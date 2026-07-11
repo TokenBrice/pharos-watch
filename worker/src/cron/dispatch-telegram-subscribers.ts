@@ -16,6 +16,7 @@ const ALERT_COLUMN_BY_TYPE = {
   safety: "alert_safety",
   launch: "alert_launch",
   reserve: "alert_reserve",
+  freeze: "alert_freeze",
 } as const;
 
 const GLOBAL_ALERT_COLUMN_BY_TYPE = {
@@ -24,6 +25,7 @@ const GLOBAL_ALERT_COLUMN_BY_TYPE = {
   safety: "global_alert_safety",
   launch: "global_alert_launch",
   reserve: "global_alert_reserve",
+  freeze: "global_alert_freeze",
 } as const;
 
 const ALERT_OVERRIDE_COLUMN_BY_TYPE = {
@@ -32,6 +34,7 @@ const ALERT_OVERRIDE_COLUMN_BY_TYPE = {
   safety: "alert_safety_override",
   launch: "alert_launch_override",
   reserve: "alert_reserve_override",
+  freeze: "alert_freeze_override",
 } as const;
 
 const VALID_ALERT_COLUMNS = new Set(Object.values(ALERT_COLUMN_BY_TYPE));
@@ -498,6 +501,7 @@ export async function loadBroadcastTargetChatIds(
                     OR ts.alert_safety = 1
                     OR ts.alert_launch = 1
                     OR ts.alert_reserve = 1
+                    OR ts.alert_freeze = 1
                   )
              )
              OR EXISTS (

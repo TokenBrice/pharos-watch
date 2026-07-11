@@ -10,7 +10,8 @@ import type {
 import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
 import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-cache";
 
-export type PerAlertTypeTargets = Record<TelegramAlertType, { chats: number; chunks: number }>;
+export type PerAlertTypeTargets = Record<Exclude<TelegramAlertType, "freeze">, { chats: number; chunks: number }> &
+  Partial<Record<"freeze", { chats: number; chunks: number }>>;
 
 export interface DispatchCapacityMetadata {
   freshCandidateChats: number;
@@ -154,8 +155,8 @@ export function buildPerAlertTypeTargets(
 ): PerAlertTypeTargets {
   const targets = emptyPerAlertTypeTargets();
   for (const sub of subscriberQueue) {
-    targets[sub.alertType].chats += 1;
-    targets[sub.alertType].chunks += sub.chunks.length;
+    (targets[sub.alertType] ??= { chats: 0, chunks: 0 }).chats += 1;
+    targets[sub.alertType]!.chunks += sub.chunks.length;
   }
   return targets;
 }

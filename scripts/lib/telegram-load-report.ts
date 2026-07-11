@@ -36,7 +36,7 @@ export function printTelegramLoadReport(report: TelegramLoadCheckReport): void {
       `Fixture ${summary.activeWatchers.toLocaleString()} active watchers: ${summary.directSubscriptions.toLocaleString()} direct subs, ${summary.presetFollowers.toLocaleString()} preset followers, ${summary.groupChats.toLocaleString()} groups, ${summary.quietHoursChats.toLocaleString()} quiet-hours chats, ${summary.chatSnoozes.toLocaleString()} chat snoozes, ${summary.perCoinSnoozes.toLocaleString()} per-coin snoozes, ${summary.blockedChats.toLocaleString()} blocked chats.`,
     );
     console.log(
-      `  Global opt-ins: depeg ${summary.globalOptIns.depeg.toLocaleString()}, dews ${summary.globalOptIns.dews.toLocaleString()}, safety ${summary.globalOptIns.safety.toLocaleString()}, launch ${summary.globalOptIns.launch.toLocaleString()}, reserve ${summary.globalOptIns.reserve.toLocaleString()}.`,
+      `  Global opt-ins: depeg ${summary.globalOptIns.depeg.toLocaleString()}, dews ${summary.globalOptIns.dews.toLocaleString()}, safety ${summary.globalOptIns.safety.toLocaleString()}, launch ${summary.globalOptIns.launch.toLocaleString()}, reserve ${summary.globalOptIns.reserve.toLocaleString()}, freeze ${summary.globalOptIns.freeze.toLocaleString()}.`,
     );
   }
 

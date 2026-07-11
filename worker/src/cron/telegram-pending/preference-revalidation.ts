@@ -26,6 +26,7 @@ const FAMILY_COLUMN = {
   safety: { direct: "alert_safety", override: "alert_safety_override", global: "global_alert_safety" },
   launch: { direct: "alert_launch", override: "alert_launch_override", global: "global_alert_launch" },
   reserve: { direct: "alert_reserve", override: "alert_reserve_override", global: "global_alert_reserve" },
+  freeze: { direct: "alert_freeze", override: "alert_freeze_override", global: "global_alert_freeze" },
 } as const satisfies Record<TelegramAlertType, { direct: string; override: string; global: string }>;
 
 interface PreferenceSubscriberRow {
@@ -37,6 +38,7 @@ interface PreferenceSubscriberRow {
   global_alert_safety: number;
   global_alert_launch: number;
   global_alert_reserve: number;
+  global_alert_freeze: number;
 }
 
 interface PreferenceSubscriptionRow {
@@ -47,11 +49,13 @@ interface PreferenceSubscriptionRow {
   alert_safety: number;
   alert_launch: number;
   alert_reserve: number;
+  alert_freeze: number;
   alert_dews_override: number;
   alert_depeg_override: number;
   alert_safety_override: number;
   alert_launch_override: number;
   alert_reserve_override: number;
+  alert_freeze_override: number;
   alert_snooze_until_ts: number | null;
 }
 
@@ -162,7 +166,7 @@ async function loadPreferenceSubscribers(
       .prepare(
         `SELECT chat_id, preference_generation, alert_snooze_until_ts,
                 global_alert_dews, global_alert_depeg, global_alert_safety,
-                global_alert_launch, global_alert_reserve
+                global_alert_launch, global_alert_reserve, global_alert_freeze
            FROM telegram_subscribers
           WHERE chat_id IN (${inClause.sql})`,
       )
@@ -193,8 +197,8 @@ async function loadPreferenceSubscriptions(
     const rows = await db
       .prepare(
         `SELECT chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety,
-                alert_launch, alert_reserve, alert_dews_override, alert_depeg_override,
-                alert_safety_override, alert_launch_override, alert_reserve_override,
+                alert_launch, alert_reserve, alert_freeze, alert_dews_override, alert_depeg_override,
+                alert_safety_override, alert_launch_override, alert_reserve_override, alert_freeze_override,
                 alert_snooze_until_ts
            FROM telegram_subscriptions
           WHERE ${predicate}`,
@@ -248,7 +252,7 @@ function enabledPresetIdsForFamily(
   rows: readonly PreferencePresetRow[],
   family: TelegramAlertType,
 ): TelegramPresetId[] {
-  if (family === "launch" || family === "reserve") return [];
+  if (family === "launch" || family === "reserve" || family === "freeze") return [];
   const column = FAMILY_COLUMN[family].direct as "alert_dews" | "alert_depeg" | "alert_safety";
   return rows.flatMap((row) =>
     row[column] === 1 && VALID_PRESET_IDS.has(row.preset_id as TelegramPresetId)

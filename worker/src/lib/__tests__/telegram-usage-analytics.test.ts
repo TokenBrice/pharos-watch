@@ -3,12 +3,47 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   bucketTelegramCommandLatency,
   classifyTelegramStartSource,
+  computeTelegramCurrentLifecycleSnapshot,
   loadTelegramTopFollowedCoins,
   recordTelegramDeliveryOutcomes,
   recordTelegramUsageEvent,
 } from "../telegram-usage-analytics";
 
 describe("telegram usage analytics", () => {
+  it("includes freeze opt-ins in lifecycle counts and all-family watcher gating", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_subscribers s",
+        first: {
+          active_watchers: 1,
+          new_watchers: 0,
+          explicit_coin_follows: 1,
+          active_preset_followers: 0,
+          active_dews_opt_ins: 0,
+          active_depeg_opt_ins: 0,
+          active_safety_opt_ins: 0,
+          active_launch_opt_ins: 0,
+          active_reserve_opt_ins: 0,
+          active_freeze_opt_ins: 1,
+          active_all_types_opt_ins: 1,
+          quiet_hours_enabled_chats: 0,
+        },
+        rows: [],
+      },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+    ]);
+
+    const snapshot = await computeTelegramCurrentLifecycleSnapshot(db, 1_771_833_600, {
+      pendingDeliveryCount: 0,
+    });
+
+    expect(snapshot.alertTypeOptIns).toMatchObject({ freeze: 1, allTypes: 1 });
+    const aggregateSql = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_subscribers s"))?.sql;
+    expect(aggregateSql).toContain("active_freeze_opt_ins");
+    expect(aggregateSql).toContain("s.global_alert_freeze = 1");
+    expect(aggregateSql).toContain("alert_freeze = 1");
+  });
+
   it("classifies deep-link payloads without storing raw payloads", () => {
     expect(classifyTelegramStartSource("")).toBe("none");
     expect(classifyTelegramStartSource("setup")).toBe("setup");

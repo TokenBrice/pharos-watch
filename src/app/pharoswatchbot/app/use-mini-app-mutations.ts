@@ -9,6 +9,8 @@ import {
 } from "./error-messages";
 import {
   isMiniAppVersionMismatch,
+  postMiniAppBulkWatchlistPreview,
+  postMiniAppPortability,
   postMiniAppSnapshot,
   refreshMiniAppBundleOnce,
   type TelegramMiniAppClientSnapshot,
@@ -19,6 +21,10 @@ import type {
   SubscribedCoin,
   TelegramAlertType,
   TelegramMiniAppOperation,
+  TelegramMiniAppBulkWatchlistOperation,
+  TelegramMiniAppBulkWatchlistResponse,
+  TelegramMiniAppPortabilityOperation,
+  TelegramMiniAppPortabilityResponse,
   TelegramMiniAppState,
 } from "./types";
 
@@ -29,6 +35,18 @@ const UNDO_WINDOW_MS = 5_000;
 
 function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state: TelegramMiniAppState | null): string {
   switch (operation.kind) {
+    case "export-watchlist":
+      return "Watchlist token ready.";
+    case "preview-watchlist-import":
+      return "Import preview ready.";
+    case "confirm-watchlist-import":
+      return "Watchlist replaced exactly as previewed.";
+    case "preview-bulk-watchlist":
+      return "Bulk watchlist preview ready.";
+    case "confirm-bulk-watchlist":
+      return "Bulk watchlist edit applied.";
+    case "undo-bulk-watchlist":
+      return "Bulk watchlist edit undone.";
     case "recommended-setup":
       return "Recommended setup applied.";
     case "set-global":
@@ -73,7 +91,7 @@ function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state:
 }
 
 function defaultGlobalAlerts(): TelegramMiniAppState["subscriber"]["globalAlerts"] {
-  return { dews: false, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
+  return { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: null };
 }
 
 function confirmThenFire(
@@ -105,6 +123,8 @@ export interface UseMiniAppMutationsArgs {
   messageAutoDismissActive: boolean;
   /** False while session state is refreshing, stale, or otherwise read-only. */
   mutationsAllowed: boolean;
+  /** Signed private-session reads remain available through Telegram's 24h window. */
+  portabilityReadsAllowed: boolean;
 }
 
 export interface UseMiniAppMutationsResult {
@@ -133,6 +153,9 @@ export interface UseMiniAppMutationsResult {
   mutate: (operation: TelegramMiniAppOperation) => void;
   /** Imperative dispatch returning the confirmed server snapshot on success. */
   performMutation: (operation: TelegramMiniAppOperation) => Promise<TelegramMiniAppClientSnapshot | null>;
+  /** Signed read-only export/import-preview request. Does not consume edit burst capacity. */
+  performPortability: (operation: Extract<TelegramMiniAppPortabilityOperation, { kind: "export-watchlist" | "preview-watchlist-import" }>) => Promise<TelegramMiniAppPortabilityResponse | null>;
+  performBulkWatchlistPreview: (operation: Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "preview-bulk-watchlist" }>) => Promise<TelegramMiniAppBulkWatchlistResponse | null>;
   /** Bound handler for the remove-coin flow: confirm-then-mutate + arm undo on success. */
   remove: (coin: SubscribedCoin) => void;
   /** Bound handler for the undo button. No-op if `pendingUndo` is null. */
@@ -174,6 +197,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     reloadSession,
     messageAutoDismissActive,
     mutationsAllowed,
+    portabilityReadsAllowed,
   } = args;
   // webApp identity is stable per render, so showConfirm is safe to hoist once.
   const showConfirm = webApp?.showConfirm;
@@ -313,6 +337,62 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     void performMutation(operation);
   }, [performMutation]);
 
+  const performPortability = useCallback(async (
+    operation: Extract<TelegramMiniAppPortabilityOperation, { kind: "export-watchlist" | "preview-watchlist-import" }>,
+  ): Promise<TelegramMiniAppPortabilityResponse | null> => {
+    if (!initData || !portabilityReadsAllowed || state?.viewer.chatId == null || isMutating) return null;
+    setIsMutating(true);
+    setPendingOperation(operation);
+    try {
+      const response = await postMiniAppPortability(MUTATE_ENDPOINT, { initData, operation });
+      setMessage(null);
+      setAnnouncement(operation.kind === "export-watchlist" ? "Watchlist token ready." : "Import preview ready.");
+      webApp?.HapticFeedback?.impactOccurred?.("light");
+      return response;
+    } catch (err) {
+      if (isMiniAppVersionMismatch(err)) {
+        refreshMiniAppBundleOnce({
+          contractVersion: err.serverContractVersion,
+          catalogVersion: err.serverCatalogVersion,
+        });
+      }
+      setMessage(miniAppErrorMessage(err, "mutation"));
+      webApp?.HapticFeedback?.notificationOccurred?.("error");
+      return null;
+    } finally {
+      setIsMutating(false);
+      setPendingOperation(null);
+    }
+  }, [initData, isMutating, portabilityReadsAllowed, state?.viewer.chatId, webApp]);
+
+  const performBulkWatchlistPreview = useCallback(async (
+    operation: Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "preview-bulk-watchlist" }>,
+  ): Promise<TelegramMiniAppBulkWatchlistResponse | null> => {
+    if (!initData || !portabilityReadsAllowed || state?.viewer.chatId == null || isMutating) return null;
+    setIsMutating(true);
+    setPendingOperation(operation);
+    try {
+      const response = await postMiniAppBulkWatchlistPreview(MUTATE_ENDPOINT, { initData, operation });
+      setMessage(null);
+      setAnnouncement("Bulk watchlist preview ready.");
+      webApp?.HapticFeedback?.impactOccurred?.("light");
+      return response;
+    } catch (err) {
+      if (isMiniAppVersionMismatch(err)) {
+        refreshMiniAppBundleOnce({
+          contractVersion: err.serverContractVersion,
+          catalogVersion: err.serverCatalogVersion,
+        });
+      }
+      setMessage(miniAppErrorMessage(err, "mutation"));
+      webApp?.HapticFeedback?.notificationOccurred?.("error");
+      return null;
+    } finally {
+      setIsMutating(false);
+      setPendingOperation(null);
+    }
+  }, [initData, isMutating, portabilityReadsAllowed, state?.viewer.chatId, webApp]);
+
   const clearUndoToast = useCallback(() => {
     if (undoTimerRef.current) {
       clearTimeout(undoTimerRef.current);
@@ -407,6 +487,8 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     homeScreenStatus,
     mutate,
     performMutation,
+    performPortability,
+    performBulkWatchlistPreview,
     remove,
     undoRemove,
     addToHomeScreen,

@@ -12,8 +12,8 @@ function makeCoin(
     stablecoinId: "usdc-circle",
     symbol: "USDC",
     name: "USD Coin",
-    alertTypes: { dews: false, depeg: false, safety: false, launch: false, reserve: false, ...alertTypes },
-    alertOverrides: { dews: false, depeg: false, safety: false, launch: false, reserve: false, ...alertOverrides },
+    alertTypes: { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false, ...alertTypes },
+    alertOverrides: { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false, ...alertOverrides },
     dewsMinBand: null,
     depegStepBps: null,
     safetyMode: null,
@@ -21,7 +21,7 @@ function makeCoin(
   };
 }
 
-const NO_GLOBAL: GlobalAlerts = { dews: false, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
+const NO_GLOBAL: GlobalAlerts = { dews: false, depeg: false, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: null };
 
 function makePreset(alertTypes: Partial<FollowedPreset["alertTypes"]>): FollowedPreset {
   return {
@@ -46,7 +46,7 @@ describe("computeEffectiveSource", () => {
   });
 
   it("treats an all-off row as an off-override when a global default would otherwise cover it", () => {
-    const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
+    const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: null };
     const result = computeEffectiveSource(makeCoin({}, { dews: true }), global, []);
     expect(result.dews).toBe("off-override");
   });
@@ -57,13 +57,13 @@ describe("computeEffectiveSource", () => {
   });
 
   it("does not treat an unmarked legacy/default zero as a local opt-out", () => {
-    const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
+    const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: null };
     const result = computeEffectiveSource(makeCoin({}), global, []);
     expect(result.dews).toBe("global");
   });
 
   it("lets per-coin win over a preset/global that also covers the type", () => {
-    const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, depegStepBps: null };
+    const global: GlobalAlerts = { dews: true, depeg: false, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: null };
     const result = computeEffectiveSource(makeCoin({ dews: true }), global, [makePreset({ dews: true })]);
     expect(result.dews).toBe("per-coin");
   });
@@ -81,5 +81,10 @@ describe("computeEffectiveSource", () => {
   it("ignores presets for the reserve type (presets do not cover reserve)", () => {
     const result = computeEffectiveSource(makeCoin({}), NO_GLOBAL, [makePreset({ dews: true, depeg: true, safety: true })]);
     expect(result.reserve).toBe("global");
+  });
+
+  it("classifies freeze-only rows as direct and never inherits freeze from presets", () => {
+    expect(computeEffectiveSource(makeCoin({ freeze: true }), NO_GLOBAL, []).freeze).toBe("per-coin");
+    expect(computeEffectiveSource(makeCoin({}), NO_GLOBAL, [makePreset({ dews: true })]).freeze).toBe("global");
   });
 });

@@ -61,6 +61,7 @@ interface CurrentAggregateRow {
   active_safety_opt_ins: number | string | null;
   active_launch_opt_ins: number | string | null;
   active_reserve_opt_ins: number | string | null;
+  active_freeze_opt_ins: number | string | null;
   active_all_types_opt_ins: number | string | null;
   quiet_hours_enabled_chats: number | string | null;
 }
@@ -105,7 +106,8 @@ const ACTIVE_SUBSCRIPTION_FLAGS = `alert_dews = 1
   OR alert_depeg = 1
   OR alert_safety = 1
   OR alert_launch = 1
-  OR alert_reserve = 1`;
+  OR alert_reserve = 1
+  OR alert_freeze = 1`;
 const ACTIVE_PRESET_FLAGS = `alert_dews = 1
   OR alert_depeg = 1
   OR alert_safety = 1`;
@@ -116,7 +118,8 @@ const ACTIVE_EXPLICIT_SUBS_BY_CHAT_SQL = `SELECT chat_id,
         MAX(CASE WHEN alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_enabled,
         MAX(CASE WHEN alert_safety = 1 THEN 1 ELSE 0 END) AS safety_enabled,
         MAX(CASE WHEN alert_launch = 1 THEN 1 ELSE 0 END) AS launch_enabled,
-        MAX(CASE WHEN alert_reserve = 1 THEN 1 ELSE 0 END) AS reserve_enabled
+        MAX(CASE WHEN alert_reserve = 1 THEN 1 ELSE 0 END) AS reserve_enabled,
+        MAX(CASE WHEN alert_freeze = 1 THEN 1 ELSE 0 END) AS freeze_enabled
    FROM telegram_subscriptions
   GROUP BY chat_id`;
 
@@ -134,6 +137,7 @@ const ACTIVE_WATCHER_CONDITION = `s.global_alert_dews = 1
   OR s.global_alert_safety = 1
   OR s.global_alert_launch = 1
   OR s.global_alert_reserve = 1
+  OR s.global_alert_freeze = 1
   OR COALESCE(sub.active_sub_count, 0) > 0
   OR COALESCE(preset.active_preset_count, 0) > 0`;
 
@@ -306,6 +310,13 @@ export async function computeTelegramCurrentLifecycleSnapshot(
            ) AS active_reserve_opt_ins,
            SUM(
              CASE
+               WHEN COALESCE(sub.freeze_enabled, 0) = 1
+                 OR s.global_alert_freeze = 1
+               THEN 1 ELSE 0
+             END
+           ) AS active_freeze_opt_ins,
+           SUM(
+             CASE
                WHEN (
                    COALESCE(sub.dews_enabled, 0) = 1
                    OR COALESCE(preset.dews_enabled, 0) = 1
@@ -328,6 +339,10 @@ export async function computeTelegramCurrentLifecycleSnapshot(
                  AND (
                    COALESCE(sub.reserve_enabled, 0) = 1
                    OR s.global_alert_reserve = 1
+                 )
+                 AND (
+                   COALESCE(sub.freeze_enabled, 0) = 1
+                   OR s.global_alert_freeze = 1
                  )
                THEN 1 ELSE 0
              END
@@ -376,6 +391,7 @@ export async function computeTelegramCurrentLifecycleSnapshot(
       safety: coerceCount(aggregate?.active_safety_opt_ins),
       launch: coerceCount(aggregate?.active_launch_opt_ins),
       reserve: coerceCount(aggregate?.active_reserve_opt_ins),
+      freeze: coerceCount(aggregate?.active_freeze_opt_ins),
       allTypes: coerceCount(aggregate?.active_all_types_opt_ins),
     },
     quietHoursEnabledChats: coerceCount(aggregate?.quiet_hours_enabled_chats),
@@ -401,11 +417,10 @@ async function upsertTelegramLifecycleSnapshot(
   db: D1Database,
   snapshot: TelegramCurrentLifecycleSnapshot,
 ): Promise<void> {
-  // NOTE: alertTypeOptIns.reserve is computed live (above) but intentionally not persisted here.
-  // The telegram_watcher_lifecycle_daily table has no active_reserve_opt_ins column (migration 0123).
-  // Persisting reserve would require a coordinated D1 migration; live counts still surface via the
-  // live aggregate query. If historical reserve retention becomes a product requirement, add the
-  // column in a migration first, then add the field to this INSERT.
+  // NOTE: reserve and freeze opt-ins are computed live (above) but intentionally not persisted here.
+  // The telegram_watcher_lifecycle_daily table has no active_reserve_opt_ins or
+  // active_freeze_opt_ins columns (migration 0123). Persisting either family would require a
+  // coordinated D1 migration; live counts still surface via the live aggregate query.
   try {
     await db
       .prepare(

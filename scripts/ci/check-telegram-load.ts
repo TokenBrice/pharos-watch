@@ -216,6 +216,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
               OR alert_safety = 1
               OR alert_launch = 1
               OR alert_reserve = 1
+              OR alert_freeze = 1
             THEN 1 ELSE 0
           END
         ) AS active_sub_count
@@ -237,6 +238,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
   OR s.global_alert_safety = 1
   OR s.global_alert_launch = 1
   OR s.global_alert_reserve = 1
+  OR s.global_alert_freeze = 1
   OR COALESCE(sub.active_sub_count, 0) > 0
   OR COALESCE(preset.active_preset_count, 0) > 0`;
 
@@ -364,13 +366,14 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
                    OR s.global_alert_safety = 1
                    OR s.global_alert_launch = 1
                    OR s.global_alert_reserve = 1
+                   OR s.global_alert_freeze = 1
                    OR COALESCE(sub.active_sub_count, 0) > 0
                    OR COALESCE(preset.active_preset_count, 0) > 0
                  THEN 1 ELSE 0 END) AS active_watchers
            FROM telegram_subscribers s
            LEFT JOIN (
              SELECT chat_id,
-                    SUM(CASE WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 OR alert_launch = 1 OR alert_reserve = 1 THEN 1 ELSE 0 END) AS active_sub_count
+                    SUM(CASE WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 OR alert_launch = 1 OR alert_reserve = 1 OR alert_freeze = 1 THEN 1 ELSE 0 END) AS active_sub_count
                FROM telegram_subscriptions
               GROUP BY chat_id
            ) sub ON sub.chat_id = s.chat_id
@@ -396,6 +399,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
           OR alert_safety = 1
           OR alert_launch = 1
           OR alert_reserve = 1
+          OR alert_freeze = 1
        GROUP BY stablecoin_id
        UNION ALL
       SELECT preset_id AS source_id, COUNT(DISTINCT chat_id) AS subscribers
@@ -491,14 +495,14 @@ const STATUS_PATH_FIXTURE_CREATED_AT_SPREAD_DAYS = 180;
 function seedStatusPathFixture(db: DatabaseSync, fixture: SyntheticTelegramFixture): void {
   const insertSubscriber = db.prepare(
     `INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, quiet_hours_enabled,
-       global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
+       global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve, global_alert_freeze,
        alert_snooze_until_ts)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const insertSubscription = db.prepare(
     `INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety,
-       alert_launch, alert_reserve, alert_snooze_until_ts)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       alert_launch, alert_reserve, alert_freeze, alert_snooze_until_ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const insertPreset = db.prepare(
     `INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews, alert_depeg, alert_safety,
@@ -516,6 +520,7 @@ function seedStatusPathFixture(db: DatabaseSync, fixture: SyntheticTelegramFixtu
         watcher.chatId, createdAt, createdAt + 3_600, watcher.quietHours ? 1 : 0,
         watcher.globals.dews ? 1 : 0, watcher.globals.depeg ? 1 : 0, watcher.globals.safety ? 1 : 0,
         watcher.globals.launch ? 1 : 0, watcher.globals.reserve ? 1 : 0,
+        watcher.globals.freeze ? 1 : 0,
         watcher.chatSnoozed ? snoozeUntil : null,
       );
       for (const subscription of watcher.directSubscriptions) {
@@ -523,6 +528,7 @@ function seedStatusPathFixture(db: DatabaseSync, fixture: SyntheticTelegramFixtu
           watcher.chatId, subscription.stablecoinId,
           subscription.flags.dews ? 1 : 0, subscription.flags.depeg ? 1 : 0, subscription.flags.safety ? 1 : 0,
           subscription.flags.launch ? 1 : 0, subscription.flags.reserve ? 1 : 0,
+          subscription.flags.freeze ? 1 : 0,
           subscription.snoozed ? snoozeUntil : null,
         );
       }

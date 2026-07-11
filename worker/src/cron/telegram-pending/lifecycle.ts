@@ -146,11 +146,13 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
                   alert_safety=0,
                   alert_launch=0,
                   alert_reserve=0,
+                  alert_freeze=0,
                   global_alert_dews=0,
                   global_alert_depeg=0,
                   global_alert_safety=0,
                   global_alert_launch=0,
                   global_alert_reserve=0,
+                  global_alert_freeze=0,
                   global_depeg_worsening_bps_step=NULL,
                   preference_generation=preference_generation + 1
             WHERE chat_id=?`,
@@ -163,7 +165,8 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
                   alert_depeg=0,
                   alert_safety=0,
                   alert_launch=0,
-                  alert_reserve=0
+                  alert_reserve=0,
+                  alert_freeze=0
             WHERE chat_id=?`,
         )
         .bind(chatId),

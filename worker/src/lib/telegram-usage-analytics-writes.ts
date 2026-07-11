@@ -19,6 +19,7 @@ export type TelegramUsageEventType =
   | "reply_failure"
   | "mini_app_session_valid"
   | "mini_app_session_invalid"
+  | "mini_app_portability"
   | "mini_app_mutation"
   | "mini_app_mutation_denied"
   | "mini_app_recommended_setup"

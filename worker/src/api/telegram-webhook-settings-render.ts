@@ -102,6 +102,7 @@ export function buildCoinMessage(coinId: string, row: SubscriptionRow | null): s
     `Depeg step: ${escapeHtml(describeDepeg(row))}`,
     `Launch: ${row?.alert_launch ? "on" : "off"}`,
     `Reserve: ${row?.alert_reserve ? "on" : "off"}`,
+    `Freeze alerts: ${row?.alert_freeze ? "on" : "off"}`,
     "",
     "Tap a row to change.",
   ].join("\n");
@@ -117,6 +118,7 @@ export function buildCoinKeyboard(
   const depegStep: number | "off" = row?.alert_depeg ? row?.depeg_worsening_bps_step ?? -1 : "off";
   const launchOn = Boolean(row?.alert_launch);
   const reserveOn = Boolean(row?.alert_reserve);
+  const freezeOn = Boolean(row?.alert_freeze);
 
   const rows: SettingsButton[][] = [
     buildDewsRow(coinId, dewsBand),
@@ -129,6 +131,10 @@ export function buildCoinKeyboard(
     [
       { text: `Reserve ${markIf(reserveOn)}on`, callback_data: `settings:c:${coinId}:rs:1` },
       { text: `${markIf(!reserveOn)}off`, callback_data: `settings:c:${coinId}:rs:0` },
+    ],
+    [
+      { text: `Freeze ${markIf(freezeOn)}on`, callback_data: `settings:c:${coinId}:fz:1` },
+      { text: `${markIf(!freezeOn)}off`, callback_data: `settings:c:${coinId}:fz:0` },
     ],
     [{ text: "← Back to chat settings", callback_data: "settings:home" }],
   ];
@@ -205,6 +211,7 @@ const TYPE_LABELS: Record<GlobalAlertType, string> = {
   safety: "Safety",
   launch: "Launch",
   reserve: "Reserve",
+  freeze: "Freeze",
 };
 
 function labelForType(type: GlobalAlertType): string {

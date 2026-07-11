@@ -288,11 +288,13 @@ export interface SubscriberRow {
   alert_safety: number;
   alert_launch: number;
   alert_reserve?: number | null;
+  alert_freeze?: number | null;
   global_alert_dews?: number | null;
   global_alert_depeg?: number | null;
   global_alert_safety?: number | null;
   global_alert_launch?: number | null;
   global_alert_reserve?: number | null;
+  global_alert_freeze?: number | null;
   global_depeg_worsening_bps_step?: number | null;
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
@@ -311,6 +313,7 @@ export interface SubscriptionRow {
   alert_safety: number;
   alert_launch: number;
   alert_reserve?: number | null;
+  alert_freeze?: number | null;
   dews_min_band: string | null;
   safety_mode: string | null;
   depeg_worsening_bps_step: number | null;
@@ -320,6 +323,7 @@ export interface SubscriptionRow {
   alert_safety_override?: number | null;
   alert_launch_override?: number | null;
   alert_reserve_override?: number | null;
+  alert_freeze_override?: number | null;
 }
 
 export type CoinResolution =

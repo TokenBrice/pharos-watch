@@ -55,11 +55,13 @@ async function loadCandidateChats(db: D1Database, cutoffSec: number, limit: numb
                  OR sub.alert_safety <> 0
                  OR sub.alert_launch <> 0
                  OR sub.alert_reserve <> 0
+                 OR sub.alert_freeze <> 0
                  OR sub.alert_dews_override <> 0
                  OR sub.alert_depeg_override <> 0
                  OR sub.alert_safety_override <> 0
                  OR sub.alert_launch_override <> 0
                  OR sub.alert_reserve_override <> 0
+                 OR sub.alert_freeze_override <> 0
                  OR sub.dews_min_band IS NOT NULL
                  OR sub.safety_mode IS NOT NULL
                  OR sub.depeg_worsening_bps_step IS NOT NULL
@@ -86,6 +88,7 @@ async function loadCandidateChats(db: D1Database, cutoffSec: number, limit: numb
           AND s.global_alert_safety = 0
           AND s.global_alert_launch = 0
           AND s.global_alert_reserve = 0
+          AND s.global_alert_freeze = 0
         ORDER BY s.last_active_at ASC
         LIMIT ?`,
     )

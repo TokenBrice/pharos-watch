@@ -50,6 +50,12 @@ export const TELEGRAM_ALERT_FAMILIES: readonly TelegramAlertFamily[] = [
     publicPhrase: "live reserve-mix drift",
     featureLine: "Live reserve-mix drift alerts for covered stablecoins",
   },
+  {
+    key: "freeze",
+    label: "Freeze and Blacklist Events",
+    publicPhrase: "issuer freeze, unfreeze, and destroy events",
+    featureLine: "Opt-in issuer freeze, blacklist release, and destroy alerts from the verified tape",
+  },
 ];
 
 /** Oxford-comma prose list of the family phrases, e.g. "a, b, and c". */

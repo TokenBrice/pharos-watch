@@ -30,9 +30,9 @@ export interface UpsertSubscriberInput {
   chatId: string;
   username: string | null;
   nowSec: number;
-  perCoinAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
-  globalAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
-  globalAlertOverrides?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
+  perCoinAlertBumps?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
+  globalAlertBumps?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
+  globalAlertOverrides?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
   quietHours?:
     | { enabled: true; startHourUtc: number; endHourUtc: number }
     | { enabled: false };
@@ -56,8 +56,8 @@ type UpsertSubscriberKind =
       chatId: string;
       username: string | null;
       nowSec: number;
-      perCoinAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
-      globalAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
+      perCoinAlertBumps?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
+      globalAlertBumps?: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
       quietHours?:
         | { enabled: true; startHourUtc: number; endHourUtc: number }
         | { enabled: false };
@@ -68,7 +68,7 @@ type UpsertSubscriberKind =
       chatId: string;
       username: string | null;
       nowSec: number;
-      globalAlertOverrides: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1; reserve?: 0 | 1 };
+      globalAlertOverrides: Partial<Record<(typeof TELEGRAM_ALERT_TYPES)[number], 0 | 1>>;
       quietHours?:
         | { enabled: true; startHourUtc: number; endHourUtc: number }
         | { enabled: false };
@@ -121,7 +121,7 @@ export function buildSubscriberUpsert(
     updates.push("preference_generation = telegram_subscribers.preference_generation + 1");
   }
 
-  const perCoinRow: Array<0 | 1> = [0, 0, 0, 0, 0];
+  const perCoinRow: Array<0 | 1> = TELEGRAM_ALERT_TYPES.map(() => 0);
   if (kind.kind === "bump" && kind.perCoinAlertBumps) {
     for (let i = 0; i < ALERT_KEYS.length; i += 1) {
       const key = ALERT_KEYS[i];
@@ -135,7 +135,7 @@ export function buildSubscriberUpsert(
     }
   }
 
-  const globalRow: Array<0 | 1> = [0, 0, 0, 0, 0];
+  const globalRow: Array<0 | 1> = TELEGRAM_ALERT_TYPES.map(() => 0);
   if (kind.kind === "bump" && kind.globalAlertBumps) {
     for (let i = 0; i < ALERT_KEYS.length; i += 1) {
       const key = ALERT_KEYS[i];
@@ -170,12 +170,12 @@ export function buildSubscriberUpsert(
   const sql = `
       INSERT INTO telegram_subscribers (
         chat_id, username,
-        alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
-        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
+        alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze,
+        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve, global_alert_freeze,
         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
         created_at, last_active_at, preference_generation
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(chat_id) DO UPDATE SET ${updates.join(", ")}
     `;
   const binds: unknown[] = [
@@ -405,6 +405,7 @@ export async function upsertGlobalAlertTypes(
         safety: alertTypes.has("safety") ? 1 : 0,
         launch: alertTypes.has("launch") ? 1 : 0,
         reserve: alertTypes.has("reserve") ? 1 : 0,
+        freeze: alertTypes.has("freeze") ? 1 : 0,
       },
     }),
   ];

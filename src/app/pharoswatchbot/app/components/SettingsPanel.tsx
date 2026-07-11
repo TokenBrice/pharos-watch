@@ -8,11 +8,13 @@ import type {
   TelegramAlertType,
   TelegramDepegStepBps,
   TelegramMiniAppOperation,
+  TelegramMiniAppPortabilityResponse,
   TelegramMiniAppState,
 } from "../types";
 import { MiniButton } from "./MiniButton";
 import { SegmentedControl } from "./SegmentedControl";
 import { TogglePill } from "./TogglePill";
+import { WatchlistPortabilityPanel } from "./WatchlistPortabilityPanel";
 
 const FALLBACK_TIMEZONES = ["UTC", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Australia/Sydney"] as const;
 const COMMON_TIMEZONES = [
@@ -362,6 +364,9 @@ function DangerZoneSection({ canMutate, isMutating, onUnsubscribeAll, onForgetMe
 export interface SettingsPanelProps {
   state: TelegramMiniAppState;
   canMutate: boolean;
+  canReadPortability: boolean;
+  /** A request is in flight. Unlike write lockout, a 429 countdown stays readable. */
+  isPortabilityRequestBusy: boolean;
   isMutating: boolean;
   pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
@@ -369,9 +374,12 @@ export interface SettingsPanelProps {
   onUnsubscribeAll: () => void;
   onForgetMe: () => void;
   hasShowConfirm: boolean;
+  onExportWatchlist: () => Promise<TelegramMiniAppPortabilityResponse | null>;
+  onPreviewWatchlistImport: (token: string) => Promise<TelegramMiniAppPortabilityResponse | null>;
+  onConfirmWatchlistImport: (operation: Extract<TelegramMiniAppOperation, { kind: "confirm-watchlist-import" }>) => Promise<unknown>;
 }
 
-export function SettingsPanel({ state, canMutate, isMutating, pendingOperation, onMutate, globalAlerts, onUnsubscribeAll, onForgetMe, hasShowConfirm }: SettingsPanelProps) {
+export function SettingsPanel({ state, canMutate, canReadPortability, isMutating, isPortabilityRequestBusy, pendingOperation, onMutate, globalAlerts, onUnsubscribeAll, onForgetMe, hasShowConfirm, onExportWatchlist, onPreviewWatchlistImport, onConfirmWatchlistImport }: SettingsPanelProps) {
   const currentDepegStep = globalAlerts.depegStepBps;
 
   return (
@@ -421,6 +429,16 @@ export function SettingsPanel({ state, canMutate, isMutating, pendingOperation, 
       </section>
       <QuietHoursPicker state={state} canMutate={canMutate} isMutating={isMutating} pendingOperation={pendingOperation} onMutate={onMutate} />
       <TimezonePicker state={state} canMutate={canMutate} isMutating={isMutating} pendingOperation={pendingOperation} onMutate={onMutate} />
+      <WatchlistPortabilityPanel
+        state={state}
+        canMutate={canMutate}
+        canReadPortability={canReadPortability}
+        isMutating={isPortabilityRequestBusy}
+        pendingOperation={pendingOperation}
+        onExport={onExportWatchlist}
+        onPreview={onPreviewWatchlistImport}
+        onConfirm={onConfirmWatchlistImport}
+      />
       <DangerZoneSection
         canMutate={canMutate}
         isMutating={isMutating}

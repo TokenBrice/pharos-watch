@@ -220,6 +220,21 @@ export async function runTelegramRetentionCleanup(
   );
   throwIfAborted(signal);
 
+  const freezeTargets = await deleteOlderThanCapped(
+    db,
+    "DELETE FROM telegram_freeze_alert_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_freeze_alert_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+    nowSec - ALERT_AUDIT_RETENTION_SEC,
+    signal,
+  );
+  throwIfAborted(signal);
+  const freezeEvents = await deleteOlderThanCapped(
+    db,
+    "DELETE FROM telegram_freeze_alert_events WHERE detected_at < ? AND rowid IN (SELECT rowid FROM telegram_freeze_alert_events WHERE detected_at < ? ORDER BY detected_at ASC, rowid ASC LIMIT ?)",
+    nowSec - ALERT_AUDIT_RETENTION_SEC,
+    signal,
+  );
+  throwIfAborted(signal);
+
   // `day` is TEXT (YYYY-MM-DD) in telegram_usage_daily and
   // telegram_watcher_lifecycle_daily; an integer cutoff would never match. Bind
   // the cutoff as a YYYY-MM-DD string so the comparison is text-vs-text.
@@ -353,6 +368,8 @@ export async function runTelegramRetentionCleanup(
     sourceResolutionMemberships.pruned +
     sourceResolutionPages.pruned +
     sourceEvents.pruned +
+    freezeTargets.pruned +
+    freezeEvents.pruned +
     usageDaily.pruned +
     watcherLifecycle.pruned +
     adoptionDaily.pruned +
@@ -382,6 +399,8 @@ export async function runTelegramRetentionCleanup(
       sourceResolutionMembershipsPruned: sourceResolutionMemberships.pruned,
       sourceResolutionPagesPruned: sourceResolutionPages.pruned,
       sourceEventsPruned: sourceEvents.pruned,
+      freezeTargetsPruned: freezeTargets.pruned,
+      freezeEventsPruned: freezeEvents.pruned,
       usageDailyPruned: usageDaily.pruned,
       watcherLifecyclePruned: watcherLifecycle.pruned,
       adoptionDailyPruned: adoptionDaily.pruned,
@@ -422,6 +441,8 @@ export async function runTelegramRetentionCleanup(
         sourceResolutionMemberships: sourceResolutionMemberships.cappedAtLimit,
         sourceResolutionPages: sourceResolutionPages.cappedAtLimit,
         sourceEvents: sourceEvents.cappedAtLimit,
+        freezeTargets: freezeTargets.cappedAtLimit,
+        freezeEvents: freezeEvents.cappedAtLimit,
         usageDaily: usageDaily.cappedAtLimit,
         watcherLifecycle: watcherLifecycle.cappedAtLimit,
         adoptionDaily: adoptionDaily.cappedAtLimit,

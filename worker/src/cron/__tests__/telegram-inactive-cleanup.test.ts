@@ -19,6 +19,7 @@ interface SubscriberRow {
   global_alert_safety?: number;
   global_alert_launch?: number;
   global_alert_reserve?: number;
+  global_alert_freeze?: number;
 }
 
 interface ChildRow {
@@ -127,7 +128,8 @@ function createStubDb(state: StubState): D1Database {
             || sub.global_alert_depeg === 1
             || sub.global_alert_safety === 1
             || sub.global_alert_launch === 1
-            || sub.global_alert_reserve === 1;
+            || sub.global_alert_reserve === 1
+            || sub.global_alert_freeze === 1;
           const eligible = state.subscribers
             .filter((sub) => sub.last_active_at < cutoffSec && !hasChild(sub.chat_id) && !hasGlobalAlert(sub))
             .sort((a, b) => a.last_active_at - b.last_active_at)
@@ -195,11 +197,13 @@ interface SubscriptionState {
   alertSafety: number;
   alertLaunch: number;
   alertReserve: number;
+  alertFreeze: number;
   alertDewsOverride: number;
   alertDepegOverride: number;
   alertSafetyOverride: number;
   alertLaunchOverride: number;
   alertReserveOverride: number;
+  alertFreezeOverride: number;
   dewsMinBand: string | null;
   safetyMode: string | null;
   depegWorseningBpsStep: number | null;
@@ -212,11 +216,13 @@ const EMPTY_SUBSCRIPTION_STATE: SubscriptionState = {
   alertSafety: 0,
   alertLaunch: 0,
   alertReserve: 0,
+  alertFreeze: 0,
   alertDewsOverride: 0,
   alertDepegOverride: 0,
   alertSafetyOverride: 0,
   alertLaunchOverride: 0,
   alertReserveOverride: 0,
+  alertFreezeOverride: 0,
   dewsMinBand: null,
   safetyMode: null,
   depegWorseningBpsStep: null,
@@ -239,16 +245,18 @@ function insertSubscription(
          alert_safety,
          alert_launch,
          alert_reserve,
+         alert_freeze,
          alert_dews_override,
          alert_depeg_override,
          alert_safety_override,
          alert_launch_override,
          alert_reserve_override,
+         alert_freeze_override,
          dews_min_band,
          safety_mode,
          depeg_worsening_bps_step,
          alert_snooze_until_ts
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       chatId,
@@ -258,11 +266,13 @@ function insertSubscription(
       state.alertSafety,
       state.alertLaunch,
       state.alertReserve,
+      state.alertFreeze,
       state.alertDewsOverride,
       state.alertDepegOverride,
       state.alertSafetyOverride,
       state.alertLaunchOverride,
       state.alertReserveOverride,
+      state.alertFreezeOverride,
       state.dewsMinBand,
       state.safetyMode,
       state.depegWorseningBpsStep,
@@ -368,6 +378,11 @@ describe("runTelegramInactiveCleanup", () => {
         last_active_at: now - INACTIVE_RETENTION_SEC - 1,
         global_alert_reserve: 1,
       },
+      {
+        chat_id: "global-freeze",
+        last_active_at: now - INACTIVE_RETENTION_SEC - 1,
+        global_alert_freeze: 1,
+      },
       { chat_id: "eligible", last_active_at: now - INACTIVE_RETENTION_SEC - 1 },
     );
     const db = createStubDb(state);
@@ -378,6 +393,7 @@ describe("runTelegramInactiveCleanup", () => {
     expect(state.subscribers.map((row) => row.chat_id).sort()).toEqual([
       "global-depeg",
       "global-dews",
+      "global-freeze",
       "global-launch",
       "global-reserve",
       "global-safety",
@@ -497,11 +513,13 @@ describe("runTelegramInactiveCleanup", () => {
       ["alert-safety", { alertSafety: 1 }],
       ["alert-launch", { alertLaunch: 1 }],
       ["alert-reserve", { alertReserve: 1 }],
+      ["alert-freeze", { alertFreeze: 1 }],
       ["override-dews", { alertDewsOverride: 1 }],
       ["override-depeg", { alertDepegOverride: 1 }],
       ["override-safety", { alertSafetyOverride: 1 }],
       ["override-launch", { alertLaunchOverride: 1 }],
       ["override-reserve", { alertReserveOverride: 1 }],
+      ["override-freeze", { alertFreezeOverride: 1 }],
       ["tuning-dews", { dewsMinBand: "AMBER" }],
       ["tuning-safety", { safetyMode: "critical" }],
       ["tuning-depeg", { depegWorseningBpsStep: 25 }],

@@ -15,6 +15,7 @@ export const TELEGRAM_ALERT_TTL_SEC = {
   safety: PENDING_TTL_SEC,
   launch: 90 * 60,
   reserve: PENDING_TTL_SEC,
+  freeze: PENDING_TTL_SEC,
   adminBroadcast: 45 * 60,
   legacy: PENDING_TTL_SEC,
 } as const;
@@ -95,6 +96,7 @@ export const TELEGRAM_PENDING_PRIORITY = {
   safety: 20,
   launch: 30,
   reserve: 30,
+  freeze: 10,
   riskAlert: 30,
   legacy: 50,
   adminBroadcast: 90,

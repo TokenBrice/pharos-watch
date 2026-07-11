@@ -15,6 +15,7 @@ import {
   insertTapeEvents,
   setProjectorWatermark,
 } from "../tape-event-store";
+import { getBlacklistConfigByKey } from "../blacklist-contracts";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
   fetchRowsWithTieExpansion,
@@ -32,6 +33,7 @@ interface BlacklistSourceRow {
   amount_usd_at_event: number | null;
   timestamp: number;           // epoch seconds
   methodology_version: string | null;
+  config_key: string | null;
   rowid: number;
 }
 
@@ -53,7 +55,7 @@ async function projectFreezeVariant(
 
   const rows = await fetchRowsWithTieExpansion<BlacklistSourceRow>(db, {
     selectSql: `SELECT id, stablecoin, chain_id, chain_name, event_type, amount_usd_at_event,
-                      timestamp, methodology_version, rowid as rowid`,
+                      timestamp, methodology_version, config_key, rowid as rowid`,
     fromSql: "blacklist_events",
     timeColumn: "timestamp",
     trailingWhereSql: " AND event_type = ? AND suppression_reason IS NULL",
@@ -111,7 +113,10 @@ async function projectFreezeVariant(
       severity,
       ts: tsMs,
       endsAt: null,
-      coinId: null,
+      // New projections carry the canonical registry id from the verified
+      // contract config. Historical rows lacking config_key retain their
+      // original symbol-only projection and are intentionally not guessed.
+      coinId: row.config_key ? getBlacklistConfigByKey(row.config_key)?.stablecoinId ?? null : null,
       issuerId: null,
       pegCurrency: null,
       chain: row.chain_name,
@@ -123,6 +128,7 @@ async function projectFreezeVariant(
         chainName: row.chain_name,
         amountUsdAtEvent: row.amount_usd_at_event,
         sourceEventId: row.id,
+        stablecoinId: row.config_key ? getBlacklistConfigByKey(row.config_key)?.stablecoinId ?? null : null,
       },
       sourceTable: "blacklist_events",
       sourceRowId: row.id,

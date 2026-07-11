@@ -30,11 +30,13 @@ function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
       global_alert_depeg INTEGER NOT NULL DEFAULT 0,
       global_alert_safety INTEGER NOT NULL DEFAULT 0,
       global_alert_launch INTEGER NOT NULL DEFAULT 0,
-      global_alert_reserve INTEGER NOT NULL DEFAULT 0
+      global_alert_reserve INTEGER NOT NULL DEFAULT 0,
+      global_alert_freeze INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE telegram_subscriptions (
       chat_id TEXT, alert_dews INTEGER DEFAULT 0, alert_depeg INTEGER DEFAULT 0,
-      alert_safety INTEGER DEFAULT 0, alert_launch INTEGER DEFAULT 0, alert_reserve INTEGER DEFAULT 0
+      alert_safety INTEGER DEFAULT 0, alert_launch INTEGER DEFAULT 0, alert_reserve INTEGER DEFAULT 0,
+      alert_freeze INTEGER DEFAULT 0
     );
     CREATE TABLE telegram_preset_subscriptions (
       chat_id TEXT, alert_dews INTEGER DEFAULT 0, alert_depeg INTEGER DEFAULT 0, alert_safety INTEGER DEFAULT 0

@@ -105,6 +105,7 @@ export function buildPendingAlertScope(alerts: ConsolidatedAlerts): PendingAlert
   collectScopeItems(alerts.safety, "safety", items);
   collectScopeItems(alerts.launch, "launch", items);
   collectScopeItems(alerts.reserve, "reserve", items);
+  collectScopeItems(alerts.freeze ?? [], "freeze", items);
   if (alerts.burst?.stablecoinIds && isTelegramAlertType(alerts.burst.dominantFamily)) {
     for (const stablecoinId of alerts.burst.stablecoinIds) {
       items.push({ stablecoinId, family: alerts.burst.dominantFamily });

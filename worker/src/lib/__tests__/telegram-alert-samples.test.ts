@@ -5,7 +5,7 @@ import {
   TELEGRAM_PUBLIC_ALERT_SAMPLES,
   telegramAlertHtmlToPublicText,
 } from "@shared/lib/telegram-alert-samples";
-import { formatConsolidatedMessage, type ConsolidatedAlerts } from "../telegram-alerts";
+import { formatConsolidatedMessage, freezeSectionHeader, type ConsolidatedAlerts } from "../telegram-alerts";
 
 /**
  * TGB-028 public-sample drift contract: the /pharoswatchbot landing page
@@ -24,6 +24,7 @@ function emptyConsolidatedAlerts(): ConsolidatedAlerts {
     safety: [],
     launch: [],
     reserve: [],
+    freeze: [],
   };
 }
 
@@ -45,11 +46,21 @@ function buildSingleFamilyAlerts(family: TelegramAlertType): ConsolidatedAlerts 
     case "reserve":
       alerts.reserve = [TELEGRAM_ALERT_SAMPLE_FIXTURES.reserve];
       break;
+    case "freeze":
+      alerts.freeze = [TELEGRAM_ALERT_SAMPLE_FIXTURES.freeze];
+      break;
   }
   return alerts;
 }
 
 describe("telegram public alert samples", () => {
+  it("uses event-specific freeze section headers with a deterministic mixed fallback", () => {
+    const base = TELEGRAM_ALERT_SAMPLE_FIXTURES.freeze;
+    expect(freezeSectionHeader([{ ...base, eventType: "blacklist" }])).toBe("Issuer Freeze Event");
+    expect(freezeSectionHeader([{ ...base, eventType: "unblacklist" }])).toBe("Issuer Unfreeze Event");
+    expect(freezeSectionHeader([{ ...base, eventType: "destroy" }])).toBe("Issuer Destroy Event");
+    expect(freezeSectionHeader([{ ...base, eventType: "blacklist" }, { ...base, eventType: "destroy" }])).toBe("Issuer Freeze Activity");
+  });
   it("covers every alert family, including reserve", () => {
     expect(Object.keys(TELEGRAM_PUBLIC_ALERT_SAMPLES).sort()).toEqual([...TELEGRAM_ALERT_TYPES].sort());
     expect(Object.keys(TELEGRAM_ALERT_SAMPLE_FIXTURES).sort()).toEqual([...TELEGRAM_ALERT_TYPES].sort());

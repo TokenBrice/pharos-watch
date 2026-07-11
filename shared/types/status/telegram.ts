@@ -119,6 +119,7 @@ export interface TelegramDeliverySliRollup {
     safety: number;
     launch: number;
     reserve: number;
+    freeze: number;
     mixed: number;
     unknown: number;
   };
@@ -217,6 +218,7 @@ export interface TelegramAlertTypeChats {
   safety: number;
   launch: number;
   reserve: number;
+  freeze?: number;
   allTypes: number;
 }
 
@@ -300,7 +302,7 @@ export interface TelegramDispatchEventsDetected {
  * Use for iteration and membership checks; order-significant routing arrays
  * (e.g. ALERT_TYPE_PRIORITY) intentionally keep their own ordering.
  */
-export const TELEGRAM_ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve"] as const;
+export const TELEGRAM_ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const;
 /** The alert categories tracked by the Telegram dispatcher. */
 export type TelegramAlertType = (typeof TELEGRAM_ALERT_TYPES)[number];
 
@@ -316,7 +318,8 @@ export interface PerAlertTypeDeliveryStats {
   firstSendLatencyMs: number | null;
 }
 
-export type PerAlertTypeDelivery = Record<TelegramAlertType, PerAlertTypeDeliveryStats>;
+export type PerAlertTypeDelivery = Record<Exclude<TelegramAlertType, "freeze">, PerAlertTypeDeliveryStats> &
+  Partial<Record<"freeze", PerAlertTypeDeliveryStats>>;
 
 export const SAFETY_ALERT_SOURCE_STATE_VALUES = ["ok", "missing", "corrupt", "stale", "wrong-generation"] as const;
 export type SafetyAlertSourceState = (typeof SAFETY_ALERT_SOURCE_STATE_VALUES)[number];

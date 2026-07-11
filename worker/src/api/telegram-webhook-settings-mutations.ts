@@ -23,6 +23,7 @@ import {
   buildDepegUpsert,
   buildDewsUpsert,
   buildLaunchUpsert,
+  buildFreezeUpsert,
   buildReserveUpsert,
   buildSafetyUpsert,
   loadSubscriberByChat,
@@ -100,6 +101,7 @@ export function prepareCoinSettingStatements(
   if (setting === "ds") return prepareDepegSetting(db, chatId, username, coinId, value);
   if (setting === "lc") return prepareLaunchSetting(db, chatId, username, coinId, value);
   if (setting === "rs") return prepareReserveSetting(db, chatId, username, coinId, value);
+  if (setting === "fz") return prepareFreezeSetting(db, chatId, username, coinId, value);
   return { description: null, statements: [] };
 }
 
@@ -202,6 +204,17 @@ function prepareReserveSetting(
   return prepareBooleanSetting("Reserve", () => prepareBoolAlert(db, chatId, username, coinId, enabled, "reserve", buildReserveUpsert), value);
 }
 
+function prepareFreezeSetting(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  coinId: string,
+  value: string,
+): { description: string | null; statements: D1PreparedStatement[] } {
+  const enabled = value === "1";
+  return prepareBooleanSetting("Freeze alerts", () => prepareBoolAlert(db, chatId, username, coinId, enabled, "freeze", buildFreezeUpsert), value);
+}
+
 /** Shared body for the three simple boolean alert prepare* helpers (tg-2[mutations]). */
 function prepareBoolAlert(
   db: D1Database,
@@ -209,7 +222,7 @@ function prepareBoolAlert(
   username: string | null,
   coinId: string,
   enabled: boolean,
-  bumpKey: "reserve" | "depeg" | "launch",
+  bumpKey: "reserve" | "depeg" | "launch" | "freeze",
   buildUpsert: (chatId: string, coinId: string, enabled: boolean) => BuiltSubscriptionUpsert,
 ): D1PreparedStatement[] {
   const now = unixNow();

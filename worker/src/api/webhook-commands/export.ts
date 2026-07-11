@@ -4,7 +4,7 @@ import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../lib/telegram-constants";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { isSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
 import {
-  encodeWatchlistTokenV2,
+  encodeWatchlistTokenV3,
   MAX_WATCHLIST_TOKEN_CHARS,
   WATCHLIST_TOKEN_REGISTRY_VERSION,
 } from "../../lib/telegram-watchlist-token";
@@ -13,7 +13,7 @@ import type { WebhookCommandHandler } from "./context";
 
 const KNOWN_PRESET_IDS = new Set<string>(TELEGRAM_PRESET_IDS);
 
-/** `/export` emits one lossless, self-contained v2 portable-state token. */
+/** `/export` emits one lossless, self-contained pw3 portable-state token. */
 export const handleExport: WebhookCommandHandler = async (ctx) => {
   const { db, chatId } = ctx;
   const { state } = await loadWatchlistPortableState(db, chatId, WATCHLIST_TOKEN_REGISTRY_VERSION);
@@ -48,7 +48,7 @@ export const handleExport: WebhookCommandHandler = async (ctx) => {
 
   let token: string;
   try {
-    token = await encodeWatchlistTokenV2(state);
+    token = await encodeWatchlistTokenV3(state);
   } catch {
     await ctx.replyToChat(
       [

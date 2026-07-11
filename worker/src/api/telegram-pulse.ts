@@ -62,6 +62,7 @@ const ACTIVE_WATCHER_SQL_CONDITION = `s.global_alert_dews = 1
   OR s.global_alert_safety = 1
   OR s.global_alert_launch = 1
   OR s.global_alert_reserve = 1
+  OR s.global_alert_freeze = 1
   OR COALESCE(sub.active_sub_count, 0) > 0
   OR COALESCE(preset.active_preset_count, 0) > 0`;
 
@@ -73,6 +74,7 @@ const ACTIVE_SUBSCRIPTION_COUNTS_SQL = `SELECT chat_id,
               OR alert_safety = 1
               OR alert_launch = 1
               OR alert_reserve = 1
+              OR alert_freeze = 1
             THEN 1 ELSE 0
           END
         ) AS active_sub_count

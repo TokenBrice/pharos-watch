@@ -11,7 +11,7 @@ import {
   type TelegramMiniAppMutableState,
   type TelegramMiniAppState,
 } from "@shared/lib/telegram-mini-app-contract";
-import { postMiniAppSnapshot, postMiniAppState, refreshMiniAppBundleOnce } from "./mini-app-api";
+import { postMiniAppPortability, postMiniAppSnapshot, postMiniAppState, refreshMiniAppBundleOnce } from "./mini-app-api";
 
 const mutableState: TelegramMiniAppMutableState = {
   viewer: {
@@ -30,6 +30,7 @@ const mutableState: TelegramMiniAppMutableState = {
       safety: false,
       launch: false,
       reserve: false,
+      freeze: false,
       depegStepBps: 250,
     },
     quietHours: { enabled: false, startHourUtc: null, endHourUtc: null, timezone: "UTC" },
@@ -91,6 +92,32 @@ describe("Mini App versioned API client", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => legacyState }));
 
     await expect(postMiniAppState("/api/telegram-mini-app/session", { initData: "signed" })).resolves.toEqual(legacyState);
+  });
+
+  it("validates a versioned portable watchlist preview without hydrating state", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+        catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+        result: {
+          kind: "watchlist-import-preview",
+          expectedPreferenceGeneration: 1,
+          previewFingerprint: "preview-v1-12-deadbeef",
+          preview: {
+            directAdds: [], directRemoves: [], directChanges: [],
+            presetAdds: [], presetRemoves: [], presetChanges: [],
+            directBroadenedCoverage: [], directRemovedCoverage: [],
+            presetBroadenedCoverage: [], presetRemovedCoverage: [],
+          },
+        },
+      }),
+    }));
+
+    await expect(postMiniAppPortability("/api/telegram-mini-app/mutate", {
+      initData: "signed",
+      operation: { kind: "export-watchlist" },
+    })).resolves.toMatchObject({ result: { kind: "watchlist-import-preview" } });
   });
 
   it("stores only a non-identifying version flag and refreshes once per target", () => {

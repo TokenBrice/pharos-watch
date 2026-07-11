@@ -202,7 +202,7 @@ describe("buildCommsWorkbenchModel", () => {
       nowSeconds: NOW_SECONDS,
     });
 
-    expect(model.delivery.perAlertType).toHaveLength(5);
+    expect(model.delivery.perAlertType).toHaveLength(6);
     expect(model.delivery.perAlertType[0]).toMatchObject({ type: "dews", sent: 3, enqueued: 0 });
     expect(model.delivery.perAlertType[1]).toMatchObject({
       type: "depeg",

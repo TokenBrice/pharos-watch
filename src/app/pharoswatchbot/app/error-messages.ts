@@ -77,6 +77,12 @@ export function miniAppErrorMessage(err: unknown, context: MiniAppErrorContext):
       case "invalid-alert-types":
       case "invalid-timezone":
         return "Change was rejected by the server.";
+      case "invalid-portable-token":
+        return "This portable token is invalid or includes entries that are no longer available.";
+      case "empty-portable-state":
+        return "There are no direct rows or presets to export yet.";
+      case "stale-import-preview":
+        return "Your watchlist changed after this preview. Preview the token again before applying it.";
       case "body-too-large":
         return "Request was too large to send.";
       case "not-configured":

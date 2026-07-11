@@ -696,16 +696,16 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.pendingTotal).toBe(0);
     expect(result.itemCount).toBe(1);
     expect(progressUpdates.find((update) => update.stage === "source-loading")).toMatchObject({
-      itemsTotal: 5,
+      itemsTotal: 6,
       metadata: {
-        providerFamilies: ["dews", "depeg", "safety", "launch", "reserve"],
+        providerFamilies: ["dews", "depeg", "safety", "launch", "reserve", "freeze"],
       },
     });
     expect(progressUpdates.find((update) => update.stage === "source-loaded")).toMatchObject({
-      itemsDone: 5,
-      itemsTotal: 5,
+      itemsDone: 6,
+      itemsTotal: 6,
       metadata: {
-        providerFamilies: ["dews", "depeg", "safety", "launch", "reserve"],
+        providerFamilies: ["dews", "depeg", "safety", "launch", "reserve", "freeze"],
         reserveSourceUnavailable: true,
         countTotals: {
           reserveDriftIds: 0,
@@ -713,9 +713,9 @@ describe("dispatchTelegramAlerts", () => {
       },
     });
     expect(progressUpdates.find((update) => update.stage === "event-detection")).toMatchObject({
-      itemsTotal: 5,
+      itemsTotal: 6,
       metadata: {
-        providerFamilies: ["dews", "depeg", "safety", "launch", "reserve"],
+        providerFamilies: ["dews", "depeg", "safety", "launch", "reserve", "freeze"],
         reserveSourceUnavailable: true,
       },
     });

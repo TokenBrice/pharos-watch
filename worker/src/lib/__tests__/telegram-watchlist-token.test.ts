@@ -7,6 +7,7 @@ import {
   decodeWatchlistToken,
   encodeWatchlistToken,
   encodeWatchlistTokenV2,
+  encodeWatchlistTokenV3,
   MAX_WATCHLIST_TOKEN_CHARS,
   WATCHLIST_TOKEN_REGISTRY_VERSION,
   type WatchlistTokenDirectState,
@@ -25,11 +26,13 @@ function direct(stablecoinId: string, overrides = false): WatchlistTokenDirectSt
     alertSafety: false,
     alertLaunch: true,
     alertReserve: false,
+    alertFreeze: false,
     overrideDews: overrides,
     overrideDepeg: true,
     overrideSafety: overrides,
     overrideLaunch: true,
     overrideReserve: overrides,
+    overrideFreeze: false,
     dewsMinBand: "WARNING",
     safetyMode: "downgrade-only",
     depegWorseningBpsStep: 250,
@@ -94,6 +97,27 @@ describe("watchlist token codec", () => {
     expect(decoded).toMatchObject({ ok: true, version: 2, state: { registryVersion: "catalog-v0-historical" } });
   });
 
+  it("round-trips freeze intent in pw3 while pw2 remains readable as explicit false", async () => {
+    const state: WatchlistTokenV2State = {
+      registryVersion: WATCHLIST_TOKEN_REGISTRY_VERSION,
+      direct: [{ ...direct("usdc-circle", true), alertFreeze: true, overrideFreeze: true }],
+      presets: [],
+    };
+    const token = await encodeWatchlistTokenV3(state);
+    expect(token).toMatch(/^pw3\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+    await expect(decodeWatchlistToken(token)).resolves.toEqual({ ok: true, version: 3, state });
+
+    const legacy = await decodeWatchlistToken(await encodeWatchlistTokenV2({
+      ...state,
+      direct: [{ ...state.direct[0], alertFreeze: false, overrideFreeze: false }],
+    }));
+    expect(legacy).toMatchObject({
+      ok: true,
+      version: 2,
+      state: { direct: [{ alertFreeze: false, overrideFreeze: false }] },
+    });
+  });
+
   it("fits the maximum current subscribable registry in one export code-block line with headroom", async () => {
     const state: WatchlistTokenV2State = {
       registryVersion: WATCHLIST_TOKEN_REGISTRY_VERSION,
@@ -104,11 +128,13 @@ describe("watchlist token codec", () => {
         alertSafety: Boolean(index & 4),
         alertLaunch: Boolean(index & 8),
         alertReserve: Boolean(index & 16),
+        alertFreeze: Boolean(index & 32),
         overrideDews: Boolean(index & 32),
         overrideDepeg: Boolean(index & 64),
         overrideSafety: Boolean(index & 128),
         overrideLaunch: Boolean(index & 256),
         overrideReserve: Boolean(index & 1) !== Boolean(index & 32),
+        overrideFreeze: Boolean(index & 64),
         dewsMinBand: ([null, "ALERT", "WARNING", "DANGER"] as const)[index % 4],
         safetyMode: ([null, "all", "downgrade-only", "upgrade-only"] as const)[Math.floor(index / 4) % 4],
         depegWorseningBpsStep: ([null, 100, 250, 500] as const)[Math.floor(index / 16) % 4],
@@ -121,14 +147,15 @@ describe("watchlist token codec", () => {
         depegWorseningBpsStep: ([null, 100, 250, 500] as const)[index % 4],
       })),
     };
-    const token = await encodeWatchlistTokenV2(state);
+    const token = await encodeWatchlistTokenV3(state);
+    expect(token).toMatch(/^pw3\./);
     expect(token.length).toBeLessThanOrEqual(MAX_WATCHLIST_TOKEN_CHARS);
     expect(TELEGRAM_MESSAGE_CHUNK_LIMIT - (`<pre>${token}</pre>`).length).toBeGreaterThanOrEqual(80);
     expect(4096 - (`/import ${token}`).length).toBeGreaterThanOrEqual(175);
     const decoded = await decodeWatchlistToken(token);
     expect(decoded).toEqual({
       ok: true,
-      version: 2,
+      version: 3,
       state: {
         ...state,
         direct: [...state.direct].sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId)),

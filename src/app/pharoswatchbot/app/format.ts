@@ -4,7 +4,7 @@ import { PRESET_ALERT_TYPES as PRESET_ALERT_TYPES_ARRAY } from "./constants";
 /** Effective alert source for a followed coin after per-coin rows suppress inherited defaults. */
 export type EffectiveAlertSource = "per-coin" | "global" | "off-override";
 
-const ALERT_TYPES: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch", "reserve"];
+const ALERT_TYPES: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch", "reserve", "freeze"];
 const PRESET_ALERT_TYPES = new Set<TelegramAlertType>(PRESET_ALERT_TYPES_ARRAY);
 
 /**

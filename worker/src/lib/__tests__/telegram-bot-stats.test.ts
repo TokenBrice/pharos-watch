@@ -72,6 +72,7 @@ describe("mapTelegramBotStats", () => {
         safety_chats: "5",
         launch_chats: "4",
         reserve_chats: "3",
+        freeze_chats: "2",
         all_types_chats: "4",
         total_subscriptions: "30",
         avg_subscriptions_per_subscribed_chat: "3.46",
@@ -137,6 +138,7 @@ describe("mapTelegramBotStats", () => {
           safety: 5,
           launch: 4,
           reserve: 3,
+          freeze: 2,
           allTypes: 4,
         },
         quietHoursEnabledChats: 2,
@@ -172,6 +174,7 @@ describe("mapTelegramBotStats", () => {
         safety: 5,
         launch: 4,
         reserve: 3,
+        freeze: 2,
         allTypes: 4,
       },
       topStablecoins: [
@@ -206,6 +209,7 @@ describe("mapTelegramBotStats", () => {
           safety: 5,
           launch: 4,
           reserve: 3,
+          freeze: 2,
           allTypes: 4,
         },
         quietHoursEnabledChats: 2,
@@ -262,6 +266,7 @@ describe("mapTelegramBotStats", () => {
         safety_chats: null,
         launch_chats: null,
         reserve_chats: null,
+        freeze_chats: null,
         all_types_chats: null,
         total_subscriptions: null,
         avg_subscriptions_per_subscribed_chat: "bad",
@@ -303,6 +308,7 @@ describe("mapTelegramBotStats", () => {
         safety: 0,
         launch: 0,
         reserve: 0,
+        freeze: 0,
         allTypes: 0,
       },
       topStablecoins: [
@@ -339,7 +345,7 @@ describe("mapTelegramBotStats", () => {
 });
 
 describe("getTelegramBotStats", () => {
-  it("queries launch-aware aggregates and active top-coin rows", async () => {
+  it("queries launch- and freeze-aware aggregates and active top-coin rows", async () => {
     const db = mockD1([
       {
         match: "FROM telegram_subscribers s",
@@ -354,6 +360,7 @@ describe("getTelegramBotStats", () => {
           depeg_chats: 1,
           safety_chats: 0,
           launch_chats: 1,
+          freeze_chats: 0,
           all_types_chats: 0,
           total_subscriptions: 2,
           avg_subscriptions_per_subscribed_chat: 1,

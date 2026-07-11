@@ -11,7 +11,9 @@ import {
 import { prepareTelegramProcessedUpdateMutationApplied } from "../processed-updates";
 import { persistPendingConfirmBulk } from "../disambiguation";
 import { prepareEnsureSubscriberExists } from "../subscribers";
-import { applyWatchlistImportV2, loadWatchlistPortableState } from "../watchlist-import";
+import { applyWatchlistDirectPatch, applyWatchlistImportV2, loadWatchlistPortableState } from "../watchlist-import";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isSubscribableCoin } from "../../../lib/telegram-subscription-eligibility";
 
 const NOW = 1_783_680_000;
 
@@ -129,6 +131,44 @@ function readState(sqlite: DatabaseSync): unknown {
 }
 
 describe("watchlist v2 atomic replacement", () => {
+  it("completes a 20-coin direct bulk patch atomically without changing preset intent", async () => {
+    const { sqlite, db } = openLatestSchema();
+    const ids = [...TRACKED_META_BY_ID.keys()].filter(isSubscribableCoin).slice(0, 20);
+    expect(ids).toHaveLength(20);
+    try {
+      sqlite.prepare(`
+        INSERT INTO telegram_subscribers (chat_id, username, created_at, last_active_at, preference_generation)
+        VALUES ('bulk-chat', 'alice', ?, ?, 9)
+      `).run(NOW, NOW);
+      sqlite.prepare(`
+        INSERT INTO telegram_preset_subscriptions (
+          chat_id, preset_id, alert_dews, alert_depeg, alert_safety, created_at, updated_at
+        ) VALUES ('bulk-chat', 'usd-top25', 1, 1, 0, ?, ?)
+      `).run(NOW, NOW);
+      const outcome = await applyWatchlistDirectPatch(db, {
+        chatId: "bulk-chat",
+        expectedPreferenceGeneration: 9,
+        generationLease: 4_100_000_000_000_020,
+        directEntriesToUpsert: ids.map((stablecoinId) => packWatchlistDirectState(direct(stablecoinId, true))),
+        directRemoveIds: [],
+      });
+      expect(outcome).toBe("applied");
+      expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = 'bulk-chat'").get()).toEqual({ preference_generation: 10 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions WHERE chat_id = 'bulk-chat'").get()).toEqual({ count: 20 });
+      expect(sqlite.prepare("SELECT alert_dews, alert_depeg FROM telegram_preset_subscriptions WHERE chat_id = 'bulk-chat'").get()).toEqual({ alert_dews: 1, alert_depeg: 1 });
+      await expect(applyWatchlistDirectPatch(db, {
+        chatId: "bulk-chat",
+        expectedPreferenceGeneration: 9,
+        generationLease: 4_100_000_000_000_021,
+        directEntriesToUpsert: [],
+        directRemoveIds: ids,
+      })).resolves.toBe("stale");
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions WHERE chat_id = 'bulk-chat'").get()).toEqual({ count: 20 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("creates a new subscriber before the pending preview inside the same batch", async () => {
     const { sqlite, db } = openLatestSchema();
     try {
@@ -235,6 +275,30 @@ describe("watchlist v2 atomic replacement", () => {
       expect(sqlite.prepare("SELECT applied_at FROM telegram_webhook_operation_mutations WHERE update_id = 7001").get()).toEqual({ applied_at: NOW });
       // The expired snooze-only row is cleaned; the active snooze-only row remains until expiry.
       expect(sqlite.prepare("SELECT 1 FROM telegram_subscriptions WHERE stablecoin_id = 'usdt-tether'").get()).toBeUndefined();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("creates a first-time Mini App subscriber inside the guarded replacement batch", async () => {
+    const { sqlite, db } = openLatestSchema();
+    const desired = [direct("usdc-circle", true)];
+    try {
+      const outcome = await applyWatchlistImportV2(db, {
+        chatId: "mini-app-chat",
+        ensureSubscriber: { username: "alice" },
+        expectedPreferenceGeneration: 0,
+        generationLease: 4_100_000_000_000_010,
+        directEntries: desired.map(packWatchlistDirectState),
+        presetEntries: [],
+        directRemoveIds: [],
+        presetRemoveIds: [],
+        pendingExpiresAt: 0,
+        pendingActionPayload: "mini-app-portability-preview",
+      });
+      expect(outcome).toBe("applied");
+      expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = 'mini-app-chat'").get()).toEqual({ preference_generation: 1 });
+      expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions WHERE chat_id = 'mini-app-chat'").get()).toEqual({ stablecoin_id: "usdc-circle" });
     } finally {
       sqlite.close();
     }

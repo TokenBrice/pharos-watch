@@ -173,6 +173,36 @@ export interface ReserveAlert {
   name: string;
 }
 
+export interface FreezeAlert {
+  stablecoinId: string;
+  symbol: string;
+  eventType: "blacklist" | "unblacklist" | "destroy";
+  chainName: string;
+  amountUsdAtEvent: number | null;
+  tapeEventId: string;
+  sourceEventId: string;
+}
+
+export function formatFreezeLine(e: FreezeAlert): string {
+  const action = e.eventType === "blacklist"
+    ? "address frozen"
+    : e.eventType === "unblacklist"
+      ? "address unfrozen"
+      : "funds destroyed";
+  const amount = e.amountUsdAtEvent != null
+    ? `\nAmount at event: $${e.amountUsdAtEvent.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+    : "";
+  return `<b>${escapeHtml(e.symbol)}</b> — ${action} on ${escapeHtml(e.chainName)}${amount}\n<a href="https://pharos.watch/freezewatch/">Source: Pharos FreezeWatch</a>`;
+}
+
+export function freezeSectionHeader(events: readonly FreezeAlert[]): string {
+  const types = new Set(events.map((event) => event.eventType));
+  if (types.size === 1 && types.has("blacklist")) return "Issuer Freeze Event";
+  if (types.size === 1 && types.has("unblacklist")) return "Issuer Unfreeze Event";
+  if (types.size === 1 && types.has("destroy")) return "Issuer Destroy Event";
+  return "Issuer Freeze Activity";
+}
+
 // Reserve-drift alert (C123). Shipped glyph-less (bold header only) per the
 // sanctioned-glyph review rule in docs/telegram-alerts.md "Message Types";
 // adding a data-tied glyph requires a separate review.
@@ -197,6 +227,7 @@ export interface ConsolidatedAlerts {
   safety: SafetyChange[];
   launch: LaunchAlert[];
   reserve: ReserveAlert[];
+  freeze?: FreezeAlert[];
   /** C128: when set, this chat's per-run alerts collapsed into one burst summary. */
   burst?: BurstSummaryAlert | null;
 }
@@ -237,6 +268,9 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   }
   if (alerts.reserve.length > 0) {
     sections.push(`<b>Reserve Drift</b>\n${alerts.reserve.map(formatReserveLine).join("\n\n")}`);
+  }
+  if ((alerts.freeze?.length ?? 0) > 0) {
+    sections.push(`<b>${freezeSectionHeader(alerts.freeze!)}</b>\n${alerts.freeze!.map(formatFreezeLine).join("\n\n")}`);
   }
 
   const body = sections.join("\n\n");
@@ -292,6 +326,7 @@ export function rankAlertCoins(alerts: ConsolidatedAlerts): RankedAlertCoin[] {
   }
   for (const e of alerts.launch) consider(e.stablecoinId, e.symbol, 0);
   for (const e of alerts.reserve) consider(e.stablecoinId, e.symbol, 0);
+  for (const e of alerts.freeze ?? []) consider(e.stablecoinId, e.symbol, 0);
 
   // Stable sort: severity desc, falling back to insertion order on ties.
   return [...byId.values()]
@@ -311,6 +346,7 @@ export function getSingleAlertStablecoinId(alerts: ConsolidatedAlerts): string |
     ...alerts.safety.map((e) => e.stablecoinId),
     ...alerts.launch.map((e) => e.stablecoinId),
     ...alerts.reserve.map((e) => e.stablecoinId),
+    ...(alerts.freeze ?? []).map((e) => e.stablecoinId),
   ];
   const unique = new Set(ids);
   return unique.size === 1 ? ids[0] ?? null : null;
@@ -344,7 +380,7 @@ export function buildAlertReplyMarkup(
     // Multi-coin chunks keep a maximum of two keyboard rows. When the compact
     // per-coin snooze row is absent, private first chunks can use the spare row
     // for the watchlist Mini App entry point.
-    const hasAlerts = alerts.dews.length + alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length + alerts.safety.length + alerts.launch.length + alerts.reserve.length > 0;
+    const hasAlerts = alerts.dews.length + alerts.depegTriggered.length + alerts.depegResolved.length + alerts.depegWorsening.length + alerts.safety.length + alerts.launch.length + alerts.reserve.length + (alerts.freeze?.length ?? 0) > 0;
 
     const rows: AlertInlineButton[][] = [];
 
@@ -555,7 +591,7 @@ export function splitMessage(html: string, limit = TELEGRAM_MESSAGE_CHUNK_LIMIT)
 // ---------- List Output Formatting ----------
 
 export function formatListOutput(
-  alertFlags: { dews: boolean; depeg: boolean; safety: boolean; launch: boolean; reserve?: boolean },
+  alertFlags: { dews: boolean; depeg: boolean; safety: boolean; launch: boolean; reserve?: boolean; freeze?: boolean },
   coins: { symbol: string; id: string }[],
 ): string {
   const types: string[] = [];
@@ -564,6 +600,7 @@ export function formatListOutput(
   if (alertFlags.safety) types.push("Safety");
   if (alertFlags.launch) types.push("Launch");
   if (alertFlags.reserve) types.push("Reserve");
+  if (alertFlags.freeze) types.push("Freeze");
 
   const typesStr = types.length > 0 ? types.join(", ") : "None";
   const coinsStr = coins.length > 0 ? coins.map((c) => `- ${c.symbol} (${c.id})`).join("\n") : "None";

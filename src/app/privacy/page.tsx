@@ -114,7 +114,7 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>Pending alerts</strong> (overflow and retry queue for delivery): {RISK_ALERT_TTL_HOURS}-hour TTL
-              for depeg, DEWS, safety, reserve, and legacy alerts; {LAUNCH_ALERT_TTL_MINUTES}-minute TTL for launch
+              for depeg, DEWS, safety, reserve, freeze, and legacy alerts; {LAUNCH_ALERT_TTL_MINUTES}-minute TTL for launch
               alerts and {ADMIN_ALERT_TTL_MINUTES}-minute TTL for admin broadcasts.
             </li>
             <li>
@@ -122,6 +122,12 @@ export default function PrivacyPage() {
               <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code> removes that chat&apos;s target
               rows and per-target item lineage, planning snapshots, rendered target plans, and transport-failure
               observations; aggregate job manifests remain until their normal prune.
+            </li>
+            <li>
+              <strong>Freeze event and recipient lineage</strong>: immutable Tape and blacklist source identities plus
+              the one-time opt-in recipient cohort are retained for 90 days. A private-chat{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code> removes that chat&apos;s freeze
+              target rows immediately; source events remain until their normal audit prune.
             </li>
             <li>
               <strong>Dead-letter audit trail</strong> for expired or permanently failed deliveries: 90-day retention,
@@ -149,11 +155,18 @@ export default function PrivacyPage() {
             For the PharosWatchBot Mini App, the signed Telegram{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded">initData</code> body is never persisted. It is
             validated request-locally through Telegram&apos;s HMAC signature and freshness window. Mutations use a
-            5-minute auth window plus a bounded per-user Pharos edit budget, while read-only session launches accept a
-            Telegram-signed launch up to 24 hours old so an open panel stays usable across the day. The embedded route does not load
+            5-minute auth window plus a bounded per-user Pharos edit budget, while read-only session and watchlist
+            portability requests accept a Telegram-signed launch up to 24 hours old so an open panel stays usable
+            across the day. Exported watchlist tokens and pasted import tokens are returned or decoded request-locally
+            and are not stored as token blobs. The embedded route does not load
             Google Analytics or report Web Vitals. After signed authentication succeeds, the Worker records only
             low-cardinality daily counters for Mini App adoption, operation outcomes, and error categories; those
             aggregate rows contain no chat ID.
+          </p>
+          <p>
+            Inline-mode status queries use public tracked-coin data. Pharos stores only aggregate query and selected-card
+            counters; query text, inline query IDs, result IDs, chat IDs, and user IDs are not persisted in D1 or custom
+            Worker logs.
           </p>
           <p>
             The Telegram Worker also emits sampled operational logs to Cloudflare Workers Logs for reliability and

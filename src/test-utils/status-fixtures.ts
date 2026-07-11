@@ -185,6 +185,7 @@ export function makeHealthyStatusResponse(): StatusResponse {
         safety: 2,
         launch: 1,
         reserve: 1,
+        freeze: 1,
         allTypes: 2,
       },
       topStablecoins: [],
@@ -661,6 +662,7 @@ export function makeLongCommsStatusResponse(base = makeHealthyStatusResponse()):
     safety: { sent: 43, enqueued: 8, failed: 3, blocked: 0, firstSendLatencyMs: 34_567 },
     launch: { sent: 21, enqueued: 13, failed: 0, blocked: 2, firstSendLatencyMs: 45_678 },
     reserve: { sent: 17, enqueued: 2, failed: 1, blocked: 0, firstSendLatencyMs: 56_789 },
+    freeze: { sent: 9, enqueued: 1, failed: 0, blocked: 0, firstSendLatencyMs: 67_890 },
   };
 
   return degraded(base, {
@@ -698,6 +700,7 @@ export function makeLongCommsStatusResponse(base = makeHealthyStatusResponse()):
           safety: 160,
           launch: 145,
           reserve: 120,
+          freeze: 110,
           allTypes: 95,
         },
         quietHoursEnabledChats: 88,

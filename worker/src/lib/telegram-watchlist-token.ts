@@ -2,8 +2,9 @@
  * Self-contained portable state for `/export` and `/import`.
  *
  * Version 1 is the historical base64url JSON format and remains read-only
- * compatible. Version 2 is `pw2.<gzip payload>.<96-bit sha256 digest>`. The
- * digest detects copy/paste corruption or tampering; it is not authentication.
+ * compatible. `pw2` and `pw3` are gzip payloads with a 96-bit SHA-256 digest;
+ * pw3 extends direct-row intent with freeze bits. The digest detects copy/paste
+ * corruption or tampering; it is not authentication.
  */
 
 import { TELEGRAM_MINI_APP_CATALOG_VERSION } from "@shared/lib/telegram-mini-app-catalog";
@@ -19,11 +20,13 @@ import { parseJson } from "./json-parse";
 
 const V1_TOKEN_VERSION = 1;
 const V2_TOKEN_VERSION = 2;
+const V3_TOKEN_VERSION = 3;
 const V2_PREFIX = "pw2";
+const V3_PREFIX = "pw3";
 const V2_DIGEST_BYTES = 12;
 const MAX_DECOMPRESSED_TOKEN_BYTES = 64 * 1024;
 const MAX_TOKEN_ROWS = 512;
-const DIRECT_PACK_MAX = 0xffff;
+const DIRECT_PACK_MAX = 0x3ffff;
 const PRESET_PACK_MAX = 0x1f;
 
 /**
@@ -48,11 +51,13 @@ export interface WatchlistTokenDirectState {
   alertSafety: boolean;
   alertLaunch: boolean;
   alertReserve: boolean;
+  alertFreeze?: boolean;
   overrideDews: boolean;
   overrideDepeg: boolean;
   overrideSafety: boolean;
   overrideLaunch: boolean;
   overrideReserve: boolean;
+  overrideFreeze?: boolean;
   dewsMinBand: "ALERT" | "WARNING" | "DANGER" | null;
   safetyMode: "all" | "downgrade-only" | "upgrade-only" | null;
   depegWorseningBpsStep: 100 | 250 | 500 | null;
@@ -74,6 +79,13 @@ export interface WatchlistTokenV2State {
 
 interface WatchlistTokenV2Body {
   v: 2;
+  r: string;
+  d: string;
+  p: string;
+}
+
+interface WatchlistTokenV3Body {
+  v: 3;
   r: string;
   d: string;
   p: string;
@@ -114,6 +126,7 @@ export type WatchlistTokenDecodeError =
 export type WatchlistTokenDecodeResult =
   | { ok: true; version: 1; state: WatchlistTokenV1State }
   | { ok: true; version: 2; state: WatchlistTokenV2State }
+  | { ok: true; version: 3; state: WatchlistTokenV2State }
   | { ok: false; error: WatchlistTokenDecodeError };
 
 /** Historical encoder retained for v1 compatibility fixtures and tests. */
@@ -160,11 +173,13 @@ export function packWatchlistDirectState(row: WatchlistTokenDirectState): string
     | bit(row.alertSafety, 2)
     | bit(row.alertLaunch, 3)
     | bit(row.alertReserve, 4)
+    | bit(Boolean(row.alertFreeze), 16)
     | bit(row.overrideDews, 5)
     | bit(row.overrideDepeg, 6)
     | bit(row.overrideSafety, 7)
     | bit(row.overrideLaunch, 8)
     | bit(row.overrideReserve, 9)
+    | bit(Boolean(row.overrideFreeze), 17)
     | (encodeDewsBand(row.dewsMinBand) << 10)
     | (encodeSafetyMode(row.safetyMode) << 12)
     | (encodeDepegStep(row.depegWorseningBpsStep) << 14);
@@ -202,11 +217,13 @@ export function unpackWatchlistDirectState(value: string): WatchlistTokenDirectS
     alertSafety: Boolean(packed & (1 << 2)),
     alertLaunch: Boolean(packed & (1 << 3)),
     alertReserve: Boolean(packed & (1 << 4)),
+    alertFreeze: Boolean(packed & (1 << 16)),
     overrideDews: Boolean(packed & (1 << 5)),
     overrideDepeg: Boolean(packed & (1 << 6)),
     overrideSafety: Boolean(packed & (1 << 7)),
     overrideLaunch: Boolean(packed & (1 << 8)),
     overrideReserve: Boolean(packed & (1 << 9)),
+    overrideFreeze: Boolean(packed & (1 << 17)),
     dewsMinBand: decodeDewsBand((packed >> 10) & 0x3),
     safetyMode: decodeSafetyMode((packed >> 12) & 0x3),
     depegWorseningBpsStep: decodeDepegStep((packed >> 14) & 0x3),
@@ -343,7 +360,70 @@ function decodeBinaryRows<T>(
   return rows;
 }
 
+const V3_DIRECT_RECORD_BITS = 50;
+const V3_DIRECT_PACK_BITS = 18;
+
+function writeBits(bytes: Uint8Array, bitOffset: number, value: number, count: number): void {
+  for (let index = 0; index < count; index += 1) {
+    const sourceBit = count - index - 1;
+    if (Math.floor(value / (2 ** sourceBit)) % 2 === 0) continue;
+    const target = bitOffset + index;
+    bytes[Math.floor(target / 8)] |= 1 << (7 - (target % 8));
+  }
+}
+
+function readBits(bytes: Uint8Array, bitOffset: number, count: number): number {
+  let value = 0;
+  for (let index = 0; index < count; index += 1) {
+    const target = bitOffset + index;
+    value = (value * 2) + ((bytes[Math.floor(target / 8)] >> (7 - (target % 8))) & 1);
+  }
+  return value;
+}
+
+function encodeV3DirectRows(rows: readonly WatchlistTokenDirectState[]): string {
+  const sorted = sortedUniqueRows(rows, (row) => row.stablecoinId);
+  const bytes = new Uint8Array(Math.ceil((sorted.length * V3_DIRECT_RECORD_BITS) / 8));
+  sorted.forEach((row, index) => {
+    const hash = fnv1a32(row.stablecoinId);
+    if (DIRECT_ID_BY_HASH.get(hash) !== row.stablecoinId) throw new Error(`Watchlist token id is not uniquely registered: ${row.stablecoinId}`);
+    const packed = packedNumber(packWatchlistDirectState(row));
+    if (packed > DIRECT_PACK_MAX) throw new Error("pw3 direct intent exceeds its bitfield");
+    const offset = index * V3_DIRECT_RECORD_BITS;
+    writeBits(bytes, offset, hash, 32);
+    writeBits(bytes, offset + 32, packed, V3_DIRECT_PACK_BITS);
+  });
+  return bytesToBase64Url(bytes);
+}
+
+function decodeV3DirectRows(value: unknown): WatchlistTokenDirectState[] | null {
+  if (typeof value !== "string") return null;
+  let bytes: Uint8Array;
+  try {
+    bytes = base64UrlToBytes(value);
+  } catch {
+    return null;
+  }
+  const rowCount = Math.floor((bytes.byteLength * 8) / V3_DIRECT_RECORD_BITS);
+  if (rowCount > MAX_TOKEN_ROWS || Math.ceil((rowCount * V3_DIRECT_RECORD_BITS) / 8) !== bytes.byteLength) return null;
+  const rows: WatchlistTokenDirectState[] = [];
+  const seen = new Set<string>();
+  for (let index = 0; index < rowCount; index += 1) {
+    const offset = index * V3_DIRECT_RECORD_BITS;
+    const id = DIRECT_ID_BY_HASH.get(readBits(bytes, offset, 32));
+    if (!id || seen.has(id)) return null;
+    const row = unpackWatchlistDirectState(`${id}~${readBits(bytes, offset + 32, V3_DIRECT_PACK_BITS).toString(36)}`);
+    if (!row) return null;
+    seen.add(id);
+    rows.push(row);
+  }
+  return rows;
+}
+
 export async function encodeWatchlistTokenV2(state: WatchlistTokenV2State): Promise<string> {
+  if (state.direct.some((row) => row.alertFreeze || row.overrideFreeze)) {
+    throw new Error("pw2 cannot represent freeze alert intent");
+  }
   const body: WatchlistTokenV2Body = {
     v: V2_TOKEN_VERSION,
     r: state.registryVersion,
@@ -364,6 +444,26 @@ export async function encodeWatchlistTokenV2(state: WatchlistTokenV2State): Prom
   };
   const compressed = await gzip(new TextEncoder().encode(JSON.stringify(body)));
   const token = `${V2_PREFIX}.${bytesToBase64Url(compressed)}.${bytesToBase64Url(await digest96(compressed))}`;
+  if (token.length > MAX_WATCHLIST_TOKEN_CHARS) throw new Error("Watchlist token exceeds the copy/paste limit");
+  return token;
+}
+
+/** pw3 extends pw2's direct row with freeze and local-freeze-override bits. */
+export async function encodeWatchlistTokenV3(state: WatchlistTokenV2State): Promise<string> {
+  const body: WatchlistTokenV3Body = {
+    v: V3_TOKEN_VERSION,
+    r: state.registryVersion,
+    d: encodeV3DirectRows(state.direct),
+    p: encodeBinaryRows(
+      state.presets,
+      PRESET_BINARY_ROW_BYTES,
+      (row) => row.presetId,
+      (row) => packedNumber(packWatchlistPresetState(row)),
+      PRESET_ID_BY_HASH,
+    ),
+  };
+  const compressed = await gzip(new TextEncoder().encode(JSON.stringify(body)));
+  const token = `${V3_PREFIX}.${bytesToBase64Url(compressed)}.${bytesToBase64Url(await digest96(compressed))}`;
   if (token.length > MAX_WATCHLIST_TOKEN_CHARS) throw new Error("Watchlist token exceeds the copy/paste limit");
   return token;
 }
@@ -429,12 +529,44 @@ async function decodeV2(cleaned: string): Promise<WatchlistTokenDecodeResult> {
   return { ok: true, version: 2, state: { registryVersion: body.r, direct, presets } };
 }
 
+async function decodeV3(cleaned: string): Promise<WatchlistTokenDecodeResult> {
+  const parts = cleaned.split(".");
+  if (parts.length !== 3 || parts[0] !== V3_PREFIX) return { ok: false, error: "malformed" };
+  let compressed: Uint8Array;
+  let suppliedDigest: Uint8Array;
+  try {
+    compressed = base64UrlToBytes(parts[1]);
+    suppliedDigest = base64UrlToBytes(parts[2]);
+  } catch {
+    return { ok: false, error: "malformed" };
+  }
+  if (suppliedDigest.byteLength !== V2_DIGEST_BYTES) return { ok: false, error: "malformed" };
+  if (!equalBytes(suppliedDigest, await digest96(compressed))) return { ok: false, error: "integrity" };
+  let decoded: string;
+  try {
+    decoded = new TextDecoder().decode(await gunzipBounded(compressed));
+  } catch {
+    return { ok: false, error: "malformed" };
+  }
+  const parsedResult = parseJson(decoded);
+  if (!parsedResult.ok) return { ok: false, error: "malformed" };
+  const parsed = parsedResult.value;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { ok: false, error: "malformed" };
+  const body = parsed as Partial<WatchlistTokenV3Body>;
+  if (body.v !== V3_TOKEN_VERSION) return { ok: false, error: "unsupported-version" };
+  if (typeof body.r !== "string" || body.r.length < 1 || body.r.length > 64) return { ok: false, error: "malformed" };
+  const direct = decodeV3DirectRows(body.d);
+  const presets = decodeBinaryRows(body.p, PRESET_BINARY_ROW_BYTES, PRESET_ID_BY_HASH, unpackWatchlistPresetState);
+  if (!direct || !presets || (direct.length === 0 && presets.length === 0)) return { ok: false, error: direct && presets ? "empty" : "malformed" };
+  return { ok: true, version: 3, state: { registryVersion: body.r, direct, presets } };
+}
+
 export async function decodeWatchlistToken(raw: string): Promise<WatchlistTokenDecodeResult> {
   const cleaned = cleanToken(raw);
   if (cleaned.length === 0) return { ok: false, error: "empty" };
-  if (cleaned.startsWith(`${V2_PREFIX}.`)) {
+  if (cleaned.startsWith(`${V2_PREFIX}.`) || cleaned.startsWith(`${V3_PREFIX}.`)) {
     if (cleaned.length > MAX_WATCHLIST_TOKEN_CHARS) return { ok: false, error: "too-large" };
-    return decodeV2(cleaned);
+    return cleaned.startsWith(`${V3_PREFIX}.`) ? decodeV3(cleaned) : decodeV2(cleaned);
   }
   if (cleaned.length > LEGACY_V1_MAX_WATCHLIST_TOKEN_CHARS) return { ok: false, error: "too-large" };
   return decodeV1(cleaned);

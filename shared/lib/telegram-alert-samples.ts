@@ -55,6 +55,15 @@ export interface TelegramAlertSampleFixtures {
   safety: TelegramSafetySampleFixture;
   launch: TelegramNamedCoinSampleFixture;
   reserve: TelegramNamedCoinSampleFixture;
+  freeze: {
+    stablecoinId: string;
+    symbol: string;
+    eventType: "blacklist" | "unblacklist" | "destroy";
+    chainName: string;
+    amountUsdAtEvent: number | null;
+    tapeEventId: string;
+    sourceEventId: string;
+  };
 }
 
 /** Synthetic but format-faithful inputs, one per alert family. */
@@ -97,6 +106,15 @@ export const TELEGRAM_ALERT_SAMPLE_FIXTURES: TelegramAlertSampleFixtures = {
     stablecoinId: "usdc-circle",
     symbol: "USDC",
     name: "Circle USD Coin",
+  },
+  freeze: {
+    stablecoinId: "usdc-circle",
+    symbol: "USDC",
+    eventType: "blacklist",
+    chainName: "Ethereum",
+    amountUsdAtEvent: 1_000_000,
+    tapeEventId: "sample-freeze",
+    sourceEventId: "sample-blacklist-row",
   },
 };
 
@@ -160,6 +178,14 @@ View on Pharos: pharos.watch/stablecoin/usdpt-western-union`,
   reserve: {
     message: `Reserve Drift
 USDC — Circle USD Coin live reserve mix has drifted from its curated profile
+
+View on Pharos: pharos.watch/stablecoin/usdc-circle`,
+  },
+  freeze: {
+    message: `Issuer Freeze Event
+USDC — address frozen on Ethereum
+Amount at event: $1,000,000
+Source: Pharos FreezeWatch: pharos.watch/freezewatch/
 
 View on Pharos: pharos.watch/stablecoin/usdc-circle`,
   },

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { ExternalLink, Info, Search, Undo2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckSquare, ExternalLink, Info, Search, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PHAROS_COIN_PAGE_PREFIX, SUGGESTED_SEARCH_IDS } from "../constants";
 import type { TelegramWebAppSdk } from "../telegram-sdk";
@@ -10,6 +10,7 @@ import type {
   CoinInsightTarget,
   SubscribedCoin,
   TelegramMiniAppOperation,
+  TelegramMiniAppBulkWatchlistResponse,
   TelegramMiniAppState,
 } from "../types";
 import { MiniButton } from "./MiniButton";
@@ -85,12 +86,140 @@ function LaunchTargetCoinCard({ coinId, coin, canMutate, isMutating, pendingOper
   );
 }
 
+type BulkPreview = Extract<TelegramMiniAppBulkWatchlistResponse["result"], { kind: "bulk-watchlist-preview" }>;
+const BULK_UNDO_WINDOW_MS = 5_000;
+
+function BulkWatchlistEditor({
+  state,
+  canMutate,
+  canRead,
+  writeDisabled,
+  requestBusy,
+  pendingOperation,
+  onPreview,
+  onConfirm,
+  onUndo,
+}: {
+  state: TelegramMiniAppState;
+  canMutate: boolean;
+  canRead: boolean;
+  writeDisabled: boolean;
+  requestBusy: boolean;
+  pendingOperation: TelegramMiniAppOperation | null;
+  onPreview: (operation: Extract<TelegramMiniAppOperation, { kind: "preview-bulk-watchlist" }>) => Promise<TelegramMiniAppBulkWatchlistResponse | null>;
+  onConfirm: (operation: Extract<TelegramMiniAppOperation, { kind: "confirm-bulk-watchlist" }>) => Promise<unknown>;
+  onUndo: (operation: Extract<TelegramMiniAppOperation, { kind: "undo-bulk-watchlist" }>) => Promise<unknown>;
+}) {
+  const [query, setQuery] = useState("");
+  const [addIds, setAddIds] = useState<string[]>([]);
+  const [removeIds, setRemoveIds] = useState<string[]>([]);
+  const [preview, setPreview] = useState<BulkPreview | null>(null);
+  const [undo, setUndo] = useState<BulkPreview["undo"] | null>(null);
+  const selectedCount = addIds.length + removeIds.length;
+  const directIds = useMemo(() => new Set(state.subscriptions.map((coin) => coin.stablecoinId)), [state.subscriptions]);
+  const matchingCatalog = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (normalized.length < 2) return [];
+    return state.catalog.searchableCoins
+      .filter((coin) => !directIds.has(coin.stablecoinId))
+      .filter((coin) => [coin.symbol, coin.name, coin.stablecoinId].some((value) => value.toLowerCase().includes(normalized)))
+      .slice(0, 8);
+  }, [directIds, query, state.catalog.searchableCoins]);
+
+  useEffect(() => {
+    if (!undo) return;
+    const timer = setTimeout(() => setUndo(null), BULK_UNDO_WINDOW_MS);
+    return () => clearTimeout(timer);
+  }, [undo]);
+
+  const toggle = (stablecoinId: string, action: "add" | "remove") => {
+    const setter = action === "add" ? setAddIds : setRemoveIds;
+    setter((current) => {
+      if (current.includes(stablecoinId)) return current.filter((id) => id !== stablecoinId);
+      if (selectedCount >= 20) return current;
+      return [...current, stablecoinId];
+    });
+    setPreview(null);
+  };
+  const label = (stablecoinId: string) => {
+    const coin = state.catalog.searchableCoins.find((candidate) => candidate.stablecoinId === stablecoinId);
+    return coin ? `${coin.symbol} (${coin.name})` : stablecoinId;
+  };
+  const previewChanges = async () => {
+    const response = await onPreview({ kind: "preview-bulk-watchlist", addStablecoinIds: addIds, removeStablecoinIds: removeIds });
+    if (response?.result.kind === "bulk-watchlist-preview") setPreview(response.result);
+  };
+  const confirm = async () => {
+    if (!preview) return;
+    const result = await onConfirm({
+      kind: "confirm-bulk-watchlist",
+      addStablecoinIds: addIds,
+      removeStablecoinIds: removeIds,
+      expectedPreferenceGeneration: preview.expectedPreferenceGeneration,
+      previewFingerprint: preview.previewFingerprint,
+    });
+    if (result) {
+      setUndo(preview.undo);
+      setPreview(null);
+      setAddIds([]);
+      setRemoveIds([]);
+      setQuery("");
+    }
+  };
+  const undoChanges = async () => {
+    if (!undo) return;
+    const result = await onUndo({ kind: "undo-bulk-watchlist", ...undo });
+    if (result) setUndo(null);
+  };
+
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2"><CheckSquare className="h-4 w-4 text-[color:var(--mini-accent)]" aria-hidden="true" /><h2 className="text-sm font-semibold text-foreground">Bulk watchlist edit</h2></div>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Select up to 20 direct rows. Presets and all-stablecoins settings stay unchanged.</p>
+        </div>
+        <span className="pharos-numeric shrink-0 rounded-md border border-border/60 bg-background/65 px-2 py-1 text-xs font-semibold text-muted-foreground">{selectedCount}/20</span>
+      </div>
+      <label htmlFor="mini-bulk-search" className="sr-only">Search coins to add in bulk</label>
+      <input id="mini-bulk-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search coins to add" className="pharos-focus-ring mt-3 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground" />
+      {matchingCatalog.length > 0 ? <div className="mt-2 space-y-1" aria-label="Coins to add">
+        {matchingCatalog.map((coin) => <label key={coin.stablecoinId} className="flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm text-foreground hover:bg-muted/35">
+          <input type="checkbox" checked={addIds.includes(coin.stablecoinId)} disabled={requestBusy || (!addIds.includes(coin.stablecoinId) && selectedCount >= 20)} onChange={() => toggle(coin.stablecoinId, "add")} />
+          <span className="min-w-0 truncate"><strong>{coin.symbol}</strong> <span className="text-muted-foreground">{coin.name}</span></span>
+        </label>)}
+      </div> : null}
+      {state.subscriptions.length > 0 ? <fieldset className="mt-3 border-t border-border/55 pt-3"><legend className="text-xs font-semibold text-foreground">Remove direct rows</legend><div className="mt-1 max-h-40 space-y-1 overflow-y-auto">
+        {state.subscriptions.map((coin) => <label key={coin.stablecoinId} className="flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm text-foreground hover:bg-muted/35">
+          <input type="checkbox" checked={removeIds.includes(coin.stablecoinId)} disabled={requestBusy || (!removeIds.includes(coin.stablecoinId) && selectedCount >= 20)} onChange={() => toggle(coin.stablecoinId, "remove")} />
+          <span className="truncate">{coin.symbol} <span className="text-muted-foreground">{coin.name}</span></span>
+        </label>)}
+      </div></fieldset> : null}
+      <div className="mt-3"><MiniButton variant="secondary" disabled={!canRead || requestBusy || selectedCount === 0} loading={pendingOperation?.kind === "preview-bulk-watchlist"} onClick={() => void previewChanges()}>Preview {selectedCount || ""} changes</MiniButton></div>
+      {preview ? <div className="mt-3 border-t border-border/55 pt-3" aria-live="polite">
+        <p className="text-sm font-semibold text-foreground">Review exact changes</p>
+        <p className="mt-1 text-xs text-muted-foreground">Add: {preview.adds.map(label).join(", ") || "none"}</p>
+        <p className="mt-1 text-xs text-muted-foreground">Remove: {preview.removes.map(label).join(", ") || "none"}</p>
+        {preview.unchanged.length > 0 ? <p className="mt-1 text-xs text-muted-foreground">Already in this state: {preview.unchanged.map(label).join(", ")}</p> : null}
+        <ul className="mt-2 space-y-1 text-xs text-muted-foreground">{preview.sourceImpact.map((impact) => <li key={`${impact.action}-${impact.stablecoinId}`}>{label(impact.stablecoinId)}: direct row {impact.action === "add" ? "added" : "removed"}; inherited coverage after change: {impact.inheritedSourcesAfter.join(" + ") || "none"}.</li>)}</ul>
+        <div className="mt-3"><MiniButton disabled={!canMutate || writeDisabled} loading={pendingOperation?.kind === "confirm-bulk-watchlist"} onClick={() => void confirm()}>Apply exact changes</MiniButton></div>
+      </div> : null}
+      {undo ? <div role="status" className="mt-3 flex items-center justify-between gap-3 border-t border-border/55 pt-3"><p className="text-xs text-muted-foreground">Bulk edit applied. Undo is available briefly.</p><MiniButton variant="secondary" disabled={!canMutate || writeDisabled} loading={pendingOperation?.kind === "undo-bulk-watchlist"} onClick={() => void undoChanges()}><Undo2 className="h-4 w-4" aria-hidden="true" /> Undo</MiniButton></div> : null}
+    </section>
+  );
+}
+
 export interface WatchlistPanelProps {
   state: TelegramMiniAppState;
   canMutate: boolean;
+  canReadBulk: boolean;
   isMutating: boolean;
+  isRequestBusy: boolean;
   pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
+  onPreviewBulk: (operation: Extract<TelegramMiniAppOperation, { kind: "preview-bulk-watchlist" }>) => Promise<TelegramMiniAppBulkWatchlistResponse | null>;
+  onConfirmBulk: (operation: Extract<TelegramMiniAppOperation, { kind: "confirm-bulk-watchlist" }>) => Promise<unknown>;
+  onUndoBulk: (operation: Extract<TelegramMiniAppOperation, { kind: "undo-bulk-watchlist" }>) => Promise<unknown>;
   /** Confirm-then-remove flow (lives in `useMiniAppMutations`). */
   onRemove: (coin: SubscribedCoin) => void;
   /** Open `CoinInsightPanel` for the target coin. */
@@ -111,7 +240,7 @@ export interface WatchlistPanelProps {
   onNavigateToCoin: (coinId: string) => void;
 }
 
-export function WatchlistPanel({ state, canMutate, isMutating, pendingOperation, onMutate, onRemove, onOpenInsight, pendingUndo, onUndo, webApp, nowSec, highlightedCoinId, targetCoinId, onNavigateToCoin }: WatchlistPanelProps) {
+export function WatchlistPanel({ state, canMutate, canReadBulk, isMutating, isRequestBusy, pendingOperation, onMutate, onPreviewBulk, onConfirmBulk, onUndoBulk, onRemove, onOpenInsight, pendingUndo, onUndo, webApp, nowSec, highlightedCoinId, targetCoinId, onNavigateToCoin }: WatchlistPanelProps) {
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const subscribed = useMemo(() => new Set(state.subscriptions.map((coin) => coin.stablecoinId)), [state.subscriptions]);
@@ -241,6 +370,18 @@ export function WatchlistPanel({ state, canMutate, isMutating, pendingOperation,
           </>
         ) : null}
       </section>
+
+      <BulkWatchlistEditor
+        state={state}
+        canMutate={canMutate}
+        canRead={canReadBulk}
+        writeDisabled={isMutating}
+        requestBusy={isRequestBusy}
+        pendingOperation={pendingOperation}
+        onPreview={onPreviewBulk}
+        onConfirm={onConfirmBulk}
+        onUndo={onUndoBulk}
+      />
 
       {pendingUndo ? (
         <section role="status" className="rounded-2xl border border-[color:var(--mini-accent-border)] bg-[color:var(--mini-accent-fill)] p-3 text-sm text-foreground">

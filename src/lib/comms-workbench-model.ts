@@ -182,6 +182,7 @@ const ALERT_TYPE_LABELS: Record<TelegramAlertType, string> = {
   safety: "Safety",
   launch: "Launch",
   reserve: "Reserve",
+  freeze: "Freeze",
 };
 
 const REPOSITORY_BLOB_URL = "https://github.com/TokenBrice/pharos-watch/blob/main";
@@ -486,6 +487,7 @@ export function buildCommsWorkbenchModel(input: {
         safety: telegramBot?.alertTypeChats.safety ?? null,
         launch: telegramBot?.alertTypeChats.launch ?? null,
         reserve: telegramBot?.alertTypeChats.reserve ?? null,
+        freeze: telegramBot?.alertTypeChats.freeze ?? null,
         allTypes: telegramBot?.alertTypeChats.allTypes ?? null,
       },
       presetQueryFailures: hasUnavailableField(unavailableFields, "presetQueryFailures")

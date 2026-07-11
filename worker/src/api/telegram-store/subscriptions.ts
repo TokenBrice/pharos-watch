@@ -29,7 +29,7 @@ export interface BuiltSubscriptionUpsert {
   binds: unknown[];
 }
 
-const SUBSCRIPTION_FOLLOW_BIND_COUNT = 13;
+const SUBSCRIPTION_FOLLOW_BIND_COUNT = 15;
 const SUBSCRIPTION_FOLLOWS_PER_STATEMENT = Math.floor(
   D1_MAX_BOUND_PARAMETERS / SUBSCRIPTION_FOLLOW_BIND_COUNT,
 );
@@ -159,13 +159,31 @@ export function buildReserveUpsert(
   };
 }
 
+export function buildFreezeUpsert(
+  chatId: string,
+  stablecoinId: string,
+  enabled: boolean,
+): BuiltSubscriptionUpsert {
+  return {
+    sql: `
+      INSERT INTO telegram_subscriptions (
+        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_freeze, alert_freeze_override
+      ) VALUES (?, ?, 0, 0, 0, ?, 1)
+      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+        alert_freeze = excluded.alert_freeze,
+        alert_freeze_override = 1
+    `,
+    binds: [chatId, stablecoinId, enabled ? 1 : 0],
+  };
+}
+
 export async function loadSubscriptionRowsByChat(
   db: D1Database,
   chatId: string,
 ): Promise<SubscriptionRow[]> {
   const result = await db
     .prepare(
-      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
+      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze, dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
          FROM telegram_subscriptions
         WHERE chat_id = ?
         ORDER BY stablecoin_id`,
@@ -189,6 +207,7 @@ export function prepareSubscriberAndSubscriptionStatements(
   const alertSafety = alertTypes.has("safety") ? 1 : 0;
   const alertLaunch = alertTypes.has("launch") ? 1 : 0;
   const alertReserve = alertTypes.has("reserve") ? 1 : 0;
+  const alertFreeze = alertTypes.has("freeze") ? 1 : 0;
   const uniqueStablecoinIds = Array.from(new Set(stablecoinIds));
 
   const statements: D1PreparedStatement[] = [
@@ -202,6 +221,7 @@ export function prepareSubscriberAndSubscriptionStatements(
         safety: alertSafety,
         launch: alertLaunch,
         reserve: alertReserve,
+        freeze: alertFreeze,
       },
     }),
   ];
@@ -228,15 +248,17 @@ export function prepareSubscriberAndSubscriptionStatements(
       alertSafety,
       alertLaunch,
       alertReserve,
+      alertFreeze,
       alertDews,
       alertDepeg,
       alertSafety,
       alertLaunch,
       alertReserve,
+      alertFreeze,
       options?.depegWorseningBpsStep ?? null,
     ]);
     const values = stablecoinIdChunk
-      .map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .join(", ");
     statements.push(
       db.prepare(`
@@ -248,11 +270,13 @@ export function prepareSubscriberAndSubscriptionStatements(
           alert_safety,
           alert_launch,
           alert_reserve,
+          alert_freeze,
           alert_dews_override,
           alert_depeg_override,
           alert_safety_override,
           alert_launch_override,
           alert_reserve_override,
+          alert_freeze_override,
           depeg_worsening_bps_step
         )
         VALUES ${values}
@@ -262,11 +286,13 @@ export function prepareSubscriberAndSubscriptionStatements(
           alert_safety = MAX(telegram_subscriptions.alert_safety, excluded.alert_safety),
           alert_launch = MAX(telegram_subscriptions.alert_launch, excluded.alert_launch),
           alert_reserve = MAX(telegram_subscriptions.alert_reserve, excluded.alert_reserve),
+          alert_freeze = MAX(telegram_subscriptions.alert_freeze, excluded.alert_freeze),
           alert_dews_override = MAX(telegram_subscriptions.alert_dews_override, excluded.alert_dews_override),
           alert_depeg_override = MAX(telegram_subscriptions.alert_depeg_override, excluded.alert_depeg_override),
           alert_safety_override = MAX(telegram_subscriptions.alert_safety_override, excluded.alert_safety_override),
           alert_launch_override = MAX(telegram_subscriptions.alert_launch_override, excluded.alert_launch_override),
           alert_reserve_override = MAX(telegram_subscriptions.alert_reserve_override, excluded.alert_reserve_override),
+          alert_freeze_override = MAX(telegram_subscriptions.alert_freeze_override, excluded.alert_freeze_override),
           ${depegStepUpdate}
       `).bind(...binds),
     );
@@ -314,6 +340,7 @@ export async function applySettingToSubscriptions(
   if (command.setting === "safety" && command.enabled) perCoinAlertBumps.safety = 1;
   if (command.setting === "launch" && command.enabled) perCoinAlertBumps.launch = 1;
   if (command.setting === "reserve" && command.enabled) perCoinAlertBumps.reserve = 1;
+  if (command.setting === "freeze" && command.enabled) perCoinAlertBumps.freeze = 1;
 
   const statements: D1PreparedStatement[] = [
     prepareUpsertSubscriberRow(db, {
@@ -353,6 +380,12 @@ export async function applySettingToSubscriptions(
         statements.push(bindSubscriptionUpsert(
           db,
           buildReserveUpsert(chatId, coin.id, command.enabled),
+        ));
+        break;
+      case "freeze":
+        statements.push(bindSubscriptionUpsert(
+          db,
+          buildFreezeUpsert(chatId, coin.id, command.enabled),
         ));
         break;
       case "depeg":
@@ -497,7 +530,7 @@ export async function loadSubscriptionsByIds(
   const placeholders = uniqueIds.map(() => "?").join(", ");
   const result = await db
     .prepare(
-      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, dews_min_band, safety_mode, depeg_worsening_bps_step
+      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze, dews_min_band, safety_mode, depeg_worsening_bps_step
          FROM telegram_subscriptions
         WHERE chat_id = ?
           AND stablecoin_id IN (${placeholders})

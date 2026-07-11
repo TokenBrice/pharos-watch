@@ -106,8 +106,8 @@ function AlertExamples() {
           What lands in your chat
         </h2>
         <p className="pharos-lead">
-          Real examples from all five families, shown exactly as the bot sends them. Safety changes name the score
-          driver; reserve alerts only cover coins with live reserve tracking.
+          Real examples from all six families, shown exactly as the bot sends them. Safety changes name the score
+          driver; reserve alerts only cover coins with live reserve tracking, while freeze alerts follow the verified tape.
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
@@ -536,7 +536,7 @@ export default function PharosWatchBotPage() {
               Stablecoin alerts, before you have to check.
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/90 sm:mt-4 sm:text-base">
-              Depeg events, DEWS early warnings, safety-grade changes, launches, and reserve drift, sent to your
+              Depeg events, DEWS early warnings, safety-grade changes, launches, reserve drift, and issuer freeze events, sent to your
               Telegram chat. Start with one preset; tune later.
             </p>
             <div className="mt-4 flex flex-wrap gap-2 sm:mt-6 sm:gap-2.5">

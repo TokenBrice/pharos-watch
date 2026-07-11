@@ -94,11 +94,13 @@ export async function setSubscriptionSnooze(
               AND alert_safety = 0
               AND alert_launch = 0
               AND alert_reserve = 0
+              AND alert_freeze = 0
               AND alert_dews_override = 0
               AND alert_depeg_override = 0
               AND alert_safety_override = 0
               AND alert_launch_override = 0
               AND alert_reserve_override = 0
+              AND alert_freeze_override = 0
               AND dews_min_band IS NULL
               AND safety_mode IS NULL
               AND depeg_worsening_bps_step IS NULL`,

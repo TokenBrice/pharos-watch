@@ -42,11 +42,12 @@ import {
 } from "./dispatch-telegram-source-lifecycle";
 import { executeAuthoritativeFanoutPath } from "./dispatch-telegram-authoritative-path";
 import { inspectAndImportLegacyOverflowBacklog } from "./telegram-legacy-overflow-import";
+import { dispatchFreezeAlertOutbox } from "./telegram-freeze-outbox";
 
 export type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
 import type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
 
-const TELEGRAM_ALERT_PROVIDER_FAMILIES = ["dews", "depeg", "safety", "launch", "reserve"] as const;
+const TELEGRAM_ALERT_PROVIDER_FAMILIES = ["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const;
 
 type DispatchEvents = Awaited<ReturnType<typeof buildTelegramDispatchEvents>>;
 
@@ -141,13 +142,17 @@ export async function dispatchTelegramAlerts(
       message: "Loading Telegram alert source snapshots",
       providerFamily: "telegram-dispatch",
       itemsDone: 0,
-      itemsTotal: 5,
+      itemsTotal: TELEGRAM_ALERT_PROVIDER_FAMILIES.length,
       metadata: {
         providerFamilies: TELEGRAM_ALERT_PROVIDER_FAMILIES,
       },
     });
     const sourceData = await loadDispatchSourceData(db);
     const { chatsWithActiveSnooze } = sourceData;
+
+    // Freeze events use a dedicated durable outbox because the historical
+    // generic target-plan table is intentionally constrained to five families.
+    const freezeOutbox = await dispatchFreezeAlertOutbox(db, dispatchNowSec);
 
     throwIfAborted(signal);
 
@@ -169,8 +174,8 @@ export async function dispatchTelegramAlerts(
       stage: "source-loaded",
       message: "Loaded Telegram alert source snapshots",
       providerFamily: "telegram-dispatch",
-      itemsDone: 5,
-      itemsTotal: 5,
+      itemsDone: TELEGRAM_ALERT_PROVIDER_FAMILIES.length,
+      itemsTotal: TELEGRAM_ALERT_PROVIDER_FAMILIES.length,
       metadata: {
         providerFamilies: TELEGRAM_ALERT_PROVIDER_FAMILIES,
         countTotals: {
@@ -182,6 +187,9 @@ export async function dispatchTelegramAlerts(
           overflowBacklogChats: overflowBacklog.length,
           legacyOverflowImportState: legacyOverflowImport.state,
           legacyOverflowImportCursor: legacyOverflowImport.importCursor,
+          freezeOutboxState: freezeOutbox.state,
+          freezeObserved: freezeOutbox.observed,
+          freezeQueued: freezeOutbox.queued,
         },
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
         reserveAlertSourceState: snapshotState.reserveSourceAssessment.state,
@@ -234,7 +242,7 @@ export async function dispatchTelegramAlerts(
       message: "Detecting Telegram alert events",
       providerFamily: "telegram-dispatch",
       itemsDone: 0,
-      itemsTotal: 5,
+      itemsTotal: TELEGRAM_ALERT_PROVIDER_FAMILIES.length,
       metadata: {
         providerFamilies: TELEGRAM_ALERT_PROVIDER_FAMILIES,
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
@@ -303,6 +311,7 @@ export async function dispatchTelegramAlerts(
           safety: safetyChanges.length,
           launch: launchPromoted.length,
           reserve: reservePromoted.length,
+          freezeObserved: freezeOutbox.observed,
           suppressedMethodologyChanges,
         },
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,

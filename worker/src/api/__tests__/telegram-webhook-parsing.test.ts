@@ -57,6 +57,19 @@ describe("parseSetCommand", () => {
     });
   });
 
+  it("parses direct and global freeze toggles", () => {
+    expect(parseSetCommand("USDC freeze on")).toEqual({
+      ticker: "USDC",
+      setting: "freeze",
+      enabled: true,
+    });
+    expect(parseSetCommand("all freeze off")).toEqual({
+      ticker: "all",
+      setting: "freeze",
+      enabled: false,
+    });
+  });
+
   it("accepts `on` as an alias of `alert` for dews", () => {
     expect(parseSetCommand("USDC dews on")).toEqual({
       ticker: "USDC",

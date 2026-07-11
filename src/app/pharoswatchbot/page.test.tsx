@@ -116,7 +116,14 @@ describe("PharosWatchBotPage", () => {
   });
 
   it("keeps the public alert and command contracts complete", () => {
-    expect(TELEGRAM_ALERT_EXAMPLES.map((alert) => alert.key)).toEqual(["dews", "depeg", "safety", "launch", "reserve"]);
+    expect(TELEGRAM_ALERT_EXAMPLES.map((alert) => alert.key)).toEqual([
+      "dews",
+      "depeg",
+      "safety",
+      "launch",
+      "reserve",
+      "freeze",
+    ]);
     // Example bubbles must be the canonical formatter-verified samples.
     for (const example of TELEGRAM_ALERT_EXAMPLES) {
       expect(example.content).toBe(TELEGRAM_PUBLIC_ALERT_SAMPLES[example.key].message);
@@ -179,7 +186,7 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getByText("Deep links")).toBeTruthy();
     expect(screen.getByText("Launch alerts")).toBeTruthy();
     expect(screen.getByText("Reserve Drift")).toBeTruthy();
-    expect(screen.getAllByText(/all five families/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/all six families/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText("/start").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/export").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/import <token>").length).toBeGreaterThan(0);
@@ -228,7 +235,7 @@ describe("PharosWatchBotPage", () => {
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       publisher: { "@id": "https://pharos.watch#organization" },
     });
-    expect(application.featureList).toHaveLength(9);
+    expect(application.featureList).toHaveLength(10);
     for (const family of TELEGRAM_ALERT_FAMILIES) {
       expect(application.featureList).toContain(family.featureLine);
     }

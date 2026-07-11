@@ -14,8 +14,8 @@ import {
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
 } from "../../shared/lib/telegram-delivery-policy";
-type AlertType = "depeg" | "dews" | "safety" | "launch" | "reserve";
-type ScenarioId = "single-depeg" | "market-wide-burst" | "dews-safety-burst" | "admin-broadcast" | "telegram-429-storm";
+type AlertType = "depeg" | "dews" | "safety" | "launch" | "reserve" | "freeze";
+type ScenarioId = "single-depeg" | "market-wide-burst" | "dews-safety-burst" | "freeze-event" | "admin-broadcast" | "telegram-429-storm";
 type SloStatus = "ok" | "slow" | "breach" | "outage-unavailable" | "exploratory";
 
 interface AlertFlags {
@@ -24,6 +24,7 @@ interface AlertFlags {
   safety: boolean;
   launch: boolean;
   reserve: boolean;
+  freeze: boolean;
 }
 
 interface DirectSubscription {
@@ -34,7 +35,7 @@ interface DirectSubscription {
 
 interface PresetSubscription {
   presetId: keyof typeof PRESET_MEMBERS;
-  flags: Omit<AlertFlags, "launch" | "reserve">;
+  flags: Omit<AlertFlags, "launch" | "reserve" | "freeze">;
 }
 
 interface SyntheticWatcher {
@@ -228,8 +229,8 @@ const PRESET_MEMBERS = {
 
 const PRESET_IDS = Object.keys(PRESET_MEMBERS) as Array<keyof typeof PRESET_MEMBERS>;
 
-function hasAlertFlag(flags: AlertFlags | Omit<AlertFlags, "launch" | "reserve">, alertType: AlertType): boolean {
-  if (alertType === "launch" || alertType === "reserve") return false;
+function hasAlertFlag(flags: AlertFlags | Omit<AlertFlags, "launch" | "reserve" | "freeze">, alertType: AlertType): boolean {
+  if (alertType === "launch" || alertType === "reserve" || alertType === "freeze") return false;
   return flags[alertType] === true;
 }
 
@@ -240,6 +241,7 @@ function mergeFlags(left: AlertFlags, right: AlertFlags): AlertFlags {
     safety: left.safety || right.safety,
     launch: left.launch || right.launch,
     reserve: left.reserve || right.reserve,
+    freeze: left.freeze || right.freeze,
   };
 }
 
@@ -250,6 +252,7 @@ function buildDirectFlags(i: number, j: number): AlertFlags {
     safety: (i + j) % 4 === 0,
     launch: (i + j) % 19 === 0,
     reserve: (i + j) % 23 === 0,
+    freeze: (i + j) % 17 === 0,
   };
 }
 
@@ -260,6 +263,7 @@ function buildGlobalFlags(i: number): AlertFlags {
     safety: i % 14 === 0,
     launch: i % 101 === 0,
     reserve: i % 67 === 0,
+    freeze: i % 31 === 0,
   };
 }
 
@@ -323,15 +327,16 @@ function hasDeliverableState(watcher: SyntheticWatcher): boolean {
     watcher.globals.safety ||
     watcher.globals.launch ||
     watcher.globals.reserve ||
+    watcher.globals.freeze ||
     watcher.directSubscriptions.some(
-      (sub) => sub.flags.depeg || sub.flags.dews || sub.flags.safety || sub.flags.launch || sub.flags.reserve,
+      (sub) => sub.flags.depeg || sub.flags.dews || sub.flags.safety || sub.flags.launch || sub.flags.reserve || sub.flags.freeze,
     ) ||
     watcher.presetSubscriptions.some((preset) => preset.flags.depeg || preset.flags.dews || preset.flags.safety)
   );
 }
 
 export function summarizeFixture(fixture: SyntheticTelegramFixture): SyntheticFixtureSummary {
-  const globalOptIns: Record<AlertType, number> = { depeg: 0, dews: 0, safety: 0, launch: 0, reserve: 0 };
+  const globalOptIns: Record<AlertType, number> = { depeg: 0, dews: 0, safety: 0, launch: 0, reserve: 0, freeze: 0 };
   let directSubscriptions = 0;
   let presetFollowers = 0;
   let groupChats = 0;
@@ -394,7 +399,7 @@ function hasDirectMatch(watcher: SyntheticWatcher, event: EventSpec): boolean {
 }
 
 function hasPresetMatch(watcher: SyntheticWatcher, event: EventSpec): boolean {
-  if (event.alertType === "launch" || event.alertType === "reserve") return false;
+  if (event.alertType === "launch" || event.alertType === "reserve" || event.alertType === "freeze") return false;
   return watcher.presetSubscriptions.some((preset) => {
     const presetMembers: readonly string[] = PRESET_MEMBERS[preset.presetId];
     return hasAlertFlag(preset.flags, event.alertType) && presetMembers.includes(event.stablecoinId);
@@ -509,7 +514,7 @@ function buildScenarioResult(args: {
         .map((key) => key.split(":")[0])
         .filter(
           (key): key is AlertType =>
-            key === "depeg" || key === "dews" || key === "safety" || key === "launch" || key === "reserve",
+            key === "depeg" || key === "dews" || key === "safety" || key === "launch" || key === "reserve" || key === "freeze",
         ),
     ),
   ).size;
@@ -611,6 +616,7 @@ export function simulateLoadScenarios(fixture: SyntheticTelegramFixture): LoadSc
     ...HOT_COIN_IDS.slice(5, 15).map((stablecoinId) => ({ alertType: "safety" as const, stablecoinId })),
     ...HOT_COIN_IDS.slice(10, 20).map((stablecoinId) => ({ alertType: "reserve" as const, stablecoinId })),
   ];
+  const freezeEvents: EventSpec[] = [{ alertType: "freeze", stablecoinId: "usdc-circle" }];
 
   return [
     buildScenarioResult({
@@ -619,6 +625,14 @@ export function simulateLoadScenarios(fixture: SyntheticTelegramFixture): LoadSc
       scenarioLabel: "Single USDC depeg",
       hitsByChat: collectEventHits(fixture, singleDepegEvents),
       fanoutReadQueries: 5,
+    }),
+    buildScenarioResult({
+      fixture,
+      scenarioId: "freeze-event",
+      scenarioLabel: "Single immutable USDC freeze event",
+      hitsByChat: collectEventHits(fixture, freezeEvents),
+      // Dedicated source capture plus target-page reads; no generic plan table.
+      fanoutReadQueries: 4,
     }),
     buildScenarioResult({
       fixture,

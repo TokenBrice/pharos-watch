@@ -16,6 +16,7 @@ export function listTelegramAlertItemKeys(alerts: ConsolidatedAlerts): string[] 
     ...alerts.safety.map((event) => itemKey("safety", event)),
     ...alerts.launch.map((event) => itemKey("launch", event)),
     ...alerts.reserve.map((event) => itemKey("reserve", event)),
+    ...(alerts.freeze ?? []).map((event) => `freeze:${event.tapeEventId}`),
   ];
   if (alerts.burst) keys.push(`burst:${alerts.burst.dominantFamily}`);
   return [...new Set(keys)].sort();
@@ -51,6 +52,7 @@ export function removeHandledTelegramAlertItems(
       safety: removeHandled(entry.alerts.safety, "safety", handled),
       launch: removeHandled(entry.alerts.launch, "launch", handled),
       reserve: removeHandled(entry.alerts.reserve, "reserve", handled),
+      freeze: (entry.alerts.freeze ?? []).filter((event) => !handled.has(`freeze:${event.tapeEventId}`)),
       burst: entry.alerts.burst && handled.has(`burst:${entry.alerts.burst.dominantFamily}`)
         ? undefined
         : entry.alerts.burst,

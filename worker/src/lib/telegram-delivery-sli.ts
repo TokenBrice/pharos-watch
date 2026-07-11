@@ -63,6 +63,7 @@ interface FamilyAttributionRow {
   safety: number | string | null;
   launch: number | string | null;
   reserve: number | string | null;
+  freeze: number | string | null;
   mixed: number | string | null;
   unknown: number | string | null;
 }
@@ -143,6 +144,7 @@ function priorityCaseSql(): string {
     WHEN 'safety' THEN ${TELEGRAM_PENDING_PRIORITY.safety}
     WHEN 'launch' THEN ${TELEGRAM_PENDING_PRIORITY.launch}
     WHEN 'reserve' THEN ${TELEGRAM_PENDING_PRIORITY.reserve}
+    WHEN 'freeze' THEN ${TELEGRAM_PENDING_PRIORITY.freeze}
     ELSE ${TELEGRAM_PENDING_PRIORITY.riskAlert}
   END`;
 }
@@ -224,7 +226,8 @@ export async function loadTelegramDeliverySliRollup(
               COALESCE(MAX(item.item_key LIKE 'depeg-%'), 0) AS depeg,
               COALESCE(MAX(item.item_key LIKE 'safety:%'), 0) AS safety,
               COALESCE(MAX(item.item_key LIKE 'launch:%'), 0) AS launch,
-              COALESCE(MAX(item.item_key LIKE 'reserve:%'), 0) AS reserve
+              COALESCE(MAX(item.item_key LIKE 'reserve:%'), 0) AS reserve,
+              COALESCE(MAX(item.item_key LIKE 'freeze:%'), 0) AS freeze
          FROM telegram_alert_job_targets target
          JOIN telegram_alert_source_events source ON source.source_event_id = target.source_event_id
          LEFT JOIN telegram_alert_job_target_items item
@@ -233,7 +236,7 @@ export async function loadTelegramDeliverySliRollup(
         WHERE source.detected_at >= ? AND source.detected_at <= ?
         GROUP BY target.job_id, target.target_key
      ), attributed AS (
-       SELECT *, dews + depeg + safety + launch + reserve AS family_count FROM family_flags
+       SELECT *, dews + depeg + safety + launch + reserve + freeze AS family_count FROM family_flags
      )
      SELECT
        SUM(CASE WHEN family_count = 1 AND dews = 1 THEN 1 ELSE 0 END) AS dews,
@@ -241,6 +244,7 @@ export async function loadTelegramDeliverySliRollup(
        SUM(CASE WHEN family_count = 1 AND safety = 1 THEN 1 ELSE 0 END) AS safety,
        SUM(CASE WHEN family_count = 1 AND launch = 1 THEN 1 ELSE 0 END) AS launch,
        SUM(CASE WHEN family_count = 1 AND reserve = 1 THEN 1 ELSE 0 END) AS reserve,
+       SUM(CASE WHEN family_count = 1 AND freeze = 1 THEN 1 ELSE 0 END) AS freeze,
        SUM(CASE WHEN family_count > 1 THEN 1 ELSE 0 END) AS mixed,
        SUM(CASE WHEN family_count = 0 THEN 1 ELSE 0 END) AS unknown
       FROM attributed`,
@@ -409,6 +413,7 @@ export async function loadTelegramDeliverySliRollup(
       safety: integer(familyAttribution?.safety),
       launch: integer(familyAttribution?.launch),
       reserve: integer(familyAttribution?.reserve),
+      freeze: integer(familyAttribution?.freeze),
       mixed: integer(familyAttribution?.mixed),
       unknown: integer(familyAttribution?.unknown),
     },

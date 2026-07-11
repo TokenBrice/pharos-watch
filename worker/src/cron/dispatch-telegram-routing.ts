@@ -61,6 +61,7 @@ export function emptyPerAlertTypeDelivery(): PerAlertTypeDelivery {
     safety: emptyPerAlertTypeStats(),
     launch: emptyPerAlertTypeStats(),
     reserve: emptyPerAlertTypeStats(),
+    freeze: emptyPerAlertTypeStats(),
   };
 }
 
@@ -72,6 +73,7 @@ function dominantAlertType(alerts: ConsolidatedAlerts): TelegramAlertType {
   if (alerts.safety.length > 0) return "safety";
   if (alerts.launch.length > 0) return "launch";
   if (alerts.reserve.length > 0) return "reserve";
+  if ((alerts.freeze?.length ?? 0) > 0) return "freeze";
   // Fallback: an empty consolidated alert should not reach this path. Pick the
   // lowest-priority type so we never crash on metric attribution.
   return ALERT_TYPE_PRIORITY[ALERT_TYPE_PRIORITY.length - 1];
@@ -85,6 +87,7 @@ function alertTypesForConsolidated(alerts: ConsolidatedAlerts): TelegramAlertTyp
   if (alerts.safety.length > 0) types.push("safety");
   if (alerts.launch.length > 0) types.push("launch");
   if (alerts.reserve.length > 0) types.push("reserve");
+  if ((alerts.freeze?.length ?? 0) > 0) types.push("freeze");
   return types;
 }
 
@@ -195,6 +198,7 @@ export function emptyAlerts(): ConsolidatedAlerts {
     safety: [],
     launch: [],
     reserve: [],
+    freeze: [],
   };
 }
 
@@ -291,6 +295,7 @@ function collectEntryStablecoinIds(alerts: ConsolidatedAlerts): string[] {
   for (const e of alerts.safety) ids.add(e.stablecoinId);
   for (const e of alerts.launch) ids.add(e.stablecoinId);
   for (const e of alerts.reserve) ids.add(e.stablecoinId);
+  for (const e of alerts.freeze ?? []) ids.add(e.stablecoinId);
   return [...ids];
 }
 

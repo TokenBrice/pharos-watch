@@ -27,6 +27,7 @@ describe("Telegram load simulation", () => {
     expect(summary.globalOptIns.dews).toBeGreaterThan(100);
     expect(summary.globalOptIns.safety).toBeGreaterThan(300);
     expect(summary.globalOptIns.reserve).toBeGreaterThan(50);
+    expect(summary.globalOptIns.freeze).toBeGreaterThan(100);
     expect(summary.presetFollowers).toBeGreaterThan(350);
     expect(summary.groupChats).toBeGreaterThan(600);
     expect(summary.quietHoursChats).toBeGreaterThan(250);
@@ -35,12 +36,13 @@ describe("Telegram load simulation", () => {
     expect(summary.blockedChats).toBeGreaterThan(50);
   });
 
-  it("simulates all Phase 5 fan-out scenarios for a target fixture", () => {
+  it("simulates every reviewed fan-out scenario for a target fixture", () => {
     const fixture = buildSyntheticTelegramFixture(1_000);
     const scenarios = simulateLoadScenarios(fixture);
 
     expect(scenarios.map((scenario) => scenario.scenarioId)).toEqual([
       "single-depeg",
+      "freeze-event",
       "market-wide-burst",
       "dews-safety-burst",
       "admin-broadcast",
@@ -57,8 +59,8 @@ describe("Telegram load simulation", () => {
     const report = buildTelegramLoadCheckReport({ skipQueryPlans: true });
 
     expect(report.fixtureSummaries.map((summary) => summary.activeWatchers)).toEqual([500, 1_000, 5_000, 10_000]);
-    expect(report.scenarios).toHaveLength(20);
-    expect(report.scenarios.filter((scenario) => scenario.exploratory)).toHaveLength(5);
+    expect(report.scenarios).toHaveLength(24);
+    expect(report.scenarios.filter((scenario) => scenario.exploratory)).toHaveLength(6);
   });
 
   it("meets the required 5000-watcher delivery SLO scenarios", () => {

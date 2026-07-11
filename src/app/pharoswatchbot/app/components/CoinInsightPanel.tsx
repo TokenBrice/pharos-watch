@@ -49,7 +49,12 @@ export function CoinInsightPanel({ state, target, webApp, onClose }: CoinInsight
   };
   const title = target.kind === "why" ? `Why ${symbol}` : `Coverage ${symbol}`;
   const isKnown = subscription != null || catalog != null;
-  const alertSummary = subscription ? formatAlertList(subscription.alertTypes) : "Not in your explicit watchlist";
+  const alertSummary = subscription
+    ? formatAlertList({
+        ...subscription.alertTypes,
+        freeze: Boolean((subscription.alertTypes as Partial<Record<TelegramAlertType, boolean>>).freeze),
+      })
+    : "Not in your explicit watchlist";
 
   return (
     <section className="rounded-2xl border border-[color:var(--mini-accent-border)] bg-[color:var(--mini-accent-fill)] p-4">

@@ -68,14 +68,19 @@ export interface CoinCardProps {
 export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, pendingOperation, onMutate, onRemove, onOpenInsight, webApp, nowSec, highlighted }: CoinCardProps) {
   const sourceChip = deriveSourceChip(coin, globalAlerts, presets);
   const { dews: dewsEnabled, depeg: depegEnabled, safety: safetyEnabled } = coin.alertTypes;
+  const alertTypes = coin.alertTypes as Partial<Record<TelegramAlertType, boolean>>;
   const showTune = dewsEnabled || depegEnabled || safetyEnabled || coin.depegStepBps != null;
   const untunableLabels = [
     coin.alertTypes.launch ? "Launch" : null,
     coin.alertTypes.reserve ? "Reserve" : null,
+    coin.alertTypes.freeze ? "Freeze" : null,
   ].filter((label): label is string => label != null);
   const untunableOnly = untunableLabels.length > 0 && !showTune;
   const coinSnoozeActive = coin.snoozeUntilTs != null && coin.snoozeUntilTs > nowSec;
   const bridgeReady = Boolean(webApp);
+  const pendingAlertTypes = pendingOperation?.kind === "set-coin"
+    ? pendingOperation.patch.alertTypes as Partial<Record<TelegramAlertType, boolean>> | undefined
+    : undefined;
   const snoozeOperation = (token: TelegramCoinSnoozeDurationToken): TelegramMiniAppOperation => ({
     kind: "set-coin-snooze",
     stablecoinId: coin.stablecoinId,
@@ -117,18 +122,18 @@ export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, p
           <TogglePill
             key={type}
             label={ALERT_LABELS[type]}
-            enabled={coin.alertTypes[type]}
+            enabled={Boolean(alertTypes[type])}
             disabled={!canMutate || isMutating}
             loading={
               pendingOperation?.kind === "set-coin" &&
               pendingOperation.stablecoinId === coin.stablecoinId &&
-              pendingOperation.patch.alertTypes?.[type] != null
+              pendingAlertTypes?.[type] != null
             }
             ariaLabel={`${coin.symbol} ${ALERT_LABELS[type]}`}
             onToggle={() => onMutate({
               kind: "set-coin",
               stablecoinId: coin.stablecoinId,
-              patch: { alertTypes: { [type]: !coin.alertTypes[type] } },
+              patch: { alertTypes: { [type]: !alertTypes[type] } },
             })}
           />
         ))}

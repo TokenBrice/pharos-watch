@@ -29,7 +29,15 @@ import {
   type TelegramUsageEventType,
 } from "../lib/telegram-usage-analytics";
 import { acquireTelegramCommandCooldown, unixNow } from "./telegram-webhook-store";
-import { TelegramMiniAppMutationError, applyTelegramMiniAppMutation, mutationActionDetail } from "./telegram-mini-app-mutations";
+import {
+  TelegramMiniAppMutationError,
+  applyTelegramMiniAppMutation,
+  executeTelegramMiniAppBulkWatchlistPreview,
+  executeTelegramMiniAppPortabilityOperation,
+  isTelegramMiniAppBulkWatchlistPreviewOperation,
+  isTelegramMiniAppPortabilityOperation,
+  mutationActionDetail,
+} from "./telegram-mini-app-mutations";
 import { acquireTelegramMiniAppMutationBurst } from "./telegram-mini-app-rate-limit";
 import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
 import { logWorkerEvent } from "../lib/structured-log";
@@ -347,6 +355,10 @@ function mutationErrorMessage(err: TelegramMiniAppMutationError): string {
   if (err.code === "empty-alert-types") return "Choose at least one alert type";
   if (err.code === "preset-unavailable") return "Preset data is temporarily unavailable";
   if (err.code === "invalid-timezone") return "Unknown timezone";
+  if (err.code === "invalid-portable-token") return "This watchlist token is invalid or no longer available for new alerts";
+  if (err.code === "empty-portable-state") return "There are no direct watchlist rows or presets to export";
+  if (err.code === "stale-import-preview") return "Your watchlist changed after this preview. Review the token again before applying it";
+  if (err.code === "stale-bulk-preview") return "Your watchlist changed after this preview. Review the selected coins again before applying it";
   return "Invalid Mini App mutation";
 }
 
@@ -442,42 +454,106 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       return versionMismatchResponse(compatibility);
     }
 
+    const portabilityOperation = isTelegramMiniAppPortabilityOperation(parsed.operation)
+      ? parsed.operation
+      : null;
+    const bulkPreviewOperation = isTelegramMiniAppBulkWatchlistPreviewOperation(parsed.operation)
+      ? parsed.operation
+      : null;
+    const readOnlyPortability = portabilityOperation?.kind === "export-watchlist"
+      || portabilityOperation?.kind === "preview-watchlist-import"
+      || bulkPreviewOperation != null;
     const auth = await validateOrResponse(db, parsed.initData, botToken, {
-      maxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
+      // Export and preview are signed reads. They keep the 24h session
+      // freshness contract and must not consume the edit burst budget.
+      maxAgeSec: readOnlyPortability
+        ? TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC
+        : TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
       start,
-      cooldownKey: MUTATION_AUTH_FAILURE_COOLDOWN_KEY,
-      cooldownSec: MUTATION_AUTH_FAILURE_COOLDOWN_SEC,
+      cooldownKey: readOnlyPortability ? "mini-app:session" : MUTATION_AUTH_FAILURE_COOLDOWN_KEY,
+      cooldownSec: readOnlyPortability ? SESSION_COOLDOWN_SEC : MUTATION_AUTH_FAILURE_COOLDOWN_SEC,
       staleAuthEvent: {
-        eventType: "mini_app_mutation_denied",
+        eventType: readOnlyPortability ? "mini_app_portability" : "mini_app_mutation_denied",
         actionDetail: mutationActionDetail(parsed.operation),
       },
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 
-    const burst = await acquireTelegramMiniAppMutationBurst(db, {
-      userId: auth.userId,
-      nowSec: unixNow(),
-    });
-    if (!burst.allowed) {
-      await recordMiniAppEvent(db, {
-        eventType: "mini_app_mutation_denied",
-        auth,
-        actionDetail: mutationActionDetail(parsed.operation),
-        outcome: "rate_limited",
-        failureClass: "rate_limited",
-        latencyMs: Date.now() - start,
+    if (readOnlyPortability) {
+      const cooldown = await acquireTelegramCommandCooldown(db, {
+        chatId: auth.userId,
+        commandKey: "mini-app:session",
+        nowSec: unixNow(),
+        cooldownSec: SESSION_COOLDOWN_SEC,
       });
-      return miniAppError(429, "rate-limited", "Pharos Mini App edit limit reached", {
-        retryAfterSec: burst.retryAfterSec,
+      if (!cooldown.allowed) {
+        await recordMiniAppEvent(db, {
+          eventType: "mini_app_portability",
+          auth,
+          actionDetail: mutationActionDetail(parsed.operation),
+          outcome: "rate_limited",
+          failureClass: "rate_limited",
+          latencyMs: Date.now() - start,
+        });
+        return miniAppError(429, "rate-limited", "Mini App session rate limited", {
+          retryAfterSec: cooldown.retryAfterSec,
+        });
+      }
+    }
+
+    if (!readOnlyPortability) {
+      const burst = await acquireTelegramMiniAppMutationBurst(db, {
+        userId: auth.userId,
+        nowSec: unixNow(),
       });
+      if (!burst.allowed) {
+        await recordMiniAppEvent(db, {
+          eventType: "mini_app_mutation_denied",
+          auth,
+          actionDetail: mutationActionDetail(parsed.operation),
+          outcome: "rate_limited",
+          failureClass: "rate_limited",
+          latencyMs: Date.now() - start,
+        });
+        return miniAppError(429, "rate-limited", "Pharos Mini App edit limit reached", {
+          retryAfterSec: burst.retryAfterSec,
+        });
+      }
     }
 
     try {
+      if (bulkPreviewOperation) {
+        const preview = await executeTelegramMiniAppBulkWatchlistPreview(db, auth, bulkPreviewOperation);
+        await recordMiniAppEvent(db, {
+          eventType: "mini_app_portability",
+          auth,
+          actionDetail: mutationActionDetail(parsed.operation),
+          outcome: "success",
+          latencyMs: Date.now() - start,
+        });
+        return jsonResponse(preview, NO_STORE);
+      }
+      if (portabilityOperation) {
+        const portability = await executeTelegramMiniAppPortabilityOperation(db, auth, portabilityOperation);
+        await recordMiniAppEvent(db, {
+          eventType: readOnlyPortability ? "mini_app_portability" : "mini_app_mutation",
+          auth,
+          actionDetail: mutationActionDetail(parsed.operation),
+          outcome: "success",
+          latencyMs: Date.now() - start,
+        });
+        if (portability) return jsonResponse(portability, NO_STORE);
+        const state = await loadTelegramMiniAppState(db, auth, {
+          nowSec: unixNow(),
+          mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
+        });
+        return stateResponse(state, compatibility);
+      }
       await applyTelegramMiniAppMutation(db, auth, parsed.operation);
     } catch (err) {
       if (err instanceof TelegramMiniAppMutationError) {
         await recordMiniAppEvent(db, {
-          eventType: "mini_app_mutation_denied",
+          eventType: readOnlyPortability ? "mini_app_portability" : "mini_app_mutation_denied",
           auth,
           actionDetail: mutationActionDetail(parsed.operation),
           outcome: err.code === "not-private" ? "denied" : "validation_error",

@@ -2,6 +2,8 @@ import type { TelegramAlertType } from "@shared/types/status";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
 import type { PendingCapacitySnapshot } from "./telegram-pending";
 
+type LegacyFanoutAlertType = Exclude<TelegramAlertType, "freeze">;
+
 interface FanoutSubscriberLoadOptions {
   chatIds?: readonly string[];
 }
@@ -40,26 +42,26 @@ export interface FanoutSubscriptionInputs {
   globalLaunchSubs: SubscriberRow[];
   globalReserveSubs: SubscriberRow[];
   perCoinSnoozeMap: Map<string, Set<string>>;
-  perCoinExplicitlyOffMaps: Record<TelegramAlertType, Map<string, Set<string>>>;
+  perCoinExplicitlyOffMaps: Record<LegacyFanoutAlertType, Map<string, Set<string>>>;
 }
 
 interface FanoutSubscriptionLoaders {
   loadSubscriberRowsBatch: (
     db: D1Database,
     stablecoinIds: string[],
-    type: TelegramAlertType,
+    type: LegacyFanoutAlertType,
     nowSec: number,
     options?: FanoutSubscriberLoadOptions,
   ) => Promise<Map<string, SubscriberRow[]>>;
   loadPresetSubscriberRowsBatch: (
     db: D1Database,
     stablecoinIds: string[],
-    type: Exclude<TelegramAlertType, "launch" | "reserve">,
+    type: Exclude<LegacyFanoutAlertType, "launch" | "reserve">,
     nowSec: number,
   ) => Promise<PresetSubscriberLoadResult>;
   loadGlobalSubscriberRows: (
     db: D1Database,
-    type: TelegramAlertType,
+    type: LegacyFanoutAlertType,
     nowSec: number,
     options?: FanoutSubscriberLoadOptions,
   ) => Promise<SubscriberRow[]>;
@@ -72,7 +74,7 @@ interface FanoutSubscriptionLoaders {
   loadPerCoinExplicitlyOffMap: (
     db: D1Database,
     stablecoinIds: readonly string[],
-    type: TelegramAlertType,
+    type: LegacyFanoutAlertType,
     options?: FanoutSubscriberLoadOptions,
   ) => Promise<Map<string, Set<string>>>;
 }

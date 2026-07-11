@@ -113,11 +113,13 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
       alert_safety INTEGER DEFAULT 1,
       alert_launch INTEGER DEFAULT 1,
       alert_reserve INTEGER DEFAULT 1,
+      alert_freeze INTEGER DEFAULT 1,
       global_alert_dews INTEGER DEFAULT 1,
       global_alert_depeg INTEGER DEFAULT 1,
       global_alert_safety INTEGER DEFAULT 1,
       global_alert_launch INTEGER DEFAULT 1,
       global_alert_reserve INTEGER DEFAULT 1,
+      global_alert_freeze INTEGER DEFAULT 1,
       global_depeg_worsening_bps_step INTEGER,
       preference_generation INTEGER NOT NULL DEFAULT 0
     );
@@ -130,11 +132,13 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
       alert_safety INTEGER DEFAULT 1,
       alert_launch INTEGER DEFAULT 1,
       alert_reserve INTEGER DEFAULT 1,
+      alert_freeze INTEGER DEFAULT 1,
       alert_dews_override INTEGER DEFAULT 0,
       alert_depeg_override INTEGER DEFAULT 0,
       alert_safety_override INTEGER DEFAULT 0,
       alert_launch_override INTEGER DEFAULT 0,
       alert_reserve_override INTEGER DEFAULT 0,
+      alert_freeze_override INTEGER DEFAULT 0,
       alert_snooze_until_ts INTEGER
     );
 
@@ -409,7 +413,7 @@ afterEach(() => {
 });
 
 describe("disableBlockedSubscriber", () => {
-  it("resets all alert flags including launch and reserve for both subscribers and subscriptions", async () => {
+  it("resets all alert flags including launch, reserve, and freeze for subscribers and subscriptions", async () => {
     const db = mockD1([
       { match: "UPDATE telegram_subscribers", rows: [] },
       { match: "UPDATE telegram_subscriptions", rows: [] },
@@ -424,13 +428,16 @@ describe("disableBlockedSubscriber", () => {
     expect(subscriberUpdate).toBeDefined();
     expect(subscriberUpdate!.sql).toContain("alert_launch=0");
     expect(subscriberUpdate!.sql).toContain("alert_reserve=0");
+    expect(subscriberUpdate!.sql).toContain("alert_freeze=0");
     expect(subscriberUpdate!.sql).toContain("global_alert_launch=0");
     expect(subscriberUpdate!.sql).toContain("global_alert_reserve=0");
+    expect(subscriberUpdate!.sql).toContain("global_alert_freeze=0");
 
     const subscriptionUpdate = history.find((e) => e.sql.includes("UPDATE telegram_subscriptions"));
     expect(subscriptionUpdate).toBeDefined();
     expect(subscriptionUpdate!.sql).toContain("alert_launch=0");
     expect(subscriptionUpdate!.sql).toContain("alert_reserve=0");
+    expect(subscriptionUpdate!.sql).toContain("alert_freeze=0");
 
     const presetDelete = history.find((e) => e.sql.includes("DELETE FROM telegram_preset_subscriptions"));
     expect(presetDelete).toBeDefined();

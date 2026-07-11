@@ -12,11 +12,13 @@ interface SubscriberRow {
   alert_safety: number;
   alert_launch: number;
   alert_reserve: number;
+  alert_freeze: number;
   global_alert_dews: number;
   global_alert_depeg: number;
   global_alert_safety: number;
   global_alert_launch: number;
   global_alert_reserve: number;
+  global_alert_freeze: number;
   global_depeg_worsening_bps_step: number | null;
   quiet_hours_enabled: number;
   quiet_hours_start_utc: number | null;
@@ -39,11 +41,13 @@ interface SubscriptionRow {
   alert_safety: number;
   alert_launch: number;
   alert_reserve: number;
+  alert_freeze: number;
   alert_dews_override: number;
   alert_depeg_override: number;
   alert_safety_override: number;
   alert_launch_override: number;
   alert_reserve_override: number;
+  alert_freeze_override: number;
   dews_min_band: string | null;
   safety_mode: string | null;
   depeg_worsening_bps_step: number | null;
@@ -85,9 +89,9 @@ export function handleAdminTelegramChat(
     async () => {
       const nowSec = Math.floor(Date.now() / 1000);
       const subscriber = await db.prepare(
-        `SELECT chat_id, username, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
+        `SELECT chat_id, username, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze,
                 global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
-                global_alert_reserve, global_depeg_worsening_bps_step,
+                global_alert_reserve, global_alert_freeze, global_depeg_worsening_bps_step,
                 quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc, timezone,
                 alert_snooze_until_ts, consecutive_block_count, consecutive_block_first_at,
                 preference_generation, created_at, last_active_at, first_follow_at,
@@ -97,9 +101,9 @@ export function handleAdminTelegramChat(
       ).bind(chatId).first<SubscriberRow>();
 
       const subscriptions = (await db.prepare(
-        `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
+        `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze,
                 alert_dews_override, alert_depeg_override, alert_safety_override,
-                alert_launch_override, alert_reserve_override, dews_min_band, safety_mode,
+                alert_launch_override, alert_reserve_override, alert_freeze_override, dews_min_band, safety_mode,
                 depeg_worsening_bps_step, alert_snooze_until_ts
            FROM telegram_subscriptions
           WHERE chat_id = ?
@@ -268,6 +272,7 @@ export function handleAdminTelegramChat(
             safety: subscriber.global_alert_safety === 1,
             launch: subscriber.global_alert_launch === 1,
             reserve: subscriber.global_alert_reserve === 1,
+            freeze: subscriber.global_alert_freeze === 1,
             depegWorseningBpsStep: subscriber.global_depeg_worsening_bps_step,
           },
           directAlertDefaults: {
@@ -276,6 +281,7 @@ export function handleAdminTelegramChat(
             safety: subscriber.alert_safety === 1,
             launch: subscriber.alert_launch === 1,
             reserve: subscriber.alert_reserve === 1,
+            freeze: subscriber.alert_freeze === 1,
           },
           deliveryControls: {
             timezone: subscriber.timezone,
@@ -302,6 +308,7 @@ export function handleAdminTelegramChat(
             safety: row.alert_safety === 1,
             launch: row.alert_launch === 1,
             reserve: row.alert_reserve === 1,
+            freeze: row.alert_freeze === 1,
           },
           explicitOverrides: {
             dews: row.alert_dews_override === 1,
@@ -309,6 +316,7 @@ export function handleAdminTelegramChat(
             safety: row.alert_safety_override === 1,
             launch: row.alert_launch_override === 1,
             reserve: row.alert_reserve_override === 1,
+            freeze: row.alert_freeze_override === 1,
           },
           dewsMinBand: row.dews_min_band,
           safetyMode: row.safety_mode,

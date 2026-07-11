@@ -29,7 +29,7 @@ import {
 } from "./action-runner";
 import type { WebhookCommandContext, WebhookCommandHandler } from "./context";
 
-const VALID_IMPORT_ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch", "reserve"]);
+const VALID_IMPORT_ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch", "reserve", "freeze"]);
 const KNOWN_PRESET_IDS = new Set<string>(TELEGRAM_PRESET_IDS);
 
 function generateImportLease(): number {
@@ -239,12 +239,12 @@ export const handleImport: WebhookCommandHandler = async (ctx, args) => {
     ?? (ctx.operationNowSec ?? Math.floor(Date.now() / 1000)) + DISAMBIGUATION_TTL_SEC;
   if (stored?.payload.kind === "watchlist-import-v2") {
     payload = stored.payload;
-  } else if (decoded?.version === 2) {
+  } else if (decoded?.version === 2 || decoded?.version === 3) {
     const unavailable = decoded.state.direct.filter((row) => !isSubscribableCoin(row.stablecoinId));
     const unknownPresets = decoded.state.presets.filter((row) => !KNOWN_PRESET_IDS.has(row.presetId));
     if (unavailable.length > 0 || unknownPresets.length > 0) {
       await ctx.replyToChat(
-        `This v2 token contains ${unavailable.length} unavailable coin row${unavailable.length === 1 ? "" : "s"} and ${unknownPresets.length} unknown preset${unknownPresets.length === 1 ? "" : "s"}. Nothing was imported; ask the source chat to remove retired entries and export again.`,
+        `This portable token contains ${unavailable.length} unavailable coin row${unavailable.length === 1 ? "" : "s"} and ${unknownPresets.length} unknown preset${unknownPresets.length === 1 ? "" : "s"}. Nothing was imported; ask the source chat to remove retired entries and export again.`,
       );
       await recordTelegramUsageEvent(ctx.db, { eventType: "subscribe", actionDetail: "import-v2", outcome: "invalid" });
       return;

@@ -311,11 +311,11 @@ export async function recordTelegramMiniAppFirstMutation(
 const RETENTION_METRICS_SQL = `WITH surviving AS (
   SELECT s.chat_id,
          CASE WHEN s.global_alert_dews = 1 OR s.global_alert_depeg = 1 OR s.global_alert_safety = 1
-                    OR s.global_alert_launch = 1 OR s.global_alert_reserve = 1 THEN 1 ELSE 0 END AS has_global,
+                    OR s.global_alert_launch = 1 OR s.global_alert_reserve = 1 OR s.global_alert_freeze = 1 THEN 1 ELSE 0 END AS has_global,
          CASE WHEN EXISTS (
            SELECT 1 FROM telegram_subscriptions t
             WHERE t.chat_id = s.chat_id
-              AND (t.alert_dews = 1 OR t.alert_depeg = 1 OR t.alert_safety = 1 OR t.alert_launch = 1 OR t.alert_reserve = 1)
+              AND (t.alert_dews = 1 OR t.alert_depeg = 1 OR t.alert_safety = 1 OR t.alert_launch = 1 OR t.alert_reserve = 1 OR t.alert_freeze = 1)
          ) THEN 1 ELSE 0 END AS has_direct,
          CASE WHEN EXISTS (
            SELECT 1 FROM telegram_preset_subscriptions p

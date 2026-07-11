@@ -15,6 +15,7 @@ interface SubscriberRow {
   global_alert_safety: number | null;
   global_alert_launch: number | null;
   global_alert_reserve: number | null;
+  global_alert_freeze: number | null;
   global_depeg_worsening_bps_step: number | null;
   quiet_hours_enabled: number | null;
   quiet_hours_start_utc: number | null;
@@ -30,11 +31,13 @@ interface SubscriptionRow {
   alert_safety: number | null;
   alert_launch: number | null;
   alert_reserve: number | null;
+  alert_freeze: number | null;
   alert_dews_override: number | null;
   alert_depeg_override: number | null;
   alert_safety_override: number | null;
   alert_launch_override: number | null;
   alert_reserve_override: number | null;
+  alert_freeze_override: number | null;
   dews_min_band: string | null;
   safety_mode: string | null;
   depeg_worsening_bps_step: number | null;
@@ -83,13 +86,15 @@ function alertTypes(row: {
   alert_safety: number | null;
   alert_launch?: number | null;
   alert_reserve?: number | null;
-}): { dews: boolean; depeg: boolean; safety: boolean; launch: boolean; reserve: boolean } {
+  alert_freeze?: number | null;
+}): { dews: boolean; depeg: boolean; safety: boolean; launch: boolean; reserve: boolean; freeze: boolean } {
   return {
     dews: boolFlag(row.alert_dews),
     depeg: boolFlag(row.alert_depeg),
     safety: boolFlag(row.alert_safety),
     launch: boolFlag(row.alert_launch),
     reserve: boolFlag(row.alert_reserve),
+    freeze: boolFlag(row.alert_freeze),
   };
 }
 
@@ -100,21 +105,24 @@ function shouldProjectSubscription(row: SubscriptionRow): boolean {
     alerts.safety ||
     alerts.launch ||
     alerts.reserve ||
+    alerts.freeze ||
     boolFlag(row.alert_dews_override) ||
     boolFlag(row.alert_depeg_override) ||
     boolFlag(row.alert_safety_override) ||
     boolFlag(row.alert_launch_override) ||
     boolFlag(row.alert_reserve_override) ||
+    boolFlag(row.alert_freeze_override) ||
     row.alert_snooze_until_ts != null;
 }
 
-function alertOverrideTypes(row: SubscriptionRow): Record<"dews" | "depeg" | "safety" | "launch" | "reserve", boolean> {
+function alertOverrideTypes(row: SubscriptionRow): Record<"dews" | "depeg" | "safety" | "launch" | "reserve" | "freeze", boolean> {
   return {
     dews: boolFlag(row.alert_dews_override),
     depeg: boolFlag(row.alert_depeg_override),
     safety: boolFlag(row.alert_safety_override),
     launch: boolFlag(row.alert_launch_override),
     reserve: boolFlag(row.alert_reserve_override),
+    freeze: boolFlag(row.alert_freeze_override),
   };
 }
 
@@ -144,16 +152,16 @@ export async function loadTelegramMiniAppState(
       const [stateResults, diagnostics] = await Promise.all([
         db.batch([
           db.prepare(
-            `SELECT global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
+            `SELECT global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve, global_alert_freeze,
                     global_depeg_worsening_bps_step, quiet_hours_enabled, quiet_hours_start_utc,
                     quiet_hours_end_utc, timezone, alert_snooze_until_ts
                FROM telegram_subscribers
               WHERE chat_id = ?`,
           ).bind(chatId),
           db.prepare(
-            `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
+            `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze,
                     alert_dews_override, alert_depeg_override, alert_safety_override,
-                    alert_launch_override, alert_reserve_override,
+                    alert_launch_override, alert_reserve_override, alert_freeze_override,
                     dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
                FROM telegram_subscriptions
               WHERE chat_id = ?
@@ -210,6 +218,7 @@ export async function loadTelegramMiniAppState(
         safety: boolFlag(subscriber?.global_alert_safety),
         launch: boolFlag(subscriber?.global_alert_launch),
         reserve: boolFlag(subscriber?.global_alert_reserve),
+        freeze: boolFlag(subscriber?.global_alert_freeze),
         depegStepBps: normalizeDepegStep(subscriber?.global_depeg_worsening_bps_step),
       },
       quietHours: {

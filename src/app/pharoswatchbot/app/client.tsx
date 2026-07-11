@@ -89,6 +89,7 @@ export function PharosWatchBotMiniAppClient() {
     reloadSession,
     messageAutoDismissActive: status === "ready",
     mutationsAllowed: status === "ready",
+    portabilityReadsAllowed: status === "ready",
   });
   const {
     displayState,
@@ -103,6 +104,8 @@ export function PharosWatchBotMiniAppClient() {
     homeScreenStatus,
     mutate,
     performMutation,
+    performPortability,
+    performBulkWatchlistPreview,
     remove: handleRemoveCoin,
     undoRemove: handleUndoRemove,
     addToHomeScreen: handleAddToHomeScreen,
@@ -241,6 +244,7 @@ export function PharosWatchBotMiniAppClient() {
   // delegate the Telegram lifecycle (attach/detach, setParams, show/hide) to
   // the shared hook. See `use-telegram-main-button.ts` for the cleanup contract.
   const canMutate = Boolean(initData && status === "ready" && state?.viewer.canMutate);
+  const canReadPortability = Boolean(initData && status === "ready" && state?.viewer.chatId != null);
   const mutationControlsDisabled = isMutating || mutationRetryAfterSec > 0;
   const runMainButtonMutation = useCallback((operation: TelegramMiniAppOperation) => {
     if (!canMutate || mutationControlsDisabled || mainButtonInFlightRef.current) return;
@@ -427,9 +431,14 @@ export function PharosWatchBotMiniAppClient() {
                 <WatchlistPanel
                   state={displayState}
                   canMutate={canMutate}
+                  canReadBulk={canReadPortability}
                   isMutating={mutationControlsDisabled}
+                  isRequestBusy={isMutating}
                   pendingOperation={pendingOperation}
                   onMutate={mutate}
+                  onPreviewBulk={performBulkWatchlistPreview}
+                  onConfirmBulk={performMutation}
+                  onUndoBulk={performMutation}
                   onRemove={handleRemoveCoin}
                   onOpenInsight={setCoinInsightTarget}
                   pendingUndo={pendingUndo}
@@ -459,13 +468,18 @@ export function PharosWatchBotMiniAppClient() {
                 <SettingsPanel
                   state={displayState}
                   canMutate={canMutate}
+                  canReadPortability={canReadPortability}
                   isMutating={mutationControlsDisabled}
+                  isPortabilityRequestBusy={isMutating}
                   pendingOperation={pendingOperation}
                   onMutate={mutate}
                   globalAlerts={confirmedGlobals}
                   onUnsubscribeAll={handleUnsubscribeAll}
                   onForgetMe={handleForgetMe}
                   hasShowConfirm={Boolean(webApp?.showConfirm)}
+                  onExportWatchlist={() => performPortability({ kind: "export-watchlist" })}
+                  onPreviewWatchlistImport={(token) => performPortability({ kind: "preview-watchlist-import", token })}
+                  onConfirmWatchlistImport={(operation) => performMutation(operation)}
                 />
               </section>
             ) : null}

@@ -19,7 +19,7 @@ export { isKnownStablecoinId, isSubscribableStablecoinId };
 export const DEFAULT_QUIET_START_HOUR = 22;
 export const DEFAULT_QUIET_END_HOUR = 7;
 
-export const GLOBAL_ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve"] as const;
+export const GLOBAL_ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const;
 export type GlobalAlertType = (typeof GLOBAL_ALERT_TYPES)[number];
 
 export const DEWS_BAND_CODES = { A: "ALERT", W: "WARNING", D: "DANGER" } as const;
@@ -53,5 +53,6 @@ export function subscriberHasGlobal(subscriber: SubscriberRow | null, type: Glob
   if (type === "depeg") return Boolean(subscriber.global_alert_depeg);
   if (type === "safety") return Boolean(subscriber.global_alert_safety);
   if (type === "launch") return Boolean(subscriber.global_alert_launch);
+  if (type === "freeze") return Boolean(subscriber.global_alert_freeze);
   return Boolean(subscriber.global_alert_reserve);
 }

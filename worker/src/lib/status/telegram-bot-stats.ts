@@ -37,6 +37,7 @@ interface TelegramBotAggregateRow {
   safety_chats: number | string | null;
   launch_chats: number | string | null;
   reserve_chats: number | string | null;
+  freeze_chats?: number | string | null;
   all_types_chats: number | string | null;
   total_subscriptions: number | string | null;
   avg_subscriptions_per_subscribed_chat: number | string | null;
@@ -121,11 +122,13 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
         OR s.global_alert_safety = 1
         OR s.global_alert_launch = 1
         OR s.global_alert_reserve = 1
+        OR s.global_alert_freeze = 1
         OR s.alert_dews = 1
         OR s.alert_depeg = 1
         OR s.alert_safety = 1
         OR s.alert_launch = 1
         OR s.alert_reserve = 1
+        OR s.alert_freeze = 1
         OR COALESCE(preset.active_preset_count, 0) > 0
       THEN 1 ELSE 0
     END
@@ -138,6 +141,7 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
         OR s.global_alert_safety = 1
         OR s.global_alert_launch = 1
         OR s.global_alert_reserve = 1
+        OR s.global_alert_freeze = 1
         OR COALESCE(preset.active_preset_count, 0) > 0
       THEN 1 ELSE 0
     END
@@ -150,12 +154,13 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
   ) AS subscribed_chats,
   SUM(
     CASE
-      WHEN (s.alert_dews = 1 OR s.alert_depeg = 1 OR s.alert_safety = 1 OR s.alert_launch = 1 OR s.alert_reserve = 1)
+      WHEN (s.alert_dews = 1 OR s.alert_depeg = 1 OR s.alert_safety = 1 OR s.alert_launch = 1 OR s.alert_reserve = 1 OR s.alert_freeze = 1)
         AND s.global_alert_dews = 0
         AND s.global_alert_depeg = 0
         AND s.global_alert_safety = 0
         AND s.global_alert_launch = 0
         AND s.global_alert_reserve = 0
+        AND s.global_alert_freeze = 0
         AND COALESCE(sub.sub_count, 0) = 0
         AND COALESCE(preset.active_preset_count, 0) = 0
       THEN 1 ELSE 0
@@ -174,6 +179,7 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
   SUM(CASE WHEN COALESCE(sub.safety_enabled, 0) = 1 OR COALESCE(preset.safety_enabled, 0) = 1 OR s.global_alert_safety = 1 THEN 1 ELSE 0 END) AS safety_chats,
   SUM(CASE WHEN COALESCE(sub.launch_enabled, 0) = 1 OR s.global_alert_launch = 1 THEN 1 ELSE 0 END) AS launch_chats,
   SUM(CASE WHEN COALESCE(sub.reserve_enabled, 0) = 1 OR s.global_alert_reserve = 1 THEN 1 ELSE 0 END) AS reserve_chats,
+  SUM(CASE WHEN COALESCE(sub.freeze_enabled, 0) = 1 OR s.global_alert_freeze = 1 THEN 1 ELSE 0 END) AS freeze_chats,
   SUM(
     CASE
       WHEN (COALESCE(sub.dews_enabled, 0) = 1 OR COALESCE(preset.dews_enabled, 0) = 1 OR s.global_alert_dews = 1)
@@ -181,6 +187,7 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
         AND (COALESCE(sub.safety_enabled, 0) = 1 OR COALESCE(preset.safety_enabled, 0) = 1 OR s.global_alert_safety = 1)
         AND (COALESCE(sub.launch_enabled, 0) = 1 OR s.global_alert_launch = 1)
         AND (COALESCE(sub.reserve_enabled, 0) = 1 OR s.global_alert_reserve = 1)
+        AND (COALESCE(sub.freeze_enabled, 0) = 1 OR s.global_alert_freeze = 1)
       THEN 1 ELSE 0
     END
   ) AS all_types_chats,
@@ -196,7 +203,7 @@ LEFT JOIN (
          COUNT(*) AS sub_count,
          SUM(
            CASE
-             WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 OR alert_launch = 1 OR alert_reserve = 1
+             WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 OR alert_launch = 1 OR alert_reserve = 1 OR alert_freeze = 1
              THEN 1 ELSE 0
            END
          ) AS active_sub_count,
@@ -205,6 +212,7 @@ LEFT JOIN (
          MAX(CASE WHEN alert_safety = 1 THEN 1 ELSE 0 END) AS safety_enabled,
          MAX(CASE WHEN alert_launch = 1 THEN 1 ELSE 0 END) AS launch_enabled,
          MAX(CASE WHEN alert_reserve = 1 THEN 1 ELSE 0 END) AS reserve_enabled,
+         MAX(CASE WHEN alert_freeze = 1 THEN 1 ELSE 0 END) AS freeze_enabled,
          MAX(
            CASE
              WHEN alert_dews = 0
@@ -627,6 +635,7 @@ export function mapTelegramBotStats(input: {
       safety: coerceCount(aggregate?.safety_chats),
       launch: coerceCount(aggregate?.launch_chats),
       reserve: coerceCount(aggregate?.reserve_chats),
+      freeze: coerceCount(aggregate?.freeze_chats),
       allTypes: coerceCount(aggregate?.all_types_chats),
     },
     topStablecoins: topStablecoins.map((row) => ({

@@ -191,6 +191,12 @@ export function parseStoredSetCommand(payload: Record<string, unknown>): ParsedS
         setting,
         enabled: payload.enabled !== false,
       };
+    case "freeze":
+      return {
+        ticker,
+        setting,
+        enabled: payload.enabled !== false,
+      };
     case "depeg":
       return {
         ticker,
@@ -394,6 +400,15 @@ export function parseSetCommand(args: string): ParsedSetCommand | { error: strin
       }
       return { error: "Reserve values: on, off" };
     }
+    case "freeze": {
+      if (value === "on") {
+        return { ticker, setting: "freeze", enabled: true };
+      }
+      if (value === "off") {
+        return { ticker, setting: "freeze", enabled: false };
+      }
+      return { error: "Freeze values: on, off" };
+    }
     case "depeg-step": {
       if (value === "off") {
         return { ticker, setting: "depeg-step", enabled: true, step: null };
@@ -405,7 +420,7 @@ export function parseSetCommand(args: string): ParsedSetCommand | { error: strin
       return { error: "Depeg-step values: off, 100, 250, 500" };
     }
     default:
-      return { error: "Supported settings: dews, safety, depeg, depeg-step, launch, reserve" };
+      return { error: "Supported settings: dews, safety, depeg, depeg-step, launch, reserve, freeze" };
   }
 }
 

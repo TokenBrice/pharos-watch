@@ -733,6 +733,75 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(mutationActionDetail({ kind: "unsubscribe-all" })).toBe("all");
   });
 
+  it("allows a stale signed session to export without consuming mutation burst capacity", async () => {
+    const initData = await privateInitData(60 * 60);
+    const db = mockD1(stateReadTables({
+      subscriptions: [{
+        stablecoin_id: "usdc-circle",
+        alert_dews: 1,
+        alert_depeg: 0,
+        alert_safety: 0,
+        alert_launch: 0,
+        alert_reserve: 0,
+        alert_dews_override: 1,
+        alert_depeg_override: 0,
+        alert_safety_override: 0,
+        alert_launch_override: 0,
+        alert_reserve_override: 0,
+        dews_min_band: null,
+        safety_mode: null,
+        depeg_worsening_bps_step: null,
+      }],
+    }));
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "export-watchlist" },
+    }), BOT_TOKEN);
+    const body = await response.json() as { result?: { kind?: string; token?: string } };
+
+    expect(response.status).toBe(200);
+    expect(body.result?.kind).toBe("watchlist-export");
+    expect(body.result?.token).toMatch(/^pw3\./);
+    expect(db.getHistory().some((entry) => entry.binds.some((value) => String(value).includes("mini-app:mutation")))).toBe(false);
+    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_portability", "watchlist_export"])).toBe(true);
+    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_mutation", "watchlist_export"])).toBe(false);
+  });
+
+  it("exports freeze intent through pw3 without using mutation telemetry", async () => {
+    const initData = await privateInitData(60 * 60);
+    const db = mockD1(stateReadTables({
+      subscriptions: [{
+        stablecoin_id: "usdc-circle",
+        alert_dews: 0,
+        alert_depeg: 0,
+        alert_safety: 0,
+        alert_launch: 0,
+        alert_reserve: 0,
+        alert_freeze: 1,
+        alert_dews_override: 0,
+        alert_depeg_override: 0,
+        alert_safety_override: 0,
+        alert_launch_override: 0,
+        alert_reserve_override: 0,
+        alert_freeze_override: 1,
+        dews_min_band: null,
+        safety_mode: null,
+        depeg_worsening_bps_step: null,
+      }],
+    }));
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "export-watchlist" },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ result: { kind: "watchlist-export", token: expect.stringMatching(/^pw3\./) } });
+    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_portability", "watchlist_export"])).toBe(true);
+    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_mutation_denied", "watchlist_export"])).toBe(false);
+  });
+
   it("applies global alert mutations", async () => {
     const initData = await privateInitData();
     const db = mockD1(stateReadTables({

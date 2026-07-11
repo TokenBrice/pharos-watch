@@ -4,9 +4,11 @@ import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
   TelegramMiniAppCatalogSchema,
+  TelegramMiniAppBulkWatchlistResponseSchema,
   TelegramMiniAppMutableStateSchema,
   TelegramMiniAppMutationRequestSchema,
   TelegramMiniAppOperationSchema,
+  TelegramMiniAppPortabilityResponseSchema,
   TelegramMiniAppResponseSchema,
   createTelegramMiniAppSnapshot,
   telegramMiniAppVersionCompatibility,
@@ -31,6 +33,7 @@ const mutableState: TelegramMiniAppMutableState = {
       safety: false,
       launch: false,
       reserve: false,
+      freeze: false,
       depegStepBps: 250,
     },
     quietHours: {
@@ -52,6 +55,12 @@ const mutableState: TelegramMiniAppMutableState = {
 };
 
 const operations: TelegramMiniAppOperation[] = [
+  { kind: "export-watchlist" },
+  { kind: "preview-watchlist-import", token: "pw2.token.digest" },
+  { kind: "confirm-watchlist-import", token: "pw2.token.digest", expectedPreferenceGeneration: 4, previewFingerprint: "preview-v1-12-deadbeef" },
+  { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: ["dai-makerdao"] },
+  { kind: "confirm-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: [], expectedPreferenceGeneration: 4, previewFingerprint: "preview-v1-12-deadbeef" },
+  { kind: "undo-bulk-watchlist", restoreDirectRows: [{ stablecoinId: "dai-makerdao", alertDews: true, alertDepeg: true, alertSafety: false, alertLaunch: false, alertReserve: false, overrideDews: true, overrideDepeg: true, overrideSafety: false, overrideLaunch: false, overrideReserve: false, dewsMinBand: null, safetyMode: null, depegWorseningBpsStep: null }], removeStablecoinIds: ["usdc-circle"], expectedPreferenceGeneration: 5, expectedFingerprint: "preview-v1-12-deadbeef" },
   { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] },
   { kind: "set-global", alertType: "reserve", enabled: true },
   { kind: "set-global-depeg-step", depegStepBps: 500 },
@@ -100,6 +109,63 @@ describe("Telegram Mini App shared contract", () => {
       viewer: { userId: "42" },
       catalog: { searchableCoins: expect.any(Array) },
     });
+  });
+
+  it("requires the exact, versioned portability preview response", () => {
+    expect(TelegramMiniAppPortabilityResponseSchema.safeParse({
+      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      result: {
+        kind: "watchlist-import-preview",
+        expectedPreferenceGeneration: 4,
+        previewFingerprint: "preview-v1-12-deadbeef",
+        preview: {
+          directAdds: ["usdc-circle"],
+          directRemoves: [],
+          directChanges: [],
+          presetAdds: [],
+          presetRemoves: [],
+          presetChanges: [],
+          directBroadenedCoverage: [{ id: "usdc-circle", alertTypes: ["dews"] }],
+          directRemovedCoverage: [],
+          presetBroadenedCoverage: [],
+          presetRemovedCoverage: [],
+        },
+      },
+    }).success).toBe(true);
+  });
+
+  it("bounds bulk watchlist selections and requires a server-issued undo state fingerprint", () => {
+    const twenty = Array.from({ length: 20 }, (_, index) => `coin-${index}`);
+    expect(TelegramMiniAppOperationSchema.safeParse({
+      kind: "preview-bulk-watchlist",
+      addStablecoinIds: twenty,
+      removeStablecoinIds: [],
+    }).success).toBe(true);
+    expect(TelegramMiniAppOperationSchema.safeParse({
+      kind: "preview-bulk-watchlist",
+      addStablecoinIds: [...twenty, "coin-20"],
+      removeStablecoinIds: [],
+    }).success).toBe(false);
+    expect(TelegramMiniAppBulkWatchlistResponseSchema.safeParse({
+      contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+      catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      result: {
+        kind: "bulk-watchlist-preview",
+        expectedPreferenceGeneration: 4,
+        previewFingerprint: "preview-v1-12-deadbeef",
+        adds: ["usdc-circle"],
+        removes: ["dai-makerdao"],
+        unchanged: [],
+        sourceImpact: [{ stablecoinId: "dai-makerdao", action: "remove", inheritedSourcesAfter: ["preset"] }],
+        undo: {
+          expectedPreferenceGeneration: 5,
+          expectedFingerprint: "preview-v1-12-deadbeef",
+          restoreDirectRows: [],
+          removeStablecoinIds: ["usdc-circle"],
+        },
+      },
+    }).success).toBe(true);
   });
 
   it("derives one shared catalog version from the generated bundled catalog", () => {

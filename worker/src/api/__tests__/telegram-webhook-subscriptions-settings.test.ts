@@ -272,7 +272,7 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("No coins available for new alerts");
   });
 
-  it("exports the maximum current subscribable registry as one copyable v2 token", async () => {
+  it("exports the maximum current subscribable registry as one copyable pw3 token", async () => {
     const frozenIds = new Set(FROZEN_STABLECOINS.map((coin) => coin.id));
     const subscriptions = [...TRACKED_META_BY_ID.keys()].filter((id) => !frozenIds.has(id)).map((stablecoinId) => ({
       stablecoin_id: stablecoinId,
@@ -301,7 +301,7 @@ describe("handleTelegramWebhook", () => {
 
     const body = sentMessageBody();
     expect(body.text).toContain(`${subscriptions.length} direct/local rows`);
-    expect(body.text).toContain("<pre>pw2.");
+    expect(body.text).toContain("<pre>pw3.");
     expect(body.text).toContain("Import shows an exact replacement preview");
   });
 

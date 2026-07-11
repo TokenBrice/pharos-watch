@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
-import { applySettingToSubscriptions } from "../subscriptions";
+import { applySettingToSubscriptions, prepareSubscriberAndSubscriptionStatements } from "../subscriptions";
 import { prepareCoinSettingStatements } from "../../telegram-webhook-settings-mutations";
 import type { ParsedSetCommand } from "../../telegram-webhook-shared";
 import type { ResolvedCoin } from "../../../lib/telegram-alerts";
@@ -92,5 +92,24 @@ describe("per-coin subscription setting builders", () => {
 
     const reserveOff = await setCommandPath({ ticker: "USDC", setting: "reserve", enabled: false });
     expect(normalizeSql(reserveOff.sql)).toContain("alert_reserve_override = 1");
+
+    const freezeOff = await setCommandPath({ ticker: "USDC", setting: "freeze", enabled: false });
+    expect(normalizeSql(freezeOff.sql)).toContain("alert_freeze_override = 1");
+  });
+
+  it("persists freeze intent through the shared direct-follow builder", async () => {
+    const db = mockD1();
+    const statements = prepareSubscriberAndSubscriptionStatements(
+      db,
+      "42",
+      "alice",
+      new Set(["freeze"]),
+      [COIN.id],
+    );
+    await db.batch(statements);
+    const subscription = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"));
+    expect(subscription?.sql).toContain("alert_freeze");
+    expect(subscription?.sql).toContain("alert_freeze_override");
+    expect(subscription?.binds).toEqual(["42", COIN.id, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, null]);
   });
 });

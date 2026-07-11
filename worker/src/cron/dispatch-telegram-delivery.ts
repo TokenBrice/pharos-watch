@@ -245,7 +245,7 @@ export async function deliverTelegramSubscriberQueue({
     );
     const perAlertType = emptyPerAlertTypeDelivery();
     for (const message of pendingMessages) {
-      if (message.alertType) perAlertType[message.alertType].enqueued += 1;
+      if (message.alertType) (perAlertType[message.alertType] ??= { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null }).enqueued += 1;
     }
     if (pendingMessages.length > 0) {
       await enqueuePendingAlerts(db, pendingMessages, nowSec, {});
@@ -351,7 +351,7 @@ export async function deliverTelegramSubscriberQueue({
   if (overflowMessages.length > 0) {
     await enqueuePendingAlerts(db, overflowMessages, nowSec, {});
     for (const message of overflowMessages) {
-      if (message.alertType) perAlertType[message.alertType].enqueued += 1;
+      if (message.alertType) (perAlertType[message.alertType] ??= { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null }).enqueued += 1;
     }
     pushQueuedStatuses(overflowMessages);
   }
@@ -362,7 +362,7 @@ export async function deliverTelegramSubscriberQueue({
     const deferredMessages = filterTerminalMessages(expandSubscriberChunks([deferred], blockedChats));
     if (deferredMessages.length === 0) continue;
     deferredMessageCount += deferredMessages.length;
-    perAlertType[deferred.alertType].enqueued += deferredMessages.length;
+    (perAlertType[deferred.alertType] ??= { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null }).enqueued += deferredMessages.length;
     await enqueuePendingAlerts(db, deferredMessages, nowSec, {
       notBeforeAt: chatsInBackoff.get(deferred.chatId) ?? null,
     });
@@ -385,7 +385,7 @@ export async function deliverTelegramSubscriberQueue({
     const overflowTailMessages = filterTerminalMessages(expandSubscriberChunks([overflow], blockedChats));
     if (overflowTailMessages.length === 0) continue;
     overflowTailMessageCount += overflowTailMessages.length;
-    perAlertType[overflow.alertType].enqueued += overflowTailMessages.length;
+    (perAlertType[overflow.alertType] ??= { sent: 0, enqueued: 0, failed: 0, blocked: 0, firstSendLatencyMs: null }).enqueued += overflowTailMessages.length;
     await enqueuePendingAlerts(db, overflowTailMessages, nowSec, {
       notBeforeAt: chatsInBackoff.get(overflow.chatId) ?? null,
     });

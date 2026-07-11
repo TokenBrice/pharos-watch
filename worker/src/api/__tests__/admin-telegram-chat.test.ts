@@ -48,18 +48,18 @@ describe("handleAdminTelegramChat v2", () => {
       `INSERT INTO telegram_subscribers (
          chat_id, username, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
          global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
-         global_alert_reserve, timezone, quiet_hours_enabled, quiet_hours_start_utc,
+         global_alert_reserve, alert_freeze, global_alert_freeze, timezone, quiet_hours_enabled, quiet_hours_start_utc,
          quiet_hours_end_utc, alert_snooze_until_ts, consecutive_block_count,
          consecutive_block_first_at, preference_generation, created_at, last_active_at
-       ) VALUES (?, ?, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, ?, 1, 22, 7, ?, 2, ?, 9, ?, ?)`,
+       ) VALUES (?, ?, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, ?, 1, 22, 7, ?, 2, ?, 9, ?, ?)`,
     ).run("12345", "secret-user", "Europe/Belgrade", now + 600, now - 100, now - 1_000, now - 10);
     sqlite.prepare(
       `INSERT INTO telegram_subscriptions (
          chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
-         alert_reserve, alert_dews_override, alert_depeg_override,
-         alert_safety_override, alert_launch_override, alert_reserve_override,
+         alert_reserve, alert_freeze, alert_dews_override, alert_depeg_override,
+         alert_safety_override, alert_launch_override, alert_reserve_override, alert_freeze_override,
          alert_snooze_until_ts
-       ) VALUES (?, ?, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, ?)`,
+       ) VALUES (?, ?, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, ?)`,
     ).run("12345", "usdc-circle", now + 300);
 
     const insertPending = sqlite.prepare(
@@ -108,8 +108,8 @@ describe("handleAdminTelegramChat v2", () => {
     expect(body.subscriber).toMatchObject({
       usernamePresent: true,
       preferenceGeneration: 9,
-      globalAlerts: { reserve: true },
-      directAlertDefaults: { reserve: true },
+      globalAlerts: { reserve: true, freeze: false },
+      directAlertDefaults: { reserve: true, freeze: false },
       deliveryControls: {
         timezone: "Europe/Belgrade",
         blockStrikes: { count: 2, firstAt: now - 100 },
@@ -117,8 +117,8 @@ describe("handleAdminTelegramChat v2", () => {
     });
     expect(body.subscriptions[0]).toMatchObject({
       stablecoinId: "usdc-circle",
-      alerts: { reserve: true },
-      explicitOverrides: { dews: true, depeg: true, safety: true, launch: true, reserve: true },
+      alerts: { reserve: true, freeze: false },
+      explicitOverrides: { dews: true, depeg: true, safety: true, launch: true, reserve: true, freeze: true },
     });
     expect(body.pendingAlerts.lifecycle).toMatchObject({
       totalRows: 6,
