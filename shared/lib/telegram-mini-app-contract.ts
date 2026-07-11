@@ -24,6 +24,7 @@ export const TELEGRAM_MINI_APP_ERROR_CODES = [
   "invalid-timezone",
   "recap-timezone-required",
   "recap-subscriber-required",
+  "stale-recap-preference",
   "invalid-portable-token",
   "empty-portable-state",
   "stale-import-preview",

@@ -48,11 +48,14 @@ export const handleRecapCallback: CallbackHandler = async ({
     await answerCallback({ text: "Action not recognized." });
     return;
   }
-  const timezone = subscriber?.timezone ?? null;
   if (subscriber == null) {
     await answerCallback({ text: "Start the bot before configuring recaps." });
     return;
   }
+  // Keep timezone and generation from one row snapshot so a concurrent
+  // preference write cannot publish an obsolete local-time schedule.
+  const timezone = subscriber.timezone ?? null;
+  const expectedPreferenceGeneration = Number(subscriber.preference_generation ?? 0);
   if (enabled && timezone == null) {
     await answerCallback({ text: "Set a timezone first with /timezone." });
     return;
@@ -81,6 +84,7 @@ export const handleRecapCallback: CallbackHandler = async ({
         deliveryHourLocal,
         nextDueAt: nextDueMs == null ? null : Math.floor(nextDueMs / 1000),
         nowSec,
+        expectedPreferenceGeneration,
       }, { operationStatements });
       if (!applied) throw new Error("recap preference mutation did not apply");
       if (operationStatements) confirmAtomicMutationApplied?.();

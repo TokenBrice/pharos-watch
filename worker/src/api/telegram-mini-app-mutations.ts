@@ -69,6 +69,7 @@ export type TelegramMiniAppMutationErrorCode =
   | "invalid-timezone"
   | "recap-timezone-required"
   | "recap-subscriber-required"
+  | "stale-recap-preference"
   | "invalid-portable-token"
   | "empty-portable-state"
   | "stale-import-preview"
@@ -764,7 +765,10 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       if (subscriber == null) {
         throw new TelegramMiniAppMutationError("recap-subscriber-required", 409);
       }
-      const timezone = subscriber?.timezone ?? null;
+      // The schedule is computed from this row, so use its generation as the
+      // write fence and ask the client to retry after a concurrent mutation.
+      const timezone = subscriber.timezone ?? null;
+      const expectedPreferenceGeneration = Number(subscriber.preference_generation ?? 0);
       if (operation.enabled && timezone == null) {
         throw new TelegramMiniAppMutationError("recap-timezone-required", 409);
       }
@@ -781,8 +785,9 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
         deliveryHourLocal: operation.deliveryHourLocal,
         nextDueAt: nextDueMs == null ? null : Math.floor(nextDueMs / 1000),
         nowSec,
+        expectedPreferenceGeneration,
       });
-      if (!applied) throw new TelegramMiniAppMutationError("invalid-coin-patch", 409);
+      if (!applied) throw new TelegramMiniAppMutationError("stale-recap-preference", 409);
       return;
     }
     case "unsubscribe-all":

@@ -366,6 +366,7 @@ function mutationErrorMessage(err: TelegramMiniAppMutationError): string {
   if (err.code === "invalid-timezone") return "Unknown timezone";
   if (err.code === "recap-timezone-required") return "Set and confirm a timezone before enabling the daily recap";
   if (err.code === "recap-subscriber-required") return "Add a watchlist before configuring the daily recap";
+  if (err.code === "stale-recap-preference") return "Your recap settings changed. Refresh and try again";
   if (err.code === "invalid-portable-token") return "This watchlist token is invalid or no longer available for new alerts";
   if (err.code === "empty-portable-state") return "There are no direct watchlist rows or presets to export";
   if (err.code === "stale-import-preview") return "Your watchlist changed after this preview. Review the token again before applying it";

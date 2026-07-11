@@ -65,6 +65,13 @@ describe("PharosWatchBotMiniAppPage", () => {
     )).toBe("Pharos edit limit reached. Wait for the countdown before editing again.");
   });
 
+  it("asks the user to retry a recap write rejected by a generation fence", () => {
+    expect(miniAppErrorMessage(
+      new MiniAppRequestError(409, "stale-recap-preference"),
+      "mutation",
+    )).toBe("Your recap settings changed. Refresh and try again.");
+  });
+
   it("renders browser preview immediately without calling session APIs", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

@@ -405,6 +405,59 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
       note: "Reviews the Tape type/time index and cap-plus-one bounded scan used by recap planning.",
     },
     {
+      id: "recap-direct-membership",
+      category: "recap-planner",
+      sql: `SELECT chat_id, stablecoin_id, alert_snooze_until_ts
+        FROM telegram_subscriptions
+       WHERE chat_id IN (?, ?, ?)
+         AND (alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1
+           OR alert_launch = 1 OR alert_reserve = 1 OR alert_freeze = 1)`,
+      binds: ["recap-1", "recap-2", "recap-3"],
+      requiredDetails: ["sqlite_autoindex_telegram_subscriptions_1"],
+      note: "Mirrors the planner's bounded direct-watchlist membership read by due chat ids.",
+    },
+    {
+      id: "recap-preset-membership",
+      category: "recap-planner",
+      sql: `SELECT chat_id, preset_id
+        FROM telegram_preset_subscriptions
+       WHERE chat_id IN (?, ?, ?)
+         AND (alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1)`,
+      binds: ["recap-1", "recap-2", "recap-3"],
+      requiredDetails: ["sqlite_autoindex_telegram_preset_subscriptions_1"],
+      note: "Mirrors the planner's bounded preset membership read by due chat ids.",
+    },
+    {
+      id: "recap-target-guarded-transition",
+      category: "recap-planner",
+      sql: `UPDATE telegram_recap_preferences
+         SET next_due_at = ?, updated_at = ?
+       WHERE chat_id = ? AND enabled = 1 AND next_due_at = ?
+         AND EXISTS (
+           SELECT 1
+             FROM telegram_recap_targets target
+             JOIN telegram_subscribers subscriber ON subscriber.chat_id = target.chat_id
+            WHERE target.recap_key = ? AND target.status = 'queued'
+              AND target.preference_generation = ?
+              AND subscriber.preference_generation = ?
+         )`,
+      binds: [1_800_086_400, 1_800_000_000, "recap-1", 1_800_000_000, "recap:recap-1:2026-07-11:v1", 1, 1],
+      requiredDetails: [
+        "sqlite_autoindex_telegram_recap_preferences_1",
+        "sqlite_autoindex_telegram_recap_targets_1",
+        "sqlite_autoindex_telegram_subscribers_1",
+      ],
+      note: "Mirrors the target-state and preference-generation-fenced schedule transition.",
+    },
+    {
+      id: "recap-pending-handoff",
+      category: "recap-planner",
+      sql: "SELECT id FROM telegram_pending_alerts WHERE dedupe_key = ?",
+      binds: ["recap:recap-1:2026-07-11:v1"],
+      requiredDetails: ["idx_tpa_dedupe_key"],
+      note: "Mirrors the exact pending-row lookup used to attach a recap target after its idempotent handoff.",
+    },
+    {
       id: "pulse-aggregate",
       category: "pulse-status",
       sql: `SELECT

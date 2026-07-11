@@ -113,7 +113,11 @@ export const handleRecap: WebhookCommandHandler = async (ctx, args) => {
     return;
   }
 
+  // Derive the local schedule and generation fence from the same subscriber
+  // snapshot. A timezone or watchlist mutation after this point must make the
+  // recap write fail instead of committing a stale schedule.
   const timezone = subscriber.timezone ?? null;
+  const expectedPreferenceGeneration = Number(subscriber.preference_generation ?? 0);
   if (enabled && timezone == null) {
     await ctx.replyToChat("Set a timezone first with <code>/timezone Europe/Paris</code>, then enable <code>/recap on</code>.");
     return;
@@ -140,6 +144,7 @@ export const handleRecap: WebhookCommandHandler = async (ctx, args) => {
       deliveryHourLocal,
       nextDueAt: nextDueMs == null ? null : Math.floor(nextDueMs / 1000),
       nowSec,
+      expectedPreferenceGeneration,
     }, operation);
     if (!applied) {
       await ctx.replyToChat("Could not update the daily recap. Please try again.");

@@ -208,12 +208,19 @@ describe("Telegram query-plan evaluation", () => {
     expect(pendingDrainIds).not.toContain("pending-drain-ready");
   });
 
-  it("reviews bounded due-recipient and Tape-window recap query plans", () => {
+  it("reviews bounded recap planning reads and guarded handoff query plans", () => {
     const recapChecks = buildQueryPlanChecks()
       .filter((check) => check.category === "recap-planner")
       .map((check) => check.id);
 
-    expect(recapChecks).toEqual(["recap-due-preferences", "recap-tape-window"]);
+    expect(recapChecks).toEqual([
+      "recap-due-preferences",
+      "recap-tape-window",
+      "recap-direct-membership",
+      "recap-preset-membership",
+      "recap-target-guarded-transition",
+      "recap-pending-handoff",
+    ]);
   });
 
   it("passes when required index details are present", () => {

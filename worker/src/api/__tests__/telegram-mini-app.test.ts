@@ -869,6 +869,43 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_recap", "recap"])).toBe(true);
   });
 
+  it("returns a retryable recap-preference conflict when the generation fence is stale", async () => {
+    const initData = await privateInitData();
+    const db = mockD1([
+      recapPreferenceTable({ preference_generation: 2 }),
+      ...stateReadTables({
+        subscriber: {
+          global_alert_dews: 0,
+          global_alert_depeg: 0,
+          global_alert_safety: 0,
+          global_alert_launch: 0,
+          global_alert_reserve: 0,
+          global_alert_freeze: 0,
+          global_depeg_worsening_bps_step: null,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+          timezone: "Europe/Paris",
+          alert_snooze_until_ts: null,
+          preference_generation: 0,
+        },
+      }),
+    ]);
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 14 },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "stale-recap-preference",
+      error: "Your recap settings changed. Refresh and try again",
+    });
+    const recapWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_recap_preferences"));
+    expect(recapWrite?.binds[recapWrite.binds.length - 1]).toBe(0);
+  });
+
   it("requires an existing subscriber and confirmed timezone before enabling a recap", async () => {
     const initData = await privateInitData();
     const missingSubscriberDb = mockD1([

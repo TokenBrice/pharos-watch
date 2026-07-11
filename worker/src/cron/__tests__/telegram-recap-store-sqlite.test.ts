@@ -65,6 +65,31 @@ describe("telegram recap store on latest SQLite schema", () => {
     expect(sqlite.prepare("SELECT next_due_at, preference_generation FROM telegram_recap_preferences p JOIN telegram_subscribers s USING (chat_id) WHERE p.chat_id = '42'").get()).toEqual({ next_due_at: NOW - 1, preference_generation: 1 });
   });
 
+  it("rejects a recap write after a concurrent timezone or preference mutation", async () => {
+    const { sqlite, db } = setup();
+    subscriber(sqlite, "42", 4);
+
+    // Entrypoints obtain these values in one subscriber read before computing
+    // the local delivery time. The stale generation must not commit later.
+    const snapshot = sqlite.prepare(
+      "SELECT timezone, preference_generation FROM telegram_subscribers WHERE chat_id = ?",
+    ).get("42") as { timezone: string | null; preference_generation: number };
+    expect(snapshot).toEqual({ timezone: null, preference_generation: 4 });
+
+    sqlite.prepare(
+      "UPDATE telegram_subscribers SET timezone = ?, preference_generation = preference_generation + 1 WHERE chat_id = ?",
+    ).run("Europe/Paris", "42");
+
+    await expect(setTelegramRecapPreference(db, {
+      ...preferenceInput("42", snapshot.preference_generation),
+      nextDueAt: NOW + 3600,
+    })).resolves.toBe(false);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_preferences").get())
+      .toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = '42'").get())
+      .toEqual({ preference_generation: 5 });
+  });
+
   it("hands target, pending row, identity, and schedule together", async () => {
     const { sqlite, db } = setup();
     subscriber(sqlite, "42");
