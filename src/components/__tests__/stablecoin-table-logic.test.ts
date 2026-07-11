@@ -44,7 +44,7 @@ function makeCoin(
     supplySource: "defillama",
     chains: ["ethereum"],
     ...overrides,
-  };
+  } as StablecoinData;
 }
 
 const sortAsc = (key: StablecoinTableSortKey) => ({ key, direction: "asc" as const });
