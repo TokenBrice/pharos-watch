@@ -11,7 +11,14 @@ import {
   type TelegramMiniAppMutableState,
   type TelegramMiniAppState,
 } from "@shared/lib/telegram-mini-app-contract";
-import { postMiniAppPortability, postMiniAppSnapshot, postMiniAppState, refreshMiniAppBundleOnce } from "./mini-app-api";
+import { SchemaValidationError } from "@/lib/api";
+import {
+  postMiniAppBulkWatchlistPreview,
+  postMiniAppPortability,
+  postMiniAppSnapshot,
+  postMiniAppState,
+  refreshMiniAppBundleOnce,
+} from "./mini-app-api";
 
 const mutableState: TelegramMiniAppMutableState = {
   viewer: {
@@ -89,6 +96,26 @@ describe("Mini App versioned API client", () => {
     expect(snapshot.stateRevision).toBe(telegramMiniAppStateRevision(mutableState));
   });
 
+  it.each([
+    ["contractVersion", "worker-contract-next", "contract-version-mismatch"],
+    ["catalogVersion", "worker-catalog-next", "catalog-version-mismatch"],
+  ] as const)("rejects a compact snapshot with an incompatible %s", async (field, value, code) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...createTelegramMiniAppSnapshot(mutableState), [field]: value }),
+    }));
+
+    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+      .rejects.toMatchObject({ status: 409, code });
+  });
+
+  it("rejects malformed success payloads before they reach Mini App state", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ state: "invalid" }) }));
+
+    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+      .rejects.toBeInstanceOf(SchemaValidationError);
+  });
+
   it("keeps the state-only compatibility wrapper for callers that do not need revision metadata", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => legacyState }));
 
@@ -119,6 +146,59 @@ describe("Mini App versioned API client", () => {
       initData: "signed",
       operation: { kind: "export-watchlist" },
     })).resolves.toMatchObject({ result: { kind: "watchlist-import-preview" } });
+  });
+
+  it.each([
+    ["contractVersion", "worker-contract-next", "contract-version-mismatch"],
+    ["catalogVersion", "worker-catalog-next", "catalog-version-mismatch"],
+  ] as const)("rejects a portable watchlist response with an incompatible %s", async (field, value, code) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+        catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+        [field]: value,
+        result: { kind: "watchlist-export", token: "signed-export", directCount: 1, presetCount: 0 },
+      }),
+    }));
+
+    await expect(postMiniAppPortability("/api/telegram-mini-app/mutate", {
+      initData: "signed",
+      operation: { kind: "export-watchlist" },
+    })).rejects.toMatchObject({ status: 409, code });
+  });
+
+  it("uses the versioned signed transport for bulk watchlist previews", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+        catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+        result: {
+          kind: "bulk-watchlist-preview",
+          expectedPreferenceGeneration: 1,
+          previewFingerprint: "preview-v1-12-deadbeef",
+          adds: ["usdc-circle"],
+          removes: [],
+          unchanged: [],
+          sourceImpact: [],
+          undo: {
+            expectedPreferenceGeneration: 2,
+            expectedFingerprint: "preview-v1-12-deadbeef",
+            restoreDirectRows: [],
+            removeStablecoinIds: ["usdc-circle"],
+          },
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(postMiniAppBulkWatchlistPreview("/api/telegram-mini-app/mutate", {
+      initData: "signed",
+      operation: { kind: "preview-bulk-watchlist", stablecoinIds: ["usdc-circle"], action: "add" },
+    })).resolves.toMatchObject({ result: { adds: ["usdc-circle"] } });
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM);
   });
 
   it("stores only a non-identifying version flag and refreshes once per target", () => {

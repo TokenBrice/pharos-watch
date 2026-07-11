@@ -211,6 +211,25 @@ describe("PharosWatchBotMiniAppPage", () => {
     }));
   });
 
+  it("opens the privacy notice through Telegram when the bridge supports links", async () => {
+    const openLink = vi.fn();
+    window.Telegram = {
+      WebApp: {
+        initData: "signed-init-data",
+        initDataUnsafe: { user: { username: "watcher" } },
+        ready: vi.fn(),
+        openLink,
+      },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => baseState }));
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("link", { name: "What we keep" }));
+    expect(openLink).toHaveBeenCalledWith(`${window.location.origin}/privacy`);
+  });
+
   it("uses the Telegram first name when no username is available", async () => {
     const state: TelegramMiniAppState = {
       ...baseState,
