@@ -141,6 +141,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0195     | `0195_brla_native_recovery_price_repair.sql`                   | Clear BRLA event 90509's mixed-unit USD recovery price from its native-BRL quote-domain row                                                               |
 | 0196     | `0196_telegram_adoption_client_quota.sql`                     | Add hashed-IP per-client minute quotas for public PharosWatchBot CTA telemetry                                                                           |
 | 0197     | `0197_telegram_freeze_alerts.sql`                             | Add opt-in global/direct Telegram freeze preferences plus dedicated immutable Tape-event and frozen-recipient outbox tables                              |
+| 0198     | `0198_telegram_personalized_recap.sql`                        | Add opt-in personalized daily recap preferences, immutable local-date targets, and bounded target/pending handoff metadata                              |
 
 ## Retired Individual Migrations
 
