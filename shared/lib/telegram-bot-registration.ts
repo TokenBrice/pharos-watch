@@ -1,6 +1,12 @@
 import { TELEGRAM_ALERT_FAMILY_PHRASE_LIST } from "./telegram-alert-families";
 
-export const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query", "my_chat_member"] as const;
+export const TELEGRAM_ALLOWED_UPDATES = [
+  "message",
+  "callback_query",
+  "my_chat_member",
+  "inline_query",
+  "chosen_inline_result",
+] as const;
 
 // Canonical @-handle for the bot. Single source of truth for the dispatch
 // addressed-to check, user-facing mentions, deep links, and the Mini App path

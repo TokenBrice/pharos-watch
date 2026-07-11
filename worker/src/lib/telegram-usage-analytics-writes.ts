@@ -30,7 +30,9 @@ export type TelegramUsageEventType =
   | "mini_app_forget"
   | "mini_app_group_readonly"
   | "command_forget"
-  | "re_engagement_warning";
+  | "re_engagement_warning"
+  | "inline_query"
+  | "inline_result_chosen";
 
 export interface TelegramUsageEventInput {
   nowSec?: number;

@@ -12,6 +12,8 @@ export type TelegramWebhookUpdateWithChatMember = TelegramWebhookUpdate & {
 };
 
 export function resolveUpdateType(update: TelegramWebhookUpdateWithChatMember): string {
+  if (update.inline_query) return "inline_query";
+  if (update.chosen_inline_result) return "chosen_inline_result";
   if (update.callback_query) return "callback_query";
   if (update.message) return "message";
   if (update.my_chat_member) return "my_chat_member";

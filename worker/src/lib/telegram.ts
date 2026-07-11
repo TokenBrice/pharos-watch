@@ -40,6 +40,18 @@ export interface TelegramBotApiPostOptions {
   timeoutMs?: number;
 }
 
+export interface TelegramInlineQueryResultArticle {
+  type: "article";
+  id: string;
+  title: string;
+  description?: string;
+  input_message_content: {
+    message_text: string;
+    parse_mode: "HTML";
+    link_preview_options?: { is_disabled: boolean };
+  };
+}
+
 export async function postTelegramBotApi(
   botToken: string,
   method: string,
@@ -613,4 +625,33 @@ export async function answerCallbackQuery(
       errorClass: classifyCallbackAcknowledgementFailure(res.status),
     });
   }
+}
+
+/**
+ * Answer a Telegram inline query with a bounded, cacheable result set. The
+ * caller owns query validation and must not include user/query identifiers in
+ * any telemetry or result payload beyond Telegram's required query id.
+ */
+export async function answerInlineQuery(
+  inlineQueryId: string,
+  botToken: string,
+  results: readonly TelegramInlineQueryResultArticle[],
+  options: { cacheTimeSec: number },
+): Promise<boolean> {
+  const res = await postTelegramBotApi(botToken, "answerInlineQuery", {
+    inline_query_id: inlineQueryId,
+    results,
+    cache_time: options.cacheTimeSec,
+    is_personal: false,
+  });
+  await drainResponseBody(res);
+  if (res.ok) return true;
+  logTelegramEvent({
+    level: "warn",
+    message: "inline query answer rejected",
+    action: "answer-inline-query",
+    statusCode: res.status,
+    errorClass: classifyCallbackAcknowledgementFailure(res.status),
+  });
+  return false;
 }

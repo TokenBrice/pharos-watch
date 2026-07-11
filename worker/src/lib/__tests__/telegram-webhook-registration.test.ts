@@ -20,7 +20,13 @@ import {
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
-const MINI_APP_MVP_ALLOWED_UPDATES = ["message", "callback_query", "my_chat_member"] as const;
+const MINI_APP_MVP_ALLOWED_UPDATES = [
+  "message",
+  "callback_query",
+  "my_chat_member",
+  "inline_query",
+  "chosen_inline_result",
+] as const;
 const CACHE_SELECT_MATCH = "SELECT value, updated_at FROM cache WHERE key = ?";
 const CACHE_WRITE_MATCH = "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)";
 const PROFILE_BACKOFF_METHODS = ["setMyName", "setMyShortDescription", "setMyDescription"] as const;
@@ -64,7 +70,7 @@ async function expectedWebhookCacheValue(
   return JSON.stringify({
     version: 2,
     url,
-    allowed_updates: ["message", "callback_query", "my_chat_member"],
+    allowed_updates: ["message", "callback_query", "my_chat_member", "inline_query", "chosen_inline_result"],
     secret_token: {
       present: true,
       marker: await secretTokenMarker(secret),
@@ -198,7 +204,7 @@ describe("reconcileTelegramWebhookRegistration", () => {
     expect(body).toEqual({
       url: "https://api.pharos.watch/api/telegram-webhook",
       secret_token: "secret-token",
-      allowed_updates: ["message", "callback_query", "my_chat_member"],
+      allowed_updates: ["message", "callback_query", "my_chat_member", "inline_query", "chosen_inline_result"],
     });
     expect(body.allowed_updates).toHaveLength(MINI_APP_MVP_ALLOWED_UPDATES.length);
     expect(body.allowed_updates).not.toContain("web_app_data");
@@ -258,7 +264,13 @@ describe("reconcileTelegramWebhookRegistration", () => {
     });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const body = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
-    expect(body.allowed_updates).toEqual(["message", "callback_query", "my_chat_member"]);
+    expect(body.allowed_updates).toEqual([
+      "message",
+      "callback_query",
+      "my_chat_member",
+      "inline_query",
+      "chosen_inline_result",
+    ]);
   });
 
   it("re-registers when the cached secret marker belongs to a previous secret", async () => {

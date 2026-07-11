@@ -214,6 +214,7 @@ export type ParsedSetCommand =
   | { ticker: string; setting: "safety"; enabled: boolean; mode: "downgrade-only" | "upgrade-only" | null }
   | { ticker: string; setting: "launch"; enabled: boolean }
   | { ticker: string; setting: "reserve"; enabled: boolean }
+  | { ticker: string; setting: "freeze"; enabled: boolean }
   | { ticker: string; setting: "depeg"; enabled: boolean }
   | { ticker: string; setting: "depeg-step"; enabled: true; step: 100 | 250 | 500 | null };
 
@@ -246,6 +247,16 @@ export interface TelegramWebhookUpdate {
     data?: string;
     from?: { id?: number; username?: string };
     message?: { chat?: { id?: number; type?: string }; message_id?: number };
+  };
+  inline_query?: {
+    id?: string;
+    query?: string;
+    from?: { id?: number; username?: string };
+    offset?: string;
+  };
+  chosen_inline_result?: {
+    result_id?: string;
+    from?: { id?: number; username?: string };
   };
 }
 
