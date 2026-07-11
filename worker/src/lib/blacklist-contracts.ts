@@ -829,11 +829,6 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // identical to the USDT0 family used by XAUT and USDQ.
   { chain: ETHEREUM, stablecoinId: "usat-tether", stablecoin: "USAT", startBlock: 23_998_151, events: USDT0_EVENT_FAMILY.events },
 
-  // AEUR (Anchored Coins) — Ethereum reuses the dual-indexed Freeze / Unfreeze
-  // family (address in topics[2]) already covered for FDUSD / EURI / U.
-  { chain: ETHEREUM, stablecoinId: "aeur-anchored-coins", stablecoin: "AEUR", startBlock: 17_731_536, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
-  // AEUR on BSC: deferred — see consolidated contract-creation note.
-
   // JPYC (JPY Coin — CENTRE fork) — Ethereum + Polygon. Implementation behind ERC1967Proxy
   // emits Blocklisted(address indexed) / UnBlocklisted(address indexed). JPY-pegged; price is
   // resolved via jpyc-jpyc entry in BLACKLIST_PRICE_ASSET_IDS.

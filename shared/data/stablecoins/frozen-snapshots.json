@@ -816,5 +816,115 @@
         }
       ]
     }
+  },
+  {
+    "id": "ausdt-tether-alloy",
+    "capturedAt": "2026-07-08T08:00:33.000Z",
+    "peggedAssetRow": {
+      "id": "ausdt-tether-alloy",
+      "name": "Alloy Tether",
+      "symbol": "aUSD₮",
+      "pegType": "peggedUSD",
+      "pegMechanism": "rwa-backed",
+      "price": 0.9996619573423076,
+      "priceSource": "defillama",
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 49983100.914486274
+      },
+      "circulatingPrevDay": {},
+      "circulatingPrevWeek": {},
+      "circulatingPrevMonth": {},
+      "chainCirculating": {},
+      "chains": ["Ethereum"]
+    }
+  },
+  {
+    "id": "usdh-native-markets",
+    "capturedAt": "2026-07-08T08:00:33.000Z",
+    "peggedAssetRow": {
+      "id": "usdh-native-markets",
+      "name": "USDH Stablecoin",
+      "symbol": "USDH",
+      "pegType": "peggedUSD",
+      "pegMechanism": "fiat-backed",
+      "price": 0.9998927,
+      "priceSource": "defillama",
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 21351529.213065293
+      },
+      "circulatingPrevDay": {},
+      "circulatingPrevWeek": {},
+      "circulatingPrevMonth": {},
+      "chainCirculating": {},
+      "chains": ["Hyperliquid L1", "HyperEVM"]
+    }
+  },
+  {
+    "id": "jpyc-jpyc-v1",
+    "capturedAt": "2026-07-08T08:00:33.000Z",
+    "peggedAssetRow": {
+      "id": "jpyc-jpyc-v1",
+      "name": "JPY Coin v1",
+      "symbol": "JPYC",
+      "pegType": "peggedJPY",
+      "pegMechanism": "rwa-backed",
+      "price": null,
+      "priceSource": "missing",
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedJPY": 18881878.355325483
+      },
+      "circulatingPrevDay": {},
+      "circulatingPrevWeek": {},
+      "circulatingPrevMonth": {},
+      "chainCirculating": {},
+      "chains": ["Ethereum", "Polygon", "Gnosis"]
+    }
+  },
+  {
+    "id": "wemix-dollar-wemix",
+    "capturedAt": "2026-07-08T08:00:33.000Z",
+    "peggedAssetRow": {
+      "id": "wemix-dollar-wemix",
+      "name": "WEMIX Dollar",
+      "symbol": "WEMIX$",
+      "pegType": "peggedUSD",
+      "pegMechanism": "rwa-backed",
+      "price": 1.005,
+      "priceSource": "defillama",
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 14611485.509545587
+      },
+      "circulatingPrevDay": {},
+      "circulatingPrevWeek": {},
+      "circulatingPrevMonth": {},
+      "chainCirculating": {},
+      "chains": []
+    }
+  },
+  {
+    "id": "aeur-anchored-coins",
+    "capturedAt": "2026-07-08T08:00:33.000Z",
+    "peggedAssetRow": {
+      "id": "aeur-anchored-coins",
+      "name": "Anchored Coins AEUR",
+      "symbol": "AEUR",
+      "pegType": "peggedEUR",
+      "pegMechanism": "fiat-backed",
+      "price": 1.117990454919679,
+      "priceSource": "defillama",
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedEUR": 1117775.589919203
+      },
+      "circulatingPrevDay": {},
+      "circulatingPrevWeek": {},
+      "circulatingPrevMonth": {},
+      "chainCirculating": {},
+      "chains": ["BSC", "Ethereum"]
+    }
   }
 ]

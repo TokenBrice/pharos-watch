@@ -407,7 +407,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 28 keys
 - `shared/data/stablecoins/coins/acred-apollo-securitize.json` - 28 keys
 - `shared/data/stablecoins/coins/aed-rakbank.json` - 20 keys
-- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 29 keys
+- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 28 keys
 - `shared/data/stablecoins/coins/aid-gaib.json` - 26 keys
 - `shared/data/stablecoins/coins/alusd-alchemix.json` - 22 keys
 - `shared/data/stablecoins/coins/apxusd-apyx.json` - 26 keys
@@ -420,7 +420,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/audm-mento.json` - 28 keys
 - `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 26 keys
 - `shared/data/stablecoins/coins/ausd-agora.json` - 25 keys
-- `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 31 keys
+- `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 30 keys
 - `shared/data/stablecoins/coins/autousd-auto-finance.json` - 25 keys
 - `shared/data/stablecoins/coins/avusd-avant.json` - 22 keys
 - `shared/data/stablecoins/coins/axcnh-anchorx.json` - 21 keys

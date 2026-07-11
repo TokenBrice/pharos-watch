@@ -356,7 +356,6 @@ describe("mint-burn-contracts top-200 Ethereum additions", () => {
     { stablecoinId: "satusd-river", symbol: "satUSD", address: "0x1958853a8be062dc4f401750eb233f5850f0d0d2", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "rwausdi-multipli", symbol: "rwaUSDi", address: "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "fpi-frax", symbol: "FPI", address: "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e", decimals: 18, dustThreshold: 10_000 },
-    { stablecoinId: "aeur-anchored-coins", symbol: "AEUR", address: "0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "usdq-quantoz", symbol: "USDQ", address: "0xc83e27f270cce0a3a3a29521173a83f402c1768b", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "usdx-hex-trust", symbol: "USDX", address: "0xf8750b54d86be7ae9e32b4a0c826811198d63313", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "mim-abracadabra", symbol: "MIM", address: "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3", decimals: 18, dustThreshold: 10_000 },

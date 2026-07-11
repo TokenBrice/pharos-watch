@@ -207,41 +207,6 @@
       "blacklistable": true
     }
   ],
-  "liveReservesConfig": {
-    "adapter": "evm-branch-balances",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "ausdt-tether-alloy",
-    "display": {
-      "url": "https://dev.alloy.tether.to/deployments/ethereum-mainnet",
-      "label": "Alloy CMPVault"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "rpcUrl": "https://ethereum-rpc.publicnode.com",
-      "fallbackRpcUrl": "https://eth.llamarpc.com",
-      "branches": [
-        {
-          "name": "XAUT collateral",
-          "holder": "0x4c1ec3d1519225f36958408fdd33a0d5ba1f2fa7",
-          "token": {
-            "chain": "ethereum",
-            "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
-            "decimals": 6
-          },
-          "risk": "medium",
-          "coinId": "xaut-tether",
-          "depType": "collateral"
-        }
-      ]
-    }
-  },
   "launchDate": "2024-06-17",
   "marketAvailability": "legacy-or-wind-down",
   "notices": [

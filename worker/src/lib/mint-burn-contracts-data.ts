@@ -38,7 +38,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "satusd-river", dustThreshold: 10_000 },
   { stablecoinId: "rwausdi-multipli", dustThreshold: 10_000 },
   { stablecoinId: "fpi-frax", dustThreshold: 10_000 },
-  { stablecoinId: "aeur-anchored-coins", dustThreshold: 10_000 },
   { stablecoinId: "usdq-quantoz", dustThreshold: 10_000 },
   { stablecoinId: "usdx-hex-trust", dustThreshold: 10_000 },
   { stablecoinId: "mim-abracadabra", dustThreshold: 10_000 },

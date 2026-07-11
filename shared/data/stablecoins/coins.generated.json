@@ -1168,23 +1168,6 @@
         "risk": "very-low"
       }
     ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "aeur-anchored-coins",
-      "display": {
-        "url": "https://www.anchoredcoins.com/en/landing/aeur",
-        "label": "Anchored Coins"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
-        }
-      }
-    },
     "notices": [
       {
         "type": "warning",
@@ -4421,41 +4404,6 @@
         "blacklistable": true
       }
     ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "collateral-mix",
-      "breakerScope": "ausdt-tether-alloy",
-      "display": {
-        "url": "https://dev.alloy.tether.to/deployments/ethereum-mainnet",
-        "label": "Alloy CMPVault"
-      },
-      "adapter": "evm-branch-balances",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
-        }
-      },
-      "params": {
-        "rpcUrl": "https://ethereum-rpc.publicnode.com",
-        "fallbackRpcUrl": "https://eth.llamarpc.com",
-        "branches": [
-          {
-            "name": "XAUT collateral",
-            "holder": "0x4c1ec3d1519225f36958408fdd33a0d5ba1f2fa7",
-            "token": {
-              "chain": "ethereum",
-              "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
-              "decimals": 6
-            },
-            "risk": "medium",
-            "coinId": "xaut-tether",
-            "depType": "collateral"
-          }
-        ]
-      }
-    },
     "notices": [
       {
         "type": "warning",
@@ -33382,23 +33330,6 @@
         "risk": "low"
       }
     ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "collateral-mix",
-      "breakerScope": "jpyc-jpyc-v1",
-      "display": {
-        "url": "https://jpyc.co.jp/",
-        "label": "JPYC"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
-        }
-      }
-    },
     "notices": [
       {
         "type": "info",
@@ -69008,25 +68939,6 @@
         "risk": "very-low"
       }
     ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "attestation-mix",
-      "breakerScope": "usdh-native-markets",
-      "display": {
-        "url": "https://usdh.com/reserves",
-        "label": "USDH Reserves"
-      },
-      "scoring": {
-        "maxSourceAgeSec": 4000000
-      },
-      "adapter": "usdh-native-markets",
-      "inputs": {
-        "primary": {
-          "kind": "http-html",
-          "url": "https://usdh.com/reserves"
-        }
-      }
-    },
     "notices": [
       {
         "type": "danger",

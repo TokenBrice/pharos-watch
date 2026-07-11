@@ -342,8 +342,7 @@
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
-    },
-    "liveReserveAdapter": "curated-validated"
+    }
   },
   {
     "id": "aid-gaib",
@@ -1110,8 +1109,7 @@
           "modulesOrGuardsStatus": "none-detected"
         }
       ]
-    },
-    "liveReserveAdapter": "evm-branch-balances"
+    }
   },
   {
     "id": "autousd-auto-finance",
@@ -9252,8 +9250,7 @@
           "modulesOrGuardsStatus": "not-applicable"
         }
       ]
-    },
-    "liveReserveAdapter": "curated-validated"
+    }
   },
   {
     "id": "jpyc-jpyc",
@@ -18738,8 +18735,7 @@
           "canRaiseCap": "unknown"
         }
       ]
-    },
-    "liveReserveAdapter": "usdh-native-markets"
+    }
   },
   {
     "id": "usdk-kast",

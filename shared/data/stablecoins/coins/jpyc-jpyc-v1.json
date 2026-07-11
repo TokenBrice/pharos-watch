@@ -83,23 +83,6 @@
       "risk": "low"
     }
   ],
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "jpyc-jpyc-v1",
-    "display": {
-      "url": "https://jpyc.co.jp/",
-      "label": "JPYC"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
   "notices": [
     {
       "type": "info",

@@ -208,23 +208,6 @@
       "message": "FlowBank SA (former reserve partner) declared bankruptcy in June 2024. Anchored Coins has since restructured collateral so that 100% of circulating AEUR is now backed at Swissquote Bank SA; bankruptcy proceedings no longer affect coverage. The issuer is winding down stablecoin operations to comply with MiCAR (which requires EU licensing for EUR issuers) and will not resume new AEUR issuance; AEUR was delisted from Binance EEA in March 2025. Redemptions continue (minimum 250,000 AEUR threshold for direct primary-market redemption)."
     }
   ],
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "aeur-anchored-coins",
-    "display": {
-      "url": "https://www.anchoredcoins.com/en/landing/aeur",
-      "label": "Anchored Coins"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
   "launchDate": "2023-07-19",
   "obituary": {
     "causeOfDeath": "regulatory",
