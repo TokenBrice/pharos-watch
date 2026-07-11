@@ -53,7 +53,7 @@ describe("telegram personalized recap planner", () => {
     const { sqlite, db } = setup();
     insertSubscriber(sqlite, "direct");
     insertSubscriber(sqlite, "global", { globalDepeg: true });
-    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id) VALUES ('direct', 'usdc-circle')").run();
+    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES ('direct', 'usdc-circle', 1)").run();
     markTapeFresh(sqlite);
     insertTape(sqlite, "recap-depeg-1", NOW - 60);
 
@@ -62,7 +62,16 @@ describe("telegram personalized recap planner", () => {
     try {
       const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
       expect(result.status).toBe("ok");
-      expect(JSON.parse(result.metadata)).toMatchObject({ queued: 2, aiCalls: 0, externalPlanningFetches: 0 });
+      expect(JSON.parse(result.metadata)).toMatchObject({
+        pagesAttempted: 1,
+        pagesCompleted: 1,
+        queued: 2,
+        factsLoaded: 1,
+        factsAdmitted: 1,
+        factsRejected: 0,
+        aiCalls: 0,
+        externalPlanningFetches: 0,
+      });
     } finally {
       Object.defineProperty(globalThis, "fetch", { configurable: true, value: originalFetch });
     }
@@ -77,7 +86,7 @@ describe("telegram personalized recap planner", () => {
   it("fails closed while Tape is stale without advancing a retryable schedule", async () => {
     const { sqlite, db } = setup();
     insertSubscriber(sqlite, "direct");
-    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id) VALUES ('direct', 'usdc-circle')").run();
+    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES ('direct', 'usdc-circle', 1)").run();
     markTapeFresh(sqlite, NOW - 91 * 60);
 
     const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
@@ -91,7 +100,7 @@ describe("telegram personalized recap planner", () => {
   it("defers the entire due page rather than deriving a recap from truncated Tape rows", async () => {
     const { sqlite, db } = setup();
     insertSubscriber(sqlite, "direct");
-    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id) VALUES ('direct', 'usdc-circle')").run();
+    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES ('direct', 'usdc-circle', 1)").run();
     markTapeFresh(sqlite);
     insertTape(sqlite, "recap-depeg-1", NOW - 60);
     insertTape(sqlite, "recap-depeg-2", NOW - 30);
@@ -102,5 +111,42 @@ describe("telegram personalized recap planner", () => {
     expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = 'direct'").get())
       .toEqual({ next_due_at: NOW - 1 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets").get()).toEqual({ count: 0 });
+  });
+
+  it("does not treat snooze-only or explicit-off rows as watchlist membership", async () => {
+    const { sqlite, db } = setup();
+    for (const chatId of ["snooze-only", "explicit-off"]) insertSubscriber(sqlite, chatId);
+    sqlite.prepare(`INSERT INTO telegram_subscriptions
+      (chat_id, stablecoin_id, alert_snooze_until_ts)
+      VALUES ('snooze-only', 'usdc-circle', ?)`).run(NOW + 3600);
+    sqlite.prepare(`INSERT INTO telegram_subscriptions
+      (chat_id, stablecoin_id, alert_depeg_override)
+      VALUES ('explicit-off', 'usdc-circle', 1)`).run();
+    markTapeFresh(sqlite);
+    insertTape(sqlite, "recap-depeg-1", NOW - 60);
+
+    const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
+
+    expect(JSON.parse(result.metadata)).toMatchObject({ queued: 0, noChanges: 2 });
+    expect(sqlite.prepare("SELECT chat_id, status FROM telegram_recap_targets ORDER BY chat_id").all()).toEqual([
+      { chat_id: "explicit-off", status: "skipped_no_changes" },
+      { chat_id: "snooze-only", status: "skipped_no_changes" },
+    ]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+  });
+
+  it("stops cooperatively at its soft deadline without advancing due work", async () => {
+    const { sqlite, db } = setup();
+    insertSubscriber(sqlite, "direct");
+    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES ('direct', 'usdc-circle', 1)").run();
+    markTapeFresh(sqlite);
+    insertTape(sqlite, "recap-depeg-1", NOW - 60);
+
+    const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW, softDeadlineMs: 0 });
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata)).toMatchObject({ queued: 0, softDeadlineDeferred: 1, pagesDeferred: 1 });
+    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = 'direct'").get())
+      .toEqual({ next_due_at: NOW - 1 });
   });
 });

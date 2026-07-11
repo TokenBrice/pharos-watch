@@ -11,6 +11,7 @@ import {
   TELEGRAM_RECAP_FIRST_LOOKBACK_SEC,
   TELEGRAM_RECAP_LOOKBACK_SEC,
   TELEGRAM_RECAP_MAX_PAGES_PER_RUN,
+  TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS,
   TELEGRAM_RECAP_TAPE_PAGE_LIMIT,
 } from "@shared/lib/telegram-recap-policy";
 import { localDateInIanaTimezone, nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
@@ -83,6 +84,8 @@ export interface TelegramRecapPlannerOptions {
   pageSize?: number;
   /** Test-only cap override; production uses the reviewed shared fact limit. */
   tapePageLimit?: number;
+  /** Test override for the cooperative wall-clock deadline. */
+  softDeadlineMs?: number;
 }
 
 function safeNowSec(options: TelegramRecapPlannerOptions): number {
@@ -164,6 +167,8 @@ async function loadDirectSubscriptions(
     SELECT chat_id, stablecoin_id, alert_snooze_until_ts
       FROM telegram_subscriptions
      WHERE chat_id IN (${inClause.sql})
+       AND (alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1
+         OR alert_launch = 1 OR alert_reserve = 1 OR alert_freeze = 1)
   `).bind(...inClause.binds).all<DirectSubscriptionRow>();
   const result = new Map<string, Set<string>>();
   for (const row of rows.results ?? []) {
@@ -183,6 +188,7 @@ async function loadPresetSubscriptions(db: D1Database, chatIds: readonly string[
     SELECT chat_id, preset_id
       FROM telegram_preset_subscriptions
      WHERE chat_id IN (${inClause.sql})
+       AND (alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1)
   `).bind(...inClause.binds).all<PresetSubscriptionRow>();
   const result = new Map<string, TelegramPresetId[]>();
   for (const row of rows.results ?? []) {
@@ -199,7 +205,13 @@ async function loadTapeFacts(
   startSec: number,
   endSec: number,
   limit: number,
-): Promise<{ truncated: boolean; highWaterId: number | null; facts: TelegramRecapFact[] }> {
+): Promise<{
+  truncated: boolean;
+  highWaterId: number | null;
+  facts: TelegramRecapFact[];
+  loadedCount: number;
+  rejectedCount: number;
+}> {
   const typeClause = buildInClause(TELEGRAM_RECAP_FACT_TYPES);
   const rows = await db.prepare(`
     SELECT id, event_id, type, severity, ts, coin_id, chain, payload_json
@@ -210,11 +222,16 @@ async function loadTapeFacts(
      LIMIT ?
   `).bind(startSec * 1000, endSec * 1000, ...typeClause.binds, limit + 1).all<TapeRow>();
   const result = rows.results ?? [];
-  if (result.length > limit) return { truncated: true, highWaterId: null, facts: [] };
+  if (result.length > limit) {
+    return { truncated: true, highWaterId: null, facts: [], loadedCount: result.length, rejectedCount: 0 };
+  }
+  const facts = parseTelegramRecapFacts(result);
   return {
     truncated: false,
     highWaterId: result.length > 0 ? Number(result[result.length - 1]!.id) : null,
-    facts: parseTelegramRecapFacts(result),
+    facts,
+    loadedCount: result.length,
+    rejectedCount: result.length - facts.length,
   };
 }
 
@@ -292,12 +309,16 @@ export async function planTelegramPersonalizedRecaps(
   signal?: AbortSignal,
   options: TelegramRecapPlannerOptions = {},
 ): Promise<TelegramRecapPlannerResult> {
+  const startedAtMs = Date.now();
   const nowSec = safeNowSec(options);
   const pageSize = Math.max(1, Math.min(TELEGRAM_RECAP_DUE_PAGE_SIZE, Math.floor(options.pageSize ?? TELEGRAM_RECAP_DUE_PAGE_SIZE)));
   const maxPages = Math.max(1, Math.min(TELEGRAM_RECAP_MAX_PAGES_PER_RUN, Math.floor(options.maxPages ?? TELEGRAM_RECAP_MAX_PAGES_PER_RUN)));
   const tapePageLimit = Math.max(1, Math.floor(options.tapePageLimit ?? TELEGRAM_RECAP_TAPE_PAGE_LIMIT));
+  const softDeadlineMs = Math.max(0, Math.floor(options.softDeadlineMs ?? TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS));
   const counts = {
-    pages: 0,
+    pagesAttempted: 0,
+    pagesCompleted: 0,
+    pagesDeferred: 0,
     due: 0,
     queued: 0,
     noChanges: 0,
@@ -307,7 +328,27 @@ export async function planTelegramPersonalizedRecaps(
     presetDeferred: 0,
     truncatedDeferred: 0,
     invalidTimezone: 0,
+    softDeadlineDeferred: 0,
+    factsLoaded: 0,
+    factsAdmitted: 0,
+    factsRejected: 0,
+    factsOmittedByMessageCap: 0,
+    factFamilyOmissions: {} as Record<string, number>,
+    oldestDueAgeSec: 0,
+    nextDueAt: null as number | null,
   };
+  const finish = (status: "ok" | "degraded", tapeFreshness: "fresh" | "stale"): TelegramRecapPlannerResult => ({
+    status,
+    itemCount: counts.queued + counts.noChanges + counts.paused + counts.stale,
+    metadata: JSON.stringify({
+      ...counts,
+      tapeFreshness,
+      wallDurationMs: Math.max(0, Date.now() - startedAtMs),
+      aiCalls: 0,
+      externalPlanningFetches: 0,
+    }),
+  });
+  const deadlineReached = () => Date.now() - startedAtMs >= softDeadlineMs;
 
   throwIfAborted(signal);
   const freshAt = await loadFreshProjectTapeAt(db);
@@ -316,19 +357,26 @@ export async function planTelegramPersonalizedRecaps(
     const subscribers = await loadSubscriberRows(db, due.map((preference) => preference.chatId));
     counts.due = due.length;
     counts.stale = await recordStalePage(db, due, subscribers, nowSec);
-    return {
-      status: "degraded",
-      itemCount: counts.stale,
-      metadata: JSON.stringify({ ...counts, tapeFreshness: "stale", aiCalls: 0, externalPlanningFetches: 0 }),
-    };
+    counts.oldestDueAgeSec = Math.max(0, ...due.map((preference) => nowSec - preference.expectedNextDueAt));
+    return finish("degraded", "stale");
   }
 
-  for (let page = 0; page < maxPages; page += 1) {
+  pageLoop: for (let page = 0; page < maxPages; page += 1) {
     throwIfAborted(signal);
+    if (deadlineReached()) {
+      counts.deferred += 1;
+      counts.softDeadlineDeferred += 1;
+      counts.pagesDeferred += 1;
+      break;
+    }
     const preferences = await listDueTelegramRecapPreferences(db, nowSec, pageSize);
     if (preferences.length === 0) break;
-    counts.pages += 1;
+    counts.pagesAttempted += 1;
     counts.due += preferences.length;
+    counts.oldestDueAgeSec = Math.max(
+      counts.oldestDueAgeSec,
+      ...preferences.map((preference) => Math.max(0, nowSec - preference.expectedNextDueAt)),
+    );
     const chatIds = preferences.map((preference) => preference.chatId);
     const subscriberByChat = await loadSubscriberRows(db, chatIds);
     const directByChat = await loadDirectSubscriptions(db, chatIds, nowSec);
@@ -340,21 +388,33 @@ export async function planTelegramPersonalizedRecaps(
     if (resolvedPresets.kind !== "ok") {
       counts.deferred += preferences.length;
       counts.presetDeferred += preferences.length;
+      counts.pagesDeferred += 1;
       break;
     }
     const earliestStartSec = Math.min(...preferences.map((preference) => recapWindow(preference, nowSec).startSec));
     const loadedFacts = await loadTapeFacts(db, earliestStartSec, nowSec, tapePageLimit);
+    counts.factsLoaded += loadedFacts.loadedCount;
+    counts.factsAdmitted += loadedFacts.facts.length;
+    counts.factsRejected += loadedFacts.rejectedCount;
     if (loadedFacts.truncated) {
       counts.deferred += preferences.length;
       counts.truncatedDeferred += preferences.length;
+      counts.pagesDeferred += 1;
       break;
     }
     const presetCoinIds = new Map<TelegramPresetId, readonly string[]>(
       resolvedPresets.presets.map((preset) => [preset.definition.id, preset.stablecoinIds]),
     );
 
-    for (const preference of preferences) {
+    for (const [preferenceIndex, preference] of preferences.entries()) {
       throwIfAborted(signal);
+      if (deadlineReached()) {
+        const deferred = preferences.length - preferenceIndex;
+        counts.deferred += deferred;
+        counts.softDeadlineDeferred += deferred;
+        counts.pagesDeferred += 1;
+        break pageLoop;
+      }
       const subscriber = subscriberByChat.get(preference.chatId);
       const timezone = subscriber?.timezone;
       if (!subscriber || !timezone) {
@@ -369,6 +429,7 @@ export async function planTelegramPersonalizedRecaps(
         counts.deferred += 1;
         continue;
       }
+      counts.nextDueAt = counts.nextDueAt == null ? nextDueAt : Math.min(counts.nextDueAt, nextDueAt);
       const window = recapWindow(preference, nowSec);
       const recapKey = buildTelegramRecapDedupeKey(preference.chatId, localDate);
       const scope = scopeForRecipient(subscriber, directByChat, presetsByChat, presetCoinIds);
@@ -401,6 +462,7 @@ export async function planTelegramPersonalizedRecaps(
         if (await recordTelegramRecapSkip(db, { target, status: "skipped_no_changes" })) counts.noChanges += 1;
         continue;
       }
+      counts.factsOmittedByMessageCap += formatted.omittedFactCount;
       const queued = await queueTelegramRecapTarget(db, {
         ...target,
         pendingDedupeKey: recapKey,
@@ -413,14 +475,11 @@ export async function planTelegramPersonalizedRecaps(
       });
       if (queued === "queued") counts.queued += 1;
     }
+    counts.pagesCompleted += 1;
     // A full page may contain guarded no-ops, but each successful plan/skip
     // advances its own next_due_at; re-reading the page remains the durable cursor.
   }
-  return {
-    status: counts.deferred > 0 ? "degraded" : "ok",
-    itemCount: counts.queued + counts.noChanges + counts.paused + counts.stale,
-    metadata: JSON.stringify({ ...counts, tapeFreshness: "fresh", aiCalls: 0, externalPlanningFetches: 0 }),
-  };
+  return finish(counts.deferred > 0 ? "degraded" : "ok", "fresh");
 }
 
 export const planTelegramRecaps = planTelegramPersonalizedRecaps;
