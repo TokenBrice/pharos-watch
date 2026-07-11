@@ -3552,13 +3552,13 @@ Errors: `400` invalid request shape, `401` invalid or stale Telegram session, `4
 
 ### `POST /api/telegram-mini-app/mutate`
 
-Applies one private-chat Mini App setting mutation, then returns the refreshed mutable-state snapshot and opaque state revision. The immutable catalog is not repeated.
+Runs one private-chat Mini App operation. Read-only export/import/bulk previews return their operation result without changing preferences; writes return the refreshed mutable-state snapshot and opaque state revision. The immutable catalog is not repeated.
 
-**Authentication:** exempt from `X-API-Key`; requires signed Telegram Mini App `initData` no older than 5 minutes. Mutations are private-user-context only (`chat_type` absent, `private`, or Telegram direct-link `sender`). The same fresh launch can perform multiple mutations inside that 5-minute window; stale auth returns `401`.
+**Authentication:** exempt from `X-API-Key`; requires signed Telegram Mini App `initData`. Export, import-preview, and bulk-preview are read-only private-user operations and accept the 24-hour session window. Confirmations and all other writes require `initData` no older than 5 minutes. Mutations are private-user-context only (`chat_type` absent, `private`, or Telegram direct-link `sender`). The same fresh launch can perform multiple mutations inside that 5-minute window; stale write auth returns `401`.
 
 **Site-data lane:** denied.
 
-**Rate limiting:** an anchored per-user burst budget admits up to 12 signature-valid, schema-valid mutation attempts in 30 seconds. A denial returns the same integer delay in `Retry-After` and `retryAfterSec`; the client counts down without replaying the write.
+**Rate limiting:** read-only portability/bulk previews use the two-second session throttle and do not consume edit capacity. Writes use an anchored per-user burst budget that admits up to 12 signature-valid, schema-valid mutation attempts in 30 seconds. A denial returns the same integer delay in `Retry-After` and `retryAfterSec`; the client counts down without replaying the write while read controls remain available.
 
 **Cache:** no-store.
 
@@ -3579,7 +3579,13 @@ Supported `operation.kind` values:
 
 - `recommended-setup` — canonical first-run setup only: `presetId="usd-top25"` and `alertTypes=["dews","depeg"]`.
 - `follow-preset` — follow any supported preset with selected alert types.
-- `set-global` — toggle one global alert family (`dews`, `depeg`, `safety`, `launch`, `reserve`).
+- `export-watchlist` — return one lossless `pw3` direct/preset token; read-only.
+- `preview-watchlist-import` — decode a portable token and return exact replacement plus broadened/removed coverage; read-only.
+- `confirm-watchlist-import` — revalidate generation/fingerprint and atomically replace portable direct/preset state.
+- `preview-bulk-watchlist` — preview up to 20 unique direct-row adds/removals and inherited source impact; read-only.
+- `confirm-bulk-watchlist` — generation/fingerprint-guarded atomic application of the previewed direct-row patch.
+- `undo-bulk-watchlist` — restore the exact pre-edit direct rows/snoozes and remove added rows when post-edit state is unchanged.
+- `set-global` — toggle one global alert family (`dews`, `depeg`, `safety`, `launch`, `reserve`, `freeze`).
 - `set-global-depeg-step` — set or clear the global depeg severity and worsening-step threshold (`100`, `250`, `500`, or `null`).
 - `set-quiet-hours` — enable or disable UTC quiet hours.
 - `clear-snooze` — clear chat-level snooze.
@@ -3592,7 +3598,7 @@ Supported `operation.kind` values:
 - `remove-coin` — remove one explicit coin subscription.
 - `follow-preset` / `unfollow-preset` — add or remove a dynamic preset watchlist.
 
-Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `409` contract/catalog version mismatch; `413` request body above the 16 KiB Mini App cap; `429` burst budget; `500` uncaught handler failure wrapper; `503` preset cache unavailable or missing bot-token configuration. A `409` occurs before burst admission, analytics, or mutation writes; the client refreshes its static bundle at most once and never replays the rejected mutation.
+Errors: `400` invalid operation/token, unknown coin/preset, empty portable state, or empty alert type selection; `401` invalid or stale Telegram session; `403` group operation; `409` contract/catalog version mismatch or stale import/bulk preview; `413` request body above the 16 KiB Mini App cap; `429` session throttle or burst budget; `500` uncaught handler failure wrapper; `503` preset cache unavailable or missing bot-token configuration. Version mismatch occurs before rate admission, analytics, or writes. Stale preview never applies a partial patch, and the client never replays a rejected write.
 
 ### `POST /api/telegram-webhook`
 
@@ -3613,10 +3619,10 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/start` — Welcome/setup wizard with onboarding examples plus `@pharoswatch` and `@pharoswatchers` links
 - `/presets` — List the preset watchlist catalog and example commands
 - `/sample` — Private preview of example alert copy and supported alert families
-- `/subscribe <types> <targets>` — Subscribe to alerts for explicit coins or preset watchlists (types: dews, depeg, safety, launch)
+- `/subscribe <types> <targets>` — Subscribe to alerts for explicit coins (`dews`, `depeg`, `safety`, `launch`, `reserve`, `freeze`) or preset watchlists (`dews`, `depeg`, `safety` only)
 - `/subscribe <types> all` — Enable one or more alert types across all tracked stablecoins
 - `/unsubscribe <targets>` — Remove explicit coin subscriptions or the concrete coin rows covered by a preset watchlist
-- `/unsubscribe all` — Remove all per-coin subscriptions, disable every current alert flag including launch, and clear the global depeg worsening step
+- `/unsubscribe all` — Remove all per-coin subscriptions, disable every current global/default alert flag including reserve and freeze, and clear the global depeg worsening step
 - `/set <ticker> <setting> <value>` — Tune per-coin thresholds and modes
 - `/set all <setting> <value>` — Toggle global all-stablecoin alert types
 - `/settings` — Open the inline-keyboard settings menu
@@ -3635,7 +3641,7 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/forget` — Private two-step deletion flow for the subscriber row and mutable alert settings
 - `/help` — Command reference
 
-Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dynamically when follow/unfollow mutations need concrete rows and when dispatch fan-out builds target alerts. `/list` displays stored preset rows directly, and `/status` is a per-coin read. Supported aliases are `usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, and `mcap-ge-100m`. Presets are supported for `dews`, `depeg`, and `safety`; `launch` still requires explicit tickers or Pharos coin IDs.
+Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dynamically when follow/unfollow mutations need concrete rows and when dispatch fan-out builds target alerts. `/list` displays stored preset rows directly, and `/status` is a per-coin read. Supported aliases are `usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, and `mcap-ge-100m`. Presets are supported for `dews`, `depeg`, and `safety`; `launch`, `reserve`, and `freeze` require explicit tickers/Pharos coin IDs or the all-stablecoin global toggle.
 
 ---
 
@@ -5404,9 +5410,10 @@ The endpoint still returns `200` with `subscriber: null` when a subscriber was d
       "safety": false,
       "launch": true,
       "reserve": true,
+      "freeze": false,
       "depegWorseningBpsStep": 250
     },
-    "directAlertDefaults": { "dews": true, "depeg": false, "safety": true, "launch": false, "reserve": true },
+    "directAlertDefaults": { "dews": true, "depeg": false, "safety": true, "launch": false, "reserve": true, "freeze": false },
     "deliveryControls": {
       "timezone": "Europe/Belgrade",
       "quietHours": { "enabled": true, "startHourUtc": 22, "endHourUtc": 7 },

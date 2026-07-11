@@ -48,6 +48,12 @@ Observed event history stays in the event ledger. Event counts are observed supp
 
 `itemCount` now reflects the number of rows actually inserted into `blacklist_events`. `metadata.eventsFetched` tracks fetched/parsed rows before `INSERT OR IGNORE` deduplication, which is useful when diagnosing repeated rescans.
 
+### Telegram Freeze Alert Consumer
+
+PharosWatchBot consumes only explicit, unsuppressed `blacklist_events` transitions after the 30-minute Tape projector has written them as immutable `freeze.blocked`, `freeze.unblocked`, or `freeze.destroyed` rows. New projector payloads carry the canonical stablecoin id resolved from the verified contract `config_key`; legacy symbol-only rows are accepted only when the symbol is unique in the tracked registry. The Telegram consumer fails closed when the latest successful `project-tape` run is older than 60 minutes and cold-seeds without historical replay when its cursor is absent.
+
+This consumer does not change tracker detection or amount methodology. Its worst-case source latency remains bounded by the six-hour blacklist scan, the 30-minute Tape projection, and the five-minute Telegram poll. Alert messages retain both the Tape event id and `blacklist_events.id`, link to `/freezewatch/`, and describe a missing historical amount as unavailable rather than zero. See [Telegram Alerts](./telegram-alerts.md#freeze-alert-source-and-cadence) for opt-in, cohort, delivery, and retention behavior.
+
 ---
 
 ## Blockchain Infrastructure
