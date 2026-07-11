@@ -123,6 +123,27 @@ function stateReadTables(overrides: {
   ];
 }
 
+function recapPreferenceTable(overrides: Partial<Record<string, unknown>> = {}): MockTableConfig {
+  const row = {
+    chat_id: "42",
+    enabled: 1,
+    cadence: "daily",
+    delivery_hour_local: 14,
+    next_due_at: NOW_SEC + 18_000,
+    last_window_end_at: null,
+    last_delivered_local_date: null,
+    created_at: NOW_SEC,
+    updated_at: NOW_SEC,
+    preference_generation: 1,
+    ...overrides,
+  };
+  return {
+    match: "FROM telegram_recap_preferences p",
+    first: row,
+    rows: [row],
+  };
+}
+
 function stablecoinsCacheTable(): MockTableConfig {
   return {
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -730,6 +751,25 @@ describe("handleTelegramMiniAppSession", () => {
     expect(row?.binds).not.toContain("42");
     expect(row?.binds).not.toContain("alice");
   });
+
+  it("records the recap-settings launch action without storing user identifiers", async () => {
+    const initData = await privateInitData(60, "recap_settings");
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppSession(
+      db,
+      request("/api/telegram-mini-app/session", { initData }),
+      BOT_TOKEN,
+    );
+
+    expect(response.status).toBe(200);
+    const row = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT INTO telegram_usage_daily")
+      && entry.binds.includes("mini_app_session_valid"));
+    expect(row?.binds).toContain("recap_settings");
+    expect(row?.binds).not.toContain("42");
+    expect(row?.binds).not.toContain("alice");
+  });
 });
 
 describe("handleTelegramMiniAppMutation", () => {
@@ -771,7 +811,99 @@ describe("handleTelegramMiniAppMutation", () => {
 
   it("uses semantic action details for timezone and unsubscribe-all mutations", () => {
     expect(mutationActionDetail({ kind: "set-timezone", timezone: "Europe/Paris" })).toBe("timezone");
+    expect(mutationActionDetail({ kind: "set-recap", enabled: true, deliveryHourLocal: 14 })).toBe("recap");
     expect(mutationActionDetail({ kind: "unsubscribe-all" })).toBe("all");
+  });
+
+  it("enables a timezone-confirmed recap, records recap telemetry, and returns refreshed state", async () => {
+    const initData = await privateInitData();
+    const db = mockD1([
+      recapPreferenceTable(),
+      ...stateReadTables({
+        subscriber: {
+          global_alert_dews: 0,
+          global_alert_depeg: 0,
+          global_alert_safety: 0,
+          global_alert_launch: 0,
+          global_alert_reserve: 0,
+          global_alert_freeze: 0,
+          global_depeg_worsening_bps_step: null,
+          quiet_hours_enabled: 0,
+          quiet_hours_start_utc: null,
+          quiet_hours_end_utc: null,
+          timezone: "Europe/Paris",
+          alert_snooze_until_ts: null,
+        },
+      }),
+    ]);
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 14 },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+    expect(historyHas(db, "INSERT INTO telegram_recap_preferences", ["42", 1, 14])).toBe(true);
+    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_recap", "recap"])).toBe(true);
+    expect(await response.json()).toMatchObject({
+      subscriber: { recap: { enabled: true, deliveryHourLocal: 14, timezoneConfirmed: true } },
+    });
+  });
+
+  it("disables a recap without requiring a timezone and cancels uncommitted recap delivery", async () => {
+    const initData = await privateInitData();
+    const db = mockD1([
+      recapPreferenceTable({ enabled: 0, delivery_hour_local: 9, next_due_at: null }),
+      ...stateReadTables(),
+    ]);
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "set-recap", enabled: false, deliveryHourLocal: 9 },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+    expect(historyHas(db, "terminal_reason = 'recap_disabled'", ["42"])).toBe(true);
+    expect(historyHas(db, "DELETE FROM telegram_pending_alerts", ["42"])).toBe(true);
+    expect(historyHas(db, "INSERT INTO telegram_usage_daily", ["mini_app_recap", "recap"])).toBe(true);
+  });
+
+  it("requires an existing subscriber and confirmed timezone before enabling a recap", async () => {
+    const initData = await privateInitData();
+    const missingSubscriberDb = mockD1([
+      { match: "FROM telegram_subscribers", first: null, rows: [] },
+    ]);
+    const missingTimezoneDb = mockD1(stateReadTables());
+
+    const missingSubscriber = await handleTelegramMiniAppMutation(
+      missingSubscriberDb,
+      request("/api/telegram-mini-app/mutate", {
+        initData,
+        operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 9 },
+      }),
+      BOT_TOKEN,
+    );
+    const missingTimezone = await handleTelegramMiniAppMutation(
+      missingTimezoneDb,
+      request("/api/telegram-mini-app/mutate", {
+        initData,
+        operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 9 },
+      }),
+      BOT_TOKEN,
+    );
+
+    expect(missingSubscriber.status).toBe(409);
+    await expect(missingSubscriber.json()).resolves.toMatchObject({
+      code: "recap-subscriber-required",
+      error: "Add a watchlist before configuring the daily recap",
+    });
+    expect(missingTimezone.status).toBe(409);
+    await expect(missingTimezone.json()).resolves.toMatchObject({
+      code: "recap-timezone-required",
+      error: "Set and confirm a timezone before enabling the daily recap",
+    });
+    expect(historyHas(missingSubscriberDb, "INSERT INTO telegram_usage_daily", ["mini_app_mutation_denied", "recap", "recap-subscriber-required"])).toBe(true);
+    expect(historyHas(missingTimezoneDb, "INSERT INTO telegram_usage_daily", ["mini_app_mutation_denied", "recap", "recap-timezone-required"])).toBe(true);
   });
 
   it("allows a stale signed session to export without consuming mutation burst capacity", async () => {
