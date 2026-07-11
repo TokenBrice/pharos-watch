@@ -282,6 +282,20 @@ describe("stablecoin catalog source helpers", () => {
     );
   });
 
+  it("applies full catalog invariants to base coin files without sidecars", () => {
+    const rootDir = makeTempRoot();
+
+    writeJson(
+      rootDir,
+      "shared/data/stablecoins/coins/base-usd.json",
+      makeCoin("base-usd", { canBeBlacklisted: true }),
+    );
+
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
+      /blacklistabilityReview: explicit canBeBlacklisted overrides require blacklistabilityReview/,
+    );
+  });
+
   it("rejects sidecars that duplicate a field still present in the base coin", () => {
     const rootDir = makeTempRoot();
 

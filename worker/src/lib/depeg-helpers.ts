@@ -57,6 +57,7 @@ export interface DexPriceRow {
 }
 
 export type PendingDepegReasonFlag = "large-cap" | "low-confidence" | "extreme-move";
+export const NATIVE_ORIGIN_PENDING_REASON_FLAG = "native-origin";
 /**
  * Stored reason is a "+"-joined list of flags in canonical order:
  * extreme-move > large-cap > low-confidence.
@@ -84,6 +85,16 @@ export function parsePendingReason(reason: PendingDepegReason | null | undefined
 
 export function isExtremeMovePending(reason: PendingDepegReason | null | undefined): boolean {
   return parsePendingReason(reason).has("extreme-move");
+}
+
+export function markNativeOriginPending(reason: PendingDepegReason): PendingDepegReason {
+  return reason.split("+").includes(NATIVE_ORIGIN_PENDING_REASON_FLAG)
+    ? reason
+    : `${reason}+${NATIVE_ORIGIN_PENDING_REASON_FLAG}`;
+}
+
+export function isNativeOriginPending(reason: PendingDepegReason | null | undefined): boolean {
+  return reason?.split("+").includes(NATIVE_ORIGIN_PENDING_REASON_FLAG) ?? false;
 }
 
 export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexPriceRow>> {

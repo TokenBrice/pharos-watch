@@ -186,6 +186,47 @@ describe("catalog action canonical audit", () => {
     expect(JSON.parse(rows(sqlite)[0]?.details_json ?? "null")).toMatchObject({ mode: "live" });
   });
 
+  it("does not let a pre-idempotency failure replace the original intent outcome", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec(AUDIT_SCHEMA);
+    const db = createSqliteD1(sqlite);
+    const definition = endpoint("backfill-depegs");
+    const intentKey = "operator-known-idempotency-key";
+
+    await auditCatalogActionResponse({
+      db,
+      endpoint: definition,
+      request: request("/api/backfill-depegs?stablecoin=usdt-tether&dry-run=false", intentKey),
+      response: Response.json({ ok: true }, { status: 200, headers: { "X-Idempotent-Replay": "false" } }),
+    });
+    await auditCatalogActionResponse({
+      db,
+      endpoint: definition,
+      request: request("/api/backfill-depegs?stablecoin=attacker-target&dry-run=false", intentKey, {
+        headers: {
+          "X-Pharos-Admin": "",
+          "Cf-Access-Authenticated-User-Email": "attacker@pharos.watch",
+        },
+      }),
+      response: Response.json(
+        { error: "Missing required X-Pharos-Admin header; refusing mutation." },
+        { status: 403 },
+      ),
+    });
+
+    const auditRows = rows(sqlite);
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows[0]).toMatchObject({
+      target: "usdt-tether",
+      result: "ok",
+      http_status: 200,
+    });
+    expect(JSON.parse(auditRows[0]?.details_json ?? "null")).toMatchObject({
+      outcome: "succeeded",
+      idempotentReplay: false,
+    });
+  });
+
   it("lets the original success replace an earlier replay-unknown placeholder", async () => {
     const sqlite = new DatabaseSync(":memory:");
     sqlite.exec(AUDIT_SCHEMA);

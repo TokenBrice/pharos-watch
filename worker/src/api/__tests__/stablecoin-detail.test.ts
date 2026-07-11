@@ -441,6 +441,19 @@ describe("handleStablecoinDetail", () => {
     expect(detailWrite?.sql).toContain("generation = ?");
   });
 
+  it("does not claim a detail cache generation before a fresh body is ready", async () => {
+    const db = mockD1([{ match: "cache", rows: [] }]);
+
+    fetchSpy.mockResolvedValueOnce(new Response("upstream unavailable", { status: 503 }));
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
+
+    expect(res.status).toBe(502);
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
+    expect(db.getHistory().some((entry) => entry.sql.includes("RETURNING generation"))).toBe(false);
+  });
+
   it("passes the CoinGecko API key through the commodity detail path", async () => {
     const db = mockD1([{ match: "cache", rows: [] }]);
 

@@ -197,8 +197,8 @@ describe("fetchTronEventsIncremental cursor safety", () => {
     await fetchTronEventsIncremental(config, null, lastTimestampMs, makeRunBudget(), noopLimiter);
 
     const requested = new URL(String(vi.mocked(fetch).mock.calls[0]?.[0]));
-    expect(requested.searchParams.get("min_timestamp")).toBe(String(lastTimestampMs));
-    expect(Number(requested.searchParams.get("max_timestamp"))).toBeLessThanOrEqual(Date.now() - 15 * 60_000);
+    expect(requested.searchParams.get("min_block_timestamp")).toBe(String(lastTimestampMs));
+    expect(Number(requested.searchParams.get("max_block_timestamp"))).toBeLessThanOrEqual(Date.now() - 15 * 60_000);
     expect(requested.searchParams.get("only_confirmed")).toBe("true");
   });
 

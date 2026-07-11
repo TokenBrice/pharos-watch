@@ -210,6 +210,9 @@ describe("router contract: strict frontend paths are routable", () => {
         }));
         expect(forbiddenRepairGet).not.toBeNull();
         expect(forbiddenRepairGet!.status).toBe(405);
+      } else if (path === "/api/admin-telegram-delivery-control") {
+        expect(getResult!.status).not.toBe(405);
+        expect(getResult!.status).toBe(401);
       } else {
         expect(getResult!.status).toBe(405);
       }
@@ -223,6 +226,22 @@ describe("router contract: strict frontend paths are routable", () => {
         expect(postResult!.status).not.toBe(405);
       }
     }
+  });
+
+  it("requires the admin mutation header for reserve recovery fault injection", async () => {
+    const path = "https://stablecoin-api.preview.workers.dev/api/admin/reserve-recovery-fault-injection";
+    const response = await route(makeRouteCtx({
+      url: new URL(path),
+      request: new Request(path, { method: "POST" }),
+      trustedAdmin: true,
+      workerVersion: "preview-v1",
+    }));
+
+    expect(response).not.toBeNull();
+    expect(response!.status).toBe(403);
+    await expect(response!.json()).resolves.toEqual({
+      error: "Missing required X-Pharos-Admin header; refusing mutation.",
+    });
   });
 
   it("keeps the dynamic discovery dismiss route aligned with shared admin method/auth rules", async () => {

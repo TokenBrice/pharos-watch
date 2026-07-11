@@ -458,6 +458,44 @@ describe("handleTelegramWebhook", () => {
     expect(buttons.some((button) => button.text.startsWith("1.") && button.callback_data === "select:1")).toBe(true);
   });
 
+  it("preserves the pending initiator on chained ambiguous ticker selections", async () => {
+    const firstAmbiguous = resolveTicker("USDF");
+    const nextAmbiguous = resolveTicker("USX");
+    if (firstAmbiguous.status !== "ambiguous" || nextAmbiguous.status !== "ambiguous") {
+      throw new Error("Expected USDF and USX to be ambiguous for chained disambiguation test");
+    }
+
+    const db = fixtureMockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "subscribe",
+          action_payload: JSON.stringify({ alertTypes: ["dews"], presetIds: [] }),
+          alert_types: JSON.stringify(["dews"]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "USDF",
+          candidates: JSON.stringify(firstAmbiguous.matches),
+          remaining_tickers: JSON.stringify(["USX"]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: "999",
+        },
+      },
+      { match: "telegram_pending_disambiguation", rows: [] },
+    ]);
+
+    await handleTelegramWebhook(
+      db,
+      makeCallbackRequest("select:1", { chatId: -123, chatType: "supergroup", fromId: 999 }),
+      "test-secret",
+      "bot-token",
+    );
+
+    const followUpInsert = db.getHistory()
+      .find((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"));
+    expect(followUpInsert?.binds[9]).toBe("999");
+  });
+
   it("handles /set for a unique ticker", async () => {
     const db = fixtureMockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
