@@ -65,6 +65,7 @@
     "telegram-degradation-watchdog",
     "telegram-disambiguation-cleanup",
     "telegram-inactive-cleanup",
+    "telegram-personalized-recap-planner",
     "telegram-pulse-snapshot",
     "telegram-retention-cleanup",
     "weekly-recap",

@@ -71,6 +71,10 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   // Keep the app timeout under Cloudflare's scheduled-event ceiling while
   // leaving room for cron_runs logging and sidecar skips.
   "dispatch-telegram-alerts": TELEGRAM_DISPATCH_TIMEOUT_MS,
+  // The planner is DB-only and bounded to one five-minute Telegram lane
+  // invocation; keep its lease budget explicit rather than relying on the
+  // fallback timeout.
+  "telegram-personalized-recap-planner": DEFAULT_CRON_TIMEOUT_MS,
   "snapshot-supply": DEFAULT_CRON_TIMEOUT_MS,
   "snapshot-chain-supply": DEFAULT_CRON_TIMEOUT_MS,
   "publish-report-card-cache": DEFAULT_CRON_TIMEOUT_MS,
