@@ -216,8 +216,8 @@ function DailyRecapSection({ state, canMutate, isMutating, pendingOperation, onM
             deliveryHourLocal: recap.deliveryHourLocal,
           })}
           className={recap.enabled
-            ? "pharos-focus-ring relative inline-flex h-11 w-[3.25rem] shrink-0 items-center rounded-full border border-[color:var(--mini-accent)] bg-[color:var(--mini-accent)] p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-            : "pharos-focus-ring relative inline-flex h-11 w-[3.25rem] shrink-0 items-center rounded-full border border-border/70 bg-background/70 p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50"}
+            ? "pharos-focus-ring relative inline-flex h-11 w-14 shrink-0 items-center rounded-full border border-[color:var(--mini-accent)] bg-[color:var(--mini-accent)] p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            : "pharos-focus-ring relative inline-flex h-11 w-14 shrink-0 items-center rounded-full border border-border/70 bg-background/70 p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50"}
         >
           <span className={recap.enabled
             ? "h-5 w-5 translate-x-5 rounded-full bg-white shadow-sm transition-transform"
