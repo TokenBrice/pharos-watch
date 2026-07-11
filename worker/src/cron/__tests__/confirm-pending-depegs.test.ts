@@ -91,7 +91,7 @@ interface PendingRow {
   peak_seen_bps: number | null;
   peak_price: number | null;
   peg_reference: number;
-  reason?: "large-cap" | "low-confidence" | "extreme-move";
+  reason?: string;
   updated_at?: number | null;
 }
 
@@ -480,6 +480,57 @@ describe("confirmPendingDepegs", () => {
     expect(deletes).toEqual([22]);
     expect(outcome?.boundValues[15]).toBe("promoted");
     expect(outcome?.boundValues[21]).toBe("confirmed-by:native:brl");
+  });
+
+  it("keeps native-origin pending rows in native units and does not promote them from the same direct quote", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValue(new Map([
+      ["brz-transfero", {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.9758,
+        updatedAt: nowSec - 60,
+      }],
+    ]));
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 23,
+            stablecoin_id: "brz-transfero",
+            symbol: "BRZ",
+            peg_type: "peggedREAL",
+            direction: "below",
+            first_seen_bps: -242,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.9758,
+            peak_seen_bps: -242,
+            peak_price: 0.9758,
+            peg_reference: 1,
+            reason: "large-cap+native-origin",
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "brz-transfero",
+          name: "Brazilian Digital",
+          symbol: "BRZ",
+          geckoId: "brz",
+          pegType: "peggedREAL",
+          price: 0.191187,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+      { peggedREAL: 0.191895 },
+    );
+
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("promotes or rejects pending rows based on secondary-source agreement", async () => {

@@ -17,6 +17,7 @@ const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
 const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
 const AUDIT_DEPEG_HISTORY_PATH = API_PATHS.auditDepegHistoryBase();
 const BACKFILL_DEWS_PATH = API_PATHS.backfillDews();
+const ADMIN_TELEGRAM_DELIVERY_CONTROL_PATH = API_PATHS.adminTelegramDeliveryControl();
 const ADMIN_DYNAMIC_PATH_ROOTS = [
   "/api/api-key-requests-admin",
   "/api/api-keys",
@@ -155,6 +156,9 @@ export function isMutatingAdminGetAllowed(url: URL): boolean {
   }
   if (url.pathname === BACKFILL_DEWS_PATH) {
     return !url.searchParams.has("repair") || url.searchParams.get("dry-run") === "true";
+  }
+  if (url.pathname === ADMIN_TELEGRAM_DELIVERY_CONTROL_PATH) {
+    return true;
   }
   return false;
 }

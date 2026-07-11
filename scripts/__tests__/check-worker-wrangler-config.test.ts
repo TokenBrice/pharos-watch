@@ -60,4 +60,29 @@ routes = [{ pattern = "api.pharos.watch", custom_domain = true }]
     expect(report.issues).toContain("Route preview.pharos.watch must set custom_domain = true.");
     expect(report.issues.some((issue) => issue.startsWith("Root custom domains must be exactly"))).toBe(true);
   });
+
+  it("rejects route entries that only appear in TOML comments", () => {
+    const report = evaluateWorkerWranglerConfig(`
+routes = [
+  # { pattern = "api.pharos.watch", custom_domain = true },
+  # { pattern = "site-api.pharos.watch", custom_domain = true },
+  # { pattern = "ops-api.pharos.watch", custom_domain = true }
+]
+
+[[rules]]
+type = "Data"
+globs = ["**/*.ttf"]
+fallthrough = true
+
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = true
+`);
+
+    expect(report.failed).toBe(true);
+    expect(report.issues).toContain(
+      "Root custom domains must be exactly api.pharos.watch, ops-api.pharos.watch, site-api.pharos.watch; found none.",
+    );
+  });
 });

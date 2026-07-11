@@ -13,6 +13,7 @@ import { isDirectRun, parsePositiveInt, sleep } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_ATTEMPTS = 60;
 const DEFAULT_DELAY_MS = 5_000;
+const DEFAULT_STABLE_COUNT = 10;
 const DEFAULT_TIMEOUT_MS = 8_000;
 const USAGE = `Usage: node scripts/maintenance/wait-pages-release-marker.mjs [options]
 
@@ -21,6 +22,7 @@ Options:
   --marker <path>     Expected local marker (default: out/__pharos_release.json)
   --attempts <count>  Poll attempts (default: 60)
   --delay-ms <ms>     Delay between attempts (default: 5000)
+  --stable-count <n>  Consecutive matching responses required (default: 10)
   --timeout-ms <ms>   Per-request timeout (default: 8000)
   -h, --help          Show this help`;
 
@@ -31,6 +33,7 @@ export function parseReleaseMarkerArgs(argv, env = process.env) {
       attempts: { type: "string" },
       "delay-ms": { type: "string" },
       marker: { type: "string" },
+      "stable-count": { type: "string" },
       "timeout-ms": { type: "string" },
       url: { type: "string", multiple: true },
     },
@@ -42,6 +45,7 @@ export function parseReleaseMarkerArgs(argv, env = process.env) {
     markerPath: typeof values.marker === "string"
       ? values.marker
       : env.PHAROS_RELEASE_MARKER_PATH ?? "out/__pharos_release.json",
+    stableCount: parsePositiveInt(env.PHAROS_RELEASE_MARKER_STABLE_COUNT, DEFAULT_STABLE_COUNT),
     timeoutMs: parsePositiveInt(env.PHAROS_RELEASE_MARKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
     urls: Array.isArray(values.url) ? values.url : [],
   };
@@ -50,6 +54,9 @@ export function parseReleaseMarkerArgs(argv, env = process.env) {
   }
   if (typeof values["delay-ms"] === "string") {
     args.delayMs = parseCliInteger(values["delay-ms"], { name: "--delay-ms", min: 0 });
+  }
+  if (typeof values["stable-count"] === "string") {
+    args.stableCount = parseCliInteger(values["stable-count"], { name: "--stable-count", min: 1 });
   }
   if (typeof values["timeout-ms"] === "string") {
     args.timeoutMs = parseCliInteger(values["timeout-ms"], { name: "--timeout-ms", min: 1 });
@@ -103,16 +110,26 @@ async function fetchMarker(url, { headers, timeoutMs }) {
 
 async function waitForUrl(url, expectedCommit, options) {
   let lastDetail = "not attempted";
+  let consecutiveMatches = 0;
   for (let attempt = 1; attempt <= options.attempts; attempt += 1) {
     try {
       const result = await fetchMarker(url, options);
       const liveCommit = typeof result.body?.commit === "string" ? result.body.commit.trim() : "";
       if (result.response.ok && liveCommit === expectedCommit) {
-        console.log(`[release-marker] OK ${url} commit=${liveCommit}`);
-        return;
+        consecutiveMatches += 1;
+        if (consecutiveMatches >= options.stableCount) {
+          console.log(
+            `[release-marker] OK ${url} commit=${liveCommit} stable=${consecutiveMatches}/${options.stableCount}`,
+          );
+          return;
+        }
+        lastDetail = `matching commit, stability=${consecutiveMatches}/${options.stableCount}`;
+      } else {
+        consecutiveMatches = 0;
+        lastDetail = `HTTP ${result.response.status}, commit=${liveCommit || "(missing)"}, body=${result.text.slice(0, 120)}`;
       }
-      lastDetail = `HTTP ${result.response.status}, commit=${liveCommit || "(missing)"}, body=${result.text.slice(0, 120)}`;
     } catch (error) {
+      consecutiveMatches = 0;
       lastDetail = error instanceof Error ? error.message : String(error);
     }
 
@@ -132,6 +149,10 @@ export async function run(argv = process.argv.slice(2)) {
   if (writeCliHelpIfRequested(args, USAGE)) return;
   const urls = args.urls.map((url) => url.trim()).filter(Boolean);
   assertCliUsage(urls.length > 0, "at least one --url is required");
+  assertCliUsage(
+    args.attempts >= args.stableCount,
+    "--attempts must be greater than or equal to --stable-count",
+  );
 
   const expected = await loadExpectedMarker(args.markerPath);
   const headers = buildAccessHeaders();
