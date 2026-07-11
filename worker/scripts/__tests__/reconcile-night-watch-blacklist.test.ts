@@ -24,13 +24,16 @@ function amountNative(event: FrozenManifestEvent): number | null {
   return event.amountRaw == null ? null : Number(BigInt(event.amountRaw)) / 1_000_000;
 }
 
-function balanceProjection(events: readonly FrozenManifestEvent[]): Map<string, number> {
+function balanceProjection(events: readonly FrozenManifestEvent[]): Map<string, { amount: number; source: string }> {
   const latest = new Map<string, FrozenManifestEvent>();
   for (const event of events) latest.set(event.address, event);
-  const balances = new Map<string, number>();
+  const balances = new Map<string, { amount: number; source: string }>();
   for (const event of latest.values()) {
     if (event.eventType === "unblacklist") continue;
-    balances.set(event.address, event.eventType === "destroy" ? amountNative(event)! : 1);
+    balances.set(event.address, {
+      amount: event.eventType === "destroy" ? amountNative(event)! : 1,
+      source: event.eventType === "destroy" ? "destroy_event" : "reconciliation_current_balance",
+    });
   }
   return balances;
 }
@@ -70,10 +73,11 @@ function makeD1(initiallyApplied = false): {
         );
         return [...balances]
           .filter(([address]) => requestedAddresses.has(address.toLowerCase()))
-          .map(([address, amount]) => ({
+          .map(([address, balance]) => ({
             address,
-            amount_native: amount,
-            source: "reconciliation_current_balance",
+            amount_native: balance.amount,
+            amount_usd: balance.amount,
+            source: balance.source,
             config_key: frozenManifest.configKey,
             contract_address: frozenManifest.contractAddress,
           })) as T[];
@@ -310,6 +314,28 @@ describe("Night Watch blacklist reconciliation", () => {
     expect(summary.status).toBe("failed");
     expect(summary.balanceReplayMatchingCount).toBeLessThan(summary.balanceReplayExpectedCount);
     expect(summary.unresolvedManifestGapCount).toBeGreaterThan(0);
+    expect(summary.samples.balanceMismatches).not.toEqual([]);
+  });
+
+  it("requires exact amount USD and source for balance replay parity", async () => {
+    const fixture = makeD1();
+    const originalQuery = fixture.d1.query;
+    fixture.d1.query = (<T>(sql: string): T[] => {
+      const rows = originalQuery<T>(sql);
+      if (sql.includes("FROM blacklist_current_balances") && fixture.executeStatements.mock.calls.length > 0) {
+        const balances = rows as Array<Record<string, unknown>>;
+        if (balances[0]) {
+          balances[0].amount_usd = 999;
+          balances[0].source = "destroy_event";
+        }
+      }
+      return rows;
+    }) as RemoteD1Client["query"];
+
+    const summary = await runNightWatchBlacklistReconciliation(options(true), dependencies(fixture.d1));
+
+    expect(summary.status).toBe("failed");
+    expect(summary.balanceReplayMatchingCount).toBeLessThan(summary.balanceReplayExpectedCount);
     expect(summary.samples.balanceMismatches).not.toEqual([]);
   });
 

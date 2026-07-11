@@ -15,6 +15,7 @@ export type NormalizedPendingSelection =
       depegWorseningBpsStep?: 100 | 250 | 500 | null;
       initialCoinIds: string[];
       remainingTickers: string[];
+      initiatorUserId: string | null;
       clearPending: boolean;
     }
   | {
@@ -22,6 +23,7 @@ export type NormalizedPendingSelection =
       presetIds: string[];
       initialCoinIds: string[];
       remainingTickers: string[];
+      initiatorUserId: string | null;
       clearPending: boolean;
     }
   | {
@@ -29,6 +31,7 @@ export type NormalizedPendingSelection =
       command: ParsedSetCommand;
       initialCoinIds: string[];
       remainingTickers: string[];
+      initiatorUserId: string | null;
       clearPending: boolean;
     };
 
@@ -74,6 +77,7 @@ function normalizePendingDisambiguationSelection(
       depegWorseningBpsStep: pending.depegWorseningBpsStep,
       initialCoinIds,
       remainingTickers,
+      initiatorUserId: pending.initiatorUserId,
       clearPending: true,
     };
   }
@@ -83,6 +87,7 @@ function normalizePendingDisambiguationSelection(
       presetIds: [...pending.presetIds],
       initialCoinIds,
       remainingTickers,
+      initiatorUserId: pending.initiatorUserId,
       clearPending: true,
     };
   }
@@ -91,6 +96,7 @@ function normalizePendingDisambiguationSelection(
     command: pending.command,
     initialCoinIds,
     remainingTickers,
+    initiatorUserId: pending.initiatorUserId,
     clearPending: true,
   };
 }
@@ -125,6 +131,10 @@ function parseStoredCoinIds(value: unknown): string[] | null {
     return null;
   }
   return [...value];
+}
+
+function parseStoredInitiatorUserId(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
 }
 
 /**
@@ -164,6 +174,7 @@ export function parseStoredCommandSelectionIntent(
       depegWorseningBpsStep: payload.depegWorseningBpsStep,
       initialCoinIds: coinIds,
       remainingTickers: [],
+      initiatorUserId: parseStoredInitiatorUserId(payload.initiatorUserId),
       clearPending: payload.clearPending,
     };
   }
@@ -180,6 +191,7 @@ export function parseStoredCommandSelectionIntent(
       presetIds: [...payload.presetIds] as string[],
       initialCoinIds: coinIds,
       remainingTickers: [],
+      initiatorUserId: parseStoredInitiatorUserId(payload.initiatorUserId),
       clearPending: payload.clearPending,
     };
   }
@@ -192,6 +204,7 @@ export function parseStoredCommandSelectionIntent(
       command: { ticker: firstCoin.symbol, ...payload.setting } as ParsedSetCommand,
       initialCoinIds: coinIds,
       remainingTickers: [],
+      initiatorUserId: parseStoredInitiatorUserId(payload.initiatorUserId),
       clearPending: payload.clearPending,
     };
   }
@@ -219,7 +232,7 @@ export async function executeNormalizedPendingSelection(
     db,
     chatId,
     username,
-    initiatorUserId: null,
+    initiatorUserId: normalized.initiatorUserId,
     ...operation,
   };
   if (normalized.actionType === "subscribe") {

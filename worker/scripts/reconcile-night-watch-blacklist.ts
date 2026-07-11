@@ -107,6 +107,7 @@ type CursorRow = {
 type StoredBalance = {
   address: string;
   amount_native: number | null;
+  amount_usd: number | null;
   source: string;
   config_key: string | null;
   contract_address: string | null;
@@ -608,7 +609,7 @@ function loadStoredBalances(d1: RemoteD1Client, addresses: readonly string[]): S
     const chunk = addresses.slice(index, index + 80).map((address) => address.toLowerCase());
     rows.push(
       ...d1.query<StoredBalance>(
-        `SELECT address, amount_native, source, config_key, contract_address
+        `SELECT address, amount_native, amount_usd, source, config_key, contract_address
        FROM blacklist_current_balances
        WHERE stablecoin = 'USDT' AND chain_id = 'tron'
          AND LOWER(address) IN (${quotedList(chunk)})`,
@@ -636,7 +637,10 @@ function verifyBalances(
     if (
       rows.length !== 1
       || rows[0]!.amount_native == null
+      || rows[0]!.amount_usd == null
       || Math.abs(rows[0]!.amount_native - expectation.amountNative) >= 0.0000005
+      || Math.abs(rows[0]!.amount_usd - expectation.amountNative) >= 0.0000005
+      || rows[0]!.source !== expectation.source
     ) {
       mismatches.push(expectation.address);
     }

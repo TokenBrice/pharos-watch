@@ -1,8 +1,8 @@
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parseWorkerDeploymentArgs } from "../../.github/scripts/deploy-worker-version.mjs";
 import { parseWorkflowWaitArgs } from "../../.github/scripts/wait-for-workflow-job.mjs";
@@ -17,7 +17,10 @@ import { parseTelegramRegistrationArgs } from "../maintenance/register-telegram"
 import { parsePagesRollbackArgs } from "../maintenance/rollback-pages-deployment.mjs";
 import { parseDepegSyncArgs } from "../maintenance/sync-depeg-events";
 import { parseDigestSyncArgs } from "../maintenance/sync-digests";
-import { parseReleaseMarkerArgs } from "../maintenance/wait-pages-release-marker.mjs";
+import {
+  parseReleaseMarkerArgs,
+  run as waitForReleaseMarker,
+} from "../maintenance/wait-pages-release-marker.mjs";
 
 const tempDirs: string[] = [];
 
@@ -111,15 +114,45 @@ describe("priority operator CLI parsers", () => {
         "--url=https://two.test/marker.json",
         "--attempts", "5",
         "--delay-ms", "0",
+        "--stable-count", "3",
       ], {}),
-    ).toMatchObject({ attempts: 5, delayMs: 0, urls: [
+    ).toMatchObject({ attempts: 5, delayMs: 0, stableCount: 3, urls: [
       "https://one.test/marker.json",
       "https://two.test/marker.json",
     ] });
     expect(() => parseReleaseMarkerArgs(["--attempts", "5x"], {})).toThrow("must be an integer");
+    expect(() => parseReleaseMarkerArgs(["--stable-count", "0"], {})).toThrow("must be between");
     expect(() => parseReleaseMarkerArgs(["--marker", "one", "--marker", "two"], {})).toThrow(
       "may only be specified once",
     );
+  });
+
+  it("requires an uninterrupted release-marker stability window", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "pharos-release-marker-"));
+    tempDirs.push(directory);
+    const markerPath = join(directory, "marker.json");
+    writeFileSync(markerPath, JSON.stringify({ commit: "target" }));
+    const commits = ["target", "target", "old", "target", "target", "target"];
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      const commit = commits.shift();
+      return new Response(JSON.stringify({ commit }), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      });
+    });
+
+    try {
+      await waitForReleaseMarker([
+        "--url", "https://one.test/marker.json",
+        "--marker", markerPath,
+        "--attempts", "6",
+        "--delay-ms", "0",
+        "--stable-count", "3",
+      ]);
+      expect(fetchMock).toHaveBeenCalledTimes(6);
+    } finally {
+      fetchMock.mockRestore();
+    }
   });
 
   it("validates workflow-job polling options before network access", () => {
