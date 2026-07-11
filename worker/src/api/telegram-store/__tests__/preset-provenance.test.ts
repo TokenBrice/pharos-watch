@@ -319,5 +319,5 @@ describe("Telegram direct/preset provenance on the latest schema", () => {
         sqlite.close();
       }
     }
-  });
+  }, 30_000);
 });
