@@ -88,6 +88,7 @@ const PAGES_EXTRA_EXACT_PATHS = [
   "scripts/maintenance/sync-depeg-events.ts",
   "scripts/maintenance/sync-digests.ts",
   "scripts/maintenance/update-build-attribution-baseline.mjs",
+  "scripts/maintenance/wait-pages-release-marker.mjs",
   "tsconfig.json",
 ];
 

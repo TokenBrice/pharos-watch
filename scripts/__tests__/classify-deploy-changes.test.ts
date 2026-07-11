@@ -71,6 +71,7 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-markdown-exports.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-openapi-spec.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-postman-collection.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/wait-pages-release-marker.mjs"])).toBe(true);
   });
 });
 
