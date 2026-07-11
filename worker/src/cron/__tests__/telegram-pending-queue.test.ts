@@ -210,6 +210,28 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
       final_delivery_at INTEGER,
       final_delivery_error TEXT
     );
+
+    CREATE TABLE telegram_recap_preferences (
+      chat_id TEXT PRIMARY KEY,
+      chat_kind TEXT NOT NULL DEFAULT 'private',
+      enabled INTEGER NOT NULL DEFAULT 0,
+      last_window_end_at INTEGER,
+      last_delivered_local_date TEXT,
+      updated_at INTEGER
+    );
+
+    CREATE TABLE telegram_recap_targets (
+      recap_key TEXT PRIMARY KEY,
+      chat_id TEXT NOT NULL,
+      local_date TEXT NOT NULL DEFAULT '2026-07-11',
+      window_end_at INTEGER NOT NULL DEFAULT 0,
+      preference_generation INTEGER NOT NULL DEFAULT 0,
+      pending_dedupe_key TEXT,
+      status TEXT NOT NULL,
+      terminal_reason TEXT,
+      completed_at INTEGER,
+      updated_at INTEGER
+    );
   `);
   applyTelegramTransportControlSchema(sqlite);
   return { sqlite, db: createSqliteD1(sqlite) };
@@ -528,6 +550,85 @@ describe("resetSubscriberBlockCount", () => {
 });
 
 describe("drainPendingQueue", () => {
+  function insertRecapDeliveryFixture(
+    sqlite: DatabaseSync,
+    now: number,
+    options: { chatId?: string; generation?: number; paused?: boolean } = {},
+  ): { chatId: string; recapKey: string } {
+    const chatId = options.chatId ?? "recap-delivery";
+    const generation = options.generation ?? 4;
+    const recapKey = `recap:${chatId}:2026-07-11:v1`;
+    sqlite.prepare(
+      `INSERT INTO telegram_subscribers (chat_id, preference_generation, alert_snooze_until_ts)
+       VALUES (?, ?, ?)`,
+    ).run(chatId, generation, options.paused ? 4_102_444_800 : null);
+    sqlite.prepare(
+      `INSERT INTO telegram_recap_preferences
+       (chat_id, chat_kind, enabled, last_window_end_at, last_delivered_local_date, updated_at)
+       VALUES (?, 'private', 1, NULL, NULL, ?)`,
+    ).run(chatId, now);
+    sqlite.prepare(
+      `INSERT INTO telegram_recap_targets
+       (recap_key, chat_id, local_date, window_end_at, preference_generation,
+        pending_dedupe_key, status, updated_at)
+       VALUES (?, ?, '2026-07-11', ?, ?, ?, 'queued', ?)`,
+    ).run(recapKey, chatId, now - 60, generation, recapKey, now);
+    insertPendingSqlite(sqlite, {
+      id: options.paused ? 8_502 : 8_501,
+      chatId,
+      html: "<b>Your Watchbot recap</b>",
+      createdAt: now - 30,
+      expiresAt: now + 3600,
+      priority: 100,
+      sourceType: "personalized_recap",
+      dedupeKey: recapKey,
+      sourceEventId: recapKey,
+      preferenceGeneration: generation,
+      markupPolicyJson: serializePendingMarkupPolicy({
+        replyMarkup: { inline_keyboard: [[{ text: "View watchlist", web_app: { url: "https://pharos.watch/pharoswatchbot" } }]] },
+      }),
+    });
+    return { chatId, recapKey };
+  }
+
+  it("projects an accepted personalized recap and replays its persisted Mini App markup", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const now = Math.floor(Date.now() / 1000);
+    const { chatId, recapKey } = insertRecapDeliveryFixture(sqlite, now);
+    mockSendToChat.mockResolvedValue({
+      ok: true, blocked: false, retryable: false, permanentFailure: false,
+      statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
+    });
+
+    await expect(drainPendingQueue(db, "bot-token", 1)).resolves.toMatchObject({ sent: 1 });
+    expect(mockSendToChat).toHaveBeenCalledWith(
+      chatId,
+      "<b>Your Watchbot recap</b>",
+      "bot-token",
+      expect.objectContaining({ replyMarkup: expect.objectContaining({ inline_keyboard: expect.any(Array) }) }),
+    );
+    expect(sqlite.prepare(
+      "SELECT status FROM telegram_recap_targets WHERE recap_key = ?",
+    ).get(recapKey)).toEqual({ status: "sent" });
+    expect(sqlite.prepare(
+      "SELECT last_window_end_at, last_delivered_local_date FROM telegram_recap_preferences WHERE chat_id = ?",
+    ).get(chatId)).toEqual({ last_window_end_at: now - 60, last_delivered_local_date: "2026-07-11" });
+    sqlite.close();
+  });
+
+  it("cancels a paused personalized recap before the Bot API effect", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const now = Math.floor(Date.now() / 1000);
+    const { recapKey } = insertRecapDeliveryFixture(sqlite, now, { paused: true });
+
+    await expect(drainPendingQueue(db, "bot-token", 1)).resolves.toMatchObject({ attempted: 0, dropped: 1 });
+    expect(mockSendToChat).not.toHaveBeenCalled();
+    expect(sqlite.prepare(
+      "SELECT status, terminal_reason FROM telegram_recap_targets WHERE recap_key = ?",
+    ).get(recapKey)).toEqual({ status: "cancelled", terminal_reason: "recap_paused" });
+    sqlite.close();
+  });
+
   it("cancels a newly ineligible risk target without attempting the Bot API", async () => {
     const { sqlite, db } = setupTelegramPendingSqlite();
     const now = Math.floor(Date.now() / 1000);
@@ -2897,6 +2998,34 @@ describe("drainPendingQueue", () => {
 });
 
 describe("enqueuePendingAlerts", () => {
+  it("uses the shared recap priority, six-hour TTL, and immutable markup provenance", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const markup = { inline_keyboard: [[{ text: "View watchlist", web_app: { url: "https://pharos.watch/pharoswatchbot" } }]] };
+    await enqueuePendingAlerts(db, [{
+      chatId: "recap-enqueue",
+      html: "<b>Watchbot recap</b>",
+      disableNotification: false,
+      sourceEventId: "recap:recap-enqueue:2026-07-11:v1",
+      preferenceGeneration: 3,
+      replyMarkup: markup,
+    }], 10_000, { sourceType: "personalized_recap" });
+
+    expect(sqlite.prepare(
+      `SELECT source_type, priority, expires_at, source_event_id, alert_scope_json,
+              preference_generation, markup_policy_json
+         FROM telegram_pending_alerts`,
+    ).get()).toEqual({
+      source_type: "personalized_recap",
+      priority: 100,
+      expires_at: 10_000 + 6 * 60 * 60,
+      source_event_id: "recap:recap-enqueue:2026-07-11:v1",
+      alert_scope_json: null,
+      preference_generation: 3,
+      markup_policy_json: serializePendingMarkupPolicy({ replyMarkup: markup }),
+    });
+    sqlite.close();
+  });
+
   it("inserts messages into the pending table", async () => {
     const db = mockD1([
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },

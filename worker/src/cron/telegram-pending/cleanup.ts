@@ -14,6 +14,7 @@ import {
   recordTelegramJobTargetFinalDelivery,
   type TelegramTargetFinalDeliveryState,
 } from "../telegram-alert-job-target-outcomes";
+import { projectRecapPendingTerminalOutcome } from "./recap-terminal";
 
 type ExpiredPendingRow = DeadLetterPendingRow & { expires_at?: number | null };
 type PendingAlertAdminFilter = { chatId: string } | { olderThanCutoffSec: number };
@@ -63,12 +64,21 @@ async function projectTerminalPendingRows(
   error: string,
 ): Promise<void> {
   for (const row of rows) {
-    if (!row.dedupe_key || !row.source_event_id) continue;
-    await recordTelegramJobTargetFinalDelivery(
-      db,
-      { pendingDedupeKey: row.dedupe_key, sourceEventId: row.source_event_id },
-      { state, at: nowSec, error },
-    );
+    if (row.dedupe_key && row.source_event_id) {
+      await recordTelegramJobTargetFinalDelivery(
+        db,
+        { pendingDedupeKey: row.dedupe_key, sourceEventId: row.source_event_id },
+        { state, at: nowSec, error },
+      );
+    }
+    const recapOutcome = state === "execution_unknown"
+      ? "execution_unknown"
+      : state === "expired"
+      ? "expired"
+      : state === "cancelled"
+      ? "cancelled"
+      : "failed_permanent";
+    await projectRecapPendingTerminalOutcome(db, row, recapOutcome, nowSec, error);
   }
 }
 
@@ -326,9 +336,10 @@ export async function cleanupExpiredPendingAlerts(
     if (!deadLettered) {
       logExpiredPendingDeadLetterBypass(rows);
     }
-    if (deadLettered) {
-      await projectTerminalPendingRows(db, rows, "expired", nowSec, "ttl_expired");
-    }
+    // A dead-letter write is diagnostic retention, not the delivery state
+    // machine. Expiry still has to reach recap targets before the queue rows
+    // are removed when that best-effort copy is unavailable.
+    await projectTerminalPendingRows(db, rows, "expired", nowSec, "ttl_expired");
     await recordTelegramAlertTargetStatuses(
       db,
       rows

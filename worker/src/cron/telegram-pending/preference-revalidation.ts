@@ -13,6 +13,7 @@ import {
   type TelegramPresetId,
   type TelegramPresetResolveOptions,
 } from "../../lib/telegram-presets";
+import { isPausedSentinel } from "../../lib/telegram-constants";
 import type { PendingAlertRow } from "./types";
 
 const INVALID_PROVENANCE_RETRY_SEC = 15 * 60;
@@ -68,9 +69,28 @@ interface PreferencePresetRow {
 }
 
 interface ParsedPendingIntent {
+  kind: "risk-alert";
   row: PendingAlertRow;
   scope: PendingAlertScopeItem[];
   markupPolicy: PendingMarkupPolicyV1;
+}
+
+interface ParsedRecapIntent {
+  kind: "personalized-recap";
+  row: PendingAlertRow;
+  recapKey: string;
+  markupPolicy: PendingMarkupPolicyV1;
+}
+
+interface RecapPreferenceRow {
+  chat_id: string;
+  subscriber_generation: number;
+  alert_snooze_until_ts: number | null;
+  recap_enabled: number;
+  chat_kind: "private";
+  target_generation: number;
+  target_status: "queued" | string;
+  target_dedupe_key: string | null;
 }
 
 export type PendingPreferenceRevalidation =
@@ -90,7 +110,37 @@ function pairKey(chatId: string, stablecoinId: string): string {
 function parseIntent(
   row: PendingAlertRow,
   nowSec: number,
-): PendingPreferenceRevalidation | ParsedPendingIntent {
+): PendingPreferenceRevalidation | ParsedPendingIntent | ParsedRecapIntent {
+  if (row.source_type === "personalized_recap") {
+    if (
+      !row.source_event_id ||
+      !isValidPendingSourceEventId(row.source_event_id) ||
+      !Number.isSafeInteger(row.preference_generation) ||
+      (row.preference_generation ?? -1) < 0
+    ) {
+      return {
+        kind: "defer",
+        row,
+        notBeforeAt: nowSec + INVALID_PROVENANCE_RETRY_SEC,
+        reason: "recap_provenance_invalid",
+      };
+    }
+    const markup = parsePendingMarkupPolicy(row.markup_policy_json);
+    if (markup.kind !== "ok") {
+      return {
+        kind: "defer",
+        row,
+        notBeforeAt: nowSec + INVALID_PROVENANCE_RETRY_SEC,
+        reason: markup.kind === "invalid" ? markup.reason : "recap_markup_policy_missing",
+      };
+    }
+    return {
+      kind: "personalized-recap",
+      row,
+      recapKey: row.source_event_id,
+      markupPolicy: markup.value,
+    };
+  }
   if (row.source_type !== "risk_alert") {
     return {
       kind: "eligible",
@@ -152,7 +202,59 @@ function parseIntent(
       reason: markup.kind === "invalid" ? markup.reason : "preference_provenance_incomplete",
     };
   }
-  return { row, scope: scope.value, markupPolicy: markup.value };
+  return { kind: "risk-alert", row, scope: scope.value, markupPolicy: markup.value };
+}
+
+async function revalidatePersonalizedRecap(
+  db: D1Database,
+  intent: ParsedRecapIntent,
+  nowSec: number,
+): Promise<PendingPreferenceRevalidation> {
+  const row = await db.prepare(`
+    SELECT s.chat_id,
+           s.preference_generation AS subscriber_generation,
+           s.alert_snooze_until_ts,
+           p.enabled AS recap_enabled,
+           p.chat_kind,
+           t.preference_generation AS target_generation,
+           t.status AS target_status,
+           t.pending_dedupe_key AS target_dedupe_key
+      FROM telegram_subscribers s
+      JOIN telegram_recap_preferences p ON p.chat_id = s.chat_id
+      JOIN telegram_recap_targets t ON t.recap_key = ? AND t.chat_id = s.chat_id
+     WHERE s.chat_id = ?
+  `).bind(intent.recapKey, intent.row.chat_id).first<RecapPreferenceRow>();
+  if (!row) {
+    return { kind: "cancel", row: intent.row, reason: "recap_preference_missing" };
+  }
+  if (row.recap_enabled !== 1 || row.chat_kind !== "private") {
+    return { kind: "cancel", row: intent.row, reason: "recap_disabled" };
+  }
+  if (
+    row.target_status !== "queued" ||
+    row.target_dedupe_key !== intent.row.dedupe_key ||
+    row.target_generation !== intent.row.preference_generation ||
+    row.subscriber_generation !== intent.row.preference_generation
+  ) {
+    return { kind: "cancel", row: intent.row, reason: "recap_generation_changed" };
+  }
+  if (isPausedSentinel(row.alert_snooze_until_ts)) {
+    return { kind: "cancel", row: intent.row, reason: "recap_paused" };
+  }
+  if (row.alert_snooze_until_ts != null && row.alert_snooze_until_ts > nowSec) {
+    return {
+      kind: "defer",
+      row: intent.row,
+      notBeforeAt: row.alert_snooze_until_ts,
+      reason: "recap_snoozed",
+    };
+  }
+  return {
+    kind: "eligible",
+    row: intent.row,
+    validatedPreferenceGeneration: row.subscriber_generation,
+    markupPolicy: intent.markupPolicy,
+  };
 }
 
 async function loadPreferenceSubscribers(
@@ -268,10 +370,15 @@ export async function revalidatePendingAlertPreferences(
 ): Promise<PendingPreferenceRevalidation[]> {
   const outcomes = new Map<number, PendingPreferenceRevalidation>();
   const intents: ParsedPendingIntent[] = [];
+  const recapIntents: ParsedRecapIntent[] = [];
   for (const row of rows) {
     const parsed = parseIntent(row, nowSec);
-    if ("kind" in parsed) outcomes.set(row.id, parsed);
-    else intents.push(parsed);
+    if ("scope" in parsed) intents.push(parsed);
+    else if ("recapKey" in parsed) recapIntents.push(parsed);
+    else outcomes.set(row.id, parsed);
+  }
+  for (const intent of recapIntents) {
+    outcomes.set(intent.row.id, await revalidatePersonalizedRecap(db, intent, nowSec));
   }
   if (intents.length === 0) return rows.flatMap((row) => outcomes.get(row.id) ?? []);
 

@@ -19,3 +19,4 @@ export * from "./dead-letter";
 export * from "./cleanup";
 export * from "./enqueue";
 export * from "./drain";
+export * from "./recap-terminal";

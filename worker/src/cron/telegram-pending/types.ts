@@ -99,7 +99,7 @@ export interface PendingEnqueueOptions {
   notBeforeAt?: number | null;
   lastErrorClass?: TelegramSendErrorClass | null;
   retryAfterSec?: number | null;
-  sourceType?: "risk_alert" | "admin_broadcast" | "admin_replay" | "legacy";
+  sourceType?: "risk_alert" | "personalized_recap" | "admin_broadcast" | "admin_replay" | "legacy";
   priority?: number | null;
   ttlSec?: number | null;
 }

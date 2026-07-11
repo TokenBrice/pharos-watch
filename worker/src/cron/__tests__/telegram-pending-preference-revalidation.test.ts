@@ -32,7 +32,8 @@ beforeEach(() => {
       global_alert_depeg INTEGER NOT NULL DEFAULT 0,
       global_alert_safety INTEGER NOT NULL DEFAULT 0,
       global_alert_launch INTEGER NOT NULL DEFAULT 0,
-      global_alert_reserve INTEGER NOT NULL DEFAULT 0
+      global_alert_reserve INTEGER NOT NULL DEFAULT 0,
+      global_alert_freeze INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE telegram_subscriptions (
       chat_id TEXT NOT NULL,
@@ -42,11 +43,13 @@ beforeEach(() => {
       alert_safety INTEGER NOT NULL DEFAULT 0,
       alert_launch INTEGER NOT NULL DEFAULT 0,
       alert_reserve INTEGER NOT NULL DEFAULT 0,
+      alert_freeze INTEGER NOT NULL DEFAULT 0,
       alert_dews_override INTEGER NOT NULL DEFAULT 0,
       alert_depeg_override INTEGER NOT NULL DEFAULT 0,
       alert_safety_override INTEGER NOT NULL DEFAULT 0,
       alert_launch_override INTEGER NOT NULL DEFAULT 0,
       alert_reserve_override INTEGER NOT NULL DEFAULT 0,
+      alert_freeze_override INTEGER NOT NULL DEFAULT 0,
       alert_snooze_until_ts INTEGER,
       PRIMARY KEY (chat_id, stablecoin_id)
     );
@@ -57,6 +60,18 @@ beforeEach(() => {
       alert_depeg INTEGER NOT NULL DEFAULT 0,
       alert_safety INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (chat_id, preset_id)
+    );
+    CREATE TABLE telegram_recap_preferences (
+      chat_id TEXT PRIMARY KEY,
+      chat_kind TEXT NOT NULL DEFAULT 'private',
+      enabled INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE telegram_recap_targets (
+      recap_key TEXT PRIMARY KEY,
+      chat_id TEXT NOT NULL,
+      preference_generation INTEGER NOT NULL,
+      pending_dedupe_key TEXT,
+      status TEXT NOT NULL
     );
   `);
   db = createSqliteD1(sqlite);
@@ -143,6 +158,32 @@ function pendingRow(options: {
     quiet_hours_end_utc: null,
     timezone: null,
   };
+}
+
+function recapRow(options: { generation?: number; markupPolicyJson?: string | null } = {}): PendingAlertRow {
+  return {
+    ...pendingRow(),
+    source_type: "personalized_recap",
+    alert_type: null,
+    dedupe_key: "recap:42:2026-07-11:v1",
+    source_event_id: "recap:42:2026-07-11:v1",
+    alert_scope_json: null,
+    preference_generation: options.generation ?? 1,
+    markup_policy_json: options.markupPolicyJson ?? serializePendingMarkupPolicy({
+      replyMarkup: { inline_keyboard: [[{ text: "View watchlist", web_app: { url: "https://pharos.watch/pharoswatchbot" } }]] },
+    }),
+  };
+}
+
+function insertRecapTarget(generation = 1, enabled = 1): void {
+  sqlite.prepare(
+    "INSERT INTO telegram_recap_preferences (chat_id, chat_kind, enabled) VALUES (?, 'private', ?)",
+  ).run(CHAT_ID, enabled);
+  sqlite.prepare(
+    `INSERT INTO telegram_recap_targets
+       (recap_key, chat_id, preference_generation, pending_dedupe_key, status)
+     VALUES (?, ?, ?, ?, 'queued')`,
+  ).run("recap:42:2026-07-11:v1", CHAT_ID, generation, "recap:42:2026-07-11:v1");
 }
 
 function stablecoinsResult(): StablecoinsCacheLoadResult {
@@ -280,6 +321,32 @@ describe("pending Telegram preference revalidation", () => {
     await expect(evaluate(row)).resolves.toMatchObject({
       kind: "defer",
       reason: "preference_provenance_incomplete",
+    });
+  });
+
+  it("revalidates a private enabled recap and preserves its exact persisted markup", async () => {
+    insertSubscriber({ generation: 4 });
+    insertRecapTarget(4);
+    const row = recapRow({ generation: 4 });
+    await expect(evaluate(row)).resolves.toMatchObject({
+      kind: "eligible",
+      validatedPreferenceGeneration: 4,
+      markupPolicy: expect.objectContaining({ replyMarkup: expect.any(Object) }),
+    });
+  });
+
+  it("cancels a paused recap instead of deferring it to the pause sentinel", async () => {
+    insertSubscriber({ generation: 1, chatSnoozeUntil: 4_102_444_800 });
+    insertRecapTarget();
+    await expect(evaluate(recapRow())).resolves.toMatchObject({ kind: "cancel", reason: "recap_paused" });
+  });
+
+  it("cancels a recap when its target generation no longer matches the subscriber", async () => {
+    insertSubscriber({ generation: 2 });
+    insertRecapTarget(1);
+    await expect(evaluate(recapRow())).resolves.toMatchObject({
+      kind: "cancel",
+      reason: "recap_generation_changed",
     });
   });
 });

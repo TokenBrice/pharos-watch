@@ -13,6 +13,10 @@ import {
   serializePendingAlertScope,
   serializePendingMarkupPolicy,
 } from "../../lib/telegram-pending-provenance";
+import {
+  TELEGRAM_RECAP_PENDING_PRIORITY,
+  TELEGRAM_RECAP_TTL_SEC,
+} from "@shared/lib/telegram-recap-policy";
 
 interface PendingProvenanceValues {
   sourceEventId: string | null;
@@ -23,7 +27,7 @@ interface PendingProvenanceValues {
 
 function resolvePendingProvenance(
   message: BatchMessage,
-  sourceType: "risk_alert" | "admin_broadcast" | "admin_replay" | "legacy",
+  sourceType: "risk_alert" | "personalized_recap" | "admin_broadcast" | "admin_replay" | "legacy",
 ): PendingProvenanceValues {
   if (sourceType === "admin_replay") {
     return {
@@ -38,6 +42,26 @@ function resolvePendingProvenance(
     };
   }
   if (sourceType !== "risk_alert") {
+    if (sourceType === "personalized_recap") {
+      if (
+        !message.sourceEventId ||
+        !isValidPendingSourceEventId(message.sourceEventId) ||
+        !Number.isSafeInteger(message.preferenceGeneration) ||
+        (message.preferenceGeneration ?? -1) < 0
+      ) {
+        throw new Error("Telegram personalized recap has incomplete provenance");
+      }
+      return {
+        sourceEventId: message.sourceEventId,
+        alertScopeJson: null,
+        preferenceGeneration: message.preferenceGeneration ?? null,
+        markupPolicyJson: serializePendingMarkupPolicy({
+          replyMarkup: message.replyMarkup,
+          linkPreviewOptions: message.linkPreviewOptions,
+          disableWebPagePreview: message.disableWebPagePreview,
+        }),
+      };
+    }
     return {
       sourceEventId: null,
       alertScopeJson: null,
@@ -93,13 +117,14 @@ function resolvePendingPriority(message: BatchMessage, options: PendingEnqueueOp
   if (options.sourceType === "admin_broadcast" || options.sourceType === "admin_replay") {
     return TELEGRAM_PENDING_PRIORITY.adminBroadcast;
   }
+  if (options.sourceType === "personalized_recap") return TELEGRAM_RECAP_PENDING_PRIORITY;
   if (options.sourceType === "legacy") return TELEGRAM_PENDING_PRIORITY.legacy;
   return pendingPriorityForAlertType(message.alertType);
 }
 
 function resolvePendingSourceType(
   options: PendingEnqueueOptions,
-): "risk_alert" | "admin_broadcast" | "admin_replay" | "legacy" {
+): "risk_alert" | "personalized_recap" | "admin_broadcast" | "admin_replay" | "legacy" {
   return options.sourceType ?? "risk_alert";
 }
 
@@ -110,6 +135,7 @@ function resolvePendingTtlSec(message: BatchMessage, options: PendingEnqueueOpti
   if (options.sourceType === "admin_broadcast" || options.sourceType === "admin_replay") {
     return TELEGRAM_ALERT_TTL_SEC.adminBroadcast;
   }
+  if (options.sourceType === "personalized_recap") return TELEGRAM_RECAP_TTL_SEC;
   if (options.sourceType === "legacy") return TELEGRAM_ALERT_TTL_SEC.legacy;
   return message.alertType ? TELEGRAM_ALERT_TTL_SEC[message.alertType] : PENDING_TTL_SEC;
 }

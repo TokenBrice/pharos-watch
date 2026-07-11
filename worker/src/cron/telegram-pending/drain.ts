@@ -54,6 +54,10 @@ import {
   type PendingPreferenceRevalidation,
 } from "./preference-revalidation";
 import {
+  projectRecapPendingTerminalOutcome,
+  reconcileRecapPendingTerminalOutcomes,
+} from "./recap-terminal";
+import {
   prepareTelegramJobTargetFinalDeliveryProjection,
   reconcileTelegramJobTargetFinalDeliveryFromPending,
   recordTelegramJobTargetFinalDelivery,
@@ -80,7 +84,8 @@ interface PendingDrainOptions {
 }
 
 function isPendingRowSnoozed(row: PendingAlertRow, nowSec: number): boolean {
-  return row.alert_snooze_until_ts != null && row.alert_snooze_until_ts > nowSec;
+  return row.source_type !== "personalized_recap" &&
+    row.alert_snooze_until_ts != null && row.alert_snooze_until_ts > nowSec;
 }
 
 function shouldSilencePendingRow(row: PendingAlertRow, nowSec: number): boolean {
@@ -444,6 +449,7 @@ async function markSentPendingAlerts(
     if (changed !== statements.length) {
       throw new Error(`Telegram sent-state persistence was not confirmed (${changed}/${statements.length})`);
     }
+    await projectRecapPendingTerminalOutcome(db, row, "accepted", nowSec);
   }
 }
 
@@ -451,6 +457,8 @@ interface StalePendingSendingRow {
   id: number;
   delivery_owner: string | null;
   delivery_generation: number;
+  source_type: string | null;
+  source_event_id: string | null;
 }
 
 /** Expired post-effect claims are terminal ambiguity, never retry candidates. */
@@ -460,7 +468,7 @@ export async function reconcileStalePendingSending(
 ): Promise<number> {
   const candidates = await db
     .prepare(
-      `SELECT id, delivery_owner, delivery_generation
+      `SELECT id, delivery_owner, delivery_generation, source_type, source_event_id
          FROM telegram_pending_alerts
         WHERE delivery_state = 'sending'
           AND COALESCE(
@@ -476,7 +484,7 @@ export async function reconcileStalePendingSending(
     .all<StalePendingSendingRow>();
   const rows = candidates.results ?? [];
   if (rows.length === 0) return 0;
-  return batchExecute(db, rows.map((row) => db
+  const changed = await batchExecute(db, rows.map((row) => db
     .prepare(
       `UPDATE telegram_pending_alerts
           SET delivery_state = 'execution_unknown',
@@ -508,6 +516,8 @@ export async function reconcileStalePendingSending(
       PENDING_CLAIM_TTL_SEC,
       nowSec,
     )));
+  if (changed > 0) await reconcileRecapPendingTerminalOutcomes(db, nowSec);
+  return changed;
 }
 
 async function recordPendingDrainTelemetry(
@@ -553,6 +563,18 @@ async function deadLetterAndDeleteTerminalPendingGroups(
         db,
         { pendingDedupeKey: row.dedupe_key, sourceEventId: row.source_event_id },
         { state: finalState, at: nowSec, error: row.last_error_class ?? group.reason },
+      );
+    }
+    const recapOutcome = group.reason === "preference_changed"
+      ? "cancelled"
+      : "failed_permanent";
+    for (const row of group.rows) {
+      await projectRecapPendingTerminalOutcome(
+        db,
+        row,
+        recapOutcome,
+        nowSec,
+        row.last_error_class ?? group.reason,
       );
     }
     const fencedRows = group.rows.filter((row) =>
@@ -755,6 +777,7 @@ async function markPendingExecutionUnknown(
     if (changed !== statements.length) {
       throw new Error(`Telegram pending ambiguity state was not confirmed (${changed}/${statements.length})`);
     }
+    await projectRecapPendingTerminalOutcome(db, row, "execution_unknown", nowSec, errorClass);
   }
 }
 
@@ -853,6 +876,7 @@ export async function drainPendingQueue(
   await reconcileStalePendingSending(db, nowSec);
   await reconcileTelegramJobTargetFinalDeliveryFromPending(db, nowSec);
   await reconcileTerminalTargetRows(db, nowSec);
+  await reconcileRecapPendingTerminalOutcomes(db, nowSec);
   const globalBackoffUntil = await readTelegramGlobalBackoff(db, nowSec);
   if (globalBackoffUntil != null) {
     return {
