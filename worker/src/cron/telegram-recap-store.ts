@@ -357,7 +357,23 @@ export async function queueTelegramRecapTarget(
     UPDATE telegram_recap_preferences
        SET next_due_at = ?, updated_at = ?
      WHERE chat_id = ? AND enabled = 1 AND next_due_at = ?
-  `).bind(input.nextDueAtAfter ?? null, input.nowSec, input.chatId, input.expectedNextDueAt);
+       AND EXISTS (
+         SELECT 1
+           FROM telegram_recap_targets target
+           JOIN telegram_subscribers subscriber ON subscriber.chat_id = target.chat_id
+          WHERE target.recap_key = ? AND target.status = 'queued'
+            AND target.preference_generation = ?
+            AND subscriber.preference_generation = ?
+       )
+  `).bind(
+    input.nextDueAtAfter ?? null,
+    input.nowSec,
+    input.chatId,
+    input.expectedNextDueAt,
+    input.recapKey,
+    input.preferenceGeneration,
+    input.preferenceGeneration,
+  );
   await executeAtomicBatch(db, [target, pending, attach, advance]);
   const row = await db.prepare(
     "SELECT status FROM telegram_recap_targets WHERE recap_key = ?",
@@ -402,7 +418,26 @@ export async function recordTelegramRecapSkip(
              ELSE last_window_end_at END,
            updated_at = ?
      WHERE chat_id = ? AND enabled = 1 AND next_due_at = ?
-  `).bind(t.nextDueAtAfter ?? null, consumeWindow ? 1 : 0, t.windowEndAt, t.nowSec, t.chatId, t.expectedNextDueAt);
+       AND EXISTS (
+         SELECT 1
+           FROM telegram_recap_targets target
+           JOIN telegram_subscribers subscriber ON subscriber.chat_id = target.chat_id
+          WHERE target.recap_key = ? AND target.status = ?
+            AND target.preference_generation = ?
+            AND subscriber.preference_generation = ?
+       )
+  `).bind(
+    t.nextDueAtAfter ?? null,
+    consumeWindow ? 1 : 0,
+    t.windowEndAt,
+    t.nowSec,
+    t.chatId,
+    t.expectedNextDueAt,
+    t.recapKey,
+    input.status,
+    t.preferenceGeneration,
+    t.preferenceGeneration,
+  );
   await executeAtomicBatch(db, [target, advance]);
   const row = await db.prepare(
     "SELECT status FROM telegram_recap_targets WHERE recap_key = ?",

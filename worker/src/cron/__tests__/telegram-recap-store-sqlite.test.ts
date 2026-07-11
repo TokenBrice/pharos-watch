@@ -74,6 +74,28 @@ describe("telegram recap store on latest SQLite schema", () => {
     await expect(queueTelegramRecapTarget(db, target("42"))).resolves.toBe("stale");
   });
 
+  it("never advances a schedule when a concurrent generation change rejects the target", async () => {
+    const { sqlite, db } = setup();
+    for (const chatId of ["queued-race", "skip-race"]) {
+      subscriber(sqlite, chatId);
+      await setTelegramRecapPreference(db, preferenceInput(chatId));
+      sqlite.prepare("UPDATE telegram_subscribers SET preference_generation = 2 WHERE chat_id = ?").run(chatId);
+    }
+
+    await expect(queueTelegramRecapTarget(db, target("queued-race"))).resolves.toBe("stale");
+    await expect(recordTelegramRecapSkip(db, {
+      target: target("skip-race"),
+      status: "skipped_no_changes",
+    })).resolves.toBe(false);
+
+    expect(sqlite.prepare("SELECT chat_id, next_due_at FROM telegram_recap_preferences ORDER BY chat_id").all()).toEqual([
+      { chat_id: "queued-race", next_due_at: NOW - 1 },
+      { chat_id: "skip-race", next_due_at: NOW - 1 },
+    ]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+  });
+
   it("records no-change, paused, and stale outcomes with the right window policy", async () => {
     const { sqlite, db } = setup();
     for (const [chatId, status] of [["none", "skipped_no_changes"], ["pause", "skipped_paused"], ["stale", "skipped_stale"]] as const) {
