@@ -59,18 +59,72 @@ SELECT
   j.created_at,
   j.status,
   j.target_count,
-  SUM(CASE WHEN t.status = 'planned' THEN 1 ELSE 0 END) AS planned,
-  SUM(CASE WHEN t.status = 'queued' THEN 1 ELSE 0 END) AS queued,
-  SUM(CASE WHEN t.status = 'sent' THEN 1 ELSE 0 END) AS sent,
-  SUM(CASE WHEN t.status = 'failed' THEN 1 ELSE 0 END) AS failed,
-  SUM(CASE WHEN t.status = 'expired' THEN 1 ELSE 0 END) AS expired
+  j.planned_count,
+  j.accepted_count,
+  j.enqueued_count,
+  j.failed_count,
+  j.cancelled_count,
+  j.expired_count,
+  j.execution_unknown_count,
+  j.metadata
 FROM telegram_alert_jobs j
-LEFT JOIN telegram_alert_job_targets t ON t.job_id = j.job_id
 WHERE j.created_at >= ? - 86400
-GROUP BY j.job_id
 ORDER BY j.created_at DESC
 LIMIT 50;
 ```
+
+These counters are reconciled from mutually exclusive target buckets. `metadata.countersSource` should be `authoritative-target-rows`.
+
+## Source Target Planning
+
+Oldest nonterminal source events and their frozen cohort:
+
+```sql
+SELECT
+  source_event_id,
+  status,
+  detected_at,
+  expires_at,
+  target_plan_state,
+  target_plan_generation,
+  target_plan_owner,
+  target_plan_claim_expires_at,
+  subscriber_horizon_at,
+  subscriber_high_water_chat_id,
+  subscriber_cursor_chat_id,
+  planning_cursor_chat_id,
+  target_plan_count,
+  target_materialized_count,
+  last_error_class
+FROM telegram_alert_source_events
+WHERE status IN ('resolving', 'planned', 'baseline_committed')
+ORDER BY detected_at, source_event_id
+LIMIT 25;
+```
+
+Planning outcomes for one source generation:
+
+```sql
+SELECT planning_outcome, COUNT(*) AS chats
+FROM telegram_alert_planning_subscribers
+WHERE source_event_id = '<source_event_id>'
+  AND plan_generation = <generation>
+GROUP BY planning_outcome
+ORDER BY chats DESC;
+```
+
+Bounded expiry debt and legacy cache import state:
+
+```sql
+SELECT *
+FROM telegram_alert_target_expiry_progress
+WHERE state = 'running'
+ORDER BY updated_at, source_event_id;
+
+SELECT * FROM telegram_legacy_overflow_state WHERE singleton = 1;
+```
+
+Do not manually advance a baseline while expiry debt remains, reset a plan generation, or route a `telegram-source:legacy-overflow:v1:*` source through the normal planner. The legacy importer owns that namespace.
 
 Targets that missed one alert:
 
@@ -85,12 +139,42 @@ SELECT
   enqueued_at,
   sent_at,
   failed_at,
+  effect_state,
+  effect_owner,
+  effect_generation,
+  effect_claimed_at,
+  effect_started_at,
+  effect_completed_at,
+  effect_claim_expires_at,
   pending_dedupe_key
 FROM telegram_alert_job_targets
 WHERE job_id = '<job_id>'
   AND status <> 'sent'
 ORDER BY status, created_at ASC;
 ```
+
+Fresh effects requiring reconciliation:
+
+```sql
+SELECT
+  job_id,
+  target_key,
+  chat_id,
+  chunk_index,
+  alert_type,
+  status,
+  effect_state,
+  effect_owner,
+  effect_generation,
+  effect_started_at,
+  effect_completed_at,
+  error_class
+FROM telegram_alert_job_targets
+WHERE effect_state IN ('sending', 'execution_unknown')
+ORDER BY COALESCE(effect_started_at, created_at) ASC;
+```
+
+Treat both states as execution-unknown once the claim expiry has passed. Inspect Telegram/user reports and the exact job payload context before any manual resend. Never reset these rows to `planned` merely to make the dispatcher retry them.
 
 ## Dead Letters
 
@@ -133,14 +217,43 @@ Processed updates by status and age:
 ```sql
 SELECT
   status,
+  effect_state,
+  intent_kind,
   COUNT(*) AS rows,
   MIN(received_at) AS oldest_received_at,
   MAX(COALESCE(processed_at, received_at)) AS newest_activity_at,
   SUM(CASE WHEN status = 'processing' AND received_at < ? - 300 THEN 1 ELSE 0 END) AS stale_processing
 FROM telegram_processed_updates
-GROUP BY status
+GROUP BY status, effect_state, intent_kind
 ORDER BY rows DESC;
 ```
+
+Webhook effects requiring reconciliation (bounded oldest-first sample):
+
+```sql
+SELECT
+  update_id,
+  update_type,
+  chat_id,
+  status,
+  effect_state,
+  intent_version,
+  intent_kind,
+  mutation_applied_at,
+  effect_started_at,
+  effect_kind,
+  effect_ordinal,
+  error_class,
+  claim_owner,
+  claim_generation
+FROM telegram_processed_updates
+WHERE effect_state IN ('started', 'execution_unknown')
+  AND status <> 'processed'
+ORDER BY COALESCE(effect_started_at, received_at) ASC
+LIMIT 5001;
+```
+
+Never reset these rows to `planned` or delete them merely to trigger a retry. Reconcile the exact Telegram-visible effect first; ambiguous outbound effects are at-most-once by design and retained for 90 days.
 
 Recent failed webhook updates:
 

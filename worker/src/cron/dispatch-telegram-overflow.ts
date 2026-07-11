@@ -23,11 +23,17 @@ import {
   readTelegramGlobalBackoff,
   type PendingDrainResult,
 } from "./telegram-pending";
+import { isValidPendingSourceEventId } from "../lib/telegram-pending-provenance";
 
-const OVERFLOW_PLAN_CACHE_KEY = "telegram:dispatch-overflow-plan";
-const OVERFLOW_PLAN_CACHE_VERSION = 1;
+export const OVERFLOW_PLAN_CACHE_KEY = "telegram:dispatch-overflow-plan";
+export const OVERFLOW_PLAN_CACHE_VERSION = 1;
+export const LEGACY_OVERFLOW_MAX_PLAN_COUNT = 5_000;
 
-type OverflowPlannedSubscriberAlert = PlannedSubscriberAlert & { expiresAt?: number };
+export type OverflowPlannedSubscriberAlert = PlannedSubscriberAlert & { expiresAt: number };
+
+export type ParsedLegacyOverflowPlanBacklog =
+  | { kind: "ok"; plans: OverflowPlannedSubscriberAlert[]; writtenAt: number | null }
+  | { kind: "invalid"; reason: string };
 
 function normalizeCachedAlerts(value: unknown): AlertsByChatEntry["alerts"] | null {
   if (!isRecord(value)) return null;
@@ -55,7 +61,7 @@ function normalizeCachedAlerts(value: unknown): AlertsByChatEntry["alerts"] | nu
   };
 }
 
-function normalizeCachedOverflowPlan(value: unknown, nowSec: number): OverflowPlannedSubscriberAlert | null {
+function normalizeCachedOverflowPlan(value: unknown, _nowSec: number): OverflowPlannedSubscriberAlert | null {
   if (!isRecord(value)) return null;
   const chatId = typeof value.chatId === "string" ? value.chatId : null;
   const alertType = isTelegramAlertType(value.alertType) ? value.alertType : null;
@@ -64,24 +70,38 @@ function normalizeCachedOverflowPlan(value: unknown, nowSec: number): OverflowPl
   const rawEntry = isRecord(value.entry) ? value.entry : null;
   const alerts = rawEntry ? normalizeCachedAlerts(rawEntry.alerts) : null;
   const lastActiveAt = rawEntry ? finiteNumber(rawEntry.lastActiveAt) : null;
+  const sourceEventId = typeof value.sourceEventId === "string" && isValidPendingSourceEventId(value.sourceEventId)
+    ? value.sourceEventId
+    : undefined;
+  const preferenceGeneration = rawEntry ? finiteNumber(rawEntry.preferenceGeneration) : null;
 
   if (
-    chatId == null ||
+    chatId == null || chatId.length === 0 || chatId.length > 200 ||
+    /[\u0000-\u001f\u007f]/.test(chatId) ||
     alertType == null ||
     estimatedChunks == null ||
+    !Number.isSafeInteger(estimatedChunks) ||
+    estimatedChunks < 1 ||
+    estimatedChunks > 64 ||
     expiresAt == null ||
-    expiresAt <= nowSec ||
+    !Number.isSafeInteger(expiresAt) ||
+    expiresAt <= 0 ||
     rawEntry == null ||
     alerts == null ||
     lastActiveAt == null
   ) {
     return null;
   }
+  const itemCount = alerts.dews.length + alerts.depegTriggered.length + alerts.depegResolved.length +
+    alerts.depegWorsening.length + alerts.safety.length + alerts.launch.length + alerts.reserve.length +
+    (alerts.burst ? 1 : 0);
+  if (itemCount < 1 || itemCount > 512) return null;
 
   return {
     chatId,
     alertType,
-    estimatedChunks: Math.max(1, Math.floor(estimatedChunks)),
+    ...(sourceEventId ? { sourceEventId } : {}),
+    estimatedChunks: Math.max(1, Math.min(64, Math.floor(estimatedChunks))),
     expiresAt: Math.floor(expiresAt),
     entry: {
       lastActiveAt,
@@ -90,9 +110,44 @@ function normalizeCachedOverflowPlan(value: unknown, nowSec: number): OverflowPl
       quietHoursStartUtc: finiteNumber(rawEntry.quietHoursStartUtc),
       quietHoursEndUtc: finiteNumber(rawEntry.quietHoursEndUtc),
       timezone: typeof rawEntry.timezone === "string" ? rawEntry.timezone : null,
+      preferenceGeneration: preferenceGeneration != null && preferenceGeneration >= 0
+        ? Math.floor(preferenceGeneration)
+        : 0,
       specificCount: finiteNumber(rawEntry.specificCount) ?? 0,
       globalCount: finiteNumber(rawEntry.globalCount) ?? 0,
     },
+  };
+}
+
+export function parseLegacyOverflowPlanBacklog(value: string): ParsedLegacyOverflowPlanBacklog {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value) as unknown;
+  } catch {
+    return { kind: "invalid", reason: "legacy_overflow_json_invalid" };
+  }
+  if (!isRecord(parsed) || parsed.version !== OVERFLOW_PLAN_CACHE_VERSION || !Array.isArray(parsed.plans)) {
+    return { kind: "invalid", reason: "legacy_overflow_schema_invalid" };
+  }
+  if (parsed.plans.length > LEGACY_OVERFLOW_MAX_PLAN_COUNT) {
+    return { kind: "invalid", reason: "legacy_overflow_plan_count_oversized" };
+  }
+  const plans = parsed.plans.map((plan) => normalizeCachedOverflowPlan(plan, 0));
+  if (plans.some((plan) => plan == null)) {
+    return { kind: "invalid", reason: "legacy_overflow_plan_invalid" };
+  }
+  const identities = new Set<string>();
+  for (const plan of plans as OverflowPlannedSubscriberAlert[]) {
+    if (identities.has(plan.chatId)) {
+      return { kind: "invalid", reason: "legacy_overflow_duplicate_chat" };
+    }
+    identities.add(plan.chatId);
+  }
+  const writtenAt = finiteNumber(parsed.writtenAt);
+  return {
+    kind: "ok",
+    plans: plans as OverflowPlannedSubscriberAlert[],
+    writtenAt: writtenAt == null ? null : Math.floor(writtenAt),
   };
 }
 
@@ -102,17 +157,8 @@ export async function readOverflowPlanBacklog(
 ): Promise<OverflowPlannedSubscriberAlert[]> {
   const cached = await getCache(db, OVERFLOW_PLAN_CACHE_KEY);
   if (!cached) return [];
-  try {
-    const parsed = JSON.parse(cached.value) as unknown;
-    if (!isRecord(parsed) || parsed.version !== OVERFLOW_PLAN_CACHE_VERSION || !Array.isArray(parsed.plans)) {
-      return [];
-    }
-    return parsed.plans
-      .map((plan) => normalizeCachedOverflowPlan(plan, nowSec))
-      .filter((plan): plan is OverflowPlannedSubscriberAlert => plan != null);
-  } catch {
-    return [];
-  }
+  const parsed = parseLegacyOverflowPlanBacklog(cached.value);
+  return parsed.kind === "ok" ? parsed.plans.filter((plan) => plan.expiresAt > nowSec) : [];
 }
 
 export async function pruneOverflowPlanBacklogForChat(
@@ -242,6 +288,7 @@ export function buildOverflowAwareSubscriberQueue(args: {
   overflowBacklog: readonly PlannedSubscriberAlert[];
   nowSec: number;
   formatBudget: number;
+  sourceEventId?: string;
 }): {
   plannedQueue: PlannedSubscriberAlert[];
   subscriberQueue: RoutedSubscriberAlert[];
@@ -259,7 +306,7 @@ export function buildOverflowAwareSubscriberQueue(args: {
       entry.quietHoursEndUtc,
       entry.timezone,
     );
-  const plannedQueue = planSubscriberQueue(args.alertsByChat);
+  const plannedQueue = planSubscriberQueue(args.alertsByChat, args.sourceEventId);
   const { toFormat, overflowPlanned, overflowFormatBudget } = splitFreshPlansForOverflowPriority(
     plannedQueue,
     args.overflowBacklog,

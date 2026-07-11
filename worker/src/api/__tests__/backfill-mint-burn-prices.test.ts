@@ -1,179 +1,121 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+
+vi.mock("../../lib/mint-burn-historical-price-repair", () => ({
+  DEFAULT_HISTORICAL_MINT_PRICE_REPAIR_LIMIT: 100,
+  MAX_HISTORICAL_MINT_PRICE_REPAIR_LIMIT: 500,
+  repairHistoricalMintBurnPrices: vi.fn(),
+}));
+
+import { repairHistoricalMintBurnPrices } from "../../lib/mint-burn-historical-price-repair";
 import { handleBackfillMintBurnPrices } from "../backfill-mint-burn-prices";
 
 stubCryptoForAuth();
 
-type QueryRecord = {
-  kind: "all" | "first" | "run";
-  sql: string;
-  args: unknown[];
+const EMPTY_RESULT = {
+  dryRun: true,
+  limit: 100,
+  selected: 0,
+  recovered: 0,
+  classifiedIrreducible: 0,
+  deferredForRetry: 0,
+  aggregateCoinsRebuilt: [],
+  aggregateVerificationPassed: null,
+  dispositions: [],
+  backlog: { unclassified: 0, irreducible: 0, pendingAggregate: 0, totalNullUsd: 0 },
 };
 
-function makeBackfillDb() {
-  const queries: QueryRecord[] = [];
-
-  const incompleteRows = [
-    {
-      id: "missing-usd",
-      stablecoin_id: "usdt-tether",
-      chain_id: "ethereum",
-      amount: 100,
-      amount_usd: null,
-      timestamp: 1_710_000_123,
-      price_used: null,
-      price_timestamp: null,
-      price_source: null,
-    },
-    {
-      id: "missing-audit",
-      stablecoin_id: "usdt-tether",
-      chain_id: "ethereum",
-      amount: 100,
-      amount_usd: 100.2,
-      timestamp: 1_710_000_456,
-      price_used: null,
-      price_timestamp: null,
-      price_source: null,
-    },
-  ];
-
-  const invokeAll = async <T>(sql: string, args: unknown[]) => {
-    queries.push({ kind: "all", sql, args });
-
-    if (sql.includes("SELECT id, stablecoin_id, chain_id, amount, amount_usd")) {
-      return {
-        success: true,
-        meta: {},
-        results: incompleteRows as T[],
-      };
-    }
-    if (sql.includes("SELECT stablecoin_id, snapshot_date, price FROM supply_history")) {
-      return {
-        success: true,
-        meta: {},
-        results: [
-          { stablecoin_id: "usdt-tether", snapshot_date: 1_709_942_400, price: 1.002 },
-        ] as T[],
-      };
-    }
-    return { success: true, meta: {}, results: [] as T[] };
-  };
-
-  const invokeFirst = async <T>(sql: string, args: unknown[]) => {
-    queries.push({ kind: "first", sql, args });
-    return null as T | null;
-  };
-
-  const invokeRun = async (sql: string, args: unknown[]) => {
-    queries.push({ kind: "run", sql, args });
-
-    if (sql.includes("UPDATE mint_burn_events")) {
-      return { success: true, meta: { changes: 1 } };
-    }
-    return { success: true, meta: { changes: 0 } };
-  };
-
-  const stmt = (sql: string) => ({
-    bind: (...args: unknown[]) => ({
-      all: async <T>() => invokeAll<T>(sql, args),
-      first: async <T>() => invokeFirst<T>(sql, args),
-      run: async () => invokeRun(sql, args),
-    }),
-    all: async <T>() => invokeAll<T>(sql, []),
-    first: async <T>() => invokeFirst<T>(sql, []),
-    run: async () => invokeRun(sql, []),
-  });
-
-  const db = {
-    prepare: (sql: string) => stmt(sql),
-    batch: async (stmts: Array<{ run: () => Promise<unknown> }>) => {
-      const results = [];
-      for (const statement of stmts) {
-        results.push(await statement.run());
-      }
-      return results;
-    },
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
-
-  return { db, queries };
-}
+const db = {} as D1Database;
 
 describe("handleBackfillMintBurnPrices", () => {
-  it("uses historical supply prices for NULL amount_usd rows and only derives audit fields for already-valued rows", async () => {
-    const { db, queries } = makeBackfillDb();
-    const request = makeApiRequest("/api/backfill-mint-burn-prices", { adminKey: "secret" });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(repairHistoricalMintBurnPrices).mockResolvedValue(EMPTY_RESULT);
+  });
 
+  it("defaults to a bounded read-only preview and forwards historical provider configuration", async () => {
+    const sourceLoader = {
+      loadCoinGecko: vi.fn(),
+      loadDefiLlama: vi.fn(),
+    };
+    const request = makeApiRequest("/api/backfill-mint-burn-prices?limit=25&stablecoin=ustb-superstate", {
+      adminKey: "secret",
+    });
     const response = await handleBackfillMintBurnPrices(
       db,
-      makeApiUrl("/api/backfill-mint-burn-prices"),
+      makeApiUrl("/api/backfill-mint-burn-prices?limit=25&stablecoin=ustb-superstate"),
       true,
       request,
+      { coingeckoApiKey: "cg-key", sourceLoader, nowSec: 123 },
     );
 
     expect(response.status).toBe(200);
-    const body = (await response.json()) as {
-      totalUpdated: number;
-      rowsValued: number;
-      rowsAudited: number;
-      rowsStillUnpriced: number;
-      rowsStillMissingAudit: number;
-      coins: Array<{
-        id: string;
-        updated: number;
-        valued: number;
-        audited: number;
-        stillUnpriced: number;
-        stillMissingAudit: number;
-      }>;
-    };
+    expect(repairHistoricalMintBurnPrices).toHaveBeenCalledWith(db, {
+      dryRun: true,
+      limit: 25,
+      stablecoinId: "ustb-superstate",
+      retryIrreducible: false,
+      coingeckoApiKey: "cg-key",
+      operatorRunId: null,
+      timeTravelBookmark: null,
+      sourceLoader,
+      nowSec: 123,
+    });
+  });
 
-    expect(body.totalUpdated).toBe(2);
-    expect(body.rowsValued).toBe(1);
-    expect(body.rowsAudited).toBe(1);
-    expect(body.rowsStillUnpriced).toBe(0);
-    expect(body.rowsStillMissingAudit).toBe(0);
-    expect(body.coins).toEqual([
-      {
-        id: "usdt-tether",
-        updated: 2,
-        valued: 1,
-        audited: 1,
-        stillUnpriced: 0,
-        stillMissingAudit: 0,
-      },
-    ]);
-
-    const selectSql = queries.find(
-      (q) => q.kind === "all" && q.sql.includes("SELECT id, stablecoin_id, chain_id, amount, amount_usd"),
-    )?.sql;
-    expect(selectSql).toContain("amount_usd IS NULL");
-    expect(selectSql).toContain("price_used IS NULL");
-    expect(selectSql).toContain("price_timestamp IS NULL");
-    expect(selectSql).toContain("price_source IS NULL");
-    expect(selectSql).toContain("ORDER BY stablecoin_id ASC, timestamp DESC, id DESC");
-
-    const historySql = queries.find(
-      (q) => q.kind === "all" && q.sql.includes("SELECT stablecoin_id, snapshot_date, price FROM supply_history"),
-    )?.sql;
-    expect(historySql).toContain("price IS NOT NULL");
-
-    const updateStatements = queries.filter(
-      (q) => q.kind === "run" && q.sql.includes("UPDATE mint_burn_events"),
+  it("requires an explicit confirmation token before mutation", async () => {
+    const path = "/api/backfill-mint-burn-prices?dry-run=false";
+    const response = await handleBackfillMintBurnPrices(
+      db,
+      makeApiUrl(path),
+      true,
+      makeApiRequest(path, { adminKey: "secret" }),
     );
-    expect(updateStatements).toHaveLength(2);
 
-    expect(updateStatements[0]?.sql).toContain("SET amount_usd = ?, price_used = ?, price_timestamp = ?, price_source = ?");
-    expect(updateStatements[1]?.sql).toContain("SET price_used = ?, price_timestamp = ?, price_source = ?");
-    expect(updateStatements.some((q) => q.sql.includes("amount * ?"))).toBe(false);
-    expect(queries.some((q) => q.sql.includes("FROM price_cache"))).toBe(false);
+    expect(response.status).toBe(400);
+    expect(repairHistoricalMintBurnPrices).not.toHaveBeenCalled();
+    expect(await response.json()).toMatchObject({
+      error: expect.stringContaining("confirm=historical-mint-prices"),
+    });
+  });
+
+  it("executes only after explicit confirmation and can revisit irreducible rows", async () => {
+    const path =
+      "/api/backfill-mint-burn-prices?dry-run=false&confirm=historical-mint-prices&bookmark=bookmark-123&retry-irreducible=true&limit=500";
+    const response = await handleBackfillMintBurnPrices(
+      db,
+      makeApiUrl(path),
+      true,
+      makeApiRequest(path, { adminKey: "secret", headers: { "Idempotency-Key": "repair-run-1" } }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(repairHistoricalMintBurnPrices).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        dryRun: false,
+        retryIrreducible: true,
+        limit: 500,
+        operatorRunId: "repair-run-1",
+        timeTravelBookmark: "bookmark-123",
+      }),
+    );
+  });
+
+  it("rejects an unbounded limit", async () => {
+    const path = "/api/backfill-mint-burn-prices?limit=501";
+    const response = await handleBackfillMintBurnPrices(
+      db,
+      makeApiUrl(path),
+      true,
+      makeApiRequest(path, { adminKey: "secret" }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(repairHistoricalMintBurnPrices).not.toHaveBeenCalled();
   });
 
   it("requires admin auth", async () => {
-    const { db } = makeBackfillDb();
-
     const response = await handleBackfillMintBurnPrices(
       db,
       makeApiUrl("/api/backfill-mint-burn-prices"),
@@ -182,7 +124,6 @@ describe("handleBackfillMintBurnPrices", () => {
     );
 
     expect(response.status).toBe(401);
-    const body = (await response.json()) as { error: string };
-    expect(body.error).toBe("Unauthorized");
+    expect(await response.json()).toEqual({ error: "Unauthorized" });
   });
 });

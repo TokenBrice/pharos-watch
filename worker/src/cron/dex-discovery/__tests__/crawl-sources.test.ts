@@ -156,7 +156,8 @@ describe("crawlCoin DexScreener hardening", () => {
       new Set(),
     );
 
-    expect(result).toEqual({ pools: [], unresolvedChains: [] });
+    expect(result).toMatchObject({ pools: [], unresolvedChains: [] });
+    expect(result.deploymentOutcomes[0]).toMatchObject({ outcome: "provider_inaccessible" });
     expect(warnSpy).toHaveBeenCalledWith("[dex-discovery] dexscreener error for ethereum:0xabc", expect.any(Error));
     expect(recordOutcome).toHaveBeenCalledWith(
       expect.anything(),
@@ -184,7 +185,7 @@ describe("crawlCoin DexScreener hardening", () => {
       new Set(),
     );
 
-    expect(result).toEqual({ pools: [], unresolvedChains: [] });
+    expect(result).toMatchObject({ pools: [], unresolvedChains: [] });
     expect(recordOutcome).toHaveBeenCalledTimes(1);
     expect(recordOutcome).toHaveBeenCalledWith(
       expect.anything(),
@@ -410,7 +411,7 @@ describe("crawlCoin DexScreener hardening", () => {
       new Set(),
     );
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       pools: [],
       unresolvedChains: [],
     });

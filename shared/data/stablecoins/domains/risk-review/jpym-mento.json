@@ -1,0 +1,74 @@
+{
+  "id": "jpym-mento",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: JPYm resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento V3 smart contracts docs",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+      },
+      {
+        "label": "Mento BreakerBox docs",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "JPYm's durable cross-chain supply path is Wormhole Native Token Transfers (NTT), Mento's officially selected interoperability provider for its full stablecoin suite. Mento runs a hub-and-spoke model: issuance and risk management stay anchored on Celo (the CDP hub) while spoke chains like Monad hold NTT-Manager-minted deployments, with cross-chain supply attested by Wormhole's Guardian network and enforced by the NTT Global Accountant. This is an external-validated messaging-network route, not an opaque/undocumented one. (Probable, not verified: Monad launched with the GBPm/USDm pair first; JPYm's specific NTT-Manager wiring on Monad was not independently confirmed on-chain, though JPYm is already deployed there as a Mento-Safe-owned proxy.)",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Wormhole NTT (Native Token Transfers)",
+        "slug": "wormhole",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/from-other-chains",
+        "bridgeTypes": [
+          "external-validated-network",
+          "burn-mint",
+          "hub-and-spoke"
+        ],
+        "note": "Mento's officially selected interoperability provider; NTT standard for native cross-chain issuance/redemption with Celo as hub, Monad as spoke; attested by Wormhole Guardians + Global Accountant."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Mento docs — Getting Mento stables from other chains (names Wormhole NTT)",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/from-other-chains"
+      },
+      {
+        "label": "Wormhole blog — Mento selects Wormhole as official interoperability provider (NTT)",
+        "url": "https://wormhole.com/blog/mento-selects-wormhole-as-its-official-interoperability-provider"
+      },
+      {
+        "label": "Mento blog — Mento selects Wormhole to power multichain FX",
+        "url": "https://www.mento.org/blog/mento-selects-wormhole-as-its-official-interoperability-provider-to-power-multichain-fx"
+      },
+      {
+        "label": "Mento blog — Mento is bringing onchain FX to the Monad ecosystem (Celo-anchored issuance, Monad liquidity)",
+        "url": "https://www.mento.org/blog/mento-is-bringing-onchain-fx-to-the-monad-ecosystem"
+      },
+      {
+        "label": "The Block — Mento launches on Monad, powered by Wormhole NTT (Mar 12 2026)",
+        "url": "https://www.theblock.co/press-releases/393188/mento-launches-on-monad-bringing-fx-markets-to-a-high-performance-l1"
+      },
+      {
+        "label": "Wormhole docs — Native Token Transfers overview (hub-and-spoke vs burn-mint, Manager/Transceiver, Guardian attestation)",
+        "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/overview/"
+      }
+    ]
+  }
+}

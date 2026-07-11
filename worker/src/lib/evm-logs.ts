@@ -37,7 +37,7 @@ export function createRateLimiter(requestsPerSecond: number): RateLimitedFetch {
     });
     pending = execute.then(
       () => {},
-      () => {}
+      () => {},
     );
     return execute;
   };
@@ -120,7 +120,10 @@ export async function getEvmBlockNumber(
     budget.count++;
     const json = await rateLimit(async () => {
       const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
-      if (!res.ok) { await cancelResponseBodyQuietly(res); return null; }
+      if (!res.ok) {
+        await cancelResponseBodyQuietly(res);
+        return null;
+      }
       return res.json() as Promise<{ result?: string }>;
     });
     if (!json?.result || !/^0x[0-9a-fA-F]+$/.test(json.result)) return null;
@@ -147,6 +150,8 @@ export interface EvmLogFetchResult {
   logs: EtherscanLogEntry[];
   complete: boolean;
   scannedToBlock: number;
+  calls: number;
+  maxDepth: number;
   failureReason?: string;
 }
 
@@ -225,6 +230,8 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
       logs: [],
       complete: false,
       scannedToBlock: unscannedBlock,
+      calls: 0,
+      maxDepth: depth,
       failureReason: "budget-exhausted",
     };
   }
@@ -233,6 +240,8 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
       logs: [],
       complete: false,
       scannedToBlock: unscannedBlock,
+      calls: 0,
+      maxDepth: depth,
       failureReason: "max-recursion-depth",
     };
   }
@@ -255,9 +264,13 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
   budget.count++;
   const timeout = AbortSignal.timeout(timeoutMs);
   const json = await rateLimit(async () => {
-    const result = await fetchJsonWithRetry<{ status: string; message: string; result: EtherscanLogEntry[] }>(`${ETHERSCAN_V2_BASE}?${params}`, {
-      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-    }, 1);
+    const result = await fetchJsonWithRetry<{ status: string; message: string; result: EtherscanLogEntry[] }>(
+      `${ETHERSCAN_V2_BASE}?${params}`,
+      {
+        signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+      },
+      1,
+    );
     if (!result?.response.ok) {
       if (result) {
         console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) HTTP ${result.response.status}`);
@@ -269,14 +282,20 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
 
   if (!json || json.status !== "1" || !Array.isArray(json.result)) {
     if (json?.message === "No records found") {
-      return { logs: [], complete: true, scannedToBlock: toBlock };
+      return { logs: [], complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: depth };
     }
     // API error — return incomplete so callers know the scan was not reliable.
-    if (json) console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) API error: ${json.message}`, json.result ? String(json.result).slice(0, 200) : "no result");
+    if (json)
+      console.warn(
+        `[evm-logs] Etherscan v2 (chain ${evmChainId}) API error: ${json.message}`,
+        json.result ? String(json.result).slice(0, 200) : "no result",
+      );
     return {
       logs: [],
       complete: false,
       scannedToBlock: unscannedBlock,
+      calls: 1,
+      maxDepth: depth,
       failureReason: json?.message ?? "etherscan-api-error",
     };
   }
@@ -290,24 +309,56 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
         logs,
         complete: false,
         scannedToBlock: unscannedBlock,
+        calls: 1,
+        maxDepth: depth,
         failureReason: "etherscan-result-cap-unsplittable",
       };
     }
 
     // Sequential splits to avoid fanning out into 2^depth concurrent connections.
     // Matches the sequential pattern in alchemy-logs.ts.
-    const first = await fetchEvmLogsForTopicsWithCompleteness(evmChainId, contractAddress, topics, apiKey, fromBlock, mid, depth + 1, rateLimit, budget, signal, timeoutMs);
+    const first = await fetchEvmLogsForTopicsWithCompleteness(
+      evmChainId,
+      contractAddress,
+      topics,
+      apiKey,
+      fromBlock,
+      mid,
+      depth + 1,
+      rateLimit,
+      budget,
+      signal,
+      timeoutMs,
+    );
     if (!first.complete) {
-      return first;
+      return {
+        ...first,
+        calls: first.calls + 1,
+        maxDepth: Math.max(depth, first.maxDepth),
+      };
     }
-    const second = await fetchEvmLogsForTopicsWithCompleteness(evmChainId, contractAddress, topics, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget, signal, timeoutMs);
+    const second = await fetchEvmLogsForTopicsWithCompleteness(
+      evmChainId,
+      contractAddress,
+      topics,
+      apiKey,
+      mid + 1,
+      toBlock,
+      depth + 1,
+      rateLimit,
+      budget,
+      signal,
+      timeoutMs,
+    );
     return {
       logs: [...first.logs, ...second.logs],
       complete: second.complete,
       scannedToBlock: second.complete ? toBlock : second.scannedToBlock,
+      calls: 1 + first.calls + second.calls,
+      maxDepth: Math.max(depth, first.maxDepth, second.maxDepth),
       failureReason: second.failureReason,
     };
   }
 
-  return { logs, complete: true, scannedToBlock: toBlock };
+  return { logs, complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: depth };
 }

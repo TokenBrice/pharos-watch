@@ -1,5 +1,9 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { STATUS_CACHE_RATIO_THRESHOLDS, STATUS_YIELD_HEALTH_THRESHOLDS } from "@shared/lib/status-thresholds";
+import {
+  YIELD_BENCHMARK_KEY_VALUES,
+  type YieldBenchmarkKey,
+} from "@shared/types/yield";
 import type {
   CronStatus,
   YieldCoverageAuditQueueAction,
@@ -17,6 +21,10 @@ import {
 } from "../../cron/yield-sync/supplemental-source-families";
 import { getBoolean, getNumber, getObject, getString } from "../../cron/dews/source-state/legacy-bridge";
 import { safeJsonParse } from "../api-cache-read";
+import {
+  classifyYieldBenchmarkFreshness,
+  YIELD_BENCHMARK_SCORE_TTL_SEC,
+} from "../../cron/yield-sync/benchmarks";
 
 const YIELD_RUNBOOK_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/yield-health.md";
 const YIELD_RANKINGS_CACHE_KEY = "yield-rankings";
@@ -276,6 +284,103 @@ function buildSourceRiskCoverage(rankings: unknown[] | null): YieldSourceRiskCov
     altRows: sourceRows.filter((row) => !row.isBest).length,
     rowsWithSourceRisk: sourceRows.filter((row) => row.sourceRisk != null).length,
     fields,
+  };
+}
+
+function getPublishedBenchmarkKey(row: Record<string, unknown>): YieldBenchmarkKey {
+  const provenance = getObject(row.provenance);
+  const key = getString(row.benchmarkKey) ?? getString(provenance?.benchmarkKey);
+  return YIELD_BENCHMARK_KEY_VALUES.includes(key as YieldBenchmarkKey)
+    ? key as YieldBenchmarkKey
+    : "USD";
+}
+
+function benchmarkAgeSeconds(
+  now: number,
+  meta: Record<string, unknown> | null,
+): { fetchedAt: number | null; ageSec: number | null } {
+  const fetchedAt = getNumber(meta?.fetchedAt);
+  return {
+    fetchedAt,
+    ageSec: fetchedAt != null ? ageSeconds(now, fetchedAt) : getNumber(meta?.ageSeconds),
+  };
+}
+
+function buildBenchmarkRegistryHealth(params: {
+  now: number;
+  rankings: unknown[] | null;
+  rankingsPayload: Record<string, unknown> | null;
+  provenance: Record<string, unknown> | null;
+}): YieldHealthSummary["benchmarkRegistry"] {
+  const usage = new Map<YieldBenchmarkKey, { rowCount: number; fallbackSelectionRowCount: number }>();
+  for (const ranking of params.rankings ?? []) {
+    const row = getObject(ranking);
+    if (!row) continue;
+    const provenance = getObject(row.provenance);
+    const key = getPublishedBenchmarkKey(row);
+    const current = usage.get(key) ?? { rowCount: 0, fallbackSelectionRowCount: 0 };
+    current.rowCount += 1;
+    if (
+      getString(row.benchmarkSelectionMode) === "fallback-usd" ||
+      getString(provenance?.benchmarkSelectionMode) === "fallback-usd"
+    ) {
+      current.fallbackSelectionRowCount += 1;
+    }
+    usage.set(key, current);
+  }
+
+  const registry =
+    getObject(params.rankingsPayload?.benchmarks) ??
+    getObject(params.provenance?.benchmarks);
+  const legacyUsdMeta = getObject(params.provenance?.benchmark);
+  const benchmarks = Object.fromEntries(
+    [...usage.entries()].map(([key, counts]) => {
+      const meta = getObject(registry?.[key]) ?? (key === "USD" ? legacyUsdMeta : null);
+      const { fetchedAt, ageSec } = benchmarkAgeSeconds(params.now, meta);
+      const isFallback = getBoolean(meta?.isFallback);
+      const fallbackMode = getString(meta?.fallbackMode);
+      const status: YieldHealthFieldStatus = meta == null
+        ? "unknown"
+        : classifyYieldBenchmarkFreshness(
+            {
+              ageSeconds: ageSec,
+              isFallback: isFallback === true,
+              fallbackMode,
+            },
+            {
+              selectionMode: counts.fallbackSelectionRowCount > 0 ? "fallback-usd" : null,
+            },
+          );
+      return [
+        key,
+        {
+          key,
+          label: getString(meta?.label),
+          currency: getString(meta?.currency),
+          rowCount: counts.rowCount,
+          fallbackSelectionRowCount: counts.fallbackSelectionRowCount,
+          fetchedAt,
+          ageSec,
+          maxAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
+          source: getString(meta?.source),
+          isFallback,
+          fallbackMode,
+          status,
+        },
+      ];
+    }),
+  ) as YieldHealthSummary["benchmarkRegistry"]["benchmarks"];
+  const entries = Object.values(benchmarks);
+  const nonHealthyCount = entries.filter((entry) => entry.status !== "healthy").length;
+
+  return {
+    status: entries.length === 0 ? "unknown" : nonHealthyCount > 0 ? "degraded" : "healthy",
+    usedBenchmarkCount: entries.length,
+    healthyBenchmarkCount: entries.filter((entry) => entry.status === "healthy").length,
+    degradedBenchmarkCount: entries.filter((entry) => entry.status === "degraded").length,
+    staleBenchmarkCount: entries.filter((entry) => entry.status === "stale").length,
+    unknownBenchmarkCount: entries.filter((entry) => entry.status === "unknown").length,
+    benchmarks,
   };
 }
 
@@ -666,16 +771,21 @@ export async function loadYieldHealthSummary(
 
   const benchmark = getObject(provenance?.benchmark);
   const benchmarkFetchedAt = getNumber(benchmark?.fetchedAt);
-  const benchmarkAgeSec = getNumber(benchmark?.ageSeconds) ?? ageSeconds(now, benchmarkFetchedAt);
+  const benchmarkAgeSec = ageSeconds(now, benchmarkFetchedAt) ?? getNumber(benchmark?.ageSeconds);
   const benchmarkIsFallback = getBoolean(benchmark?.isFallback);
-  const benchmarkStaleness = freshnessStatus(
-    benchmarkAgeSec,
-    STATUS_YIELD_HEALTH_THRESHOLDS.benchmarkMaxAgeSec,
-    { missingIs: "unknown", degradedAfterOne: true },
-  );
-  const benchmarkStatus: YieldHealthFieldStatus = benchmarkIsFallback === true
-    ? (benchmarkStaleness === "stale" ? "stale" : "degraded")
-    : benchmarkStaleness;
+  const benchmarkStatus: YieldHealthFieldStatus = benchmark == null
+    ? "unknown"
+    : classifyYieldBenchmarkFreshness({
+        ageSeconds: benchmarkAgeSec,
+        isFallback: benchmarkIsFallback === true,
+        fallbackMode: getString(benchmark.fallbackMode),
+      });
+  const benchmarkRegistry = buildBenchmarkRegistryHealth({
+    now,
+    rankings,
+    rankingsPayload,
+    provenance,
+  });
 
   const coverageAuditUpdatedAt = byKey.get(YIELD_COVERAGE_AUDIT_CACHE_KEY)?.updated_at ?? null;
   const coverageAuditPayload = safeJsonObjectParse(
@@ -710,7 +820,7 @@ export async function loadYieldHealthSummary(
     rankingStatus,
     safetyCoverageStatus,
     supplemental.status,
-    benchmarkStatus,
+    benchmarkRegistry.status,
     coverageAuditStatus,
     sourceRiskCoverage.status,
   ]);
@@ -744,6 +854,7 @@ export async function loadYieldHealthSummary(
       fallbackMode: getString(benchmark?.fallbackMode),
       status: benchmarkStatus,
     },
+    benchmarkRegistry,
     coverageAudit: {
       updatedAt: coverageAuditUpdatedAt,
       ageSec: coverageAuditAgeSec,

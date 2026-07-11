@@ -41,11 +41,17 @@ export const RUNBOOK_BY_CODE: Record<string, string> = {
   data_quality_skipped_db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
   stablecoins_cache_unavailable: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   stablecoins_cache_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  stablecoin_publication_incomplete: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  stablecoin_publication_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   blacklist_gaps_degraded: `${RUNBOOK_BASE}/blacklist-sync.md`,
   blacklist_gaps_stale: `${RUNBOOK_BASE}/blacklist-sync.md`,
   onchain_integrity_degraded: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
   onchain_integrity_stale: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
   onchain_monitor_unavailable: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
+  d1_capacity_watch: `${RUNBOOK_BASE}/d1-capacity-and-runtime-experiments.md`,
+  d1_capacity_warning: `${RUNBOOK_BASE}/d1-capacity-and-runtime-experiments.md`,
+  d1_capacity_critical: `${RUNBOOK_BASE}/d1-capacity-and-runtime-experiments.md`,
+  d1_capacity_query_failed: `${RUNBOOK_BASE}/d1-capacity-and-runtime-experiments.md`,
 };
 
 /**
@@ -247,6 +253,29 @@ export function buildAvailabilityCauses(input: {
     });
   }
 
+  if (input.publicHealth.d1CapacityQueryError) {
+    pushCause(availabilityCauses, {
+      code: "d1_capacity_query_failed",
+      layer: "availability",
+      severity: "info",
+      message: "D1 capacity diagnostics are temporarily unavailable.",
+    });
+  } else if (input.publicHealth.d1Capacity?.thresholdState !== "normal" && input.publicHealth.d1Capacity) {
+    const capacity = input.publicHealth.d1Capacity;
+    const exhaustion = capacity.daysUntilExhaustion == null
+      ? "Exhaustion forecast is not yet available."
+      : `Projected exhaustion is ${capacity.daysUntilExhaustion} days away.`;
+    pushCause(availabilityCauses, {
+      code: `d1_capacity_${capacity.thresholdState}`,
+      layer: "availability",
+      severity: capacity.thresholdState === "critical" ? "critical" : "warning",
+      message: `D1 database utilization is ${capacity.utilizationPercent}% (${capacity.thresholdState}). ${exhaustion}`,
+      metric: "d1CapacityUtilizationPercent",
+      value: capacity.utilizationPercent,
+      threshold: capacity.crossedThresholdPercent ?? 60,
+    });
+  }
+
   if (input.cronHistoryQueryFailed) {
     pushCause(availabilityCauses, {
       code: "cron_history_query_failed",
@@ -375,6 +404,29 @@ export function buildDataQualityCauses(input: {
       layer: "data-quality",
       severity: "warning",
       message: `Stablecoins cache is degraded (${input.dataQuality.stablecoinsCacheReason ?? "unknown"}).`,
+    });
+  }
+
+  if (input.dataQuality.stablecoinPublication?.status === "incomplete") {
+    const missing = input.dataQuality.stablecoinPublication.missingActiveIds;
+    const examples = missing.slice(0, 12).join(", ");
+    pushCause(dataQualityCauses, {
+      code: "stablecoin_publication_incomplete",
+      layer: "data-quality",
+      severity: "warning",
+      message:
+        `Stablecoin publication is missing ${missing.length} unwaived active ID(s)` +
+        (examples ? `: ${examples}${missing.length > 12 ? ", ..." : ""}.` : "."),
+      metric: "missingActiveStablecoins",
+      value: missing.length,
+      threshold: 1,
+    });
+  } else if (input.dataQuality.stablecoinPublication?.status === "unknown") {
+    pushCause(dataQualityCauses, {
+      code: "stablecoin_publication_unknown",
+      layer: "data-quality",
+      severity: "warning",
+      message: "Exact stablecoin publication coverage evidence is unavailable.",
     });
   }
 

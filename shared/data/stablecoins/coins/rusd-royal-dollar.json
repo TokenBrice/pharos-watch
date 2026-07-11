@@ -14,6 +14,7 @@
   "collateral": "Issuer-managed fiat reserve assets and short-term liquid instruments disclosed by Royal/R Coins materials",
   "pegMechanism": "Centralized 1:1 dollar token with issuer-managed mint and redemption processes for approved users",
   "mechanismArchetype": "fiat-cash",
+  "llamaId": "415",
   "detailProvider": "coingecko",
   "geckoId": "royal-dollar",
   "protocolSlug": "rcoins",

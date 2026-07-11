@@ -32,6 +32,7 @@ const ROUTES: ReadonlyArray<{ path: string; tier: string }> = [
   { path: "/yield", tier: "analytics" },
   { path: "/timeline", tier: "analytics" },
   { path: "/chains", tier: "analytics" },
+  { path: "/pharoswatchbot", tier: "discovery" },
   { path: "/pharoswatchbot/app", tier: "mini-app" },
 ];
 

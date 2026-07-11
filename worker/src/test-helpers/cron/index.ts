@@ -2,8 +2,8 @@
  * Cron-test mock factories.
  *
  * Scaffolded by W2.10.0 ahead of migrating the four mega-tests
- * (`sync-yield-data.test.ts`, `enrich-prices.test.ts`,
- * `dispatch-telegram-alerts.test.ts`, `sync-stablecoins.test.ts`) onto a
+ * (`sync-yield-data-*.test.ts`, `enrich-prices-*.test.ts`,
+ * `dispatch-telegram-alerts-*.test.ts`, `sync-stablecoins.test.ts`) onto a
  * shared mocking surface. See the per-file headers for usage patterns.
  */
 

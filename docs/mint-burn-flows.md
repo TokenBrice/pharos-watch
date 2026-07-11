@@ -414,7 +414,12 @@ CREATE TABLE mint_burn_events (
   amount_usd REAL,                     -- NULL if price unavailable at sync time
   price_used REAL,                     -- Price at resolution time
   price_timestamp INTEGER,             -- When the price was sourced (cache update time), NOT the event's block timestamp
-  price_source TEXT,                   -- "supply-history-daily", "price-cache-current", "price_cache_heal", "backfill-supply-history-daily", or "backfill-derived-amount-usd"
+  price_source TEXT,                   -- Runtime source or exact historical repair source
+  price_repair_status TEXT,            -- NULL, "pending_aggregate", "recovered", or "irreducible"
+  price_repair_reason TEXT,            -- Terminal no-source reason or retryable provider diagnostic
+  price_repair_attempted_at INTEGER,   -- Latest bounded historical repair attempt
+  price_repair_run_id TEXT,            -- Operator Idempotency-Key for the last mutation attempt
+  price_repair_bookmark TEXT,          -- Pre-run D1 Time Travel bookmark
   burn_type TEXT,                      -- "effective_burn", "bridge_burn", or "review_required" when classified
   burn_review_reason TEXT,             -- reason code when burn classification needs review
   flow_type TEXT DEFAULT 'standard',   -- "standard", "bridge_transfer", or "atomic_roundtrip"
@@ -432,6 +437,11 @@ CREATE INDEX idx_mbe2_burn_type ON mint_burn_events(burn_type, timestamp DESC);
 CREATE INDEX idx_mbe_coin_chain_ts ON mint_burn_events(stablecoin_id, chain_id, timestamp DESC);
 CREATE INDEX idx_mbe_symbol_ts ON mint_burn_events(symbol, timestamp DESC);
 CREATE INDEX idx_mbe_null_price_ts ON mint_burn_events(timestamp DESC) WHERE amount_usd IS NULL;
+
+-- migration 0178: bounded historical debt selection and aggregate-resume state
+CREATE INDEX idx_mbe_historical_price_repair_backlog
+  ON mint_burn_events(price_repair_status, price_repair_attempted_at ASC, timestamp ASC, id ASC)
+  WHERE amount_usd IS NULL OR price_repair_status = 'pending_aggregate';
 
 -- migration 0097: composite index to speed roundtrip sweep and future flow_type-filtered queries
 CREATE INDEX idx_mbe_flow_type_ts ON mint_burn_events(flow_type, timestamp DESC);
@@ -559,18 +569,31 @@ Product note: stablecoin detail-page "Mint & Burn Flow History" uses the counted
 
 ### POST /api/backfill-mint-burn-prices (admin)
 
-Repairs incomplete mint/burn valuation metadata for historical rows. Requires Access service-token headers on `ops-api.pharos.watch`.
+Repairs historical `amount_usd IS NULL` debt. Requires Access service-token headers on `ops-api.pharos.watch`. The route is bounded to `1..500` rows (`limit=100` by default) and defaults to dry-run even though it is a `POST` action.
 
 Note: cron now auto-heals recent NULL-price events (48h lookback). This endpoint remains the operator tool for broader historical backfills.
 
-1. Finds all `mint_burn_events` rows with incomplete valuation or audit fields (`amount_usd`, `price_used`, `price_timestamp`, `price_source`).
-2. For rows with `amount_usd IS NULL`, tries to value them from event-day `supply_history` prices.
-3. For rows that already have `amount_usd`, derives audit fields conservatively where possible without rewriting historical USD valuation from current spot prices.
-4. Rebuilds `mint_burn_hourly` only for coins whose `amount_usd` actually changed.
+1. Selects the oldest bounded batch of unclassified NULL-USD events, optionally scoped with `stablecoin=<id>`.
+2. Prefers an exact UTC event-day `supply_history` price. If absent, it fetches a bounded event-day CoinGecko market-chart range, then DefiLlama CoinGecko-identity and exact contract-chart ranges. DefiLlama ranges are fetched sequentially in at most eight 800-day windows per identity and merged before exact-day resolution; a larger range or any unavailable window remains retryable instead of being misclassified as definitive absence. Each accepted price records its source and source timestamp.
+3. It never uses the current `price_cache` or another day's price for historical repair. A definitive search with no valid event-day point becomes `price_repair_status = "irreducible"`; transient provider failures remain unclassified and retryable with a diagnostic reason.
+4. Recovered rows first enter `pending_aggregate`. The operator rebuilds all hourly buckets for each affected coin, verifies every bucket against `mint_burn_events`, and only then marks the rows `recovered`. A failed/interrupted rebuild resumes before new valuation work on the next call.
+5. The response includes the remaining unclassified, irreducible, pending-aggregate, and total NULL-USD counts, so closure means `unclassified = 0` and `pendingAggregate = 0` rather than pretending irreducible rows were valued.
 
-Important constraint: this endpoint no longer bulk-fills historical `amount_usd` from the current `price_cache` snapshot. Rows without a time-appropriate historical price remain unresolved and are reported as still unpriced.
+Preview one batch:
 
-Returns: `{ totalUpdated, rowsValued, rowsAudited, rowsStillUnpriced, rowsStillMissingAudit, coins: [{ id, updated, valued, audited, stillUnpriced, stillMissingAudit }] }`
+```text
+POST /api/backfill-mint-burn-prices?dry-run=true&limit=100
+```
+
+After taking a D1 Time Travel bookmark and reviewing the preview, execute the identical scope with an idempotency key:
+
+```text
+POST /api/backfill-mint-burn-prices?dry-run=false&confirm=historical-mint-prices&bookmark=<fresh-d1-bookmark>&limit=100
+```
+
+`retry-irreducible=true` explicitly reopens terminal classifications when a new historical source becomes available. Do not use it as the normal drain mode.
+
+Returns: `{ dryRun, limit, selected, recovered, classifiedIrreducible, deferredForRetry, aggregateCoinsRebuilt, aggregateVerificationPassed, dispositions, backlog }`.
 
 ### POST /api/backfill-mint-burn (admin)
 
@@ -753,6 +776,7 @@ Current production scope already spans configured issuance chains. Planned next 
 | `worker/src/lib/mint-burn-pipeline/context.ts` | Shared current/historical price context loaders |
 | `worker/src/lib/mint-burn-pipeline/persistence.ts` | Shared event write + hourly recompute helpers |
 | `worker/src/lib/mint-burn-pipeline/price-heal.ts` | Shared NULL-price auto-heal helper |
+| `worker/src/lib/mint-burn-historical-price-repair.ts` | Bounded event-day historical repair, terminal classification, aggregate resume, and verification |
 | `worker/src/lib/mint-burn-pipeline/roundtrip-sweep.ts` | Post-cron sweep for cross-run atomic roundtrip detection |
 | `worker/src/lib/mint-burn-pipeline/sync-state.ts` | Shared sync-state read/init/upsert helpers |
 | `worker/src/lib/mint-burn-contracts.ts` | Mint/burn event configs resolved from shared stablecoin contracts (no explicit address overrides; both reUSD configs track canonical zero-address Transfers) |
@@ -764,6 +788,7 @@ Current production scope already spans configured issuance chains. Planned next 
 | `worker/src/api/backfill-mint-burn-prices.ts` | Admin endpoint: backfill NULL amount_usd values |
 | `worker/src/api/reclassify-atomic-roundtrips.ts` | Admin endpoint: retroactively tag same-tx mint/burn rows as atomic roundtrips |
 | `worker/migrations/0000_baseline.sql` | Baseline mint/burn schema (3 tables, including the historical v2 layout) |
+| `worker/migrations/0178_historical_data_debt_closure.sql` | Historical repair state plus reviewed BRLA DDR repair provenance |
 | `src/hooks/use-mint-burn-flows.ts` | TanStack Query hooks (3 hooks) |
 | `src/app/flows/page.tsx` | Frontend page and metadata |
 | `worker/src/lib/mint-burn-scoring.ts` | Pure Flow Intensity / Bank Run Gauge / flight-to-quality logic (`getGaugeBand`, `computeGaugeScore`, `detectFlightToQuality`) |

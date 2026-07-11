@@ -101,7 +101,7 @@ describe("SafetyScoreHistorySection", () => {
 
     // Initial grade still present
     expect(html).toContain("Initial grade");
-    expect(html).toContain('aria-label="Updated at ');
+    expect(html).toContain("Updated at ");
     expect(html).toContain(">2h</span>");
   });
 

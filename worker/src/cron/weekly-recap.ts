@@ -2,7 +2,11 @@ import { formatIsoDate } from "@shared/lib/format";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { createNeutralSkippedCronResult } from "../lib/cron-result";
-import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
+import type { TelegramCreds } from "../lib/telegram";
+import {
+  deliverTelegramDigestEdition,
+  enqueueTelegramDigestEdition,
+} from "../lib/telegram-digest-outbox";
 import { SECONDS } from "../lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
@@ -119,7 +123,26 @@ async function deliverWeeklyDigestToTelegram(params: {
   digestText: string;
   generatedAt: number;
   weekStartLabel: string;
+  signal?: AbortSignal;
 }): Promise<string> {
+  const date = formatIsoDate(params.generatedAt);
+  const editionKey = `weekly:${date}`;
+  const weekLabel = `Week of ${params.weekStartLabel}`;
+  const tgTitle = `Weekly Recap: ${params.digestTitle || weekLabel}`;
+  if (params.telegramCreds) {
+    const enqueueResult = await enqueueTelegramDigestEdition(params.db, {
+      editionKey,
+      digestKind: "weekly",
+      digestGeneratedAt: params.generatedAt,
+      targetChatId: params.telegramCreds.chatId,
+      title: tgTitle,
+      extended: params.digestExtended ?? params.digestText,
+      date: `${date}-weekly`,
+    }, params.signal);
+    if (!enqueueResult.payloadMatched) {
+      throw new Error(`Immutable Telegram digest edition differs (${editionKey})`);
+    }
+  }
   return runDigestChannelDelivery({
     db: params.db,
     circuitSource: CIRCUIT_SOURCE.TELEGRAM_API,
@@ -127,11 +150,15 @@ async function deliverWeeklyDigestToTelegram(params: {
     logPrefix: "weekly-recap",
     channelLabel: "Telegram",
     deliver: async (creds) => {
-      const weekLabel = `Week of ${params.weekStartLabel}`;
-      const tgTitle = `Weekly Recap: ${params.digestTitle || weekLabel}`;
-      const date = formatIsoDate(params.generatedAt);
-      await postDigestToTelegram(tgTitle, params.digestExtended ?? params.digestText, `${date}-weekly`, creds);
-      return "ok";
+      const delivery = await deliverTelegramDigestEdition(params.db, creds, editionKey, params.signal);
+      if (delivery.outcome === "sent") return "ok";
+      if (delivery.outcome === "skipped" && delivery.state === "sent") {
+        return "ok+already-sent";
+      }
+      if (delivery.outcome === "skipped") return `queued: ${delivery.state}`;
+      throw new Error(
+        `Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
+      );
     },
   });
 }
@@ -240,6 +267,7 @@ export async function generateWeeklyRecap(
       digestText: existing.digest_text,
       generatedAt: existing.generated_at,
       weekStartLabel: getMetaString(existingMeta, "weekStart") ?? formatIsoDate(existing.generated_at),
+      signal,
     });
     await updateWeeklyTelegramDeliveryMeta(db, existing, {
       nowSec: Math.floor(Date.now() / 1000),
@@ -504,6 +532,7 @@ export async function generateWeeklyRecap(
       digestText: digestCopy.digestText,
       generatedAt: nowSec,
       weekStartLabel: weeklyData.weekStartDate,
+      signal,
     }));
   await updateWeeklyTelegramDeliveryMeta(
     db,

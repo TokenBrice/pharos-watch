@@ -19,10 +19,12 @@ import {
 } from "./sync-stablecoins/stages";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { CronProgressReporter } from "../lib/cron-logger";
+import { createBinanceFetchSession } from "../lib/cex-tickers";
 
 export interface SyncStablecoinsOptions {
   cmcApiKey?: string;
   alertWebhookUrl?: string | null;
+  alertBrokerMode?: string;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
   reportProgress?: CronProgressReporter;
@@ -38,6 +40,7 @@ export async function syncStablecoins(
   const {
     cmcApiKey,
     alertWebhookUrl,
+    alertBrokerMode,
     coingeckoApiKey,
     chainRpcs,
     reportProgress,
@@ -47,6 +50,7 @@ export async function syncStablecoins(
   const startAbort = returnIfAborted(signal, "start");
   if (startAbort) return startAbort;
   const syncStartSec = Math.floor(Date.now() / 1000);
+  const binanceSession = createBinanceFetchSession();
   const intake = await runStablecoinsIntakeStage({
     db,
     syncStartSec,
@@ -54,6 +58,7 @@ export async function syncStablecoins(
     jupiterApiKey,
     signal,
     alertWebhookUrl,
+    alertBrokerMode,
     coingeckoApiKey,
     chainRpcs,
     reportProgress,
@@ -80,6 +85,7 @@ export async function syncStablecoins(
     chainRpcs,
     addressPriceProvider,
     reportProgress,
+    binanceSession,
   });
   if ("enrichStats" in pricingStage === false) return pricingStage;
   const {
@@ -132,7 +138,7 @@ export async function syncStablecoins(
     }),
   });
   if (stalenessCheck.blockedResult) {
-    await recordStablecoinsStalenessBlockOutcome(db, stalenessCheck, alertWebhookUrl);
+    await recordStablecoinsStalenessBlockOutcome(db, stalenessCheck, alertWebhookUrl, alertBrokerMode);
     return stalenessCheck.blockedResult;
   }
   const {
@@ -148,6 +154,7 @@ export async function syncStablecoins(
     syncStartSec,
     signal,
     alertWebhookUrl,
+    alertBrokerMode,
     coingeckoApiKey,
     rawAssetCount,
     droppedMalformedAssets,
@@ -156,6 +163,7 @@ export async function syncStablecoins(
     returnIfAborted,
     abortResult,
     reportProgress,
+    binanceSession,
   });
   if (isAbortResult(publication)) return publication;
   if (!("cacheResult" in publication)) return publication;
@@ -196,5 +204,20 @@ export async function syncStablecoins(
       status: result.status ?? "ok",
     },
   });
-  return result;
+  return {
+    ...result,
+    productivity: {
+      productive: true,
+      reason: "stablecoins-cache-published",
+      publications: [{
+        surface: "stablecoins",
+        generationId: `stablecoins:${cacheResult.syncStartSec}`,
+        publishedAt: cacheResult.syncStartSec,
+        candidateRows: assets.length,
+        publishedRows: assets.length,
+        expectedRows: assets.length,
+        artifactCacheKey: cacheResult.cacheKey,
+      }],
+    },
+  };
 }

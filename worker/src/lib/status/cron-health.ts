@@ -566,10 +566,17 @@ export async function loadCronHealth(
     // because the system cannot credibly claim healthy operation without
     // them. Mirrors the reserveComposition.bootstrap pattern.
     const watchBootstrap = runs.length === 0 && statusImpact === "watch";
-    const healthy = telemetryUnknown
-      ? true
-      : inFlightFresh || availabilityHealthyFromLastRun || watchBootstrap;
-    const availabilityUnhealthy = !telemetryUnknown && !healthy;
+    // An expired lease or heartbeat on the latest active attempt is a direct
+    // producer-integrity failure. A prior successful cron_runs row (or a
+    // separately fresh progress row) must not mask abandoned current
+    // ownership while the sweeper is still catching up.
+    const latestAttemptStale = latestAttempt?.stale === true;
+    const healthy = latestAttemptStale
+      ? false
+      : telemetryUnknown
+        ? true
+        : inFlightFresh || availabilityHealthyFromLastRun || watchBootstrap;
+    const availabilityUnhealthy = !healthy && (!telemetryUnknown || latestAttemptStale);
 
     if (availabilityUnhealthy) {
       unhealthyCrons++;

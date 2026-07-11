@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
 
 export interface ReleaseMetadata {
   commit: string | null;
@@ -34,11 +35,14 @@ function parseReleaseMetadata(value: unknown): ReleaseMetadata | null {
   };
 }
 
-export function useReleaseMetadata(): ReleaseMetadataState {
+export function useReleaseMetadata(enabled = true): ReleaseMetadataState {
   const [state, setState] = useState<ReleaseMetadataState>({ status: "loading", metadata: null });
 
   useEffect(() => {
-    let cancelled = false;
+    if (!enabled) {
+      return;
+    }
+    const requests = new RequestSequence();
 
     async function loadReleaseMetadata() {
       if (typeof fetch !== "function") {
@@ -47,26 +51,26 @@ export function useReleaseMetadata(): ReleaseMetadataState {
       }
 
       try {
-        const response = await fetch("/__pharos_release.json", { cache: "no-store" });
-        if (!response.ok) {
-          if (!cancelled) setState({ status: "unavailable", metadata: null });
-          return;
-        }
-        const metadata = parseReleaseMetadata(await response.json());
-        if (!cancelled) {
-          setState(metadata ? { status: "ready", metadata } : { status: "unavailable", metadata: null });
-        }
-      } catch {
-        if (!cancelled) setState({ status: "unavailable", metadata: null });
+        const payload = await requests.run((signal) =>
+          requestJson<unknown>("/__pharos_release.json", {
+            signal,
+            timeoutMs: 5_000,
+            init: { cache: "no-store" },
+          }),
+        );
+        const metadata = parseReleaseMetadata(payload);
+        setState(metadata ? { status: "ready", metadata } : { status: "unavailable", metadata: null });
+      } catch (error) {
+        if (!isRequestCancellation(error)) setState({ status: "unavailable", metadata: null });
       }
     }
 
     void loadReleaseMetadata();
 
     return () => {
-      cancelled = true;
+      requests.cancel();
     };
-  }, []);
+  }, [enabled]);
 
-  return state;
+  return enabled ? state : { status: "unavailable", metadata: null };
 }

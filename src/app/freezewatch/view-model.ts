@@ -141,6 +141,7 @@ export function useFreezeWatchPageController() {
     sortDirection,
     limit: pageSize,
     offset,
+    includeTotal: true,
   });
   const events = pageData?.events ?? [];
   const error = summaryError ?? pageError;

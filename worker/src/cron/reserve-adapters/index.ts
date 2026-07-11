@@ -64,7 +64,7 @@ import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
 export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
 
-const ADAPTER_FNS = {
+export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   abracadabra: fetchAbracadabraReserves,
   accountable: fetchAccountableReserves,
   "anzen-usdz": fetchAnzenUsdzReserves,
@@ -130,7 +130,7 @@ const ADAPTER_FNS = {
 
 // Cast (not satisfies) below: Object.fromEntries widens keys to string, so the
 // adapter-key map type must be re-asserted; key coverage is enforced by the
-// ADAPTER_FNS `satisfies` check and the registry test.
+// LIVE_RESERVE_ADAPTER_FETCHERS `satisfies` check and the registry test.
 const ADAPTERS = Object.fromEntries(
   Object.entries(LIVE_RESERVE_ADAPTER_DEFINITIONS).map(([key, definition]) => [
     key,
@@ -138,7 +138,7 @@ const ADAPTERS = Object.fromEntries(
       const validation = "validation" in definition ? definition.validation : undefined;
       return {
         key,
-        fetch: ADAPTER_FNS[key as LiveReserveAdapterKey],
+        fetch: LIVE_RESERVE_ADAPTER_FETCHERS[key as LiveReserveAdapterKey],
         sourceModel: definition.sourceModel,
         evidenceClass: definition.evidenceClass,
         sharedSourceMode: definition.sharedSourceMode,

@@ -1,8 +1,110 @@
 import type { CronResult } from "../../lib/cron-logger";
+import { getCache } from "../../lib/db-cache";
+import { readCachedJson } from "../../lib/api-utils";
 import { readPreviousYieldRankingsCount } from "./publication";
 
 const MIN_YIELD_COVERAGE_RATIO = 0.6;
 const MIN_YIELD_COINS_FOR_GUARD = 10;
+const MIN_DIRECT_CURATED_QUALITY_RATIO = 0.6;
+const MIN_FALLBACK_MODELED_INCREASE = 3;
+const FALLBACK_MODELED_INCREASE_RATIO = 0.2;
+const QUALITY_MIX_REASON_LIMIT = 2;
+
+interface YieldQualityMixRanking {
+  dataSource?: unknown;
+  provenance?: unknown;
+}
+
+export interface YieldPublicationQualityMix {
+  directCuratedCount: number;
+  fallbackModeledCount: number;
+  unclassifiedCount: number;
+  totalCount: number;
+}
+
+interface YieldQualityMixRegression {
+  reasons: string[];
+  minimumDirectCuratedCount: number;
+  minimumFallbackModeledIncrease: number;
+}
+
+function classifyQualityMixRanking(ranking: YieldQualityMixRanking): "direct-curated" | "fallback-modeled" | null {
+  const dataSource = typeof ranking.dataSource === "string" ? ranking.dataSource : null;
+  const provenance =
+    ranking.provenance != null && typeof ranking.provenance === "object" && !Array.isArray(ranking.provenance)
+      ? (ranking.provenance as Record<string, unknown>)
+      : null;
+  const confidenceTier = provenance && typeof provenance.confidenceTier === "string" ? provenance.confidenceTier : null;
+
+  if (dataSource === "price-derived" || dataSource === "rate-derived" || confidenceTier === "fallback") {
+    return "fallback-modeled";
+  }
+  if (
+    confidenceTier === "deterministic" ||
+    confidenceTier === "curated" ||
+    dataSource === "onchain" ||
+    dataSource === "defillama" ||
+    dataSource === "protocol-api"
+  ) {
+    return "direct-curated";
+  }
+  return null;
+}
+
+export function summarizeYieldPublicationQualityMix(
+  rankings: readonly YieldQualityMixRanking[],
+): YieldPublicationQualityMix {
+  let directCuratedCount = 0;
+  let fallbackModeledCount = 0;
+  for (const ranking of rankings) {
+    const cohort = classifyQualityMixRanking(ranking);
+    if (cohort === "direct-curated") directCuratedCount += 1;
+    if (cohort === "fallback-modeled") fallbackModeledCount += 1;
+  }
+  return {
+    directCuratedCount,
+    fallbackModeledCount,
+    unclassifiedCount: rankings.length - directCuratedCount - fallbackModeledCount,
+    totalCount: rankings.length,
+  };
+}
+
+export function detectYieldQualityMixRegression(
+  previous: YieldPublicationQualityMix,
+  current: YieldPublicationQualityMix,
+): YieldQualityMixRegression | null {
+  if (previous.directCuratedCount < MIN_YIELD_COINS_FOR_GUARD) return null;
+
+  const minimumDirectCuratedCount = Math.ceil(previous.directCuratedCount * MIN_DIRECT_CURATED_QUALITY_RATIO);
+  const minimumFallbackModeledIncrease = Math.max(
+    MIN_FALLBACK_MODELED_INCREASE,
+    Math.ceil(previous.directCuratedCount * FALLBACK_MODELED_INCREASE_RATIO),
+  );
+  const fallbackModeledIncrease = current.fallbackModeledCount - previous.fallbackModeledCount;
+  if (
+    current.directCuratedCount >= minimumDirectCuratedCount ||
+    fallbackModeledIncrease < minimumFallbackModeledIncrease
+  ) {
+    return null;
+  }
+
+  return {
+    reasons: ["direct-curated-collapse", "fallback-modeled-substitution"].slice(0, QUALITY_MIX_REASON_LIMIT),
+    minimumDirectCuratedCount,
+    minimumFallbackModeledIncrease,
+  };
+}
+
+async function readPreviousYieldQualityMix(db: D1Database): Promise<YieldPublicationQualityMix | null> {
+  const previousCache = await getCache(db, "yield-rankings");
+  const parsed = readCachedJson<{ rankings?: YieldQualityMixRanking[] }>(
+    "yield-sync-quality-guard",
+    "yield-rankings",
+    previousCache,
+  );
+  if (parsed.status !== "ok" || !Array.isArray(parsed.data.rankings)) return null;
+  return summarizeYieldPublicationQualityMix(parsed.data.rankings);
+}
 
 function countPreviewRankings(
   payload: { rankings: Array<{ id: string }> },
@@ -74,7 +176,13 @@ export function guardTrackedYieldCoverage(params: {
 
 export async function guardPublishedYieldCoverage(params: {
   db: D1Database;
-  previewRankingsPayload: { rankings: Array<{ id: string }> };
+  previewRankingsPayload: {
+    rankings: Array<{
+      id: string;
+      dataSource?: unknown;
+      provenance?: unknown;
+    }>;
+  };
   yieldCoinIdSet: Set<string>;
   opportunityCoinIdSet: Set<string>;
 }): Promise<{
@@ -194,6 +302,45 @@ export async function guardPublishedYieldCoverage(params: {
       previousPublishedRankingCount,
       currentPublishedRankingCount,
     };
+  }
+
+  if (previousPublishedRankingCount >= MIN_YIELD_COINS_FOR_GUARD) {
+    const previousQualityMix = await readPreviousYieldQualityMix(params.db);
+    if (previousQualityMix) {
+      const currentQualityMix = summarizeYieldPublicationQualityMix(params.previewRankingsPayload.rankings);
+      const qualityMixRegression = detectYieldQualityMixRegression(previousQualityMix, currentQualityMix);
+      if (qualityMixRegression) {
+        return {
+          result: {
+            status: "degraded",
+            itemCount: currentPublishedRankingCount,
+            metadata: JSON.stringify({
+              reason: "published-source-quality-mix-regression",
+              qualityMixReasons: qualityMixRegression.reasons,
+              previousPublishedDirectCuratedCount: previousQualityMix.directCuratedCount,
+              currentPublishedDirectCuratedCount: currentQualityMix.directCuratedCount,
+              publishedDirectCuratedCountDelta:
+                currentQualityMix.directCuratedCount - previousQualityMix.directCuratedCount,
+              minimumDirectCuratedCount: qualityMixRegression.minimumDirectCuratedCount,
+              previousPublishedFallbackModeledCount: previousQualityMix.fallbackModeledCount,
+              currentPublishedFallbackModeledCount: currentQualityMix.fallbackModeledCount,
+              publishedFallbackModeledCountDelta:
+                currentQualityMix.fallbackModeledCount - previousQualityMix.fallbackModeledCount,
+              minimumFallbackModeledIncrease: qualityMixRegression.minimumFallbackModeledIncrease,
+              previousPublishedRankingCount,
+              currentPublishedRankingCount,
+              publishedRankingCountDelta: currentPublishedRankingCount - previousPublishedRankingCount,
+            }),
+          },
+          previousPublishedYieldBearingCount,
+          currentPublishedYieldBearingCount,
+          previousPublishedOpportunityCount,
+          currentPublishedOpportunityCount,
+          previousPublishedRankingCount,
+          currentPublishedRankingCount,
+        };
+      }
+    }
   }
 
   return {

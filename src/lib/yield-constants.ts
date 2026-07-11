@@ -8,6 +8,8 @@ export const WARNING_SIGNAL_LABELS: Record<string, string> = {
   "reward-heavy": "Reward heavy",
   "tvl-outflow": "TVL outflow",
   "data-stale": "Data stale",
+  "benchmark-degraded": "Benchmark degraded",
+  "benchmark-stale": "Benchmark stale",
   "zero-yield": "Zero yield",
   "low-source-tvl": "Low source TVL",
 };
@@ -19,6 +21,8 @@ const WARNING_SIGNAL_DESCRIPTIONS: Record<string, string> = {
   "reward-heavy": "A large share of APY comes from incentives. Inspect the base/reward split and expect rewards to change faster than base yield.",
   "tvl-outflow": "Venue TVL is falling. Check venue depth and recent withdrawals before relying on the quote.",
   "data-stale": "Latest source observation is older than expected. Treat APY as stale until the source refreshes.",
+  "benchmark-degraded": "The row uses a retained or fallback benchmark. Treat benchmark-relative comparisons with caution.",
+  "benchmark-stale": "The selected benchmark is older than its scoring window, so PYS is unavailable until it refreshes.",
   "zero-yield": "Current source reports zero yield. Verify whether the program paused or the source failed.",
   "low-source-tvl": "Venue TVL is small. Use the depth lens and retained alternates before comparing this APY with deeper venues.",
 };

@@ -16,10 +16,8 @@ export function useAdminPollingQuery<T>(
 ): UseQueryResult<T, Error> {
   return usePollingQuery<T>(
     [...key, ADMIN_QUERY_SCOPE],
-    () => createApiQueryFn<T>(
-      buildAdminApiPath(typeof path === "function" ? path() : path),
-      options?.schema,
-    )(),
+    (context) =>
+      createApiQueryFn<T>(buildAdminApiPath(typeof path === "function" ? path() : path), options?.schema)(context),
     cronInterval,
     {
       enabled: options?.enabled,

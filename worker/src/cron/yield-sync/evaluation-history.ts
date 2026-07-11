@@ -23,8 +23,14 @@ function shouldNormalizeOnChainSourceKey(row: {
   data_source: string;
   exchange_rate?: number | null;
 }): boolean {
-  return row.data_source === "onchain"
-    && (row.exchange_rate != null || isLegacyDeterministicOnChainSourceKey(row.stablecoin_id, row.source_key));
+  if (row.data_source !== "onchain") return false;
+
+  // Only identities that predate source-aware history are aliases. Modern
+  // on-chain keys (including linked-variant and protocol-specific keys) carry
+  // real ownership and must survive comparison unchanged.
+  return row.source_key == null
+    || row.source_key === "legacy-best"
+    || isLegacyDeterministicOnChainSourceKey(row.stablecoin_id, row.source_key);
 }
 
 export function pickHistoryRowsForSource(

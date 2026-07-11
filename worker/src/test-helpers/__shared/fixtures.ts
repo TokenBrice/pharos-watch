@@ -104,6 +104,7 @@ type YieldHistoryRow = {
   pys_at_publish?: number | null;
   safety_at_publish?: number | null;
   variance_at_publish?: number | null;
+  pys_inputs_at_publish?: string | null;
 };
 
 type DexLiquidityHistoryRow = {

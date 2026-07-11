@@ -8,7 +8,7 @@ Route contract for the public API access and reference surfaces for external Pha
 
 - **Access route:** `/api/`
 - **Access route file:** `src/app/api/page.tsx`
-- **Access client form:** `src/components/api-key-request-form.tsx`
+- **Access client form:** `src/components/api-key-request-form.tsx` facade, `src/components/api-key-request-fields.tsx`, `src/components/api-key-request-reveal.tsx`, and `src/hooks/use-api-key-request-form-state.ts`
 - **Reference route:** `/about/api/`
 - **Server route:** `src/app/about/api/page.tsx`
 - **Error boundary:** `src/app/about/api/error.tsx`

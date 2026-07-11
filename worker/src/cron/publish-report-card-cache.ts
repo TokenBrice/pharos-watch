@@ -3,12 +3,12 @@ import {
   ALERT_SAFETY_SOURCE_CACHE_KEY,
   buildAlertSafetySourceEnvelope,
 } from "../lib/alert-safety-source-cache";
-import { setCache } from "../lib/db-cache";
-import { writeReportCardCache } from "../lib/report-card-cache";
-import { writePublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
+import { setCacheMany } from "../lib/db-cache";
+import { buildReportCardCacheEntry } from "../lib/report-card-cache";
+import { buildPublishedReportCardsSnapshotCacheEntry } from "../lib/report-cards-snapshot-cache";
 import type { CronResult } from "../lib/cron-logger";
-import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../lib/abort";
+import { buildReportCardPublicationPlan } from "../lib/report-card-publication";
 
 export async function publishReportCardCache(
   db: D1Database,
@@ -20,28 +20,63 @@ export async function publishReportCardCache(
 
   throwIfAborted(signal);
 
-  const writableCards = snapshot.cards.filter((card) => !FROZEN_IDS.has(card.id));
-  await writePublishedReportCardsSnapshot(db, snapshot);
-  const { writtenCount } = await writeReportCardCache(db, writableCards, snapshot.updatedAt, {
+  const publication = buildReportCardPublicationPlan(
+    snapshot.cards,
+    snapshot.methodology.version,
+    snapshot.updatedAt,
+  );
+  const publishedSnapshot = {
+    ...snapshot,
+    publication: publication.completeness,
+  };
+  const compactEntry = buildReportCardCacheEntry(publication.activeCards, snapshot.updatedAt, {
     liquidityStale: snapshot.liquidityStale,
     redemptionStale: snapshot.redemptionStale,
     inputFreshness: snapshot.inputFreshness,
+    completeness: publication.completeness,
   });
-  await setCache(
-    db,
-    ALERT_SAFETY_SOURCE_CACHE_KEY,
-    JSON.stringify(buildAlertSafetySourceEnvelope(
-      writableCards,
+  const alertEntry = {
+    key: ALERT_SAFETY_SOURCE_CACHE_KEY,
+    value: JSON.stringify(buildAlertSafetySourceEnvelope(
+      publication.activeCards,
       snapshot.methodology.version,
       snapshot.updatedAt,
+      publication.completeness,
     )),
-  );
+  };
+  await setCacheMany(db, [
+    buildPublishedReportCardsSnapshotCacheEntry(publishedSnapshot),
+    compactEntry,
+    alertEntry,
+  ], signal);
 
   return {
-    itemCount: writtenCount,
+    itemCount: publication.completeness.expectedCount,
+    productivity: {
+      productive: true,
+      reason: "report-card-cache-published",
+      publications: [{
+        surface: "report-card-cache",
+        generationId: publication.completeness.generationId,
+        publishedAt: snapshot.updatedAt,
+        candidateRows: publication.completeness.expectedCount,
+        publishedRows: publication.completeness.expectedCount,
+        expectedRows: publication.completeness.expectedCount,
+        artifactCacheKey: "report_card_cache",
+        validationSummary: {
+          methodologyVersion: snapshot.methodology.version,
+          scoredCount: publication.completeness.scoredCount,
+          notRatedCount: publication.completeness.notRatedCount,
+        },
+      }],
+    },
     metadata: JSON.stringify({
       updatedAt: snapshot.updatedAt,
       snapshotCards: snapshot.cards.length,
+      activeCards: publication.completeness.expectedCount,
+      scoredCards: publication.completeness.scoredCount,
+      notRatedCards: publication.completeness.notRatedCount,
+      publicationGenerationId: publication.completeness.generationId,
       liquidityStale: snapshot.liquidityStale,
       redemptionStale: snapshot.redemptionStale,
     }),

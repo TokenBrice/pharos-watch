@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { buildApiUrl } from "@/lib/api";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
+import { RequestFailure, RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
+import type { SchemaLike } from "@/lib/schema-like";
 
 type FeedbackType = "bug" | "data-correction" | "feature-request";
 
@@ -35,6 +37,42 @@ const DESCRIPTION_HINTS: Record<FeedbackType, string> = {
   "feature-request": "Describe the feature and why it would be useful.",
 };
 
+interface FeedbackResponse {
+  ok: boolean;
+  error?: string;
+}
+
+const FeedbackResponseSchema: SchemaLike<FeedbackResponse> = {
+  safeParse(value) {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      typeof (value as { ok?: unknown }).ok !== "boolean"
+    ) {
+      return { success: false, error: { issues: [{ path: [], message: "Expected feedback response" }] } };
+    }
+    const record = value as { ok: boolean; error?: unknown };
+    if (record.error !== undefined && typeof record.error !== "string") {
+      return { success: false, error: { issues: [{ path: ["error"], message: "Expected string" }] } };
+    }
+    return { success: true, data: { ok: record.ok, ...(record.error ? { error: record.error } : {}) } };
+  },
+};
+
+function feedbackRequestErrorMessage(error: unknown): string {
+  if (error instanceof RequestFailure && error.kind === "http" && error.bodyText) {
+    try {
+      const parsed = JSON.parse(error.bodyText) as { error?: unknown };
+      if (typeof parsed.error === "string" && parsed.error.trim()) return parsed.error;
+    } catch {
+      // Fall through to the stable endpoint-neutral message.
+    }
+  }
+  if (error instanceof RequestFailure && error.kind === "timeout") return "Request timed out. Please try again.";
+  return "Network error. Please try again.";
+}
+
 function getCurrentPageUrl() {
   return typeof window === "undefined"
     ? "/"
@@ -58,6 +96,9 @@ export function FeedbackModal({
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [pageUrl, setPageUrl] = useState(getCurrentPageUrl);
+  const requestSequence = useRef(new RequestSequence());
+
+  useEffect(() => () => requestSequence.current.cancel(), []);
 
   const reset = useCallback(() => {
     setType(defaultType);
@@ -72,7 +113,10 @@ export function FeedbackModal({
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
-      if (!next) reset();
+      if (!next) {
+        requestSequence.current.cancel();
+        reset();
+      }
       onOpenChange(next);
     },
     [onOpenChange, reset],
@@ -99,23 +143,29 @@ export function FeedbackModal({
     };
 
     try {
-      const res = await fetch(buildApiUrl(API_PATHS.feedback()), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`,
-        },
-        body: JSON.stringify(body),
-      });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
-      if (!res.ok || !data.ok) {
+      const data = await requestSequence.current.run((signal) =>
+        requestJson<FeedbackResponse>(buildApiUrl(API_PATHS.feedback()), {
+          signal,
+          schema: FeedbackResponseSchema,
+          init: {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`,
+            },
+            body: JSON.stringify(body),
+          },
+        }),
+      );
+      if (!data.ok) {
         setErrorMsg(data.error ?? "Something went wrong. Please try again.");
         setStatus("error");
       } else {
         setStatus("success");
       }
-    } catch {
-      setErrorMsg("Network error. Please try again.");
+    } catch (error) {
+      if (isRequestCancellation(error)) return;
+      setErrorMsg(feedbackRequestErrorMessage(error));
       setStatus("error");
     }
   }, [type, title, description, expectedValue, stablecoinId, stablecoinName, pegValue, contactHandle, website]);

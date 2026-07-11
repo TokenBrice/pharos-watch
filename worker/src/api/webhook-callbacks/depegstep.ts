@@ -1,15 +1,19 @@
-import { batchExecute } from "../../lib/db";
+import { executeAtomicBatch } from "../../lib/db";
 import { isDepegStepValue } from "../../lib/telegram-constants";
 import { prepareCoinSettingStatements } from "../telegram-webhook-settings-mutations";
 import {
   callbackUsername,
   hasExactParts,
-  isKnownStablecoinId,
+  isSubscribableStablecoinId,
   runCallbackMutation,
   type CallbackHandler,
 } from "./_shared";
 
-export const handleDepegStepCallback: CallbackHandler = async ({ db, botToken, cb, chatId, parsed }) => {
+export const handleDepegStepCallback: CallbackHandler = async ({
+  db, botToken, cb, chatId, parsed, answerCallback, beforeIrreversibleEffect,
+  markMutationApplied, planIntent, prepareMutationAppliedStatement, confirmAtomicMutationApplied,
+  wasMutationApplied,
+}) => {
   await runCallbackMutation<{ id: string; step: number }>({
     db,
     botToken,
@@ -19,7 +23,7 @@ export const handleDepegStepCallback: CallbackHandler = async ({ db, botToken, c
       const step = Number(parsed.parts[2]);
       if (
         !hasExactParts(parsed.parts, 3) ||
-        !isKnownStablecoinId(parsed.arg) ||
+        !isSubscribableStablecoinId(parsed.arg) ||
         !isDepegStepValue(step)
       ) {
         return null;
@@ -31,7 +35,9 @@ export const handleDepegStepCallback: CallbackHandler = async ({ db, botToken, c
     actionDetail: "depegstep",
     logAction: "depegstep",
     logMessage: "depegstep callback write failed",
-    write: async ({ id, step }) => {
+    intentKind: "callback:depegstep",
+    intentPayload: ({ id, step }) => ({ coinId: id, step }),
+    write: async ({ id, step }, options) => {
       const prepared = prepareCoinSettingStatements(
         db,
         chatId,
@@ -40,9 +46,16 @@ export const handleDepegStepCallback: CallbackHandler = async ({ db, botToken, c
         "ds",
         String(step),
       );
-      await batchExecute(db, prepared.statements);
+      await executeAtomicBatch(db, [...prepared.statements, ...(options.operationStatements ?? [])]);
     },
     successText: ({ step }) => `Depeg worsening alerts set to ${step} bps.`,
     failureText: "Could not save setting. Please try again.",
+    answerCallback,
+    beforeIrreversibleEffect,
+    markMutationApplied,
+    planIntent,
+    prepareMutationAppliedStatement,
+    confirmAtomicMutationApplied,
+    wasMutationApplied,
   });
 };

@@ -31,6 +31,7 @@ import {
 } from "@/components/dex-liquidity-card-parts";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { cn } from "@/lib/utils";
+import { QueryStateNotice } from "@/components/query-state-notice";
 
 /**
  * A coin has "meaningful" DEX data only when at least one observed pool or
@@ -43,9 +44,10 @@ export function hasMeaningfulDexData(liq: DexLiquidityData | undefined): liq is 
 }
 
 export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
-  const { data: liquidityMap, isLoading } = useDexLiquidity();
+  const query = useDexLiquidity();
+  const { data: liquidityMap, isLoading } = query;
 
-  if (isLoading) {
+  if (isLoading && !liquidityMap) {
     return (
       <Card className={DETAIL_MODULE_SHELL_CLASS}>
         <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
@@ -59,6 +61,21 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             <Skeleton className="h-12" />
             <Skeleton className="h-12" />
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (query.error && !liquidityMap) {
+    return (
+      <Card className={DETAIL_MODULE_SHELL_CLASS}>
+        <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+            <MethodologyLabel topic="liquidityScore">DEX Liquidity</MethodologyLabel>
+          </DetailSectionTitle>
+        </CardHeader>
+        <CardContent className={DETAIL_MODULE_BODY_CLASS}>
+          <QueryStateNotice state="unavailable" label="DEX liquidity data" onRetry={() => void query.refetch()} />
         </CardContent>
       </Card>
     );
@@ -106,6 +123,14 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
         </div>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-6")}>
+        {query.error ? (
+          <QueryStateNotice
+            state="stale-with-data"
+            label="DEX liquidity data"
+            dataUpdatedAt={query.dataUpdatedAt}
+            onRetry={() => void query.refetch()}
+          />
+        ) : null}
         {!isRated && (
           <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
             <p>No observed direct DEX market for this token in the current pipeline.</p>

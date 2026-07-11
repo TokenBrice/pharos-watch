@@ -4,8 +4,8 @@
  *
  * The Dinamo license allows WOFF2 use via @font-face on the licensed domain,
  * but does not allow putting the font files in public repositories. The output
- * directory is gitignored; deploy pipelines must inject these files separately
- * if production should render Whyte instead of the tracked Bricolage fallback.
+ * directory is gitignored. This stages local files only; production CSS uses
+ * the tracked Bricolage face unless a future deploy provisions and enables Whyte.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";

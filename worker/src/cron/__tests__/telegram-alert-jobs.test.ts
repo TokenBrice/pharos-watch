@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PerAlertTypeDelivery } from "@shared/types/status";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
+  buildFreshTargetJobIdMap,
   finalizeTelegramAlertJobManifests,
   persistTelegramAlertJobManifests,
 } from "../telegram-alert-jobs";
@@ -57,6 +58,7 @@ describe("telegram alert job manifests", () => {
     expect(manifests.map((manifest) => manifest.alertType).sort()).toEqual(["depeg", "safety"]);
     expect(manifests.find((manifest) => manifest.alertType === "depeg")?.targetCount).toBe(2);
     expect(manifests.find((manifest) => manifest.alertType === "safety")?.targetCount).toBe(1);
+    expect(buildFreshTargetJobIdMap(manifests).size).toBe(3);
 
     const history = db.getHistory();
     const jobInserts = history.filter((entry) => entry.sql.includes("INSERT INTO telegram_alert_jobs"));
@@ -67,7 +69,7 @@ describe("telegram alert job manifests", () => {
     expect(targetInserts.map((entry) => entry.binds[2]).sort()).toEqual(["100", "100", "200"]);
   });
 
-  it("finalizes job counters from per-alert-type delivery stats", async () => {
+  it("finalizes job counters exclusively from authoritative target rows", async () => {
     const db = mockD1();
     const perAlertType = emptyDelivery();
     perAlertType.depeg.sent = 7;
@@ -76,22 +78,28 @@ describe("telegram alert job manifests", () => {
 
     await finalizeTelegramAlertJobManifests(
       db,
-      [{ jobId: "telegram:depeg:abc", alertType: "depeg", targetCount: 10 }],
+      [{ jobId: "telegram:depeg:abc", alertType: "depeg", targetCount: 10, targetKeys: [] }],
       perAlertType,
       1_800_000_060,
     );
 
     const update = db.getHistory().find((entry) => entry.sql.includes("UPDATE telegram_alert_jobs"));
-    expect(update?.binds[0]).toBe("degraded");
-    expect(update?.binds[1]).toBe(7);
-    expect(update?.binds[2]).toBe(2);
-    expect(update?.binds[3]).toBe(1);
-    expect(update?.binds[5]).toBe("telegram:depeg:abc");
+    expect(update?.sql).toContain("WITH target_buckets AS");
+    expect(update?.sql).toContain("target.final_delivery_state IS NOT NULL");
+    expect(update?.sql).toContain("SUM(CASE WHEN bucket = 'execution_unknown' THEN 1 ELSE 0 END)");
+    expect(update?.sql).toContain("'$.countersSource', 'authoritative-target-rows'");
+    expect(update?.sql).not.toContain("latestAttempt");
+    expect(update?.binds).toEqual([
+      "telegram:depeg:abc",
+      1_800_000_060,
+      1_800_000_060,
+      "telegram:depeg:abc",
+    ]);
   });
 });
 
 describe("telegram alert target statuses", () => {
-  it("does not treat failed target keys as terminal for fresh-send idempotency", async () => {
+  it("treats queued, failed, and uncertain effects as terminal for fresh-send idempotency", async () => {
     const db = mockD1([
       { match: "FROM telegram_alert_job_targets", rows: [{ pending_dedupe_key: "sent-key" }] },
     ]);
@@ -100,8 +108,8 @@ describe("telegram alert target statuses", () => {
 
     expect(terminal).toEqual(new Set(["sent-key"]));
     const [query] = db.getHistory();
-    expect(query?.sql).toContain("status IN ('sent', 'expired')");
-    expect(query?.sql).not.toContain("'failed'");
+    expect(query?.sql).toContain("status IN ('queued', 'sent', 'failed', 'expired')");
+    expect(query?.sql).toContain("effect_state IN ('sending', 'complete', 'execution_unknown')");
   });
 
   it("allows a later successful send to replace a previously failed target status", async () => {
@@ -116,6 +124,7 @@ describe("telegram alert target statuses", () => {
     const [update] = db.getHistory();
     expect(update?.sql).toContain("WHERE pending_dedupe_key = ?");
     expect(update?.sql).toContain("AND status <> 'sent'");
+    expect(update?.sql).toContain("effect_state NOT IN ('sending', 'execution_unknown')");
     expect(update?.binds).toEqual([
       "sent",
       1_800_000_100,

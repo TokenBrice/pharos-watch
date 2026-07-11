@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { CronRun, CronStatus, StatusResponse } from "@shared/types";
+import type { CronRun, CronStatus } from "@shared/types";
 import { getCronSeverity, sortCronGroupsBySeverity } from "@/app/admin/cron-severity";
 import { countConsecutiveStatus, getLastSuccessfulRun } from "@/lib/status/cron-run-utils";
 import type { CronGroup } from "@/app/admin/sections/cron-lane-types";
-import { deriveInitialPipelineTab } from "@/app/admin/sections/pipeline-section";
 
 function makeCron(overrides: Partial<CronStatus>): CronStatus {
   return {
@@ -132,56 +131,5 @@ describe("getLastSuccessfulRun", () => {
   it("treats degraded as successful", () => {
     const degraded = run("degraded");
     expect(getLastSuccessfulRun([run("error"), degraded])).toBe(degraded);
-  });
-});
-
-function makeStatus(overrides: Record<string, unknown>): StatusResponse {
-  const base = {
-    dataQuality: { missingPrices: 0, blacklistMissingAmounts: 0, onchainSupplyDivergences: 0 },
-    reserveComposition: { status: "healthy", deferredCoins: 0 },
-    sectionErrors: {},
-  };
-  return { ...base, ...overrides } as unknown as StatusResponse;
-}
-
-describe("deriveInitialPipelineTab", () => {
-  it("returns quality when a data-quality metric is non-zero", () => {
-    expect(deriveInitialPipelineTab(makeStatus({
-      dataQuality: { missingPrices: 1, blacklistMissingAmounts: 0, onchainSupplyDivergences: 0 },
-    }))).toBe("quality");
-  });
-
-  it("returns markets when a price mismatch exists", () => {
-    expect(deriveInitialPipelineTab(makeStatus({
-      coingeckoPriceDiff: { mismatchedCount: 2 },
-    }))).toBe("markets");
-  });
-
-  it("returns reserves when reserve composition is unhealthy", () => {
-    expect(deriveInitialPipelineTab(makeStatus({
-      reserveComposition: { status: "degraded", deferredCoins: 0 },
-    }))).toBe("reserves");
-  });
-
-  it("returns yield when yield health is non-healthy", () => {
-    expect(deriveInitialPipelineTab(makeStatus({
-      yieldHealth: { status: "degraded" },
-    }))).toBe("yield");
-  });
-
-  it("returns storage when d1 usage section errored", () => {
-    expect(deriveInitialPipelineTab(makeStatus({
-      sectionErrors: { d1Usage: true },
-    }))).toBe("storage");
-  });
-
-  it("returns discovery when discovery candidates exist", () => {
-    expect(deriveInitialPipelineTab(makeStatus({
-      discoveryCandidates: [{}],
-    }))).toBe("discovery");
-  });
-
-  it("falls through to quality when everything is clean", () => {
-    expect(deriveInitialPipelineTab(makeStatus({}))).toBe("quality");
   });
 });

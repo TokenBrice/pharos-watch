@@ -679,6 +679,97 @@ describe("mento redemption telemetry", () => {
     expect(result.metadata?.redemptionFeeBps).toBe(5);
   });
 
+  it("enumerates broker pools once for all Mento coins in the same reserve run", async () => {
+    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => {
+      if (data === GET_EXCHANGE_IDS_SELECTOR) return encodeExchangeIds([EXCHANGE_ID_1]);
+      if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) {
+        return encodePoolExchange({
+          asset0: USDM_ADDRESS,
+          asset1: USDC_ADDRESS,
+          bucket0: 0n,
+          bucket1: 10n ** 18n,
+          spread: 5n * 10n ** 20n,
+        });
+      }
+      return null;
+    });
+    const config = makeRedemptionConfig({
+      redemption: {
+        kind: "broker-pool",
+        pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
+      },
+    });
+    const requestCache = makeRequestCache();
+
+    await fetchMentoReserves({ id: "cusd-celo" } as never, config, new AbortController().signal, { requestCache } as never);
+    await fetchMentoReserves({ id: "ceur-celo" } as never, config, new AbortController().signal, { requestCache } as never);
+
+    expect(fetchOnchainRawCall).toHaveBeenCalledTimes(2);
+  });
+
+  it("retains a failed broker enumeration for the run instead of retrying it per coin", async () => {
+    vi.mocked(fetchOnchainRawCall).mockRejectedValue(new Error("rpc down"));
+    const config = makeRedemptionConfig({
+      redemption: {
+        kind: "broker-pool",
+        pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
+      },
+    });
+    const requestCache = makeRequestCache();
+
+    const first = await fetchMentoReserves(
+      { id: "cusd-celo" } as never,
+      config,
+      new AbortController().signal,
+      { requestCache } as never,
+    );
+    const second = await fetchMentoReserves(
+      { id: "ceur-celo" } as never,
+      config,
+      new AbortController().signal,
+      { requestCache } as never,
+    );
+
+    expect(fetchOnchainRawCall).toHaveBeenCalledTimes(1);
+    expect(first.warnings?.some((warning) => warning.code === "mento-redemption-telemetry-failed")).toBe(true);
+    expect(second.warnings?.some((warning) => warning.code === "mento-redemption-telemetry-failed")).toBe(true);
+  });
+
+  it("bounds optional redemption telemetry without discarding reserve composition", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(fetchOnchainRawCall).mockImplementation(({ signal }) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        }),
+      );
+      const config = makeRedemptionConfig({
+        redemption: {
+          kind: "broker-pool",
+          pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
+        },
+      });
+      const resultPromise = fetchMentoReserves(
+        { id: "cusd-celo" } as never,
+        config,
+        new AbortController().signal,
+        { requestCache: makeRequestCache() } as never,
+      );
+
+      await vi.advanceTimersByTimeAsync(8_000);
+      const result = await resultPromise;
+
+      expect(result.slices.length).toBeGreaterThan(0);
+      expect(result.metadata?.redemption).toBeUndefined();
+      expect(result.warnings?.some((warning) =>
+        warning.code === "mento-redemption-telemetry-failed"
+        && warning.message.includes("mento-redemption-timeout")
+      )).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("fails closed when the broker-pool onchain read fails, leaving reserve slices unaffected", async () => {
     vi.mocked(fetchOnchainRawCall).mockRejectedValue(new Error("rpc down"));
 

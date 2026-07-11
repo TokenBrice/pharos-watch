@@ -30,9 +30,7 @@ try {
 // Helpers
 // ------------------------------------------------------------------
 function pickEnv(prefix) {
-  return Object.fromEntries(
-    Object.entries(process.env).filter(([k]) => k.startsWith(prefix)),
-  );
+  return Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith(prefix)));
 }
 
 function firstNonEmpty(...values) {
@@ -91,7 +89,9 @@ async function dumpLog() {
   try {
     const log = await readFile(SERVER_LOG, "utf8");
     if (log.trim()) process.stderr.write(log);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 async function cleanup() {
@@ -99,13 +99,27 @@ async function cleanup() {
     if (process.platform !== "win32") {
       process.kill(-server.pid, "SIGTERM");
       await sleep(2000);
-      try { process.kill(-server.pid, "SIGKILL"); } catch { /* already gone */ }
+      try {
+        process.kill(-server.pid, "SIGKILL");
+      } catch {
+        /* already gone */
+      }
     } else {
       server.kill("SIGTERM");
     }
-  } catch { /* process already gone */ }
-  try { if (logFd) await logFd.close(); } catch { /* ignore */ }
-  try { await rm(SERVER_LOG, { force: true }); } catch { /* ignore */ }
+  } catch {
+    /* process already gone */
+  }
+  try {
+    if (logFd) await logFd.close();
+  } catch {
+    /* ignore */
+  }
+  try {
+    await rm(SERVER_LOG, { force: true });
+  } catch {
+    /* ignore */
+  }
 }
 
 for (const sig of ["SIGINT", "SIGTERM"]) {
@@ -123,8 +137,13 @@ let ready = false;
 for (let attempt = 1; attempt <= 30; attempt++) {
   try {
     const res = await fetch(`${staticExportBaseUrl}/`);
-    if (res.status < 400) { ready = true; break; }
-  } catch { /* not up yet */ }
+    if (res.status < 400) {
+      ready = true;
+      break;
+    }
+  } catch {
+    /* not up yet */
+  }
   await sleep(1000);
 }
 
@@ -151,16 +170,20 @@ function runNpmScript(args) {
 
 try {
   if (shouldRunMobileSmoke()) {
-    // Desktop and mobile smokes target the same already-running server and are
-    // independent; running them concurrently matches the CI pre-publish block
-    // and roughly halves this phase's wall-clock.
-    const [desktopExit, mobileExit] = await Promise.all([
+    // All three smokes target the same already-running artifact and are
+    // independent, matching the CI pre-publish block.
+    const [desktopExit, mobileExit, assetExit] = await Promise.all([
       runNpmScript(["run", "test:smoke-ui", "--", "--url", staticExportBaseUrl, "--mode", "local"]),
       runNpmScript(["run", "test:smoke-ui:mobile", "--", "--url", staticExportBaseUrl]),
+      runNpmScript(["run", "test:smoke-pages-assets", "--", "--url", staticExportBaseUrl, "--mode", "local"]),
     ]);
-    smokeExit = desktopExit !== 0 ? desktopExit : mobileExit;
+    smokeExit = desktopExit !== 0 ? desktopExit : mobileExit !== 0 ? mobileExit : assetExit;
   } else {
-    smokeExit = await runNpmScript(["run", "test:smoke-ui", "--", "--url", staticExportBaseUrl, "--mode", "local"]);
+    const [desktopExit, assetExit] = await Promise.all([
+      runNpmScript(["run", "test:smoke-ui", "--", "--url", staticExportBaseUrl, "--mode", "local"]),
+      runNpmScript(["run", "test:smoke-pages-assets", "--", "--url", staticExportBaseUrl, "--mode", "local"]),
+    ]);
+    smokeExit = desktopExit !== 0 ? desktopExit : assetExit;
     if (smokeExit === 0) {
       console.log("[pages-smoke] Skipping mobile smoke (PAGES_SMOKE_INCLUDE_MOBILE=0).");
     }

@@ -1,10 +1,16 @@
-import type { YieldRanking } from "../types";
+interface DedupeYieldRanking {
+  id: string;
+  currentApy: number;
+  pharosYieldScore: number | null;
+  apy30d: number;
+  sourceTvlUsd: number | null;
+}
 
 function score(value: number | null | undefined) {
   return value ?? Number.NEGATIVE_INFINITY;
 }
 
-function isPreferredRanking(candidate: YieldRanking, current: YieldRanking) {
+function isPreferredRanking<T extends DedupeYieldRanking>(candidate: T, current: T) {
   if (score(candidate.currentApy) !== score(current.currentApy)) {
     return score(candidate.currentApy) > score(current.currentApy);
   }
@@ -24,8 +30,8 @@ function isPreferredRanking(candidate: YieldRanking, current: YieldRanking) {
   return false;
 }
 
-export function dedupeYieldRankings(rankings: YieldRanking[]): YieldRanking[] {
-  const deduped = new Map<string, YieldRanking>();
+export function dedupeYieldRankings<T extends DedupeYieldRanking>(rankings: T[]): T[] {
+  const deduped = new Map<string, T>();
 
   for (const ranking of rankings) {
     const current = deduped.get(ranking.id);

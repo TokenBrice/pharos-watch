@@ -3,9 +3,11 @@ import {
   batchExecute,
   buildPaginatedQuery,
   chunkArray,
+  executeAtomicBatch,
   getFirstSeenDates,
   getLastBlock,
   normalizeBlacklistSyncStateKey,
+  prepareMultiRowInsertStatements,
   setLastBlock,
 } from "../db";
 import {
@@ -143,6 +145,38 @@ describe("db utility helpers", () => {
 
     expect(batchCalls).toHaveLength(3);
     expect(batchCalls.map((chunk) => chunk.length)).toEqual([2, 2, 1]);
+  });
+
+  it("executes a bounded atomic batch in one D1 transaction", async () => {
+    const { db, batchCalls } = makeDb();
+    const stmts = Array.from({ length: 100 }, () => ({}) as D1PreparedStatement);
+
+    await executeAtomicBatch(db, stmts);
+
+    expect(batchCalls).toHaveLength(1);
+    expect(batchCalls[0]).toHaveLength(100);
+    await expect(executeAtomicBatch(db, [...stmts, {} as D1PreparedStatement])).rejects.toThrow(
+      "at most 100 statements",
+    );
+  });
+
+  it("packs multi-row inserts under the D1 bind limit", () => {
+    const { db, calls } = makeDb();
+    const rows = Array.from({ length: 26 }, (_, index) => [
+      `coin-${index}`,
+      1_700_000_000,
+      index,
+      1,
+    ] as const);
+
+    const statements = prepareMultiRowInsertStatements(
+      db,
+      "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price)",
+      rows,
+    );
+
+    expect(statements).toHaveLength(2);
+    expect(calls.map((call) => call.args.length)).toEqual([100, 4]);
   });
 
   it("does not start batch execution when the abort signal is already aborted", async () => {

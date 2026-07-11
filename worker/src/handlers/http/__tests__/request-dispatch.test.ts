@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   handleMaintenanceMode: vi.fn(),
   notFoundResponse: vi.fn(),
   warnWorkerEnvIssuesOnce: vi.fn(),
+  evaluateTelegramIngressAbuseGate: vi.fn(),
+  recordTelegramIngressHandlerResponse: vi.fn(),
 }));
 
 vi.mock("../../../lib/api-key-rate-limit", () => ({
@@ -69,6 +71,11 @@ vi.mock("../gates", () => ({
   warnWorkerEnvIssuesOnce: mocks.warnWorkerEnvIssuesOnce,
 }));
 
+vi.mock("../telegram-ingress-abuse", () => ({
+  evaluateTelegramIngressAbuseGate: mocks.evaluateTelegramIngressAbuseGate,
+  recordTelegramIngressHandlerResponse: mocks.recordTelegramIngressHandlerResponse,
+}));
+
 import { handleHttpRequestImpl } from "../request-dispatch";
 
 function makeEnv(overrides: Record<string, unknown> = {}) {
@@ -90,6 +97,10 @@ describe("handleHttpRequestImpl", () => {
     mocks.resolveCorsOrigin.mockReturnValue("https://pharos.watch");
     mocks.handleCorsPreflight.mockReturnValue(null);
     mocks.handleMaintenanceMode.mockReturnValue(null);
+    mocks.evaluateTelegramIngressAbuseGate.mockImplementation(async (request: Request) => ({
+      request,
+      response: null,
+    }));
     mocks.checkCachedPublicApiReadFastRateLimit.mockReturnValue(null);
     mocks.evaluateCachedPublicApiReadFastGate.mockResolvedValue(null);
     mocks.evaluateAccessGate.mockResolvedValue({
@@ -161,6 +172,73 @@ describe("handleHttpRequestImpl", () => {
     expect(response).toBe(maintenanceResponse);
     expect(mocks.addCorsHeaders).toHaveBeenCalledWith(maintenanceResponse, "https://pharos.watch");
     expect(mocks.evaluateAccessGate).not.toHaveBeenCalled();
+  });
+
+  it("short-circuits Telegram ingress abuse rejections before access, D1 attribution, and routing", async () => {
+    const gateResponse = new Response(JSON.stringify({ error: "rate limited" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json" },
+    });
+    mocks.evaluateTelegramIngressAbuseGate.mockImplementation(async (request: Request) => ({
+      request,
+      response: gateResponse,
+    }));
+
+    const response = await handleHttpRequestImpl(
+      new Request("https://api.pharos.watch/api/telegram-mini-app/session", {
+        method: "POST",
+        body: "{}",
+      }),
+      makeEnv(),
+      makeCtx(),
+    );
+
+    expect(response).toBe(gateResponse);
+    expect(mocks.evaluateAccessGate).not.toHaveBeenCalled();
+    expect(mocks.createRequestSourceRecorder).not.toHaveBeenCalled();
+    expect(mocks.resolveRoute).not.toHaveBeenCalled();
+    expect(mocks.route).not.toHaveBeenCalled();
+    expect(mocks.recordTelegramIngressHandlerResponse).not.toHaveBeenCalled();
+    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
+    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
+  });
+
+  it("routes the rebuilt bounded Telegram request and observes handler rejections", async () => {
+    const originalRequest = new Request("https://api.pharos.watch/api/telegram-mini-app/mutate", {
+      method: "POST",
+      headers: { "Content-Length": "2" },
+      body: "{}",
+    });
+    const boundedRequest = new Request(originalRequest.url, {
+      method: "POST",
+      body: "{}",
+    });
+    const handlerResponse = new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+    mocks.evaluateTelegramIngressAbuseGate.mockResolvedValue({
+      request: boundedRequest,
+      response: null,
+    });
+    mocks.route.mockResolvedValue(handlerResponse);
+
+    const response = await handleHttpRequestImpl(originalRequest, makeEnv(), makeCtx());
+
+    expect(response).toBe(handlerResponse);
+    expect(mocks.evaluateAccessGate).toHaveBeenCalledWith(
+      boundedRequest,
+      new URL(originalRequest.url),
+      expect.anything(),
+    );
+    expect(mocks.buildRouteContext).toHaveBeenCalledWith(expect.objectContaining({
+      request: boundedRequest,
+    }));
+    expect(mocks.recordTelegramIngressHandlerResponse).toHaveBeenCalledWith(
+      boundedRequest,
+      new URL(originalRequest.url),
+      handlerResponse,
+    );
   });
 
   it("records request source and returns the access-gate response on rejection", async () => {

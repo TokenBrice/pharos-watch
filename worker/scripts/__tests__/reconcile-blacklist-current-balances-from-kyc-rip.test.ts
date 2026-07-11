@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   parseCurrentBalanceArgs,
@@ -31,6 +33,7 @@ describe("current-balance kyc.rip reconciliation", () => {
   it("defaults to dry-run and parses apply mode", () => {
     expect(parseCurrentBalanceArgs([])).toEqual({
       apply: false,
+      help: false,
       remote: true,
       database: "stablecoin-db",
       timeoutMs: 15_000,
@@ -41,7 +44,38 @@ describe("current-balance kyc.rip reconciliation", () => {
     ).toBe(true);
     expect(parseCurrentBalanceArgs(["--apply", "--confirm", SCRIPT_NAME]).apply).toBe(true);
     expect(() => parseCurrentBalanceArgs(["--apply"])).toThrow(/live mutation requires/);
-    expect(() => parseCurrentBalanceArgs(["--bogus"])).toThrow(/Unknown argument/);
+  });
+
+  it("rejects unknown, duplicate, conflicting, local, and positional arguments", () => {
+    expect(() => parseCurrentBalanceArgs(["--bogus"])).toThrow(/Unknown option/);
+    expect(() => parseCurrentBalanceArgs(["--timeout-ms", "1000", "--timeout-ms", "2000"])).toThrow(
+      /may only be specified once/,
+    );
+    expect(() =>
+      parseCurrentBalanceArgs(["--execute", "--apply", "--confirm", SCRIPT_NAME]),
+    ).toThrow(/mutually exclusive/);
+    expect(() => parseCurrentBalanceArgs(["--local"])).toThrow(/not supported/);
+    expect(() => parseCurrentBalanceArgs(["unexpected"])).toThrow(/Unexpected argument/);
+  });
+
+  it("supports short help and direct-run usage exit codes", () => {
+    expect(parseCurrentBalanceArgs(["-h"])).toMatchObject({ apply: false, help: true, remote: true });
+
+    const tsx = join(process.cwd(), "node_modules/.bin/tsx");
+    const help = spawnSync(tsx, [SCRIPT_NAME, "--help"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    expect(help.status).toBe(0);
+    expect(help.stdout).toContain(`Usage: tsx ${SCRIPT_NAME}`);
+
+    const unconfirmed = spawnSync(tsx, [SCRIPT_NAME, "--apply"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    expect(unconfirmed.status).toBe(2);
+    expect(unconfirmed.stderr).toContain("live mutation requires");
+    expect(unconfirmed.stderr).toContain(`Usage: tsx ${SCRIPT_NAME}`);
   });
 
   it("does not query or execute D1 in dry-run mode", async () => {

@@ -48,6 +48,32 @@ export const ApiKeyListResponseSchema: z.ZodType<ApiKeyListResponse> = z.object(
   keys: z.array(ApiKeySummarySchema),
 });
 
+export interface ApiKeyAuditEntry {
+  id: number;
+  apiKeyId: number;
+  action: string;
+  actor: string;
+  detail: unknown;
+  createdAt: number;
+}
+
+export interface ApiKeyAuditLogResponse {
+  entries: ApiKeyAuditEntry[];
+}
+
+export const ApiKeyAuditEntrySchema: z.ZodType<ApiKeyAuditEntry> = z.object({
+  id: z.number(),
+  apiKeyId: z.number(),
+  action: z.string(),
+  actor: z.string(),
+  detail: z.unknown(),
+  createdAt: z.number(),
+});
+
+export const ApiKeyAuditLogResponseSchema: z.ZodType<ApiKeyAuditLogResponse> = z.object({
+  entries: z.array(ApiKeyAuditEntrySchema),
+});
+
 export interface ApiKeyCreateRequest {
   name: string;
   ownerEmail?: string | null;

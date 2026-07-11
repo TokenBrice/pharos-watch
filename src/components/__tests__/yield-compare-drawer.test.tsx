@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
@@ -70,13 +70,13 @@ describe("YieldCompareDrawer", () => {
     render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />);
 
     expect(screen.getByText("Compare yield sources")).toBeTruthy();
-    expect(screen.getByText("USDC")).toBeTruthy();
-    expect(screen.getByText("USDT")).toBeTruthy();
-    expect(screen.getByText("APY (30d)")).toBeTruthy();
-    expect(screen.getByText("4.50%")).toBeTruthy();
-    expect(screen.getByText("5.10%")).toBeTruthy();
-    expect(screen.getByText("Aave")).toBeTruthy();
-    expect(screen.getByText("Morpho")).toBeTruthy();
+    expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("USDT").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("APY (30d)").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("4.50%").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("5.10%").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Aave").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Morpho").length).toBeGreaterThan(0);
 
     const shell = screen.getByTestId("yield-compare-drawer-table");
     const table = screen.getByRole("table", { name: "Yield source comparison" });
@@ -112,14 +112,40 @@ describe("YieldCompareDrawer", () => {
       />,
     );
 
-    expect(screen.getByText("Source posture")).toBeTruthy();
-    expect(screen.getByText("Speculative")).toBeTruthy();
-    expect(screen.getByText("Source risk")).toBeTruthy();
-    expect(screen.getByText("42/100 | 1.32x")).toBeTruthy();
-    expect(screen.getByText("Venue tier")).toBeTruthy();
-    expect(screen.getByText("Medium (3.1/5), partial confidence")).toBeTruthy();
-    expect(screen.getByText("Decision reason")).toBeTruthy();
-    expect(screen.getByText("Curated source preferred | 1 alternate rejected")).toBeTruthy();
+    expect(screen.getAllByText("Source posture").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Speculative").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Source risk").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("42/100 | 1.32x").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Venue tier").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Medium (3.1/5), partial confidence").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Decision reason").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Curated source preferred | 1 alternate rejected").length).toBeGreaterThan(0);
+  });
+
+  it("shows PYS evidence qualification and keeps remove controls touch-sized", () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
+    render(
+      <YieldCompareDrawer
+        open
+        onOpenChange={vi.fn()}
+        rows={[
+          makeRow({
+            provenance: {
+              scoreQualification: "partial",
+              evidenceCompleteness: 0.71,
+            },
+          } as Partial<YieldViewModelRow>),
+        ]}
+        logos={{}}
+      />,
+    );
+
+    expect(screen.getAllByText("PYS qualification").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("partial (71% complete)").length).toBeGreaterThan(0);
+    for (const button of screen.getAllByRole("button", { name: "Remove USDC from compare" })) {
+      expect(button.className).toContain("h-11");
+      expect(button.className).toContain("w-11");
+    }
   });
 
   it("renders 'Coin not in current view' placeholder when a selected id is filtered out", () => {
@@ -135,16 +161,33 @@ describe("YieldCompareDrawer", () => {
     render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc]} logos={{}} />);
 
     expect(screen.getAllByText("__proto__").length).toBeGreaterThan(0);
-    expect(screen.getByText("USDC")).toBeTruthy();
+    expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
     expect(screen.getAllByTestId("logo")[0].getAttribute("data-src")).toBe("");
   });
 
-  it("exposes a share link mirroring the current compare ids", () => {
+  it("copies a shareable comparison URL when Web Share is unavailable", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
     render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />);
 
-    const link = screen.getByRole("link", { name: /Share this comparison/i });
-    expect(link.getAttribute("href")).toMatch(/\/yield\/?\?compare=usdc-circle%2Cusdt-tether/);
+    fireEvent.click(screen.getByRole("button", { name: "Share comparison" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/\/yield\/?\?compare=usdc-circle%2Cusdt-tether/));
+      expect(screen.getByRole("button", { name: "Link copied" })).toBeTruthy();
+    });
+  });
+
+  it("renders stacked comparison summaries for narrow layouts", () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
+    render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />);
+
+    expect(screen.getByTestId("yield-compare-mobile-list")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /Remove .* from compare/ })).toHaveLength(4);
   });
 
   it("renders nothing when the drawer is closed", () => {

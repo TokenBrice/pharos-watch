@@ -12,6 +12,11 @@ import type { CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
 import { d1ChangeCount } from "./_internals";
 import { unixNow } from "./subscribers";
+import {
+  appendTelegramOperationStatements,
+  type TelegramOperationBatchOptions,
+} from "./_internals";
+import { executeAtomicBatch } from "../../lib/db";
 
 interface PendingDisambiguationPersistenceInput {
   chatId: string;
@@ -24,6 +29,8 @@ interface PendingDisambiguationPersistenceInput {
   remainingTickers: readonly string[];
   initiatorUserId: string | null;
   expiresAt?: number;
+  operationStatements?: D1PreparedStatement[];
+  beforePendingStatements?: D1PreparedStatement[];
 }
 
 export async function persistPendingDisambiguation(
@@ -38,6 +45,8 @@ export async function persistPendingDisambiguation(
     remainingTickers: string[];
     alertTypes?: Set<string>;
     initiatorUserId: string | null;
+    expiresAt?: number;
+    operationStatements?: D1PreparedStatement[];
   },
 ): Promise<boolean> {
   return persistPendingDisambiguationRow(db, {
@@ -50,6 +59,8 @@ export async function persistPendingDisambiguation(
     candidates: input.candidates,
     remainingTickers: input.remainingTickers,
     initiatorUserId: input.initiatorUserId,
+    expiresAt: input.expiresAt,
+    operationStatements: input.operationStatements,
   });
 }
 
@@ -59,7 +70,7 @@ export async function persistPendingDisambiguationRow(
 ): Promise<boolean> {
   const nowSec = unixNow();
   const expiresAt = input.expiresAt ?? nowSec + DISAMBIGUATION_TTL_SEC;
-  const result = await db
+  const statement = db
     .prepare(`
       INSERT INTO telegram_pending_disambiguation (
         chat_id,
@@ -101,8 +112,16 @@ export async function persistPendingDisambiguationRow(
       expiresAt,
       input.initiatorUserId,
       nowSec,
-    )
-    .run();
+    );
+  if ((input.operationStatements?.length ?? 0) > 0 || (input.beforePendingStatements?.length ?? 0) > 0) {
+    const results = await runWithOverloadRetry(
+      () => db.batch([...(input.beforePendingStatements ?? []), statement, ...(input.operationStatements ?? [])]),
+      3,
+    );
+    const pendingResultIndex = input.beforePendingStatements?.length ?? 0;
+    return d1ChangeCount(results[pendingResultIndex] ?? ({ meta: {} } as D1Result<unknown>)) > 0;
+  }
+  const result = await statement.run();
   return d1ChangeCount(result) > 0;
 }
 
@@ -130,6 +149,9 @@ export async function persistPendingConfirmBulk(
     chatId: string;
     payload: ConfirmBulkPayload;
     initiatorUserId: string | null;
+    expiresAt?: number;
+    operationStatements?: D1PreparedStatement[];
+    beforePendingStatements?: D1PreparedStatement[];
   },
 ): Promise<boolean> {
   return persistPendingDisambiguationRow(db, {
@@ -142,6 +164,9 @@ export async function persistPendingConfirmBulk(
     candidates: [],
     remainingTickers: [],
     initiatorUserId: input.initiatorUserId,
+    expiresAt: input.expiresAt,
+    operationStatements: input.operationStatements,
+    beforePendingStatements: input.beforePendingStatements,
   });
 }
 
@@ -156,6 +181,8 @@ export async function persistPendingForgetConfirm(
   input: {
     chatId: string;
     initiatorUserId: string | null;
+    expiresAt?: number;
+    operationStatements?: D1PreparedStatement[];
   },
 ): Promise<boolean> {
   return persistPendingDisambiguationRow(db, {
@@ -168,17 +195,29 @@ export async function persistPendingForgetConfirm(
     candidates: [],
     remainingTickers: [],
     initiatorUserId: input.initiatorUserId,
+    expiresAt: input.expiresAt,
+    operationStatements: input.operationStatements,
   });
 }
 
 export async function clearPendingDisambiguation(
   db: D1Database,
   chatId: string,
+  options: TelegramOperationBatchOptions & {
+    expected?: { actionType: string; expiresAt: number };
+  } = {},
 ): Promise<void> {
-  await db
-    .prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?")
-    .bind(chatId)
-    .run();
+  const statement = options.expected
+    ? db.prepare(
+        `DELETE FROM telegram_pending_disambiguation
+          WHERE chat_id = ?
+            AND action_type = ?
+            AND expires_at = ?`,
+      ).bind(chatId, options.expected.actionType, options.expected.expiresAt)
+    : db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId);
+  await executeAtomicBatch(db, appendTelegramOperationStatements([
+    statement,
+  ], options));
 }
 
 // Grace window past `expires_at` before a disambiguation row is eligible for

@@ -193,17 +193,18 @@ export function isSafetyDeescalation(oldGrade: string, newGrade: string): boolea
 
 // ---------- Snapshot Persistence ----------
 
-export async function writeSnapshots(
-  db: D1Database,
-  snapshots: {
-    dews: DewsSnapshot;
-    dewsAlertable: DewsSnapshot;
-    depeg: DepegSnapshot;
-    safety?: AlertSafetySnapshotEnvelope | null;
-    launch: string[];
-    reserveDispatched: string[] | null;
-  },
-): Promise<void> {
+export interface TelegramAlertSnapshots {
+  dews: DewsSnapshot;
+  dewsAlertable: DewsSnapshot;
+  depeg: DepegSnapshot;
+  safety?: AlertSafetySnapshotEnvelope | null;
+  launch: string[];
+  reserveDispatched: string[] | null;
+}
+
+export function buildTelegramSnapshotCacheEntries(
+  snapshots: TelegramAlertSnapshots,
+): Array<{ key: string; value: string }> {
   const writes: Array<{ key: string; value: string }> = [
     { key: SNAPSHOT_KEYS.dews, value: JSON.stringify(snapshots.dews) },
     { key: SNAPSHOT_KEYS.dewsAlertable, value: JSON.stringify(snapshots.dewsAlertable) },
@@ -216,5 +217,12 @@ export async function writeSnapshots(
     writes.push({ key: SNAPSHOT_KEYS.safety, value: JSON.stringify(snapshots.safety) });
   }
 
-  await setCacheMany(db, writes);
+  return writes;
+}
+
+export async function writeSnapshots(
+  db: D1Database,
+  snapshots: TelegramAlertSnapshots,
+): Promise<void> {
+  await setCacheMany(db, buildTelegramSnapshotCacheEntries(snapshots));
 }

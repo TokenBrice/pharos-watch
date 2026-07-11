@@ -1,21 +1,28 @@
 "use client";
 
-interface TelegramThemeParams {
-  bg_color?: string;
-  text_color?: string;
-  button_color?: string;
-  button_text_color?: string;
-  hint_color?: string;
-  link_color?: string;
-  secondary_bg_color?: string;
-  header_bg_color?: string;
-  accent_text_color?: string;
-  section_bg_color?: string;
-  section_header_text_color?: string;
-  subtitle_text_color?: string;
-  destructive_text_color?: string;
-  bottom_bar_bg_color?: string;
-}
+import { normalizeTelegramTheme, type TelegramThemeParams } from "./telegram-theme";
+
+export type { TelegramThemeParams } from "./telegram-theme";
+
+const TELEGRAM_THEME_VARIABLES = [
+  "--telegram-bg",
+  "--telegram-text",
+  "--telegram-button",
+  "--telegram-button-text",
+  "--telegram-hint",
+  "--telegram-link",
+  "--telegram-secondary-bg",
+  "--telegram-header-bg",
+  "--telegram-accent-text",
+  "--telegram-section-bg",
+  "--telegram-section-header-text",
+  "--telegram-subtitle-text",
+  "--telegram-destructive-text",
+  "--telegram-bottom-bar-bg",
+  "--telegram-control-bg",
+  "--telegram-border",
+  "--telegram-ring",
+] as const;
 
 type TelegramWebAppEvent = "themeChanged" | "viewportChanged" | "safeAreaChanged" | "contentSafeAreaChanged";
 
@@ -57,6 +64,7 @@ interface TelegramSettingsButton {
 
 export interface TelegramWebAppSdk {
   initData: string;
+  platform?: string;
   initDataUnsafe?: {
     user?: { first_name?: string; username?: string };
     start_param?: string;
@@ -110,21 +118,24 @@ export function getTelegramLaunchContext(): {
   const webApp = window.Telegram?.WebApp ?? null;
   const search = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash);
+  const launchData = hash.get("tgWebAppData") ?? search.get("tgWebAppData");
+  const launchPlatform = hash.get("tgWebAppPlatform") ?? search.get("tgWebAppPlatform") ?? webApp?.platform ?? null;
+  const hasUnsupportedTelegramHost = launchPlatform?.toLowerCase() === "unknown";
+  // Loading telegram-web-app.js creates WebApp with platform="unknown" in every browser.
+  // Only Telegram-provided launch data on a supported host justifies the long SDK poll;
+  // the Worker remains authoritative for validating the data's signature.
   const hasTelegramLaunchHint = Boolean(
-    webApp
-    || window.Telegram
-    || search.has("tgWebAppStartParam")
-    || search.has("tgWebAppVersion")
-    || search.has("tgWebAppPlatform")
-    || hash.has("tgWebAppData")
-    || hash.has("tgWebAppVersion")
-    || hash.has("tgWebAppPlatform"),
+    launchData
+    && launchPlatform
+    && !hasUnsupportedTelegramHost,
   );
   return {
     webApp,
-    initData: webApp?.initData ?? "",
+    initData: hasUnsupportedTelegramHost ? "" : webApp?.initData ?? "",
     startParam: webApp?.initDataUnsafe?.start_param ?? search.get("tgWebAppStartParam") ?? search.get("startapp"),
-    previewName: webApp?.initDataUnsafe?.user?.first_name ?? webApp?.initDataUnsafe?.user?.username ?? null,
+    previewName: hasUnsupportedTelegramHost
+      ? null
+      : webApp?.initDataUnsafe?.user?.first_name ?? webApp?.initDataUnsafe?.user?.username ?? null,
     hasTelegramLaunchHint,
   };
 }
@@ -149,28 +160,37 @@ export function applyTelegramTheme(webApp: TelegramWebAppSdk | null): void {
   root.setProperty("--telegram-safe-area-bottom", `${sumEdge("bottom")}px`);
   root.setProperty("--telegram-safe-area-left", `${sumEdge("left")}px`);
 
-  const theme = webApp.themeParams;
-  const setThemeVar = (varName: string, value: string | undefined) => {
+  const normalizedTheme = normalizeTelegramTheme(webApp.themeParams, webApp.colorScheme);
+  const themeVars: Record<string, string | undefined> = normalizedTheme
+    ? {
+        "--telegram-bg": normalizedTheme.background,
+        "--telegram-text": normalizedTheme.text,
+        "--telegram-button": normalizedTheme.button,
+        "--telegram-button-text": normalizedTheme.buttonText,
+        "--telegram-hint": normalizedTheme.hint,
+        "--telegram-link": normalizedTheme.link,
+        "--telegram-secondary-bg": normalizedTheme.secondaryBackground,
+        "--telegram-header-bg": normalizedTheme.headerBackground,
+        "--telegram-accent-text": normalizedTheme.accentText,
+        "--telegram-section-bg": normalizedTheme.sectionBackground,
+        "--telegram-control-bg": normalizedTheme.controlBackground,
+        "--telegram-section-header-text": normalizedTheme.sectionHeaderText,
+        "--telegram-subtitle-text": normalizedTheme.subtitleText,
+        "--telegram-destructive-text": normalizedTheme.destructiveText,
+        "--telegram-bottom-bar-bg": webApp.isVersionAtLeast?.("8.0")
+          ? normalizedTheme.bottomBarBackground
+          : undefined,
+        "--telegram-border": normalizedTheme.border,
+        "--telegram-ring": normalizedTheme.focusRing,
+      }
+    : {};
+  for (const varName of TELEGRAM_THEME_VARIABLES) {
+    const value = themeVars[varName];
     if (value) root.setProperty(varName, value);
-  };
-  setThemeVar("--telegram-bg", theme?.bg_color);
-  setThemeVar("--telegram-text", theme?.text_color);
-  setThemeVar("--telegram-button", theme?.button_color);
-  setThemeVar("--telegram-button-text", theme?.button_text_color);
-  setThemeVar("--telegram-hint", theme?.hint_color);
-  setThemeVar("--telegram-link", theme?.link_color);
-  setThemeVar("--telegram-secondary-bg", theme?.secondary_bg_color);
-  setThemeVar("--telegram-header-bg", theme?.header_bg_color);
-  setThemeVar("--telegram-accent-text", theme?.accent_text_color);
-  setThemeVar("--telegram-section-bg", theme?.section_bg_color);
-  setThemeVar("--telegram-section-header-text", theme?.section_header_text_color);
-  setThemeVar("--telegram-subtitle-text", theme?.subtitle_text_color);
-  setThemeVar("--telegram-destructive-text", theme?.destructive_text_color);
+    else root.removeProperty(varName);
+  }
   if (webApp.colorScheme === "dark" || webApp.colorScheme === "light") {
     root.setProperty("--telegram-color-scheme", webApp.colorScheme);
-  }
-  if (webApp.isVersionAtLeast?.("8.0")) {
-    setThemeVar("--telegram-bottom-bar-bg", theme?.bottom_bar_bg_color);
   }
 }
 

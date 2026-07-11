@@ -6,6 +6,7 @@ export type EndpointPublicApiAccess = "protected" | "exempt";
 export type EndpointSiteDataAccess = "allowed" | "denied";
 export type EndpointDependency =
   | "apiKeyHashPepper"
+  | "alertWebhookUrl"
   | "alchemyApiKey"
   | "anthropicApiKey"
   | "cloudflareD1StatusConfig"
@@ -14,9 +15,53 @@ export type EndpointDependency =
   | "mintBurnFreshnessConfig"
   | "coingeckoApiKey"
   | "apiKeySelfServeEnv"
+  | "workerVersion"
   | "telegram";
 
 export type StatusPageActionGroup = "recovery" | "audit" | "communications";
+
+export type StatusPageActionKind = "inspect" | "backfill" | "repair" | "reset" | "communication";
+export type StatusPageActionRisk = "read-only" | "low" | "moderate" | "high";
+export type StatusPageActionResultMode = "immediate" | "queued" | "continuation";
+export type StatusPageActionAuditMode = "canonical" | "handler";
+export type StatusPageActionRunbookPath =
+  | "docs/data-pipeline.md"
+  | "docs/depeg-detection.md"
+  | "docs/dews.md"
+  | "docs/mint-burn-flows.md"
+  | "docs/pricing-pipeline.md"
+  | "docs/stability-index.md"
+  | "docs/yield-intelligence.md";
+
+export type StatusPageActionScope =
+  | {
+      type: "global" | "automatic";
+      label: string;
+    }
+  | {
+      type: "asset-or-batch";
+      assetIdentifier: "stablecoin-id" | "symbol";
+      assetLabel: string;
+      assetPlaceholder: string;
+      batchLabel: string;
+      queryParam: "stablecoin" | "stablecoinId" | "symbol";
+    };
+
+export type StatusPageActionDryRun =
+  | {
+      supported: false;
+      default: false;
+      liveSupported: true;
+    }
+  | {
+      supported: true;
+      default: true;
+      /** False when the endpoint supports live mode but this generic control cannot satisfy its extra execution fence. */
+      liveSupported: boolean;
+      queryParam: "dry-run" | "dryRun";
+      dryRunMethod?: EndpointMethod;
+      liveMethod?: EndpointMethod;
+    };
 
 interface EndpointStatusPageActionConfig {
   label: string;
@@ -24,10 +69,20 @@ interface EndpointStatusPageActionConfig {
   destructive?: boolean;
   method: EndpointMethod;
   path?: string;
-  /** When true the action dialog offers an optional stablecoin ID input to target a single coin. */
-  acceptsStablecoinFilter?: boolean;
   /** UI grouping in the admin actions panel. Defaults to "recovery" when omitted. */
   group?: StatusPageActionGroup;
+  kind: StatusPageActionKind;
+  risk: StatusPageActionRisk;
+  scope: StatusPageActionScope;
+  dryRun: StatusPageActionDryRun;
+  expectedDuration: string;
+  preconditions: readonly string[];
+  blockedBy: readonly string[];
+  resultMode: StatusPageActionResultMode;
+  /** Canonical router audit is the default. Use handler only when the handler writes one richer audit row itself. */
+  auditMode?: StatusPageActionAuditMode;
+  rollback?: string;
+  runbookPath?: StatusPageActionRunbookPath;
 }
 
 export interface EndpointDefinition {
@@ -180,8 +235,19 @@ export interface StatusPageAction {
   confirm: string;
   destructive: boolean;
   method: EndpointMethod;
+  /** Compatibility projection for callers that only need to know whether an asset filter exists. */
   acceptsStablecoinFilter: boolean;
   group: StatusPageActionGroup;
+  kind: StatusPageActionKind;
+  risk: StatusPageActionRisk;
+  scope: StatusPageActionScope;
+  dryRun: StatusPageActionDryRun;
+  expectedDuration: string;
+  preconditions: readonly string[];
+  blockedBy: readonly string[];
+  resultMode: StatusPageActionResultMode;
+  rollback?: string;
+  runbookPath?: StatusPageActionRunbookPath;
 }
 
 export interface EndpointMethodValidationError {
@@ -214,6 +280,26 @@ export type DynamicAdminEndpointMatch =
       chatId: string;
       methods: readonly EndpointMethod[];
     };
+
+const NO_DRY_RUN: StatusPageActionDryRun = {
+  supported: false,
+  default: false,
+  liveSupported: true,
+};
+
+function globalActionScope(label: string): StatusPageActionScope {
+  return { type: "global", label };
+}
+
+function automaticActionScope(label: string): StatusPageActionScope {
+  return { type: "automatic", label };
+}
+
+function assetOrBatchActionScope(
+  options: Omit<Extract<StatusPageActionScope, { type: "asset-or-batch" }>, "type">,
+): StatusPageActionScope {
+  return { type: "asset-or-batch", ...options };
+}
 
 const BASE_ENDPOINT_DEFINITIONS = [
   // Public endpoints probed by the status dashboard.
@@ -527,6 +613,15 @@ const BASE_ENDPOINT_DEFINITIONS = [
       confirm: "Trigger daily digest? Bypasses 1h dedup window.",
       method: "POST",
       group: "communications",
+      kind: "communication",
+      risk: "moderate",
+      scope: globalActionScope("All digest recipients"),
+      dryRun: NO_DRY_RUN,
+      expectedDuration: "Queued; starts within 5 minutes",
+      preconditions: ["Review current digest state and downstream delivery health."],
+      blockedBy: [],
+      resultMode: "queued",
+      rollback: "No automatic recall is available after downstream delivery begins.",
     },
   }),
   adminMutation({
@@ -539,6 +634,16 @@ const BASE_ENDPOINT_DEFINITIONS = [
       confirm: "Reset blacklist sync? Rolls back EVM 50k blocks, Tron 7 days.",
       destructive: true,
       method: "POST",
+      kind: "reset",
+      risk: "high",
+      scope: globalActionScope("All blacklist sync configurations"),
+      dryRun: NO_DRY_RUN,
+      expectedDuration: "Seconds; replay continues on scheduled syncs",
+      preconditions: ["Use only when blacklist cursors require a controlled replay."],
+      blockedBy: [],
+      resultMode: "immediate",
+      rollback: "No direct rollback; later syncs advance the rewound cursors.",
+      runbookPath: "docs/data-pipeline.md",
     },
   }),
   adminGet({
@@ -550,6 +655,15 @@ const BASE_ENDPOINT_DEFINITIONS = [
       confirm: "Fetch sync state debug dump?",
       method: "GET",
       group: "audit",
+      kind: "inspect",
+      risk: "read-only",
+      scope: globalActionScope("Blacklist sync state"),
+      dryRun: NO_DRY_RUN,
+      expectedDuration: "Seconds",
+      preconditions: [],
+      blockedBy: [],
+      resultMode: "immediate",
+      runbookPath: "docs/data-pipeline.md",
     },
   }),
   adminMutation({
@@ -561,6 +675,26 @@ const BASE_ENDPOINT_DEFINITIONS = [
       label: "Remediate Blacklist Gaps",
       confirm: "Run targeted blacklist amount-gap remediation? Prefer dry-run first.",
       method: "POST",
+      kind: "repair",
+      risk: "moderate",
+      scope: assetOrBatchActionScope({
+        assetIdentifier: "symbol",
+        assetLabel: "Stablecoin symbol",
+        assetPlaceholder: "e.g. USDT",
+        batchLabel: "Bounded eligible gap rows",
+        queryParam: "stablecoin",
+      }),
+      dryRun: {
+        supported: true,
+        default: true,
+        liveSupported: true,
+        queryParam: "dryRun",
+      },
+      expectedDuration: "Seconds to minutes; bounded to 200 rows",
+      preconditions: ["Review the dry-run candidate and resolution counts before live remediation."],
+      blockedBy: ["Live mode requires configured chain RPCs."],
+      resultMode: "immediate",
+      runbookPath: "docs/data-pipeline.md",
     },
   }),
   adminMutation({
@@ -570,8 +704,28 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Blacklist Balances",
-      confirm: "Backfill current-balance cache for coins missing balance rows? Prefer dry-run first (?dryRun=true).",
+      confirm: "Backfill current-balance cache for coins missing balance rows?",
       method: "POST",
+      kind: "repair",
+      risk: "moderate",
+      scope: assetOrBatchActionScope({
+        assetIdentifier: "symbol",
+        assetLabel: "Stablecoin symbol",
+        assetPlaceholder: "e.g. USDC",
+        batchLabel: "All matching blacklist configurations",
+        queryParam: "stablecoin",
+      }),
+      dryRun: {
+        supported: true,
+        default: true,
+        liveSupported: true,
+        queryParam: "dryRun",
+      },
+      expectedDuration: "Seconds to minutes; bounded per configuration",
+      preconditions: ["Review the dry-run candidate totals before writing balance cache rows."],
+      blockedBy: ["At least one active matching blacklist configuration is required."],
+      resultMode: "immediate",
+      runbookPath: "docs/data-pipeline.md",
     },
   }),
   adminMutation({
@@ -583,7 +737,26 @@ const BASE_ENDPOINT_DEFINITIONS = [
       label: "Backfill Depegs",
       confirm: "Run depeg backfill? This may take several minutes.",
       method: "POST",
-      acceptsStablecoinFilter: true,
+      kind: "backfill",
+      risk: "high",
+      scope: assetOrBatchActionScope({
+        assetIdentifier: "stablecoin-id",
+        assetLabel: "Stablecoin ID",
+        assetPlaceholder: "e.g. usdt-tether",
+        batchLabel: "Bounded registry batch",
+        queryParam: "stablecoin",
+      }),
+      dryRun: {
+        supported: true,
+        default: true,
+        liveSupported: true,
+        queryParam: "dry-run",
+      },
+      expectedDuration: "Several minutes per batch",
+      preconditions: ["Review the planned event replacements in dry-run mode before writing."],
+      blockedBy: ["Unknown targets and unavailable historical price inputs are rejected or reported."],
+      resultMode: "immediate",
+      runbookPath: "docs/depeg-detection.md",
     },
   }),
   adminMutation({
@@ -595,7 +768,21 @@ const BASE_ENDPOINT_DEFINITIONS = [
       label: "Backfill Supply",
       confirm: "Backfill supply history snapshots?",
       method: "POST",
-      acceptsStablecoinFilter: true,
+      kind: "backfill",
+      risk: "moderate",
+      scope: assetOrBatchActionScope({
+        assetIdentifier: "stablecoin-id",
+        assetLabel: "Stablecoin ID",
+        assetPlaceholder: "e.g. usdc-circle",
+        batchLabel: "Bounded registry batch",
+        queryParam: "stablecoin",
+      }),
+      dryRun: NO_DRY_RUN,
+      expectedDuration: "Several minutes per batch",
+      preconditions: ["Prefer a single asset for targeted repair; batch mode processes a bounded registry slice."],
+      blockedBy: ["Unknown targets, invalid windows, and malformed continuation cursors are rejected."],
+      resultMode: "continuation",
+      runbookPath: "docs/data-pipeline.md",
     },
   }),
   adminMutation({
@@ -607,7 +794,21 @@ const BASE_ENDPOINT_DEFINITIONS = [
       label: "Backfill CG Prices",
       confirm: "Backfill CoinGecko prices?",
       method: "POST",
-      acceptsStablecoinFilter: true,
+      kind: "backfill",
+      risk: "moderate",
+      scope: assetOrBatchActionScope({
+        assetIdentifier: "stablecoin-id",
+        assetLabel: "Stablecoin ID",
+        assetPlaceholder: "e.g. usdc-circle",
+        batchLabel: "Bounded registry batch",
+        queryParam: "stablecoin",
+      }),
+      dryRun: NO_DRY_RUN,
+      expectedDuration: "Several minutes; CoinGecko requests are rate-limited",
+      preconditions: ["Confirm the selected assets should fill missing historical price or market-cap rows."],
+      blockedBy: ["Targets without a CoinGecko ID are skipped."],
+      resultMode: "immediate",
+      runbookPath: "docs/pricing-pipeline.md",
     },
   }),
   adminMutation({
@@ -618,7 +819,21 @@ const BASE_ENDPOINT_DEFINITIONS = [
       label: "Backfill Yield History",
       confirm: "Backfill protocol yield history?",
       method: "POST",
-      acceptsStablecoinFilter: true,
+      kind: "backfill",
+      risk: "low",
+      scope: assetOrBatchActionScope({
+        assetIdentifier: "stablecoin-id",
+        assetLabel: "Stablecoin ID",
+        assetPlaceholder: "e.g. zys-zephyr-protocol",
+        batchLabel: "Supported protocol-history targets",
+        queryParam: "stablecoin",
+      }),
+      dryRun: NO_DRY_RUN,
+      expectedDuration: "Usually under a minute",
+      preconditions: ["Use only for protocol-history sources explicitly supported by the handler."],
+      blockedBy: ["Unsupported targets return no matching backfill rows."],
+      resultMode: "immediate",
+      runbookPath: "docs/yield-intelligence.md",
     },
   }),
   adminMutation({
@@ -629,16 +844,59 @@ const BASE_ENDPOINT_DEFINITIONS = [
       label: "Backfill PSI",
       confirm: "Backfill stability index history?",
       method: "POST",
+      kind: "backfill",
+      risk: "high",
+      scope: globalActionScope("Historical PSI daily table"),
+      dryRun: {
+        supported: true,
+        default: true,
+        liveSupported: true,
+        queryParam: "dry-run",
+      },
+      expectedDuration: "Several minutes for the full historical window",
+      preconditions: [
+        "Repair supply, price, and DEWS history before rebuilding PSI.",
+        "Review dry-run day and score-change counts before the live table swap.",
+      ],
+      blockedBy: ["No depeg history, an active PSI rebuild lease, or an invalid day window."],
+      resultMode: "immediate",
+      rollback: "Re-run a verified window; live mode swaps through a rebuild table.",
+      runbookPath: "docs/stability-index.md",
     },
   }),
   adminMutation({
     key: "backfill-mint-burn-prices",
     path: API_PATHS.backfillMintBurnPrices(),
+    routeDependencies: ["coingeckoApiKey"],
     probeGroup: "manual",
     statusPageAction: {
-      label: "Backfill Mint/Burn Prices",
-      confirm: "Backfill mint/burn USD prices for NULL events?",
+      label: "Preview Mint/Burn Price Repair",
+      confirm: "Preview historical mint/burn USD price repairs for NULL events?",
       method: "POST",
+      group: "audit",
+      kind: "inspect",
+      risk: "high",
+      scope: assetOrBatchActionScope({
+        assetIdentifier: "stablecoin-id",
+        assetLabel: "Stablecoin ID",
+        assetPlaceholder: "e.g. usdc-circle",
+        batchLabel: "Bounded NULL-price backlog",
+        queryParam: "stablecoin",
+      }),
+      dryRun: {
+        supported: true,
+        default: true,
+        liveSupported: false,
+        queryParam: "dry-run",
+      },
+      expectedDuration: "Seconds to minutes; bounded repair preview",
+      preconditions: [
+        "This generic control is preview-only.",
+        "Live repair requires the preview bookmark and endpoint execution confirmation.",
+      ],
+      blockedBy: ["Live mode requires a fresh bookmark and an idempotency key."],
+      resultMode: "immediate",
+      runbookPath: "docs/mint-burn-flows.md",
     },
   }),
   adminMutation({
@@ -650,6 +908,15 @@ const BASE_ENDPOINT_DEFINITIONS = [
       label: "Backfill Mint/Burn",
       confirm: "Run mint/burn backfill job?",
       method: "POST",
+      kind: "backfill",
+      risk: "high",
+      scope: automaticActionScope("Most-behind eligible mint/burn configuration"),
+      dryRun: NO_DRY_RUN,
+      expectedDuration: "Several minutes; bounded to 24 chunks by default",
+      preconditions: ["Confirm automatic critical-first target selection is appropriate for the incident."],
+      blockedBy: ["Alchemy credentials and a supported chain URL are required."],
+      resultMode: "continuation",
+      runbookPath: "docs/mint-burn-flows.md",
     },
   }),
   adminMutation({
@@ -658,8 +925,23 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Tape",
-      confirm: "Re-run tape projectors for selected classes? Prefer dry-run first (?dryRun=true).",
+      confirm: "Re-run tape projectors for selected classes?",
       method: "POST",
+      kind: "backfill",
+      risk: "moderate",
+      scope: globalActionScope("All tape projector classes"),
+      dryRun: {
+        supported: true,
+        default: true,
+        liveSupported: true,
+        queryParam: "dryRun",
+      },
+      expectedDuration: "Seconds to minutes, depending on projector backlog",
+      preconditions: ["Review per-class dry-run counts before advancing projector watermarks."],
+      blockedBy: [],
+      resultMode: "immediate",
+      rollback: "Projector writes are idempotent; rerun the corrected scope when needed.",
+      runbookPath: "docs/data-pipeline.md",
     },
   }),
   adminMutation({
@@ -671,6 +953,22 @@ const BASE_ENDPOINT_DEFINITIONS = [
       confirm: "Reclassify atomic roundtrips in mint/burn data?",
       method: "POST",
       group: "audit",
+      kind: "repair",
+      risk: "high",
+      scope: assetOrBatchActionScope({
+        assetIdentifier: "stablecoin-id",
+        assetLabel: "Stablecoin ID",
+        assetPlaceholder: "e.g. usdc-circle",
+        batchLabel: "Default 90-day mint/burn window",
+        queryParam: "stablecoinId",
+      }),
+      dryRun: NO_DRY_RUN,
+      expectedDuration: "Seconds to minutes; 1,000 groups per pass",
+      preconditions: ["Prefer single-asset scope when the roundtrip partition is large."],
+      blockedBy: ["Broad or unbounded scans can exceed D1 statement CPU limits."],
+      resultMode: "continuation",
+      rollback: "Rerunning applies both forward and reverse amount-tolerance checks.",
+      runbookPath: "docs/mint-burn-flows.md",
     },
   }),
   adminDualModeMutation({
@@ -681,10 +979,33 @@ const BASE_ENDPOINT_DEFINITIONS = [
     opsProxyTimeoutMs: 45_000,
     statusPageAction: {
       label: "Audit Depegs",
-      confirm: "Run depeg history audit (dry-run)?",
+      confirm: "Audit depeg history and review possible provenance repairs?",
       method: "GET",
       path: API_PATHS.auditDepegHistoryDryRun(),
       group: "audit",
+      kind: "repair",
+      risk: "high",
+      scope: assetOrBatchActionScope({
+        assetIdentifier: "symbol",
+        assetLabel: "Stablecoin symbol",
+        assetPlaceholder: "e.g. USDT",
+        batchLabel: "Bounded closed-depeg audit batch",
+        queryParam: "symbol",
+      }),
+      dryRun: {
+        supported: true,
+        default: true,
+        liveSupported: true,
+        queryParam: "dry-run",
+        dryRunMethod: "GET",
+        liveMethod: "POST",
+      },
+      expectedDuration: "Seconds; proxy timeout is 45 seconds",
+      preconditions: ["Review the audit preview before persisting provenance verdicts or repairs."],
+      blockedBy: ["Mutations that touch sealed DDRv2 events require the explicit repair migration path."],
+      resultMode: "immediate",
+      rollback: "No generic rollback exists for persisted audit repairs.",
+      runbookPath: "docs/depeg-detection.md",
     },
   }),
   adminDualModeMutation({
@@ -692,9 +1013,19 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.backfillDews(),
     probeGroup: "manual",
     statusPageAction: {
-      label: "Backfill DEWS",
-      confirm: "Run DEWS historical backfill validation?",
+      label: "Validate DEWS History",
+      confirm: "Run the read-only DEWS historical backtest?",
       method: "GET",
+      group: "audit",
+      kind: "inspect",
+      risk: "read-only",
+      scope: globalActionScope("Completed depeg-event history"),
+      dryRun: NO_DRY_RUN,
+      expectedDuration: "Seconds to minutes",
+      preconditions: ["Completed depeg events and historical supply/liquidity inputs must exist."],
+      blockedBy: ["The endpoint returns no result when completed depeg history is unavailable."],
+      resultMode: "immediate",
+      runbookPath: "docs/dews.md",
     },
   }),
   adminGet({
@@ -722,6 +1053,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
   }),
   adminMutation({
+    key: "reserve-recovery-fault-injection",
+    path: API_PATHS.armReserveRecoveryFaultInjection(),
+    routeDependencies: ["workerVersion"],
+    probeGroup: "manual",
+  }),
+  adminMutation({
     key: "bulk-dismiss-discovery-candidates",
     path: API_PATHS.bulkDismissDiscoveryCandidates(),
     probeGroup: "manual",
@@ -732,15 +1069,32 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
   }),
   adminMutation({
+    key: "alert-broker-canary",
+    path: API_PATHS.alertBrokerCanary(),
+    routeDependencies: ["alertWebhookUrl"],
+    probeGroup: "manual",
+  }),
+  adminMutation({
     key: "admin-telegram-resend",
     path: API_PATHS.adminTelegramResend(),
-    routeDependencies: ["telegram"],
+    routeDependencies: [],
     probeGroup: "manual",
   }),
   adminMutation({
     key: "admin-telegram-broadcast",
     path: API_PATHS.adminTelegramBroadcast(),
+    routeDependencies: ["telegram"],
     probeGroup: "manual",
+  }),
+  adminDualModeMutation({
+    key: "admin-telegram-delivery-control",
+    path: API_PATHS.adminTelegramDeliveryControl(),
+    probeGroup: "manual",
+  }),
+  adminGet({
+    key: "admin-telegram-adoption-report",
+    path: API_PATHS.adminTelegramAdoptionReport(),
+    probeGroup: "admin",
   }),
   adminGet({
     key: "status-probe-history",

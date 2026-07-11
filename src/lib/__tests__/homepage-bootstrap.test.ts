@@ -32,7 +32,7 @@ describe("homepage bootstrap", () => {
     expect(payload?.queries.dexLiquidity).toBeUndefined();
   });
 
-  it("validates query data with endpoint schemas", () => {
+  it("validates query data with the endpoint's lazy schema", async () => {
     const payload = normalizeHomepageBootstrapPayload({
       version: HOMEPAGE_BOOTSTRAP_VERSION,
       generatedAt: 1,
@@ -49,7 +49,7 @@ describe("homepage bootstrap", () => {
     });
 
     expect(payload).not.toBeNull();
-    expect(validateHomepageBootstrapPayloadData(payload!)).toEqual([
+    await expect(validateHomepageBootstrapPayloadData(payload!)).resolves.toEqual([
       expect.stringContaining("stablecoins:"),
     ]);
   });

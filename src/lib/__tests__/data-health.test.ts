@@ -127,7 +127,7 @@ describe("deriveDataHealth", () => {
     expect(health.state).toBe("degraded");
   });
 
-  it("keeps backend-fresh cached data fresh when refresh fails and freshness metadata is present", () => {
+  it("surfaces a refresh failure while preserving backend-fresh cached data", () => {
     const now = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(now);
     const updatedAtMs = now - 2 * 60_000;
@@ -143,8 +143,9 @@ describe("deriveDataHealth", () => {
         status: "fresh",
       },
     });
-    expect(health.state).toBe("fresh");
-    expect(health.message).toBe("Data is fresh.");
+    expect(health.state).toBe("degraded");
+    expect(health.message).toBe("Using last successful data while refresh retries.");
+    expect(health.dataUpdatedAt).toBe(Math.floor(updatedAtMs / 1000) * 1000);
   });
 
   it("treats empty successful responses as available when the caller marks hasData true", () => {

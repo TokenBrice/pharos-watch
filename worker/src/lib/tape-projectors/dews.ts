@@ -24,7 +24,8 @@ import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/depeg-dews-version";
 import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
-import { buildInClause, chunkArray } from "../db";
+import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../db";
+import { reconcileDewsPublishedGenerationLedger } from "../dews-publication-pointer";
 import {
   getProjectorWatermark,
   insertTapeEvents,
@@ -65,7 +66,11 @@ async function fetchSamplesSince(
 ): Promise<StressSignalRow[]> {
   return fetchRowsWithTieExpansion<StressSignalRow>(db, {
     selectSql: "SELECT stablecoin_id, computed_at, score, band",
-    fromSql: "stress_signals",
+    fromSql: `stress_signals
+      JOIN surface_publication_generations publication
+        ON publication.surface = 'dews'
+       AND publication.generation_id = 'dews:' || CAST(stress_signals.computed_at AS TEXT)
+       AND publication.state = 'published'`,
     timeColumn: "computed_at",
     orderBySql: "computed_at ASC, stablecoin_id ASC",
     since,
@@ -88,23 +93,32 @@ async function fetchPriorBands(
   const map = new Map<string, StressSignalRow>();
   if (coinIds.length === 0 || since <= 0) return map;
 
-  for (const chunk of chunkArray([...new Set(coinIds)])) {
-    const inClause = buildInClause(chunk);
+  for (const chunk of chunkArray([...new Set(coinIds)], D1_SAFE_IN_CLAUSE_BIND_LIMIT - 1)) {
+    const requestedRowsSql = chunk.map(() => "(?)").join(", ");
     const rows = await db
       .prepare(
-        `SELECT s.stablecoin_id, s.computed_at, s.score, s.band
-           FROM stress_signals s
-           INNER JOIN (
-             SELECT stablecoin_id, MAX(computed_at) as max_at
-             FROM stress_signals
-             WHERE stablecoin_id IN (${inClause.sql})
-               AND computed_at <= ?
-             GROUP BY stablecoin_id
-           ) latest
-             ON s.stablecoin_id = latest.stablecoin_id
-            AND s.computed_at = latest.max_at`,
+        `WITH requested(stablecoin_id) AS (VALUES ${requestedRowsSql})
+         SELECT /* pharos:tape:dews-prior-band-seek */
+                s.stablecoin_id, s.computed_at, s.score, s.band
+           FROM requested
+           JOIN stress_signals s
+             ON s.rowid = (
+               SELECT candidate.rowid
+                 FROM stress_signals candidate
+                WHERE candidate.stablecoin_id = requested.stablecoin_id
+                  AND candidate.computed_at <= ?
+                  AND EXISTS (
+                    SELECT 1
+                      FROM surface_publication_generations publication
+                     WHERE publication.surface = 'dews'
+                       AND publication.generation_id = 'dews:' || CAST(candidate.computed_at AS TEXT)
+                       AND publication.state = 'published'
+                  )
+                ORDER BY candidate.computed_at DESC
+                LIMIT 1
+             )`,
       )
-      .bind(...inClause.binds, since)
+      .bind(...chunk, since)
       .all<StressSignalRow>();
     for (const row of rows.results ?? []) {
       map.set(row.stablecoin_id, row);
@@ -208,6 +222,9 @@ async function projectDewsByVariant(
   options: ProjectorOptions | undefined,
 ): Promise<ProjectorResult> {
   const cursorKey = variant === "escalated" ? "dews.escalated" : "dews.deescalated";
+  if (options?.dryRun !== true) {
+    await reconcileDewsPublishedGenerationLedger(db, Math.floor(Date.now() / 1000));
+  }
   const { since, until, limit, dryRun } = await resolveProjectorOptions(db, cursorKey, options);
 
   const rows = await fetchSamplesSince(db, since, until, limit);
@@ -272,6 +289,9 @@ export async function projectDewsBandTransitions(
   db: D1Database,
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
+  if (options?.dryRun !== true) {
+    await reconcileDewsPublishedGenerationLedger(db, Math.floor(Date.now() / 1000));
+  }
   // Seed from the older of the two cursors so neither variant skips a window.
   const escWatermark = await getProjectorWatermark(db, "dews.escalated");
   const deescWatermark = await getProjectorWatermark(db, "dews.deescalated");

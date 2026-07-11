@@ -6,152 +6,153 @@ interface TestIdempotencyRecord {
   response_status: number;
   response_body: string;
   created_at: number;
+  reservation_owner: string | null;
+  reservation_generation: number;
+  execution_started_at: number | null;
 }
 
-function makeIdempotencyDb(
-  options: {
-    failExecutionCleanupDeleteOnce?: boolean;
-    failFailureStateUpdateOnce?: boolean;
-  } = {},
-): D1Database & {
+interface TestDbOptions {
+  failBeginOnce?: boolean;
+  failTerminalUpdates?: boolean;
+  ambiguousTerminalCommitOnce?: boolean;
+  beforeTerminalUpdate?: (record: TestIdempotencyRecord) => void;
+}
+
+function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
   getHistory(): Array<{ sql: string; binds: unknown[] }>;
   getRecord(action: string, key: string): TestIdempotencyRecord | undefined;
-  setRecord(action: string, key: string, record: TestIdempotencyRecord): void;
 } {
-  const store = new Map<
-    string,
-    {
-      request_hash: string;
-      response_status: number;
-      response_body: string;
-      created_at: number;
-    }
-  >();
+  const store = new Map<string, TestIdempotencyRecord>();
   const history: Array<{ sql: string; binds: unknown[] }> = [];
-  let failExecutionCleanupDeleteOnce = options.failExecutionCleanupDeleteOnce ?? false;
-  let failFailureStateUpdateOnce = options.failFailureStateUpdateOnce ?? false;
+  let failBeginOnce = options.failBeginOnce ?? false;
+  let ambiguousTerminalCommitOnce = options.ambiguousTerminalCommitOnce ?? false;
 
   const stmt = (sql: string) => ({
     bind: (...args: unknown[]) => ({
       first: async <T>() => {
         history.push({ sql, binds: [...args] });
         if (sql.includes("FROM admin_idempotency_keys")) {
-          const key = `${args[0]}:${args[1]}`;
-          return (store.get(key) ?? null) as T | null;
+          return (store.get(`${args[0]}:${args[1]}`) ?? null) as T | null;
         }
         return null as T | null;
       },
       run: async () => {
         history.push({ sql, binds: [...args] });
         if (sql.includes("INSERT OR IGNORE INTO admin_idempotency_keys")) {
-          const [action, idemKey, requestHash, status, body, createdAt] = args as [
+          const [action, idempotencyKey, requestHash, responseStatus, responseBody, createdAt, owner] = args as [
             string,
             string,
             string,
             number,
             string,
             number,
+            string,
           ];
-          const key = `${action}:${idemKey}`;
-          if (!store.has(key)) {
-            store.set(key, {
-              request_hash: requestHash,
-              response_status: status,
-              response_body: body,
-              created_at: createdAt,
-            });
-            return { success: true, meta: { changes: 1 } };
-          }
-          return { success: true, meta: { changes: 0 } };
+          const mapKey = `${action}:${idempotencyKey}`;
+          if (store.has(mapKey)) return { success: true, meta: { changes: 0 } };
+          store.set(mapKey, {
+            request_hash: requestHash,
+            response_status: responseStatus,
+            response_body: responseBody,
+            created_at: createdAt,
+            reservation_owner: owner,
+            reservation_generation: 1,
+            execution_started_at: null,
+          });
+          return { success: true, meta: { changes: 1 } };
         }
-        if (sql.includes("UPDATE admin_idempotency_keys SET response_status") && sql.includes("created_at < ?")) {
-          const [status, body, createdAt, action, idemKey, requestHash, expectedStatus, createdBefore] = args as [
-            number,
-            string,
-            number,
-            string,
-            string,
-            string,
-            number,
-            number,
-          ];
-          const key = `${action}:${idemKey}`;
-          const existing = store.get(key);
+
+        if (sql.includes("reservation_generation = reservation_generation + 1")) {
+          const [owner, createdAt, action, idempotencyKey, requestHash, expectedStatus, expectedGeneration, cutoff] =
+            args as [string, number, string, string, string, number, number, number];
+          const mapKey = `${action}:${idempotencyKey}`;
+          const record = store.get(mapKey);
           if (
-            !existing ||
-            existing.request_hash !== requestHash ||
-            existing.response_status !== expectedStatus ||
-            existing.created_at >= createdBefore
+            !record ||
+            record.request_hash !== requestHash ||
+            record.response_status !== expectedStatus ||
+            record.execution_started_at != null ||
+            record.reservation_generation !== expectedGeneration ||
+            record.created_at >= cutoff
           ) {
             return { success: true, meta: { changes: 0 } };
           }
-          store.set(key, {
-            request_hash: existing.request_hash,
-            response_status: status,
-            response_body: body,
+          Object.assign(record, {
+            reservation_owner: owner,
+            reservation_generation: expectedGeneration + 1,
+            response_body: "",
             created_at: createdAt,
           });
           return { success: true, meta: { changes: 1 } };
         }
-        if (sql.includes("UPDATE admin_idempotency_keys SET response_status")) {
-          const [status, body, createdAt, action, idemKey, requestHash, expectedStatus] = args as [
-            number,
-            string,
-            number,
-            string,
-            string,
-            string,
-            number | undefined,
-          ];
-          if (status === -2 && failFailureStateUpdateOnce) {
-            failFailureStateUpdateOnce = false;
-            throw new Error("failure-state update failed");
+
+        if (sql.includes("SET execution_started_at = ?")) {
+          if (failBeginOnce) {
+            failBeginOnce = false;
+            return { success: true, meta: { changes: 0 } };
           }
-          const key = `${action}:${idemKey}`;
-          const existing = store.get(key);
+          const [startedAt, action, idempotencyKey, requestHash, expectedStatus, owner, generation] = args as [
+            number,
+            string,
+            string,
+            string,
+            number,
+            string,
+            number,
+          ];
+          const record = store.get(`${action}:${idempotencyKey}`);
           if (
-            !existing ||
-            existing.request_hash !== requestHash ||
-            (typeof expectedStatus === "number" && existing.response_status !== expectedStatus)
+            !record ||
+            record.request_hash !== requestHash ||
+            record.response_status !== expectedStatus ||
+            record.execution_started_at != null ||
+            record.reservation_owner !== owner ||
+            record.reservation_generation !== generation
           ) {
             return { success: true, meta: { changes: 0 } };
           }
-          store.set(key, {
-            request_hash: existing.request_hash,
+          record.execution_started_at = startedAt;
+          return { success: true, meta: { changes: 1 } };
+        }
+
+        if (sql.includes("SET response_status = ?")) {
+          const [status, body, createdAt, action, idempotencyKey, requestHash, expectedStatus, owner, generation] =
+            args as [number, string, number, string, string, string, number, string, number];
+          const record = store.get(`${action}:${idempotencyKey}`);
+          if (record) options.beforeTerminalUpdate?.(record);
+          if (options.failTerminalUpdates) throw new Error("terminal persistence unavailable");
+          if (
+            !record ||
+            record.request_hash !== requestHash ||
+            record.response_status !== expectedStatus ||
+            record.execution_started_at == null ||
+            record.reservation_owner !== owner ||
+            record.reservation_generation !== generation
+          ) {
+            return { success: true, meta: { changes: 0 } };
+          }
+          Object.assign(record, {
             response_status: status,
             response_body: body,
             created_at: createdAt,
           });
+          if (ambiguousTerminalCommitOnce) {
+            ambiguousTerminalCommitOnce = false;
+            throw new Error("D1 DB storage operation exceeded timeout");
+          }
           return { success: true, meta: { changes: 1 } };
         }
+
         if (sql.includes("DELETE FROM admin_idempotency_keys")) {
-          if (
-            sql.includes("request_hash = ?") &&
-            sql.includes("response_status = ?") &&
-            failExecutionCleanupDeleteOnce
-          ) {
-            failExecutionCleanupDeleteOnce = false;
-            throw new Error("pending cleanup delete failed");
+          const [cutoff, pendingStatus] = args as [number, number];
+          let changes = 0;
+          for (const [key, record] of store) {
+            if (record.created_at < cutoff && record.response_status !== pendingStatus) {
+              store.delete(key);
+              changes++;
+            }
           }
-          const [action, idemKey, requestHash, expectedStatus] = args as [
-            string,
-            string,
-            string | undefined,
-            number | undefined,
-          ];
-          const key = `${action}:${idemKey}`;
-          const existing = store.get(key);
-          if (!existing) {
-            return { success: true, meta: { changes: 0 } };
-          }
-          if (typeof requestHash === "string" && existing.request_hash !== requestHash) {
-            return { success: true, meta: { changes: 0 } };
-          }
-          if (typeof expectedStatus === "number" && existing.response_status !== expectedStatus) {
-            return { success: true, meta: { changes: 0 } };
-          }
-          store.delete(key);
-          return { success: true, meta: { changes: 1 } };
+          return { success: true, meta: { changes } };
         }
         return { success: true, meta: { changes: 0 } };
       },
@@ -165,347 +166,318 @@ function makeIdempotencyDb(
     dump: async () => new ArrayBuffer(0),
     getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
     getRecord: (action: string, key: string) => store.get(`${action}:${key}`),
-    setRecord: (action: string, key: string, record: TestIdempotencyRecord) => {
-      store.set(`${action}:${key}`, { ...record });
-    },
   } as unknown as D1Database & {
     getHistory(): Array<{ sql: string; binds: unknown[] }>;
     getRecord(action: string, key: string): TestIdempotencyRecord | undefined;
-    setRecord(action: string, key: string, record: TestIdempotencyRecord): void;
   };
 }
 
+function request(key: string, query = "batch=1"): Request {
+  return new Request(`https://x/api/backfill-depegs?${query}`, {
+    method: "POST",
+    headers: { "Idempotency-Key": key },
+    body: JSON.stringify({ batch: 1 }),
+  });
+}
+
 describe("runIdempotentAdminAction", () => {
-  it("replays stored response for repeated key + request", async () => {
+  it("replays a stored terminal response", async () => {
     const db = makeIdempotencyDb();
-    const request = new Request("https://x/api/backfill-depegs?batch=1", {
-      method: "POST",
-      headers: { "Idempotency-Key": "abc-123" },
-    });
-
     let calls = 0;
-    const execute = async () => {
-      calls++;
-      return new Response(JSON.stringify({ ok: true, calls }), {
-        headers: { "Content-Type": "application/json" },
-      });
-    };
+    const execute = async () => Response.json({ ok: true, calls: ++calls });
 
-    const first = await runIdempotentAdminAction(db, "backfill-depegs", request, execute);
-    const second = await runIdempotentAdminAction(db, "backfill-depegs", request, execute);
+    const first = await runIdempotentAdminAction(db, "backfill-depegs", request("replay"), execute);
+    const second = await runIdempotentAdminAction(db, "backfill-depegs", request("replay"), execute);
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
-    expect(calls).toBe(1);
     expect(second.headers.get("X-Idempotent-Replay")).toBe("true");
-    const body = (await second.json()) as { ok: boolean; calls: number };
-    expect(body.calls).toBe(1);
+    expect(calls).toBe(1);
   });
 
-  it("returns 409 for in-flight key and does not execute again", async () => {
+  it("keeps one-time secrets out of stored and replayed sensitive responses", async () => {
     const db = makeIdempotencyDb();
-    const makeRequest = () =>
-      new Request("https://x/api/backfill-depegs?batch=1", {
-        method: "POST",
-        headers: { "Idempotency-Key": "abc-inflight" },
-        body: JSON.stringify({ batch: 1 }),
-      });
-
+    const plaintextToken = "ph_live_secret_that_must_not_be_persisted";
     let calls = 0;
-    let markFirstStarted: (() => void) | null = null;
-    const firstStarted = new Promise<void>((resolve) => {
-      markFirstStarted = resolve;
-    });
-    let resolveGate: ((value: Response) => void) | null = null;
-    const gate = new Promise<Response>((resolve) => {
-      resolveGate = resolve;
-    });
     const execute = async () => {
       calls++;
-      markFirstStarted?.();
+      return Response.json({ key: { id: 7, name: "Ops Key" }, token: plaintextToken }, { status: 201 });
+    };
+    const options = {
+      sensitiveReplayBody: (body: string) => {
+        const parsed = JSON.parse(body) as { key: unknown };
+        return JSON.stringify({
+          key: parsed.key,
+          tokenUnavailableOnReplay: true,
+          recovery: "Rotate the identified API key.",
+        });
+      },
+    };
+
+    const first = await runIdempotentAdminAction(db, "api-key-create", request("sensitive"), execute, options);
+    const replay = await runIdempotentAdminAction(db, "api-key-create", request("sensitive"), execute, options);
+    const storedBody = db.getRecord("api-key-create", "sensitive")?.response_body ?? "";
+
+    expect(await first.json()).toMatchObject({ token: plaintextToken });
+    expect(storedBody).not.toContain(plaintextToken);
+    expect(JSON.parse(storedBody)).toMatchObject({ tokenUnavailableOnReplay: true, key: { id: 7 } });
+    await expect(replay.json()).resolves.toMatchObject({
+      tokenUnavailableOnReplay: true,
+      key: { id: 7, name: "Ops Key" },
+    });
+    expect(calls).toBe(1);
+  });
+
+  it("fails closed when sensitive replay redaction throws", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const db = makeIdempotencyDb();
+    const plaintextToken = "ph_live_secret_that_must_never_escape_redaction_failure";
+    let calls = 0;
+    const execute = async () => {
+      calls++;
+      return Response.json({ key: { id: 9 }, token: plaintextToken }, { status: 201 });
+    };
+    const options = {
+      sensitiveReplayBody: () => {
+        throw new Error("redactor failed");
+      },
+    };
+
+    const first = await runIdempotentAdminAction(db, "api-key-rotate", request("redactor-failure"), execute, options);
+    const replay = await runIdempotentAdminAction(db, "api-key-rotate", request("redactor-failure"), execute, options);
+    const stored = db.getRecord("api-key-rotate", "redactor-failure");
+
+    expect(first.status).toBe(503);
+    expect(await first.json()).toMatchObject({ error: "execution_unknown" });
+    expect(stored?.response_status).toBe(-2);
+    expect(stored?.response_body).not.toContain(plaintextToken);
+    expect(replay.status).toBe(503);
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(await replay.text()).not.toContain(plaintextToken);
+    expect(calls).toBe(1);
+    errorSpy.mockRestore();
+  });
+
+  it("does not replay while an execution is in flight", async () => {
+    const db = makeIdempotencyDb();
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let finish!: (response: Response) => void;
+    const gate = new Promise<Response>((resolve) => {
+      finish = resolve;
+    });
+    let calls = 0;
+    const execute = async () => {
+      calls++;
+      started();
       return gate;
     };
 
-    const first = runIdempotentAdminAction(db, "backfill-depegs", makeRequest(), execute);
-    await firstStarted; // ensure first call reserved the key and entered execute
+    const firstPromise = runIdempotentAdminAction(db, "backfill-depegs", request("in-flight"), execute);
+    await startedPromise;
+    const duplicate = await runIdempotentAdminAction(db, "backfill-depegs", request("in-flight"), execute);
 
-    const second = await runIdempotentAdminAction(db, "backfill-depegs", makeRequest(), execute);
-    expect(second.status).toBe(409);
+    expect(duplicate.status).toBe(503);
+    expect(await duplicate.json()).toMatchObject({ error: "execution_unknown" });
     expect(calls).toBe(1);
+    finish(Response.json({ ok: true }));
+    await expect(firstPromise).resolves.toHaveProperty("status", 200);
+  });
 
-    resolveGate!(
-      new Response(JSON.stringify({ ok: true, calls }), {
-        headers: { "Content-Type": "application/json" },
-      }),
+  it("recovers an abandoned reservation only before execution starts", async () => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const db = makeIdempotencyDb({ failBeginOnce: true });
+    const first = await runIdempotentAdminAction(db, "backfill-depegs", request("unstarted"), async () =>
+      Response.json({ impossible: true }),
+    );
+    expect(first.status).toBe(409);
+    const pending = db.getRecord("backfill-depegs", "unstarted")!;
+    pending.created_at = now - 20 * 60 - 1;
+
+    let calls = 0;
+    const recovered = await runIdempotentAdminAction(db, "backfill-depegs", request("unstarted"), async () =>
+      Response.json({ calls: ++calls }, { status: 202 }),
     );
 
-    const firstResponse = await first;
-    expect(firstResponse.status).toBe(200);
+    expect(recovered.status).toBe(202);
+    expect(calls).toBe(1);
+    expect(pending.reservation_generation).toBe(2);
+    expect(pending.response_status).toBe(202);
+    vi.restoreAllMocks();
+  });
+
+  it("compatibly takes over a stranded legacy generation-zero reservation", async () => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const db = makeIdempotencyDb({ failBeginOnce: true });
+    await runIdempotentAdminAction(db, "reset-blacklist-sync", request("legacy-generation-zero"), async () =>
+      Response.json({ impossible: true }),
+    );
+    const pending = db.getRecord("reset-blacklist-sync", "legacy-generation-zero")!;
+    pending.reservation_generation = 0;
+    pending.reservation_owner = null;
+    pending.created_at = now - 20 * 60 - 1;
+
+    let calls = 0;
+    const recovered = await runIdempotentAdminAction(
+      db,
+      "reset-blacklist-sync",
+      request("legacy-generation-zero"),
+      async () => Response.json({ calls: ++calls }, { status: 202 }),
+    );
+
+    expect(recovered.status).toBe(202);
+    expect(calls).toBe(1);
+    expect(pending.reservation_generation).toBe(1);
+    expect(pending.response_status).toBe(202);
+    vi.restoreAllMocks();
+  });
+
+  it("suppresses retry after a crash immediately after execution-start was persisted", async () => {
+    const db = makeIdempotencyDb();
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const first = runIdempotentAdminAction(db, "backfill-depegs", request("crash-before-effect"), async () => {
+      started();
+      return new Promise<Response>(() => {});
+    });
+    void first;
+    await startedPromise;
+
+    let calls = 0;
+    const retry = await runIdempotentAdminAction(db, "backfill-depegs", request("crash-before-effect"), async () =>
+      Response.json({ calls: ++calls }),
+    );
+
+    expect(retry.status).toBe(503);
+    expect(calls).toBe(0);
+  });
+
+  it("stores and replays execution_unknown when execution throws", async () => {
+    const db = makeIdempotencyDb();
+    let calls = 0;
+    const execute = async (): Promise<Response> => {
+      calls++;
+      throw new Error("effect may have happened");
+    };
+
+    const first = await runIdempotentAdminAction(db, "backfill-depegs", request("throws"), execute);
+    const second = await runIdempotentAdminAction(db, "backfill-depegs", request("throws"), execute);
+
+    expect(first.status).toBe(503);
+    expect(first.headers.get("X-Execution-Certainty")).toBe("unknown");
+    expect(second.status).toBe(503);
+    expect(second.headers.get("X-Execution-Certainty")).toBe("unknown");
+    expect(second.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(db.getRecord("backfill-depegs", "throws")?.response_status).toBe(-2);
     expect(calls).toBe(1);
   });
 
-  it("takes over an abandoned pending reservation older than the execution window for the same request", async () => {
-    const now = 1_800_000_000;
-    const dateSpy = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-
-    try {
-      const db = makeIdempotencyDb();
-      const request = new Request("https://x/api/backfill-depegs?batch=2", {
-        method: "POST",
-        headers: { "Idempotency-Key": "abc-abandoned" },
-        body: JSON.stringify({ batch: 2 }),
-      });
-
-      const firstStarted = new Promise<void>((resolve) => {
-        void runIdempotentAdminAction(db, "backfill-depegs", request.clone(), async () => {
-          resolve();
-          return new Promise<Response>(() => {});
-        });
-      });
-      await firstStarted;
-
-      const pending = db.getRecord("backfill-depegs", "abc-abandoned");
-      expect(pending).toBeDefined();
-      pending!.created_at = now - 20 * 60 - 1;
-      const originalHash = pending!.request_hash;
-
-      let calls = 0;
-      const execute = async () => {
-        calls++;
-        return new Response(JSON.stringify({ ok: true, calls }), {
-          status: 202,
-          headers: { "Content-Type": "application/json" },
-        });
-      };
-
-      const response = await runIdempotentAdminAction(db, "backfill-depegs", request, execute);
-
-      expect(response.status).toBe(202);
-      expect(response.headers.get("X-Idempotent-Replay")).toBe("false");
-      expect(calls).toBe(1);
-
-      const record = db.getRecord("backfill-depegs", "abc-abandoned");
-      expect(record?.request_hash).toBe(originalHash);
-      expect(record?.response_status).toBe(202);
-      expect(record?.created_at).toBe(now);
-
-      const takeover = db.getHistory().find((entry) => entry.sql.includes("created_at < ?"));
-      expect(takeover?.binds[2]).toBe(now);
-      expect(takeover?.binds[3]).toBe("backfill-depegs");
-      expect(takeover?.binds[4]).toBe("abc-abandoned");
-      expect(takeover?.binds[5]).toBe(originalHash);
-      expect(takeover?.binds[6]).toBe(-1);
-      expect(takeover?.binds[7]).toBe(now - 20 * 60);
-    } finally {
-      dateSpy.mockRestore();
-    }
-  });
-
-  it("rejects abandoned pending reservation takeover for a different request", async () => {
-    const now = 1_800_000_000;
-    const dateSpy = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
-
-    try {
-      const db = makeIdempotencyDb();
-      db.setRecord("backfill-depegs", "abc-abandoned-conflict", {
-        request_hash: "stale-request-hash",
-        response_status: -1,
-        response_body: "",
-        created_at: now - 20 * 60 - 1,
-      });
-
-      const request = new Request("https://x/api/backfill-depegs?batch=2", {
-        method: "POST",
-        headers: { "Idempotency-Key": "abc-abandoned-conflict" },
-        body: JSON.stringify({ batch: 2 }),
-      });
-
-      let calls = 0;
-      const response = await runIdempotentAdminAction(db, "backfill-depegs", request, async () => {
-        calls++;
-        return new Response(JSON.stringify({ ok: true }), { status: 202 });
-      });
-
-      expect(response.status).toBe(409);
-      expect(await response.json()).toEqual({
-        error: "Idempotency key reuse with different request payload",
-      });
-      expect(calls).toBe(0);
-      expect(db.getRecord("backfill-depegs", "abc-abandoned-conflict")?.request_hash).toBe("stale-request-hash");
-    } finally {
-      dateSpy.mockRestore();
-    }
-  });
-
-  it("treats equivalent query params with different ordering as the same request", async () => {
+  it("stores handler 5xx responses as execution_unknown instead of terminal success", async () => {
     const db = makeIdempotencyDb();
-    const requestA = new Request("https://x/api/backfill-depegs?batch=1&dry-run=false", {
-      method: "POST",
-      headers: { "Idempotency-Key": "abc-order" },
-      body: JSON.stringify({ batch: 1 }),
-    });
-    const requestB = new Request("https://x/api/backfill-depegs?dry-run=false&batch=1", {
-      method: "POST",
-      headers: { "Idempotency-Key": "abc-order" },
-      body: JSON.stringify({ batch: 1 }),
-    });
-
     let calls = 0;
     const execute = async () => {
       calls++;
-      return new Response(JSON.stringify({ ok: true, calls }), {
-        headers: { "Content-Type": "application/json" },
-      });
+      return Response.json({ error: "partial_failure", detail: "effect may have completed" }, { status: 500 });
     };
 
-    const first = await runIdempotentAdminAction(db, "backfill-depegs", requestA, execute);
-    const second = await runIdempotentAdminAction(db, "backfill-depegs", requestB, execute);
+    const first = await runIdempotentAdminAction(db, "backfill-depegs", request("handler-5xx"), execute);
+    const replay = await runIdempotentAdminAction(db, "backfill-depegs", request("handler-5xx"), execute);
+    const stored = db.getRecord("backfill-depegs", "handler-5xx");
 
-    expect(first.status).toBe(200);
-    expect(second.status).toBe(200);
+    expect(first.status).toBe(503);
+    expect(first.headers.get("X-Execution-Certainty")).toBe("unknown");
+    expect(replay.status).toBe(503);
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(stored?.response_status).toBe(-2);
+    expect(stored?.response_body).not.toContain("partial_failure");
     expect(calls).toBe(1);
-    expect(second.headers.get("X-Idempotent-Replay")).toBe("true");
   });
 
-  it("cleans up pending reservations after execute throws so the same key can retry", async () => {
+  it("does not replay a successful side effect when terminal persistence fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const db = makeIdempotencyDb({ failTerminalUpdates: true });
+    let effects = 0;
+    const execute = async () => Response.json({ effects: ++effects });
+
+    const first = await runIdempotentAdminAction(db, "backfill-depegs", request("persist-fail"), execute);
+    const retry = await runIdempotentAdminAction(db, "backfill-depegs", request("persist-fail"), execute);
+
+    expect(first.status).toBe(503);
+    expect(retry.status).toBe(503);
+    expect(effects).toBe(1);
+    expect(db.getRecord("backfill-depegs", "persist-fail")).toMatchObject({
+      response_status: -1,
+      execution_started_at: expect.any(Number),
+    });
+    errorSpy.mockRestore();
+  });
+
+  it("confirms an ambiguous terminal commit without replaying execution", async () => {
+    const db = makeIdempotencyDb({ ambiguousTerminalCommitOnce: true });
+    let effects = 0;
+    const response = await runIdempotentAdminAction(db, "backfill-depegs", request("ambiguous-commit"), async () =>
+      Response.json({ effects: ++effects }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(effects).toBe(1);
+    expect(db.getRecord("backfill-depegs", "ambiguous-commit")?.response_status).toBe(200);
+  });
+
+  it("fences a late original terminal write after ownership changes", async () => {
+    const db = makeIdempotencyDb({
+      beforeTerminalUpdate: (record) => {
+        record.reservation_owner = "new-owner";
+        record.reservation_generation += 1;
+      },
+    });
+    const response = await runIdempotentAdminAction(db, "backfill-depegs", request("late-owner"), async () =>
+      Response.json({ ok: true }),
+    );
+
+    expect(response.status).toBe(503);
+    expect(db.getRecord("backfill-depegs", "late-owner")).toMatchObject({
+      response_status: -1,
+      reservation_owner: "new-owner",
+      reservation_generation: 2,
+    });
+  });
+
+  it("rejects key reuse with a different request fingerprint", async () => {
     const db = makeIdempotencyDb();
-    const request = new Request("https://x/api/backfill-depegs?batch=1", {
-      method: "POST",
-      headers: { "Idempotency-Key": "abc-failure-retry" },
-    });
-
-    let calls = 0;
-    const execute = async () => {
-      calls++;
-      if (calls === 1) {
-        throw new Error("boom");
-      }
-      return new Response(JSON.stringify({ ok: true, calls }), {
-        headers: { "Content-Type": "application/json" },
-      });
-    };
-
-    await expect(runIdempotentAdminAction(db, "backfill-depegs", request, execute)).rejects.toThrow("boom");
-    expect(db.getRecord("backfill-depegs", "abc-failure-retry")).toBeUndefined();
-
-    const retry = await runIdempotentAdminAction(db, "backfill-depegs", request, execute);
-
-    expect(retry.status).toBe(200);
-    expect(retry.headers.get("X-Idempotent-Replay")).toBe("false");
-    expect(calls).toBe(2);
-  });
-
-  it("stores a deterministic terminal failure replay when cleanup cannot be confirmed", async () => {
-    const db = makeIdempotencyDb({ failExecutionCleanupDeleteOnce: true });
-    const request = new Request("https://x/api/backfill-depegs?batch=1", {
-      method: "POST",
-      headers: { "Idempotency-Key": "abc-failure-replay" },
-    });
-
-    const execute = async () => {
-      throw new Error("boom");
-    };
-
-    const first = await runIdempotentAdminAction(db, "backfill-depegs", request, execute);
-
-    expect(first.status).toBe(500);
-    expect(first.headers.get("Idempotency-Key")).toBe("abc-failure-replay");
-    expect(first.headers.get("X-Idempotent-Replay")).toBe("false");
-    expect(db.getRecord("backfill-depegs", "abc-failure-replay")?.response_status).toBe(-2);
-
-    const second = await runIdempotentAdminAction(db, "backfill-depegs", request, execute);
-
-    expect(second.status).toBe(500);
-    expect(second.headers.get("X-Idempotent-Replay")).toBe("true");
-    expect(await second.json()).toEqual({
-      error: "Previous idempotent attempt failed before cleanup could be confirmed. Retry with a new Idempotency-Key.",
-    });
-  });
-
-  it("returns 409 when the same key is reused with a different payload", async () => {
-    const db = makeIdempotencyDb();
-    const requestA = new Request("https://x/api/backfill-depegs?batch=1", {
-      method: "POST",
-      headers: { "Idempotency-Key": "abc-conflict" },
-      body: JSON.stringify({ batch: 1 }),
-    });
-    const requestB = new Request("https://x/api/backfill-depegs?batch=2", {
-      method: "POST",
-      headers: { "Idempotency-Key": "abc-conflict" },
-      body: JSON.stringify({ batch: 2 }),
-    });
-
-    const execute = async () =>
-      new Response(JSON.stringify({ ok: true }), {
-        headers: { "Content-Type": "application/json" },
-      });
-
-    const first = await runIdempotentAdminAction(db, "backfill-depegs", requestA, execute);
-    const second = await runIdempotentAdminAction(db, "backfill-depegs", requestB, execute);
+    const first = await runIdempotentAdminAction(db, "backfill-depegs", request("conflict", "batch=1"), async () =>
+      Response.json({ ok: true }),
+    );
+    const second = await runIdempotentAdminAction(db, "backfill-depegs", request("conflict", "batch=2"), async () =>
+      Response.json({ impossible: true }),
+    );
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(409);
-    expect(await second.json()).toEqual({
-      error: "Idempotency key reuse with different request payload",
-    });
+    expect(second.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(second.headers.get("X-Idempotency-Conflict")).toBe("request-mismatch");
   });
 
-  it("attempts final cleanup and logs clearly when the failure-state write also fails", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const db = makeIdempotencyDb({
-      failExecutionCleanupDeleteOnce: true,
-      failFailureStateUpdateOnce: true,
-    });
-    const request = new Request("https://x/api/backfill-depegs?batch=1", {
-      method: "POST",
-      headers: { "Idempotency-Key": "abc-final-cleanup" },
-    });
-
+  it("canonicalizes query ordering in the request fingerprint", async () => {
+    const db = makeIdempotencyDb();
     let calls = 0;
-    const execute = async () => {
-      calls++;
-      if (calls === 1) {
-        throw new Error("boom");
-      }
-      return new Response(JSON.stringify({ ok: true, calls }), {
-        headers: { "Content-Type": "application/json" },
-      });
-    };
+    const execute = async () => Response.json({ calls: ++calls });
+    await runIdempotentAdminAction(db, "backfill-depegs", request("ordered", "batch=1&dryRun=false"), execute);
+    const replay = await runIdempotentAdminAction(
+      db,
+      "backfill-depegs",
+      request("ordered", "dryRun=false&batch=1"),
+      execute,
+    );
 
-    await expect(runIdempotentAdminAction(db, "backfill-depegs", request, execute)).rejects.toThrow("boom");
-
-    const history = db.getHistory();
-    expect(
-      history.some(
-        (entry) => entry.sql.includes("UPDATE admin_idempotency_keys SET response_status") && entry.binds[0] === -2,
-      ),
-    ).toBe(true);
-    expect(
-      history.filter(
-        (entry) => entry.sql.includes("DELETE FROM admin_idempotency_keys") && entry.sql.includes("request_hash = ?"),
-      ).length,
-    ).toBeGreaterThanOrEqual(2);
-    expect(JSON.parse(warnSpy.mock.calls[0]?.[0] as string)).toMatchObject({
-      scope: "admin",
-      level: "warn",
-      event: "idempotency_execution_cleanup_failed",
-      route: "backfill-depegs",
-      source: "admin_idempotency_keys",
-      errorMessage: "pending cleanup delete failed",
-    });
-    expect(JSON.parse(errorSpy.mock.calls[0]?.[0] as string)).toMatchObject({
-      scope: "admin",
-      level: "error",
-      event: "idempotency_terminal_failure_replay_persist_failed",
-      route: "backfill-depegs",
-      source: "admin_idempotency_keys",
-      errorMessage: "failure-state [sql]",
-    });
-    expect(db.getRecord("backfill-depegs", "abc-final-cleanup")).toBeUndefined();
-
-    const retry = await runIdempotentAdminAction(db, "backfill-depegs", request, execute);
-    expect(retry.status).toBe(200);
-    expect(calls).toBe(2);
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(calls).toBe(1);
   });
 });

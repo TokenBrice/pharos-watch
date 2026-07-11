@@ -137,6 +137,16 @@ function pickMetaYieldUrl(stablecoinId: string): string | null {
   return meta.links?.[0]?.url ?? liveDisplay?.url ?? null;
 }
 
+function resolveLinkedVariantSourceOwnerId(stablecoinId: string, sourceKey: string | null | undefined): string | null {
+  const prefix = "linked-variant:";
+  if (!sourceKey?.startsWith(prefix)) return null;
+
+  const ownerId = sourceKey.slice(prefix.length).split(":", 1)[0]?.trim();
+  if (!ownerId) return null;
+  const ownerMeta = TRACKED_META_BY_ID.get(ownerId);
+  return ownerMeta?.variantOf === stablecoinId ? ownerId : null;
+}
+
 export function resolveYieldSourceUrl(params: {
   stablecoinId: string;
   sourceKey?: string | null;
@@ -162,7 +172,9 @@ export function resolveYieldSourceUrl(params: {
     return overrideByLabel;
   }
 
-  // Auto-generated source keys are not stable link targets; prefer source-label
-  // mappings and curated coin links instead of attempting to deep-link by pool id.
-  return pickMetaYieldUrl(params.stablecoinId);
+  // Auto-generated source keys are not stable link targets. A linked wrapper is
+  // owned by the child encoded in its validated source key, so its retained
+  // alternatives must fall back to the child venue rather than the parent issuer.
+  const sourceOwnerId = resolveLinkedVariantSourceOwnerId(params.stablecoinId, params.sourceKey);
+  return pickMetaYieldUrl(sourceOwnerId ?? params.stablecoinId);
 }

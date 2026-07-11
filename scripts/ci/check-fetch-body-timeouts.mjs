@@ -5,7 +5,7 @@ import { extname, relative, resolve } from "node:path";
 import { collectSourceFiles, runAsCli } from "../lib/source-files.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
-const DEFAULT_ROOTS = ["worker/src/cron", "worker/src/lib"];
+const DEFAULT_ROOTS = ["worker/src/api", "worker/src/cron", "worker/src/lib"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
 /** @type {Set<string>} */

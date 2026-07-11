@@ -22,6 +22,30 @@ function formatCount(value: number | null): string {
   return Math.round(value).toLocaleString();
 }
 
+function formatCapacityForecast(capacity: NonNullable<D1UsageSummary["capacity"]>): {
+  value: string;
+  subtext: string;
+} {
+  if (capacity.daysUntilExhaustion != null) {
+    return {
+      value: `${capacity.daysUntilExhaustion.toLocaleString()} days`,
+      subtext: capacity.nextThresholdAt != null && capacity.nextThresholdPercent != null
+        ? `${capacity.nextThresholdPercent}% near ${new Date(capacity.nextThresholdAt * 1000).toLocaleDateString()}`
+        : "Projected time to the 10 GB limit",
+    };
+  }
+  if (capacity.forecastBasis === "non-growing") {
+    return {
+      value: "No growth",
+      subtext: `Flat or shrinking over ${capacity.forecastSpanHours.toLocaleString()}h`,
+    };
+  }
+  return {
+    value: "Collecting",
+    subtext: `${capacity.sampleCount.toLocaleString()} samples across ${capacity.forecastSpanHours.toLocaleString()}h`,
+  };
+}
+
 export function D1UsageCard({
   summary,
   error,
@@ -42,12 +66,13 @@ export function D1UsageCard({
   }
 
   const checkedAgeSeconds = Math.max(0, nowSeconds - summary.checkedAt);
+  const capacityForecast = summary.capacity ? formatCapacityForecast(summary.capacity) : null;
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base">D1 Usage</CardTitle>
+          <CardTitle as="h3" className="text-base">D1 Usage</CardTitle>
           <span className="text-xs text-muted-foreground">
             checked {formatElapsedSeconds(checkedAgeSeconds)} ago
           </span>
@@ -58,8 +83,19 @@ export function D1UsageCard({
           <StatTile
             label="Database Size"
             value={formatBytes(summary.databaseSizeBytes)}
-            subtext={summary.numTables != null ? `${formatCount(summary.numTables)} tables` : undefined}
+            subtext={summary.capacity
+              ? `${summary.capacity.utilizationPercent}% used · ${summary.capacity.thresholdState}`
+              : summary.numTables != null
+                ? `${formatCount(summary.numTables)} tables`
+                : undefined}
           />
+          {summary.capacity && capacityForecast ? (
+            <StatTile
+              label="Capacity Forecast"
+              value={capacityForecast.value}
+              subtext={capacityForecast.subtext}
+            />
+          ) : null}
           <StatTile
             label="Rows Read (24h)"
             value={formatCount(summary.rowsRead24h)}
@@ -81,6 +117,11 @@ export function D1UsageCard({
           <div>
             Database: {summary.databaseName ?? "unknown"} · {summary.databaseId}
           </div>
+          {summary.capacity && summary.numTables != null ? (
+            <div>
+              Tables: {formatCount(summary.numTables)} · capacity observed {formatElapsedSeconds(Math.max(0, nowSeconds - summary.capacity.observedAt))} ago
+            </div>
+          ) : null}
           <div>
             Window: {new Date(summary.windowStart * 1000).toLocaleString()} to {new Date(summary.windowEnd * 1000).toLocaleString()}
           </div>

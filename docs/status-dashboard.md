@@ -1,6 +1,6 @@
 # Status Dashboard
 
-Operational reference for the split status surfaces: public `/status/` read-only health monitoring and Access-gated `/admin/` operator triage, including backend status computation, hysteresis state machine, discrepancy detection, endpoint probing, and inline admin actions.
+Operational reference for the split status surfaces: public `/status/` read-only health monitoring and Access-gated route-based operator workspaces under `/admin/` and `/admin-api/`, including backend status computation, hysteresis, discrepancy detection, endpoint probing, guarded actions, credential operations, and durable audit history.
 
 ---
 
@@ -22,8 +22,14 @@ The operator dashboard combines ten signals:
 The repo now ships two related surfaces:
 
 - `/status/`: public, read-only health board backed by `/api/health` plus public browser probes
-- `/admin/`: Access-protected operator dashboard backed by `/api/admin/*` proxy routes and the admin-only `/api/status` / `/api/status-history` worker endpoints
-- `/admin-api/`: Access-protected API management dashboard for API keys plus self-serve API key requests
+- `/admin/`: Triage workspace
+- `/admin/pipeline/`: data-quality, market, reserve, yield, storage, integrity, and discovery workbench
+- `/admin/reliability/`: endpoint, dependency, demand, and cache reliability workbench
+- `/admin/crons/`: grouped scheduler workbench
+- `/admin/actions/`: guarded operator action catalog and execution history
+- `/admin/comms/`: Telegram delivery operations and audience coverage
+- `/admin/history/`: incident, action, and credential activity history
+- `/admin-api/`: API-key inventory and lifecycle workbench
 
 The active frontend operator mode is now:
 
@@ -40,21 +46,24 @@ The active frontend operator mode is now:
 - Public page: `src/app/status/page.tsx`
 - Public client: `src/app/status/client.tsx`
 - Operator page: `src/app/admin/page.tsx`
-- Operator client: `src/app/admin/client.tsx`
-- Dashboard model hook: `src/hooks/use-status-dashboard-model.ts`
+- Operator layout: `src/app/admin/layout.tsx`
+- Ops chrome: `src/components/ops-shell.tsx`
+- Workspace registry: `src/lib/admin-workspaces.ts`
+- Workspace clients: `src/app/admin/{pipeline,reliability,crons,actions,comms,history}/client.tsx`
+- API-management client: `src/app/admin-api/client.tsx`
 - Ops host gate: `functions/admin/[[path]].ts`
 - Ops proxy route: `functions/api/admin/[[path]].ts`
 - Pure derived-data helpers: `src/lib/status-dashboard-model.ts`
 - Decomposed UI components: `src/components/status/*`
-- The `/admin/` page shell adds a command-center top fold above the lane stack:
-  - a compact triage header with overall status, recovery-hold chip when applicable, holding age, `FreshnessIndicator`, `RefreshCountdown`, and sign-out
+- The shared `OpsShell` owns compact private chrome, route navigation, theme, public-status, and sign-out controls. It does not mount the public event tape, public navigation, feedback control, or public footer.
+- The `/admin/` Triage workspace provides the command-center top fold:
+  - a compact triage header with the three independent verdict axes (`Service`, `Evidence`, and `Intervention`), recovery-hold context, `FreshnessIndicator`, and `RefreshCountdown`
   - blocker, cron-error, public-health, watch, reserve-drift, and classification-warning summary badges
-  - a `Blockers` card capped to the top three blockers until expanded
-  - a `Needs attention` queue that keeps urgency dynamic without reordering the primary workspace map
-  - a state-machine / probe / discrepancy diagnostics disclosure owned by the triage layer
+  - deduplicated blockers and a `Needs attention` queue ordered lexicographically by severity, public impact, evidence risk, persistence, count, and stable workspace order; recommended actions stay attached to their causal lane instead of adding a duplicate Actions entry
+  - a state-machine / probe / discrepancy diagnostics disclosure whose deep content mounts only while open; it auto-expands only on the first evaluated signal after evidence loads, and later signals surface a `New signal` badge on the collapsed summary instead of forcing the section open (`src/app/admin/use-auto-expand.ts`)
   - a promoted `Recommended Now` action strip derived from blocking causes and unhealthy cron lanes
-  - a `NoticeRail` below the top fold for client-stale, public-health divergence, and hook fetch failures
-  - a sticky `LongformScrollspyNav` rail labeled `Jump to Lane`, driven by fixed `sections` while the urgency-sorted queue uses `attentionSections`
+  - explicit stale-client, public-health divergence, and background-fetch notices that preserve the last good payload
+  - a compact `Credentials` lifecycle summary (`src/components/status/credential-summary-card.tsx`): active, expiring-soon, expired, and non-expiring counts plus a 7-day rotate/deactivate audit-anomaly count, derived from the existing `/api/api-keys` inventory and global audit-log reads with the same predicates as the API Management summary. It renders counts only — no rows, editors, or mutations — and links lifecycle work to `/admin-api/`. Missing evidence renders as `Unknown`, never zero.
 - `/admin/` disables indexing (`robots: { index: false, follow: false }`)
 - `/status/` stays read-only, uses only public read endpoints, and is public/indexable through its route metadata and sitemap entry
 - The public `/status/` top fold uses `PublicStatusHero`: a headline row, conditional warning paragraph, four-metric strip, and compact metadata footer with browser-sync timing and refresh control.
@@ -111,12 +120,16 @@ The active frontend operator mode is now:
   - Strips `/api/admin` and forwards to `ops-api.pharos.watch` with `CF-Access-Client-Id` / `CF-Access-Client-Secret`
   - Allows only admin routes and shared dynamic-admin matches from `shared/lib/api-endpoints/`
   - Verifies the operator's UI Access token against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD`, accepting either `Cf-Access-Jwt-Assertion` or a same-origin `cf-access-token` / `CF_Authorization` session token when the assertion header is absent
-  - Forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request; browser callers never send Access service-token headers directly
-  - Reflects a narrowed response-header set (`Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Idempotent-Replay`) back into the app shell
+  - Forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request; after signature verification, it injects the normalized human email from the UI Access JWT for audit attribution and ignores browser-supplied actor headers
+  - Reflects a narrowed response-header set (`Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, `X-Idempotent-Replay`) back into the app shell
   - Converts upstream timeouts into operator-visible `504` JSON errors; non-timeout fetch failures and Access redirect responses still return `502`
-- `src/hooks/use-status-dashboard-model.ts`
-  - Owns the polling orchestration for `useStatus`, `useHealth`, `useEndpointProbes`, `useStatusHistory`, and `useRequestSourceStats`
-  - Derives the operational lane summaries, fixed workspace order, severity-ranked attention queue, notice rail entries, cross-surface status deltas, and the sync-floor freshness view used by the page shell
+- Workspace clients own only the queries their route requires. Triage does not mount credential inventory rows, endpoint matrices, cache tables, or healthy cron rows; Reliability owns endpoint/demand reads, History owns transition and audit reads, and API Management owns credential lifecycle mutations. Triage additionally reads the credential inventory and global audit log for its counts-only lifecycle summary.
+- `src/lib/status-dashboard-model.ts`
+  - Provides pure status derivations and cron group construction without owning React polling or a root five-second clock
+- `src/hooks/use-critical-ops-model.ts`
+  - Builds the memoized Triage/Actions dashboard model from status, public health, and critical browser probes
+  - The model is memoized on its actual data dependencies and rebuilds only when query evidence changes or a required query crosses the staleness boundary (`STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs`); there is no free-running interval clock at the workspace root
+  - Relative-time labels (dashboard fetch age, diagnostics sync floor) self-update inside the `FreshnessIndicator` leaf component instead of rerendering the workspace
 - `src/lib/status/action-recommendations.ts`
   - Shared recommendation engine reused by the status model and status UI components
 - `src/lib/status/cron-config.ts`
@@ -124,7 +137,7 @@ The active frontend operator mode is now:
 - `src/components/longform-scrollspy-nav.tsx`
   - Applies sticky section navigation without re-running hash alignment on every live refresh, so polling does not snap operators back to an anchored section mid-scroll
 - `src/components/status/telegram-bot-stats.tsx`
-  - Renders Telegram subscriber adoption metrics, top subscribed coins, custom-preference / quiet-hour counts, the latest `dispatch-telegram-alerts` delivery summary, and the safety-alert source-cache state when safety alerts are suppressed
+  - Renders delivery health, shared backlog-policy evidence, permanent failures, retries, dispatch results, and per-alert delivery before a separate audience-coverage section. Missing optional telemetry remains `Unknown`, never zero.
 - Cron telemetry is grouped by trigger slot and rendered as a matrix:
   - 15-minute core ingestion / score recompute
   - 5-minute Telegram dispatch lane for subscriber alerts
@@ -132,26 +145,27 @@ The active frontend operator mode is now:
   - 30-minute charts / liquidity jobs plus the decoupled DEWS / PSI DB-only trigger
   - hourly core yield publisher (`sync-yield-data`); `sync-blacklist` is on a dedicated 6-hourly trigger, and the reserve + redemption + Kinesis lane is on a dedicated 4-hourly trigger; `sync-dex-discovery` is on a dedicated 2-hourly trigger
   - daily snapshot / digest / coverage-discovery jobs
-  - Rows show state, operator-friendly label, raw job id, trigger, last run, last good run, duration, item count, and error/skip streaks
-  - A selected-row detail panel owns full metadata, error text, in-flight progress, and recent run dots so long metadata does not stretch the default scan view
+  - The default attention filter does not mount healthy rows; operators can search and filter by state, impact, trigger group, and running status
+  - Trigger boundaries remain visible, with severity ordering inside each group and stable registry order for ties
+  - Rows show state, impact class, operator-friendly label, raw job id, trigger, last run, last good run, readable/exact duration, item count, and evidence markers
+  - A selected-row detail panel owns full metadata, error text, in-flight progress, attempt records, stale artifacts, latest events, and accessible recent-run outcomes
   - Slot execution metadata includes compact child outcome counts (`jobsAttempted`, `jobsSucceeded`, legacy `jobsRun`, `jobsSkipped`, `jobsNeutralSkipped`, `jobsDegraded`, `jobsErrored`, `budgetOnlyJobs`) so a best-effort slot can surface degraded/error children without hiding later jobs that still ran. Expected no-op skips, such as an empty manual digest poll, increment `jobsNeutralSkipped` instead of `jobsSkipped`.
-  - Budget-only scheduled surfaces are exposed separately through `budgetOnlySurfaces` instead of being folded into `crons`: Telegram registration reconciliation and the manual digest-trigger poll report cache-backed checked-at time, duration, due/processed counts, outcome, skip reason, and bounded metadata.
+  - Budget-only scheduled surfaces are exposed separately through `budgetOnlySurfaces` instead of being folded into `crons`: Telegram registration reconciliation, the durable alert-broker delivery drain, and the manual digest-trigger poll report cache-backed checked-at time, duration, due/processed counts, outcome, skip reason, and bounded metadata. Broker retry telemetry is independent of Telegram bot-token preflight.
   - When a leased job is still running, rows and the detail panel surface `running` / `running-stale` state from `crons[*].inFlight`
   - Orphaned progress rows and expired leases are suppressed from `crons[*].inFlight` and exposed as `crons[*].staleArtifacts`, with aggregate counters in `summary.staleCronArtifacts`, `summary.orphanedCronProgressRows`, and `summary.expiredCronLeases`
   - Shared display metadata now comes from `shared/lib/cron-jobs.ts`, which also feeds worker interval expectations
   - Job-specific metadata summaries are resolved through `src/components/status/cron-metadata-summary.ts` and clamped in the row/details split
-- The client now groups widgets into fixed operator workspaces instead of one flat vertical list:
-  - `Triage`: current incident state, blockers, watch count, recommended action, last transition, query freshness, and raw diagnostics
-  - `Pipeline`: tabbed inspection for `Quality`, `Markets`, `Reserves`, `Yield`, `Storage`, and `Discovery`; the initial tab follows active issues
+- The operator UI uses fixed route workspaces instead of a single scrolling lane stack:
+  - `Triage`: current incident state, blockers, watch count, recommended action, last transition, query freshness, raw diagnostics, and a counts-only credential lifecycle summary linking to API Management
+  - `Pipeline`: URL-backed tab inspection for `Quality`, `Markets`, `Reserves`, `Yield`, `Storage`, `Integrity`, and `Discovery`; inactive modes are not mounted
   - Mint/burn reconciliation now defaults to the six highest-severity rows and exposes the long insufficient-source tail behind a `See all` disclosure button
-  - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, total site-vs-external demand attribution (Pages delivery split, worker-lane load, top route groups, recent buckets), keyed API-key load, and cache freshness; manual action routes are no longer rendered as default `Not probed` noise
-  - `Cron Lanes`: trigger-grouped cron matrix with unhealthy/degraded groups first and fully healthy groups collapsed by default
-  - `Actions`: recommended actions plus the recovery/backfill, audit/diagnostic, and communication action shelf
-  - `Credentials`: API-key inventory table, create drawer, edit drawer, rotate, and deactivate workflows
-  - `Comms`: Telegram delivery telemetry, alert coverage, dispatch summary, top subscribed coins, and pending delivery details
-  - `Incident History`: filtered incident timeline windows
-- Lane order is stable for operator muscle memory: `Triage`, `Pipeline`, `Cron Lanes`, `Reliability`, `Actions`, `Credentials`, `Comms`, and `Incident History`. Urgency is surfaced separately in the triage `Needs attention` queue.
-- Runtime warnings (`client stale`, `/api/health` divergence, hook fetch failures) are collapsed into a shared notice rail above the sticky lane nav instead of rendering as separate free-floating banners.
+  - `Reliability`: URL-backed `Impact`, `Endpoints`, `Dependencies`, `Demand`, and `Cache` modes; manual mutation routes are excluded from default probe noise
+  - `Crons`: grouped, filterable attention workbench with a sticky selected-row evidence panel and separately grouped budget-only surfaces
+  - `Actions`: searchable intent/risk catalog with one shared execution dialog, direct dry runs where supported, structured results, and persistent action history
+  - `Comms`: delivery-first Telegram operations followed by separate audience coverage
+  - `History`: window, severity, surface, cause, and public-impact filters plus correlated incident, action, and credential activity
+  - `API Management`: attention-first, searchable, filterable, sortable, paginated credential inventory with one selected-row editor and one-time token acknowledgement
+- Workspace order is stable for operator muscle memory: `Triage`, `Pipeline`, `Reliability`, `Crons`, `Actions`, `Comms`, `History`, and `API Management`. Urgency stays in Triage rather than reordering navigation.
 
 ### Endpoint groups
 
@@ -323,6 +337,8 @@ Additional response fields:
 - `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
 - `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
 - `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
+- `producerHeads`: one row per canonical schedule/job/path/kind, including budget-only paths, with separate last invocation/completion, productive output, publication, invocation ID, Worker version, and observed/missing state
+- `alertBroker`: active/pending/critical condition counts, oldest incident, bounded condition keys, failed deliveries, missing targets, and query health; the same summary contributes to public `/api/health` so shared facts classify consistently
 
 ### Cron error escalation
 
@@ -338,7 +354,7 @@ Availability escalation on cron errors follows a transient-vs-sustained split:
 - `dependencyHealth`: admin-only derived dependency matrix built from existing `caches`, `crons`, and `publicationHealth` plus `shared/lib/data-dependency-registry.ts`. It groups degraded/stale downstream symptoms under the most likely stale upstream dependency (for example DEX liquidity -> DEWS/report-card/redemption symptoms) without changing `availabilityStatus`, `dataQualityStatus`, or publication behavior.
 - `canaries`: admin-only latest structural canary results from `worker_canary_runs`, written by `data-invariant-canary` when `WORKER_CANARY_MODE` is enabled. It covers DEX publication/current-row invariants, stablecoins-cache active coverage, PSI/DEWS latest samples, and report-card cache generation/methodology freshness without changing producer behavior.
 - `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from CoinGecko spot
-- `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) sourced from Cloudflare's D1 control-plane and analytics APIs when the dedicated worker bindings are configured
+- `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) plus an additive `capacity` assessment with 60/75/90% state, 30-day growth, next-threshold, and exhaustion forecasts, sourced from Cloudflare's D1 control-plane and analytics APIs when the dedicated worker bindings are configured
 - `reserveDrift`: optional array of coins where the independent live-derived collateral quality score diverges from curated by more than 15 points (`coinId`, `liveCollateralScore`, `curatedCollateralScore`, `delta`), sorted by delta descending. Omitted when no drift exceeds the threshold.
 - `classificationWarnings`: optional array of decentralized-governance coins where centralized custody fraction exceeds 50% (`coinId`, `governance`, `centralizedCustodyPct`, `threshold`). Signals potential governance reclassification candidates. Omitted when no warnings.
 
@@ -479,6 +495,9 @@ Response includes:
 3. latest probe aggregate
 4. discrepancy summary
 5. transition list (`limit` query param, max 200)
+6. `hasMore` completeness evidence (`true` when another matching row exists, `false` for a complete matching window, and `null` when completeness could not be determined)
+
+The incident-history workspace only makes negative deployment-correlation statements for a fresh response with `hasMore === false`. Row-limited, retained, fallback, and indeterminate results remain visibly partial and keep correlation Unknown.
 
 ---
 
@@ -513,7 +532,7 @@ Manual actions are rendered from `getStatusPageActions()` and executed only on u
 
 ---
 
-## Inline Admin Actions
+## Guarded Admin Actions
 
 Status-page manual actions are router-dispatched from shared endpoint metadata (`shared/lib/api-endpoints/`):
 
@@ -534,20 +553,35 @@ Status-page manual actions are router-dispatched from shared endpoint metadata (
 - `GET /api/audit-depeg-history?dry-run=true`
 - `GET /api/backfill-dews`
 
-The UI now uses these actions in two ways:
+The UI uses these actions in two ways:
 
-- a complete operator tool shelf in the `Actions` workspace (`All actions`)
+- a searchable intent/risk catalog in the `Actions` workspace
 - contextual recommendations derived from blocking causes and availability-impacting cron lanes (`Recommended now`)
 
-The complete operator tool shelf is grouped into recovery/backfill, audit/diagnostic, and communication actions.
+The catalog groups inspect, dry-run, recovery, communication, and destructive behavior. Shared endpoint metadata is canonical for risk, scope, prerequisites, expected duration, dry-run support, result mode, and audit ownership. Single-asset execution uses the tracked client registry picker and derives the endpoint's canonical stablecoin ID or symbol from that selection; arbitrary free-form targets are not accepted. One provider-owned execution dialog handles confirmation, readiness, direct dry run, structured results, raw debugging output, and focus restoration.
 
-Each action execution is confirmed, sent with an `Idempotency-Key` when supported by the worker, logged locally in the page, and triggers a status/probe/history refresh on completion.
+Mutations use one stable `Idempotency-Key` per operator intent. Double submission coalesces, known replay reuses the same result, and an uncertain response keeps the same key available for a safe retry; starting a genuinely new intent creates a new key. The proxy preserves `Idempotency-Key`, `X-Idempotent-Replay`, and `X-Execution-Certainty`, so the browser can distinguish confirmed, replayed, and unknown outcomes.
+
+Every router-dispatched status-page action is written to `admin_action_audit_log`, including validation failures, handler errors, execution-unknown responses, and idempotent replay. The catalog audit wrapper stores allowlisted metadata only and hashes the idempotency identity; it never stores authorization, tokens, raw request bodies, or raw responses. Migration `0186_admin_action_audit_intent_key.sql` adds the nullable intent identity and a partial unique constraint on `(action, intent_key)` so replay backfills missing audit rows without duplicating authoritative executions.
+
+Any handler response at HTTP 5xx after idempotent execution has started is converted to durable `execution_unknown`; the same key replays that unknown state and never runs the effect again. If the action result exists but its canonical audit write fails, the router returns `503 audit_persistence_failed` with the same idempotency metadata. Retrying that key replays the stored result and attempts to backfill the audit row without repeating the action.
+
+`GET /api/admin-action-log?limit=100` feeds persistent execution history. The Actions and History workspaces reconcile it with current-session state, but session-only results remain explicitly labeled until the deployed backend can return their durable row.
+
+Persisted audit coverage boundary (intentional):
+
+- Every catalog action (`statusPageAction` endpoints) is audited canonically at the router, success or failure, so the Actions workbench catalog has complete server-side coverage once a request reaches the Worker.
+- Executions that never reach the Worker (client network failure or abort before a response) can only exist as session-scoped entries; they are labeled `session` in the workbench and legitimately disappear on reload. Their idempotency key remains reusable for a safe retry that will produce the durable row.
+- Non-catalog operator mutations (cron lease/kill controls, circuit-breaker reset, Telegram pending/resend/broadcast, bulk discovery dismissal) emit handler-level `admin_action_audit_log` records; credential lifecycle mutations audit into `api_key_audit_log` instead and surface through the API Management and History workspaces.
+- `POST /api/admin/reserve-recovery-fault-injection` deliberately writes no admin audit record: it is a workers.dev preview-host-only test harness that returns `403` on production hosts.
 
 `POST /api/backfill-mint-burn` is operator-safe from the status page even without an explicit `configKey`: the worker auto-selects the most behind tracked mint/burn config with a critical-first / major-symbol-first policy and returns the selected config in the response payload.
 
 Mutating admin paths are protected by method guardrails:
 
 - `GET` on mutating admin path -> `405` with `Allow: POST`
+- missing or invalid action targets fail validation before handler dispatch
+- uncertain execution returns `X-Execution-Certainty: unknown` and remains retryable with the same intent key
 
 ---
 
@@ -598,12 +632,14 @@ Data is sourced from the admin-only `GET /api/status` payload. The worker supple
 Renders in the Admin Pipeline `Storage` tab beside pipeline freshness. It shows:
 
 - current D1 database size
+- current utilization state against the 10 GB ceiling
+- next-threshold and exhaustion forecast when at least three samples span 24 hours
 - table count
 - read-replication mode and region
 - trailing 24-hour read/write query counts
 - trailing 24-hour rows-read/rows-written counts
 
-Data is sourced from the admin-only `GET /api/status` payload. The worker supplement uses the same Cloudflare D1 info + analytics calls that `wrangler d1 info` uses: a D1 control-plane fetch for database metadata plus a GraphQL `d1AnalyticsAdaptiveGroups` query over the trailing 24 hours. The field stays `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker. Loader/config failures are surfaced through `sectionErrors.d1Usage`.
+Data is sourced from the admin-only `GET /api/status` payload. The worker supplement uses the same Cloudflare D1 info + analytics calls that `wrangler d1 info` uses: a D1 control-plane fetch for database metadata plus a GraphQL `d1AnalyticsAdaptiveGroups` query over the trailing 24 hours. The scheduled status self-check records at most one capacity sample per UTC hour and routes threshold transitions through the durable alert broker. The field stays `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker. Loader/config failures are surfaced through `sectionErrors.d1Usage`.
 
 ## Mint/Burn Reconciliation Card
 
@@ -632,15 +668,38 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 
 ---
 
+## Operator Workspace Rollout (2026-07-10)
+
+- Replaced the single long operator page with eight stable route workspaces and private ops-only chrome.
+- Separated service state, evidence quality, and intervention need so a healthy availability verdict cannot hide missing or stale evidence.
+- Added focused Pipeline, Reliability, Cron, Actions, Comms, History, and API-key workbenches with URL-backed modes and bounded mounting.
+- Made catalog actions and credential lifecycle mutations replay-safe, surfaced execution certainty through the proxy, and unified durable action/credential activity in History.
+- Added sanitized authenticated browser fixtures across 320, 390, 768, 1024, and 1440 px plus axe, 200% text reflow, light/dark, forced-colors, and reduced-motion coverage.
+
+## Rendering and Refresh Model (2026-07-11)
+
+- No workspace owns a free-running root clock. The Triage/Actions model hook re-anchors when query evidence refreshes and wakes again only at the per-query staleness boundary, so wall-clock time cannot rebuild the dashboard model between those events. Relative-time labels tick inside `FreshnessIndicator` leaves.
+- Collapsed `<details>` disclosures mount their content only while open (`src/components/status/lazy-details.tsx`): healthy endpoint-probe, cache-freshness, and circuit-breaker tables, budget-only surface evidence rows, and the Triage diagnostics panel keep no hidden subtree in the DOM when closed.
+- Triage auto-expansion is evaluated once, during the first render that carries definite evidence, so the primary shell paints in its final layout. Late-arriving issues badge the collapsed diagnostics summary; they never force a section open or move the operator mid-task.
+- Refetches keep the last successful payload visible; `WorkspaceStatusBoundary` shows a background-failure notice instead of blanking the workspace.
+- Default Triage render budgets are guarded by `src/app/admin/__tests__/triage-budgets.test.tsx`: under 60 interactive main-area controls and under 100 table body rows on the initial healthy render, with the diagnostics disclosure closed and unmounted.
+- Display-font assets: an earlier ops-host review observed 404s for the licensed `ABCWhyteInktrap-Regular.woff2` / `ABCWhyteInktrap-Bold.woff2` files. Clean builds intentionally standardize on the tracked Bricolage Grotesque display face and emit no references to the licensed Whyte files (they are gitignored and staged only via `npm run install:whyte-fonts`), so the ops origin no longer issues those requests. The ops chrome uses the same tracked font stack as the public host.
+
+---
+
 ## Related Files
 
 | File                                                 | Role                                                                                                                                                                                                                                                                                   |
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/app/status/client.tsx`                          | Public read-only system health board backed by `/api/health` plus public browser probes                                                                                                                                                                                                |
-| `src/app/admin/client.tsx`                           | Ops-host-only operator dashboard orchestration shell with triage, cron telemetry, actions, credentials, and communications workspaces                                                                                                                                                    |
+| `src/app/admin/layout.tsx`                           | Ops-host-only layout that composes `OpsShell` with the shared action execution provider                                                                                                                                                                                                  |
+| `src/components/ops-shell.tsx`                       | Private header, workspace navigation, theme/public-status controls, sign-out, host gate, and skip target                                                                                                                                                                                  |
+| `src/lib/admin-workspaces.ts`                        | Stable route registry and legacy hash-to-workspace mapping                                                                                                                                                                                                                                |
+| `src/app/admin/*/client.tsx`                         | Route-owned polling and focused Pipeline, Reliability, Cron, Actions, Comms, and History workbenches                                                                                                                                                                                       |
+| `src/app/admin-api/client.tsx`                       | Private searchable, filterable, paginated API-key inventory and lifecycle workbench                                                                                                                                                                                                       |
 | `functions/admin/[[path]].ts`                        | Pages Functions host gate for `/admin/`; returns `404` outside `ops.pharos.watch`, otherwise serves the static admin route asset                                                                                                                                                       |
 | `src/components/status/*`                            | Decomposed status UI modules (banner, facts, diagnostics, probe grid, admin actions, API keys, Telegram telemetry, cards, and tables). Admin cron rows are grouped by trigger slot, show trigger/isolation metadata, and keep verbose run metadata behind a selected-row detail panel. |
-| `src/components/status/telegram-bot-stats.tsx`       | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                                                                                          |
+| `src/components/status/telegram-bot-stats.tsx`       | Telegram delivery operations, backlog policy, retry/failure evidence, per-alert results, and separately grouped audience coverage                                                                                                                                                         |
 | `src/components/status/discovery-candidates.tsx`     | Discovery candidates card — untracked stablecoin list with dismiss actions                                                                                                                                                                                                             |
 | `src/components/status/price-source-health.tsx`      | Price source health card — confidence distribution, source breakdown, divergences                                                                                                                                                                                                      |
 | `src/components/status/yield-health.tsx`             | Yield health card — rankings count/freshness/delta, safety hydration coverage, supplemental cache age, benchmark fallback/age, coverage-audit age/queue, and runbook link                                                                                                               |

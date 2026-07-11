@@ -32,7 +32,7 @@ function buildScriptSrc(options: ContentSecurityPolicyOptions): string {
     "'self'",
     ...(options.nonce ? [`'nonce-${options.nonce}'`] : []),
     ...(options.telegramMiniApp ? ["https://telegram.org"] : []),
-    "https://www.googletagmanager.com",
+    ...(!options.telegramMiniApp ? ["https://www.googletagmanager.com"] : []),
   ];
   return scriptSrc.join(" ");
 }
@@ -41,13 +41,19 @@ export function buildStaticContentSecurityPolicy(options: ContentSecurityPolicyO
   const frameAncestors = options.telegramMiniApp
     ? "frame-ancestors https://telegram.org https://*.telegram.org"
     : "frame-ancestors 'none'";
+  const googleImageSources = options.telegramMiniApp
+    ? ""
+    : " https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com";
+  const googleConnectSources = options.telegramMiniApp
+    ? ""
+    : " https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com";
 
   return [
     "default-src 'self'",
     `script-src ${buildScriptSrc(options)}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://pbs.twimg.com https://abs.twimg.com data:",
-    `connect-src 'self' ${API_ORIGIN} https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com`,
+    `img-src 'self' https://coin-images.coingecko.com${googleImageSources} https://pbs.twimg.com https://abs.twimg.com data:`,
+    `connect-src 'self' ${API_ORIGIN}${googleConnectSources}`,
     "font-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",

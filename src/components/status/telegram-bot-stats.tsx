@@ -1,320 +1,658 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
-import type { StatusResponse, StatusSectionError, TelegramAlertType } from "@shared/types";
+import Link from "next/link";
+import { AlertTriangle, ArrowRight, CircleCheck, CircleHelp, CircleX, ExternalLink } from "lucide-react";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-thresholds";
-
-const PER_ALERT_TYPE_LABELS: Record<TelegramAlertType, string> = {
-  dews: "DEWS",
-  depeg: "Depeg",
-  safety: "Safety",
-  launch: "Launch",
-  reserve: "Reserve",
-};
-
-const TELEGRAM_LIFECYCLE_SNAPSHOT_STALE_SECONDS = TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS * 2;
+import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { Button } from "@/components/ui/button";
+import type {
+  CommsDeliveryHealth,
+  CommsPerAlertDeliveryRow,
+  CommsPriorityMetric,
+  CommsWorkbenchModel,
+} from "@/lib/comms-workbench-model";
+import { cn } from "@/lib/utils";
 
 interface TelegramBotStatsProps {
-  telegramBot: StatusResponse["telegramBot"];
-  dispatchCron?: StatusResponse["crons"][string];
-  error?: StatusSectionError;
-  nowSeconds: number;
+  model: CommsWorkbenchModel;
 }
 
-function renderMetric(label: string, value: string | number | null | undefined) {
+const HEALTH_PRESENTATION: Record<CommsDeliveryHealth, { label: string; className: string; icon: typeof CircleCheck }> =
+  {
+    healthy: {
+      label: "Healthy",
+      className: "text-green-700 dark:text-green-300",
+      icon: CircleCheck,
+    },
+    degraded: {
+      label: "Degraded",
+      className: "text-amber-700 dark:text-amber-300",
+      icon: AlertTriangle,
+    },
+    failed: {
+      label: "Failed",
+      className: "text-red-700 dark:text-red-300",
+      icon: CircleX,
+    },
+    unknown: {
+      label: "Unknown",
+      className: "text-muted-foreground",
+      icon: CircleHelp,
+    },
+  };
+
+function formatCount(value: number | null): string {
+  return value == null ? "Unknown" : value.toLocaleString();
+}
+
+function formatDuration(value: number | null): string {
+  return value == null ? "Unknown" : formatElapsedSeconds(value);
+}
+
+function formatMilliseconds(value: number | null): string {
+  return value == null ? "Unknown" : `${value.toLocaleString()}ms`;
+}
+
+function formatTimestamp(value: number | null): string {
+  return value == null ? "Unknown" : new Date(value * 1_000).toLocaleString();
+}
+
+function formatBoolean(value: boolean | null): string {
+  return value == null ? "Unknown" : value ? "Yes" : "No";
+}
+
+function formatStatus(value: string | null): string {
+  if (value == null) return "Unknown";
+  return value.replaceAll("_", " ");
+}
+
+function MetricRow({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-mono tabular-nums">{value ?? "—"}</span>
+    <div className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-0.5 py-1.5 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <dt className="min-w-0 break-words text-muted-foreground">{label}</dt>
+      <dd
+        className={cn(
+          "min-w-0 max-w-full break-words font-mono tabular-nums [overflow-wrap:anywhere] sm:text-right",
+          valueClassName,
+        )}
+      >
+        {value}
+      </dd>
     </div>
   );
 }
 
-function formatSnapshotCapturedAt(snapshotAt: number, ageSeconds: number) {
-  return `${new Date(snapshotAt * 1000).toLocaleString()} (${formatElapsedSeconds(ageSeconds)} ago)`;
+function DeliveryHealthValue({ health }: { health: CommsDeliveryHealth }) {
+  const presentation = HEALTH_PRESENTATION[health];
+  const Icon = presentation.icon;
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 font-semibold", presentation.className)}>
+      <Icon aria-hidden="true" className="size-4 shrink-0" />
+      {presentation.label}
+    </span>
+  );
 }
 
-export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds }: TelegramBotStatsProps) {
-  if (!telegramBot) {
-    return (
-      <Card>
-        <CardContent className="py-6 text-sm text-muted-foreground">
-          {error
-            ? `Telegram bot metrics query failed: ${error.message}`
-            : "Telegram bot metrics are unavailable. This usually means the Telegram tables have not been migrated in the current environment yet."}
-        </CardContent>
-      </Card>
-    );
+function PriorityValue({ metric, model }: { metric: CommsPriorityMetric; model: CommsWorkbenchModel }) {
+  const { delivery } = model;
+  switch (metric.id) {
+    case "delivery-health":
+      return (
+        <>
+          <DeliveryHealthValue health={delivery.health} />
+          <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{delivery.healthReason}</span>
+        </>
+      );
+    case "pending-backlog":
+      return (
+        <>
+          <span className="font-mono text-lg font-semibold tabular-nums">
+            {formatCount(delivery.pendingDeliveries)}
+          </span>
+          <span className="mt-1 block text-xs text-muted-foreground">
+            {delivery.backlogAssessment === "attention"
+              ? "Shared policy needs attention"
+              : delivery.backlogAssessment === "within-policy"
+                ? "Within shared policy"
+                : "Policy assessment Unknown"}
+          </span>
+        </>
+      );
+    case "oldest-backlog":
+      return (
+        <span className="font-mono text-lg font-semibold tabular-nums">
+          {formatDuration(delivery.oldestBacklogAgeSec)}
+        </span>
+      );
+    case "permanent-failures":
+      return (
+        <span
+          className={cn(
+            "font-mono text-lg font-semibold tabular-nums",
+            (delivery.permanentFailures.total ?? 0) > 0 && "text-red-700 dark:text-red-300",
+          )}
+        >
+          {formatCount(delivery.permanentFailures.total)}
+        </span>
+      );
+    case "rate-limiting":
+      return (
+        <>
+          <span className="font-medium">
+            {delivery.retries.rateLimited == null
+              ? "Unknown"
+              : delivery.retries.rateLimited
+                ? "Rate limited"
+                : "Not rate limited"}
+          </span>
+          <span className="mt-1 block text-xs text-muted-foreground">
+            {delivery.retries.totalQueued == null
+              ? "Queued retries Unknown"
+              : `${delivery.retries.totalQueued.toLocaleString()} queued ${delivery.retries.totalQueued === 1 ? "retry" : "retries"}`}
+          </span>
+        </>
+      );
+    case "latest-dispatch":
+      return (
+        <>
+          <span className="font-medium capitalize">{formatStatus(delivery.latestDispatch.status)}</span>
+          <span className="mt-1 block font-mono text-xs tabular-nums text-muted-foreground">
+            {delivery.latestDispatch.ageSec == null
+              ? "Run age Unknown"
+              : `${formatDuration(delivery.latestDispatch.ageSec)} ago`}
+          </span>
+        </>
+      );
   }
+}
 
-  const lastDispatch = dispatchCron?.lastRun ?? null;
-  const dispatchMeta = parseTelegramDispatchCronMetadata(lastDispatch?.metadata);
-  const dispatchStatusClass = !lastDispatch
-    ? "bg-muted text-muted-foreground"
-    : lastDispatch.status === "ok"
-      ? "bg-green-500/15 text-green-700 dark:text-green-400"
-      : lastDispatch.status === "degraded"
-        ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-        : "bg-red-500/15 text-red-700 dark:text-red-400";
-  const pendingBacklog = telegramBot.pendingDeliveryBacklog;
-  const retryErrorClasses = Object.entries(telegramBot.retryErrorClassCounts ?? {})
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  const telemetryQuality = telegramBot.quality;
-  const lifecycleSnapshot = telegramBot.lifecycleSnapshot;
-  const lifecycleSnapshotAgeSeconds = lifecycleSnapshot
-    ? Math.max(0, nowSeconds - lifecycleSnapshot.snapshotAt)
-    : null;
-  const isLifecycleSnapshotStale = lifecycleSnapshotAgeSeconds != null
-    && lifecycleSnapshotAgeSeconds > TELEGRAM_LIFECYCLE_SNAPSHOT_STALE_SECONDS;
+function DeliveryPriority({ model }: { model: CommsWorkbenchModel }) {
+  return (
+    <dl className="grid min-w-0 grid-cols-1 gap-x-5 sm:grid-cols-2 xl:grid-cols-3" data-testid="comms-priority-order">
+      {model.priorityMetrics.map((metric) => (
+        <div key={metric.id} className="min-w-0 border-t border-border/60 py-3" data-metric-id={metric.id}>
+          <dt className="text-xs font-medium uppercase text-muted-foreground">{metric.label}</dt>
+          <dd className="min-w-0 pt-1 [overflow-wrap:anywhere]">
+            <PriorityValue metric={metric} model={model} />
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
-  const summaryCards = [
-    {
-      label: "Subscribers",
-      value: telegramBot.totalChats,
-      detail: `${telegramBot.alertEnabledChats} with active per-coin, global, launch, or saved alert defaults`,
-    },
-    {
-      label: "Alert-Ready Chats",
-      value: telegramBot.deliverableChats,
-      detail: `${telegramBot.subscribedChats} chats currently have saved coin follows`,
-    },
-    {
-      label: "Alert Follows",
-      value: telegramBot.totalSubscriptions,
-      detail: `${telegramBot.explicitCoinSubscriptions ?? telegramBot.totalSubscriptions} explicit, ${telegramBot.presetImpliedCoinSubscriptions ?? 0} preset-implied`,
-    },
-    {
-      label: "Pending Queue",
-      value: telegramBot.pendingDeliveries,
-      detail:
-        telegramBot.lastSubscriberActivityAt != null
-          ? `${telegramBot.pendingDisambiguations} pending replies, last activity ${formatElapsedSeconds(Math.max(0, nowSeconds - telegramBot.lastSubscriberActivityAt))} ago`
-          : `${telegramBot.pendingDisambiguations} pending replies`,
-    },
-  ];
+function RecoverySummary({ model }: { model: CommsWorkbenchModel }) {
+  const { delivery } = model;
+  if (delivery.health === "healthy") return null;
+  const presentation = HEALTH_PRESENTATION[delivery.health];
 
   return (
-    <div className="space-y-4">
-      {telemetryQuality?.status === "partial" ? (
-        <Card className="border-amber-500/35 bg-amber-500/10">
-          <CardContent className="py-3 text-sm text-amber-800 dark:text-amber-200">
-            Telegram telemetry is partial: {telemetryQuality.unavailableFields.join(", ")}
-            {telemetryQuality.errors ? (
-              <span className="block pt-1 font-mono text-xs">
-                {Object.entries(telemetryQuality.errors).map(([field, message]) => `${field}: ${message}`).join(" · ")}
-              </span>
-            ) : null}
-          </CardContent>
-        </Card>
+    <div
+      className={cn(
+        "min-w-0 border-l-2 py-2 pl-3",
+        delivery.health === "failed"
+          ? "border-red-500"
+          : delivery.health === "degraded"
+            ? "border-amber-500"
+            : "border-border",
+      )}
+      data-testid="comms-recovery-summary"
+    >
+      <p className={cn("text-sm font-medium", presentation.className)}>{delivery.healthReason}</p>
+      {delivery.backlogReasons.length > 1 ? (
+        <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+          {delivery.backlogReasons.slice(1).map((reason) => (
+            <li key={reason} className="min-w-0 break-words">
+              {reason}
+            </li>
+          ))}
+        </ul>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((card) => (
-          <Card key={card.label}>
-            <CardContent className="pt-4">
-              <div className="text-xs text-muted-foreground">{card.label}</div>
-              <div className="font-mono text-2xl font-extrabold tabular-nums text-foreground">{card.value}</div>
-              <div className="text-xs text-muted-foreground">{card.detail}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {delivery.recoveryLinks.length > 0 ? (
+        <div className="mt-3 flex min-w-0 flex-wrap gap-2">
+          {delivery.recoveryLinks.map((link) => (
+            <Button key={link.href} asChild size="sm" variant="outline" className="min-h-11 max-w-full sm:min-h-8">
+              <Link href={link.href} {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+                <span className="min-w-0 break-words">{link.label}</span>
+                {link.external ? <ExternalLink aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
+              </Link>
+            </Button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Alert Coverage</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {renderMetric("DEWS enabled", telegramBot.alertTypeChats.dews)}
-            {renderMetric("Depeg enabled", telegramBot.alertTypeChats.depeg)}
-            {renderMetric("Safety enabled", telegramBot.alertTypeChats.safety)}
-            {renderMetric("Launch enabled", telegramBot.alertTypeChats.launch)}
-            {renderMetric("All 4 alert types", telegramBot.alertTypeChats.allTypes)}
-            <div className="border-t pt-3">
-              {renderMetric("Custom preference chats", telegramBot.customPreferenceChats)}
-              {renderMetric("Quiet hours enabled", telegramBot.quietHoursEnabledChats)}
-              {renderMetric("Flags on, no coins", telegramBot.emptyAlertChats)}
-              {renderMetric("Muted with saved coins", telegramBot.mutedChatsWithSubscriptions)}
-            </div>
-            <div className="border-t pt-3">
-              <div className="mb-2 text-xs font-medium text-muted-foreground">
-                Pending delivery telemetry
-              </div>
-              {renderMetric(
-                "Oldest pending age",
-                telegramBot.oldestPendingDeliveryAgeSec != null
-                  ? formatElapsedSeconds(telegramBot.oldestPendingDeliveryAgeSec)
-                  : null,
-              )}
-              {renderMetric("Backlog due", pendingBacklog?.due)}
-              {renderMetric("Backlog deferred", pendingBacklog?.deferred)}
-              {renderMetric("Backlog expired", pendingBacklog?.expired)}
-              {renderMetric("Preset query failures", telegramBot.presetQueryFailures ?? 0)}
-              {renderMetric("Preset followers", telegramBot.activePresetFollowers ?? 0)}
-              {renderMetric("Inactive cleaned 7d", telegramBot.inactiveSubscribersCleanedThisWeek)}
-            </div>
-            {lifecycleSnapshot ? (
-              <div className="border-t pt-3">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    Lifecycle snapshot
-                  </div>
-                  {isLifecycleSnapshotStale ? (
-                    <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400">
-                      snapshot stale · {formatElapsedSeconds(lifecycleSnapshotAgeSeconds ?? 0)} old
-                    </Badge>
-                  ) : null}
-                </div>
-                {renderMetric("Snapshot date", lifecycleSnapshot.date)}
-                {renderMetric(
-                  "Snapshot captured",
-                  formatSnapshotCapturedAt(lifecycleSnapshot.snapshotAt, lifecycleSnapshotAgeSeconds ?? 0),
-                )}
-                {renderMetric("New watchers", lifecycleSnapshot.newWatchers)}
-                {renderMetric("Churned watchers", lifecycleSnapshot.churnedWatchers)}
-                {renderMetric("Reactivated watchers", lifecycleSnapshot.reactivatedWatchers)}
-                {renderMetric("Preset-implied follows", lifecycleSnapshot.presetImpliedCoinFollows)}
-              </div>
-            ) : null}
-            {retryErrorClasses.length > 0 ? (
-              <div className="border-t pt-3">
-                <div className="mb-2 text-xs font-medium text-muted-foreground">
-                  Pending retry classes
-                </div>
-                <div className="space-y-1.5">
-                  {retryErrorClasses.map(([errorClass, count]) => (
-                    <div key={errorClass} className="flex items-center justify-between gap-4 text-sm">
-                      <span className="text-muted-foreground">{errorClass}</span>
-                      <span className="font-mono tabular-nums">{count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
+function TelemetryNotice({ model }: { model: CommsWorkbenchModel }) {
+  if (model.quality.status === "complete" && !model.quality.sectionError) return null;
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Last Dispatch</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {lastDispatch ? (
-              <>
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <Badge className={dispatchStatusClass}>{lastDispatch.status}</Badge>
-                  <span className="text-muted-foreground">
-                    {formatElapsedSeconds(Math.max(0, nowSeconds - lastDispatch.startedAt))} ago
-                  </span>
-                  <span className="text-muted-foreground">{lastDispatch.itemCount ?? 0} messages counted</span>
-                </div>
-                {dispatchMeta?.skipped ? (
-                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-                    Run skipped: {dispatchMeta.skipped}
-                  </div>
-                ) : null}
-                {dispatchMeta?.safetyAlertsSuppressed ? (
-                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-                    Safety alerts suppressed: {dispatchMeta.safetyAlertSourceState ?? "missing"}
-                    {dispatchMeta.safetyAlertSourceAgeSeconds != null
-                      ? ` · source age ${formatElapsedSeconds(dispatchMeta.safetyAlertSourceAgeSeconds)}`
-                      : ""}
-                  </div>
-                ) : null}
-                {renderMetric("Subscribers notified", dispatchMeta?.subscribersNotified ?? null)}
-                {renderMetric("Messages sent", dispatchMeta?.messagesSent ?? lastDispatch.itemCount ?? null)}
-                {renderMetric("Fresh attempted", dispatchMeta?.freshAttempted ?? null)}
-                {renderMetric("Fresh retries queued", dispatchMeta?.freshRetryQueued ?? null)}
-                {renderMetric("Fresh permanent failures", dispatchMeta?.freshPermanentFailures ?? null)}
-                {renderMetric("Pending attempted", dispatchMeta?.pendingAttempted ?? null)}
-                {renderMetric("Pending sent", dispatchMeta?.pendingDrained ?? null)}
-                {renderMetric("Pending retries queued", dispatchMeta?.pendingRetryQueued ?? null)}
-                {renderMetric("Pending deferred", dispatchMeta?.pendingDeferred ?? null)}
-                {renderMetric("Pending dropped", dispatchMeta?.pendingDropped ?? null)}
-                {renderMetric("Pending newly enqueued", dispatchMeta?.pendingEnqueued ?? null)}
-                {renderMetric("Pending retry after", dispatchMeta?.pendingRetryAfterSec ?? null)}
-                {renderMetric("Blocked cleaned up", dispatchMeta?.blockedUsersCleanedUp ?? null)}
-                {renderMetric("Safety source age", dispatchMeta?.safetyAlertSourceAgeSeconds ?? null)}
-                {renderMetric("DEWS changes", dispatchMeta?.eventsDetected?.dews ?? null)}
-                {renderMetric("Depeg changes", dispatchMeta?.eventsDetected?.depeg ?? null)}
-                {renderMetric("Depeg worsening", dispatchMeta?.eventsDetected?.depegWorsening ?? null)}
-                {renderMetric("Safety changes", dispatchMeta?.eventsDetected?.safety ?? null)}
-                {renderMetric("Launch changes", dispatchMeta?.eventsDetected?.launch ?? null)}
-                {renderMetric("Methodology suppressions", dispatchMeta?.eventsDetected?.suppressedMethodologyChanges ?? null)}
-                {dispatchMeta?.perAlertType ? (
-                  <div className="border-t pt-3">
-                    <div className="mb-2 text-xs font-medium text-muted-foreground">
-                      Per-alert-type delivery
-                    </div>
-                    <div className="space-y-1.5 text-xs">
-                      {(Object.keys(PER_ALERT_TYPE_LABELS) as TelegramAlertType[]).map((type) => {
-                        const stats = dispatchMeta.perAlertType?.[type];
-                        if (!stats) return null;
-                        return (
-                          <div
-                            key={type}
-                            className="grid grid-cols-[6rem_repeat(4,minmax(0,1fr))_minmax(0,1.25fr)] items-center gap-2 font-mono tabular-nums"
-                          >
-                            <span className="text-sm font-medium text-foreground">{PER_ALERT_TYPE_LABELS[type]}</span>
-                            <span title="sent">sent {stats.sent}</span>
-                            <span title="enqueued">enq {stats.enqueued}</span>
-                            <span title="failed">fail {stats.failed}</span>
-                            <span title="blocked">blk {stats.blocked}</span>
-                            <span className="text-muted-foreground" title="first send latency">
-                              {stats.firstSendLatencyMs != null ? `${stats.firstSendLatencyMs}ms` : "—"}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {dispatchMeta?.snapshotSeeded ? <Badge variant="secondary">snapshot reseeded</Badge> : null}
-                  {dispatchMeta?.cappedAtLimit ? <Badge variant="secondary">hit message cap</Badge> : null}
-                  {dispatchMeta?.pendingRateLimited ? <Badge variant="secondary">pending rate limited</Badge> : null}
-                  {dispatchMeta?.safetyAlertSourceState && dispatchMeta.safetyAlertSourceState !== "ok" ? (
-                    <Badge variant="secondary">{dispatchMeta.safetyAlertSourceState}</Badge>
-                  ) : null}
-                </div>
-              </>
-            ) : (
-              <div className="text-sm text-muted-foreground">No dispatch runs recorded yet.</div>
-            )}
-          </CardContent>
-        </Card>
+  return (
+    <div className="min-w-0 border-l-2 border-amber-500 py-2 pl-3 text-sm" data-testid="telegram-telemetry-notice">
+      <p className="font-medium text-amber-800 dark:text-amber-200">
+        {model.quality.status === "partial" ? "Telegram telemetry is partial." : "Telegram telemetry is Unknown."}
+      </p>
+      {model.quality.unavailableFields.length > 0 ? (
+        <p className="mt-1 min-w-0 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
+          Unavailable fields: {model.quality.unavailableFields.join(", ")}
+        </p>
+      ) : null}
+      {model.quality.sectionError ? (
+        <p className="mt-1 min-w-0 break-words font-mono text-xs text-muted-foreground [overflow-wrap:anywhere]">
+          {model.quality.sectionError}
+        </p>
+      ) : null}
+      {model.quality.errors.map(({ field, message }) => (
+        <p
+          key={field}
+          className="mt-1 min-w-0 break-words font-mono text-xs text-muted-foreground [overflow-wrap:anywhere]"
+        >
+          {field}: {message}
+        </p>
+      ))}
+    </div>
+  );
+}
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Top Subscribed Coins</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {telegramBot.topStablecoins.length > 0 ? (
-              <div className="space-y-3">
-                {telegramBot.topStablecoins.map((coin) => (
-                  <div key={coin.stablecoinId} className="flex items-center justify-between gap-4 text-sm">
-                    <div className="min-w-0">
-                      <div className="font-medium text-foreground">{coin.symbol}</div>
-                      <div className="truncate text-xs text-muted-foreground">
-                        {coin.stablecoinId}
-                        {coin.presetImpliedSubscribers ? (
-                          <> · {coin.explicitSubscribers ?? coin.subscribers} explicit + {coin.presetImpliedSubscribers} preset</>
-                        ) : null}
-                      </div>
-                    </div>
-                    <Badge variant="secondary" className="font-mono tabular-nums">
-                      {coin.subscribers}
-                    </Badge>
-                  </div>
+function BacklogTelemetry({ model }: { model: CommsWorkbenchModel }) {
+  const { delivery } = model;
+  return (
+    <section aria-labelledby="comms-backlog-title" className="min-w-0 border-t border-border/60 pt-3">
+      <h3 id="comms-backlog-title" className="text-sm font-semibold text-foreground">
+        Queue state
+      </h3>
+      <dl className="mt-2 min-w-0 divide-y divide-border/40">
+        <MetricRow label="Claimable now" value={formatCount(delivery.backlog.claimable)} />
+        <MetricRow label="Due" value={formatCount(delivery.backlog.due)} />
+        <MetricRow label="Deferred" value={formatCount(delivery.backlog.deferred)} />
+        <MetricRow label="Expired" value={formatCount(delivery.backlog.expired)} />
+        <MetricRow label="Near TTL" value={formatCount(delivery.backlog.nearTtl)} />
+        <MetricRow label="Sending" value={formatCount(delivery.backlog.sending)} />
+        <MetricRow label="Execution Unknown" value={formatCount(delivery.backlog.executionUnknown)} />
+        <MetricRow label="Pending execution Unknown" value={formatCount(delivery.backlog.pendingExecutionUnknown)} />
+        <MetricRow label="Fresh execution Unknown" value={formatCount(delivery.backlog.freshExecutionUnknown)} />
+        <MetricRow
+          label="Oldest execution Unknown"
+          value={formatDuration(delivery.backlog.oldestExecutionUnknownAgeSec)}
+        />
+        <MetricRow label="Sent cleanup" value={formatCount(delivery.backlog.sentCleanup)} />
+        <MetricRow label="Estimated drain" value={formatDuration(delivery.estimatedDrainTimeSec)} />
+      </dl>
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+        Attention uses the shared {formatDuration(delivery.backlogPolicy.oldestAgeSec)} age and{" "}
+        {formatDuration(delivery.backlogPolicy.estimatedDrainTimeSec)} drain policies plus near-TTL risk. Queue size is
+        measured only; its watchdog threshold remains backend-owned and is not duplicated here.
+      </p>
+    </section>
+  );
+}
+
+function RetryTelemetry({ model }: { model: CommsWorkbenchModel }) {
+  const { permanentFailures, retries } = model.delivery;
+  return (
+    <section aria-labelledby="comms-retry-title" className="min-w-0 border-t border-border/60 pt-3">
+      <h3 id="comms-retry-title" className="text-sm font-semibold text-foreground">
+        Failure and retry classes
+      </h3>
+      <dl className="mt-2 min-w-0 divide-y divide-border/40">
+        <MetricRow label="Fresh permanent" value={formatCount(permanentFailures.fresh)} />
+        <MetricRow label="Pending non-retryable" value={formatCount(permanentFailures.pendingNonRetryable)} />
+        <MetricRow label="Max-attempt drops" value={formatCount(permanentFailures.maxAttempts)} />
+        <MetricRow label="Fresh retries queued" value={formatCount(retries.freshQueued)} />
+        <MetricRow label="Pending retries queued" value={formatCount(retries.pendingQueued)} />
+        <MetricRow label="Rate limited" value={formatBoolean(retries.rateLimited)} />
+        <MetricRow label="Retry after" value={formatDuration(retries.retryAfterSec)} />
+      </dl>
+      {retries.errorClasses == null ? (
+        <p className="mt-3 text-xs text-muted-foreground">Pending retry-class telemetry is Unknown.</p>
+      ) : retries.errorClasses.length === 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">No pending retry classes.</p>
+      ) : (
+        <div className="mt-3 min-w-0 overflow-hidden">
+          <TableFrame
+            tableId="telegram-retry-classes"
+            chrome="bare"
+            density="compact"
+            tableClassName="table-fixed border-collapse text-left text-xs"
+            viewportProps={{ mobileScrollHint: false, scrollShadow: false, compactBottomPadding: false }}
+          >
+            <TableCaption className="sr-only">Pending Telegram retry error classes</TableCaption>
+            <TableHeader className="text-muted-foreground">
+              <TableRow rowIntent="static">
+                <TableHead scope="col" className="h-auto w-3/4 whitespace-normal px-0 pb-1 pr-3 font-medium">
+                  Error class
+                </TableHead>
+                <TableHead scope="col" className="h-auto w-1/4 whitespace-normal px-0 pb-1 text-right font-medium">
+                  Pending
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {retries.errorClasses.map(({ errorClass, count }) => (
+                <TableRow key={errorClass} rowIntent="static" className="border-t border-border/40">
+                  <TableHead
+                    scope="row"
+                    className="h-auto min-w-0 whitespace-normal px-0 py-1.5 pr-3 font-mono font-normal [overflow-wrap:anywhere]"
+                  >
+                    {errorClass}
+                  </TableHead>
+                  <TableCell className="whitespace-normal px-0 py-1.5 text-right font-mono tabular-nums">
+                    {count.toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </TableFrame>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function LatestDispatch({ model }: { model: CommsWorkbenchModel }) {
+  const dispatch = model.delivery.latestDispatch;
+  return (
+    <section aria-labelledby="comms-latest-dispatch-title" className="min-w-0 border-t border-border/60 pt-3">
+      <h3 id="comms-latest-dispatch-title" className="text-sm font-semibold text-foreground">
+        Latest dispatch outcome
+      </h3>
+      <dl className="mt-2 min-w-0 divide-y divide-border/40">
+        <MetricRow label="Outcome" value={formatStatus(dispatch.status)} valueClassName="capitalize" />
+        <MetricRow label="Started" value={formatTimestamp(dispatch.startedAt)} />
+        <MetricRow label="Run age" value={formatDuration(dispatch.ageSec)} />
+        <MetricRow label="Duration" value={formatMilliseconds(dispatch.durationMs)} />
+        <MetricRow label="Messages sent" value={formatCount(dispatch.messagesSent)} />
+        <MetricRow label="Subscribers notified" value={formatCount(dispatch.subscribersNotified)} />
+        <MetricRow
+          label="Fresh attempted / sent"
+          value={`${formatCount(dispatch.freshAttempted)} / ${formatCount(dispatch.freshSent)}`}
+        />
+        <MetricRow
+          label="Pending attempted / sent"
+          value={`${formatCount(dispatch.pendingAttempted)} / ${formatCount(dispatch.pendingDrained)}`}
+        />
+        <MetricRow
+          label="Pending deferred / dropped"
+          value={`${formatCount(dispatch.pendingDeferred)} / ${formatCount(dispatch.pendingDropped)}`}
+        />
+        <MetricRow label="TTL-expired drops" value={formatCount(dispatch.pendingDroppedTtlExpired)} />
+        <MetricRow label="Message cap reached" value={formatBoolean(dispatch.cappedAtLimit)} />
+        <MetricRow label="Snapshot reseeded" value={formatBoolean(dispatch.snapshotSeeded)} />
+        <MetricRow label="Safety source" value={dispatch.safetySourceState ?? "Unknown"} />
+        <MetricRow label="Safety alerts suppressed" value={formatBoolean(dispatch.safetyAlertsSuppressed)} />
+        <MetricRow label="Reserve source" value={dispatch.reserveSourceState ?? "Unknown"} />
+        <MetricRow label="Reserve alerts suppressed" value={formatBoolean(dispatch.reserveAlertsSuppressed)} />
+      </dl>
+      {dispatch.skipped ? (
+        <p className="mt-2 min-w-0 break-words text-xs text-amber-700 [overflow-wrap:anywhere] dark:text-amber-300">
+          Skipped: {dispatch.skipped}
+        </p>
+      ) : null}
+      {dispatch.error ? (
+        <p className="mt-2 min-w-0 break-words font-mono text-xs text-red-700 [overflow-wrap:anywhere] dark:text-red-300">
+          {dispatch.error}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function MobilePerAlertRow({ row }: { row: CommsPerAlertDeliveryRow }) {
+  return (
+    <div className="min-w-0 border-t border-border/60 py-3 first:border-t-0" data-alert-type={row.type}>
+      <div className="text-sm font-medium text-foreground">{row.label}</div>
+      <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 pt-2 text-xs">
+        <div className="min-w-0">
+          <dt className="text-muted-foreground">Sent</dt>
+          <dd className="font-mono tabular-nums">{formatCount(row.sent)}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-muted-foreground">Enqueued</dt>
+          <dd className="font-mono tabular-nums">{formatCount(row.enqueued)}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-muted-foreground">Failed</dt>
+          <dd className="font-mono tabular-nums">{formatCount(row.failed)}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-muted-foreground">Blocked</dt>
+          <dd className="font-mono tabular-nums">{formatCount(row.blocked)}</dd>
+        </div>
+        <div className="col-span-2 min-w-0">
+          <dt className="text-muted-foreground">First send latency</dt>
+          <dd className="min-w-0 break-words font-mono tabular-nums [overflow-wrap:anywhere]">
+            {formatMilliseconds(row.firstSendLatencyMs)}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+function PerAlertDelivery({ model }: { model: CommsWorkbenchModel }) {
+  const rows = model.delivery.perAlertType;
+  return (
+    <section aria-labelledby="comms-per-alert-title" className="min-w-0 border-t border-border/60 pt-4">
+      <h3 id="comms-per-alert-title" className="text-sm font-semibold text-foreground">
+        Per-alert delivery
+      </h3>
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">Per-alert delivery telemetry is Unknown.</p>
+      ) : (
+        <>
+          <div className="mt-2 min-w-0 sm:hidden" data-testid="telegram-delivery-mobile">
+            {rows.map((row) => (
+              <MobilePerAlertRow key={row.type} row={row} />
+            ))}
+          </div>
+          <div
+            className="mt-2 hidden min-w-0 max-w-full overflow-x-auto sm:block"
+            data-testid="telegram-delivery-desktop"
+          >
+            <TableFrame
+              tableId="telegram-per-alert-delivery"
+              chrome="bare"
+              density="compact"
+              tableClassName="table-fixed border-collapse text-left text-xs tabular-nums"
+              viewportProps={{ mobileScrollHint: false, scrollShadow: false, compactBottomPadding: false }}
+            >
+              <TableCaption className="sr-only">Per-alert Telegram delivery results</TableCaption>
+              <TableHeader className="text-muted-foreground">
+                <TableRow rowIntent="static">
+                  <TableHead scope="col" className="h-auto w-[24%] whitespace-normal px-0 pb-2 pr-2 font-medium">
+                    Alert type
+                  </TableHead>
+                  <TableHead scope="col" className="h-auto w-[12%] whitespace-normal px-0 pb-2 text-right font-medium">
+                    Sent
+                  </TableHead>
+                  <TableHead scope="col" className="h-auto w-[14%] whitespace-normal px-0 pb-2 text-right font-medium">
+                    Enqueued
+                  </TableHead>
+                  <TableHead scope="col" className="h-auto w-[12%] whitespace-normal px-0 pb-2 text-right font-medium">
+                    Failed
+                  </TableHead>
+                  <TableHead scope="col" className="h-auto w-[12%] whitespace-normal px-0 pb-2 text-right font-medium">
+                    Blocked
+                  </TableHead>
+                  <TableHead scope="col" className="h-auto w-[26%] whitespace-normal px-0 pb-2 text-right font-medium">
+                    First latency
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.type} rowIntent="static" className="border-t border-border/60">
+                    <TableHead
+                      scope="row"
+                      className="h-auto min-w-0 whitespace-normal px-0 py-2 pr-2 text-sm font-medium"
+                    >
+                      {row.label}
+                    </TableHead>
+                    <TableCell className="whitespace-normal px-0 py-2 text-right font-mono">
+                      {formatCount(row.sent)}
+                    </TableCell>
+                    <TableCell className="whitespace-normal px-0 py-2 text-right font-mono">
+                      {formatCount(row.enqueued)}
+                    </TableCell>
+                    <TableCell className="whitespace-normal px-0 py-2 text-right font-mono">
+                      {formatCount(row.failed)}
+                    </TableCell>
+                    <TableCell className="whitespace-normal px-0 py-2 text-right font-mono">
+                      {formatCount(row.blocked)}
+                    </TableCell>
+                    <TableCell className="min-w-0 whitespace-normal px-0 py-2 text-right font-mono [overflow-wrap:anywhere]">
+                      {formatMilliseconds(row.firstSendLatencyMs)}
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">No coin subscriptions yet.</div>
-            )}
-          </CardContent>
-        </Card>
+              </TableBody>
+            </TableFrame>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function AudienceCoverage({ model }: { model: CommsWorkbenchModel }) {
+  const { audience } = model;
+  return (
+    <section aria-labelledby="audience-coverage-title" className="min-w-0 border-t border-border/60 pt-5">
+      <div>
+        <h2 id="audience-coverage-title" className="text-base font-semibold text-foreground">
+          Audience Coverage
+        </h2>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          Subscriber reach and preferences, separated from current delivery operations.
+        </p>
       </div>
+
+      <div className="mt-3 grid min-w-0 gap-x-6 gap-y-4 lg:grid-cols-3">
+        <section aria-labelledby="audience-reach-title" className="min-w-0 border-t border-border/60 pt-3">
+          <h3 id="audience-reach-title" className="text-sm font-semibold text-foreground">
+            Reach
+          </h3>
+          <dl className="mt-2 min-w-0 divide-y divide-border/40">
+            <MetricRow label="Subscriber chats" value={formatCount(audience.totalChats)} />
+            <MetricRow label="Alert enabled" value={formatCount(audience.alertEnabledChats)} />
+            <MetricRow label="Alert ready" value={formatCount(audience.deliverableChats)} />
+            <MetricRow label="Saved coin follows" value={formatCount(audience.subscribedChats)} />
+            <MetricRow label="Total follows" value={formatCount(audience.totalSubscriptions)} />
+            <MetricRow label="Explicit follows" value={formatCount(audience.explicitCoinSubscriptions)} />
+            <MetricRow label="Preset-implied follows" value={formatCount(audience.presetImpliedCoinSubscriptions)} />
+            <MetricRow label="Preset followers" value={formatCount(audience.activePresetFollowers)} />
+            <MetricRow label="Average follows / chat" value={formatCount(audience.averageSubscriptionsPerChat)} />
+          </dl>
+        </section>
+
+        <section aria-labelledby="audience-preferences-title" className="min-w-0 border-t border-border/60 pt-3">
+          <h3 id="audience-preferences-title" className="text-sm font-semibold text-foreground">
+            Preferences
+          </h3>
+          <dl className="mt-2 min-w-0 divide-y divide-border/40">
+            <MetricRow label="DEWS" value={formatCount(audience.alertTypeChats.dews)} />
+            <MetricRow label="Depeg" value={formatCount(audience.alertTypeChats.depeg)} />
+            <MetricRow label="Safety" value={formatCount(audience.alertTypeChats.safety)} />
+            <MetricRow label="Launch" value={formatCount(audience.alertTypeChats.launch)} />
+            <MetricRow label="Reserve" value={formatCount(audience.alertTypeChats.reserve)} />
+            <MetricRow label="All alert types" value={formatCount(audience.alertTypeChats.allTypes)} />
+            <MetricRow label="Custom preferences" value={formatCount(audience.customPreferenceChats)} />
+            <MetricRow label="Quiet hours" value={formatCount(audience.quietHoursEnabledChats)} />
+            <MetricRow label="Enabled, no coins" value={formatCount(audience.emptyAlertChats)} />
+            <MetricRow label="Muted with coins" value={formatCount(audience.mutedChatsWithSubscriptions)} />
+          </dl>
+        </section>
+
+        <section aria-labelledby="audience-top-coins-title" className="min-w-0 border-t border-border/60 pt-3">
+          <h3 id="audience-top-coins-title" className="text-sm font-semibold text-foreground">
+            Top subscribed coins
+          </h3>
+          {model.quality.status === "unknown" ? (
+            <p className="mt-2 text-sm text-muted-foreground">Coin subscription coverage is Unknown.</p>
+          ) : audience.topStablecoins.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">No saved coin subscriptions.</p>
+          ) : (
+            <ul className="mt-2 min-w-0 divide-y divide-border/40">
+              {audience.topStablecoins.map((coin) => (
+                <li key={coin.stablecoinId} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <div className="font-medium text-foreground">{coin.symbol}</div>
+                    <div className="min-w-0 break-words font-mono text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                      {coin.stablecoinId}
+                    </div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {formatCount(coin.explicitSubscribers)} explicit / {formatCount(coin.presetImpliedSubscribers)}{" "}
+                      preset
+                    </div>
+                  </div>
+                  <span className="font-mono tabular-nums">{coin.subscribers.toLocaleString()}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <details className="mt-4 min-w-0 border-t border-border/60 pt-3">
+        <summary className="min-h-11 cursor-pointer rounded-sm py-3 text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-0 sm:py-0">
+          Lifecycle and secondary telemetry
+        </summary>
+        <div className="mt-3 grid min-w-0 gap-x-6 lg:grid-cols-2">
+          <dl className="min-w-0 divide-y divide-border/40">
+            <MetricRow label="Pending disambiguations" value={formatCount(audience.pendingDisambiguations)} />
+            <MetricRow label="Last subscriber activity" value={formatTimestamp(audience.lastSubscriberActivityAt)} />
+            <MetricRow label="Preset query failures" value={formatCount(audience.presetQueryFailures)} />
+            <MetricRow label="Webhook effects Unknown" value={formatCount(audience.webhookEffectUnknown)} />
+            <MetricRow label="Inactive cleaned, 7d" value={formatCount(audience.inactiveSubscribersCleanedThisWeek)} />
+          </dl>
+          <dl className="min-w-0 divide-y divide-border/40">
+            <MetricRow label="Lifecycle date" value={audience.lifecycle.date ?? "Unknown"} />
+            <MetricRow label="Snapshot captured" value={formatTimestamp(audience.lifecycle.snapshotAt)} />
+            <MetricRow label="Snapshot age" value={formatDuration(audience.lifecycle.ageSec)} />
+            <MetricRow label="Snapshot stale" value={formatBoolean(audience.lifecycle.stale)} />
+            <MetricRow label="Active watchers" value={formatCount(audience.lifecycle.activeWatchers)} />
+            <MetricRow label="New watchers" value={formatCount(audience.lifecycle.newWatchers)} />
+            <MetricRow label="Churned watchers" value={formatCount(audience.lifecycle.churnedWatchers)} />
+            <MetricRow label="Reactivated watchers" value={formatCount(audience.lifecycle.reactivatedWatchers)} />
+            <MetricRow
+              label="Preset-implied follows"
+              value={formatCount(audience.lifecycle.presetImpliedCoinFollows)}
+            />
+          </dl>
+        </div>
+      </details>
+    </section>
+  );
+}
+
+export function TelegramBotStats({ model }: TelegramBotStatsProps) {
+  return (
+    <div className="min-w-0 space-y-5">
+      <TelemetryNotice model={model} />
+
+      <section aria-labelledby="delivery-operations-title" className="min-w-0">
+        <div>
+          <h2 id="delivery-operations-title" className="text-base font-semibold text-foreground">
+            Delivery Operations
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Current Telegram dispatch outcome, queue pressure, and failure evidence.
+          </p>
+        </div>
+
+        <div className="mt-3 min-w-0">
+          <DeliveryPriority model={model} />
+        </div>
+        <RecoverySummary model={model} />
+
+        <div className="mt-4 grid min-w-0 gap-x-6 gap-y-4 lg:grid-cols-3">
+          <BacklogTelemetry model={model} />
+          <RetryTelemetry model={model} />
+          <LatestDispatch model={model} />
+        </div>
+
+        <PerAlertDelivery model={model} />
+      </section>
+
+      <AudienceCoverage model={model} />
     </div>
   );
 }

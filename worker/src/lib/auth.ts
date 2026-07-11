@@ -22,6 +22,10 @@ function isOpsApiRequest(request: Request | undefined): boolean {
   }
 }
 
+function isAccessProtectedAdminHost(request: Request | undefined): boolean {
+  return isOpsApiRequest(request) || isWorkerPreviewRequest(request);
+}
+
 export function isWorkerPreviewRequest(request: Request | undefined): boolean {
   if (!request) return false;
   try {
@@ -55,7 +59,7 @@ async function hasOpsApiAccessSignal(
   request: Request | undefined,
   env?: AdminAuthEnv,
 ): Promise<boolean> {
-  if (!isOpsApiRequest(request)) return false;
+  if (!isAccessProtectedAdminHost(request)) return false;
 
   const accessJwt = request?.headers.get("Cf-Access-Jwt-Assertion")?.trim();
   if (!accessJwt || !env?.CF_ACCESS_OPS_API_AUD || !env.CF_ACCESS_TEAM_DOMAIN) return false;

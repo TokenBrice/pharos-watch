@@ -8,6 +8,78 @@ import {
 import type { PendingEnqueueOptions } from "./types";
 import { buildDedupeKey } from "./dedupe";
 import type { TelegramAlertType } from "@shared/types/status";
+import {
+  isValidPendingSourceEventId,
+  serializePendingAlertScope,
+  serializePendingMarkupPolicy,
+} from "../../lib/telegram-pending-provenance";
+
+interface PendingProvenanceValues {
+  sourceEventId: string | null;
+  alertScopeJson: string | null;
+  preferenceGeneration: number | null;
+  markupPolicyJson: string | null;
+}
+
+function resolvePendingProvenance(
+  message: BatchMessage,
+  sourceType: "risk_alert" | "admin_broadcast" | "admin_replay" | "legacy",
+): PendingProvenanceValues {
+  if (sourceType === "admin_replay") {
+    return {
+      sourceEventId: null,
+      alertScopeJson: null,
+      preferenceGeneration: null,
+      markupPolicyJson: serializePendingMarkupPolicy({
+        replyMarkup: message.replyMarkup,
+        linkPreviewOptions: message.linkPreviewOptions,
+        disableWebPagePreview: message.disableWebPagePreview,
+      }),
+    };
+  }
+  if (sourceType !== "risk_alert") {
+    return {
+      sourceEventId: null,
+      alertScopeJson: null,
+      preferenceGeneration: null,
+      markupPolicyJson: null,
+    };
+  }
+  const fieldsPresent = [
+    message.sourceEventId != null,
+    message.alertScope != null,
+    message.preferenceGeneration != null,
+  ];
+  if (fieldsPresent.every((present) => !present)) {
+    // Existing cache entries and rolling-deploy producers predate provenance.
+    return {
+      sourceEventId: null,
+      alertScopeJson: null,
+      preferenceGeneration: null,
+      markupPolicyJson: null,
+    };
+  }
+  if (
+    !fieldsPresent.every(Boolean) ||
+    !message.sourceEventId ||
+    !isValidPendingSourceEventId(message.sourceEventId) ||
+    !Number.isSafeInteger(message.preferenceGeneration) ||
+    (message.preferenceGeneration ?? -1) < 0 ||
+    !message.alertScope
+  ) {
+    throw new Error("Telegram pending risk alert has incomplete provenance");
+  }
+  return {
+    sourceEventId: message.sourceEventId,
+    alertScopeJson: serializePendingAlertScope(message.alertScope),
+    preferenceGeneration: message.preferenceGeneration ?? null,
+    markupPolicyJson: serializePendingMarkupPolicy({
+      replyMarkup: message.replyMarkup,
+      linkPreviewOptions: message.linkPreviewOptions,
+      disableWebPagePreview: message.disableWebPagePreview,
+    }),
+  };
+}
 
 function pendingPriorityForAlertType(alertType: TelegramAlertType | undefined): number {
   if (!alertType) return TELEGRAM_PENDING_PRIORITY.riskAlert;
@@ -18,12 +90,16 @@ function resolvePendingPriority(message: BatchMessage, options: PendingEnqueueOp
   if (options.priority != null && Number.isFinite(options.priority)) {
     return Math.max(0, Math.floor(options.priority));
   }
-  if (options.sourceType === "admin_broadcast") return TELEGRAM_PENDING_PRIORITY.adminBroadcast;
+  if (options.sourceType === "admin_broadcast" || options.sourceType === "admin_replay") {
+    return TELEGRAM_PENDING_PRIORITY.adminBroadcast;
+  }
   if (options.sourceType === "legacy") return TELEGRAM_PENDING_PRIORITY.legacy;
   return pendingPriorityForAlertType(message.alertType);
 }
 
-function resolvePendingSourceType(options: PendingEnqueueOptions): "risk_alert" | "admin_broadcast" | "legacy" {
+function resolvePendingSourceType(
+  options: PendingEnqueueOptions,
+): "risk_alert" | "admin_broadcast" | "admin_replay" | "legacy" {
   return options.sourceType ?? "risk_alert";
 }
 
@@ -31,7 +107,9 @@ function resolvePendingTtlSec(message: BatchMessage, options: PendingEnqueueOpti
   if (options.ttlSec != null && Number.isFinite(options.ttlSec) && options.ttlSec > 0) {
     return Math.floor(options.ttlSec);
   }
-  if (options.sourceType === "admin_broadcast") return TELEGRAM_ALERT_TTL_SEC.adminBroadcast;
+  if (options.sourceType === "admin_broadcast" || options.sourceType === "admin_replay") {
+    return TELEGRAM_ALERT_TTL_SEC.adminBroadcast;
+  }
   if (options.sourceType === "legacy") return TELEGRAM_ALERT_TTL_SEC.legacy;
   return message.alertType ? TELEGRAM_ALERT_TTL_SEC[message.alertType] : PENDING_TTL_SEC;
 }
@@ -39,6 +117,11 @@ function resolvePendingTtlSec(message: BatchMessage, options: PendingEnqueueOpti
 interface SqlFragment {
   sql: string;
   binds: readonly number[];
+}
+
+export interface PendingEnqueueGuard {
+  sql: string;
+  binds: readonly unknown[];
 }
 
 const SHOULD_REFRESH_EXISTING_ROW_SQL = [
@@ -68,41 +151,96 @@ function collectSqlBinds(...fragments: readonly SqlFragment[]): number[] {
   return fragments.flatMap((fragment) => [...fragment.binds]);
 }
 
-export async function enqueuePendingAlerts(
+export function buildPendingAlertEnqueueStatement(
   db: D1Database,
-  messages: BatchMessage[],
+  msg: BatchMessage,
   nowSec: number,
   options: PendingEnqueueOptions = {},
-): Promise<void> {
-  if (messages.length === 0) return;
-
+  guard?: PendingEnqueueGuard,
+): D1PreparedStatement {
   const sourceType = resolvePendingSourceType(options);
-  const stmts = messages.map((msg) => {
-    const expiresAt = nowSec + resolvePendingTtlSec(msg, options);
-    const createdAtRefresh = refreshExistingRowCase("excluded.created_at", "telegram_pending_alerts.created_at");
-    const attemptsRefresh = refreshExistingRowCase("0", "telegram_pending_alerts.attempts");
-    const notBeforeRefresh = refreshExistingRowPredicate();
-    const expiresAtRefresh = refreshExistingRowCase("excluded.expires_at", "COALESCE(telegram_pending_alerts.expires_at, excluded.expires_at)");
-    const processingOwnerRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_owner");
-    const processingStartedRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_started_at");
-    const processingExpiresRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_expires_at");
-    const refreshBinds = collectSqlBinds(
-      createdAtRefresh,
-      attemptsRefresh,
-      notBeforeRefresh,
-      expiresAtRefresh,
-      processingOwnerRefresh,
-      processingStartedRefresh,
-      processingExpiresRefresh,
-    );
-    return db
-      .prepare(
-        `INSERT INTO telegram_pending_alerts (
+  const provenance = resolvePendingProvenance(msg, sourceType);
+  const expiresAt = nowSec + resolvePendingTtlSec(msg, options);
+  const createdAtRefresh = refreshExistingRowCase("excluded.created_at", "telegram_pending_alerts.created_at");
+  const attemptsRefresh = refreshExistingRowCase("0", "telegram_pending_alerts.attempts");
+  const notBeforeRefresh = refreshExistingRowPredicate();
+  const expiresAtRefresh = refreshExistingRowCase(
+    "excluded.expires_at",
+    "COALESCE(telegram_pending_alerts.expires_at, excluded.expires_at)",
+  );
+  const processingOwnerRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_owner");
+  const processingStartedRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_started_at");
+  const processingExpiresRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_expires_at");
+  const deliveryOwnerRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.delivery_owner");
+  const deliveryStartedRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.delivery_started_at");
+  const deliveryCompletedRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.delivery_completed_at");
+  const deliveryClaimExpiresRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.delivery_claim_expires_at");
+  const sourceEventRefresh = refreshExistingRowCase(
+    "excluded.source_event_id",
+    "telegram_pending_alerts.source_event_id",
+  );
+  const alertScopeRefresh = refreshExistingRowCase(
+    "excluded.alert_scope_json",
+    "telegram_pending_alerts.alert_scope_json",
+  );
+  const preferenceGenerationRefresh = refreshExistingRowCase(
+    "excluded.preference_generation",
+    "telegram_pending_alerts.preference_generation",
+  );
+  const markupPolicyRefresh = refreshExistingRowCase(
+    "excluded.markup_policy_json",
+    "telegram_pending_alerts.markup_policy_json",
+  );
+  const refreshBinds = collectSqlBinds(
+    createdAtRefresh,
+    attemptsRefresh,
+    notBeforeRefresh,
+    expiresAtRefresh,
+    processingOwnerRefresh,
+    processingStartedRefresh,
+    processingExpiresRefresh,
+    deliveryOwnerRefresh,
+    deliveryStartedRefresh,
+    deliveryCompletedRefresh,
+    deliveryClaimExpiresRefresh,
+    sourceEventRefresh,
+    alertScopeRefresh,
+    preferenceGenerationRefresh,
+    markupPolicyRefresh,
+  );
+  const values = [
+    msg.chatId,
+    msg.html,
+    msg.disableNotification ? 1 : 0,
+    nowSec,
+    options.notBeforeAt ?? null,
+    options.lastErrorClass ?? null,
+    options.retryAfterSec ?? null,
+    nowSec,
+    buildDedupeKey(msg),
+    msg.chunkIndex ?? 0,
+    resolvePendingPriority(msg, options),
+    sourceType,
+    msg.alertType ?? null,
+    expiresAt,
+    provenance.sourceEventId,
+    provenance.alertScopeJson,
+    provenance.preferenceGeneration,
+    provenance.markupPolicyJson,
+  ];
+  const valuePlaceholders = values.map(() => "?").join(", ");
+  const valuesSource = guard
+    ? `SELECT ${valuePlaceholders} WHERE ${guard.sql}`
+    : `VALUES (${valuePlaceholders})`;
+  return db
+    .prepare(
+      `INSERT INTO telegram_pending_alerts (
            chat_id, message_html, disable_notification, created_at, not_before_at,
            last_error_class, retry_after_sec, updated_at, dedupe_key, chunk_index,
-           priority, source_type, alert_type, expires_at
+           priority, source_type, alert_type, expires_at, source_event_id,
+           alert_scope_json, preference_generation, markup_policy_json
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ${valuesSource}
          ON CONFLICT(dedupe_key) DO UPDATE SET
            message_html = excluded.message_html,
            disable_notification = excluded.disable_notification,
@@ -128,25 +266,37 @@ export async function enqueuePendingAlerts(
            expires_at = ${expiresAtRefresh.sql},
            processing_owner = ${processingOwnerRefresh.sql},
            processing_started_at = ${processingStartedRefresh.sql},
-           processing_expires_at = ${processingExpiresRefresh.sql}`,
-      )
-      .bind(
-        msg.chatId,
-        msg.html,
-        msg.disableNotification ? 1 : 0,
-        nowSec,
-        options.notBeforeAt ?? null,
-        options.lastErrorClass ?? null,
-        options.retryAfterSec ?? null,
-        nowSec,
-        buildDedupeKey(msg),
-        msg.chunkIndex ?? 0,
-        resolvePendingPriority(msg, options),
-        sourceType,
-        msg.alertType ?? null,
-        expiresAt,
-        ...refreshBinds,
-      );
-  });
+           processing_expires_at = ${processingExpiresRefresh.sql},
+           delivery_owner = ${deliveryOwnerRefresh.sql},
+           delivery_started_at = ${deliveryStartedRefresh.sql},
+           delivery_completed_at = ${deliveryCompletedRefresh.sql},
+           delivery_claim_expires_at = ${deliveryClaimExpiresRefresh.sql},
+           source_event_id = ${sourceEventRefresh.sql},
+           alert_scope_json = ${alertScopeRefresh.sql},
+           preference_generation = ${preferenceGenerationRefresh.sql},
+           markup_policy_json = ${markupPolicyRefresh.sql}
+         WHERE telegram_pending_alerts.delivery_state = 'pending'
+           AND (
+             telegram_pending_alerts.processing_owner IS NULL
+             OR telegram_pending_alerts.processing_expires_at IS NULL
+             OR telegram_pending_alerts.processing_expires_at <= excluded.created_at
+             OR COALESCE(
+                  telegram_pending_alerts.expires_at,
+                  telegram_pending_alerts.created_at + ${PENDING_TTL_SEC}
+                ) <= excluded.created_at
+             OR telegram_pending_alerts.created_at < excluded.created_at - ${PENDING_TTL_SEC}
+           )`,
+    )
+    .bind(...values, ...(guard?.binds ?? []), ...refreshBinds);
+}
+
+export async function enqueuePendingAlerts(
+  db: D1Database,
+  messages: BatchMessage[],
+  nowSec: number,
+  options: PendingEnqueueOptions = {},
+): Promise<void> {
+  if (messages.length === 0) return;
+  const stmts = messages.map((message) => buildPendingAlertEnqueueStatement(db, message, nowSec, options));
   await batchExecute(db, stmts);
 }

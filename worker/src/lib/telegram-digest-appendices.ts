@@ -34,7 +34,7 @@ export const CEMETERY_FOOTERS = [
 
 type TrackedStablecoinMeta = (typeof TRACKED_STABLECOINS)[number];
 
-interface CacheWrite {
+export interface TelegramDigestSuccessAction {
   key: string;
   value: string;
 }
@@ -55,6 +55,7 @@ export interface TelegramDigestAppendixMetadata {
 export interface PreparedTelegramDigestAppendices {
   appendixHtml: string | null;
   metadata: TelegramDigestAppendixMetadata;
+  successActions?: readonly TelegramDigestSuccessAction[];
   commitSuccess: () => Promise<void>;
 }
 
@@ -181,7 +182,7 @@ function buildTrackedAppendix(
   return sections.join("\n\n");
 }
 
-async function applyCacheWrites(db: D1Database, writes: CacheWrite[]): Promise<void> {
+async function applyCacheWrites(db: D1Database, writes: readonly TelegramDigestSuccessAction[]): Promise<void> {
   for (const write of writes) {
     await setCache(db, write.key, write.value);
   }
@@ -236,8 +237,8 @@ export async function queuePendingTrackedStablecoinAdditions(
 export async function prepareTelegramDigestAppendices(
   db: D1Database,
 ): Promise<PreparedTelegramDigestAppendices> {
-  const immediateWrites: CacheWrite[] = [];
-  const postSuccessWrites: CacheWrite[] = [];
+  const immediateWrites: TelegramDigestSuccessAction[] = [];
+  const postSuccessWrites: TelegramDigestSuccessAction[] = [];
   const appendixSections: string[] = [];
   const metadata: TelegramDigestAppendixMetadata = {
     hasAppendix: false,
@@ -437,6 +438,7 @@ export async function prepareTelegramDigestAppendices(
   return {
     appendixHtml,
     metadata,
+    successActions: postSuccessWrites,
     // Appendix snapshot advancement is a post-delivery best-effort commit.
     // The daily digest sender owns retry idempotency through the send marker.
     commitSuccess: async () => {

@@ -6,7 +6,11 @@ function buildRuntime(
   runLeasedCron: ScheduledRuntimeContext["runLeasedCron"],
 ): ScheduledRuntimeContext {
   return {
-    db: {} as D1Database,
+    db: {
+      prepare: () => ({
+        bind: () => ({ run: async () => ({ meta: { changes: 1 } }) }),
+      }),
+    } as unknown as D1Database,
     env: {} as ScheduledRuntimeContext["env"],
     ctx: {} as ExecutionContext,
     cron: "0 8 * * *",
@@ -117,7 +121,7 @@ describe("scheduled slot groups", () => {
 
   it("skips remaining serial tasks after a failure when stopOnFailure is enabled", async () => {
     const runLeasedCron = vi.fn(async (job: string, fn) => {
-      if (job === "failed") {
+      if (job === "snapshot-safety-grade-history") {
         throw new Error("boom");
       }
       return fn(new AbortController().signal, async () => {});
@@ -129,9 +133,9 @@ describe("scheduled slot groups", () => {
         label: "dependent-serial",
         stopOnFailure: true,
         tasks: [
-          { job: "ok", run: async () => ({ status: "ok" }) },
-          { job: "failed", run: async () => ({ status: "ok" }) },
-          { job: "downstream", run: async () => ({ status: "ok" }) },
+          { job: "snapshot-supply", run: async () => ({ status: "ok" }) },
+          { job: "snapshot-safety-grade-history", run: async () => ({ status: "ok" }) },
+          { job: "snapshot-psi", run: async () => ({ status: "ok" }) },
         ],
       },
     ]);
@@ -146,9 +150,44 @@ describe("scheduled slot groups", () => {
       jobsErrored: 1,
     });
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
-      ["ok", "ok", undefined],
-      ["failed", "error", undefined],
-      ["downstream", "skipped", "upstream-failure:failed"],
+      ["snapshot-supply", "ok", undefined],
+      ["snapshot-safety-grade-history", "error", undefined],
+      ["snapshot-psi", "skipped", "upstream-failure:snapshot-safety-grade-history"],
+    ]);
+  });
+
+  it("skips dependent serial tasks after a non-neutral lease skip when configured", async () => {
+    const runLeasedCron = vi.fn(async (job: string, fn) => {
+      if (job === "snapshot-supply") {
+        return { status: "skipped_locked" as const };
+      }
+      return fn(new AbortController().signal, async () => {});
+    }) as ScheduledRuntimeContext["runLeasedCron"];
+
+    const summary = await runScheduledSlotGroups(buildRuntime(runLeasedCron), "test slot", [
+      {
+        mode: "serial",
+        label: "dependent-serial",
+        stopOnNonNeutralSkip: true,
+        tasks: [
+          { job: "snapshot-supply", run: async () => ({ status: "ok" }) },
+          { job: "snapshot-safety-grade-history", run: async () => ({ status: "ok" }) },
+          { job: "snapshot-psi", run: async () => ({ status: "ok" }) },
+        ],
+      },
+    ]);
+
+    expect(runLeasedCron).toHaveBeenCalledTimes(1);
+    expect(summary).toMatchObject({
+      jobsAttempted: 0,
+      jobsSkipped: 3,
+      jobsNeutralSkipped: 0,
+      jobsErrored: 0,
+    });
+    expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
+      ["snapshot-supply", "skipped", "lease-locked"],
+      ["snapshot-safety-grade-history", "skipped", "upstream-blocked:snapshot-supply"],
+      ["snapshot-psi", "skipped", "upstream-blocked:snapshot-supply"],
     ]);
   });
 

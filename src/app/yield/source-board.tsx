@@ -149,6 +149,7 @@ function StackBar({
 }) {
   const total = segments.reduce((sum, seg) => sum + seg.count, 0);
   if (total === 0) return null;
+  const visibleSegments = segments.filter((seg) => seg.count > 0);
 
   return (
     <div
@@ -157,23 +158,30 @@ function StackBar({
       // / aria-prohibited-attr on the labelled segments).
       role="group"
       aria-label={ariaLabel}
-      className="flex h-6 w-full overflow-hidden rounded-full bg-muted/30 sm:h-2"
+      className="relative flex h-6 w-full"
     >
-      {segments
-        .filter((seg) => seg.count > 0)
-        .map((seg) => {
+      {/* Keep the 8px visual bar centered inside 24px targets. */}
+      <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-2 h-2 rounded-full bg-muted/30" />
+      {visibleSegments.map((seg, index) => {
           const percentage = (seg.count / total) * 100;
           const isInteractive = seg.target != null && onSegmentSelect != null;
           const isTooNarrowForFocus = percentage < 14 && !isInteractive;
+          const isFocusable = isInteractive || !isTooNarrowForFocus;
           const triggerLabel = `${seg.label}: ${seg.count}. ${seg.description}`;
           const triggerClassName = cn(
-            "block h-full",
+            "relative block h-6",
+            isFocusable && "pharos-focus-ring min-w-6",
             isInteractive
-              ? "pharos-focus-ring min-w-6 cursor-pointer border-0 p-0 sm:min-w-0"
+              ? "cursor-pointer border-0 p-0"
               : isTooNarrowForFocus
                 ? "pointer-events-none"
-                : "pharos-focus-ring cursor-help",
+                : "cursor-help",
             seg.active && "ring-2 ring-inset ring-foreground/70",
+          );
+          const visualClassName = cn(
+            "pointer-events-none absolute inset-x-0 top-2 h-2",
+            index === 0 && "rounded-l-full",
+            index === visibleSegments.length - 1 && "rounded-r-full",
             seg.bg,
           );
 
@@ -188,7 +196,9 @@ function StackBar({
                     className={triggerClassName}
                     style={{ width: `${percentage}%` }}
                     onClick={() => onSegmentSelect(seg.target!, seg.active === true)}
-                  />
+                  >
+                    <span aria-hidden="true" className={visualClassName} />
+                  </button>
                 ) : (
                   <span
                     // aria-label is prohibited on role=generic; the focusable
@@ -199,7 +209,9 @@ function StackBar({
                     aria-label={isTooNarrowForFocus ? undefined : triggerLabel}
                     className={triggerClassName}
                     style={{ width: `${percentage}%` }}
-                  />
+                  >
+                    <span aria-hidden="true" className={visualClassName} />
+                  </span>
                 )}
               </TooltipTrigger>
               <TooltipContent className="max-w-[260px] text-xs">

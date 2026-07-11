@@ -3,12 +3,14 @@
 import { useMemo, useState } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
+import { QueryStateNotice } from "@/components/query-state-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
 import { useLogos } from "@/hooks/use-logos";
 import { formatCurrency } from "@shared/lib/format";
 import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { resolveQueryViewState } from "@/lib/query-view-state";
 
 // How many recent freeze rows to surface beneath the headline.
 const MAX_RECENT = 4;
@@ -116,18 +118,24 @@ export function RecentFreezesCard(): React.JSX.Element {
   const [windowKey, setWindowKey] = useState<WindowKey>("24h");
 
   const agg = useMemo(() => {
-    const events = eventsQuery.data?.events ?? [];
-    if (events.length === 0) return null;
+    if (!eventsQuery.data) return null;
+    const events = eventsQuery.data.events;
     const refSec = eventsQuery.dataUpdatedAt
       ? Math.floor(eventsQuery.dataUpdatedAt / 1000)
-      // eslint-disable-next-line react-hooks/purity -- Date.now() only used as a transient fallback before TanStack Query reports dataUpdatedAt; visible result is bounded by the query's refetchInterval.
-      : Math.floor(Date.now() / 1000);
+      : // eslint-disable-next-line react-hooks/purity -- Date.now() only used as a transient fallback before TanStack Query reports dataUpdatedAt; visible result is bounded by the query's refetchInterval.
+        Math.floor(Date.now() / 1000);
     return aggregate(events, refSec, (sym) => symbolToId(sym, logoMap));
   }, [eventsQuery.data, eventsQuery.dataUpdatedAt, logoMap]);
 
   const isLoading = eventsQuery.isLoading;
-  const amount = windowKey === "24h" ? agg?.amount24hUsd ?? 0 : agg?.amount7dUsd ?? 0;
-  const count = windowKey === "24h" ? agg?.count24h ?? 0 : agg?.count7d ?? 0;
+  const state = resolveQueryViewState({
+    hasData: eventsQuery.data !== undefined,
+    isLoading,
+    error: eventsQuery.error,
+    isEmpty: (eventsQuery.data?.events.length ?? 0) === 0,
+  });
+  const amount = windowKey === "24h" ? (agg?.amount24hUsd ?? 0) : (agg?.amount7dUsd ?? 0);
+  const count = windowKey === "24h" ? (agg?.count24h ?? 0) : (agg?.count7d ?? 0);
 
   return (
     <div className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4">
@@ -142,7 +150,7 @@ export function RecentFreezesCard(): React.JSX.Element {
               onClick={() => setWindowKey("24h")}
               aria-pressed={windowKey === "24h"}
               data-state={windowKey === "24h" ? "on" : "off"}
-              className="pharos-toggle-pill pharos-focus-ring min-h-6 justify-center px-2 py-1 font-mono text-[11px] leading-none"
+              className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-[11px] leading-none"
             >
               24h
             </button>
@@ -151,7 +159,7 @@ export function RecentFreezesCard(): React.JSX.Element {
               onClick={() => setWindowKey("7d")}
               aria-pressed={windowKey === "7d"}
               data-state={windowKey === "7d" ? "on" : "off"}
-              className="pharos-toggle-pill pharos-focus-ring min-h-6 justify-center px-2 py-1 font-mono text-[11px] leading-none"
+              className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-[11px] leading-none"
             >
               7d
             </button>
@@ -159,13 +167,24 @@ export function RecentFreezesCard(): React.JSX.Element {
         }
       />
 
-      {isLoading || !agg ? (
+      {state === "loading" ? (
         <>
           <Skeleton className="h-12 w-28" />
           <Skeleton className="h-20 w-full" />
         </>
+      ) : state === "unavailable" || !agg ? (
+        <QueryStateNotice state="unavailable" label="Recent freeze data" onRetry={() => void eventsQuery.refetch()} />
       ) : (
         <>
+          {state === "stale-with-data" ? (
+            <QueryStateNotice
+              state={state}
+              label="Recent freeze data"
+              dataUpdatedAt={eventsQuery.dataUpdatedAt}
+              onRetry={() => void eventsQuery.refetch()}
+              compact
+            />
+          ) : null}
           <div className="flex items-baseline gap-2">
             <span
               className={`pharos-numeric text-4xl font-bold tracking-tight ${
@@ -191,14 +210,10 @@ export function RecentFreezesCard(): React.JSX.Element {
                     className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 py-1 pharos-numeric"
                   >
                     <CoinCell logoSrc={logoSrc} />
-                    <span className="truncate uppercase tracking-tight text-foreground">
-                      {ev.symbol}
-                    </span>
+                    <span className="truncate uppercase tracking-tight text-foreground">{ev.symbol}</span>
                     <span className="flex items-baseline gap-1.5">
                       <span className="font-semibold pharos-numeric text-red-700 dark:text-red-400">
-                        {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0
-                          ? formatCurrency(ev.amountUsdAtEvent, 0)
-                          : "—"}
+                        {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0 ? formatCurrency(ev.amountUsdAtEvent, 0) : "—"}
                       </span>
                       <span aria-hidden="true" className="text-muted-foreground/40">
                         ·

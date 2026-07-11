@@ -11,11 +11,11 @@ const PRESET_ALERT_TYPES = new Set<TelegramAlertType>(PRESET_ALERT_TYPES_ARRAY);
  * Pure C74 display helper: classify each alert type's effective source for a followed coin,
  * using only already-projected session state (no extra reads, no preset→coin expansion).
  *
- * A `SubscribedCoin` always represents an explicit per-coin row, so:
+ * A `SubscribedCoin` represents a direct/local preference row, so:
  * - a type the coin enables resolves to `per-coin` (it wins over preset/global);
- * - a type the coin leaves off resolves to `off-override` when a followed preset or the global
- *   default would otherwise cover it (the C02 per-coin `off` suppression), or to `global` as the
- *   default lane when nothing else applies.
+ * - a type with an explicit local-off marker resolves to `off-override` when a followed preset
+ *   or the global default would otherwise cover it;
+ * - an unmarked off flag does not suppress inherited preset/global coverage.
  */
 export function computeEffectiveSource(
   coin: SubscribedCoin,
@@ -29,7 +29,7 @@ export function computeEffectiveSource(
   for (const type of ALERT_TYPES) {
     if (coin.alertTypes[type]) {
       result[type] = "per-coin";
-    } else if (presetCovers(type) || globalAlerts[type]) {
+    } else if (coin.alertOverrides?.[type] && (presetCovers(type) || globalAlerts[type])) {
       result[type] = "off-override";
     } else {
       result[type] = "global";

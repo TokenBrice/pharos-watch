@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -9,11 +10,8 @@ import { logosById } from "@/lib/logos";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import YieldAnalysisClient from "./client";
 
-// WHY: lending-opportunity rows can appear for any tracked stablecoin (per yield methodology),
-// so the yield deep-link must be reachable for every active coin — not just those flagged
-// `yieldBearing`. The client renders an empty-state card when no live yield row exists.
 export function generateStaticParams() {
-  return TRACKED_STABLECOINS.filter((coin) => coin.status !== "pre-launch").map((coin) => ({ id: coin.id }));
+  return TRACKED_STABLECOINS.filter(hasStaticYieldWorkbench).map((coin) => ({ id: coin.id }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {

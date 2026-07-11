@@ -1,8 +1,16 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isMiniAppErrorCode, MINI_APP_ERROR_CODES } from "./error-messages";
+import {
+  TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
+  TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
+  createTelegramMiniAppSnapshot,
+  telegramMiniAppStateRevision,
+  type TelegramMiniAppMutableState,
+} from "@shared/lib/telegram-mini-app-contract";
+import { isMiniAppErrorCode, miniAppErrorMessage, MINI_APP_ERROR_CODES, MiniAppRequestError } from "./error-messages";
+import { refreshMiniAppBundleOnce } from "./mini-app-api";
 import PharosWatchBotMiniAppPage, { metadata } from "./page";
 import type { TelegramMiniAppState } from "./types";
 
@@ -29,7 +37,9 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  window.sessionStorage.clear();
   Reflect.deleteProperty(window, "Telegram");
+  window.history.replaceState({}, "", "/pharoswatchbot/app/");
 });
 
 describe("PharosWatchBotMiniAppPage", () => {
@@ -47,51 +57,115 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(isMiniAppErrorCode(null)).toBe(false);
   });
 
-  it("renders browser preview without calling session APIs", async () => {
-    vi.useFakeTimers();
+  it("attributes edit throttling to Pharos rather than Telegram", () => {
+    expect(miniAppErrorMessage(
+      new MiniAppRequestError(429, "rate-limited", 12),
+      "mutation",
+    )).toBe("Pharos edit limit reached. Wait for the countdown before editing again.");
+  });
+
+  it("renders browser preview immediately without calling session APIs", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     render(<PharosWatchBotMiniAppPage />);
-
-    await act(async () => {
-      vi.advanceTimersByTime(550);
-    });
 
     expect(screen.getByText("PharosWatchBot app preview")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("waits for delayed Telegram launch data before falling back to preview", async () => {
+  it("waits for the page script to expose delayed Telegram launch data", async () => {
     vi.useFakeTimers();
-    const webApp = { initData: "", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() };
-    window.Telegram = { WebApp: webApp };
+    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
+    const script = document.querySelector<HTMLScriptElement>('script[src="https://telegram.org/js/telegram-web-app.js"]');
+    expect(script).toBeTruthy();
 
     await act(async () => {
       vi.advanceTimersByTime(600);
     });
     expect(fetchMock).not.toHaveBeenCalled();
 
-    webApp.initData = "signed-init-data";
+    window.Telegram = {
+      WebApp: {
+        initData: "signed-init-data",
+        platform: "tdesktop",
+        initDataUnsafe: { user: { username: "watcher" } },
+        ready: vi.fn(),
+      },
+    };
     await act(async () => {
+      script?.dispatchEvent(new Event("load"));
       vi.advanceTimersByTime(50);
       await Promise.resolve();
       await Promise.resolve();
     });
 
     expect(screen.getByText("@watcher")).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith("/api/telegram-mini-app/session", expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/session\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data" }),
     }));
+    const sessionUrl = new URL(String(fetchMock.mock.calls[0]?.[0]), "https://pharos.watch");
+    expect(sessionUrl.searchParams.get(TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM)).toBeTruthy();
+    expect(sessionUrl.searchParams.get(TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM)).toBeTruthy();
   });
 
-  it("shows a Telegram launch-data error when the bridge exists but initData never arrives", async () => {
+  it("treats the SDK object created in a normal browser as standalone", () => {
     vi.useFakeTimers();
-    window.Telegram = { WebApp: { initData: "", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
+    window.Telegram = { WebApp: { initData: "", platform: "unknown", ready: vi.fn() } };
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    expect(screen.getByText("PharosWatchBot app preview")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("treats launch data from an unsupported host as browser preview", () => {
+    vi.useFakeTimers();
+    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=unknown");
+    window.Telegram = {
+      WebApp: {
+        initData: "signed-init-data",
+        platform: "unknown",
+        initDataUnsafe: { user: { username: "watcher" } },
+        ready: vi.fn(),
+      },
+    };
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    expect(screen.getByText("PharosWatchBot app preview")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("offers a bot link when missing launch data cannot close a WebView", async () => {
+    vi.useFakeTimers();
+    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await act(async () => {
+      vi.advanceTimersByTime(8_050);
+    });
+
+    expect(screen.getByRole("link", { name: "Open PharosWatchBot" }).getAttribute("href")).toBe("https://t.me/PharosWatchBot");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("closes a supported Telegram launch when initData never arrives", async () => {
+    vi.useFakeTimers();
+    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
+    const close = vi.fn();
+    window.Telegram = { WebApp: { initData: "", platform: "tdesktop", ready: vi.fn(), close } };
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
@@ -102,6 +176,8 @@ describe("PharosWatchBotMiniAppPage", () => {
     });
 
     expect(screen.getByText("Telegram launch data was not available. Close and reopen from PharosWatchBot.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Close and reopen" }));
+    expect(close).toHaveBeenCalledTimes(1);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -118,8 +194,17 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(ready).toHaveBeenCalled();
     expect(expand).toHaveBeenCalled();
     expect(screen.getByText("Global alerts")).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "watchlist" }).className).toContain("truncate");
-    expect(fetchMock).toHaveBeenCalledWith("/api/telegram-mini-app/session", expect.objectContaining({
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["home", "watchlist", "presets", "settings"]);
+    for (const tab of tabs) {
+      expect(tab.className).toContain("min-w-0");
+      expect(tab.className).toContain("break-words");
+      expect(tab.className).toContain("text-xs");
+      expect(tab.className).not.toContain("whitespace-nowrap");
+      expect(tab.className).not.toContain("truncate");
+    }
+    expect(screen.getByRole("button", { name: "Refresh session" }).className).toContain("size-11");
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/session\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data" }),
     }));
@@ -147,6 +232,22 @@ describe("PharosWatchBotMiniAppPage", () => {
     render(<PharosWatchBotMiniAppPage />);
 
     await waitFor(() => expect(screen.getByText("Telegram launch authorization was rejected. Close and reopen from PharosWatchBot.")).toBeTruthy());
+  });
+
+  it("retries a failed session request when launch data is available", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: "Unavailable" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("Could not load Mini App settings. Reopen from Telegram or try again.")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("routes coin start params to the watchlist view", async () => {
@@ -297,7 +398,7 @@ describe("PharosWatchBotMiniAppPage", () => {
 
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
     expect(screen.getByText("Global alerts")).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledWith("/api/telegram-mini-app/session", expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/session\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data" }),
     }));
@@ -346,6 +447,38 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.queryByText("Group settings are command-only for now")).toBeNull();
   });
 
+  it("offers a Telegram relaunch that reopens the current panel on stale auth", async () => {
+    const openTelegramLink = vi.fn();
+    const impactOccurred = vi.fn();
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "settings", user: { username: "watcher" } }, ready: vi.fn(), HapticFeedback: { impactOccurred }, openTelegramLink } };
+    const staleState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => staleState }));
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("Reopen Telegram to edit settings")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Relaunch and keep this panel" }));
+    expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?startapp=settings");
+    expect(impactOccurred).toHaveBeenCalledWith("light");
+  });
+
+  it("hides the stale-auth relaunch button when openTelegramLink is unavailable", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
+    const staleState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => staleState }));
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("Reopen Telegram to edit settings")).toBeTruthy());
+    expect(screen.queryByRole("button", { name: "Relaunch and keep this panel" })).toBeNull();
+  });
+
   it("renders the group settings command as inline code", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
     const groupState: TelegramMiniAppState = {
@@ -362,9 +495,14 @@ describe("PharosWatchBotMiniAppPage", () => {
 
   it("posts mutations and replaces returned state", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { impactOccurred: vi.fn() } } };
+    const nextState = { ...baseState, subscriber: { ...baseState.subscriber, globalAlerts: { ...baseState.subscriber.globalAlerts, safety: true } } };
+    const { catalog: _catalog, ...mutableNextState } = nextState;
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...baseState, subscriber: { ...baseState.subscriber, globalAlerts: { ...baseState.subscriber.globalAlerts, safety: true } } }) });
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => createTelegramMiniAppSnapshot(mutableNextState as TelegramMiniAppMutableState),
+      });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
@@ -373,13 +511,41 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-global", alertType: "safety", enabled: true } }),
     }));
+    expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("reverts optimistic global toggles after a generic mutation failure without reloading", async () => {
+  it("never replays a mutation after a catalog-version mismatch", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() } } };
+    const nextVersions = { contractVersion: "3", catalogVersion: "catalog-v2-next" };
+    refreshMiniAppBundleOnce(nextVersions, { storage: window.sessionStorage, refresh: vi.fn() });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 409,
+        json: async () => ({
+          error: "Telegram Mini App catalog version changed",
+          code: "catalog-version-mismatch",
+          ...nextVersions,
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
+
+    await waitFor(() => expect(screen.getByText("Mini App was updated. Close and reopen it from PharosWatchBot.")).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("keeps confirmed global toggles unchanged after a generic mutation failure", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() } } };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => baseState })
@@ -397,6 +563,120 @@ describe("PharosWatchBotMiniAppPage", () => {
     await waitFor(() => expect(screen.getByText("Something went wrong. Try again or reopen Telegram.")).toBeTruthy());
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("keeps server-confirmed values visible while a mutation response is pending", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { impactOccurred: vi.fn() } } };
+    const nextState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        globalAlerts: { ...baseState.subscriber.globalAlerts, safety: true },
+      },
+    };
+    let resolveMutation: ((response: { ok: true; json: () => Promise<TelegramMiniAppState> }) => void) | undefined;
+    const mutationResponse = new Promise<{ ok: true; json: () => Promise<TelegramMiniAppState> }>((resolve) => {
+      resolveMutation = resolve;
+    });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockReturnValueOnce(mutationResponse);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    const safetyToggle = screen.getByRole("button", { name: /Safety/i });
+    fireEvent.click(safetyToggle);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(safetyToggle.getAttribute("aria-pressed")).toBe("false");
+    expect(safetyToggle.getAttribute("aria-busy")).toBe("true");
+    expect(safetyToggle).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: /Launch/i })).toHaveProperty("disabled", true);
+
+    resolveMutation?.({ ok: true, json: async () => nextState });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Safety/i }).getAttribute("aria-pressed")).toBe("true"));
+    expect(screen.getByRole("button", { name: /Safety/i }).hasAttribute("aria-busy")).toBe(false);
+  });
+
+  it("keeps last-known state visible and read-only after refresh failure until retry succeeds", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    vi.spyOn(Date, "now").mockReturnValue(1_725_000_000_000);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ error: "offline", code: "internal" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "Refresh session" }));
+
+    const staleHeading = await screen.findByRole("heading", { name: "Showing last-known settings" });
+    const stalePanel = staleHeading.closest("section");
+    expect(stalePanel).toBeTruthy();
+    const { catalog: _catalog, ...mutableState } = baseState;
+    expect(within(stalePanel as HTMLElement).getByText(telegramMiniAppStateRevision(mutableState))).toBeTruthy();
+    expect(stalePanel?.textContent).toContain("Telegram Mini App auth is temporarily unavailable. Try again shortly.");
+    expect(stalePanel?.querySelector("time")?.getAttribute("datetime")).toBe("2024-08-30T06:40:00.000Z");
+
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", true);
+    fireEvent.click(within(stalePanel as HTMLElement).getByRole("button", { name: "Retry refresh" }));
+
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Showing last-known settings" })).toBeNull());
+    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", false);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("disables mutation controls for the server retry window and announces the countdown", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() } } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        headers: new Headers({ "Retry-After": "3" }),
+        json: async () => ({ error: "limit", code: "rate-limited", retryAfterSec: 3 }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    vi.useFakeTimers();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const countdown = screen.getByRole("timer");
+    expect(countdown.getAttribute("aria-live")).toBe("off");
+    expect(countdown.textContent).toContain("Settings unlock in 3 seconds");
+    expect(screen.getByText("Pharos edit limit reached. Settings are disabled for 3 seconds.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: /Launch/i })).toHaveProperty("disabled", true);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(screen.getByRole("timer").textContent).toContain("Settings unlock in 1 second");
+    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", true);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(screen.queryByText(/Settings unlock in/)).toBeNull();
+    expect(screen.getByText("Pharos editing is available again.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Safety/i })).toHaveProperty("disabled", false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("reloads session state after a stale-auth mutation rejection", async () => {
@@ -417,7 +697,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
-    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+    expect(fetchMock.mock.calls.map(([path]) => new URL(String(path), "https://pharos.watch").pathname)).toEqual([
       "/api/telegram-mini-app/session",
       "/api/telegram-mini-app/mutate",
       "/api/telegram-mini-app/session",
@@ -455,7 +735,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Set global depeg step to 500 bps" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-global-depeg-step", depegStepBps: 500 } }),
     }));
@@ -474,7 +754,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Snooze alerts for 4h" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-snooze", durationToken: "4h" } }),
     }));
@@ -492,7 +772,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Pause all alerts indefinitely" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "pause" } }),
     }));
@@ -565,6 +845,48 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.getAllByRole("button", { name: /^Follow / })[0]?.getAttribute("aria-label")).toBe("Follow USDT");
   });
 
+  it("keeps suggested coins useful for followed and read-only accounts", async () => {
+    const readOnlyState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+      catalog: {
+        ...baseState.catalog,
+        searchableCoins: [
+          ...baseState.catalog.searchableCoins,
+          { stablecoinId: "usdc-circle", symbol: "USDC", name: "USD Coin", peg: "USD" },
+        ],
+      },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => readOnlyState }));
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    try {
+      render(<PharosWatchBotMiniAppPage />);
+      await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+      fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
+
+      const followedSuggestion = screen.getByRole("button", { name: "Go to followed USDC" });
+      const searchSuggestion = screen.getByRole("button", { name: "Search for USDT" });
+      expect(followedSuggestion).toHaveProperty("disabled", false);
+      expect(searchSuggestion).toHaveProperty("disabled", false);
+
+      fireEvent.click(followedSuggestion);
+      const coinRow = document.getElementById("coin-row-usdc-circle");
+      await waitFor(() => expect(document.activeElement).toBe(coinRow));
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth" });
+
+      fireEvent.click(searchSuggestion);
+      const searchInput = screen.getByLabelText("Search stablecoins");
+      expect((searchInput as HTMLInputElement).value).toBe("USDT");
+      await waitFor(() => expect(document.activeElement).toBe(searchInput));
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    }
+  });
+
   it("clears per-coin snooze with the right durationToken", async () => {
     const coinSnoozed: TelegramMiniAppState = {
       ...baseState,
@@ -584,7 +906,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clear USDC snooze" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-coin-snooze", stablecoinId: "usdc-circle", durationToken: "clear" } }),
     }));
@@ -603,10 +925,52 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.change(screen.getByLabelText("Timezone"), { target: { value: "Europe/Paris" } });
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-timezone", timezone: "Europe/Paris" } }),
     }));
+  });
+
+  it("offers a compact timezone picker plus searchable full coverage and confirmed recent zones", async () => {
+    const honoluluState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        quietHours: { ...baseState.subscriber.quietHours, timezone: "Pacific/Honolulu" },
+      },
+    };
+    const parisState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        quietHours: { ...baseState.subscriber.quietHours, timezone: "Europe/Paris" },
+      },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: true, json: async () => honoluluState })
+      .mockResolvedValueOnce({ ok: true, json: async () => parisState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+
+    const compactPicker = screen.getByLabelText("Timezone") as unknown as HTMLSelectElement;
+    const fullPicker = screen.getByLabelText("Timezone name") as HTMLInputElement;
+    const datalist = document.getElementById("telegram-mini-app-timezone-options");
+    expect(compactPicker.options.length).toBeLessThan(20);
+    expect(datalist?.querySelectorAll("option").length).toBeGreaterThan(compactPicker.options.length);
+
+    fireEvent.change(fullPicker, { target: { value: "Pacific/Honolulu" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply timezone" }));
+    await waitFor(() => expect(compactPicker.value).toBe("Pacific/Honolulu"));
+
+    fireEvent.change(compactPicker, { target: { value: "Europe/Paris" } });
+    await waitFor(() => expect(compactPicker.value).toBe("Europe/Paris"));
+    expect(Array.from(compactPicker.options).some((option) => option.text === "Recent: Pacific/Honolulu")).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("renders quiet hours in the configured timezone", async () => {
@@ -645,7 +1009,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(showConfirm).toHaveBeenCalledTimes(1);
     expect(showConfirm.mock.calls[0]?.[0]).toMatch(/clears every coin, preset, and global toggle/i);
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "unsubscribe-all" } }),
     }));
@@ -673,7 +1037,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Unsubscribe from all" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm unsubscribe from all alerts" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "unsubscribe-all" } }),
     }));
@@ -695,7 +1059,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Unfollow USD Top 25" }));
 
     expect(showConfirm).toHaveBeenCalledTimes(1);
-    expect(showConfirm.mock.calls[0]?.[0]).toMatch(/also removes explicit coin rows covered by this preset/i);
+    expect(showConfirm.mock.calls[0]?.[0]).toMatch(/direct coin settings and overlapping presets will stay unchanged/i);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -715,7 +1079,7 @@ describe("PharosWatchBotMiniAppPage", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(showConfirm).toHaveBeenCalledTimes(2);
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "forget-me" } }),
     }));
@@ -904,7 +1268,6 @@ describe("PharosWatchBotMiniAppPage", () => {
 
   it.each([
     [401, "stale-auth", "Telegram authorization expired. Close and reopen from PharosWatchBot."],
-    [429, "rate-limited", "Slow down — Telegram is rate-limiting your edits. Try again in a moment."],
     [403, "not-private", "This Mini App can only edit personal alerts. Use the bot commands in groups."],
     [400, "validation-error", "Change was rejected by the server."],
     [400, "unknown-coin", "Change was rejected by the server."],
@@ -986,7 +1349,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete all my data" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm delete all my data forever" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+    expect(fetchMock).toHaveBeenLastCalledWith(expect.stringMatching(/^\/api\/telegram-mini-app\/mutate\?/), expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "forget-me" } }),
     }));
@@ -1083,7 +1446,7 @@ describe("PharosWatchBotMiniAppPage", () => {
       ...baseState,
       subscriber: { ...baseState.subscriber, exists: false, snoozeUntilTs: null },
     };
-    let resolveMutation: ((value: { ok: true; json: () => Promise<TelegramMiniAppState> }) => void) | null = null;
+    let resolveMutation!: (value: { ok: true; json: () => Promise<TelegramMiniAppState> }) => void;
     const mutationResponse = new Promise<{ ok: true; json: () => Promise<TelegramMiniAppState> }>((resolve) => {
       resolveMutation = resolve;
     });
@@ -1103,7 +1466,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    resolveMutation?.({ ok: true, json: async () => baseState });
+    resolveMutation({ ok: true, json: async () => baseState });
     await waitFor(() => expect(screen.getByText("Recommended setup applied.")).toBeTruthy());
   });
 

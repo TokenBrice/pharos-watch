@@ -98,13 +98,11 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
   }
 
   if (input.error && hasData) {
-    const state = input.meta ? baseState : (baseState === "fresh" ? "degraded" : baseState);
+    const state = baseState === "fresh" ? "degraded" : baseState;
     return {
       label: input.label,
       state,
-      message: state === "fresh" || state === "degraded" || state === "stale"
-        ? getBaseMessage(state)
-        : "Using last successful data while refresh retries.",
+      message: "Using last successful data while refresh retries.",
       dataUpdatedAt: updatedAtMs,
       ageMs,
       staleTime: input.staleTime,

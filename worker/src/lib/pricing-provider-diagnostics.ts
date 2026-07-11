@@ -59,6 +59,7 @@ export interface PricingProviderAttemptDiagnostic {
   errorClass?: string;
   errorMessage?: string;
   snippet?: string;
+  retryAfterSec?: number;
 }
 
 const MAX_SNIPPET_CHARS = 240;

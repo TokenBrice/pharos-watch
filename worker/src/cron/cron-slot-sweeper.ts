@@ -1,4 +1,4 @@
-import { sendAlert } from "../lib/alerts";
+import { deliverOperationalAlert } from "../lib/operational-alert";
 import { throwIfAborted } from "../lib/abort";
 import {
   sweepStaleScheduledSlotExecutions,
@@ -44,6 +44,7 @@ export async function runCronSlotSweeper(
   db: D1Database,
   alertWebhookUrl: string | null,
   signal?: AbortSignal,
+  alertBrokerMode?: string,
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
@@ -53,22 +54,48 @@ export async function runCronSlotSweeper(
   let alertDelivered = false;
   let alertSuppressed = false;
   if (summary.slotsReconciled > 0) {
-    if (alertWebhookUrl && await shouldSendAlert(db, nowSec)) {
-      alertDelivered = await sendAlert(
-        alertWebhookUrl,
-        "Cron slot abandoned",
-        [
+    if (alertBrokerMode != null || (alertWebhookUrl && await shouldSendAlert(db, nowSec))) {
+      alertDelivered = await deliverOperationalAlert({
+        db,
+        conditionKey: "watchdog:scheduled-slot-abandoned",
+        active: true,
+        severity: "critical",
+        title: "Cron slot abandoned",
+        message: [
           `Reconciled ${summary.slotsReconciled} stale scheduled slot(s) at ${new Date(nowSec * 1000).toISOString()}.`,
           `Synthetic child cron_runs inserted: ${summary.syntheticCronRuns}.`,
           summarizeAbandonedSlots(summary),
         ].filter(Boolean).join("\n"),
-      );
+        recoveryTitle: "Cron slot abandonment recovered",
+        recoveryMessage: "No stale scheduled slot required reconciliation in the latest sweep.",
+        fingerprint: { watchdog: "scheduled-slot-abandoned" },
+        metadata: {
+          slotsReconciled: summary.slotsReconciled,
+          syntheticCronRuns: summary.syntheticCronRuns,
+        },
+        webhookUrl: alertWebhookUrl,
+        brokerMode: alertBrokerMode,
+        cooldownSec: SLOT_SWEEPER_ALERT_COOLDOWN_SEC,
+      });
       if (alertDelivered) {
         await markAlertAttempted(db, nowSec, summary);
       }
     } else {
       alertSuppressed = true;
     }
+  } else if (alertBrokerMode != null) {
+    alertDelivered = await deliverOperationalAlert({
+      db,
+      conditionKey: "watchdog:scheduled-slot-abandoned",
+      active: false,
+      severity: "critical",
+      title: "Cron slot abandoned",
+      message: "No stale scheduled slot required reconciliation.",
+      recoveryTitle: "Cron slot abandonment recovered",
+      recoveryMessage: "No stale scheduled slot required reconciliation in the latest sweep.",
+      webhookUrl: alertWebhookUrl,
+      brokerMode: alertBrokerMode,
+    });
   }
 
   return {

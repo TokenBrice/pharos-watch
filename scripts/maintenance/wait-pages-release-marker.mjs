@@ -2,41 +2,65 @@
 
 import { readFile } from "node:fs/promises";
 
+import {
+  assertCliUsage,
+  parseCliInteger,
+  parseStrictCliArgs,
+  runCliEntrypoint,
+  writeCliHelpIfRequested,
+} from "../lib/cli-args.mjs";
 import { isDirectRun, parsePositiveInt, sleep } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_ATTEMPTS = 60;
 const DEFAULT_DELAY_MS = 5_000;
+const DEFAULT_STABLE_COUNT = 10;
 const DEFAULT_TIMEOUT_MS = 8_000;
+const USAGE = `Usage: node scripts/maintenance/wait-pages-release-marker.mjs [options]
 
-function parseArgs(argv) {
+Options:
+  --url <url>         Release marker URL (repeatable; at least one required)
+  --marker <path>     Expected local marker (default: out/__pharos_release.json)
+  --attempts <count>  Poll attempts (default: 60)
+  --delay-ms <ms>     Delay between attempts (default: 5000)
+  --stable-count <n>  Consecutive matching responses required (default: 10)
+  --timeout-ms <ms>   Per-request timeout (default: 8000)
+  -h, --help          Show this help`;
+
+/** @param {readonly string[]} argv @param {Record<string, string | undefined>} [env] */
+export function parseReleaseMarkerArgs(argv, env = process.env) {
+  const { values } = parseStrictCliArgs(argv, {
+    options: {
+      attempts: { type: "string" },
+      "delay-ms": { type: "string" },
+      marker: { type: "string" },
+      "stable-count": { type: "string" },
+      "timeout-ms": { type: "string" },
+      url: { type: "string", multiple: true },
+    },
+  });
   const args = {
-    attempts: parsePositiveInt(process.env.PHAROS_RELEASE_MARKER_ATTEMPTS, DEFAULT_ATTEMPTS),
-    delayMs: parsePositiveInt(process.env.PHAROS_RELEASE_MARKER_DELAY_MS, DEFAULT_DELAY_MS),
-    markerPath: process.env.PHAROS_RELEASE_MARKER_PATH ?? "out/__pharos_release.json",
-    timeoutMs: parsePositiveInt(process.env.PHAROS_RELEASE_MARKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
-    urls: [],
+    attempts: parsePositiveInt(env.PHAROS_RELEASE_MARKER_ATTEMPTS, DEFAULT_ATTEMPTS),
+    delayMs: parsePositiveInt(env.PHAROS_RELEASE_MARKER_DELAY_MS, DEFAULT_DELAY_MS),
+    help: values.help === true,
+    markerPath: typeof values.marker === "string"
+      ? values.marker
+      : env.PHAROS_RELEASE_MARKER_PATH ?? "out/__pharos_release.json",
+    stableCount: parsePositiveInt(env.PHAROS_RELEASE_MARKER_STABLE_COUNT, DEFAULT_STABLE_COUNT),
+    timeoutMs: parsePositiveInt(env.PHAROS_RELEASE_MARKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
+    urls: Array.isArray(values.url) ? values.url : [],
   };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === "--marker") {
-      args.markerPath = argv[index + 1] ?? "";
-      index += 1;
-    } else if (arg === "--url") {
-      args.urls.push(argv[index + 1] ?? "");
-      index += 1;
-    } else if (arg === "--attempts") {
-      args.attempts = parsePositiveInt(argv[index + 1], args.attempts);
-      index += 1;
-    } else if (arg === "--delay-ms") {
-      args.delayMs = parsePositiveInt(argv[index + 1], args.delayMs);
-      index += 1;
-    } else if (arg === "--timeout-ms") {
-      args.timeoutMs = parsePositiveInt(argv[index + 1], args.timeoutMs);
-      index += 1;
-    }
+  if (typeof values.attempts === "string") {
+    args.attempts = parseCliInteger(values.attempts, { name: "--attempts", min: 1 });
   }
-
+  if (typeof values["delay-ms"] === "string") {
+    args.delayMs = parseCliInteger(values["delay-ms"], { name: "--delay-ms", min: 0 });
+  }
+  if (typeof values["stable-count"] === "string") {
+    args.stableCount = parseCliInteger(values["stable-count"], { name: "--stable-count", min: 1 });
+  }
+  if (typeof values["timeout-ms"] === "string") {
+    args.timeoutMs = parseCliInteger(values["timeout-ms"], { name: "--timeout-ms", min: 1 });
+  }
   return args;
 }
 
@@ -86,16 +110,26 @@ async function fetchMarker(url, { headers, timeoutMs }) {
 
 async function waitForUrl(url, expectedCommit, options) {
   let lastDetail = "not attempted";
+  let consecutiveMatches = 0;
   for (let attempt = 1; attempt <= options.attempts; attempt += 1) {
     try {
       const result = await fetchMarker(url, options);
       const liveCommit = typeof result.body?.commit === "string" ? result.body.commit.trim() : "";
       if (result.response.ok && liveCommit === expectedCommit) {
-        console.log(`[release-marker] OK ${url} commit=${liveCommit}`);
-        return;
+        consecutiveMatches += 1;
+        if (consecutiveMatches >= options.stableCount) {
+          console.log(
+            `[release-marker] OK ${url} commit=${liveCommit} stable=${consecutiveMatches}/${options.stableCount}`,
+          );
+          return;
+        }
+        lastDetail = `matching commit, stability=${consecutiveMatches}/${options.stableCount}`;
+      } else {
+        consecutiveMatches = 0;
+        lastDetail = `HTTP ${result.response.status}, commit=${liveCommit || "(missing)"}, body=${result.text.slice(0, 120)}`;
       }
-      lastDetail = `HTTP ${result.response.status}, commit=${liveCommit || "(missing)"}, body=${result.text.slice(0, 120)}`;
     } catch (error) {
+      consecutiveMatches = 0;
       lastDetail = error instanceof Error ? error.message : String(error);
     }
 
@@ -111,11 +145,14 @@ async function waitForUrl(url, expectedCommit, options) {
 }
 
 export async function run(argv = process.argv.slice(2)) {
-  const args = parseArgs(argv);
+  const args = parseReleaseMarkerArgs(argv);
+  if (writeCliHelpIfRequested(args, USAGE)) return;
   const urls = args.urls.map((url) => url.trim()).filter(Boolean);
-  if (urls.length === 0) {
-    throw new Error("Pass at least one --url for the release marker to check");
-  }
+  assertCliUsage(urls.length > 0, "at least one --url is required");
+  assertCliUsage(
+    args.attempts >= args.stableCount,
+    "--attempts must be greater than or equal to --stable-count",
+  );
 
   const expected = await loadExpectedMarker(args.markerPath);
   const headers = buildAccessHeaders();
@@ -125,8 +162,8 @@ export async function run(argv = process.argv.slice(2)) {
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  run().catch((error) => {
-    console.error(`[release-marker] FAILED: ${error instanceof Error ? error.message : String(error)}`);
-    process.exit(1);
+  void runCliEntrypoint(() => run(), {
+    label: "release-marker",
+    usage: USAGE,
   });
 }

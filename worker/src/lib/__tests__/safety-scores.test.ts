@@ -71,6 +71,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   return {
     TRACKED_STABLECOINS: stablecoins,
     ACTIVE_STABLECOINS: stablecoins,
+    ACTIVE_IDS: new Set(stablecoins.map((coin) => coin.id)),
   };
 });
 
@@ -81,6 +82,7 @@ vi.mock("../report-cards-snapshot", () => ({
 
 import { computeSafetyScoresSnapshot } from "../safety-scores";
 import type { StablecoinsCacheLoadOk } from "../stablecoins-cache";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 
 describe("computeSafetyScoresSnapshot", () => {
   let db: D1Database;
@@ -161,5 +163,198 @@ describe("computeSafetyScoresSnapshot", () => {
 
     expect(result.kind).toBe("degraded");
     expect(result.reason).toBe("Redemption backstop snapshot unavailable");
+  });
+
+  it("loads yield safety from one exact published report-card generation", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const generationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
+    db = mockD1([{
+      match: "FROM cache WHERE key = ?",
+      matchBinds: ["report_card_cache"],
+      rows: [{
+        key: "report_card_cache",
+        value: JSON.stringify({
+          scores: {
+            "usdt-tether": { score: 75, grade: "B" },
+            "usdc-circle": { score: 82, grade: "B+" },
+          },
+          updatedAt,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          publicationGenerationId: generationId,
+          completeness: {
+            generationId,
+            methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+            expectedCount: 3,
+            scoredCount: 2,
+            notRatedCount: 1,
+            notRatedIds: ["ust-terra"],
+          },
+        }),
+        updated_at: updatedAt,
+      }],
+    }]);
+
+    const result = await computeSafetyScoresSnapshot(db, {
+      outputMode: "map",
+      sourceMode: "published-cache",
+    });
+
+    expect(result).toMatchObject({
+      kind: "ok",
+      source: "report-card-cache",
+      publicationGenerationId: generationId,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publishedAt: updatedAt,
+      coveredCount: 2,
+      trackedCount: 3,
+    });
+    expect(result.scores.get("usdc-circle")).toEqual({ score: 82, grade: "B+" });
+    expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
+  });
+
+  it("degrades yield safety when the compact cache manifest swaps an active identity", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const generationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
+    db = mockD1([{
+      match: "FROM cache WHERE key = ?",
+      matchBinds: ["report_card_cache"],
+      rows: [{
+        key: "report_card_cache",
+        value: JSON.stringify({
+          scores: {
+            "usdt-tether": { score: 75, grade: "B" },
+            "unexpected-stablecoin": { score: 82, grade: "B+" },
+          },
+          updatedAt,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          publicationGenerationId: generationId,
+          completeness: {
+            generationId,
+            methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+            expectedCount: 3,
+            scoredCount: 2,
+            notRatedCount: 1,
+            notRatedIds: ["ust-terra"],
+          },
+        }),
+        updated_at: updatedAt,
+      }],
+    }]);
+
+    const result = await computeSafetyScoresSnapshot(db, {
+      outputMode: "map",
+      sourceMode: "published-cache",
+    });
+
+    expect(result).toMatchObject({
+      kind: "degraded",
+      source: "report-card-cache",
+      publicationGenerationId: null,
+      reason: "report-card-cache:completeness-mismatch",
+    });
+    expect(result.scores.size).toBe(0);
+    expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["missing cache", null, "report-card-cache:missing-cache"],
+    [
+      "legacy cache without completeness",
+      {
+        scores: { "usdt-tether": { score: 75, grade: "B" } },
+        updatedAt: Math.floor(Date.now() / 1000),
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      },
+      "report-card-cache:completeness-missing",
+    ],
+  ])("fails closed for %s", async (_label, payload, reason) => {
+    if (payload) {
+      db = mockD1([{
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["report_card_cache"],
+        rows: [{
+          key: "report_card_cache",
+          value: JSON.stringify(payload),
+          updated_at: payload.updatedAt,
+        }],
+      }]);
+    }
+
+    const result = await computeSafetyScoresSnapshot(db, {
+      outputMode: "map",
+      sourceMode: "published-cache",
+    });
+
+    expect(result).toMatchObject({
+      kind: "degraded",
+      source: "report-card-cache",
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      reason,
+      coveredCount: 0,
+      trackedCount: 3,
+    });
+    expect(result.scores.size).toBe(0);
+    expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves the exact generation while degrading stale report-card inputs", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const generationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
+    db = mockD1([{
+      match: "FROM cache WHERE key = ?",
+      matchBinds: ["report_card_cache"],
+      rows: [{
+        key: "report_card_cache",
+        value: JSON.stringify({
+          scores: {
+            "usdt-tether": { score: 75, grade: "B" },
+            "usdc-circle": { score: 82, grade: "B+" },
+          },
+          updatedAt,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          publicationGenerationId: generationId,
+          completeness: {
+            generationId,
+            methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+            expectedCount: 3,
+            scoredCount: 2,
+            notRatedCount: 1,
+            notRatedIds: ["ust-terra"],
+          },
+          degradedInputs: {
+            inputsStale: true,
+            liquidityStale: true,
+            redemptionStale: false,
+            staleInputs: ["dexLiquidity"],
+          },
+        }),
+        updated_at: updatedAt,
+      }],
+    }]);
+
+    const result = await computeSafetyScoresSnapshot(db, {
+      outputMode: "map",
+      sourceMode: "published-cache",
+    });
+
+    expect(result).toMatchObject({
+      kind: "degraded",
+      source: "report-card-cache",
+      publicationGenerationId: generationId,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publishedAt: updatedAt,
+      reason: "report-card-cache:degraded-inputs",
+      coveredCount: 2,
+      trackedCount: 3,
+    });
+  });
+
+  it("rejects full-grade output for the compact published source", async () => {
+    await expect(computeSafetyScoresSnapshot(db, {
+      outputMode: "full-grades",
+      sourceMode: "published-cache",
+    } as never)).rejects.toThrow("published-cache safety scores support map output only");
+    expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { handleHealth } from "../health";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 type HealthDbOptions = {
   extraCacheRows?: Record<string, unknown>[];
@@ -11,6 +12,49 @@ type HealthDbOptions = {
   statusStartedAt?: number;
   extras?: MockTableConfig[];
 };
+
+function completePublicationEntry(now: number): MockTableConfig {
+  return {
+    match: "job = 'sync-stablecoins' AND metadata IS NOT NULL",
+    rows: [],
+    first: {
+      started_at: now - 30,
+      metadata: JSON.stringify({
+        activePublicationCoverage: {
+          complete: true,
+          expectedActiveCount: ACTIVE_IDS.size,
+          presentActiveCount: ACTIVE_IDS.size,
+          waivedActiveCount: 0,
+          missingActiveIds: [],
+          waivedActiveIds: [],
+          expiredWaiverIds: [],
+        },
+      }),
+    },
+  };
+}
+
+function dewsPublicationEntry(now: number): MockTableConfig {
+  const updatedAt = now - 60;
+  const row = {
+    key: "dews:published-generation",
+    updated_at: updatedAt,
+    value: JSON.stringify({
+      updatedAt,
+      source: "compute-dews",
+      publishStatus: "published",
+      coverageVersion: 2,
+      expectedRowCount: 1,
+      stablecoinIdsDigest: "a".repeat(64),
+    }),
+  };
+  return {
+    match: "FROM cache WHERE key = ?",
+    matchBinds: ["dews:published-generation"],
+    rows: [row],
+    first: row,
+  };
+}
 
 function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
   const {
@@ -23,6 +67,8 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
   } = options;
 
   return mockD1([
+    completePublicationEntry(now),
+    dewsPublicationEntry(now),
     {
       match: "cache WHERE key IN",
       rows: [
@@ -49,9 +95,46 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
 }
 
 describe("handleHealth", () => {
+  const telegramCapacityRow = {
+    total: 3,
+    expired: 0,
+    due: 2,
+    deferred: 1,
+    near_ttl: 0,
+    oldest_pending_created_at: null,
+    oldest_due_created_at: null,
+    pending_sending: 0,
+    pending_execution_unknown: 0,
+    sent_cleanup: 0,
+    oldest_pending_execution_unknown_at: null,
+    fresh_sending: 0,
+    fresh_execution_unknown: 0,
+    oldest_fresh_execution_unknown_at: null,
+    fresh_uncertain_sample_count: 0,
+  };
+  const telegramDeliveryBacklog = {
+    claimable: 2,
+    due: 2,
+    deferred: 1,
+    expired: 0,
+    nearTtl: 0,
+    sending: 0,
+    pendingSending: 0,
+    freshSending: 0,
+    executionUnknown: 0,
+    pendingExecutionUnknown: 0,
+    freshExecutionUnknown: 0,
+    oldestExecutionUnknownAgeSec: null,
+    executionUnknownSampleLimit: 5_001,
+    executionUnknownLowerBound: false,
+    sentCleanup: 0,
+    completedPendingCleanup: 0,
+  };
   it("returns 200 with health status", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
+      completePublicationEntry(now),
+      dewsPublicationEntry(now),
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
@@ -373,7 +456,7 @@ describe("handleHealth", () => {
       { match: "SELECT status", rows: [], first: { status: "ok" } },
       { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
       { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_pending_alerts", rows: [], first: { n: 3 } },
+      { match: "telegram_pending_alerts", rows: [], first: telegramCapacityRow },
       {
         match: "dispatch-telegram-alerts",
         rows: [],
@@ -385,6 +468,10 @@ describe("handleHealth", () => {
             safetyAlertSourceAgeSeconds: 120,
             safetyAlertsSuppressed: false,
             safetyAlertSourceGeneration: "safety-7.09-alert-source-v1",
+            reserveAlertSourceState: "ok",
+            reserveAlertSourceAgeSeconds: 240,
+            reserveAlertsSuppressed: false,
+            reserveAlertSourceGeneration: "reserve-alert-source-v1",
           }),
         },
       },
@@ -400,17 +487,27 @@ describe("handleHealth", () => {
         safetyAlertSourceAgeSeconds: number | null;
         safetyAlertsSuppressed: boolean;
         safetyAlertSourceGeneration: string | null;
+        reserveAlertSourceState: string | null;
+        reserveAlertSourceAgeSeconds: number | null;
+        reserveAlertsSuppressed: boolean;
+        reserveAlertSourceGeneration: string | null;
       } | null;
     };
     expect(body.telegramSummary).toEqual({
       totalChats: 42,
       pendingDeliveries: 3,
+      pendingDeliveryLifecycleStatus: "available",
+      pendingDeliveryBacklog: telegramDeliveryBacklog,
       lastDispatchAt: now - 120,
       lastDispatchStatus: "ok",
       safetyAlertSourceState: "ok",
       safetyAlertSourceAgeSeconds: 120,
       safetyAlertsSuppressed: false,
       safetyAlertSourceGeneration: "safety-7.09-alert-source-v1",
+      reserveAlertSourceState: "ok",
+      reserveAlertSourceAgeSeconds: 240,
+      reserveAlertsSuppressed: false,
+      reserveAlertSourceGeneration: "reserve-alert-source-v1",
     });
   });
 
@@ -424,7 +521,7 @@ describe("handleHealth", () => {
       { match: "SELECT status", rows: [], first: { status: "ok" } },
       { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
       { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_pending_alerts", rows: [], first: { n: 3 } },
+      { match: "telegram_pending_alerts", rows: [], first: telegramCapacityRow },
       {
         match: "dispatch-telegram-alerts",
         rows: [],
@@ -443,20 +540,65 @@ describe("handleHealth", () => {
         safetyAlertSourceAgeSeconds: number | null;
         safetyAlertsSuppressed: boolean;
         safetyAlertSourceGeneration: string | null;
+        reserveAlertSourceState: string | null;
+        reserveAlertSourceAgeSeconds: number | null;
+        reserveAlertsSuppressed: boolean;
+        reserveAlertSourceGeneration: string | null;
       } | null;
     };
 
     expect(body.telegramSummary).toEqual({
       totalChats: 42,
       pendingDeliveries: 3,
+      pendingDeliveryLifecycleStatus: "available",
+      pendingDeliveryBacklog: telegramDeliveryBacklog,
       lastDispatchAt: now - 120,
       lastDispatchStatus: "ok",
       safetyAlertSourceState: null,
       safetyAlertSourceAgeSeconds: null,
       safetyAlertsSuppressed: false,
       safetyAlertSourceGeneration: null,
+      reserveAlertSourceState: null,
+      reserveAlertSourceAgeSeconds: null,
+      reserveAlertsSuppressed: false,
+      reserveAlertSourceGeneration: null,
     });
     expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it("reports unknown lifecycle capacity without manufacturing an empty queue", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
+      { match: "SELECT status", rows: [], first: { status: "ok" } },
+      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+      { match: "telegram_subscribers", rows: [], first: { n: 42 } },
+      { match: "telegram_pending_alerts", rows: [], throwError: new Error("capacity unavailable") },
+      {
+        match: "dispatch-telegram-alerts",
+        rows: [],
+        first: { started_at: now - 120, status: "ok", metadata: null },
+      },
+    ]);
+
+    const response = await handleHealth(db);
+    const body = (await response.json()) as {
+      status: string;
+      warnings: string[];
+      telegramSummary: {
+        pendingDeliveries: number | null;
+        pendingDeliveryLifecycleStatus: string;
+        pendingDeliveryBacklog?: unknown;
+      };
+    };
+
+    expect(body.status).not.toBe("healthy");
+    expect(body.warnings).toContain("telegram-delivery-lifecycle:unknown");
+    expect(body.telegramSummary.pendingDeliveries).toBeNull();
+    expect(body.telegramSummary.pendingDeliveryLifecycleStatus).toBe("unknown");
+    expect(body.telegramSummary.pendingDeliveryBacklog).toBeUndefined();
   });
 
   it("adds a warning when safety alerts are suppressed", async () => {
@@ -468,7 +610,7 @@ describe("handleHealth", () => {
       { match: "SELECT status", rows: [], first: { status: "ok" } },
       { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
       { match: "telegram_subscribers", rows: [], first: { n: 42 } },
-      { match: "telegram_pending_alerts", rows: [], first: { n: 3 } },
+      { match: "telegram_pending_alerts", rows: [], first: telegramCapacityRow },
       {
         match: "dispatch-telegram-alerts",
         rows: [],
@@ -480,6 +622,10 @@ describe("handleHealth", () => {
             safetyAlertSourceAgeSeconds: 120,
             safetyAlertsSuppressed: true,
             safetyAlertSourceGeneration: "legacy-generation",
+            reserveAlertSourceState: "recovering",
+            reserveAlertSourceAgeSeconds: 120,
+            reserveAlertsSuppressed: true,
+            reserveAlertSourceGeneration: "reserve-alert-source-v1",
           }),
         },
       },
@@ -488,6 +634,7 @@ describe("handleHealth", () => {
     const res = await handleHealth(db);
     const body = (await res.json()) as { warnings: string[] };
     expect(body.warnings).toContain("telegram-safety-alerts-suppressed:wrong-generation");
+    expect(body.warnings).toContain("telegram-reserve-alerts-suppressed:recovering");
   });
 
   it("returns null telegramSummary when telegram tables do not exist", async () => {

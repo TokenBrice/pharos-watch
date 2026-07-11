@@ -9,6 +9,7 @@ import {
 import { activeDepegCapScore } from "@shared/lib/report-card-active-depeg";
 import { round1, roundScore } from "@shared/lib/math";
 import type { DimensionKey, ReportCard, ReportCardGrade, SafetyAlertSourceState } from "@shared/types";
+import type { ReportCardPublicationCompleteness } from "./report-card-publication";
 
 export const ALERT_SAFETY_SOURCE_CACHE_KEY = "alert:safety-source-cache";
 const ALERT_SAFETY_SOURCE_SCHEMA_VERSION = "1";
@@ -80,8 +81,10 @@ export type AlertSafetySourceSnapshot = Record<string, AlertSafetySourceRow>;
 
 export interface AlertSafetySourceEnvelope {
   generation: string;
+  publicationGenerationId?: string;
   methodologyVersion: string;
   publishedAt: number;
+  completeness?: ReportCardPublicationCompleteness;
   snapshot: AlertSafetySourceSnapshot;
 }
 
@@ -586,9 +589,11 @@ export function buildAlertSafetySourceEnvelope(
   cards: ReportCard[],
   methodologyVersion: string,
   publishedAt: number,
+  completeness?: ReportCardPublicationCompleteness,
 ): AlertSafetySourceEnvelope {
   return {
     generation: getAlertSafetySourceGeneration(methodologyVersion),
+    ...(completeness ? { publicationGenerationId: completeness.generationId, completeness } : {}),
     methodologyVersion,
     publishedAt,
     snapshot: buildAlertSafetySourceSnapshot(cards, methodologyVersion),
@@ -604,17 +609,42 @@ function parseAlertSafetySourceEnvelope(
 
   const generation = typeof record.generation === "string" ? record.generation : null;
   const methodologyVersion = typeof record.methodologyVersion === "string" ? record.methodologyVersion : null;
+  const publicationGenerationId = typeof record.publicationGenerationId === "string"
+    ? record.publicationGenerationId
+    : null;
   const publishedAt = typeof record.publishedAt === "number" ? record.publishedAt : null;
   const snapshot = parseSnapshot(record.snapshot);
 
-  if (!generation || !methodologyVersion || publishedAt == null || !snapshot) {
+  const completenessRecord = asRecord(record.completeness);
+  const completeness = completenessRecord
+    && typeof completenessRecord.generationId === "string"
+    && typeof completenessRecord.methodologyVersion === "string"
+    && typeof completenessRecord.expectedCount === "number"
+    && typeof completenessRecord.scoredCount === "number"
+    && typeof completenessRecord.notRatedCount === "number"
+    && Array.isArray(completenessRecord.notRatedIds)
+    && completenessRecord.notRatedIds.every((id) => typeof id === "string")
+    && completenessRecord.expectedCount === completenessRecord.scoredCount + completenessRecord.notRatedCount
+      ? completenessRecord as unknown as ReportCardPublicationCompleteness
+      : null;
+
+  if (
+    !generation
+    || !methodologyVersion
+    || publishedAt == null
+    || !snapshot
+    || (record.completeness != null && !completeness)
+    || (completeness && publicationGenerationId !== completeness.generationId)
+  ) {
     return null;
   }
 
   return {
     generation,
+    ...(publicationGenerationId ? { publicationGenerationId } : {}),
     methodologyVersion,
     publishedAt,
+    ...(completeness ? { completeness } : {}),
     snapshot,
   };
 }

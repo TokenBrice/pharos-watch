@@ -8,8 +8,6 @@ import {
   type TelegramWebAppSdk,
 } from "./telegram-sdk";
 
-/** Outside Telegram (browser preview), stop polling after ~0.5s (10 × 50ms) so the preview banner appears promptly. */
-const TELEGRAM_BROWSER_PREVIEW_ATTEMPTS = 10;
 /** Inside Telegram, poll for up to 8s (160 × 50ms) while Telegram's launch initData settles on slow clients. */
 const TELEGRAM_LAUNCH_MAX_ATTEMPTS = 160;
 /** Delay between Telegram launch-context polls; 50ms keeps the spin tight without busy-looping. */
@@ -18,7 +16,7 @@ const TELEGRAM_LAUNCH_RETRY_MS = 50;
 export type TelegramBridgeStatus = "loading" | "ready" | "preview" | "missing";
 
 export interface TelegramBridgeState {
-  /** The Telegram WebApp SDK handle once probing has resolved. `null` until then or in browser preview. */
+  /** The Telegram WebApp SDK handle once probing has resolved. It can exist in standalone browser preview. */
   webApp: TelegramWebAppSdk | null;
   /** Signed launch authorization payload. Empty string in browser preview. */
   initData: string;
@@ -75,8 +73,8 @@ export function useTelegramBridge(opts: UseTelegramBridgeOptions = {}): Telegram
     const initialize = () => {
       const launch = getTelegramLaunchContext();
       const shouldKeepWaiting = !launch.initData
-        && attempts < TELEGRAM_LAUNCH_MAX_ATTEMPTS
-        && (launch.hasTelegramLaunchHint || attempts < TELEGRAM_BROWSER_PREVIEW_ATTEMPTS);
+        && launch.hasTelegramLaunchHint
+        && attempts < TELEGRAM_LAUNCH_MAX_ATTEMPTS;
       if (shouldKeepWaiting) {
         attempts += 1;
         timer = setTimeout(initialize, TELEGRAM_LAUNCH_RETRY_MS);

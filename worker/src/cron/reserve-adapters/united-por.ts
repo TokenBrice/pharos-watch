@@ -28,6 +28,12 @@ interface UnitedPorSliceConfig {
   depType?: ReserveSlice["depType"];
 }
 
+function normalizeRipcordDetails(details: unknown): string[] {
+  return Array.isArray(details)
+    ? details.filter((detail): detail is string => typeof detail === "string")
+    : [];
+}
+
 /**
  * Reads United Stables' public aggregate PoR payload
  * (`https://u.tech/u-client-api/v1/public/u/por`): `totalReserve` vs
@@ -57,6 +63,7 @@ export function adaptUnitedPorPayload(
   }
 
   const collateralizationRatio = totalReserveUsd / supplyUsd;
+  const ripcordDetails = normalizeRipcordDetails(payload.ripcordDetails);
 
   const warnings: LiveReserveWarning[] = buildCoverageShortfallWarnings({
     code: "united-por-reserve-under-token",
@@ -69,8 +76,8 @@ export function adaptUnitedPorPayload(
   // ripcord snapshot never scores as healthy, and carry the disclosed
   // details into the warning message rather than a bare boolean.
   if (payload.ripcord) {
-    const detail = payload.ripcordDetails.length > 0
-      ? payload.ripcordDetails.join("; ")
+    const detail = ripcordDetails.length > 0
+      ? ripcordDetails.join("; ")
       : "no further detail disclosed";
     warnings.push(
       reserveDegradedWarning(
@@ -96,7 +103,7 @@ export function adaptUnitedPorPayload(
       details: {
         accountName: payload.accountName,
         ripcord: payload.ripcord,
-        ...(payload.ripcordDetails.length > 0 ? { ripcordDetails: payload.ripcordDetails } : {}),
+        ...(ripcordDetails.length > 0 ? { ripcordDetails } : {}),
       },
     },
     ...(warnings.length > 0 ? { warnings } : {}),

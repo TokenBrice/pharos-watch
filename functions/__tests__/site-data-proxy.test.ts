@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeTestD1Database } from "../../scripts/test-utils/d1";
 import { onRequest } from "../_site-data/[[path]].ts";
 import { resetSiteDataRequestAttributionStateForTests } from "../lib/request-attribution";
+import { MAX_PROXY_RESPONSE_BODY_BYTES } from "../lib/upstream-proxy";
 
 function makeEnv(db = makeTestD1Database(), overrides: Record<string, unknown> = {}) {
   return {
@@ -113,227 +114,17 @@ describe("site-data proxy", () => {
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
-  it("returns a cached response and records a Pages cache-hit request", async () => {
-    vi.setSystemTime(new Date("2026-06-15T10:00:00.000Z"));
-    cacheMatch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ cached: true }), {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, max-age=60",
-          "Content-Type": "application/json",
-          Date: "Mon, 15 Jun 2026 09:59:30 GMT",
-        },
-      }),
-    );
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
-    const db = makeTestD1Database();
-
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(db),
-      params: { path: "stablecoins" },
-    });
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ cached: true });
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(cachePut).not.toHaveBeenCalled();
-    expect(
-      db
-        .getHistory()
-        .some(
-          (entry) =>
-            entry.sql.includes("INSERT INTO site_data_request_stats") &&
-            entry.binds[1] === "stablecoins" &&
-            entry.binds[2] === "/api/stablecoins" &&
-            entry.binds[3] === "pages-cache-hit" &&
-            entry.binds[4] === "",
-        ),
-    ).toBe(true);
-  });
-
-  it("partitions the Pages cache key by caller origin to honor Vary: Origin", async () => {
+  it("never grants an upstream response a second Pages cache lifetime", async () => {
+    cacheMatch.mockRejectedValueOnce(new Error("Pages cache unavailable"));
     const fetchSpy = vi.fn(
       async () =>
         new Response(JSON.stringify({ ok: true }), {
           status: 200,
           headers: {
-            "Cache-Control": "public, max-age=60",
+            Age: "299",
+            "Cache-Control": "public, max-age=300",
             "Content-Type": "application/json",
-            Vary: "Origin",
-            "Access-Control-Allow-Origin": "https://pharos.watch",
-          },
-        }),
-    );
-    vi.stubGlobal("fetch", fetchSpy);
-
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
-
-    expect(response.status).toBe(200);
-    expect(cachePut).toHaveBeenCalledTimes(1);
-
-    const matchKey = cacheMatch.mock.calls[0]?.[0] as Request;
-    const putKey = cachePut.mock.calls[0]?.[0] as Request;
-    expect(new URL(matchKey.url).searchParams.get("__cors_origin")).toBe("https://pharos.watch");
-    expect(new URL(putKey.url).searchParams.get("__cors_origin")).toBe("https://pharos.watch");
-
-    // A request from a different allowed origin must not collide with this key,
-    // otherwise it would receive pharos.watch's reflected ACAO.
-    const otherKeyOrigin = new URL(matchKey.url).searchParams.get("__cors_origin");
-    expect(otherKeyOrigin).not.toBe("https://ops.pharos.watch");
-  });
-
-  it("does not serve a cache entry written for a different origin", async () => {
-    // The cache mock keys on the synthetic __cors_origin param: an entry stored
-    // for pharos.watch must not be returned to an ops.pharos.watch request.
-    const store = new Map<string, Response>();
-    cacheMatch.mockImplementation(async (key: Request) => store.get(key.url)?.clone() ?? undefined);
-    cachePut.mockImplementation(async (key: Request, value: Response) => {
-      store.set(key.url, value);
-    });
-
-    const cachedForSite = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ acao: "https://pharos.watch" }), {
-          status: 200,
-          headers: {
-            "Cache-Control": "public, max-age=60",
-            "Content-Type": "application/json",
-            Vary: "Origin",
-            "Access-Control-Allow-Origin": "https://pharos.watch",
-          },
-        }),
-    );
-    vi.stubGlobal("fetch", cachedForSite);
-
-    // Populate the cache from pharos.watch.
-    await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
-    expect(store.size).toBe(1);
-
-    // An ops.pharos.watch request must miss and refetch (its own ACAO), not
-    // reuse the pharos.watch entry.
-    const cachedForOps = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ acao: "https://ops.pharos.watch" }), {
-          status: 200,
-          headers: {
-            "Cache-Control": "public, max-age=60",
-            "Content-Type": "application/json",
-            Vary: "Origin",
-            "Access-Control-Allow-Origin": "https://ops.pharos.watch",
-          },
-        }),
-    );
-    vi.stubGlobal("fetch", cachedForOps);
-
-    const opsResponse = await onRequest({
-      request: new Request("https://ops.pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://ops.pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
-
-    expect(cachedForOps).toHaveBeenCalledOnce();
-    expect(opsResponse.headers.get("Access-Control-Allow-Origin")).toBe("https://ops.pharos.watch");
-    expect(store.size).toBe(2);
-  });
-
-  it("bypasses a stale Pages cache response and refreshes upstream", async () => {
-    vi.setSystemTime(new Date("2026-06-15T10:02:00.000Z"));
-    cacheMatch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ cached: true }), {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, max-age=60",
-          "Content-Type": "application/json",
-          Date: "Mon, 15 Jun 2026 10:00:00 GMT",
-        },
-      }),
-    );
-    const fetchSpy = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ refreshed: true }), {
-          status: 200,
-          headers: {
-            "Cache-Control": "public, max-age=60",
-            "Content-Type": "application/json",
-          },
-        }),
-    );
-    vi.stubGlobal("fetch", fetchSpy);
-
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ refreshed: true });
-    expect(fetchSpy).toHaveBeenCalledOnce();
-    expect(cachePut).toHaveBeenCalledTimes(1);
-  });
-
-  it("bypasses a Pages cache response without explicit freshness", async () => {
-    cacheMatch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ cached: true }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }),
-    );
-    const fetchSpy = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ refreshed: true }), {
-          status: 200,
-          headers: {
-            "Cache-Control": "public, max-age=60",
-            "Content-Type": "application/json",
-          },
-        }),
-    );
-    vi.stubGlobal("fetch", fetchSpy);
-
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ refreshed: true });
-    expect(fetchSpy).toHaveBeenCalledOnce();
-    expect(cachePut).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not cache upstream responses without explicit freshness", async () => {
-    const fetchSpy = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ ok: true }), {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
+            Date: "Mon, 15 Jun 2026 09:55:01 GMT",
           },
         }),
     );
@@ -349,45 +140,13 @@ describe("site-data proxy", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(response.headers.get("Age")).toBe("299");
+    expect(response.headers.get("Date")).toBe("Mon, 15 Jun 2026 09:55:01 GMT");
+    expect(cacheMatch).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
   });
 
-  it("uses s-maxage when it follows max-age in cached response directives", async () => {
-    vi.setSystemTime(new Date("2026-06-15T10:02:00.000Z"));
-    cacheMatch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ cached: true }), {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, max-age=60, s-maxage=180",
-          "Content-Type": "application/json",
-          Date: "Mon, 15 Jun 2026 10:00:00 GMT",
-        },
-      }),
-    );
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
-
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ cached: true });
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(cachePut).not.toHaveBeenCalled();
-  });
-
-  it("bypasses the Pages cache for conditional requests", async () => {
-    cacheMatch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ cached: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+  it("forwards conditional requests without consulting a Pages cache", async () => {
     const fetchSpy = vi.fn(
       async () =>
         new Response(null, {
@@ -413,7 +172,7 @@ describe("site-data proxy", () => {
 
   it("proxies allowlisted requests to the site API with the shared secret and records an upstream fetch", async () => {
     const fetchSpy = vi.fn(
-      async () =>
+      async (..._args: Parameters<typeof fetch>) =>
         new Response(JSON.stringify({ ok: true }), {
           status: 200,
           headers: {
@@ -444,14 +203,18 @@ describe("site-data proxy", () => {
       }),
     );
 
-    const fetchInit = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+    const fetchInit = fetchSpy.mock.calls[0]?.[1];
+    if (!fetchInit) {
+      throw new Error("Expected the proxy fetch to include request options");
+    }
     const forwardedHeaders = fetchInit.headers as Headers;
     expect(forwardedHeaders.get("Accept")).toBe("application/json");
     expect(forwardedHeaders.get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
     expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
     expect(response.headers.get("Warning")).toContain("advisory");
     expect(response.headers.get("X-Data-Age")).toBe("12");
-    expect(cachePut).toHaveBeenCalledTimes(1);
+    expect(cacheMatch).not.toHaveBeenCalled();
+    expect(cachePut).not.toHaveBeenCalled();
     expect(
       db
         .getHistory()
@@ -469,7 +232,7 @@ describe("site-data proxy", () => {
 
   it("proxies the events endpoint through the site-data lane for public UI reads", async () => {
     const fetchSpy = vi.fn(
-      async () =>
+      async (..._args: Parameters<typeof fetch>) =>
         new Response(JSON.stringify({ events: [] }), {
           status: 200,
           headers: {
@@ -493,8 +256,11 @@ describe("site-data proxy", () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
     const [upstreamUrl, init] = fetchSpy.mock.calls[0] ?? [];
     expect(upstreamUrl).toBe("https://site-api.pharos.watch/api/events?limit=1");
-    expect((init as RequestInit).headers).toBeInstanceOf(Headers);
-    expect(((init as RequestInit).headers as Headers).get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
+    if (!init) {
+      throw new Error("Expected the proxy fetch to include request options");
+    }
+    expect(init.headers).toBeInstanceOf(Headers);
+    expect((init.headers as Headers).get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
   });
 
   it("records site-data attribution through waitUntil when the Pages DB binding is present", async () => {
@@ -590,40 +356,6 @@ describe("site-data proxy", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
     expect(fetchSpy).toHaveBeenCalledOnce();
-  });
-
-  it("returns the upstream response when the background Pages cache write fails", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    cachePut.mockRejectedValueOnce(new Error("cache unavailable"));
-    const fetchSpy = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ ok: true }), {
-          status: 200,
-          headers: {
-            "Cache-Control": "public, max-age=60",
-            "Content-Type": "application/json",
-          },
-        }),
-    );
-    vi.stubGlobal("fetch", fetchSpy);
-    const ctx = makeWaitUntil();
-
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-      waitUntil: ctx.waitUntil,
-    });
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ ok: true });
-    expect(cachePut).toHaveBeenCalledTimes(1);
-    expect(ctx.waitUntil).toHaveBeenCalled();
-
-    await ctx.flush();
-    expect(warn).toHaveBeenCalledWith("[site-data-proxy] Failed to write Pages cache:", expect.any(Error));
   });
 
   it("does not cache upstream responses marked no-store", async () => {
@@ -856,6 +588,79 @@ describe("site-data proxy", () => {
         ),
     ).toBe(true);
     expect(warn).toHaveBeenCalledWith("[site-data-proxy] upstream fetch failed (Error): network down");
+  });
+
+  it("times out when headers arrive but the upstream body stalls", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"partial":'));
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    )));
+
+    const responsePromise = onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(makeTestD1Database(), { DB: undefined }),
+      params: { path: "stablecoins" },
+    });
+
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(504);
+    await expect(response.json()).resolves.toEqual({ error: "Site API upstream timed out" });
+  });
+
+  it("rejects a response whose declared body exceeds the proxy limit", async () => {
+    const cancel = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(
+      new ReadableStream<Uint8Array>({ cancel }),
+      {
+        status: 200,
+        headers: { "Content-Length": String(MAX_PROXY_RESPONSE_BODY_BYTES + 1) },
+      },
+    )));
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(502);
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("cancels a chunked response as soon as it crosses the proxy limit", async () => {
+    const cancel = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(MAX_PROXY_RESPONSE_BODY_BYTES));
+          controller.enqueue(new Uint8Array(1));
+        },
+        cancel,
+      }),
+      { status: 200 },
+    )));
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(502);
+    expect(cancel).toHaveBeenCalledOnce();
   });
 
   it("returns 500 when the site-proxy secret is missing", async () => {

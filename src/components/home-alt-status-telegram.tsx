@@ -9,6 +9,7 @@ import { getStatusTone } from "@/lib/status-dashboard-model";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@shared/lib/format";
+import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { HealthResponse } from "@shared/types";
 
 // Grouped, locale-aware counts for the watcher/follow figures — matches the
@@ -84,10 +85,14 @@ function TelegramLine(): React.JSX.Element {
         strokeWidth={2}
       />
       <span className="pharos-numeric shrink-0 text-sm font-semibold">{COUNT_FORMATTER.format(pulse.activeWatchers)}</span>
-      <span className="shrink-0 text-sm text-muted-foreground">watchers</span>
+      <span className="shrink-0 text-sm text-muted-foreground" title={TELEGRAM_METRIC_SEMANTICS.activeWatchers.description}>
+        {TELEGRAM_METRIC_SEMANTICS.activeWatchers.label.toLowerCase()}
+      </span>
       <span aria-hidden="true" className="text-muted-foreground/40">·</span>
       <span className="pharos-numeric shrink-0 text-sm font-semibold">{COUNT_FORMATTER.format(pulse.coinSubscriptions)}</span>
-      <span className="shrink-0 text-sm text-muted-foreground">follows</span>
+      <span className="shrink-0 text-sm text-muted-foreground" title={TELEGRAM_METRIC_SEMANTICS.coinFollows.description}>
+        {TELEGRAM_METRIC_SEMANTICS.coinFollows.label.toLowerCase()}
+      </span>
       <SquareArrowRight aria-hidden="true" className={ARROW_CLASS} strokeWidth={2} />
     </Link>
   );

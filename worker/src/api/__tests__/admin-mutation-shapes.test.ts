@@ -17,9 +17,16 @@ import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helper
 stubCryptoForAuth();
 
 // Stub external services the handlers reach for during exercised paths.
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: vi.fn(async () => new Response("{}", { status: 200 })),
-}));
+vi.mock("../../lib/fetch-retry", () => {
+  const fetchWithRetry = vi.fn(async () => new Response("{}", { status: 200 }));
+  return {
+    fetchWithRetry,
+    fetchJsonWithRetry: async (..._args: unknown[]) => {
+      const response = await fetchWithRetry();
+      return { response, body: await response.json() };
+    },
+  };
+});
 vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/mint-burn-pipeline/persistence")>();
   return { ...actual, recalcAffectedHours: vi.fn().mockResolvedValue(undefined) };

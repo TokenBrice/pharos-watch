@@ -20,6 +20,19 @@ import {
 } from "../ci/pharos-change-contract.mjs";
 import { findExistingComment, parseNextLink, upsertPrComment } from "../ci/upsert-github-pr-comment.mjs";
 
+function requireBlockingReason(output: unknown): string {
+  if (
+    typeof output !== "object" ||
+    output === null ||
+    !("reason" in output) ||
+    typeof output.reason !== "string"
+  ) {
+    throw new Error("Expected a blocking hook output with a reason");
+  }
+
+  return output.reason;
+}
+
 describe("normalizeChangedFiles", () => {
   it("normalizes path separators, blanks, and duplicates", () => {
     expect(normalizeChangedFiles(["worker\\src\\cron\\sync.ts", "", "worker/src/cron/sync.ts"])).toEqual([
@@ -32,7 +45,7 @@ describe("classifyChangedFiles", () => {
   it("routes stablecoin registry changes to data docs and checks", () => {
     const contract = classifyChangedFiles(["shared/data/stablecoins/coins/example-usd.json"]);
 
-    expect(contract.families.map((family) => family.id)).toContain("stablecoin-registry");
+    expect(contract.families.map((family: { id: string }) => family.id)).toContain("stablecoin-registry");
     expect(contract.docsToRead).toContain("docs/stablecoin-data.md");
     expect(contract.checks).toContain("npm run check:stablecoin-data");
     expect(contract.hardRules).toContain("Do not add manual supply overrides.");
@@ -43,7 +56,7 @@ describe("classifyChangedFiles", () => {
   it("routes scheduled Worker changes to cron docs and guardrails", () => {
     const contract = classifyChangedFiles(["worker/src/cron/sync-yield-data.ts"]);
 
-    expect(contract.families.map((family) => family.id)).toContain("worker-cron");
+    expect(contract.families.map((family: { id: string }) => family.id)).toContain("worker-cron");
     expect(contract.docsToRead).toContain("docs/worker-and-api-limits.md");
     expect(contract.checks).toContain("npm run check:cron-sync");
     expect(contract.checks).toContain("npm run check:cron-connections");
@@ -53,7 +66,7 @@ describe("classifyChangedFiles", () => {
   it("routes repo-local agent config changes to agent process guidance", () => {
     const contract = classifyChangedFiles([".codex/config.toml", ".claude/settings.json", "scripts/ci/pharos-change-contract.mjs"]);
 
-    expect(contract.families.map((family) => family.id)).toContain("agent-hooks-process");
+    expect(contract.families.map((family: { id: string }) => family.id)).toContain("agent-hooks-process");
     expect(contract.docsToRead).toContain("docs/process/agent-artifacts.md");
     expect(contract.checks).toContain("focused hook/script tests");
   });
@@ -89,7 +102,7 @@ describe("session delta helpers", () => {
     ], {
       "docs/scripts.md": "baseline-dirty",
     }, {
-      buildFingerprints: (files) => Object.fromEntries(files.map((file) => [file, fingerprints[file]])),
+      buildFingerprints: (files: string[]) => Object.fromEntries(files.map((file) => [file, fingerprints[file]])),
     })).toEqual(["scripts/ci/pharos-change-contract.mjs"]);
   });
 
@@ -193,7 +206,7 @@ describe("Codex hook outputs", () => {
 
   it("does not block Stop or emit a reminder for low-risk-only changes", () => {
     const contract = classifyChangedFiles(["docs/scripts.md"]);
-    expect(contract.families.every((family) => family.risk === "low")).toBe(true);
+    expect(contract.families.every((family: { risk: string }) => family.risk === "low")).toBe(true);
 
     expect(buildStopHookOutput(contract)).toEqual({ continue: true });
     expect(buildPostToolUseHookOutput(contract, {}, { dedupe: false })).toEqual({ continue: true });
@@ -241,7 +254,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("git reset --hard");
+    expect(requireBlockingReason(output)).toContain("git reset --hard");
   });
 
   it("blocks git pushes that bypass the merge gate", () => {
@@ -257,7 +270,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("pre-push merge gate");
+    expect(requireBlockingReason(output)).toContain("pre-push merge gate");
   });
 
   it("blocks git pushes with repeated -C global options", () => {
@@ -273,7 +286,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("pre-push merge gate");
+    expect(requireBlockingReason(output)).toContain("pre-push merge gate");
   });
 
   it("blocks git subcommands after git global flags", () => {
@@ -289,7 +302,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("git reset --hard");
+    expect(requireBlockingReason(output)).toContain("git reset --hard");
   });
 
   it("blocks raw production deploy commands", () => {
@@ -305,7 +318,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("Raw production deploy commands");
+    expect(requireBlockingReason(output)).toContain("Raw production deploy commands");
   });
 
   it("blocks raw production deploy commands inside shell eval wrappers", () => {
@@ -321,7 +334,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("Raw production deploy commands");
+    expect(requireBlockingReason(output)).toContain("Raw production deploy commands");
   });
 
   it("blocks remote D1 mutation commands", () => {
@@ -337,7 +350,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("Remote D1 mutation commands");
+    expect(requireBlockingReason(output)).toContain("Remote D1 mutation commands");
   });
 
   it("allows searches that mention deploy and remote D1 commands", () => {
@@ -388,7 +401,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("Raw production deploy commands");
+    expect(requireBlockingReason(output)).toContain("Raw production deploy commands");
   });
 
   it("blocks remote D1 mutations appended after apply_patch heredocs", () => {
@@ -413,7 +426,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("Remote D1 mutation commands");
+    expect(requireBlockingReason(output)).toContain("Remote D1 mutation commands");
   });
 
   it("blocks protected redirection writes appended after apply_patch heredocs", () => {
@@ -438,7 +451,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("environment files");
+    expect(requireBlockingReason(output)).toContain("environment files");
   });
 
   it("still blocks protected paths when patch payloads arrive as commands", () => {
@@ -459,7 +472,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("environment files");
+    expect(requireBlockingReason(output)).toContain("environment files");
   });
 
   it("allows heredoc scripts that only quote blocked commands", () => {
@@ -501,7 +514,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("environment files");
+    expect(requireBlockingReason(output)).toContain("environment files");
   });
 
   it("blocks obvious destructive migration SQL", () => {
@@ -523,7 +536,7 @@ describe("hard-block hook outputs", () => {
         permissionDecision: "deny",
       },
     });
-    expect(output.reason).toContain("destructive migration SQL");
+    expect(requireBlockingReason(output)).toContain("destructive migration SQL");
   });
 
   it("denies production permission requests", () => {
@@ -598,7 +611,8 @@ describe("upsert GitHub PR comment", () => {
   it("follows Link pagination to find a marker comment beyond the first page", async () => {
     const page2Url = "https://api.github.com/repos/owner/repo/issues/12/comments?page=2";
     const calls: string[] = [];
-    const fetchImpl = async (url: string) => {
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = String(input);
       calls.push(url);
       if (url.endsWith("/issues/12/comments?per_page=100")) {
         return new Response(JSON.stringify([{ id: 1, body: "noise" }]), {
@@ -635,8 +649,13 @@ describe("upsert GitHub PR comment", () => {
 
   it("patches an existing marker comment", async () => {
     const calls: Array<{ body?: string; method?: string; url: string }> = [];
-    const fetchImpl = async (url: string, init: { body?: string; method?: string } = {}) => {
-      calls.push({ body: init.body, method: init.method, url });
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = String(input);
+      calls.push({
+        body: typeof init?.body === "string" ? init.body : undefined,
+        method: init?.method,
+        url,
+      });
       if (url.endsWith("/issues/12/comments?per_page=100")) {
         return new Response(JSON.stringify([{ id: 44, body: "<!-- pharos-change-contract --> old" }]));
       }

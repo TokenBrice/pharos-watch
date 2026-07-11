@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { changelogs } from "../../src/data/changelogs";
+import { getGeneratedMarkdownAssetPath } from "../../shared/lib/markdown-route-policy";
 import {
   buildMethodologyChangelogMarkdown,
   buildMethodologyIndexMarkdown,
@@ -22,6 +23,9 @@ const OUT_DIR = join(dirname(SCRIPT_PATH), "../../out");
 export function writeMarkdownRoute(outDir: string, route: MarkdownRoute): void {
   if (!route.path.startsWith("/") || !route.path.endsWith("/")) {
     throw new Error(`Path must start and end with a trailing slash: ${route.path}`);
+  }
+  if (!getGeneratedMarkdownAssetPath(route.path)) {
+    throw new Error(`Path is not an allowed generated Markdown route: ${route.path}`);
   }
   if (route.path.includes("..")) {
     throw new Error(`Path traversal segments are not allowed: ${route.path}`);

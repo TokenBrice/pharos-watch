@@ -260,6 +260,16 @@ export const ReportCardsResponseSchema = z.object({
     .optional(),
   collateralDriftCoins: z.array(CollateralDriftEntrySchema).optional(),
   liveToFallbackCoins: z.array(z.string()).optional(),
+  publication: z
+    .object({
+      generationId: z.string(),
+      methodologyVersion: z.string(),
+      expectedCount: z.number().int().nonnegative(),
+      scoredCount: z.number().int().nonnegative(),
+      notRatedCount: z.number().int().nonnegative(),
+      notRatedIds: z.array(z.string()),
+    })
+    .optional(),
 });
 
 export type ReportCardsResponse = z.infer<typeof ReportCardsResponseSchema>;

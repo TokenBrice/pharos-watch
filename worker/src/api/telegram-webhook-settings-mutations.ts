@@ -16,7 +16,8 @@ import {
   type GlobalAlertType,
   type SafetyModeValue,
 } from "./telegram-webhook-settings-shared";
-import { batchExecute } from "../lib/db";
+import { executeAtomicBatch } from "../lib/db";
+import { assertSubscribableCoin } from "../lib/telegram-subscription-eligibility";
 import {
   buildDepegStepUpsert,
   buildDepegUpsert,
@@ -30,21 +31,23 @@ import {
   upsertSubscriberRow,
   type BuiltSubscriptionUpsert,
 } from "./telegram-webhook-store";
+import type { TelegramOperationBatchOptions } from "./telegram-store/_internals";
 
 export async function toggleGlobalAlert(
   db: D1Database,
   chatId: string,
   username: string | null,
   type: GlobalAlertType,
+  options: TelegramOperationBatchOptions & { next?: 0 | 1 } = {},
 ): Promise<void> {
   const subscriber = await loadSubscriberByChat(db, chatId);
-  const next: 0 | 1 = subscriberHasGlobal(subscriber, type) ? 0 : 1;
+  const next: 0 | 1 = options.next ?? (subscriberHasGlobal(subscriber, type) ? 0 : 1);
   await upsertSubscriberRow(db, {
     chatId,
     username,
     nowSec: unixNow(),
     globalAlertOverrides: { [type]: next },
-  });
+  }, options);
 }
 
 export async function setQuietHours(
@@ -52,6 +55,7 @@ export async function setQuietHours(
   chatId: string,
   username: string | null,
   enabled: boolean,
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   await upsertSubscriberRow(db, {
     chatId,
@@ -60,7 +64,7 @@ export async function setQuietHours(
     quietHours: enabled
       ? { enabled: true, startHourUtc: DEFAULT_QUIET_START_HOUR, endHourUtc: DEFAULT_QUIET_END_HOUR }
       : { enabled: false },
-  });
+  }, options);
 }
 
 /**
@@ -74,10 +78,11 @@ export async function applyCoinSetting(
   coinId: string,
   setting: string,
   value: string,
+  options: TelegramOperationBatchOptions = {},
 ): Promise<string | null> {
   const prepared = prepareCoinSettingStatements(db, chatId, username, coinId, setting, value);
   if (prepared.description == null) return null;
-  await batchExecute(db, prepared.statements);
+  await executeAtomicBatch(db, [...prepared.statements, ...(options.operationStatements ?? [])]);
   return prepared.description;
 }
 
@@ -89,6 +94,7 @@ export function prepareCoinSettingStatements(
   setting: string,
   value: string,
 ): { description: string | null; statements: D1PreparedStatement[] } {
+  assertSubscribableCoin(coinId);
   if (setting === "db") return prepareDewsSetting(db, chatId, username, coinId, value);
   if (setting === "sm") return prepareSafetySetting(db, chatId, username, coinId, value);
   if (setting === "ds") return prepareDepegSetting(db, chatId, username, coinId, value);
@@ -213,6 +219,7 @@ function prepareBoolAlert(
       username,
       nowSec: now,
       perCoinAlertBumps: enabled ? { [bumpKey]: 1 } : undefined,
+      bumpPreferenceGeneration: true,
     }),
     prepareSubscriptionUpsert(db, buildUpsert(chatId, coinId, enabled)),
   ];
@@ -232,6 +239,7 @@ function prepareDews(
       username,
       nowSec: now,
       perCoinAlertBumps: payload.enabled ? { dews: 1 } : undefined,
+      bumpPreferenceGeneration: true,
     }),
     prepareSubscriptionUpsert(db, buildDewsUpsert(chatId, coinId, payload.enabled, payload.minBand)),
   ];
@@ -251,6 +259,7 @@ function prepareSafety(
       username,
       nowSec: now,
       perCoinAlertBumps: payload.enabled ? { safety: 1 } : undefined,
+      bumpPreferenceGeneration: true,
     }),
     prepareSubscriptionUpsert(db, buildSafetyUpsert(chatId, coinId, payload.enabled, payload.mode)),
   ];
@@ -280,6 +289,7 @@ function prepareDepegStep(
       username,
       nowSec: now,
       perCoinAlertBumps: { depeg: 1 },
+      bumpPreferenceGeneration: true,
     }),
   ];
   statements.push(prepareSubscriptionUpsert(db, buildDepegStepUpsert(chatId, coinId, step)));

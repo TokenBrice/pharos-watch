@@ -422,7 +422,7 @@ describe("enrichRowBalances", () => {
     const candidateQuery = db.getHistory().find((entry) =>
       entry.sql.includes("blacklist-amount-recovery-evm-candidates"),
     );
-    expect(candidateQuery?.sql).toContain("COALESCE(amount_attempt_count, 0) < ?");
+    expect(candidateQuery?.sql).toContain("COALESCE(events.amount_attempt_count, 0) < ?");
     expect(candidateQuery?.binds).toEqual([3, 100]);
 
     const update = db.getHistory().find((entry) =>

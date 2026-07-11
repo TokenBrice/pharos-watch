@@ -4,7 +4,8 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
-import type { DexLiquidityData, DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types";
+import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
+import type { DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types";
 
 const { useDexLiquidityMock, useDexLiquidityHistoryMock } = vi.hoisted(() => ({
   useDexLiquidityMock: vi.fn(),
@@ -32,47 +33,6 @@ vi.mock("@/components/methodology-hint", () => ({
   MethodologyTriggerButton: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
-function makeLiquidityData(overrides: Partial<DexLiquidityData> = {}): DexLiquidityData {
-  return {
-    totalTvlUsd: 0,
-    totalVolume24hUsd: 0,
-    totalVolume7dUsd: 0,
-    poolCount: 0,
-    pairCount: 0,
-    chainCount: 0,
-    protocolTvl: {},
-    chainTvl: {},
-    topPools: [],
-    liquidityScore: null,
-    concentrationHhi: null,
-    depthStability: null,
-    tvlChange24h: null,
-    tvlChange7d: null,
-    updatedAt: 1_775_822_400,
-    dexPriceUsd: null,
-    dexDeviationBps: null,
-    priceSourceCount: null,
-    priceSourceTvl: null,
-    priceSources: null,
-    effectiveTvlUsd: 0,
-    avgPoolStress: null,
-    weightedBalanceRatio: null,
-    organicFraction: null,
-    durabilityScore: null,
-    coverageClass: "unobserved",
-    coverageConfidence: 0,
-    liquidityEvidenceClass: "unobserved",
-    hasMeasuredLiquidityEvidence: false,
-    trendworthy: false,
-    sourceMix: {},
-    balanceMeasuredTvlUsd: 0,
-    organicMeasuredTvlUsd: 0,
-    scoreComponents: null,
-    methodologyVersion: "5.3",
-    ...overrides,
-  };
-}
-
 function makeHistoryPoint(overrides: Partial<DexLiquidityHistoryPoint> = {}): DexLiquidityHistoryPoint {
   return {
     tvl: 0,
@@ -95,10 +55,24 @@ describe("DexLiquidityCard", () => {
     useDexLiquidityHistoryMock.mockReset();
   });
 
+  it("renders unavailable instead of hiding the module when the query fails", () => {
+    useDexLiquidityMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("liquidity failed"),
+      dataUpdatedAt: 0,
+      refetch: vi.fn(),
+    });
+
+    render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+
+    expect(screen.getByRole("alert").textContent).toContain("DEX liquidity data is temporarily unavailable");
+  });
+
   it("promotes effective liquidity above total AMM liquidity in the overview metrics", () => {
     useDexLiquidityMock.mockReturnValue({
       data: {
-        "usdc-circle": makeLiquidityData({
+        "usdc-circle": makeDexLiquidityData({
           totalTvlUsd: 10_200_000,
           effectiveTvlUsd: 910_710,
           totalVolume24hUsd: 265_010,
@@ -135,7 +109,7 @@ describe("DexLiquidityCard", () => {
   it("renders an explicit unobserved-history state instead of a zero-value chart for unrated assets", () => {
     useDexLiquidityMock.mockReturnValue({
       data: {
-        "usdk-kast": makeLiquidityData({
+        "usdk-kast": makeDexLiquidityData({
           // Coin is observed (has a pool) but unrated (liquidityScore null); the
           // card still renders and surfaces the unrated/no-direct-market notice.
           poolCount: 1,
@@ -181,7 +155,7 @@ describe("DexLiquidityCard", () => {
     };
     useDexLiquidityMock.mockReturnValue({
       data: {
-        "usdc-circle": makeLiquidityData({
+        "usdc-circle": makeDexLiquidityData({
           totalTvlUsd: 1_250_000,
           effectiveTvlUsd: 1_250_000,
           totalVolume24hUsd: 420_000,

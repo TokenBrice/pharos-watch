@@ -205,7 +205,7 @@ describe("queryBlacklistGapMetrics", () => {
       { match: "blacklist-gap-metrics-cache-write", rows: [] },
     ], { requireMatch: true });
 
-    const result = await materializeBlacklistGapMetrics(db, 1_700_000_000, 86_400);
+    const result = await materializeBlacklistGapMetrics(db, 1_700_000_000, 86_400, 1_699_999_000);
 
     expect(result).toEqual({ written: 2 });
     const writes = db.getHistory().filter((entry) => entry.sql.includes("blacklist-gap-metrics-cache-write"));
@@ -213,6 +213,11 @@ describe("queryBlacklistGapMetrics", () => {
       "blacklist:gap-metrics:producer:v1:86400:core",
       "blacklist:gap-metrics:producer:v1:86400:full",
     ]);
+    expect(writes.every((entry) => entry.binds[2] === 1_699_999_000)).toBe(true);
+    expect(writes.every((entry) => {
+      const payload = JSON.parse(String(entry.binds[1])) as { materializedAt?: number };
+      return payload.materializedAt === 1_700_000_000;
+    })).toBe(true);
     expect(db.getHistory().filter((entry) => entry.sql.includes("blacklist-gap-aggregate"))).toHaveLength(1);
     expect(db.getHistory().filter((entry) => entry.sql.includes("blacklist-gap-status-distribution"))).toHaveLength(1);
     expect(db.getHistory().filter((entry) => entry.sql.includes("blacklist-gap-source-distribution"))).toHaveLength(1);

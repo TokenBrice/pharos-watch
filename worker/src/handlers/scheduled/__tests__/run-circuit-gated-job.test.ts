@@ -122,7 +122,7 @@ describe("runCircuitGatedLeasedScheduledJob", () => {
     );
   });
 
-  it("keeps follow-up success work non-blocking", async () => {
+  it("does not swallow a legacy follow-up failure", async () => {
     const cronResult = { status: "degraded", itemCount: 1, metadata: "" } as CronResult;
     const onSettledSuccess = vi.fn(async () => {
       throw new Error("follow-up failed");
@@ -136,7 +136,7 @@ describe("runCircuitGatedLeasedScheduledJob", () => {
       job: "sync-dex-liquidity",
       fn: async () => cronResult,
       onSettledSuccess,
-    })).resolves.toBe(cronResult);
+    })).rejects.toThrow("follow-up failed");
 
     expect(recordOutcomeDecision).toHaveBeenCalledWith(
       expect.anything(),

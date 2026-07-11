@@ -45,7 +45,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
     <Card>
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-base">Live Reserve Sync</CardTitle>
+          <CardTitle as="h3" className="text-base">Live Reserve Sync</CardTitle>
           <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusTone}`}>
             {health.status}
           </span>

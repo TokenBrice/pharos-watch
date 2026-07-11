@@ -6,6 +6,8 @@ import { createCronResult } from "../lib/cron-result";
 import { pruneWorkerJobAttempts } from "../lib/job-ledger";
 import { pruneRepairTasks } from "../lib/repair-tasks";
 import { WORKER_CANARY_RUN_RETENTION_SEC, pruneWorkerCanaryRuns } from "../lib/canary-checks";
+import { pruneScheduledRecoveryCheckpoints } from "../lib/scheduled-recovery-checkpoint";
+import { pruneProducerHistory } from "../lib/producer-history";
 
 // Kept in sync with the retention window previously enforced inline inside
 // runScheduledSlotWithFence (14 days).  Consolidated here so the daily
@@ -76,9 +78,17 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
 
   const jobAttemptsDeleted = await pruneWorkerJobAttempts(db, now - SECONDS.ONE_WEEK, signal);
   throwIfAborted(signal);
+  const producerHistoryDeleted = await pruneProducerHistory(db, now, signal);
+  throwIfAborted(signal);
   const repairTasksDeleted = await pruneRepairTasks(db, now - SECONDS.ONE_WEEK, signal);
   throwIfAborted(signal);
   const canaryRunsDeleted = await pruneWorkerCanaryRuns(db, now - WORKER_CANARY_RUN_RETENTION_SEC, signal);
+  throwIfAborted(signal);
+  const recoveryCheckpointsDeleted = await pruneScheduledRecoveryCheckpoints(
+    db,
+    now - SLOT_EXECUTION_RETENTION_SEC,
+    signal,
+  );
   throwIfAborted(signal);
 
   const selectorSnapshotDailyQuotaResult = await runWithOverloadRetry(() =>
@@ -119,16 +129,20 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
     itemCount:
       cronRunsDeleted +
       jobAttemptsDeleted +
+      producerHistoryDeleted +
       repairTasksDeleted +
       canaryRunsDeleted +
+      recoveryCheckpointsDeleted +
       selectorSnapshotDailyQuotaDeleted +
       blockTimestampCacheDeleted +
       slotExecutionsDeleted,
     metadata: {
       cronRunsDeleted,
       jobAttemptsDeleted,
+      producerHistoryDeleted,
       repairTasksDeleted,
       canaryRunsDeleted,
+      recoveryCheckpointsDeleted,
       selectorSnapshotDailyQuotaDeleted,
       blockTimestampCacheDeleted,
       slotExecutionsDeleted,
@@ -136,6 +150,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       cutoffJobAttemptsSec: now - SECONDS.ONE_WEEK,
       cutoffRepairTasksSec: now - SECONDS.ONE_WEEK,
       cutoffCanaryRunsSec: now - WORKER_CANARY_RUN_RETENTION_SEC,
+      cutoffRecoveryCheckpointsSec: now - SLOT_EXECUTION_RETENTION_SEC,
       cutoffSelectorSnapshotDailyQuotaDate: selectorSnapshotDailyQuotaCutoffDate,
       cutoffBlockTimestampCacheSec: now - BLOCK_TIMESTAMP_CACHE_RETENTION_SEC,
       cutoffSlotExecutionsSec: now - SLOT_EXECUTION_RETENTION_SEC,

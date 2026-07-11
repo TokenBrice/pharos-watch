@@ -67,6 +67,44 @@ function makeHealth(overrides: Partial<YieldHealthSummary> = {}): YieldHealthSum
       fallbackMode: null,
       status: "healthy",
     },
+    benchmarkRegistry: {
+      status: "degraded",
+      usedBenchmarkCount: 2,
+      healthyBenchmarkCount: 1,
+      degradedBenchmarkCount: 0,
+      staleBenchmarkCount: 1,
+      unknownBenchmarkCount: 0,
+      benchmarks: {
+        USD: {
+          key: "USD",
+          label: "USD 3M T-Bill",
+          currency: "USD",
+          rowCount: 119,
+          fallbackSelectionRowCount: 0,
+          fetchedAt: 1_700_000_000,
+          ageSec: 1200,
+          maxAgeSec: 172_800,
+          source: "SOFR",
+          isFallback: false,
+          fallbackMode: null,
+          status: "healthy",
+        },
+        GBP: {
+          key: "GBP",
+          label: "GBP 3M compounded SONIA",
+          currency: "GBP",
+          rowCount: 1,
+          fallbackSelectionRowCount: 0,
+          fetchedAt: 1_699_800_000,
+          ageSec: 200_000,
+          maxAgeSec: 172_800,
+          source: "SONIA",
+          isFallback: true,
+          fallbackMode: "retained",
+          status: "stale",
+        },
+      },
+    },
     coverageAudit: {
       updatedAt: 1_700_000_000,
       ageSec: 3600,
@@ -134,6 +172,16 @@ function makeHealth(overrides: Partial<YieldHealthSummary> = {}): YieldHealthSum
         venueRiskTier: fieldCoverage(0.3),
       },
     },
+    comparisonAnchorFreshness: {
+      status: "healthy",
+      anchoredRowCount: 0,
+      staleAnchorCount: 0,
+      oldestAnchorAgeSeconds: null,
+      oldestAnchorStablecoinId: null,
+      oldestAnchorSourceKey: null,
+      staleAnchorExamples: [],
+      staleAnchorExamplesTruncated: false,
+    },
     latestCronStatus: "ok",
     latestCronStartedAt: 1_700_000_000,
     ...overrides,
@@ -150,6 +198,9 @@ describe("YieldHealthCard", () => {
 
     expect(screen.getByText("1/4 fresh · 1 degraded · 1 stale · 1 missing")).toBeTruthy();
     expect(screen.getByText(/\+2 vs 118/)).toBeTruthy();
+    expect(screen.getByText("1/2 healthy · 0 degraded · 1 stale · 0 unknown")).toBeTruthy();
+    expect(screen.getByText(/GBP · 1 row/)).toBeTruthy();
+    expect(screen.getAllByText(/stale ·/).length).toBeGreaterThan(0);
   });
 
   it("renders source-risk coverage and coverage audit queue counts", () => {

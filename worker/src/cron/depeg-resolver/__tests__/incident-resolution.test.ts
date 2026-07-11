@@ -1,12 +1,43 @@
 import { describe, expect, it } from "vitest";
 import type { DdrActiveEventInput } from "@shared/lib/depeg-resolver";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import type { DdrEventDbRow } from "../types";
 import { loadDdrContext, type DdrLoadedContext } from "../context";
 import { resolveDdrIncidents } from "../incident-resolution";
 
 const NOW_SEC = 1_780_358_400;
 const DAY = 86_400;
+
+function publishedDewsConfigs(signalsJson = "{}") {
+  const computedAt = NOW_SEC - 60;
+  const row = {
+    stablecoin_id: "usdc-circle",
+    score: 66,
+    band: "WARNING",
+    signals_json: signalsJson,
+    computed_at: computedAt,
+  };
+  return [
+    {
+      match: "FROM cache WHERE key = ?",
+      matchBinds: ["dews:published-generation"],
+      rows: [],
+      first: {
+        value: JSON.stringify({
+          updatedAt: computedAt,
+          source: "compute-dews",
+          publishStatus: "published",
+          coverageVersion: 2,
+          expectedRowCount: 1,
+          stablecoinIdsDigest: buildDewsStablecoinIdsDigest([row.stablecoin_id]),
+        }),
+        updated_at: computedAt,
+      },
+    },
+    { match: "pharos:stress-signals:published-exact", rows: [row] },
+  ];
+}
 
 function activeInput(overrides: Partial<DdrActiveEventInput> = {}): DdrActiveEventInput {
   return {
@@ -118,6 +149,7 @@ describe("loadDdrContext", () => {
       },
     });
     const db = mockD1([
+      ...publishedDewsConfigs(signalsJson),
       {
         match: "FROM cache WHERE key = ?",
         rows: [
@@ -147,18 +179,6 @@ describe("loadDdrContext", () => {
           snapshot_date: snapshot.date,
           circulating_usd: snapshot.usd,
         })),
-      },
-      {
-        match: "FROM stress_signals s",
-        rows: [
-          {
-            stablecoin_id: "usdc-circle",
-            score: 66,
-            band: "WARNING",
-            signals_json: signalsJson,
-            computed_at: NOW_SEC - 60,
-          },
-        ],
       },
       {
         match: "FROM dex_liquidity_history",
@@ -238,8 +258,66 @@ describe("loadDdrContext", () => {
     expect(result.context.safetyByCoin.get("usdc-circle")).toMatchObject({ grade: "A", score: 90 });
   });
 
+  it("degrades rather than resolving from a partially staged DEWS generation", async () => {
+    const computedAt = NOW_SEC - 60;
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            updatedAt: computedAt,
+            source: "compute-dews",
+            publishStatus: "published",
+            coverageVersion: 2,
+            expectedRowCount: 2,
+            stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdc-circle", "usdt-tether"]),
+          }),
+          updated_at: computedAt,
+        },
+      },
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [{
+          key: "stablecoins",
+          value: JSON.stringify({
+            peggedAssets: [{
+              id: "usdc-circle",
+              symbol: "USDC",
+              name: "USD Coin",
+              pegType: "peggedUSD",
+              price: 0.97,
+              circulating: { peggedUSD: 1_000_000_000 },
+            }],
+          }),
+          updated_at: NOW_SEC,
+        }],
+      },
+      {
+        match: "pharos:stress-signals:published-exact",
+        rows: [{
+          stablecoin_id: "usdc-circle",
+          score: 66,
+          band: "WARNING",
+          signals_json: "{}",
+          computed_at: computedAt,
+        }],
+      },
+      { match: "FROM redemption_backstop_runs", rows: [] },
+    ]);
+
+    const result = await loadDdrContext(db, [activeRow()], NOW_SEC);
+
+    expect(result).toMatchObject({
+      kind: "degraded",
+      reason: expect.stringContaining("published generation coverage mismatch: rows=1/2"),
+    });
+  });
+
   it("keeps a missing completed redemption run non-fatal with empty redemption context", async () => {
     const db = mockD1([
+      ...publishedDewsConfigs(),
       {
         match: "FROM cache WHERE key = ?",
         rows: [
@@ -273,6 +351,7 @@ describe("loadDdrContext", () => {
 
   it("degrades when the redemption live-signal read fails", async () => {
     const db = mockD1([
+      ...publishedDewsConfigs(),
       {
         match: "FROM cache WHERE key = ?",
         rows: [

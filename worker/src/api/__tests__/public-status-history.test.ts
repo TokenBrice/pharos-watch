@@ -59,6 +59,31 @@ function stubPublicHealth(overallStatus: "healthy" | "degraded" | "stale"): Publ
     openCircuitCount: 0,
     circuitImpactStatus: "healthy",
     circuitQueryError: null,
+    d1Capacity: null,
+    d1CapacityImpactStatus: "healthy",
+    d1CapacityQueryError: null,
+    alertBroker: {
+      activeCount: 0,
+      pendingCount: 0,
+      criticalActiveCount: 0,
+      failedDeliveryCount: 0,
+      missingTargetCount: 0,
+      oldestActiveAt: null,
+      activeConditionKeys: [],
+      queryFailed: false,
+    },
+    alertBrokerImpactStatus: "healthy",
+    stablecoinPublication: {
+      status: "complete",
+      expectedActiveCount: 0,
+      presentActiveCount: 0,
+      waivedActiveCount: 0,
+      missingActiveIds: [],
+      waivedActiveIds: [],
+      expiredWaiverIds: [],
+      observedAt: null,
+    },
+    stablecoinPublicationImpactStatus: "healthy",
   };
 }
 

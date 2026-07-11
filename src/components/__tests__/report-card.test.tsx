@@ -76,7 +76,8 @@ describe("ReportCardDetail", () => {
       />,
     );
 
-    expect(screen.getByRole("status", { name: /Updated at/i }).getAttribute("data-stale")).toBe("true");
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
+    expect(screen.getByText(/Updated at/i, { selector: ".sr-only" })).toBeTruthy();
   });
 
   it("keeps dimension disclosure controls separate from methodology hint buttons", () => {

@@ -11,6 +11,7 @@ interface CoinSelectorProps {
   selected: CoinOption | null;
   logos?: Record<string, string>;
   disabledIds?: Set<string>;
+  disabled?: boolean;
   onSelect: (coin: CoinOption) => void;
   onRemove: () => void;
 }
@@ -20,6 +21,7 @@ export function CoinSelector({
   selected,
   logos,
   disabledIds,
+  disabled = false,
   onSelect,
   onRemove,
 }: CoinSelectorProps) {
@@ -61,7 +63,7 @@ export function CoinSelector({
   // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (!open) return;
+      if (!open || disabled) return;
       switch (e.key) {
         case "Escape":
           setOpen(false);
@@ -102,7 +104,7 @@ export function CoinSelector({
           break;
       }
     },
-    [open, filtered, focusedIndex, disabledIds, onSelect],
+    [disabled, open, filtered, focusedIndex, disabledIds, onSelect],
   );
 
   // Scroll focused item into view
@@ -137,6 +139,7 @@ export function CoinSelector({
         </span>
         <button type="button"
           onClick={onRemove}
+          disabled={disabled}
           className="pharos-focus-ring ml-auto flex min-h-11 min-w-11 items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded sm:min-h-9 sm:min-w-9"
           aria-label={`Remove ${selected.name}`}
         >
@@ -153,6 +156,7 @@ export function CoinSelector({
         variant="outline"
         className="min-h-11 w-full justify-between font-normal text-muted-foreground sm:min-h-9"
         onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
         aria-expanded={open}
         aria-haspopup="listbox"
       >
@@ -178,6 +182,7 @@ export function CoinSelector({
               }
               placeholder="Search by name or symbol..."
               value={search}
+              disabled={disabled}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setFocusedIndex(-1);
@@ -196,7 +201,7 @@ export function CoinSelector({
               </li>
             )}
             {filtered.map((coin, idx) => {
-              const disabled = disabledIds?.has(coin.id);
+              const coinDisabled = disabled || disabledIds?.has(coin.id);
               const focused = idx === focusedIndex;
               return (
                 <li
@@ -204,14 +209,14 @@ export function CoinSelector({
                   id={`coin-option-${coin.id}`}
                   role="option"
                   aria-selected={false}
-                  aria-disabled={disabled}
+                  aria-disabled={coinDisabled}
                   className={
-                    disabled
+                    coinDisabled
                       ? "flex min-h-11 items-center gap-2 rounded-sm px-2 py-2 text-sm opacity-40 cursor-not-allowed sm:min-h-8 sm:py-1.5"
                       : `flex min-h-11 cursor-pointer items-center gap-2 rounded-sm px-2 py-2 text-sm transition-colors hover:bg-accent sm:min-h-8 sm:py-1.5 ${focused ? "bg-accent" : ""}`
                   }
                   onClick={() => {
-                    if (!disabled) {
+                    if (!coinDisabled) {
                       onSelect(coin);
                       setOpen(false);
                       setSearch("");

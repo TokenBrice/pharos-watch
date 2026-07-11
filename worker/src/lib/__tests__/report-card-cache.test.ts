@@ -2,6 +2,28 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { loadReportCardCache, REPORT_CARD_CACHE_GENERATION, writeReportCardCache } from "../report-card-cache";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+
+function exactCachePayload(overrides: { scoreIds?: string[]; notRatedIds?: string[] } = {}) {
+  const notRatedIds = overrides.notRatedIds ?? [];
+  const scoreIds = overrides.scoreIds ?? [...ACTIVE_IDS].filter((id) => !notRatedIds.includes(id));
+  const updatedAt = 1_700_000_000;
+  const generationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
+  return JSON.stringify({
+    scores: Object.fromEntries(scoreIds.map((id) => [id, { score: 80, grade: "B+" }])),
+    updatedAt,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    publicationGenerationId: generationId,
+    completeness: {
+      generationId,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      expectedCount: ACTIVE_IDS.size,
+      scoredCount: scoreIds.length,
+      notRatedCount: notRatedIds.length,
+      notRatedIds,
+    },
+  });
+}
 
 function makeReportCardDb(value: string | null, updatedAt = 1_700_000_000): D1Database {
   if (value == null) {
@@ -225,6 +247,65 @@ describe("loadReportCardCache", () => {
       updatedAt: 1_700_000_000,
     });
   });
+
+  it("requires an exact active-set manifest for publication-sensitive consumers", async () => {
+    const result = await loadReportCardCache(makeReportCardDb(exactCachePayload()), {
+      requireCompleteness: true,
+    });
+
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.payload.publicationGenerationId).toContain("report-cards:");
+      expect(result.payload.completeness?.expectedCount).toBe(ACTIVE_IDS.size);
+    }
+  });
+
+  it("rejects legacy and same-count swapped publication identities", async () => {
+    const legacy = await loadReportCardCache(
+      makeReportCardDb(JSON.stringify({
+        scores: { "usdt-tether": { score: 80, grade: "B+" } },
+        updatedAt: 1_700_000_000,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      })),
+      { requireCompleteness: true },
+    );
+    expect(legacy).toMatchObject({ kind: "error", reason: "completeness-missing" });
+
+    const scoreIds = [...ACTIVE_IDS];
+    scoreIds.splice(0, 1, "unexpected-stablecoin");
+    const swapped = await loadReportCardCache(makeReportCardDb(exactCachePayload({ scoreIds })), {
+      requireCompleteness: true,
+    });
+    expect(swapped).toMatchObject({ kind: "error", reason: "completeness-mismatch" });
+  });
+
+  it("rejects a manifest whose generation does not bind its publication timestamp", async () => {
+    const payload = JSON.parse(exactCachePayload()) as {
+      publicationGenerationId: string;
+      completeness: { generationId: string };
+    };
+    payload.publicationGenerationId = "report-cards:forged-generation";
+    payload.completeness.generationId = payload.publicationGenerationId;
+
+    const result = await loadReportCardCache(makeReportCardDb(JSON.stringify(payload)), {
+      requireCompleteness: true,
+    });
+
+    expect(result).toMatchObject({ kind: "error", reason: "completeness-mismatch" });
+  });
+
+  it("rejects malformed score entries without throwing for completeness checks", async () => {
+    const payload = JSON.parse(exactCachePayload()) as {
+      scores: Record<string, unknown>;
+    };
+    payload.scores[[...ACTIVE_IDS][0]] = null;
+
+    const result = await loadReportCardCache(makeReportCardDb(JSON.stringify(payload)), {
+      requireCompleteness: true,
+    });
+
+    expect(result).toMatchObject({ kind: "error", reason: "completeness-mismatch" });
+  });
 });
 
 describe("writeReportCardCache", () => {
@@ -238,6 +319,14 @@ describe("writeReportCardCache", () => {
     ] as never, 1_777_000_000, {
       liquidityStale: true,
       redemptionStale: false,
+      completeness: {
+        generationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1777000000`,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        expectedCount: 2,
+        scoredCount: 1,
+        notRatedCount: 1,
+        notRatedIds: ["nr"],
+      },
     });
 
     expect(result.writtenCount).toBe(1);
@@ -252,6 +341,15 @@ describe("writeReportCardCache", () => {
         },
         updatedAt: 1_777_000_000,
         methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1777000000`,
+        completeness: {
+          generationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1777000000`,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          expectedCount: 2,
+          scoredCount: 1,
+          notRatedCount: 1,
+          notRatedIds: ["nr"],
+        },
         degradedInputs: {
           inputsStale: true,
           liquidityStale: true,

@@ -14,11 +14,13 @@ import {
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
 } from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
+  cleanupFalseLinkedVariantSourceSwitches,
   pruneYieldTables,
   validateYieldRankingsPayloadForPublish,
 } from "../yield-sync/publication";
@@ -114,6 +116,13 @@ function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): Eva
     benchmarkMeta,
     pharosYieldScore: 28,
     pysNullReason: null,
+    sourceFreshness: "fresh",
+    benchmarkFreshness: "healthy",
+    calculationMode: "market-api",
+    evidenceClass: "curated-observation",
+    evidenceCompleteness: 1,
+    scoreQualification: "rated",
+    scoreQualified: true,
     prevExchangeRate: null,
     prevTvlUsd: 1_700_000,
     sourceDepthRatio: null,
@@ -126,6 +135,7 @@ function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): Eva
     usedLegacyHistory: false,
     usedDefaultSafety: false,
     safetyProvenance: "live-report-card",
+    safetyReason: null,
     previousBestSourceKey: null,
     ...overrides,
   };
@@ -163,9 +173,7 @@ function buildPayloadWithObservedAt(sourceObservedAt: number, overrides: Partial
           sourceAgeSeconds: Math.max(0, startSec - sourceObservedAt),
           comparisonAnchorObservedAt,
           comparisonAnchorAgeSeconds:
-            comparisonAnchorObservedAt == null
-              ? null
-              : Math.max(0, startSec - comparisonAnchorObservedAt),
+            comparisonAnchorObservedAt == null ? null : Math.max(0, startSec - comparisonAnchorObservedAt),
           confidenceTier: source.confidenceTier,
           selectionMethod: "confidence-weighted" as const,
           selectionReason: "test",
@@ -219,56 +227,52 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
 
     expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
     expect(payload.rankings[0]?.sourceRole).toBe("degraded-canonical");
+    expect(payload.rankings[0]?.pharosYieldScore).toBeNull();
+    expect(payload.rankings[0]?.pysNullReason).toBe("source-stale");
+    expect(payload.rankings[0]?.provenance).toMatchObject({
+      sourceFreshness: "stale",
+      scoreQualification: "NR",
+      evidenceCompleteness: 0.8571,
+      scoreQualified: false,
+    });
   });
 
   it("does not add data-stale for healthy price-derived daily snapshots", () => {
     const thresholdSec = PRICE_DERIVED_STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(
-      Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60,
-      {
-        dataSource: "price-derived",
-        sourceKey: "price-derived",
-      },
-    );
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60, {
+      dataSource: "price-derived",
+      sourceKey: "price-derived",
+    });
 
     expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
   });
 
   it("still adds data-stale when price-derived snapshots miss the extended threshold", () => {
     const thresholdSec = PRICE_DERIVED_STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(
-      Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 60,
-      {
-        dataSource: "price-derived",
-        sourceKey: "price-derived",
-      },
-    );
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 60, {
+      dataSource: "price-derived",
+      sourceKey: "price-derived",
+    });
 
     expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
   });
 
   it("does not add data-stale for healthy supplemental protocol-api rows", () => {
     const thresholdSec = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(
-      Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60,
-      {
-        dataSource: "protocol-api",
-        sourceKey: "protocol-api:pendle:ethereum:0xpool",
-      },
-    );
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60, {
+      dataSource: "protocol-api",
+      sourceKey: "protocol-api:pendle:ethereum:0xpool",
+    });
 
     expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
   });
 
   it("adds data-stale once supplemental protocol-api rows miss their cadence window", () => {
     const thresholdSec = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(
-      Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 60,
-      {
-        dataSource: "protocol-api",
-        sourceKey: "protocol-api:pendle:ethereum:0xpool",
-      },
-    );
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 60, {
+      dataSource: "protocol-api",
+      sourceKey: "protocol-api:pendle:ethereum:0xpool",
+    });
 
     expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
   });
@@ -299,15 +303,37 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
   });
 
+  it("keeps intentional price-derived anchors fresh through the 45-day source window", () => {
+    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const payload = buildPayloadWithObservedAt(nowSec, {
+      dataSource: "price-derived",
+      sourceKey: "price-derived",
+      sourceObservedAt: nowSec,
+      comparisonAnchorObservedAt: nowSec - 30 * 24 * 60 * 60,
+    });
+
+    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
+  });
+
+  it("marks price-derived anchors stale after their 45-day source window", () => {
+    const thresholdSec = LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS / 1000;
+    const nowSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const payload = buildPayloadWithObservedAt(nowSec, {
+      dataSource: "price-derived",
+      sourceKey: "price-derived",
+      sourceObservedAt: nowSec,
+      comparisonAnchorObservedAt: nowSec - thresholdSec - 60,
+    });
+
+    expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
+  });
+
   it("does not add data-stale for healthy supplemental onchain rows", () => {
     const thresholdSec = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
-    const payload = buildPayloadWithObservedAt(
-      Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60,
-      {
-        dataSource: "onchain",
-        sourceKey: "aave-v3-onchain:ethereum:0xasset",
-      },
-    );
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60, {
+      dataSource: "onchain",
+      sourceKey: "aave-v3-onchain:ethereum:0xasset",
+    });
 
     expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
   });
@@ -512,6 +538,10 @@ describe("validateYieldRankingsPayloadForPublish", () => {
     expect(firstAlt).toMatchObject({
       sourceRole: "audit-alternate",
       confidenceTier: "curated",
+      calculationMode: "market-api",
+      evidenceClass: "curated-observation",
+      evidenceCompleteness: 1,
+      scoreQualification: "rated",
       selectionRank: 2,
       rejectionReasonCode: "unspecified",
     });
@@ -730,7 +760,9 @@ describe("publishYieldCoordinatorResults", () => {
 
     expect(result.ok).toBe(false);
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_publication_generations"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_publication_generations"))).toBe(
+      true,
+    );
     expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(false);
   });
@@ -756,7 +788,9 @@ describe("publishYieldCoordinatorResults", () => {
     expect(rows[0]?.publication_state).toBe("published");
     expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
     expect(
-      history.some((entry) => entry.sql.includes("UPDATE yield_history SET publication_state = ?") && entry.binds[0] === "failed"),
+      history.some(
+        (entry) => entry.sql.includes("UPDATE yield_history SET publication_state = ?") && entry.binds[0] === "failed",
+      ),
     ).toBe(true);
   });
 
@@ -777,7 +811,9 @@ describe("publishYieldCoordinatorResults", () => {
     expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
     expect(
-      history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?") && entry.binds[0] === "failed"),
+      history.some(
+        (entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?") && entry.binds[0] === "failed",
+      ),
     ).toBe(true);
   });
 
@@ -829,19 +865,25 @@ describe("publishYieldCoordinatorResults", () => {
       dataSource: "price-derived",
     });
 
-    const result = await publishYieldCoordinatorResults(makePublishParams({
-      db,
-      evaluatedSources: [best, rejected, retained],
-      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
-    }));
+    const result = await publishYieldCoordinatorResults(
+      makePublishParams({
+        db,
+        evaluatedSources: [best, rejected, retained],
+        bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      }),
+    );
 
     expect(result).toMatchObject({ ok: true });
-    const decisionInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
+    const decisionInsert = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
     const decisionRows = parseJsonBind<Array<{ alternatives_json: string }>>(decisionInsert);
     const alternativesJson = decisionRows[0]?.alternatives_json ?? "";
     expect(new TextEncoder().encode(alternativesJson).length).toBeLessThanOrEqual(4096);
     const alternatives = JSON.parse(alternativesJson) as Array<{ reason?: string; anomalies?: string[] }>;
-    expect(alternatives.some((alternative) => alternative.reason === "rejected: divergent lower-confidence source")).toBe(true);
+    expect(
+      alternatives.some((alternative) => alternative.reason === "rejected: divergent lower-confidence source"),
+    ).toBe(true);
     expect(alternatives.every((alternative) => (alternative.anomalies?.length ?? 0) <= 6)).toBe(true);
   });
 
@@ -859,8 +901,10 @@ describe("publishYieldCoordinatorResults", () => {
     const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"));
     const yieldHistoryInsert = history.find((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"));
     const cacheWrite = history.find((entry) => entry.sql.includes("INSERT INTO cache (key, value, updated_at)"));
-    const yieldRows = parseJsonBind<Array<{ publication_generation_id: string; publication_state: string }>>(yieldDataInsert);
-    const historyRows = parseJsonBind<Array<{ publication_generation_id: string; publication_state: string }>>(yieldHistoryInsert);
+    const yieldRows =
+      parseJsonBind<Array<{ publication_generation_id: string; publication_state: string }>>(yieldDataInsert);
+    const historyRows =
+      parseJsonBind<Array<{ publication_generation_id: string; publication_state: string }>>(yieldHistoryInsert);
     expect(yieldRows[0]).toMatchObject({
       publication_generation_id: "yield-1774526400",
       publication_state: "published",
@@ -910,13 +954,15 @@ describe("publishYieldCoordinatorResults", () => {
     expect(result).toMatchObject({ ok: true, degradationReasons: [] });
 
     const history = db.getHistory();
-    const cacheWriteIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO cache (key, value, updated_at)"));
+    const cacheWriteIndex = history.findIndex((entry) =>
+      entry.sql.includes("INSERT INTO cache (key, value, updated_at)"),
+    );
     const freshnessIndex = history.findIndex((entry) => entry.binds[0] === "freshness:yield-data");
     const historyRetentionIndex = history.findIndex((entry) =>
-      entry.sql.includes("pharos:yield-sync:history-retention-delete")
+      entry.sql.includes("pharos:yield-sync:history-retention-delete"),
     );
     const handoffCleanupIndex = history.findIndex((entry) =>
-      entry.sql.includes("pharos:yield-sync:ownership-handoff-delete")
+      entry.sql.includes("pharos:yield-sync:ownership-handoff-delete"),
     );
     expect(cacheWriteIndex).toBeGreaterThanOrEqual(0);
     expect(freshnessIndex).toBeGreaterThan(cacheWriteIndex);
@@ -924,10 +970,12 @@ describe("publishYieldCoordinatorResults", () => {
     expect(handoffCleanupIndex).toBeGreaterThan(historyRetentionIndex);
 
     const degradedDb = makePublicationDb(1);
-    const degradedResult = await publishYieldCoordinatorResults(makePublishParams({
-      db: degradedDb,
-      degradationReasons: ["safety-snapshot-degraded"],
-    }));
+    const degradedResult = await publishYieldCoordinatorResults(
+      makePublishParams({
+        db: degradedDb,
+        degradationReasons: ["safety-snapshot-degraded"],
+      }),
+    );
     expect(degradedResult).toMatchObject({ ok: true, degradationReasons: ["safety-snapshot-degraded"] });
     expect(
       degradedDb.getHistory().some((entry) => entry.sql.includes("pharos:yield-sync:ownership-handoff-delete")),
@@ -991,12 +1039,14 @@ describe("publishYieldCoordinatorResults", () => {
     expect(previewLedger?.alternatives.length).toBeLessThanOrEqual(2);
     expect(previewLedger?.sourceSwitch).toBe(true);
 
-    const result = await publishYieldCoordinatorResults(makePublishParams({
-      db,
-      previewRankingsPayload,
-      evaluatedSources: [best, altA, altB, altC],
-      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
-    }));
+    const result = await publishYieldCoordinatorResults(
+      makePublishParams({
+        db,
+        previewRankingsPayload,
+        evaluatedSources: [best, altA, altB, altC],
+        bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      }),
+    );
     expect(result).toMatchObject({ ok: true });
 
     const history = db.getHistory();
@@ -1011,11 +1061,15 @@ describe("publishYieldCoordinatorResults", () => {
     const decisionRows = parseJsonBind<Array<{ retention_reason: string }>>(decisionInsert);
     expect(decisionRows[0]?.retention_reason).toBe("trend");
 
-    const alternativesInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decision_alternatives"));
-    const alternativeRows = parseJsonBind<Array<{
-      alt_source_key: string;
-      rejection_reason_code: string;
-    }>>(alternativesInsert);
+    const alternativesInsert = history.find((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO yield_source_decision_alternatives"),
+    );
+    const alternativeRows = parseJsonBind<
+      Array<{
+        alt_source_key: string;
+        rejection_reason_code: string;
+      }>
+    >(alternativesInsert);
     expect(alternativeRows.length).toBeLessThanOrEqual(2);
     expect(alternativeRows.length).toBeGreaterThan(0);
     for (const row of alternativeRows) {
@@ -1029,7 +1083,7 @@ describe("publishYieldCoordinatorResults", () => {
     expect(ledgerBytes).toBeLessThan(1024);
   });
 
-  it("persists pys / safety / variance snapshot columns on yield_history rows", async () => {
+  it("persists exactly reproducible PYS inputs on yield_history rows", async () => {
     const db = makePublicationDb(1);
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
     expect(result).toMatchObject({ ok: true });
@@ -1039,14 +1093,29 @@ describe("publishYieldCoordinatorResults", () => {
     expect(yieldHistoryInsert?.sql).toContain("pys_at_publish");
     expect(yieldHistoryInsert?.sql).toContain("safety_at_publish");
     expect(yieldHistoryInsert?.sql).toContain("variance_at_publish");
-    const historyRows = parseJsonBind<Array<{
-      pys_at_publish: number | null;
-      safety_at_publish: number | null;
-      variance_at_publish: number | null;
-    }>>(yieldHistoryInsert);
+    expect(yieldHistoryInsert?.sql).toContain("pys_inputs_at_publish");
+    const historyRows = parseJsonBind<
+      Array<{
+        pys_at_publish: number | null;
+        safety_at_publish: number | null;
+        variance_at_publish: number | null;
+        pys_inputs_at_publish: string;
+      }>
+    >(yieldHistoryInsert);
     expect(historyRows[0]?.pys_at_publish).toBe(28);
     expect(historyRows[0]?.safety_at_publish).toBe(82);
     expect(historyRows[0]?.variance_at_publish).toBe(0.2);
+    expect(JSON.parse(historyRows[0]?.pys_inputs_at_publish ?? "null")).toMatchObject({
+      schemaVersion: 1,
+      apy30d: 4.6,
+      safetyScore: 82,
+      varianceScore: 0.1,
+      benchmarkRate: 4.2,
+      sourceRiskPenalty: 1,
+      scoreQualification: "rated",
+      benchmarkKey: "USD",
+      evidenceClass: "curated-observation",
+    });
   });
 
   it("classifies retention_reason as 'audit' when no switch, no anomalies, and no rejected higher-confidence source", async () => {
@@ -1054,7 +1123,9 @@ describe("publishYieldCoordinatorResults", () => {
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
     expect(result).toMatchObject({ ok: true });
 
-    const decisionInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
+    const decisionInsert = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
     const decisionRows = parseJsonBind<Array<{ retention_reason: string }>>(decisionInsert);
     expect(decisionRows[0]?.retention_reason).toBe("audit");
   });
@@ -1079,20 +1150,75 @@ describe("publishYieldCoordinatorResults", () => {
       anomalies: ["diverges-from-canonical"],
     });
 
-    const result = await publishYieldCoordinatorResults(makePublishParams({
-      db,
-      evaluatedSources: [best, rejected],
-      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
-    }));
+    const result = await publishYieldCoordinatorResults(
+      makePublishParams({
+        db,
+        evaluatedSources: [best, rejected],
+        bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      }),
+    );
     expect(result).toMatchObject({ ok: true });
 
-    const decisionInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
+    const decisionInsert = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
     const decisionRows = parseJsonBind<Array<{ retention_reason: string }>>(decisionInsert);
     expect(decisionRows[0]?.retention_reason).toBe("trend");
   });
 });
 
 describe("pruneYieldTables", () => {
+  it("reclassifies false linked switches only after two clean published generations", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE yield_publication_generations (
+          generation_id TEXT PRIMARY KEY,
+          state TEXT NOT NULL
+        );
+        CREATE TABLE yield_source_decisions (
+          generation_id TEXT NOT NULL,
+          stablecoin_id TEXT NOT NULL,
+          selected_source_key TEXT NOT NULL,
+          previous_best_source_key TEXT,
+          source_switch INTEGER NOT NULL,
+          created_at INTEGER NOT NULL,
+          retention_reason TEXT
+        );
+      `);
+      const generation = sqlite.prepare(
+        "INSERT INTO yield_publication_generations (generation_id, state) VALUES (?, 'published')",
+      );
+      const decision = sqlite.prepare(`
+        INSERT INTO yield_source_decisions (
+          generation_id, stablecoin_id, selected_source_key, previous_best_source_key,
+          source_switch, created_at, retention_reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      const linkedKey = "linked-variant:child:onchain:child";
+      generation.run("old-false");
+      generation.run("clean-1");
+      decision.run("old-false", "verified-parent", linkedKey, "onchain:verified-parent", 1, 100, "trend");
+      decision.run("clean-1", "verified-parent", linkedKey, linkedKey, 0, 200, "audit");
+
+      expect(await cleanupFalseLinkedVariantSourceSwitches(createSqliteD1(sqlite))).toBe(0);
+
+      generation.run("clean-2");
+      decision.run("clean-2", "verified-parent", linkedKey, linkedKey, 0, 300, "audit");
+      expect(await cleanupFalseLinkedVariantSourceSwitches(createSqliteD1(sqlite))).toBe(1);
+      expect(
+        sqlite
+          .prepare(
+            "SELECT source_switch, retention_reason FROM yield_source_decisions WHERE generation_id = 'old-false'",
+          )
+          .get(),
+      ).toEqual({ source_switch: 0, retention_reason: "audit" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("chunks stale yield_data cleanup below the D1 bind-variable ceiling while preserving frozen rows", async () => {
     const db = mockD1();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
@@ -1103,9 +1229,7 @@ describe("pruneYieldTables", () => {
       .getHistory()
       .filter((entry) => entry.sql.includes("pharos:yield-sync:stale-yield-data-delete"));
     expect(staleDeletes.length).toBeGreaterThan(1);
-    expect(Math.max(...staleDeletes.map((entry) => entry.binds.length))).toBeLessThanOrEqual(
-      D1_MAX_BOUND_PARAMETERS,
-    );
+    expect(Math.max(...staleDeletes.map((entry) => entry.binds.length))).toBeLessThanOrEqual(D1_MAX_BOUND_PARAMETERS);
   });
 
   it("deletes old null rollout audit rows while retaining inferable trend rows", async () => {
@@ -1183,13 +1307,7 @@ describe("pruneYieldTables", () => {
         .prepare("SELECT generation_id FROM yield_source_decisions ORDER BY generation_id ASC")
         .all()
         .map((row) => (row as { generation_id: string }).generation_id);
-      expect(generations).toEqual([
-        "g-null-anomaly",
-        "g-null-higher",
-        "g-null-switch",
-        "g-old-trend",
-        "g-recent-null",
-      ]);
+      expect(generations).toEqual(["g-null-anomaly", "g-null-higher", "g-null-switch", "g-old-trend", "g-recent-null"]);
       const alternatives = sqlite
         .prepare("SELECT generation_id FROM yield_source_decision_alternatives ORDER BY generation_id ASC")
         .all()

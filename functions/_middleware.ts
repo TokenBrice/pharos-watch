@@ -1,5 +1,10 @@
 import { isTelegramMiniAppPath } from "@shared/lib/site-csp";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import {
+  getCanonicalPathForMarkdownAsset,
+  getGeneratedMarkdownAssetPath,
+  isNegotiableMarkdownRoute,
+} from "@shared/lib/markdown-route-policy";
 import { injectHtmlCsp } from "./lib/csp-inject";
 
 interface MiddlewareEnv {
@@ -12,16 +17,7 @@ interface MiddlewareContext {
   next: (input?: Request | string, init?: RequestInit) => Promise<Response>;
 }
 
-const MARKDOWN_ROUTE_PREFIXES = [
-  "/methodology/",
-  "/stablecoin/",
-  "/changelog/",
-  "/digest/",
-  "/docs/",
-] as const;
-
 const PASSTHROUGH_PREFIXES = ["/_site-data/", "/_next/"] as const;
-const GENERATED_MARKDOWN_ASSET_SUFFIX = "/index.md";
 
 function parseQ(params: string[]): number {
   const qParam = params.find((param) => /^q\s*=/i.test(param));
@@ -60,17 +56,6 @@ export function prefersMarkdown(accept: string | null): boolean {
   const htmlEffective = Number.isFinite(htmlQ) ? htmlQ : -Infinity;
 
   return markdownQ > 0 && markdownQ >= htmlEffective;
-}
-
-function matchesMarkdownRoute(pathname: string): boolean {
-  if (!pathname.endsWith("/")) return false;
-  return MARKDOWN_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-}
-
-function directMarkdownAssetCanonicalPath(pathname: string): string | null {
-  if (!pathname.endsWith(GENERATED_MARKDOWN_ASSET_SUFFIX)) return null;
-  if (!MARKDOWN_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return null;
-  return `${pathname.slice(0, -GENERATED_MARKDOWN_ASSET_SUFFIX.length)}/`;
 }
 
 function matchesPassthrough(pathname: string): boolean {
@@ -139,7 +124,7 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
     return ctx.next();
   }
 
-  const directMarkdownCanonicalPath = directMarkdownAssetCanonicalPath(url.pathname);
+  const directMarkdownCanonicalPath = getCanonicalPathForMarkdownAsset(url.pathname);
   if (directMarkdownCanonicalPath) {
     const directMarkdownResponse = await ctx.next();
     if (!directMarkdownResponse.ok) return directMarkdownResponse;
@@ -150,11 +135,11 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
   }
 
   const shouldTryMarkdown =
-    matchesMarkdownRoute(url.pathname) && prefersMarkdown(ctx.request.headers.get("Accept"));
+    isNegotiableMarkdownRoute(url.pathname) && prefersMarkdown(ctx.request.headers.get("Accept"));
 
   if (shouldTryMarkdown && ctx.env.ASSETS) {
     const mdUrl = new URL(url);
-    mdUrl.pathname = `${url.pathname}index.md`;
+    mdUrl.pathname = getGeneratedMarkdownAssetPath(url.pathname) ?? url.pathname;
     mdUrl.search = "";
     const mdResponse = await ctx.env.ASSETS.fetch(new Request(mdUrl.toString(), { method: "GET" }));
 
@@ -167,7 +152,7 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
   }
 
   const fallback = await ctx.next();
-  const negotiated = matchesMarkdownRoute(url.pathname)
+  const negotiated = isNegotiableMarkdownRoute(url.pathname)
     ? withNegotiationHeaders(fallback, ctx.request.method)
     : fallback;
   return withHtmlCsp(negotiated, ctx.request, url.pathname);

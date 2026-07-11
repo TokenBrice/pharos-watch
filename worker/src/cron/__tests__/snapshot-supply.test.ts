@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
 // Stub psi-eligible to avoid importing the full stablecoins list
 vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_ELIGIBLE_STABLECOINS: [
     { id: "usdt-tether", symbol: "USDT" },
     { id: "usdc-circle", symbol: "USDC" },
+    { id: "eurt-test", symbol: "EURT" },
   ],
 }));
 
@@ -18,6 +20,33 @@ vi.mock("@shared/lib/supply", () => ({
 }));
 
 import { snapshotSupply } from "../snapshot-supply";
+import { buildSupplySnapshotCoverageExpectation } from "../../lib/supply-snapshot-completion";
+import type { StablecoinPublicationWaiver } from "../../lib/stablecoin-publication-coverage";
+
+const DEFAULT_REQUIRED_IDS = ["usdt-tether", "usdc-circle"] as const;
+
+function completionMarker(params: {
+  snapshotDate: number;
+  requiredIds?: readonly string[];
+  appliedWaivers?: readonly StablecoinPublicationWaiver[];
+  ownedRowIds?: readonly string[];
+  writtenRows?: number;
+}): string {
+  const requiredIds = params.requiredIds ?? DEFAULT_REQUIRED_IDS;
+  const expectation = buildSupplySnapshotCoverageExpectation(
+    requiredIds,
+    params.appliedWaivers ?? [],
+  );
+  return JSON.stringify({
+    snapshotDate: params.snapshotDate,
+    coverageVersion: 2,
+    expectedActiveCount: expectation.expectedActiveCount,
+    accountedActiveCount: expectation.expectedActiveCount,
+    coverageDigest: expectation.coverageDigest,
+    ownedRowIds: [...(params.ownedRowIds ?? requiredIds)].sort(),
+    writtenRows: params.writtenRows ?? requiredIds.length,
+  });
+}
 
 describe("snapshotSupply", () => {
   beforeEach(() => {
@@ -118,7 +147,7 @@ describe("snapshotSupply", () => {
         rows: [],
         first: {
           key: "snapshot-supply:last-write",
-          value: JSON.stringify({ snapshotDate: todaySnapshotDate }),
+          value: completionMarker({ snapshotDate: todaySnapshotDate }),
           updated_at: slotStartedAt - 60,
         },
       },
@@ -139,6 +168,87 @@ describe("snapshotSupply", () => {
       freshnessGateLabel: "daily0800Utc",
     });
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+  });
+
+  it("does not let a v1 count-only marker bypass the daily freshness gate", async () => {
+    const slotStartedAt = Date.parse("2025-06-15T08:00:00Z") / 1000;
+    const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
+    vi.setSystemTime(new Date(slotStartedAt * 1000));
+    const cacheUpdatedAt = slotStartedAt - 15 * 60;
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{
+          key: "stablecoins",
+          value: JSON.stringify({
+            peggedAssets: [
+              { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100 } },
+              { id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 50 } },
+            ],
+          }),
+          updated_at: cacheUpdatedAt,
+        }],
+      },
+      {
+        match: "cache",
+        matchBinds: ["snapshot-supply:last-write"],
+        rows: [{
+          key: "snapshot-supply:last-write",
+          value: JSON.stringify({
+            snapshotDate,
+            coverageVersion: 1,
+            expectedActiveCount: 2,
+            accountedActiveCount: 2,
+          }),
+          updated_at: slotStartedAt - 60,
+        }],
+      },
+    ]);
+
+    const result = await snapshotSupply(db, undefined, {
+      minStablecoinsCacheUpdatedAtSec: slotStartedAt,
+      freshnessGateLabel: "daily0800Utc",
+    });
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({ reason: "stablecoins_cache_before_slot" });
+  });
+
+  it("does not let an identity-matched marker hide incomplete current coverage at the freshness gate", async () => {
+    const slotStartedAt = Date.parse("2025-06-15T08:00:00Z") / 1000;
+    const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
+    vi.setSystemTime(new Date(slotStartedAt * 1000));
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{
+          key: "stablecoins",
+          value: JSON.stringify({ peggedAssets: [
+            { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100 } },
+          ] }),
+          updated_at: slotStartedAt - 15 * 60,
+        }],
+      },
+      {
+        match: "cache",
+        matchBinds: ["snapshot-supply:last-write"],
+        rows: [{
+          key: "snapshot-supply:last-write",
+          value: completionMarker({ snapshotDate }),
+          updated_at: slotStartedAt - 60,
+        }],
+      },
+    ]);
+
+    const result = await snapshotSupply(db, undefined, {
+      minStablecoinsCacheUpdatedAtSec: slotStartedAt,
+      freshnessGateLabel: "daily0800Utc",
+    });
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({ reason: "stablecoins_cache_before_slot" });
   });
 
   it("inserts rows for tracked assets with valid supply", async () => {
@@ -201,7 +311,7 @@ describe("snapshotSupply", () => {
         rows: [],
         first: {
           key: "snapshot-supply:last-write",
-          value: JSON.stringify({ snapshotDate: todaySnapshotDate }),
+          value: completionMarker({ snapshotDate: todaySnapshotDate }),
           updated_at: freshUpdatedAt,
         },
       },
@@ -212,6 +322,354 @@ describe("snapshotSupply", () => {
     expect(result.itemCount).toBe(0);
     expect(JSON.parse(String(result.metadata))).toMatchObject({ reason: "already_written_today" });
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+  });
+
+  it("retries a same-count active-ID replacement and removes the prior owned row", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
+    const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{
+          key: "stablecoins",
+          value: JSON.stringify({ peggedAssets: [
+            { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100 } },
+            { id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 50 } },
+          ] }),
+          updated_at: freshUpdatedAt,
+        }],
+      },
+      {
+        match: "cache",
+        matchBinds: ["snapshot-supply:last-write"],
+        rows: [{
+          key: "snapshot-supply:last-write",
+          value: completionMarker({
+            snapshotDate,
+            requiredIds: ["usdt-tether", "eurt-test"],
+            ownedRowIds: ["usdt-tether", "eurt-test"],
+          }),
+          updated_at: freshUpdatedAt,
+        }],
+      },
+    ]);
+
+    const result = await snapshotSupply(db, undefined, {
+      requiredActiveIds: DEFAULT_REQUIRED_IDS,
+      snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
+    });
+
+    expect(result.itemCount).toBe(2);
+    const deletes = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM supply_history"));
+    expect(deletes.some((entry) => entry.binds.includes("eurt-test"))).toBe(true);
+    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"));
+    expect(inserts.flatMap((entry) => entry.binds)).not.toContain("eurt-test");
+  });
+
+  it("invalidates the same-day marker when an active asset is promoted", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
+    const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
+    const requiredIds = [...DEFAULT_REQUIRED_IDS, "eurt-test"];
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{
+          key: "stablecoins",
+          value: JSON.stringify({ peggedAssets: [
+            { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100 } },
+            { id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 50 } },
+            { id: "eurt-test", symbol: "EURT", circulating: { peggedEUR: 25 } },
+          ] }),
+          updated_at: freshUpdatedAt,
+        }],
+      },
+      {
+        match: "cache",
+        matchBinds: ["snapshot-supply:last-write"],
+        rows: [{
+          key: "snapshot-supply:last-write",
+          value: completionMarker({ snapshotDate }),
+          updated_at: freshUpdatedAt,
+        }],
+      },
+    ]);
+
+    const result = await snapshotSupply(db, undefined, {
+      requiredActiveIds: requiredIds,
+      snapshotEligibleIds: requiredIds,
+    });
+
+    expect(result.itemCount).toBe(3);
+  });
+
+  it("replaces a removed asset without deleting rows outside snapshot ownership", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
+    const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
+    const previousIds = [...DEFAULT_REQUIRED_IDS, "eurt-test"];
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{
+          key: "stablecoins",
+          value: JSON.stringify({ peggedAssets: [
+            { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100 } },
+            { id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 50 } },
+            { id: "eurt-test", symbol: "EURT", circulating: { peggedEUR: 25 } },
+            { id: "admin-backfill-only", symbol: "ADMIN", circulating: { peggedUSD: 10 } },
+          ] }),
+          updated_at: freshUpdatedAt,
+        }],
+      },
+      {
+        match: "cache",
+        matchBinds: ["snapshot-supply:last-write"],
+        rows: [{
+          key: "snapshot-supply:last-write",
+          value: completionMarker({
+            snapshotDate,
+            requiredIds: previousIds,
+            ownedRowIds: previousIds,
+          }),
+          updated_at: freshUpdatedAt,
+        }],
+      },
+    ]);
+
+    const result = await snapshotSupply(db, undefined, {
+      requiredActiveIds: DEFAULT_REQUIRED_IDS,
+      snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
+    });
+
+    expect(result.itemCount).toBe(2);
+    const deleteBinds = db.getHistory()
+      .filter((entry) => entry.sql.includes("DELETE FROM supply_history"))
+      .flatMap((entry) => entry.binds);
+    expect(deleteBinds).toContain("eurt-test");
+    expect(deleteBinds).not.toContain("admin-backfill-only");
+  });
+
+  it("replaces owned rows exactly while preserving an outside admin row in SQLite", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE cache (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+        CREATE TABLE supply_history (
+          stablecoin_id TEXT NOT NULL,
+          snapshot_date INTEGER NOT NULL,
+          circulating_usd REAL NOT NULL,
+          price REAL,
+          PRIMARY KEY (stablecoin_id, snapshot_date)
+        );
+      `);
+      const nowSec = Math.floor(Date.now() / 1000);
+      const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
+      const previousIds = [...DEFAULT_REQUIRED_IDS, "eurt-test"];
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        "stablecoins",
+        JSON.stringify({ peggedAssets: [
+          { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100 } },
+          { id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 50 } },
+        ] }),
+        nowSec - 60,
+      );
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        "snapshot-supply:last-write",
+        completionMarker({
+          snapshotDate,
+          requiredIds: previousIds,
+          ownedRowIds: previousIds,
+        }),
+        nowSec - 60,
+      );
+      const seed = sqlite.prepare(
+        "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+      );
+      seed.run("usdt-tether", snapshotDate, 90, 1);
+      seed.run("usdc-circle", snapshotDate, 45, 1);
+      seed.run("eurt-test", snapshotDate, 25, 1);
+      seed.run("admin-backfill-only", snapshotDate, 10, 1);
+
+      const result = await snapshotSupply(createSqliteD1(sqlite), undefined, {
+        nowSec,
+        requiredActiveIds: DEFAULT_REQUIRED_IDS,
+        snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
+      });
+
+      expect(result.itemCount).toBe(2);
+      const ids = sqlite.prepare(
+        "SELECT stablecoin_id FROM supply_history WHERE snapshot_date = ? ORDER BY stablecoin_id",
+      ).all(snapshotDate) as Array<{ stablecoin_id: string }>;
+      expect(ids.map((row) => row.stablecoin_id)).toEqual([
+        "admin-backfill-only",
+        "usdc-circle",
+        "usdt-tether",
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("invalidates completion when an applied waiver owner or expiry changes", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
+    const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
+    const originalWaiver: StablecoinPublicationWaiver = {
+      stablecoinId: "usdc-circle",
+      owner: "data-platform",
+      reason: "upstream unavailable",
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    };
+    const variants: StablecoinPublicationWaiver[] = [
+      { ...originalWaiver, owner: "data-operations" },
+      { ...originalWaiver, expiresAt: originalWaiver.expiresAt + 3600 },
+    ];
+
+    for (const currentWaiver of variants) {
+      const db = mockD1([
+        {
+          match: "cache",
+          matchBinds: ["stablecoins"],
+          rows: [{
+            key: "stablecoins",
+            value: JSON.stringify({ peggedAssets: [
+              { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100 } },
+            ] }),
+            updated_at: freshUpdatedAt,
+          }],
+        },
+        {
+          match: "cache",
+          matchBinds: ["snapshot-supply:last-write"],
+          rows: [{
+            key: "snapshot-supply:last-write",
+            value: completionMarker({
+              snapshotDate,
+              appliedWaivers: [originalWaiver],
+              ownedRowIds: ["usdt-tether"],
+              writtenRows: 1,
+            }),
+            updated_at: freshUpdatedAt,
+          }],
+        },
+      ]);
+
+      const result = await snapshotSupply(db, undefined, {
+        nowSec: Math.floor(Date.now() / 1000),
+        publicationWaivers: [currentWaiver],
+        snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
+        requiredActiveIds: DEFAULT_REQUIRED_IDS,
+      });
+
+      expect(result.itemCount).toBe(1);
+    }
+  });
+
+  it("fails closed when a same-day marker's applied waiver reaches expiry", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
+    const waiver: StablecoinPublicationWaiver = {
+      stablecoinId: "usdc-circle",
+      owner: "data-platform",
+      reason: "upstream unavailable",
+      expiresAt: nowSec,
+    };
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{
+          key: "stablecoins",
+          value: JSON.stringify({ peggedAssets: [
+            { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100 } },
+          ] }),
+          updated_at: nowSec - 60,
+        }],
+      },
+      {
+        match: "cache",
+        matchBinds: ["snapshot-supply:last-write"],
+        rows: [{
+          key: "snapshot-supply:last-write",
+          value: completionMarker({
+            snapshotDate,
+            appliedWaivers: [waiver],
+            ownedRowIds: ["usdt-tether"],
+            writtenRows: 1,
+          }),
+          updated_at: nowSec - 60,
+        }],
+      },
+    ]);
+
+    const result = await snapshotSupply(db, undefined, {
+      nowSec,
+      publicationWaivers: [waiver],
+      snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
+      requiredActiveIds: DEFAULT_REQUIRED_IDS,
+    });
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "partial_snapshot_blocked",
+      missingActiveIds: ["usdc-circle"],
+    });
+  });
+
+  it("retries a same-day v1 count-equal marker that cannot prove exact identity coverage", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
+    const todaySnapshotDate = Math.floor(Date.UTC(2025, 5, 15) / 1000);
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } },
+        { id: "usdc-circle", symbol: "USDC", price: 1, circulating: { peggedUSD: 50_000_000 } },
+      ],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{ key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt }],
+      },
+      {
+        match: "cache",
+        matchBinds: ["snapshot-supply:last-write"],
+        rows: [{
+          key: "snapshot-supply:last-write",
+          value: JSON.stringify({
+            snapshotDate: todaySnapshotDate,
+            coverageVersion: 1,
+            expectedActiveCount: 2,
+            accountedActiveCount: 2,
+          }),
+          updated_at: freshUpdatedAt,
+        }],
+      },
+    ]);
+
+    const result = await snapshotSupply(db);
+
+    expect(result.itemCount).toBe(2);
+    expect(db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toHaveLength(1);
+    const markerWrite = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "snapshot-supply:last-write"
+    );
+    expect(JSON.parse(String(markerWrite?.binds[1]))).toMatchObject({
+      snapshotDate: todaySnapshotDate,
+      coverageVersion: 2,
+      expectedActiveCount: 2,
+      accountedActiveCount: 2,
+      coverageDigest: expect.stringMatching(/^[0-9a-f]{64}$/),
+      ownedRowIds: ["usdc-circle", "usdt-tether"],
+      writtenRows: 2,
+    });
   });
 
   it("writes after UTC midnight even when the previous write is under 20 hours old", async () => {
@@ -273,5 +731,44 @@ describe("snapshotSupply", () => {
     });
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("snapshot-supply:last-write"))).toBe(false);
+  });
+
+  it("leaves the day retryable when the snapshot batch fails", async () => {
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 30;
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } },
+        { id: "usdc-circle", symbol: "USDC", price: 1, circulating: { peggedUSD: 50_000_000 } },
+      ],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [],
+        first: { key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt },
+      },
+      {
+        match: "INSERT OR REPLACE INTO supply_history",
+        rows: [],
+        throwError: new Error("partial batch failure"),
+      },
+    ]);
+    const batches: D1PreparedStatement[][] = [];
+    const originalBatch = db.batch.bind(db);
+    db.batch = (async (statements: D1PreparedStatement[]) => {
+      batches.push(statements);
+      return originalBatch(statements);
+    }) as D1Database["batch"];
+
+    const result = await snapshotSupply(db);
+
+    expect(result).toMatchObject({ status: "degraded", itemCount: 0 });
+    expect(JSON.parse(String(result.metadata))).toMatchObject({ reason: "db_write_failed" });
+    expect(batches).toHaveLength(1);
+    expect(batches[0]!.map((statement) => (statement as { sql?: string }).sql)).toEqual(expect.arrayContaining([
+      expect.stringContaining("DELETE FROM supply_history"),
+      expect.stringContaining("INSERT OR REPLACE INTO supply_history"),
+      expect.stringContaining("INSERT OR REPLACE INTO cache"),
+    ]));
   });
 });

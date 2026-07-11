@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -26,20 +26,22 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
 }));
 
 // BlacklistSection renders after the mocks are defined so the vi.mock hoists apply.
-import {
-  BlacklistHistorySection,
-  BlacklistSection,
-} from "@/components/stablecoin-detail/blacklist-section";
+import { BlacklistHistorySection, BlacklistSection } from "@/components/stablecoin-detail/blacklist-section";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import type { BlacklistEvent } from "@shared/types";
 
-function summaryStub(overrides: {
-  perCoinTotalEvents?: Record<string, number>;
-  perCoinFrozenAddressCount?: Record<string, number>;
-  perCoinFrozenTotal?: Record<string, number>;
-  perCoinDestroyedTotal?: Record<string, number>;
-  perCoinQuarterlyEventTypes?: Record<string, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>;
-} = {}) {
+function summaryStub(
+  overrides: {
+    perCoinTotalEvents?: Record<string, number>;
+    perCoinFrozenAddressCount?: Record<string, number>;
+    perCoinFrozenTotal?: Record<string, number>;
+    perCoinDestroyedTotal?: Record<string, number>;
+    perCoinQuarterlyEventTypes?: Record<
+      string,
+      Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>
+    >;
+  } = {},
+) {
   return {
     data: {
       stats: {
@@ -47,10 +49,9 @@ function summaryStub(overrides: {
         perCoinFrozenAddressCount: overrides.perCoinFrozenAddressCount ?? { USDC: 3 },
         perCoinFrozenTotal: overrides.perCoinFrozenTotal ?? { USDC: 1000 },
         perCoinDestroyedTotal: overrides.perCoinDestroyedTotal ?? { USDC: 0 },
-        perCoinQuarterlyEventTypes:
-          overrides.perCoinQuarterlyEventTypes ?? {
-            USDC: [{ quarter: "Q1 '26", blacklist: 5, unblacklist: 0, destroy: 0 }],
-          },
+        perCoinQuarterlyEventTypes: overrides.perCoinQuarterlyEventTypes ?? {
+          USDC: [{ quarter: "Q1 '26", blacklist: 5, unblacklist: 0, destroy: 0 }],
+        },
       },
     },
     isLoading: false,
@@ -61,25 +62,19 @@ function summaryStub(overrides: {
 describe("BlacklistSection", () => {
   it("returns null for a coin not in BLACKLIST_STABLECOINS", () => {
     vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
-    const { container } = render(
-      <BlacklistSection stablecoinId="makerdao-dai" symbol={"DAI" as "USDC"} />,
-    );
+    const { container } = render(<BlacklistSection stablecoinId="makerdao-dai" symbol={"DAI" as "USDC"} />);
     expect(container.firstChild).toBeNull();
   });
 
   it("returns null for a supported coin with zero events", () => {
-    vi.mocked(useBlacklistSummary).mockReturnValue(
-      summaryStub({ perCoinTotalEvents: { USDC: 0 } }),
-    );
+    vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub({ perCoinTotalEvents: { USDC: 0 } }));
     const { container } = render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
     expect(container.firstChild).toBeNull();
   });
 
   it("renders the Blacklist Activity heading and all three stat titles on the happy path", () => {
     vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
-    const { getByText, getAllByText } = render(
-      <BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />,
-    );
+    const { getByText, getAllByText } = render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
     expect(getByText(/Blacklist Activity/i)).toBeTruthy();
     expect(getByText(/Frozen addresses/i)).toBeTruthy();
     expect(getByText(/Frozen total/i)).toBeTruthy();
@@ -90,9 +85,7 @@ describe("BlacklistSection", () => {
 
   it("renders Recent Blacklist Events from BlacklistHistorySection on the happy path", () => {
     vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
-    const { getByText } = render(
-      <BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />,
-    );
+    const { getByText } = render(<BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />);
     expect(getByText(/Recent Blacklist Events/i)).toBeTruthy();
   });
 
@@ -126,35 +119,45 @@ describe("BlacklistSection", () => {
       isError: false,
     } as unknown as ReturnType<typeof useBlacklistEventsPage>);
 
-    const { getByRole, getByTestId } = render(
-      <BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />,
-    );
+    const { getByRole, getByTestId } = render(<BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />);
 
     expect(getByTestId("stablecoin-blacklist-events-table").getAttribute("data-table-id")).toBe(
       "stablecoin-blacklist-events",
     );
-    expect(getByRole("link", { name: "See all events →" }).getAttribute("href")).toBe(
-      "/freezewatch/?stablecoin=USDC",
-    );
+    expect(getByRole("link", { name: "See all events →" }).getAttribute("href")).toBe("/freezewatch/?stablecoin=USDC");
   });
 
   it("BlacklistHistorySection returns null for a supported coin with zero events", () => {
-    vi.mocked(useBlacklistSummary).mockReturnValue(
-      summaryStub({ perCoinTotalEvents: { USDC: 0 } }),
-    );
-    const { container } = render(
-      <BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />,
-    );
+    vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub({ perCoinTotalEvents: { USDC: 0 } }));
+    const { container } = render(<BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />);
     expect(container.firstChild).toBeNull();
   });
 
-  it("returns null when the summary errors (silent failure)", () => {
+  it("renders an explicit unavailable state when the summary errors", () => {
     vi.mocked(useBlacklistSummary).mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: true,
+      error: new Error("summary failed"),
+      dataUpdatedAt: 0,
+      refetch: vi.fn(),
     } as unknown as ReturnType<typeof useBlacklistSummary>);
-    const { container } = render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
-    expect(container.firstChild).toBeNull();
+    render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
+    expect(screen.getByRole("alert").textContent).toContain("temporarily unavailable");
+  });
+
+  it("renders cached summary data with a stale notice when refresh fails", () => {
+    const cachedSummary = summaryStub();
+    vi.mocked(useBlacklistSummary).mockReturnValue({
+      ...cachedSummary,
+      error: new Error("summary refresh failed"),
+      dataUpdatedAt: Date.parse("2026-07-10T00:00:00Z"),
+      refetch: vi.fn(),
+    } as ReturnType<typeof useBlacklistSummary>);
+
+    render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
+
+    expect(screen.getByRole("status").textContent).toContain("refresh failed; showing the last available data");
+    expect(screen.getByText(/Frozen addresses/i)).toBeTruthy();
   });
 });

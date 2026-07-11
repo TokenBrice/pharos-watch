@@ -1,51 +1,79 @@
+import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import { escapeHtml } from "../../lib/telegram";
+import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../lib/telegram-constants";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
-import { encodeWatchlistToken } from "../../lib/telegram-watchlist-token";
-import { loadPresetSubscriptions, loadSubscriptionRowsByChat } from "../telegram-webhook-store";
+import { isSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
+import {
+  encodeWatchlistTokenV2,
+  MAX_WATCHLIST_TOKEN_CHARS,
+  WATCHLIST_TOKEN_REGISTRY_VERSION,
+} from "../../lib/telegram-watchlist-token";
+import { loadWatchlistPortableState } from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
 
-/**
- * `/export` — emit a portable base64url token of the chat's explicit coin
- * follows + the alert types it uses + followed presets, so it can be re-applied
- * elsewhere via `/import`. Read-only; safe in any chat.
- */
+const KNOWN_PRESET_IDS = new Set<string>(TELEGRAM_PRESET_IDS);
+
+/** `/export` emits one lossless, self-contained v2 portable-state token. */
 export const handleExport: WebhookCommandHandler = async (ctx) => {
   const { db, chatId } = ctx;
-  const [subscriptions, presetSubscriptions] = await Promise.all([
-    loadSubscriptionRowsByChat(db, chatId),
-    loadPresetSubscriptions(db, chatId),
-  ]);
-
-  const coinIds = subscriptions.map((row) => row.stablecoin_id);
-  const presetIds = presetSubscriptions.map((row) => row.preset_id);
-  if (coinIds.length === 0 && presetIds.length === 0) {
+  const { state } = await loadWatchlistPortableState(db, chatId, WATCHLIST_TOKEN_REGISTRY_VERSION);
+  if (state.direct.length === 0 && state.presets.length === 0) {
     await ctx.replyToChat(
       "Nothing to export yet. Use /subscribe (or /presets) first, then /export to copy your watchlist to another chat.",
     );
     return;
   }
 
-  const alertTypes = new Set<string>();
-  for (const row of subscriptions) {
-    if (row.alert_dews) alertTypes.add("dews");
-    if (row.alert_depeg) alertTypes.add("depeg");
-    if (row.alert_safety) alertTypes.add("safety");
-    if (row.alert_launch) alertTypes.add("launch");
-    if (row.alert_reserve) alertTypes.add("reserve");
-  }
-  for (const row of presetSubscriptions) {
-    if (row.alert_dews) alertTypes.add("dews");
-    if (row.alert_depeg) alertTypes.add("depeg");
-    if (row.alert_safety) alertTypes.add("safety");
+  const unavailableIds = state.direct
+    .map((row) => row.stablecoinId)
+    .filter((id) => !isSubscribableCoin(id));
+  const unknownPresets = state.presets
+    .map((row) => row.presetId)
+    .filter((id) => !KNOWN_PRESET_IDS.has(id));
+  if (unavailableIds.length > 0 || unknownPresets.length > 0) {
+    await ctx.replyToChat(
+      [
+        "This watchlist contains retired or unknown entries, so a lossless token cannot be created yet.",
+        "Remove those entries with /unsubscribe or the control panel, then run /export again. Nothing was changed.",
+      ].join("\n"),
+    );
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: "export-v2",
+      outcome: "blocked",
+      failureClass: "unavailable-portable-state",
+    });
+    return;
   }
 
-  const token = encodeWatchlistToken({ coinIds, alertTypes: [...alertTypes], presetIds });
-  await ctx.replyToChat(
-    [
-      `Your watchlist token (${coinIds.length} coins, ${presetIds.length} presets):`,
-      `<pre>${escapeHtml(token)}</pre>`,
-      "Send it to another chat as <code>/import &lt;token&gt;</code> to copy these follows.",
-    ].join("\n"),
-  );
-  await recordTelegramUsageEvent(db, { eventType: "subscribe", actionDetail: "export", outcome: "success" });
+  let token: string;
+  try {
+    token = await encodeWatchlistTokenV2(state);
+  } catch {
+    await ctx.replyToChat(
+      [
+        `Your watchlist is too large for one safe Telegram copy/paste token (${state.direct.length} direct/local rows, ${state.presets.length} presets), so no token was sent.`,
+        "Nothing was changed. Please report this to the Pharos team so the portable format can be expanded safely.",
+      ].join("\n"),
+    );
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: "export-v2",
+      outcome: "blocked",
+      failureClass: "token-too-large",
+    });
+    return;
+  }
+
+  const tokenBlock = `<pre>${escapeHtml(token)}</pre>`;
+  if (token.length > MAX_WATCHLIST_TOKEN_CHARS || tokenBlock.length > TELEGRAM_MESSAGE_CHUNK_LIMIT) {
+    throw new Error("Encoded watchlist token escaped its copy/paste size contract");
+  }
+  await ctx.replyToChat([
+    `Your lossless watchlist token (${state.direct.length} direct/local rows, ${state.presets.length} presets):`,
+    tokenBlock,
+    "Send it as <code>/import &lt;token&gt;</code>. Import shows an exact replacement preview before changing anything.",
+    "Not included: global-all settings, quiet hours, timezone, chat/per-coin snoozes, pending actions, or delivery history.",
+  ].join("\n"));
+  await recordTelegramUsageEvent(db, { eventType: "subscribe", actionDetail: "export-v2", outcome: "success" });
 };

@@ -1,5 +1,57 @@
+.pharoswatchbot-hero {
+  background: #172534;
+}
+
+.pharoswatchbot-hero-media {
+  width: 48%;
+}
+
+.pharoswatchbot-hero-image {
+  object-fit: cover;
+  object-position: center top;
+  opacity: 0.7;
+}
+
+.pharoswatchbot-hero-scrim {
+  background: rgb(16 26 36 / 58%);
+}
+
+.pharoswatchbot-hero-primary {
+  background: #f8fafc;
+  color: #101a24 !important;
+}
+
+.pharoswatchbot-hero-primary:hover {
+  background: #e8edf2;
+}
+
+.pharoswatchbot-hero-secondary {
+  border: 1px solid rgb(248 250 252 / 78%);
+  background: rgb(16 26 36 / 90%);
+  color: #f8fafc !important;
+}
+
+.pharoswatchbot-hero-secondary:hover {
+  background: #101a24;
+}
+
 .telegram-mini-app-carousel-track {
   transition: transform 240ms ease-out;
+}
+
+@media (max-width: 639px) {
+  .pharoswatchbot-hero-media {
+    width: 100%;
+  }
+
+  .pharoswatchbot-hero-image {
+    object-position: center 18%;
+    opacity: 0.08;
+  }
+
+  .pharoswatchbot-hero-scrim {
+    background: rgb(16 26 36 / 82%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

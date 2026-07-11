@@ -1,15 +1,30 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from "node:child_process";
-import { unlink } from "node:fs/promises";
+import { mkdtemp, rm, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const LOG_FILE = join(tmpdir(), `worker-smoke-${process.pid}.log`);
-const WORKER_URL = "http://127.0.0.1:8787/api/stablecoins";
+const WORKER_PORT = Number.parseInt(process.env.WORKER_SMOKE_PORT ?? "8787", 10);
+if (!Number.isInteger(WORKER_PORT) || WORKER_PORT <= 0 || WORKER_PORT > 65535) {
+  throw new Error("WORKER_SMOKE_PORT must be an integer between 1 and 65535");
+}
+const WORKER_COMPATIBILITY_DATE = (process.env.WORKER_SMOKE_COMPATIBILITY_DATE ?? "").trim();
+if (WORKER_COMPATIBILITY_DATE && !/^\d{4}-\d{2}-\d{2}$/.test(WORKER_COMPATIBILITY_DATE)) {
+  throw new Error("WORKER_SMOKE_COMPATIBILITY_DATE must use YYYY-MM-DD");
+}
+const WORKER_SMOKE_MODE = (process.env.WORKER_SMOKE_MODE ?? "full").trim();
+if (WORKER_SMOKE_MODE !== "full" && WORKER_SMOKE_MODE !== "runtime") {
+  throw new Error("WORKER_SMOKE_MODE must be full or runtime");
+}
+const WORKER_SMOKE_ISOLATED = process.env.WORKER_SMOKE_ISOLATED === "true";
+const WORKER_ORIGIN = `http://127.0.0.1:${WORKER_PORT}`;
+const WORKER_URL = `${WORKER_ORIGIN}/api/health`;
 const READINESS_ATTEMPTS = 60;
 
 let wrangler = null;
+let persistenceDirectory = null;
 
 async function cleanup(dumpLog = false) {
   if (dumpLog) {
@@ -35,6 +50,10 @@ async function cleanup(dumpLog = false) {
   } catch {
     // ignore
   }
+  if (persistenceDirectory) {
+    await rm(persistenceDirectory, { recursive: true, force: true });
+    persistenceDirectory = null;
+  }
 }
 
 for (const sig of ["SIGINT", "SIGTERM"]) {
@@ -59,14 +78,68 @@ async function waitForWorker() {
 
 let smokeExitCode = 1;
 
+async function runRuntimeSmoke() {
+  const response = await fetch(`${WORKER_ORIGIN}/api/health`, {
+    signal: AbortSignal.timeout(12_000),
+  });
+  const body = await response.json();
+  if (response.status !== 200) {
+    throw new Error(`/api/health returned ${response.status}`);
+  }
+  if (!body || !["healthy", "degraded", "stale"].includes(body.status)) {
+    throw new Error("/api/health returned an invalid status contract");
+  }
+  if (!Array.isArray(body.warnings) || !body.caches || typeof body.caches !== "object") {
+    throw new Error("/api/health returned an invalid health payload");
+  }
+  process.stdout.write(`[worker-smoke] Runtime health contract passed (${body.status}).\n`);
+}
+
 try {
+  if (WORKER_SMOKE_ISOLATED) {
+    persistenceDirectory = await mkdtemp(join(tmpdir(), "pharos-worker-smoke-state-"));
+    const migrations = spawnSync(
+      "npx",
+      [
+        "--no-install",
+        "wrangler",
+        "d1",
+        "migrations",
+        "apply",
+        "stablecoin-db",
+        "--local",
+        "--persist-to",
+        persistenceDirectory,
+      ],
+      {
+        cwd: "worker",
+        encoding: "utf8",
+        env: { ...process.env, CI: "true" },
+        maxBuffer: 10 * 1024 * 1024,
+      },
+    );
+    if (migrations.error) throw migrations.error;
+    if (migrations.status !== 0) {
+      throw new Error(
+        `Failed to initialize isolated Worker D1 (${migrations.status}):\n${migrations.stdout}\n${migrations.stderr}`,
+      );
+    }
+  }
+
   // 1. Start wrangler dev
   const logFd = await (async () => {
     const { open } = await import("node:fs/promises");
     return (await open(LOG_FILE, "a")).fd;
   })();
 
-  wrangler = spawn("npx", ["--no-install", "wrangler", "dev", "--port", "8787", "--local"], {
+  const wranglerArgs = ["--no-install", "wrangler", "dev", "--port", String(WORKER_PORT), "--local"];
+  if (persistenceDirectory) {
+    wranglerArgs.push("--persist-to", persistenceDirectory);
+  }
+  if (WORKER_COMPATIBILITY_DATE) {
+    wranglerArgs.push("--compatibility-date", WORKER_COMPATIBILITY_DATE);
+  }
+  wrangler = spawn("npx", wranglerArgs, {
     cwd: "worker",
     detached: true,
     stdio: ["ignore", logFd, logFd],
@@ -88,24 +161,29 @@ try {
 
   process.stdout.write("[worker-smoke] Worker is up. Running smoke tests...\n");
 
-  // 3. Run smoke-api
-  const smokeEnv = {
-    ...process.env,
-    SMOKE_API_BASE: "http://127.0.0.1:8787",
-    SMOKE_API_REQUIRE_KEY: "false",
-    SMOKE_API_RETRY_COUNT: "2",
-  };
-  if (process.env.SMOKE_API_KEY) {
-    smokeEnv.SMOKE_API_KEY = process.env.SMOKE_API_KEY;
+  // 3. Run the requested smoke scope.
+  if (WORKER_SMOKE_MODE === "runtime") {
+    await runRuntimeSmoke();
+    smokeExitCode = 0;
+  } else {
+    const smokeEnv = {
+      ...process.env,
+      SMOKE_API_BASE: WORKER_ORIGIN,
+      SMOKE_API_REQUIRE_KEY: "false",
+      SMOKE_API_RETRY_COUNT: "2",
+    };
+    if (process.env.SMOKE_API_KEY) {
+      smokeEnv.SMOKE_API_KEY = process.env.SMOKE_API_KEY;
+    }
+
+    const smoke = spawnSync("npm", ["run", "test:smoke-api"], {
+      stdio: "inherit",
+      env: smokeEnv,
+    });
+
+    if (smoke.error) throw smoke.error;
+    smokeExitCode = smoke.status ?? 1;
   }
-
-  const smoke = spawnSync("npm", ["run", "test:smoke-api"], {
-    stdio: "inherit",
-    env: smokeEnv,
-  });
-
-  if (smoke.error) throw smoke.error;
-  smokeExitCode = smoke.status ?? 1;
 } finally {
   // 4. Cleanup — dump log only on failure
   await cleanup(smokeExitCode !== 0);

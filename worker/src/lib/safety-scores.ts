@@ -4,6 +4,10 @@ import {
   ReportCardsSnapshotUnavailableError,
 } from "./report-cards-snapshot";
 import type { StablecoinsCacheLoadResult } from "./stablecoins-cache";
+import {
+  loadReportCardCache,
+  REPORT_CARD_CACHE_MAX_AGE_MS,
+} from "./report-card-cache";
 
 interface SafetyResult {
   score: number;
@@ -23,10 +27,21 @@ export interface ComputeSafetyScoresOptions {
   includeNavTokens?: boolean;
   outputMode?: "map" | "full-grades";
   preloadedStablecoinsCache?: StablecoinsCacheLoadResult;
+  sourceMode?: "computed" | "published-cache";
 }
 
-type ComputeSafetyScoresMapOptions = Omit<ComputeSafetyScoresOptions, "outputMode"> & { outputMode: "map" };
-type ComputeSafetyScoresFullOptions = Omit<ComputeSafetyScoresOptions, "outputMode"> & { outputMode: "full-grades" };
+type ComputeSafetyScoresMapOptions = Omit<ComputeSafetyScoresOptions, "outputMode" | "sourceMode"> & {
+  outputMode: "map";
+  sourceMode?: "computed";
+};
+type ComputeSafetyScoresFullOptions = Omit<ComputeSafetyScoresOptions, "outputMode" | "sourceMode"> & {
+  outputMode: "full-grades";
+  sourceMode?: "computed";
+};
+type ComputePublishedSafetyScoresMapOptions = {
+  outputMode: "map";
+  sourceMode: "published-cache";
+};
 
 export type SafetyScoresResultMap = {
   kind: "ok" | "degraded";
@@ -50,6 +65,13 @@ export type SafetyScoresResultFull = {
 };
 
 export type SafetyScoresSnapshotResult = SafetyScoresResultMap | SafetyScoresResultFull;
+
+export type PublishedSafetyScoresResultMap = SafetyScoresResultMap & {
+  source: "report-card-cache";
+  publicationGenerationId: string | null;
+  methodologyVersion: string | null;
+  publishedAt: number | null;
+};
 
 function buildResultBase(
   kind: "ok" | "degraded",
@@ -94,16 +116,50 @@ function toFullResult(
   };
 }
 
+async function loadPublishedSafetyScoresSnapshot(db: D1Database): Promise<PublishedSafetyScoresResultMap> {
+  const cached = await loadReportCardCache(db, {
+    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+    requireCompleteness: true,
+  });
+  if (cached.kind !== "ok") {
+    return {
+      ...toMapResult("degraded", new Map(), ACTIVE_STABLECOINS.length, `report-card-cache:${cached.reason}`),
+      source: "report-card-cache",
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      publishedAt: cached.updatedAt,
+    };
+  }
+
+  const scores = new Map(
+    Object.entries(cached.payload.scores).map(([id, score]) => [id, { ...score }]),
+  );
+  const degradedInputs = cached.payload.degradedInputs?.inputsStale === true;
+  return {
+    ...toMapResult(
+      degradedInputs ? "degraded" : "ok",
+      scores,
+      cached.payload.completeness!.expectedCount,
+      degradedInputs ? "report-card-cache:degraded-inputs" : undefined,
+    ),
+    source: "report-card-cache",
+    publicationGenerationId: cached.payload.publicationGenerationId!,
+    methodologyVersion: cached.payload.methodologyVersion,
+    publishedAt: cached.payload.updatedAt,
+  };
+}
+
 /**
- * Computes safety grades from the latest report-card snapshot in D1.
+ * Loads safety grades from either report-card inputs or the exact published
+ * compact report-card generation in D1.
  *
  * Reads all non-defunct report cards, maps each to an overall grade and score
  * derived from peg stability, liquidity depth, and governance dimensions, then
  * returns coverage statistics alongside the scored results.
  *
- * On any failure (missing snapshot, DB error), returns a "degraded" result
- * containing whatever partial scores were accumulated before the error rather
- * than throwing, so callers can serve stale-but-non-empty data.
+ * Computed mode preserves partial scores on failure. Published-cache mode
+ * fails closed with an empty map unless the active-ID completeness manifest,
+ * methodology, freshness, and generation identity all validate.
  *
  * @param db - D1 database handle.
  * @param options.outputMode - "map" returns an id→{grade,score} lookup suitable
@@ -117,6 +173,10 @@ function toFullResult(
  */
 export async function computeSafetyScoresSnapshot(
   db: D1Database,
+  options: ComputePublishedSafetyScoresMapOptions,
+): Promise<PublishedSafetyScoresResultMap>;
+export async function computeSafetyScoresSnapshot(
+  db: D1Database,
   options: ComputeSafetyScoresMapOptions,
 ): Promise<SafetyScoresResultMap>;
 export async function computeSafetyScoresSnapshot(
@@ -128,6 +188,12 @@ export async function computeSafetyScoresSnapshot(
   options: ComputeSafetyScoresOptions = {},
 ): Promise<SafetyScoresSnapshotResult> {
   const outputMode = options.outputMode ?? "map";
+  if (options.sourceMode === "published-cache") {
+    if (outputMode !== "map") {
+      throw new Error("published-cache safety scores support map output only");
+    }
+    return loadPublishedSafetyScoresSnapshot(db);
+  }
   const includeNavTokens = options.includeNavTokens ?? true;
   const trackedCount = ACTIVE_STABLECOINS.filter((meta) => includeNavTokens || !meta.flags.navToken).length;
 

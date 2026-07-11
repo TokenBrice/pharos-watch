@@ -4,12 +4,7 @@ import { normalizeBlacklistSyncStateKey } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { backfillTronFromLedger } from "./amount-recovery";
 import type { BlacklistRunBudget } from "./run-budget";
-
-type BlacklistConfigState = {
-  config: (typeof CONTRACT_CONFIGS)[number];
-  configKey: string;
-  lastBlock: number;
-};
+import { inferBlacklistCursorKind, type BlacklistConfigState } from "./state";
 
 type ProcessedRows = {
   insertedRows: number;
@@ -32,9 +27,6 @@ type SyncBlacklistRuntimeBudgetContext = {
   incompleteRuntimeConfigs?: number;
   subrequestBudgetHit?: boolean;
 };
-
-const RUNTIME_SKIPPED_OK_MAX_CONTRACTS = 10;
-const RUNTIME_SKIPPED_OK_RATIO = 0.15;
 
 export type SyncBlacklistApiErrorConfig = {
   configKey: string;
@@ -68,31 +60,73 @@ export async function loadBlacklistConfigStates(
   // The per-config key-normalization that getLastBlock applies is replicated
   // in-memory below: each config's last_block is the max over rows matching
   // either its raw config_key or its normalized form, defaulting to 0.
-  const rows = await runWithOverloadRetry(() =>
-    db
-      .prepare(`SELECT config_key, last_block FROM blacklist_sync_state`)
-      .all<{ config_key: string; last_block: number }>(),
+  const rows = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT
+           config_key,
+           last_block,
+           cursor_value,
+           attempt_generation,
+           last_attempted_at,
+           last_succeeded_at,
+           last_skipped_at,
+           last_failed_at,
+           consecutive_skips,
+           consecutive_failures,
+           last_outcome
+         FROM blacklist_sync_state`,
+        )
+        .all<{
+          config_key: string;
+          last_block: number;
+          cursor_value: number | null;
+          attempt_generation: number | null;
+          last_attempted_at: number | null;
+          last_succeeded_at: number | null;
+          last_skipped_at: number | null;
+          last_failed_at: number | null;
+          consecutive_skips: number | null;
+          consecutive_failures: number | null;
+          last_outcome: string | null;
+        }>(),
     3,
     signal,
   );
-  const lastBlockByKey = new Map<string, number>();
+  type LoadedStateRow = NonNullable<typeof rows.results>[number];
+  const stateByKey = new Map<string, LoadedStateRow>();
   for (const row of rows.results ?? []) {
-    lastBlockByKey.set(row.config_key, row.last_block);
+    stateByKey.set(row.config_key, row);
   }
 
   const configStates = eligibleConfigs.map((config) => {
     const configKey = config.configKey;
     const keyCandidates = [...new Set([configKey, normalizeBlacklistSyncStateKey(configKey)])];
-    const lastBlock = Math.max(
-      0,
-      ...keyCandidates.map((key) => lastBlockByKey.get(key) ?? 0),
-    );
-    return { config, configKey, lastBlock };
+    const matchingRows = keyCandidates
+      .map((key) => stateByKey.get(key))
+      .filter((row): row is LoadedStateRow => row != null);
+    const cursorValue = Math.max(0, ...matchingRows.flatMap((row) => [row.last_block ?? 0, row.cursor_value ?? 0]));
+    const newestState = matchingRows.sort((a, b) => (b.attempt_generation ?? 0) - (a.attempt_generation ?? 0))[0];
+    return {
+      config,
+      configKey,
+      cursorKind: inferBlacklistCursorKind(config),
+      cursorValue,
+      attemptGeneration: newestState?.attempt_generation ?? 0,
+      lastAttemptedAt: newestState?.last_attempted_at ?? null,
+      lastSucceededAt: newestState?.last_succeeded_at ?? null,
+      lastSkippedAt: newestState?.last_skipped_at ?? null,
+      lastFailedAt: newestState?.last_failed_at ?? null,
+      consecutiveSkips: newestState?.consecutive_skips ?? 0,
+      consecutiveFailures: newestState?.consecutive_failures ?? 0,
+      lastOutcome: newestState?.last_outcome ?? null,
+    } satisfies BlacklistConfigState;
   });
 
   return {
     configStates,
-    zeroCursorConfigs: configStates.filter((state) => state.lastBlock === 0).map((state) => state.configKey),
+    zeroCursorConfigs: configStates.filter((state) => state.cursorValue === 0).map((state) => state.configKey),
   };
 }
 
@@ -144,29 +178,13 @@ export async function applyTronLedgerMirrorPass(
   }
 }
 
-export function getRuntimeBudgetSkippedOkThreshold(totalConfigs = CONTRACT_CONFIGS.length): number {
-  if (totalConfigs <= 0) return 0;
-  return Math.max(1, Math.min(RUNTIME_SKIPPED_OK_MAX_CONTRACTS, Math.ceil(totalConfigs * RUNTIME_SKIPPED_OK_RATIO)));
-}
-
 export function deriveSyncBlacklistStatus(
   apiErrors: number,
   runtimeBudgetHit: boolean,
-  runtimeBudgetContext: SyncBlacklistRuntimeBudgetContext = {},
+  _runtimeBudgetContext: SyncBlacklistRuntimeBudgetContext = {},
 ): SyncBlacklistStatus {
-  const degradedThreshold = Math.max(1, Math.ceil(CONTRACT_CONFIGS.length * 0.25));
   const errorThreshold = Math.ceil(CONTRACT_CONFIGS.length / 2);
-  const contractsSkipped = Math.max(0, runtimeBudgetContext.contractsSkipped ?? 0);
-  const totalConfigs = Math.max(0, runtimeBudgetContext.totalConfigs ?? CONTRACT_CONFIGS.length);
-  const incompleteRuntimeConfigs = Math.max(0, runtimeBudgetContext.incompleteRuntimeConfigs ?? 0);
-  const skippedThreshold = getRuntimeBudgetSkippedOkThreshold(totalConfigs);
-  const materialRuntimeBudgetHit = runtimeBudgetHit && (
-    runtimeBudgetContext.subrequestBudgetHit === true ||
-    incompleteRuntimeConfigs > 0 ||
-    contractsSkipped > skippedThreshold
-  );
-
   if (apiErrors > errorThreshold) return "error";
-  if (apiErrors > degradedThreshold || materialRuntimeBudgetHit) return "degraded";
+  if (apiErrors > 0 || runtimeBudgetHit) return "degraded";
   return "ok";
 }

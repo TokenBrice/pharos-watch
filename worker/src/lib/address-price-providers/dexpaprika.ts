@@ -12,22 +12,82 @@ import {
   parseObservedAt,
   parsePositiveNumber,
 } from "./shared";
+import {
+  readProviderAvailability,
+  readProviderNegativeCache,
+  recordProviderEnvironmentAvailable,
+  suppressProviderUntil,
+  writeProviderNegativeCache,
+} from "../pricing-provider-runtime-state";
 
 const DEXPAPRIKA_MAX_REQUESTS = 60;
+const DEXPAPRIKA_NOT_FOUND_TTL_SEC = 24 * 60 * 60;
+const DEXPAPRIKA_RATE_LIMIT_DEFAULT_SEC = 15 * 60;
+const DEXPAPRIKA_RATE_LIMIT_MAX_SEC = 60 * 60;
+
+function targetCacheKey(target: AddressPriceTarget): string {
+  return `${target.providerChainId}:${target.address.toLowerCase()}`;
+}
 
 export async function runDexPaprikaAddressProvider(
   targets: AddressPriceTarget[],
   signal: AbortSignal | undefined,
   deadlineMs: number,
+  runtime?: { db?: D1Database; nowSec?: number },
 ): Promise<AddressPriceProviderRunResult> {
   const state = createProviderRunState();
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
-  const cappedTargets = Math.max(0, targets.length - DEXPAPRIKA_MAX_REQUESTS);
+  let rateLimited = false;
+  const nowSec = runtime?.nowSec ?? Math.floor(Date.now() / 1000);
+  const availability = runtime?.db
+    ? await readProviderAvailability(runtime.db, "dexpaprika-address", nowSec)
+    : { shouldFetch: true, probeOnly: false, blockedStatus: null, nextProbeAt: null };
+  if (!availability.shouldFetch) {
+    return {
+      quotes,
+      diagnostics: [{
+        source: "dexpaprika-address",
+        stage: "health-probe",
+        endpoint: "dexpaprika-address:rate-limit",
+        status: availability.blockedStatus,
+        ok: false,
+        success: false,
+        candidateCount: targets.length,
+        errorClass: "rate-limited",
+        errorMessage: `Provider probe deferred until ${availability.nextProbeAt ?? "unknown"}`,
+        rejectionReasonCounts: { blocked: targets.length },
+      }],
+      rejectedTargets: { blocked: targets.length },
+      successfulRequests: 0,
+      attemptedRequests: 0,
+    };
+  }
 
-  for (const target of targets.slice(0, DEXPAPRIKA_MAX_REQUESTS)) {
+  const negativeCache = await readProviderNegativeCache(runtime?.db, "dexpaprika-address", nowSec);
+  const activeTargets = targets.filter((target) => !negativeCache.has(targetCacheKey(target)));
+  const cachedTargets = targets.length - activeTargets.length;
+  const requestLimit = availability.probeOnly ? 1 : DEXPAPRIKA_MAX_REQUESTS;
+  const cappedTargets = Math.max(0, activeTargets.length - requestLimit);
+  if (cachedTargets > 0) {
+    rejectedTargets.blocked = cachedTargets;
+    diagnostics.push({
+      source: "dexpaprika-address",
+      stage: "primary",
+      endpoint: "dexpaprika-address:negative-cache",
+      status: 404,
+      ok: false,
+      success: false,
+      candidateCount: cachedTargets,
+      errorClass: "negative-cache",
+      rejectionReasonCounts: { blocked: cachedTargets },
+    });
+  }
+
+  for (const target of activeTargets.slice(0, requestLimit)) {
     throwIfAborted(signal);
     if (Date.now() >= deadlineMs) break;
+    if (negativeCache.has(targetCacheKey(target))) continue;
     attemptedRequests += 1;
     const url = `https://api.dexpaprika.com/networks/${target.providerChainId}/tokens/${target.address}`;
     const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
@@ -77,6 +137,40 @@ export async function runDexPaprikaAddressProvider(
       diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected DexPaprika token detail object");
     }
     diagnostics.push(diagnostic);
+    if (diagnostic.status === 404) {
+      // A deterministic token miss still proves that the provider is reachable.
+      successfulRequests += 1;
+      negativeCache.add(targetCacheKey(target));
+      await writeProviderNegativeCache(
+        runtime?.db,
+        "dexpaprika-address",
+        targetCacheKey(target),
+        404,
+        nowSec,
+        DEXPAPRIKA_NOT_FOUND_TTL_SEC,
+      );
+    }
+    if (diagnostic.status === 429) {
+      rateLimited = true;
+      const retryAfterSec = Math.min(
+        DEXPAPRIKA_RATE_LIMIT_MAX_SEC,
+        Math.max(1, diagnostic.retryAfterSec ?? DEXPAPRIKA_RATE_LIMIT_DEFAULT_SEC),
+      );
+      if (runtime?.db) {
+        await suppressProviderUntil(
+          runtime.db,
+          "dexpaprika-address",
+          429,
+          nowSec,
+          nowSec + retryAfterSec,
+        );
+      }
+      break;
+    }
+  }
+
+  if (successfulRequests > 0 && !rateLimited && runtime?.db) {
+    await recordProviderEnvironmentAvailable(runtime.db, "dexpaprika-address", nowSec);
   }
 
   if (cappedTargets > 0) {

@@ -21,6 +21,16 @@ describe("telegram mini app payloads", () => {
     expect(formatCoveragePayload("usdc-circle")).toBe("coverage_usdc-circle");
   });
 
+  it("maps only catalog-issued adoption tokens to their Mini App destinations", () => {
+    expect(parseMiniAppPayload("pw1_landing_miniapp_home")).toEqual({
+      kind: "adoption",
+      destination: "miniapp_home",
+    });
+    expect(miniAppPayloadIntent(parseMiniAppPayload("pw1_landing_miniapp_watchlist")!)).toBe("watchlist");
+    expect(parseMiniAppPayload("pw1_landing_unknown")).toBeNull();
+    expect(parseMiniAppPayload("pw1_landing_hero")).toBeNull();
+  });
+
   it("rejects empty insight ids and malformed payloads", () => {
     expect(parseMiniAppPayload("why_")).toBeNull();
     expect(parseMiniAppPayload("coverage_")).toBeNull();

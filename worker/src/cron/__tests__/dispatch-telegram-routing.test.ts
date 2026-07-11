@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type {
-  ConsolidatedAlerts,
-  DepegAlertPayload,
-  DewsChange,
-  SafetyChange,
-} from "../../lib/telegram-alerts";
+import type { ConsolidatedAlerts, DepegAlertPayload, DewsChange, SafetyChange } from "../../lib/telegram-alerts";
 import {
   collapseBurstChats,
   expandSubscriberChunks,
@@ -102,6 +97,7 @@ function routedAlert(
     chunks,
     disableNotification: false,
     alertType: "safety",
+    alertTypes: ["safety"],
     ...overrides,
   };
 }
@@ -151,12 +147,8 @@ describe("dispatch telegram routing helpers", () => {
 
   it("applies per-coin snooze to both specific and global fan-out", () => {
     const alertsByChat = new Map<string, AlertsByChatEntry>();
-    const specificRows = new Map([
-      ["usdc-circle", [subscriber({ chat_id: "specific-chat" })]],
-    ]);
-    const globalRows = [
-      subscriber({ chat_id: "global-chat", isGlobal: true }),
-    ];
+    const specificRows = new Map([["usdc-circle", [subscriber({ chat_id: "specific-chat" })]]]);
+    const globalRows = [subscriber({ chat_id: "global-chat", isGlobal: true })];
 
     routeAlertEvents(
       [DEWS_WARNING],
@@ -174,13 +166,7 @@ describe("dispatch telegram routing helpers", () => {
   it("applies per-coin off rows to preset/specific and global fan-out", () => {
     const alertsByChat = new Map<string, AlertsByChatEntry>();
     const specificRows = new Map([
-      [
-        "usdc-circle",
-        [
-          subscriber({ chat_id: "preset-chat" }),
-          subscriber({ chat_id: "specific-on" }),
-        ],
-      ],
+      ["usdc-circle", [subscriber({ chat_id: "preset-chat" }), subscriber({ chat_id: "specific-on" })]],
     ]);
     const globalRows = [
       subscriber({ chat_id: "global-chat", isGlobal: true }),
@@ -226,14 +212,13 @@ describe("dispatch telegram routing helpers", () => {
       ]),
     );
     const selected = selectChatsToFormat(planned, 10);
-    const queue = formatPlannedSubscribers(
-      selected.toFormat,
-      (entry) => entry.quietHoursEnabled,
-    );
+    const queue = formatPlannedSubscribers(selected.toFormat, (entry) => entry.quietHoursEnabled);
 
     expect(selected.overflow).toEqual([]);
     expect(queue.map((entry) => entry.chatId)).toEqual(["newer", "older"]);
     expect(queue[0].alertType).toBe("depeg");
+    expect(queue[0].alertTypes).toEqual(["depeg", "dews"]);
+    expect(expandSubscriberChunks([queue[0]])[0]).not.toHaveProperty("alertType");
     expect(queue[0].disableNotification).toBe(true);
     expect(queue[0].canonicalHtml).toContain("<b>Depeg Detected</b>");
     expect(queue[0].chunks.length).toBeGreaterThan(0);
@@ -246,11 +231,7 @@ describe("dispatch telegram routing helpers", () => {
     const inBackoff = routedAlert("in-backoff", ["c"]);
     const overflow = routedAlert("overflow", ["d", "e"]);
 
-    const result = splitFreshQueue(
-      [first, inBackoff, overflow],
-      3,
-      new Map([["in-backoff", 1_800_000_300]]),
-    );
+    const result = splitFreshQueue([first, inBackoff, overflow], 3, new Map([["in-backoff", 1_800_000_300]]));
 
     expect(result.toSend.map((entry) => entry.chatId)).toEqual(["first"]);
     expect(result.deferredPerChat.map((entry) => entry.chatId)).toEqual(["in-backoff"]);
@@ -296,10 +277,7 @@ describe("dispatch telegram routing helpers", () => {
     const groupChat = routedAlert("-100123", ["group"]);
     const blockedChat = routedAlert("456", ["blocked"]);
 
-    const messages = expandSubscriberChunks(
-      [privateChat, groupChat, blockedChat],
-      new Set(["456"]),
-    );
+    const messages = expandSubscriberChunks([privateChat, groupChat, blockedChat], new Set(["456"]));
 
     expect(messages.map((message) => [message.chatId, message.chunkIndex])).toEqual([
       ["123", 0],
@@ -368,13 +346,7 @@ describe("collapseBurstChats (C128)", () => {
 
   it("expires the marker after the TTL and treats the run as a fresh burst", () => {
     const map = new Map([["100", entry(burstAlerts(["a", "b", "c"]), 3)]]);
-    const out = collapseBurstChats(
-      map,
-      { "100": { enteredAt: 1000, coinIds: ["a", "b", "c"] } },
-      1000 + 1801,
-      2,
-      1800,
-    );
+    const out = collapseBurstChats(map, { "100": { enteredAt: 1000, coinIds: ["a", "b", "c"] } }, 1000 + 1801, 2, 1800);
     expect(map.get("100")?.alerts.burst?.coinCount).toBe(3);
     expect(out.markers["100"]?.enteredAt).toBe(1000 + 1801);
   });

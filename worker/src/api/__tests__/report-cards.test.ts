@@ -4,6 +4,9 @@ import { makeAsset, makeReportCardsDb } from "../../test-helpers/__shared/fixtur
 import { handleReportCards } from "../report-cards";
 import { REPORT_CARDS_SNAPSHOT_CACHE_GENERATION } from "../../lib/report-cards-snapshot-cache";
 import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { buildReportCardsSnapshot } from "../../lib/report-cards-snapshot";
+import { buildReportCardPublicationPlan } from "../../lib/report-card-publication";
 
 function makeCachedSnapshot(updatedAt = Math.floor(Date.now() / 1000)) {
   return {
@@ -31,11 +34,28 @@ function makeCachedSnapshot(updatedAt = Math.floor(Date.now() / 1000)) {
   };
 }
 
-function makeCachedSnapshotEnvelope(snapshot: ReturnType<typeof makeCachedSnapshot>) {
+function makeCachedSnapshotEnvelope(snapshot: unknown) {
   return {
     generation: REPORT_CARDS_SNAPSHOT_CACHE_GENERATION,
     methodologyVersion: METHODOLOGY_VERSION,
     payload: snapshot,
+  };
+}
+
+async function makeExactCachedSnapshot(updatedAt: number) {
+  const assets = ACTIVE_STABLECOINS.map((meta) => makeAsset({
+    id: meta.id,
+    name: meta.name,
+    symbol: meta.symbol,
+  }));
+  const snapshot = await buildReportCardsSnapshot(makeReportCardsDb(assets, updatedAt));
+  return {
+    ...snapshot,
+    publication: buildReportCardPublicationPlan(
+      snapshot.cards,
+      snapshot.methodology.version,
+      snapshot.updatedAt,
+    ).completeness,
   };
 }
 
@@ -70,13 +90,14 @@ describe("handleReportCards", () => {
 
   it("serves the published snapshot without recomputing the report cards", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const snapshot = await makeExactCachedSnapshot(updatedAt);
     const db = mockD1([
       {
         match: "cache",
         rows: [
           {
             key: "report-cards:snapshot",
-            value: JSON.stringify(makeCachedSnapshotEnvelope(makeCachedSnapshot(updatedAt))),
+            value: JSON.stringify(makeCachedSnapshotEnvelope(snapshot)),
             updated_at: updatedAt,
           },
         ],
@@ -87,7 +108,7 @@ describe("handleReportCards", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { cards: unknown[]; updatedAt: number };
-    expect(body.cards).toEqual([]);
+    expect(body.cards).toHaveLength(snapshot.cards.length);
     expect(body.updatedAt).toBe(updatedAt);
     expect(db.getHistory().some((entry) => entry.sql.includes("dex_liquidity"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("depeg_events"))).toBe(false);

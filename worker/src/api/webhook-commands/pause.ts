@@ -7,7 +7,12 @@ import {
   setSubscriberSnooze,
   unixNow,
 } from "../telegram-webhook-store";
-import { replyWithOptionalMiniApp, type WebhookCommandHandler } from "./context";
+import {
+  confirmCommandMutation,
+  prepareCommandMutation,
+  replyWithOptionalMiniApp,
+  type WebhookCommandHandler,
+} from "./context";
 
 type SnoozeDurationToken = keyof typeof SNOOZE_SECONDS;
 
@@ -35,7 +40,11 @@ export const handlePause: WebhookCommandHandler = async (ctx, args) => {
   const token = args.trim().toLowerCase();
 
   if (token.length === 0) {
-    await setSubscriberSnooze(db, chatId, username, PAUSE_SENTINEL_TS);
+    const operation = await prepareCommandMutation(ctx, "pause", { snoozeUntil: PAUSE_SENTINEL_TS });
+    if (!ctx.wasMutationApplied) {
+      await setSubscriberSnooze(db, chatId, username, PAUSE_SENTINEL_TS, operation);
+      confirmCommandMutation(ctx, operation);
+    }
     await recordTelegramUsageEvent(db, {
       eventType: "snooze_change",
       actionDetail: "pause",
@@ -52,7 +61,11 @@ export const handlePause: WebhookCommandHandler = async (ctx, args) => {
   }
 
   if (RESUME_TOKENS.has(token)) {
-    await clearAlertSnooze(db, chatId, username);
+    const operation = await prepareCommandMutation(ctx, "pause", { snoozeUntil: null });
+    if (!ctx.wasMutationApplied) {
+      await clearAlertSnooze(db, chatId, username, operation);
+      confirmCommandMutation(ctx, operation);
+    }
     await recordTelegramUsageEvent(db, {
       eventType: "snooze_change",
       actionDetail: "pause",
@@ -67,7 +80,15 @@ export const handlePause: WebhookCommandHandler = async (ctx, args) => {
   }
 
   if (isSnoozeDurationToken(token)) {
-    await setSubscriberSnooze(db, chatId, username, unixNow() + SNOOZE_SECONDS[token]);
+    const storedUntil = Number(ctx.storedIntent?.payload.snoozeUntil);
+    const snoozeUntil = Number.isFinite(storedUntil)
+      ? storedUntil
+      : (ctx.operationNowSec ?? unixNow()) + SNOOZE_SECONDS[token];
+    const operation = await prepareCommandMutation(ctx, "pause", { snoozeUntil, duration: token });
+    if (!ctx.wasMutationApplied) {
+      await setSubscriberSnooze(db, chatId, username, snoozeUntil, operation);
+      confirmCommandMutation(ctx, operation);
+    }
     await recordTelegramUsageEvent(db, {
       eventType: "snooze_change",
       actionDetail: "pause",

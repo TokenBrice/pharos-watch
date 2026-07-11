@@ -48,6 +48,8 @@ URL filters:
 
 Default view is `regime=all`. For legacy MiCA links, the client infers `regime=mica` when `status` is a MiCA status or `type`/`tokenType` is present.
 
+The shared search sync is two-way: editing `q` replaces the current URL state, while browser Back/Forward navigation rehydrates the input from the active URL instead of leaving a stale local search value.
+
 The main authorization table excludes frozen and pre-launch assets. MiCA rows can enter the main table when the coin is active and has `mica` metadata. GENIUS rows enter the main table only when the regime is effective (`GENIUS_REGIME_STATE.rulemakingPhase === "effective"`) and the coin is not pre-launch; pre-launch coins and all non-frozen coins while the regime is not yet effective remain in the separate "Implementation Watch" section (frozen coins are excluded from both the main table and Implementation Watch).
 
 Tables show the GENIUS reserve-disclosure column whenever the displayed rows

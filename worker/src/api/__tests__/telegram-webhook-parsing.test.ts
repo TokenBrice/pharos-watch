@@ -123,6 +123,15 @@ describe("parseStartPayload", () => {
     expect(parseStartPayload("SETUP")).toEqual({ kind: "setup" });
   });
 
+  it("accepts only catalog-issued adoption tokens for the bot setup surface", () => {
+    expect(parseStartPayload("pw1_landing_hero")).toEqual({
+      kind: "adoption",
+      token: "pw1_landing_hero",
+    });
+    expect(parseStartPayload("pw1_landing_miniapp_home")).toEqual({ kind: "none" });
+    expect(parseStartPayload("pw1_landing_arbitrary")).toEqual({ kind: "none" });
+  });
+
   it("returns sample for the sample keyword (case-insensitive) only", () => {
     expect(parseStartPayload("sample")).toEqual({ kind: "sample" });
     expect(parseStartPayload("SAMPLE")).toEqual({ kind: "sample" });

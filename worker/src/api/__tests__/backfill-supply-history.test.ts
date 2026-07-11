@@ -1271,4 +1271,58 @@ describe("handleBackfillSupplyHistory", () => {
     expect(inserts[0].args).toEqual(["xaut-tether", day1, 100_000_000, 2_300]);
     expect(inserts[1].args).toEqual(["xaut-tether", day2, 101_000_000, null]);
   });
+
+  it("consumes the parallel price response before returning a protocol fallback error", async () => {
+    const encoder = new TextEncoder();
+    let priceBodyConsumed = false;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.includes("/coins/tether-gold/market_chart")) {
+        return new Response(
+          JSON.stringify({ market_caps: [], prices: [] }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/coins/tether-gold?")) {
+        return new Response(
+          JSON.stringify({ market_data: { circulating_supply: 0 } }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/protocol/tether-gold")) {
+        return new Response(JSON.stringify({ tvl: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/chart/coingecko:tether-gold")) {
+        return new Response(new ReadableStream<Uint8Array>({
+          pull(controller) {
+            priceBodyConsumed = true;
+            controller.enqueue(encoder.encode(JSON.stringify({ coins: {} })));
+            controller.close();
+          },
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    const path = "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-10";
+    const res = await handleBackfillSupplyHistory(
+      makeDb(),
+      makeApiUrl(path),
+      true,
+      makeApiRequest(path, { adminKey: "secret" }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { errors?: string[] };
+    expect(body.errors?.[0]).toContain("no TVL history");
+    expect(priceBodyConsumed).toBe(true);
+  });
 });

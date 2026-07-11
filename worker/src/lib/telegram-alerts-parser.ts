@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   resolveTelegramPresetAlias,
   type TelegramPresetId,
@@ -7,12 +7,7 @@ import {
   isDepegStepValue,
   type DepegStepValue,
 } from "./telegram-constants";
-
-// Frozen coins are no longer subscribable for new alerts (no fresh data is being collected),
-// but pre-launch coins remain subscribable so users can opt into launch alerts.
-const SUBSCRIBABLE_STABLECOINS = TRACKED_STABLECOINS.filter(
-  (meta) => !FROZEN_IDS.has(meta.id),
-);
+import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "./telegram-subscription-eligibility";
 
 // ---------- Types ----------
 
@@ -121,8 +116,8 @@ function buildIdIndex(coins: readonly typeof TRACKED_STABLECOINS[number][]): Map
 }
 
 /** Build lowercase symbol / id indexes once at module load. */
-const SUBSCRIBABLE_SYMBOL_INDEX = buildSymbolIndex(SUBSCRIBABLE_STABLECOINS);
-const SUBSCRIBABLE_ID_INDEX = buildIdIndex(SUBSCRIBABLE_STABLECOINS);
+const SUBSCRIBABLE_SYMBOL_INDEX = buildSymbolIndex(TELEGRAM_SUBSCRIBABLE_STABLECOINS);
+const SUBSCRIBABLE_ID_INDEX = buildIdIndex(TELEGRAM_SUBSCRIBABLE_STABLECOINS);
 const TRACKED_SYMBOL_INDEX = buildSymbolIndex(TRACKED_STABLECOINS);
 const TRACKED_ID_INDEX = buildIdIndex(TRACKED_STABLECOINS);
 

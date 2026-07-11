@@ -1,5 +1,4 @@
 import type { HealthResponse, StatusResponse } from "@shared/types";
-import { ActionReadinessPanel } from "@/components/status/action-readiness-panel";
 import { AdminActionsPanel } from "@/components/status/admin-actions-panel";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import { buildActionReadinessChecks } from "@/lib/status/admin-ops-insights";
@@ -26,13 +25,20 @@ export function ActionsSection({
     clientDataStale,
     recommendedActions,
   });
+  const systemHealthy =
+    data.overallStatus === "healthy" &&
+    healthData?.status === "healthy" &&
+    !clientDataStale &&
+    recommendedActions.length === 0;
 
   return (
     <StatusSection
       id="actions"
       kicker="Operations"
       title="Actions"
-      accentClassName="border-l-emerald-500"
+      headingLevel="h1"
+      variant="workspace"
+      description="Inspect evidence, preview bounded changes, and run recovery actions with scope and readiness visible before confirmation."
       summary={
         <>
           <SummaryBadge label="Suggested" value={String(recommendedActions.length)} />
@@ -41,10 +47,12 @@ export function ActionsSection({
         </>
       }
     >
-      <ActionReadinessPanel checks={readinessChecks} />
       <AdminActionsPanel
         status={{ causes: data.causes, crons: data.crons }}
         nowSeconds={data.timestamp}
+        readinessChecks={readinessChecks}
+        systemHealthy={systemHealthy}
+        recommendations={recommendedActions}
         onActionFinished={handleRefresh}
         showRecommendations
       />

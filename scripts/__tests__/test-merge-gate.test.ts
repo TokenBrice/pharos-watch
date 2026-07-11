@@ -340,7 +340,7 @@ describe("buildCommandPlan", () => {
       LANG: "C.UTF-8",
       CI: "true",
       SMOKE_UI_OVERFLOW_ROUTES:
-        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/,/pharoswatchbot/",
       SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "0",
     });
@@ -352,11 +352,11 @@ describe("buildCommandPlan", () => {
       LANG: "C.UTF-8",
       CI: "true",
       SMOKE_UI_OVERFLOW_ROUTES:
-        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/,/pharoswatchbot/",
       SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "1",
       SMOKE_MOBILE_UI_ROUTES:
-        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/,/pharoswatchbot/",
       SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
       SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
       SMOKE_MOBILE_UI_WORKERS: "3",
@@ -376,11 +376,11 @@ describe("buildCommandPlan", () => {
       CI: "true",
       SMOKE_UI_EXPECT_GA_ID: "G-PROD",
       SMOKE_UI_OVERFLOW_ROUTES:
-        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/,/pharoswatchbot/",
       SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "1",
       SMOKE_MOBILE_UI_ROUTES:
-        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
+        "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/,/pharoswatchbot/",
       SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
       SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
       SMOKE_MOBILE_UI_WORKERS: "3",

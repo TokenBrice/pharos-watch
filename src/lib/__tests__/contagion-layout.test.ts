@@ -32,12 +32,15 @@ const DIMENSION_STUB = {
 const RAW_INPUTS_STUB = {
   pegScore: 95,
   activeDepeg: false,
+  activeDepegBps: null,
   depegEventCount: 0,
   lastEventAt: null,
   liquidityScore: 60,
   effectiveExitScore: null,
   redemptionBackstopScore: null,
   redemptionRouteFamily: null,
+  redemptionModelConfidence: null,
+  redemptionUsedForLiquidity: false,
   redemptionImmediateCapacityUsd: null,
   redemptionImmediateCapacityRatio: null,
   concentrationHhi: null,
@@ -51,6 +54,8 @@ const RAW_INPUTS_STUB = {
   governanceQuality: "regulated-entity" as const,
   dependencies: [],
   navToken: false,
+  collateralFromLive: false,
+  dependencyFromLive: false,
 };
 
 function mockCard(id: string, symbol: string, grade: ReportCardGrade = "B", isDefunct = false): ReportCard {

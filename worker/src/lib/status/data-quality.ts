@@ -17,6 +17,14 @@ import { logWorkerEvent } from "../structured-log";
 import { getSourceFailureMessage } from "./section-errors";
 import { loadDdrRepairDebt } from "../ddr-repair-debt";
 import { loadRepairDebtSummary } from "../repair-tasks";
+import {
+  EMPTY_BLACKLIST_RECONCILIATION_STATUS,
+  loadBlacklistReconciliationStatus,
+} from "../blacklist-reconciliation-status";
+import {
+  loadStablecoinPublicationHealth,
+  unknownStablecoinPublicationHealth,
+} from "../stablecoin-publication-health";
 
 function emptyRepairDebt(source: DataQuality["repairDebt"]["source"] = "unavailable"): DataQuality["repairDebt"] {
   return {
@@ -75,11 +83,12 @@ function mergeDdrCacheRepairDebtSummary(
 
   const fallback = ddrCacheRepairDebtSummary(ddrRepairDebt, now);
   const delta = ddrRepairDebt.count - taskDdrCount;
-  const oldestAgeSec = repairDebt.oldestAgeSec == null
-    ? fallback.oldestAgeSec
-    : fallback.oldestAgeSec == null
-      ? repairDebt.oldestAgeSec
-      : Math.max(repairDebt.oldestAgeSec, fallback.oldestAgeSec);
+  const oldestAgeSec =
+    repairDebt.oldestAgeSec == null
+      ? fallback.oldestAgeSec
+      : fallback.oldestAgeSec == null
+        ? repairDebt.oldestAgeSec
+        : Math.max(repairDebt.oldestAgeSec, fallback.oldestAgeSec);
 
   return {
     ...repairDebt,
@@ -126,6 +135,7 @@ export function emptyDataQuality(): DataQuality {
     sourceFailures: [],
     totalStablecoins: 0,
     missingPrices: 0,
+    stablecoinPublication: unknownStablecoinPublicationHealth(),
     blacklistMissingAmounts: 0,
     blacklistRecentMissingAmounts: 0,
     blacklistRecentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
@@ -134,6 +144,10 @@ export function emptyDataQuality(): DataQuality {
     blacklistOldestRecoverableAgeSec: null,
     blacklistNeverAttemptedCount: 0,
     blacklistRepeatedFailureCount: 0,
+    blacklistReconciliation: {
+      ...EMPTY_BLACKLIST_RECONCILIATION_STATUS,
+      status: "unknown",
+    },
     onchainSupplyDivergences: 0,
     onchainDivergenceRatio: 0,
     onchainSupplyMonitoring: "unavailable",
@@ -170,11 +184,11 @@ export async function getDataQuality(
     recordDataQualityFailure(sourceFailures, "stablecoins-cache", stablecoinsCacheResult.reason);
   }
   const stablecoinAssets = hasUsableStablecoinsPayload(stablecoinsCacheResult)
-    ? stablecoinsCacheResult.payload.peggedAssets as Array<{
+    ? (stablecoinsCacheResult.payload.peggedAssets as Array<{
         id: string;
         price?: number;
         circulating?: Record<string, number>;
-      }>
+      }>)
     : [];
   const stablecoinAssetMap = new Map(stablecoinAssets.map((asset) => [asset.id, asset]));
 
@@ -186,10 +200,27 @@ export async function getDataQuality(
   // DefiLlama residuals and pre-launch canonical coins should not drive the
   // active canonical missing-price ratio.
   const activeCanonicalAssets = stablecoinAssets.filter((asset) => ACTIVE_IDS.has(asset.id));
-  const totalStablecoins = activeCanonicalAssets.length;
+  let stablecoinPublication = unknownStablecoinPublicationHealth();
+  try {
+    stablecoinPublication = await loadStablecoinPublicationHealth(db);
+  } catch (error) {
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "stablecoin_publication_health_query_failed",
+      route: "status",
+      source: "sync-stablecoins",
+      message: "Stablecoin publication coverage metadata unavailable",
+      error,
+    });
+  }
+  const hasExactPublicationEvidence = stablecoinPublication.status !== "unknown";
+  const totalStablecoins = hasExactPublicationEvidence
+    ? stablecoinPublication.expectedActiveCount
+    : activeCanonicalAssets.length;
   const missingPrices = activeCanonicalAssets.filter(
     (asset: { price?: number | null }) => asset.price == null || asset.price === 0,
-  ).length;
+  ).length + (stablecoinPublication.status === "incomplete" ? stablecoinPublication.missingActiveIds.length : 0);
 
   let blacklistTotal = 0;
   let blacklistMissingAmounts = 0;
@@ -198,13 +229,19 @@ export async function getDataQuality(
   let blacklistNeverAttemptedCount = 0;
   let blacklistRepeatedFailureCount = 0;
   let blacklistGapStatus: DataQuality["blacklistGapStatus"] = "ok";
+  let blacklistReconciliation: NonNullable<DataQuality["blacklistReconciliation"]> = {
+    ...EMPTY_BLACKLIST_RECONCILIATION_STATUS,
+    status: "unknown",
+  };
   try {
-    const gaps = options?.blacklistMetrics ?? await queryBlacklistGapMetrics(db, now, {
-      recentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
-      includeDistributions: false,
-      producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
-      cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
-    });
+    const gaps =
+      options?.blacklistMetrics ??
+      (await queryBlacklistGapMetrics(db, now, {
+        recentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
+        includeDistributions: false,
+        producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
+        cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+      }));
     blacklistTotal = gaps.totalEvents;
     blacklistMissingAmounts = gaps.missingAmounts;
     blacklistRecentMissingAmounts = gaps.recentMissingAmounts;
@@ -222,6 +259,20 @@ export async function getDataQuality(
       source: "blacklist-gaps",
       message: "Failed to query blacklist gaps",
       error: e,
+    });
+  }
+
+  try {
+    blacklistReconciliation = await loadBlacklistReconciliationStatus(db);
+  } catch (error) {
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: "blacklist_reconciliation_status_query_failed",
+      route: "status",
+      source: "blacklist-reconciliation",
+      message: "Failed to query blacklist reconciliation status",
+      error,
     });
   }
 
@@ -315,9 +366,9 @@ export async function getDataQuality(
     onchainSupplyTrackedCoins = monitor?.tracked ?? 0;
 
     if (
-      onchainSupplyLatestAt != null
-      && now - onchainSupplyLatestAt <= STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC
-      && onchainSupplyTrackedCoins > 0
+      onchainSupplyLatestAt != null &&
+      now - onchainSupplyLatestAt <= STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC &&
+      onchainSupplyTrackedCoins > 0
     ) {
       onchainSupplyMonitoring = "active";
       onchainSupplyQueryStatus = "ok";
@@ -417,6 +468,7 @@ export async function getDataQuality(
     sourceFailures,
     totalStablecoins,
     missingPrices,
+    stablecoinPublication,
     blacklistMissingAmounts,
     blacklistRecentMissingAmounts,
     blacklistRecentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
@@ -425,6 +477,7 @@ export async function getDataQuality(
     blacklistOldestRecoverableAgeSec,
     blacklistNeverAttemptedCount,
     blacklistRepeatedFailureCount,
+    blacklistReconciliation,
     onchainSupplyDivergences,
     onchainDivergenceRatio:
       onchainSupplyMonitoring === "active" && onchainSupplyTrackedCoins > 0

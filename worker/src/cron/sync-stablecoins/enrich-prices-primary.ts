@@ -4,6 +4,7 @@ import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provide
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DlListQuote } from "../../lib/primary-price-collector";
 import type { AddressPriceProviderRuntimeConfig } from "../../lib/address-price-providers";
+import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import { createValidationContextResolver, type ValidationContextResolver } from "./pricing";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import type { PriceValidationStats } from "./enrich-prices-primary-shared";
@@ -36,6 +37,7 @@ export async function fetchPrimaryPrices(
   options?: {
     previousAssetsById?: Map<string, PeggedAsset>;
     addressProvider?: AddressPriceProviderRuntimeConfig;
+    binanceSession?: BinanceFetchSession;
   },
 ): Promise<{
   results: Map<string, PrimaryPriceResult>;
@@ -75,6 +77,7 @@ export async function fetchPrimaryPrices(
     coingeckoApiKey,
     chainRpcs,
     references,
+    binanceSession: options?.binanceSession,
   });
 
   buildPrimaryConsensusResults({

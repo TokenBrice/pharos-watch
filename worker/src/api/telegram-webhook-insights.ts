@@ -14,6 +14,7 @@ import { TOP_VIEW_NAMES } from "../lib/telegram-constants";
 import { formatTelegramCompactUsd } from "./telegram-format";
 import type { StatusForCoin } from "./telegram-webhook-status";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
+import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 
 const TOP_LIMIT = 5;
 const TOP_VIEWS = TOP_VIEW_NAMES;
@@ -146,21 +147,11 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
       );
     }
     case "dews": {
-      const result = await db
-        .prepare(
-          `SELECT s.stablecoin_id, s.band, s.score, s.computed_at
-             FROM stress_signals s
-             JOIN (
-               SELECT stablecoin_id, MAX(computed_at) AS computed_at
-                 FROM stress_signals
-                GROUP BY stablecoin_id
-             ) latest ON latest.stablecoin_id = s.stablecoin_id AND latest.computed_at = s.computed_at
-            ORDER BY s.score DESC
-            LIMIT ?`,
-        )
-        .bind(TOP_LIMIT)
-        .all<{ stablecoin_id: string; band: string; score: number; computed_at: number }>();
-      return formatTopRows("Top DEWS scores", result.results ?? [], (row, i) => {
+      const published = await loadPublishedStressSignalGeneration(db, Math.floor(Date.now() / 1000));
+      const rows = published.status === "ok"
+        ? [...published.rows].sort((a, b) => b.score - a.score).slice(0, TOP_LIMIT)
+        : [];
+      return formatTopRows("Top DEWS scores", rows, (row, i) => {
         const symbol = TRACKED_META_BY_ID.get(row.stablecoin_id)?.symbol ?? row.stablecoin_id;
         return `${i}. ${symbol} — ${row.band} (${row.score}), ${formatAge(row.computed_at)}`;
       });

@@ -18,6 +18,7 @@ import {
   RedemptionBackstopSnapshotUnavailableError,
 } from "../../lib/redemption-backstops-store";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import {
   CURRENT_PRICE_MAX_AGE_SEC,
   DAY,
@@ -221,15 +222,20 @@ export async function loadDdrContext(
     supplyByCoin.set(s.stablecoin_id, list);
   }
 
-  const dewsResult = await queryRows("stress_signals", () => db
-    .prepare(
-      `SELECT s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at FROM stress_signals s ` +
-        `JOIN (SELECT stablecoin_id, MAX(computed_at) mc FROM stress_signals ` +
-        `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) GROUP BY stablecoin_id) m ` +
-        `ON s.stablecoin_id = m.stablecoin_id AND s.computed_at = m.mc`,
-    )
-    .bind(...activeCoinIds)
-    .all<{ stablecoin_id: string; score: number; band: string; signals_json: string | null; computed_at: number }>());
+  const publishedDews = await loadPublishedStressSignalGeneration(db, nowSec);
+  const activeCoinIdSet = new Set(activeCoinIds);
+  const dewsResult: QueryRowsResult<{
+    stablecoin_id: string;
+    score: number;
+    band: string;
+    signals_json: string | null;
+    computed_at: number;
+  }> = publishedDews.status === "ok"
+    ? {
+        rows: publishedDews.rows.filter((row) => activeCoinIdSet.has(row.stablecoin_id)),
+        error: null,
+      }
+    : { rows: [], error: `stress_signals:${publishedDews.reason}` };
   const dewsByCoin = new Map(dewsResult.rows.map((d) => [d.stablecoin_id, d]));
 
   const liqResult = await queryRows("dex_liquidity", () => db

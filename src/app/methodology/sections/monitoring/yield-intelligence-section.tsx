@@ -28,6 +28,12 @@ export function YieldIntelligenceMethodologySection() {
             changelogClassName="hover:text-violet-700 dark:hover:text-violet-400"
           >
               <p>{YIELD_OVERVIEW_PARAGRAPH}</p>
+              <p>
+                Source-family and benchmark freshness are eligibility rules applied before confidence arbitration.
+                Expired evidence remains visible as NR context, but it cannot carry an exact current PYS. Every benchmark
+                used by a published row is evaluated independently so a healthy USD lane cannot mask a stale local-currency
+                benchmark.
+              </p>
               <YieldMethodologyRelatedLinks />
               <MethodologyFacts
                 facts={[
@@ -53,7 +59,7 @@ export function YieldIntelligenceMethodologySection() {
                     {
                       label: "Failure behavior",
                       value:
-                        "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 or the benchmark-adjusted effective yield is non-positive (safety defaults to 40 / NR if live report-card hydration is missing; missing source-risk penalty resolves to neutral 1), while degraded benchmark or safety inputs are surfaced in provenance",
+                        "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 or the benchmark-adjusted effective yield is non-positive. Expired source or benchmark evidence remains visible with PYS NR rather than an exact score (safety defaults to 40 / NR if live report-card hydration is missing and publishes an explicit missing/default reason; missing source-risk penalty resolves to neutral 1)",
                     },
                   ]}
                 />
@@ -192,7 +198,8 @@ export function YieldIntelligenceMethodologySection() {
                   <p>
                     Deterministic rows keep their own source identity (`onchain:&lt;stablecoinId&gt;`) rather than sharing
                     a pool UUID with curated sources, so source-aware history and previous-rate lookups stay isolated when
-                    both paths coexist.
+                    both paths coexist. Linked variants and protocol-specific on-chain rows also preserve their exact modern
+                    keys; only pre-source-key history and the named LUSD legacy alias normalize to a parent deterministic key.
                   </p>
                   <p>
                     Trailing APY metrics are computed from source-specific history rather than a mixed coin-level series, so
@@ -203,7 +210,21 @@ export function YieldIntelligenceMethodologySection() {
                     cadence-aware: hourly families attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded">sync-yield-data</code>{" "}
                     intervals (about 3 hours at the current publisher), while <code className="text-xs bg-muted px-1 py-0.5 rounded">price-derived</code>{" "}
                     rows wait 36 hours because they are backed by daily <code className="text-xs bg-muted px-1 py-0.5 rounded">supply_history</code>{" "}
-                    snapshots rather than hourly source observations.
+                    snapshots and <code className="text-xs bg-muted px-1 py-0.5 rounded">rate-derived</code> rows wait 48 hours
+                    for the daily benchmark producer. Ordinary exchange-rate anchors expire after 14 days; price-derived and
+                    Midas/Ondo NAV anchors remain valid through their configured 45-day comparison window.
+                  </p>
+                  <p>
+                    Freshness eligibility is applied before confidence arbitration. A stale deterministic candidate cannot
+                    beat a fresh curated candidate, and every benchmark used by a published row is evaluated independently.
+                    Fallback benchmarks remain score-bearing but degraded while they are within the 48-hour scoring TTL;
+                    expired source or benchmark evidence is retained for audit with an NR PYS and explicit provenance.
+                  </p>
+                  <p>
+                    Calculation mode and evidence class are separate. Exchange-rate math can be deterministic while the
+                    product estimate remains a modeled proxy; fresh direct first-party, on-chain, and curated observations
+                    therefore outrank a modeled proxy on evidence quality. Rankings label evidence as rated, estimated,
+                    partial, or NR. Missing critical freshness or Safety evidence cannot produce an exact PYS.
                   </p>
                 </div>
                 {/* PYS formula */}
@@ -235,7 +256,8 @@ export function YieldIntelligenceMethodologySection() {
                     <li>
                       <span className="text-foreground">Source-risk penalty</span> uses nested source-risk evidence from
                       measured reward share, source depth, freshness, source switching, bootstrap history, and sourced
-                      venue tier where available, then clamps it to 1&ndash;2.5 while treating missing evidence as neutral
+                      venue tier where available. History maturity counts distinct UTC observation days rather than raw
+                      hourly samples, then clamps the combined penalty to 1&ndash;2.5 while treating missing evidence as neutral
                     </li>
                     <li>
                       <span className="text-foreground">Yield efficiency</span> rewards higher APY relative to the
@@ -258,8 +280,8 @@ export function YieldIntelligenceMethodologySection() {
                   <p>
                     NAV-appreciating tokens (e.g.&nbsp;sDAI, wUSDM, BUIDL) use live report-card scores when the safety
                     framework has enough data for them, including NAV-aware report-card coverage. The default safety baseline
-                    of 40 (NR) is only a missing-safety fallback, so a NAV token&apos;s PYS can still reflect a full safety
-                    assessment when report-card hydration succeeds.
+                    of 40 (NR) is only a missing-safety fallback and carries an explicit provenance reason, so a NAV
+                    token&apos;s PYS can still reflect a full safety assessment when report-card hydration succeeds.
                   </p>
                   <YieldNavTokenMechanismLinks />
                 </div>
@@ -268,8 +290,12 @@ export function YieldIntelligenceMethodologySection() {
                   <h3 className="text-foreground font-medium">Limitations</h3>
                   <ul className="list-disc list-inside space-y-1">
                     <li>
-                      Trailing averages require sufficient history &mdash; newly tracked coins may show unstable scores
-                      until 7 days of data accumulate
+                      Trailing averages require sufficient history &mdash; newly tracked coins retain a limited-history
+                      penalty until 7 distinct UTC observation days accumulate
+                    </li>
+                    <li>
+                      History before v8.31 lacks the full benchmark, source-risk, and scaling input snapshot and is labeled
+                      legacy-partial; later points store versioned inputs for exact PYS recomputation
                     </li>
                     <li>
                       Some DeFiLlama and protocol-native surfaces still depend on upstream asset metadata completeness; the

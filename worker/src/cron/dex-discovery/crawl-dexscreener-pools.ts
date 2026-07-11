@@ -16,12 +16,14 @@ import {
   type CrawlStageContext,
   toStagedPool,
 } from "./staged-pool";
+import type { DexDeploymentProviderCheck } from "./types";
 
 type DexScreenerTarget = readonly [string, string];
 const DEXSCREENER_LIQUIDITY_CIRCUIT = CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY;
 
 export interface DexScreenerPoolsStageResult {
   stoppedEarly: boolean;
+  providerChecks: DexDeploymentProviderCheck[];
 }
 
 export interface DexScreenerPoolsStageDependencies {
@@ -79,16 +81,17 @@ export async function crawlDexScreenerPoolsStage({
   dependencies = defaultDexScreenerPoolsStageDependencies,
 }: CrawlDexScreenerPoolsStageOptions): Promise<DexScreenerPoolsStageResult> {
   if (targets.length === 0 || context.timeExceeded()) {
-    return { stoppedEarly: false };
+    return { stoppedEarly: false, providerChecks: [] };
   }
 
   const dsAllowed = await dependencies.shouldAttemptFetch(db, DEXSCREENER_LIQUIDITY_CIRCUIT);
   if (!dsAllowed) {
-    return { stoppedEarly: false };
+    return { stoppedEarly: false, providerChecks: [] };
   }
 
   let dsRequests = 0;
   let successfulRequests = 0;
+  const providerChecks: DexDeploymentProviderCheck[] = [];
 
   for (const [chain, address] of targets) {
     throwIfAborted(context.signal);
@@ -96,7 +99,7 @@ export async function crawlDexScreenerPoolsStage({
       if (dsRequests > 0) {
         await dependencies.recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
       }
-      return { stoppedEarly: true };
+      return { stoppedEarly: true, providerChecks };
     }
 
     const dsChain = DS_CHAIN_MAP[chain];
@@ -115,6 +118,12 @@ export async function crawlDexScreenerPoolsStage({
         DISCOVERY_STAGE_TIMEOUT_MS.dexscreener,
         0,
       );
+      providerChecks.push({
+        chain,
+        address,
+        provider: "dexscreener",
+        status: result.ok ? "success" : "failure",
+      });
       if (!result.ok) continue;
       successfulRequests++;
 
@@ -190,6 +199,7 @@ export async function crawlDexScreenerPoolsStage({
     } catch (err) {
       if (context.signal?.aborted) throw err;
       console.warn(`[dex-discovery] dexscreener error for ${chain}:${address}`, err);
+      providerChecks.push({ chain, address, provider: "dexscreener", status: "failure" });
     }
   }
 
@@ -197,5 +207,5 @@ export async function crawlDexScreenerPoolsStage({
     await dependencies.recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
   }
 
-  return { stoppedEarly: false };
+  return { stoppedEarly: false, providerChecks };
 }

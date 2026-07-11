@@ -1,0 +1,153 @@
+{
+  "id": "wusd-worldwide",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "WUSD (Fireblocks ERC20F UUPS tokens on Ethereum/Polygon/Viction) uses issuer-operated role-gated minting. Full RoleGranted/RoleRevoked histories enumerated on all 3 chains: minters are issuer EOAs, ownerless operation contracts, and a renounced-owner LayerZero OFT on Viction; DEFAULT_ADMIN on every chain is the issuer EOA 0x731Ef…, with upgrade authority held by issuer EOAs.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x171AC757879D9f5004992159FC9bF3344f82D5c3",
+        "label": "WUSD Ethereum MINTER_ROLE holder (UUPS proxy, admin EOA)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25295374: this UUPS proxy (impl 0x7d1367a7…) exposes admin() = 0x0014EB4AC6dd1473B258D088E6ef214b2bcdc53C; eth_getCode on that admin returned no bytecode (issuer-context EOA, consistent with WSPN enterprise key custody). Not a Safe (no Safe selectors; Safe Transaction Service has no record)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1a41b5922E926Cca1EAa8afAC55bdDce40FDBe61",
+        "label": "WUSD Ethereum MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+          }
+        ],
+        "evidence": "Ethereum role reconstruction found this no-code account holding MINTER_ROLE; Safe Transaction Service did not identify a Safe."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x80c0A17d45049016A02a16D2B77A9003320FB9e0",
+        "label": "WUSD Ethereum MINTER_ROLE holder (ownerless operations contract)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25295374: owner() = 0x0 and the EIP-1967 implementation slot is empty (not a proxy) — an ownerless, non-upgradeable issuer operations contract holding MINTER_ROLE and BURNER_ROLE."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xff5fd9d00fab52b197a8e20a01c151026b57559b",
+        "label": "WUSD Polygon MINTER_ROLE holder (ownerless operations contract)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WUSD Polygon RoleGranted logs",
+            "url": "https://polygon.blockscout.com/api?module=logs&action=getLogs&address=0x7cd017ca5ddb86861fa983a34b5f495c6f898c41&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "At Polygon block 88326662: hasRole(MINTER_ROLE, 0xff5fd9…) = true; owner() = 0x0; EIP-1967 implementation and admin slots both empty (non-upgradeable, ownerless 24KB contract holding MINTER_ROLE and BURNER_ROLE). Surfaced by the full Polygon RoleGranted scan; no RoleRevoked events exist on Polygon."
+      },
+      {
+        "chain": "viction",
+        "address": "0x2f5a9cb393ecbacf205c72ec8ed367460959b025",
+        "label": "WUSD Viction MINTER_ROLE holder (LayerZero OFT bridge minter, owner renounced)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WUSD Viction token on VicScan",
+            "url": "https://www.vicscan.xyz/address/0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+          }
+        ],
+        "evidence": "At Viction block 109908880: hasRole(MINTER_ROLE, 0x2f5a9c…) = true on the Viction WUSD token; owner() on the 47KB LayerZero OFT contract returned 0x0 (ownership renounced — peer/config changes locked); no EIP-1967 admin slot. Minting via this route is gated by inbound LayerZero messages rather than a privileged key."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x731Efdc933464ed81Bf3Ea961e9fDAdC62e83bd1",
+        "label": "WUSD default admin (all 3 chains)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+          }
+        ],
+        "evidence": "hasRole(DEFAULT_ADMIN_ROLE, 0x731Ef…) = true on Ethereum (block 25295374), Polygon (88326662), and Viction (109908880); eth_getCode returned no bytecode (issuer EOA). DEFAULT_ADMIN can grant any ERC20F role, including MINTER_ROLE and UPGRADER_ROLE (no UPGRADER_ROLE holder was ever granted on Ethereum or Polygon, so token upgrades there require this admin to first grant the role)."
+      },
+      {
+        "chain": "viction",
+        "address": "0x4a48240e0062dfe01369840d89804fe45eb8a41e",
+        "label": "WUSD Viction UPGRADER_ROLE + CONTRACT_ADMIN_ROLE holder",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WUSD Viction token on VicScan",
+            "url": "https://www.vicscan.xyz/address/0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+          }
+        ],
+        "evidence": "At Viction block 109908880: hasRole(UPGRADER_ROLE, 0x4a4824…) = true (live read); the full Viction RoleGranted scan also shows CONTRACT_ADMIN_ROLE granted to the same address; eth_getCode returned no bytecode (issuer EOA). Holds UUPS upgrade authority over the Viction WUSD token. The Viction token also exposes owner() = 0x42cc0bac… (issuer EOA, no code)."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "WSPN Mint Account docs",
+          "url": "https://developer.wspn.io/5768563m0"
+        },
+        {
+          "label": "WSPN whitepaper",
+          "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf"
+        },
+        {
+          "label": "WUSD Ethereum token",
+          "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+        },
+        {
+          "label": "WUSD RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7cd017ca5ddb86861fa983a34b5f495c6f898c41&fromBlock=21390703&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ],
+      "evidence": "On 2026-06-11, full RoleGranted/RoleRevoked histories enumerated on all 3 chains (Ethereum + Polygon via Blockscout from deployment; Viction via rpc.viction.xyz eth_getLogs from block 0) and confirmed with live hasRole reads. Tokens are Fireblocks ERC20F UUPS proxies (EIP-1967 admin slot 0; upgrade gated by UPGRADER_ROLE). Ethereum (block 25295374): minters = 0x171AC (UUPS proxy whose admin() = EOA 0x0014EB…), 0x1a41b5 (EOA), 0x80c0A (ownerless non-proxy contract); DEFAULT_ADMIN = EOA 0x731Ef; no UPGRADER_ROLE ever granted; no revocations. Polygon (block 88326662): minters = 0x1a41b5 (EOA) and 0xff5fd9… (ownerless non-proxy contract); DEFAULT_ADMIN = 0x731Ef; no UPGRADER_ROLE granted. Viction (block 109908880): minters = 0x1a41b5 (EOA) and LayerZero OFT 0x2f5a9c (owner() = 0x0, renounced); DEFAULT_ADMIN = 0x731Ef (original admin 0x702b4b revoked); UPGRADER+CONTRACT_ADMIN = EOA 0x4a4824; token owner() = EOA 0x42cc0bac. Every privileged key is an issuer-context EOA, consistent with WSPN's centralized issuance model.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    }
+  }
+}

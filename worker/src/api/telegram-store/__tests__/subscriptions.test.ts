@@ -23,17 +23,29 @@ function subscriptionInsert(db: MockD1Database): { sql: string; binds: unknown[]
   return insert;
 }
 
+function expectPreferenceGenerationBump(db: MockD1Database): void {
+  const subscriber = db
+    .getHistory()
+    .find((entry) => entry.sql.includes("INSERT INTO telegram_subscribers"));
+  expect(subscriber?.sql).toContain(
+    "preference_generation = telegram_subscribers.preference_generation + 1",
+  );
+  expect(subscriber?.binds[(subscriber?.binds.length ?? 0) - 1]).toBe(1);
+}
+
 async function settingsPath(setting: string, value: string): Promise<{ sql: string; binds: unknown[] }> {
   const db = mockD1();
   const prepared = prepareCoinSettingStatements(db, "42", "alice", COIN.id, setting, value);
   expect(prepared.description).not.toBeNull();
   await db.batch(prepared.statements);
+  expectPreferenceGenerationBump(db);
   return subscriptionInsert(db);
 }
 
 async function setCommandPath(command: ParsedSetCommand): Promise<{ sql: string; binds: unknown[] }> {
   const db = mockD1();
   await applySettingToSubscriptions(db, "42", "alice", [COIN], command);
+  expectPreferenceGenerationBump(db);
   return subscriptionInsert(db);
 }
 

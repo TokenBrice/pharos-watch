@@ -20,8 +20,7 @@ import { parseSitemapLocs, walkOutFiles } from "../lib/seo-sitemap.mjs";
 
 const DEFAULT_OUT_DIR = path.resolve("out");
 const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-to-csr/;
-const EMPTY_BAILOUT_TEMPLATE_PATTERN =
-  /<template\s+data-dgst=(["'])BAILOUT_TO_CLIENT_SIDE_RENDERING\1><\/template>/g;
+const EMPTY_BAILOUT_TEMPLATE_PATTERN = /<template\s+data-dgst=(["'])BAILOUT_TO_CLIENT_SIDE_RENDERING\1><\/template>/g;
 const PHAROS_ORIGIN = "https://pharos.watch";
 const PHAROS_HOSTNAME = new URL(PHAROS_ORIGIN).hostname;
 const RETIRED_INTERNAL_ROUTE_PREFIXES = [
@@ -59,9 +58,9 @@ const REQUIRED_STATIC_HEADER_RULES = [
   { route: "/sheets/*.csv", header: "X-Robots-Tag", directives: ["noindex", "follow"], label: "Sheets CSV exports" },
   { route: "/postman/*.json", header: "X-Robots-Tag", directives: ["noindex", "follow"], label: "Postman artifacts" },
 ];
-const REQUIRED_STATIC_HEADER_RESETS = [
-  { route: "/llms.txt", header: "X-Robots-Tag", label: "LLM-facing index" },
-];
+const REQUIRED_STATIC_HEADER_RESETS = [{ route: "/llms.txt", header: "X-Robots-Tag", label: "LLM-facing index" }];
+const REQUIRED_DOCUMENT_CACHE_DIRECTIVES = ["max-age=0", "must-revalidate"];
+const FORBIDDEN_DOCUMENT_CACHE_DIRECTIVES = ["s-maxage", "stale-while-revalidate"];
 const DATASET_DATA_CATALOG_REFERENCE_PATHS = [
   "includedInDataCatalog.@id",
   "includedInDataCatalog.name",
@@ -282,7 +281,6 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
 // a future sitemap intentionally points at a Pages Function or non-HTML asset.
 const SITEMAP_LOCAL_HTML_EXCEPTIONS = new Set([]);
 
-
 function routeFromFile(filePath, outDir) {
   const relDir = path.relative(outDir, path.dirname(filePath)).replace(/\\/g, "/");
   if (!relDir) return "/";
@@ -422,6 +420,26 @@ function validateStaticHeaders(outDir, errors) {
 
     if (!block.resets.has(reset.header.toLowerCase())) {
       errors.push(`static headers ${reset.label} rule ${reset.route} must reset ${reset.header}`);
+    }
+  }
+
+  const catchAll = blockByRoute.get("/*");
+  const cacheValues = catchAll?.headers.get("cache-control") ?? [];
+  const cacheDirectives = cacheValues
+    .flatMap((value) => value.split(","))
+    .map((directive) => directive.trim().toLowerCase())
+    .filter(Boolean);
+  if (cacheValues.length === 0) {
+    errors.push("static headers missing Cache-Control on catch-all document rule /*");
+  }
+  for (const required of REQUIRED_DOCUMENT_CACHE_DIRECTIVES) {
+    if (!cacheDirectives.includes(required)) {
+      errors.push(`static headers catch-all document rule /* missing Cache-Control directive ${required}`);
+    }
+  }
+  for (const forbidden of FORBIDDEN_DOCUMENT_CACHE_DIRECTIVES) {
+    if (cacheDirectives.some((directive) => directive === forbidden || directive.startsWith(`${forbidden}=`))) {
+      errors.push(`static headers catch-all document rule /* must not use Cache-Control directive ${forbidden}`);
     }
   }
 }
@@ -855,7 +873,9 @@ export function collectSeoStaticCheckResult({
     for (const href of getAnchorHrefs(record.html)) {
       const slashlessRoute = slashlessInternalRouteMatch(href, routeSet);
       if (slashlessRoute) {
-        errors.push(`${record.route}: internal anchor href omits canonical trailing slash: ${href} (use ${slashlessRoute})`);
+        errors.push(
+          `${record.route}: internal anchor href omits canonical trailing slash: ${href} (use ${slashlessRoute})`,
+        );
       }
 
       const normalized = normalizeHref(href);

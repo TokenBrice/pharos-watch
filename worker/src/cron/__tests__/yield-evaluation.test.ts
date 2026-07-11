@@ -16,7 +16,7 @@ function baseEvaluationInput(overrides: Partial<EvaluateYieldSourcesInput> = {})
     sevenDaysAgoSec: startSec - 7 * 86400,
     safetyScores: new Map([["coin-a", { score: 80, grade: "B+" }]]),
     riskFreeRates: {
-      USD: buildHardcodedUsdBenchmark("test"),
+      USD: freshUsdBenchmark(startSec),
       EUR: null,
       CHF: null,
       GBP: null,
@@ -40,6 +40,42 @@ function baseEvaluationInput(overrides: Partial<EvaluateYieldSourcesInput> = {})
     sourceSwitchCount30dByCoin: new Map(),
     stablecoinSupplyById: new Map([["coin-a", 10_000_000]]),
     ...overrides,
+  };
+}
+
+function freshUsdBenchmark(observedAt: number, rate = 4.2) {
+  return {
+    ...withYieldBenchmarkStaticMeta("USD", {
+      rate,
+      recordDate: "2026-04-20",
+      fetchedAt: observedAt,
+      ageSeconds: 0,
+      source: "fred-dgs3mo-test",
+      isFallback: false,
+      fallbackMode: null,
+    }),
+    lastMarketRate: rate,
+    lastMarketRecordDate: "2026-04-20",
+    lastMarketFetchedAt: observedAt,
+    lastMarketSource: "fred-dgs3mo-test",
+  };
+}
+
+function gbpBenchmark(observedAt: number, ageSeconds: number, rate = 4.5) {
+  return {
+    ...withYieldBenchmarkStaticMeta("GBP", {
+      rate,
+      recordDate: "2026-04-17",
+      fetchedAt: observedAt,
+      ageSeconds,
+      source: "fred-sonia-compounded-index-test",
+      isFallback: false,
+      fallbackMode: null,
+    }),
+    lastMarketRate: rate,
+    lastMarketRecordDate: "2026-04-17",
+    lastMarketFetchedAt: observedAt,
+    lastMarketSource: "fred-sonia-compounded-index-test",
   };
 }
 
@@ -83,7 +119,7 @@ function historyRows(sourceKey: string, count: number, startSec: number, apy = 5
   return Array.from({ length: count }, (_, index) => ({
     stablecoin_id: "coin-a",
     source_key: sourceKey,
-    recorded_at: startSec - (index + 1) * 3600,
+    recorded_at: startSec - (index + 1) * 86400,
     is_best: 1,
     apy,
     source_tvl_usd: 1_000_000,
@@ -239,6 +275,34 @@ describe("evaluateYieldSources", () => {
         expect(evaluated?.usedDefaultSafety, row.label).toBe(scenario.expectedUsedDefaultSafety);
       }
     }
+  });
+
+  it("explains default and explicitly not-rated safety inputs", () => {
+    const missing = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
+      safetyScores: new Map(),
+    })).evaluatedSources[0];
+    expect(missing).toMatchObject({
+      safetyGrade: "NR",
+      usedDefaultSafety: true,
+      safetyReason: "report-card-score-missing",
+      scoreQualification: "NR",
+      pharosYieldScore: null,
+      pysNullReason: "safety-unrated",
+    });
+
+    const notRated = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
+      safetyScores: new Map([["coin-a", { score: 40, grade: "NR" }]]),
+    })).evaluatedSources[0];
+    expect(notRated).toMatchObject({
+      safetyGrade: "NR",
+      usedDefaultSafety: false,
+      safetyReason: "report-card-grade-not-rated",
+      scoreQualification: "NR",
+      pharosYieldScore: null,
+      pysNullReason: "safety-unrated",
+    });
   });
 
   it("uses risk-adjusted utility for same-tier arbitration when a source-risk penalty is present", () => {
@@ -474,6 +538,41 @@ describe("evaluateYieldSources", () => {
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:higher");
   });
 
+  it("keeps a curated native row ahead of a lower external lending opportunity", () => {
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:native",
+            currentApy: 4.5,
+            dataSource: "defillama",
+            yieldType: "lending-vault",
+          }),
+        },
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "protocol-api:coin-a:opportunity",
+            currentApy: 2.2,
+            dataSource: "protocol-api",
+            yieldType: "lending-opportunity",
+          }),
+        },
+      ],
+    }));
+
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:native");
+    expect(result.evaluatedSources.find(
+      (source) => source.sourceKey === "protocol-api:coin-a:opportunity",
+    )).toMatchObject({
+      evidenceClass: "discovered-observation",
+      confidenceTier: "discovered",
+    });
+  });
+
   it("prefers a non-fixed-yield holder row over a fixed-yield market for the same coin", () => {
     const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [
@@ -552,7 +651,37 @@ describe("evaluateYieldSources", () => {
     expect(result.evaluatedSources[0]?.sourceSwitchCount30d).toBe(2);
   });
 
-  it("preserves deterministic precedence over lower-tier rows even when the deterministic row has a penalty", () => {
+  it("counts distinct UTC history days instead of hourly samples for maturity", () => {
+    const startSec = 1776729600;
+    const historyRows = Array.from({ length: 8 }, (_, index) => ({
+      stablecoin_id: "coin-a",
+      source_key: "defillama:coin-a:base",
+      recorded_at: startSec - (index + 1) * 3600,
+      is_best: 1,
+      apy: 4.8,
+      source_tvl_usd: 2_400_000,
+      data_source: "defillama",
+      yield_source: "Fixture source",
+      yield_type: "lending-vault",
+    }));
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      sevenDaysAgoSec: startSec - 7 * 86400,
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({ sourceKey: "defillama:coin-a:base" }),
+        },
+      ],
+      sourceHistory: new Map([[buildHistoryKey("coin-a", "defillama:coin-a:base"), historyRows]]),
+    }));
+
+    expect(result.evaluatedSources[0]?.observationCount30d).toBeLessThan(7);
+    expect(result.evaluatedSources[0]?.sourceRiskPenalty).toBeGreaterThan(1);
+  });
+
+  it("keeps a fresh direct observation ahead of a deterministic modeled proxy", () => {
     const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [
         {
@@ -576,7 +705,108 @@ describe("evaluateYieldSources", () => {
       ],
     }));
 
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:high");
+    expect(result.evaluatedSources.find((source) => source.sourceKey === "rate-derived:coin-a")).toMatchObject({
+      calculationMode: "benchmark-model",
+      evidenceClass: "modeled-proxy",
+      scoreQualification: "estimated",
+    });
+    expect(result.evaluatedSources.find((source) => source.sourceKey === "defillama:coin-a:high")).toMatchObject({
+      calculationMode: "market-api",
+      evidenceClass: "curated-observation",
+    });
+  });
+
+  it("rejects an expired deterministic source before arbitration and retains it behind a fresh curated source", () => {
+    const startSec = 1776729600;
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "rate-derived:coin-a",
+            dataSource: "rate-derived",
+            currentApy: 12,
+            sourceObservedAt: startSec - 49 * 60 * 60,
+          }),
+        },
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:fresh",
+            currentApy: 5,
+            sourceObservedAt: startSec - 60,
+          }),
+        },
+      ],
+    }));
+
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("defillama:coin-a:fresh");
+    expect(result.evaluatedSources.find((source) => source.sourceKey === "rate-derived:coin-a")).toMatchObject({
+      rejected: true,
+      sourceFreshness: "stale",
+      scoreQualified: false,
+      pharosYieldScore: null,
+      pysNullReason: "source-stale",
+      warnings: expect.arrayContaining(["data-stale"]),
+    });
+  });
+
+  it("publishes stale no-alternative observations only as unscored last-known context", () => {
+    const startSec = 1776729600;
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "rate-derived:coin-a",
+          dataSource: "rate-derived",
+          sourceObservedAt: startSec - 49 * 60 * 60,
+        }),
+      }],
+    }));
+
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("rate-derived:coin-a");
+    expect(result.evaluatedSources[0]).toMatchObject({
+      rejected: true,
+      scoreQualified: false,
+      pharosYieldScore: null,
+      pysNullReason: "source-stale",
+      warnings: expect.arrayContaining(["data-stale"]),
+    });
+  });
+
+  it("marks a fresh GBP source unscored when its native benchmark is stale", () => {
+    const startSec = 1776729600;
+    const staleAgeSeconds = 49 * 60 * 60;
+    const input = baseEvaluationInput({
+      startSec,
+      resolved: [{
+        id: "tgbp-tokenised",
+        symbol: "TGBP",
+        yield: resolvedYield({
+          sourceKey: "defillama:tgbp:fresh",
+          sourceObservedAt: startSec - 60,
+        }),
+      }],
+      safetyScores: new Map([["tgbp-tokenised", { score: 75, grade: "B" }]]),
+    });
+    input.riskFreeRates.GBP = gbpBenchmark(startSec - staleAgeSeconds, staleAgeSeconds);
+
+    const [source] = evaluateYieldSources(input).evaluatedSources;
+    expect(source).toMatchObject({
+      benchmarkKey: "GBP",
+      sourceFreshness: "fresh",
+      benchmarkFreshness: "stale",
+      scoreQualified: false,
+      pharosYieldScore: null,
+      pysNullReason: "benchmark-stale",
+      warnings: expect.arrayContaining(["benchmark-stale"]),
+    });
   });
 
   it("does not carry old scrvUSD trailing-delta history into the current-rate source", () => {
@@ -784,5 +1014,168 @@ describe("evaluateYieldSources", () => {
     expect(source?.benchmarkKey).toBe("USD_EFFR");
     expect(source?.benchmarkRate).toBe(3.9);
     expect(source?.benchmarkSelectionMode).toBe("manual-override");
+  });
+});
+
+describe("opportunity-level risk (yield v8.32)", () => {
+  it("scores a reviewed blue-chip lending opportunity at the underlying safety", () => {
+    const startSec = 1776729600;
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:aave",
+          project: "aave-v3",
+          yieldType: "lending-opportunity",
+        }),
+      }],
+      sourceHistory: new Map([
+        [buildHistoryKey("coin-a", "defillama:coin-a:aave"), historyRows("defillama:coin-a:aave", 9, startSec)],
+      ]),
+    })).evaluatedSources;
+
+    // The fixture coin resolves a fallback-USD benchmark, so qualification is
+    // estimated rather than rated; the opportunity contract itself is complete.
+    expect(source).toMatchObject({
+      safetyScore: 80,
+      safetyProvenance: "opportunity-safety",
+      scoreQualification: "estimated",
+      pysNullReason: null,
+    });
+    expect(source?.pharosYieldScore).toBeGreaterThan(0);
+    expect(source?.sourceRisk?.opportunityRisk).toEqual({
+      opportunityClass: "lending",
+      underlyingSafetyScore: 80,
+      opportunitySafetyScore: 80,
+      opportunitySafetyPenalty: 0,
+      venueReviewed: true,
+      missingCriticalEvidence: [],
+    });
+  });
+
+  it("deducts opportunity safety for a reviewed higher-risk venue without touching the underlying input", () => {
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:clearpool",
+          project: "clearpool",
+          yieldType: "lending-opportunity",
+        }),
+      }],
+    })).evaluatedSources;
+
+    expect(source?.safetyProvenance).toBe("opportunity-safety");
+    expect(source?.safetyScore).toBeLessThan(80);
+    expect(source?.sourceRisk?.opportunityRisk).toMatchObject({
+      opportunityClass: "lending",
+      underlyingSafetyScore: 80,
+      venueReviewed: true,
+      missingCriticalEvidence: [],
+    });
+    expect(source?.sourceRisk?.opportunityRisk?.opportunitySafetyScore).toBe(source?.safetyScore);
+  });
+
+  it("withholds the exact PYS when an external opportunity's venue is unreviewed", () => {
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:obscure",
+          project: "obscure-unreviewed-venue",
+          yieldType: "lending-opportunity",
+        }),
+      }],
+    })).evaluatedSources;
+
+    expect(source).toMatchObject({
+      safetyScore: 80,
+      safetyProvenance: "cached-publish",
+      scoreQualification: "NR",
+      pharosYieldScore: null,
+      pysNullReason: "opportunity-evidence-missing",
+    });
+    expect(source?.sourceRisk?.opportunityRisk).toMatchObject({
+      opportunitySafetyScore: null,
+      venueReviewed: false,
+      missingCriticalEvidence: ["venue-review"],
+    });
+  });
+
+  it("treats unknown market size as missing critical evidence", () => {
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:aave",
+          project: "aave-v3",
+          yieldType: "lending-opportunity",
+          sourceTvlUsd: null,
+        }),
+      }],
+    })).evaluatedSources;
+
+    expect(source).toMatchObject({
+      pharosYieldScore: null,
+      pysNullReason: "opportunity-evidence-missing",
+      scoreQualification: "NR",
+    });
+    expect(source?.sourceRisk?.opportunityRisk?.missingCriticalEvidence).toEqual(["market-size"]);
+  });
+
+  it("leaves holder yield untouched by opportunity evidence requirements", () => {
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:holder",
+          project: "obscure-unreviewed-venue",
+          yieldType: "lending-vault",
+        }),
+      }],
+    })).evaluatedSources;
+
+    expect(source?.pharosYieldScore).toBeGreaterThan(0);
+    expect(source?.safetyProvenance).toBe("cached-publish");
+    expect(source?.sourceRisk?.opportunityRisk).toBeUndefined();
+  });
+
+  it("publishes the opportunity contract for Royco Dawn tranches from the bespoke tranche model", () => {
+    const [source] = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceKey: "royco-dawn:ethereum:0xmarket:junior",
+          dataSource: "protocol-api",
+          yieldType: "structured-tranche",
+          sourceRisk: {
+            trancheSide: "junior",
+            venueProtocol: "royco-dawn",
+            venueRiskTier: "medium",
+            marketStatus: "normal",
+            marketTvlUsd: 2_000_000,
+          },
+        }),
+      }],
+    })).evaluatedSources;
+
+    expect(source?.safetyProvenance).toBe("opportunity-safety");
+    expect(source?.safetyScore).toBeLessThan(80);
+    expect(source?.sourceRisk?.trancheSafetyScore).toBe(source?.safetyScore);
+    expect(source?.sourceRisk?.opportunityRisk).toMatchObject({
+      opportunityClass: "structured-tranche",
+      underlyingSafetyScore: 80,
+      opportunitySafetyScore: source?.safetyScore,
+      opportunitySafetyPenalty: source?.sourceRisk?.trancheSafetyPenalty,
+      venueReviewed: true,
+      missingCriticalEvidence: [],
+    });
   });
 });

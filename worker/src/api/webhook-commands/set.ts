@@ -10,6 +10,7 @@ import {
 } from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
 import { makeActionRunner } from "./action-runner";
+import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 
 export const handleSet: WebhookCommandHandler = async (ctx, args) => {
   const { db, chatId, username, actorUserId } = ctx;
@@ -25,7 +26,24 @@ export const handleSet: WebhookCommandHandler = async (ctx, args) => {
       await ctx.replyToChat(escapeHtml(globalError));
       return;
     }
-    await applyGlobalSetting(db, chatId, username, parsed);
+    const { ticker: _ticker, ...normalizedSetting } = parsed;
+    await ctx.planIntent?.(createTelegramWebhookIntent("command:set", {
+      scope: "all",
+      setting: normalizedSetting,
+      clearPending: Boolean(ctx.clearPendingOnMutation),
+    }, "required"));
+    const operationStatements = ctx.prepareMutationOperationStatements
+      ? ctx.prepareMutationOperationStatements()
+      : ctx.prepareMutationAppliedStatement
+        ? [ctx.prepareMutationAppliedStatement()]
+      : undefined;
+    if (!ctx.wasMutationApplied) {
+      await applyGlobalSetting(db, chatId, username, parsed, {
+        operationStatements,
+        clearPending: ctx.clearPendingOnMutation,
+      });
+      if (operationStatements) ctx.confirmAtomicMutationApplied?.();
+    }
     await recordTelegramUsageEvent(db, {
       eventType: "global_alert_change",
       actionDetail: parsed.setting,
@@ -44,7 +62,22 @@ export const handleSet: WebhookCommandHandler = async (ctx, args) => {
   }
 
   const runAction = makeActionRunner(
-    { db, chatId, username, initiatorUserId: actorUserId },
+    {
+      db,
+      chatId,
+      username,
+      initiatorUserId: actorUserId,
+      beforeIrreversibleEffect: ctx.beforeIrreversibleEffect,
+      planIntent: ctx.planIntent,
+      prepareMutationAppliedStatement: ctx.prepareMutationAppliedStatement,
+      prepareMutationOperationStatements: ctx.prepareMutationOperationStatements,
+      preparePendingMutationAppliedStatement: ctx.preparePendingMutationAppliedStatement,
+      confirmAtomicMutationApplied: ctx.confirmAtomicMutationApplied,
+      markMutationApplied: ctx.markMutationApplied,
+      storedIntent: ctx.storedIntent,
+      wasMutationApplied: ctx.wasMutationApplied,
+      operationNowSec: ctx.operationNowSec,
+    },
     ctx.botToken,
     undefined,
     ctx.chatType === "private"
@@ -58,5 +91,10 @@ export const handleSet: WebhookCommandHandler = async (ctx, args) => {
         }
       : undefined,
   );
-  await runAction({ tickers: [parsed.ticker], actionType: "set", actionPayload: parsed });
+  await runAction({
+    tickers: [parsed.ticker],
+    actionType: "set",
+    actionPayload: parsed,
+    clearPendingOnTerminal: ctx.clearPendingOnMutation,
+  });
 };

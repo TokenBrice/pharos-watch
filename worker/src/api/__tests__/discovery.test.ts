@@ -64,19 +64,53 @@ describe("handleDiscoveryCandidates", () => {
 describe("handleDismissCandidate", () => {
   it("marks candidate as dismissed", async () => {
     const db = mockD1([
+      {
+        match: "SELECT id, name, symbol, source, market_cap, dismissed FROM discovery_candidates WHERE id = ?",
+        first: { id: 1, name: "Big", symbol: "BIG", source: "both", market_cap: 50_000_000, dismissed: 0 },
+        rows: [],
+      },
       { match: "UPDATE discovery_candidates", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } },
     ]);
     const res = await handleDismissCandidate(db, 1);
     expect(res.status).toBe(200);
-    const body = await res.json() as { ok: boolean };
+    const body = await res.json() as { ok: boolean; alreadyDismissed: boolean; auditAction: string };
     expect(body.ok).toBe(true);
+    expect(body.alreadyDismissed).toBe(false);
+    expect(body.auditAction).toBe("dismiss-discovery-candidate");
+    const audit = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
+    expect(audit?.binds[2]).toBe("dismiss-discovery-candidate");
+    expect(audit?.binds[3]).toBe("candidate:1");
   });
 
   it("returns 404 for non-existent candidate", async () => {
     const db = mockD1([
-      { match: "UPDATE discovery_candidates", rows: [], runMeta: { changes: 0 } },
+      {
+        match: "SELECT id, name, symbol, source, market_cap, dismissed FROM discovery_candidates WHERE id = ?",
+        first: null,
+        rows: [],
+      },
     ]);
     const res = await handleDismissCandidate(db, 999);
     expect(res.status).toBe(404);
+  });
+
+  it("reconciles an already-dismissed candidate as a safe success", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT id, name, symbol, source, market_cap, dismissed FROM discovery_candidates WHERE id = ?",
+        first: { id: 1, name: "Big", symbol: "BIG", source: "both", market_cap: 50_000_000, dismissed: 1 },
+        rows: [],
+      },
+    ]);
+
+    const res = await handleDismissCandidate(db, 1);
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({
+      ok: true,
+      alreadyDismissed: true,
+      candidate: { id: 1, symbol: "BIG" },
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO admin_action_audit"))).toBe(false);
   });
 });

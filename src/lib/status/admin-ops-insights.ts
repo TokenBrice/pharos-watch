@@ -145,8 +145,8 @@ export function buildActionReadinessChecks({
       label: "Dashboard data",
       state: clientDataStale ? "watch" : "ready",
       detail: clientDataStale
-        ? "At least one critical status query is older than 120s; refresh before acting."
-        : "Status, public health, and browser probe data are fresh enough for triage.",
+        ? "At least one required status, health, or critical browser-probe signal is missing or outside its polling budget; refresh before acting."
+        : "Status, public health, and critical browser-probe evidence are fresh enough for triage.",
     },
     {
       id: "public-health",

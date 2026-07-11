@@ -1,27 +1,33 @@
-import { batchExecute } from "../../lib/db";
+import { executeAtomicBatch } from "../../lib/db";
 import { prepareCoinSettingStatements } from "../telegram-webhook-settings-mutations";
 import {
   callbackUsername,
   hasExactParts,
-  isKnownStablecoinId,
+  isSubscribableStablecoinId,
   runCallbackMutation,
   type CallbackHandler,
 } from "./_shared";
 
-export const handleSafetyDownCallback: CallbackHandler = async ({ db, botToken, cb, chatId, parsed }) => {
+export const handleSafetyDownCallback: CallbackHandler = async ({
+  db, botToken, cb, chatId, parsed, answerCallback, beforeIrreversibleEffect,
+  markMutationApplied, planIntent, prepareMutationAppliedStatement, confirmAtomicMutationApplied,
+  wasMutationApplied,
+}) => {
   await runCallbackMutation<string>({
     db,
     botToken,
     cb,
     chatId,
     validate: () =>
-      hasExactParts(parsed.parts, 2) && isKnownStablecoinId(parsed.arg) ? parsed.arg : null,
+      hasExactParts(parsed.parts, 2) && isSubscribableStablecoinId(parsed.arg) ? parsed.arg : null,
     requireAdmin: true,
     eventType: "subscribe",
     actionDetail: "safetydown",
     logAction: "safetydown",
     logMessage: "safetydown callback write failed",
-    write: async (id) => {
+    intentKind: "callback:safetydown",
+    intentPayload: (id) => ({ coinId: id, mode: "downgrade-only" }),
+    write: async (id, options) => {
       const prepared = prepareCoinSettingStatements(
         db,
         chatId,
@@ -30,9 +36,16 @@ export const handleSafetyDownCallback: CallbackHandler = async ({ db, botToken, 
         "sm",
         "d",
       );
-      await batchExecute(db, prepared.statements);
+      await executeAtomicBatch(db, [...prepared.statements, ...(options.operationStatements ?? [])]);
     },
     successText: "Safety alerts set to downgrades only.",
     failureText: "Could not save setting. Please try again.",
+    answerCallback,
+    beforeIrreversibleEffect,
+    markMutationApplied,
+    planIntent,
+    prepareMutationAppliedStatement,
+    confirmAtomicMutationApplied,
+    wasMutationApplied,
   });
 };

@@ -19,6 +19,8 @@ export interface FetchBlacklistEventsParams {
   sortDirection?: BlacklistSortDirection;
   limit?: number;
   offset?: number;
+  cursor?: string;
+  includeTotal?: boolean;
 }
 
 export function buildBlacklistEventsPath(params: FetchBlacklistEventsParams): string {
@@ -30,7 +32,9 @@ export function buildBlacklistEventsPath(params: FetchBlacklistEventsParams): st
     sortBy: params.sortBy,
     sortDirection: params.sortDirection,
     limit: params.limit,
-    offset: params.offset,
+    offset: params.cursor ? undefined : params.offset,
+    cursor: params.cursor,
+    includeTotal: params.includeTotal,
   });
 }
 

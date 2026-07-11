@@ -135,6 +135,8 @@ describe("data surface descriptors", () => {
     expect({
       path: DATA_SURFACE_DESCRIPTORS.yieldRankings.apiPath,
       queryKey: DATA_SURFACE_DESCRIPTORS.yieldRankings.queryKey,
+      summaryPath: DATA_SURFACE_DESCRIPTORS.yieldRankings.summaryApiPath,
+      summaryQueryKey: DATA_SURFACE_DESCRIPTORS.yieldRankings.summaryQueryKey,
       producerIntervalSec: DATA_SURFACE_DESCRIPTORS.yieldRankings.producerIntervalSec,
       endpointMaxAgeSec: DATA_SURFACE_DESCRIPTORS.yieldRankings.endpointMaxAgeSec,
       producerJob: DATA_SURFACE_DESCRIPTORS.yieldRankings.producerJob,
@@ -143,6 +145,8 @@ describe("data surface descriptors", () => {
     }).toEqual({
       path: "/api/yield-rankings",
       queryKey: ["yield-rankings"],
+      summaryPath: "/api/yield-rankings?projection=summary",
+      summaryQueryKey: ["yield-rankings", "summary"],
       producerIntervalSec: 3600,
       endpointMaxAgeSec: 3600,
       producerJob: "sync-yield-data",
@@ -210,16 +214,8 @@ describe("data surface descriptors", () => {
       "source",
       "aave-v3",
     ]);
-    expect(surface.buildApiPath("usdt", 90, "best", null)).toBe(
-      "/api/yield-history?stablecoin=usdt&days=90&mode=best",
-    );
-    expect(surface.buildQueryKey("usdt", 90, "best", null)).toEqual([
-      "yield-history",
-      "usdt",
-      90,
-      "best",
-      null,
-    ]);
+    expect(surface.buildApiPath("usdt", 90, "best", null)).toBe("/api/yield-history?stablecoin=usdt&days=90&mode=best");
+    expect(surface.buildQueryKey("usdt", 90, "best", null)).toEqual(["yield-history", "usdt", 90, "best", null]);
     expect({
       producerIntervalSec: surface.producerIntervalSec,
       endpointMaxAgeSec: surface.endpointMaxAgeSec,
@@ -240,11 +236,7 @@ describe("data surface descriptors", () => {
       const frontend = frontendStaticDescriptor(surface);
       const apiPath = requireDescriptorField(surface, "apiPath", surface.apiPath);
       const queryKey = requireDescriptorField(surface, "queryKey", surface.queryKey);
-      const producerIntervalSec = requireDescriptorField(
-        surface,
-        "producerIntervalSec",
-        surface.producerIntervalSec,
-      );
+      const producerIntervalSec = requireDescriptorField(surface, "producerIntervalSec", surface.producerIntervalSec);
 
       expect(frontend.queryKey).toBe(queryKey);
       expect(frontend.path).toBe(apiPath);
@@ -330,9 +322,15 @@ describe("data surface descriptors", () => {
       expect(surface.producerJob).toBe(lane.producerJob);
       expect(surface.producerIntervalSec).toBe(lane.producerIntervalSec);
       expect("endpointMaxAgeSec" in surface ? surface.endpointMaxAgeSec : undefined).toBe(lane.endpointMaxAgeSec);
-      expect("availabilityMaxAgeSec" in surface ? surface.availabilityMaxAgeSec : undefined).toBe(lane.availabilityMaxAgeSec);
-      expect("availabilityMaxAgeSec" in surface ? surface.availabilityMaxAgeSec : undefined).toBe(CACHE_AVAILABILITY_MAX_AGE_SEC[lane.cacheKey]);
-      expect("freshnessSentinelKey" in surface ? surface.freshnessSentinelKey : undefined).toBe(lane.freshnessSentinelKey);
+      expect("availabilityMaxAgeSec" in surface ? surface.availabilityMaxAgeSec : undefined).toBe(
+        lane.availabilityMaxAgeSec,
+      );
+      expect("availabilityMaxAgeSec" in surface ? surface.availabilityMaxAgeSec : undefined).toBe(
+        CACHE_AVAILABILITY_MAX_AGE_SEC[lane.cacheKey],
+      );
+      expect("freshnessSentinelKey" in surface ? surface.freshnessSentinelKey : undefined).toBe(
+        lane.freshnessSentinelKey,
+      );
     }
   });
 
@@ -408,7 +406,7 @@ describe("data surface descriptors", () => {
     for (const { surface, id, explicit } of cases) {
       const definition = dependency(id);
       expect(definition?.producerJob).toBe(surface.producerJob ?? null);
-      expect(definition?.cacheKey).toBe("cacheKey" in surface ? surface.cacheKey ?? null : null);
+      expect(definition?.cacheKey).toBe("cacheKey" in surface ? (surface.cacheKey ?? null) : null);
       expect(definition?.criticality).toBe(surface.dependencyCriticality);
       expect({
         label: definition?.label,
@@ -461,11 +459,7 @@ describe("data surface descriptors", () => {
       const contract = PHAROSVILLE_CONTRACT_BY_KEY[schemaKey];
       const apiPath = requireDescriptorField(surface, "apiPath", surface.apiPath);
       const endpointMaxAgeSec = requireDescriptorField(surface, "endpointMaxAgeSec", surface.endpointMaxAgeSec);
-      const producerIntervalSec = requireDescriptorField(
-        surface,
-        "producerIntervalSec",
-        surface.producerIntervalSec,
-      );
+      const producerIntervalSec = requireDescriptorField(surface, "producerIntervalSec", surface.producerIntervalSec);
 
       expect(contract).toBeDefined();
       expect(contract.key).toBe(schemaKey);

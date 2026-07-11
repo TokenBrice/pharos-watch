@@ -4,6 +4,7 @@ import type { LiveReserveEvidenceClass } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "./reserve-adapters/index";
 import type { ReserveSyncStateRecord } from "../lib/live-reserves-store";
 import { toErrorMessage } from "../lib/error-utils";
+import { fnv1aHash } from "../lib/hash";
 
 export const CONFIGURED_COINS = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig);
 export type ConfiguredCoin = (typeof CONFIGURED_COINS)[number];
@@ -59,6 +60,14 @@ export function orderConfiguredCoinsForSync(
 }
 
 export const SYNC_ORDERED_CONFIGURED_COINS = orderConfiguredCoinsForSync(CONFIGURED_COINS);
+export const LIVE_RESERVE_QUEUE_HASH = fnv1aHash(JSON.stringify(
+  SYNC_ORDERED_CONFIGURED_COINS.map((coin) => ({
+    id: coin.id,
+    adapter: coin.liveReservesConfig?.adapter ?? null,
+    version: coin.liveReservesConfig?.version ?? null,
+    breakerScope: coin.liveReservesConfig?.breakerScope ?? null,
+  })),
+));
 export const CONFIGURED_LIVE_RESERVE_BREAKER_KEYS = new Set(
   CONFIGURED_COINS.map((coin) => breakerKeyForConfig(coin.liveReservesConfig!)),
 );

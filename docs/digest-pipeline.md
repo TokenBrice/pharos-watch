@@ -10,7 +10,7 @@ The digest pipeline has four layers:
 
 1. **Generation** — a Cloudflare Worker cron collects market data and calls Claude to produce a short editorial recap
 2. **Storage** — the result is persisted to D1 (`daily_digest` table)
-3. **Distribution** — posted to Telegram immediately after generation and stored for web/API consumption
+3. **Distribution** — immutable Telegram editions are persisted before Bot API delivery, then sent immediately or retried from the stored payload
 4. **Frontend** — served via public API endpoints, displayed on the homepage and a dedicated archive
 
 Daily and weekly generation now share a common worker substrate in `worker/src/cron/digest/platform.ts` for the Anthropic request/parse path, `daily_digest` row insertion, and circuit-aware delivery wrappers. The daily and weekly jobs still own their distinct input-building and prompt logic.
@@ -147,6 +147,8 @@ The `digest_meta` column stores structured metadata about editorial choices (lea
 
 Retention policy: `daily_digest` is a product archive kept forever. The public archive/detail pages, static digest sync, recent-copy context, cross-day trends, and the total-mcap ATH collector all read historical rows. Do not add age-based pruning unless ATH and archive dependencies are materialized first or an explicit public-output change is accepted.
 
+`telegram_digest_outbox` is the delivery ledger, not the editorial archive. Successfully sent rows are retained for 90 days and pruned in bounded batches by the five-minute drain. `execution_unknown` and `failed_permanent` rows remain until operator reconciliation so uncertainty is not erased by retention cleanup.
+
 ---
 
 ## API Endpoints
@@ -165,7 +167,7 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 
 ## Distribution
 
-After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery is **non-fatal** after the digest row is stored: a delivery failure logs a warning and rolls back that channel's same-day sent marker, but never removes the D1 digest record.
+After the digest is stored in D1, it is posted to configured Twitter/X and Telegram channels. Delivery never removes the D1 digest record. Twitter/X retains its same-day marker contract; Telegram first persists the exact rendered edition in `telegram_digest_outbox`, then sends only that stored payload.
 
 ### Web archive and sitemap policy
 
@@ -192,7 +194,7 @@ If any of the four are absent, Twitter posting is skipped silently. Twitter/X de
 
 ### Telegram
 
-**File:** `worker/src/lib/telegram.ts`
+**Files:** `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-digest-outbox.ts`
 
 - Auth: bot token embedded in the request URL (no OAuth)
 - Parse mode: **HTML** — title is wrapped in `<b>`, link uses `<a href>`
@@ -207,7 +209,7 @@ If any of the four are absent, Twitter posting is skipped silently. Twitter/X de
   ```
 - Endpoint: `POST https://api.telegram.org/bot{token}/sendMessage`
 
-The `extended` field is used (not `text`) because Telegram's 4096-char limit removes the need for truncation, and the longer copy reads better in a channel context.
+The `extended` field is used instead of `text`. The final rendered HTML is split on safe structural boundaries below the 4096-character Bot API ceiling. Every chunk is persisted before the first external request, including unusually large appendix editions.
 
 Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also asks `worker/src/lib/telegram-digest-appendices.ts` for any pending deploy-diff notices. When present, those notices are appended beneath the digest body:
 
@@ -216,9 +218,9 @@ Before the Telegram channel post is sent, `worker/src/cron/daily-digest.ts` also
 
 Active tracked additions are queued earlier by `worker/src/cron/sync-stablecoins.ts`, which diffs the just-built stablecoins payload against the previous `stablecoins` cache before the cache row is overwritten. That queue is then consumed by the next successful Telegram digest post, so tracked additions are not lost when the digest appendix snapshot key is missing or has to be reseeded.
 
-Appendix snapshots advance only after Telegram accepts the digest post, so a failed channel delivery does not lose pending additions.
+Appendix snapshot writes are stored with the immutable edition and committed atomically with its `sent` transition after every chunk is accepted. A failed or partial channel delivery therefore does not lose pending additions.
 
-Telegram delivery is also replay-safe per UTC date. `daily-digest.ts` atomically claims a `daily-digest:telegram-sent:YYYY-MM-DD` marker before posting; if the digest later re-runs the same day, Telegram delivery is skipped as `already-sent` while appendix state remains uncommitted for an already-sent retry. If Telegram rejects the post, the marker is rolled back so a later run can retry. This prevents duplicate channel posts without dropping pending appendix changes on a failed earlier attempt.
+Telegram delivery is keyed by immutable daily or weekly edition. The outbox stores the target chat, exact ordered chunk array, accepted-chunk cursor, and owner/generation-fenced state. Confirmed retryable HTTP responses return the edition to `pending` with bounded exponential or Telegram `retry_after` backoff. A timeout/network failure, expired `sending` owner, or persistence failure after acceptance becomes `execution_unknown` and is never replayed automatically. Confirmed permanent rejection becomes `failed_permanent`. The five-minute digest-trigger slot drains due `pending` editions without rerunning Anthropic or re-rendering copy; operator reconciliation for terminal states is documented in [`runbooks/telegram-digest-outbox.md`](./runbooks/telegram-digest-outbox.md).
 
 **Required secrets:**
 
@@ -246,20 +248,20 @@ Daily and weekly channel outcomes are returned in scheduled-run cron metadata. `
 { "metadata": "243 chars, tweet: ok, telegram: ok" }
 ```
 
-Possible channel values include `"no-creds"`, `"ok"`, `"failed: <truncated error>"`, `"skipped: circuit-open"`, `"skipped: quality-gate"`, `"skipped: already-sent"`, and successful appendixed delivery strings such as `ok+appendix(...)`.
+Possible channel values include `"no-creds"`, `"ok"`, `"failed: <truncated error>"`, `"queued: <state>"`, `"skipped: circuit-open"`, `"skipped: quality-gate"`, `"skipped: already-sent"`, and successful appendixed delivery strings such as `ok+appendix(...)`. Outbox retry and terminal backlog counts are separately exposed under the budget-only `telegram-digest-outbox-drain` status surface.
 
 ---
 
 ## Weekly Recap
 
 **File:** `worker/src/cron/weekly-recap.ts`
-**Schedule:** Mondays only, chained after `daily-digest` on the same `"5 8 * * *"` trigger
+**Schedule:** Mondays only on the independent `"10 8 * * *"` trigger, in parallel with `discovery-scan`
 **Dedup guard:** returns `skipped_neutral` outside Monday UTC or when a recent weekly row is already delivered; retries a recent row with `digest_meta.telegramDelivered = false` unless its delivery status is `skipped: quality-gate`
-**Period semantics:** trailing daily editions ending with the Monday daily digest, not a strict Monday-Sunday calendar week. `digest_meta.periodType` is `"trailing-daily-editions"`.
+**Period semantics:** trailing daily editions available at the Monday 08:10 UTC start, not a strict Monday-Sunday calendar week. `digest_meta.periodType` is `"trailing-daily-editions"`.
 
 ### Data collection
 
-Fetches the last 15 daily digests (`LIMIT 15`, cutoff `now - 15d`, excluding weekly entries via `json_extract(digest_meta, '$.type') != 'weekly'`), splits them at a UTC-day boundary (`todayTs - 6d`, = last Tuesday 00:00 UTC given the Monday 08:05 cron slot), and aggregates both summary ranges and weekly signal leaderboards for the current week plus basic aggregates for the prior week:
+Fetches the last 15 daily digests (`LIMIT 15`, cutoff `now - 15d`, excluding weekly entries via `json_extract(digest_meta, '$.type') != 'weekly'`), splits them at a UTC-day boundary (`todayTs - 6d`, last Tuesday 00:00 UTC for the Monday run), and aggregates both summary ranges and weekly signal leaderboards for the current week plus basic aggregates for the prior week:
 
 | Metric | Derivation |
 |--------|-----------|
@@ -297,7 +299,7 @@ Stored in the same `daily_digest` table. The `digest_meta` column includes `"typ
 
 ### Distribution
 
-Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "Weekly Recap:" and the link uses the weekly route slug `/digest/YYYY-MM-DD-weekly/`. If generation succeeded but the Telegram post failed, was circuit-open, or had no credentials, the stored row remains eligible for a delivery retry instead of being regenerated.
+Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "Weekly Recap:" and the link uses the weekly route slug `/digest/YYYY-MM-DD-weekly/`. The exact rendered weekly edition uses the same durable outbox as daily distribution. Confirmed retryable failures are polled every five minutes without another LLM call; ambiguous or permanent outcomes stop for operator reconciliation. The compatibility fields in `daily_digest.digest_meta` are updated after outbox success.
 
 ---
 

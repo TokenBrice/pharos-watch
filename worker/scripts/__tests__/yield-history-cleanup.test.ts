@@ -3,13 +3,14 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createYieldHistoryCleanupArtifact,
   deleteCleanupRowsFromSqlite,
   loadCleanupRowsFromSqlite,
   parseYieldHistoryCleanupCliOptions,
   restoreCleanupRowsToSqlite,
+  runYieldHistoryCleanupCli,
   summarizeYieldHistoryCleanupRows,
 } from "../yield-history-cleanup";
 
@@ -69,6 +70,7 @@ describe("yield-history-cleanup", () => {
     const options = parseYieldHistoryCleanupCliOptions(["--export", "cleanup.json", "--operator", "ops"]);
 
     expect(options).toMatchObject({
+      help: false,
       exportPath: "cleanup.json",
       operator: "ops",
       remote: true,
@@ -108,6 +110,48 @@ describe("yield-history-cleanup", () => {
     );
   });
 
+  it("keeps writer-pause changes in dry-run mode without live confirmation", async () => {
+    const setWriterPause = vi.fn();
+    const clearWriterPause = vi.fn();
+    const printJson = vi.fn();
+    const dependencies = { setWriterPause, clearWriterPause, printJson };
+
+    await runYieldHistoryCleanupCli(["--arm-writer-pause", "--operator", "ops"], dependencies);
+    await runYieldHistoryCleanupCli(["--clear-writer-pause"], dependencies);
+
+    expect(setWriterPause).not.toHaveBeenCalled();
+    expect(clearWriterPause).not.toHaveBeenCalled();
+    expect(printJson).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      action: "arm-writer-pause",
+      mode: "dry-run",
+      operator: "ops",
+      remote: true,
+    }));
+    expect(printJson).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      action: "clear-writer-pause",
+      mode: "dry-run",
+      remote: true,
+    }));
+  });
+
+  it("executes writer-pause changes only in confirmed live mode", async () => {
+    const setWriterPause = vi.fn();
+    const clearWriterPause = vi.fn();
+    const printJson = vi.fn();
+    const dependencies = { setWriterPause, clearWriterPause, printJson };
+    const liveArgs = ["--execute", "--confirm", "yield-history-cleanup"];
+
+    await runYieldHistoryCleanupCli(["--arm-writer-pause", "--operator", "ops", ...liveArgs], dependencies);
+    await runYieldHistoryCleanupCli(["--clear-writer-pause", ...liveArgs], dependencies);
+
+    expect(setWriterPause).toHaveBeenCalledOnce();
+    expect(setWriterPause).toHaveBeenCalledWith(true, "ops");
+    expect(clearWriterPause).toHaveBeenCalledOnce();
+    expect(clearWriterPause).toHaveBeenCalledWith(true);
+    expect(printJson).toHaveBeenNthCalledWith(1, expect.objectContaining({ armed: true, remote: true }));
+    expect(printJson).toHaveBeenNthCalledWith(2, expect.objectContaining({ cleared: true, remote: true }));
+  });
+
   it("prints direct-run guard refusals without an unhandled rejection", () => {
     const result = spawnSync(
       join(process.cwd(), "node_modules/.bin/tsx"),
@@ -118,11 +162,27 @@ describe("yield-history-cleanup", () => {
       },
     );
 
-    expect(result.status).toBe(1);
+    expect(result.status).toBe(2);
     expect(result.stderr).toContain(
-      "Error: Refusing yield-history-cleanup: live mutation requires --execute --confirm yield-history-cleanup",
+      "yield-history-cleanup: Refusing yield-history-cleanup: live mutation requires --execute --confirm yield-history-cleanup",
     );
+    expect(result.stderr).toContain("Usage: tsx worker/scripts/yield-history-cleanup.ts");
     expect(result.stderr).not.toMatch(/UnhandledPromiseRejection|unhandled rejection/i);
+  });
+
+  it("prints direct-run help with exit 0", () => {
+    const result = spawnSync(
+      join(process.cwd(), "node_modules/.bin/tsx"),
+      ["worker/scripts/yield-history-cleanup.ts", "--help"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Usage: tsx worker/scripts/yield-history-cleanup.ts");
+    expect(result.stderr).toBe("");
   });
 
   it("preserves sqlite restore exemption from live confirmation", () => {
@@ -153,14 +213,31 @@ describe("yield-history-cleanup", () => {
         "--confirm",
         "yield-history-cleanup",
       ]),
-    ).toThrow("--restore requires a value");
+    ).toThrow(/--restore[\s\S]*(?:ambiguous|missing)/);
 
     expect(() => parseYieldHistoryCleanupCliOptions(["--sqlite", "--export"])).toThrow(
-      "--sqlite requires a value",
+      /--sqlite[\s\S]*(?:ambiguous|missing)/,
     );
     expect(() => parseYieldHistoryCleanupCliOptions(["--export="])).toThrow(
       "--export requires a non-empty value",
     );
+  });
+
+  it("rejects unknown, duplicate, conflicting, and positional arguments", () => {
+    expect(() => parseYieldHistoryCleanupCliOptions(["--bogus"])).toThrow(/Unknown option/);
+    expect(() =>
+      parseYieldHistoryCleanupCliOptions(["--operator", "one", "--operator", "two"]),
+    ).toThrow(/may only be specified once/);
+    expect(() =>
+      parseYieldHistoryCleanupCliOptions(["--arm-writer-pause", "--clear-writer-pause"]),
+    ).toThrow(/cannot be used together/);
+    expect(() =>
+      parseYieldHistoryCleanupCliOptions(["--restore", "backup.json", "--export", "new.json"]),
+    ).toThrow(/cannot be used together/);
+    expect(() =>
+      parseYieldHistoryCleanupCliOptions(["--sqlite", "test.sqlite", "--arm-writer-pause"]),
+    ).toThrow(/cannot be used together/);
+    expect(() => parseYieldHistoryCleanupCliOptions(["unexpected"])).toThrow(/Unexpected argument/);
   });
 
   it("loads only the targeted parent-owned wrapper rows", () => {

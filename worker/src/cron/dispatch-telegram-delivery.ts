@@ -18,11 +18,13 @@ import {
   type AlertsByChatEntry,
   type PlannedSubscriberAlert,
   type RoutedSubscriberAlert,
+  type FreshRetryEffectHandoff,
 } from "./dispatch-telegram-routing";
 import type { PerAlertTypeDelivery } from "@shared/types/status";
 import { throwIfAborted } from "../lib/abort";
 import type { BatchMessage } from "../lib/telegram";
 import { buildInClause, chunkArray } from "../lib/db";
+import { handoffFreshTelegramAlertTargetsToPending } from "./telegram-alert-target-effects";
 
 interface DeliverTelegramSubscriberQueueOptions {
   db: D1Database;
@@ -42,6 +44,7 @@ interface DeliverTelegramSubscriberQueueOptions {
   chatsInBackoff: ReadonlyMap<string, number>;
   globalBackoffUntil: number | null;
   dispatchStartedAtMs: number;
+  freshTargetJobIds?: ReadonlyMap<string, string>;
   terminalTargetKeys?: ReadonlySet<string>;
   signal?: AbortSignal;
   markTelegramDeliveryStarted?: () => void;
@@ -208,6 +211,7 @@ export async function deliverTelegramSubscriberQueue({
   chatsInBackoff,
   globalBackoffUntil,
   dispatchStartedAtMs,
+  freshTargetJobIds = new Map(),
   terminalTargetKeys = new Set(),
   signal,
   markTelegramDeliveryStarted,
@@ -271,6 +275,8 @@ export async function deliverTelegramSubscriberQueue({
   );
   const sendList = filterTerminalMessages(expandSubscriberChunks(toSend));
   const toSendForDeliveryOutcome = filterTerminalSubscriberChunksForOutcome(toSend);
+  let globalRateLimitNotBeforeAt: number | null = null;
+  const handedOffFreshRetryTargetKeys = new Set<string>();
   if (sendList.length > 0) markTelegramDeliveryStarted?.();
   const {
     subscribersNotified,
@@ -291,6 +297,39 @@ export async function deliverTelegramSubscriberQueue({
     drainResult.blockedCleanedUp,
     drainResult.blockedCleanupFailed,
     dispatchStartedAtMs,
+    freshTargetJobIds,
+    async (handoffs: readonly FreshRetryEffectHandoff[]) => {
+      const existingAttemptsByDedupeKey = await loadExistingPendingAttempts(
+        db,
+        handoffs.map((handoff) => handoff.message),
+        nowSec,
+      );
+      const pendingHandoffs = handoffs.map((handoff) => {
+        const priorAttempts = existingAttemptsByDedupeKey.get(buildDedupeKey(handoff.message)) ?? 0;
+        const notBeforeAt = handoff.at + pendingBackoffSec(priorAttempts, handoff.result.retryAfterSec);
+        const isGlobalRateLimit =
+          handoff.result.errorClass === "rate_limit" && handoff.result.rateLimitScope === "global";
+        if (isGlobalRateLimit) {
+          globalRateLimitNotBeforeAt = Math.max(globalRateLimitNotBeforeAt ?? 0, notBeforeAt);
+        }
+        return {
+          ...handoff.claim,
+          message: handoff.message,
+          at: handoff.at,
+          errorClass: handoff.result.errorClass,
+          options: {
+            notBeforeAt: isGlobalRateLimit ? null : notBeforeAt,
+            lastErrorClass: handoff.result.errorClass,
+            retryAfterSec: handoff.result.retryAfterSec,
+          },
+        };
+      });
+      await handoffFreshTelegramAlertTargetsToPending(db, pendingHandoffs, signal);
+      for (const handoff of handoffs) {
+        handedOffFreshRetryTargetKeys.add(buildDedupeKey(handoff.message));
+      }
+      await setTelegramGlobalBackoff(db, globalRateLimitNotBeforeAt);
+    },
     signal,
   );
   const deferredChats = new Set(deferredPerChat.map((sub) => sub.chatId));
@@ -353,14 +392,16 @@ export async function deliverTelegramSubscriberQueue({
     pushQueuedStatuses(overflowTailMessages);
   }
 
-  let globalRateLimitNotBeforeAt: number | null = null;
   const existingAttemptsByDedupeKey = await loadExistingPendingAttempts(
     db,
-    retryableFreshMessages.map((retry) => retry.message),
+    retryableFreshMessages
+      .filter((retry) => !handedOffFreshRetryTargetKeys.has(buildDedupeKey(retry.message)))
+      .map((retry) => retry.message),
     nowSec,
   );
   const retryEnqueueGroups = new Map<string, { messages: typeof retryableFreshMessages[number]["message"][]; options: PendingEnqueueOptions }>();
   for (const retry of retryableFreshMessages) {
+    if (handedOffFreshRetryTargetKeys.has(buildDedupeKey(retry.message))) continue;
     const retryAfterSec = retry.result.retryAfterSec;
     const priorAttempts = existingAttemptsByDedupeKey.get(buildDedupeKey(retry.message)) ?? 0;
     const notBeforeAt = nowSec + pendingBackoffSec(priorAttempts, retryAfterSec);

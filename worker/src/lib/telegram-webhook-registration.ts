@@ -464,7 +464,7 @@ export async function reconcileTelegramMenuButton(
   const current = await fetchTelegramMenuButton(botToken, options.signal);
   if (menuButtonMatches(current, miniAppUrl)) {
     await setCache(db, TELEGRAM_MENU_RECONCILED_CACHE_KEY, expectedCacheValue);
-    return { attempted: false, skipped: true, reason: "already-current", miniAppUrl };
+    return { attempted: true, skipped: false, reason: "already-current", miniAppUrl };
   }
 
   if (await isRateLimited(db, "setChatMenuButton")) {

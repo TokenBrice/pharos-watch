@@ -13,6 +13,12 @@ const {
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: fetchWithRetryMock,
+  fetchJsonWithRetry: async (...args: unknown[]) => {
+    const response = await fetchWithRetryMock(...args) as Response | null;
+    return response
+      ? { response, body: response.ok ? await response.json() : {} }
+      : null;
+  },
 }));
 
 vi.mock("../../lib/circuit-breaker", () => ({

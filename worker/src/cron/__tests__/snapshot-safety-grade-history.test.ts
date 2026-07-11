@@ -125,7 +125,7 @@ describe("snapshotSafetyGradeHistory", () => {
     vi.restoreAllMocks();
   });
 
-  it("seeds rows for live coins with no history", async () => {
+  it("seeds rows for live coins without overwriting the publisher-owned report-card cache", async () => {
     mockSnapshot([
       makeCard("usdt-tether", "B", 72),
       makeCard("usdc-circle", "A", 84),
@@ -148,8 +148,8 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(metadata.seeded).toBe(2);
     expect(metadata.changed).toBe(0);
     expect(metadata.skipped).toBe(0);
-    expect(metadata.reportCardCacheRows).toBe(2);
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(true);
+    expect(metadata.reportCardCacheOwner).toBe("publish-report-card-cache");
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
   });
 
   it("inserts only transition rows when grades change", async () => {
@@ -178,7 +178,7 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(metadata.seeded).toBe(0);
     expect(metadata.changed).toBe(1);
     expect(metadata.skipped).toBe(1);
-    expect(metadata.reportCardCacheRows).toBe(2);
+    expect(metadata.reportCardCacheOwner).toBe("publish-report-card-cache");
   });
 
   it("is idempotent when all live grades are unchanged", async () => {
@@ -206,7 +206,7 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(metadata.seeded).toBe(0);
     expect(metadata.changed).toBe(0);
     expect(metadata.skipped).toBe(2);
-    expect(metadata.reportCardCacheRows).toBe(2);
+    expect(metadata.reportCardCacheOwner).toBe("publish-report-card-cache");
   });
 
   it("suppresses grade-history writes when report-card inputs are degraded", async () => {
@@ -237,14 +237,7 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(metadata.changed).toBe(0);
     expect(metadata.suppressedSeeds).toBe(1);
     expect(metadata.suppressedTransitions).toBe(1);
-    expect(metadata.reportCardCacheRows).toBe(2);
-
-    const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
-    expect(JSON.parse(String(write?.binds[1])).payload.degradedInputs).toEqual({
-      inputsStale: true,
-      liquidityStale: false,
-      redemptionStale: true,
-      staleInputs: ["redemptionBackstops"],
-    });
+    expect(metadata.reportCardCacheOwner).toBe("publish-report-card-cache");
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
   });
 });

@@ -30,6 +30,7 @@ describe("useBlacklistEventsPage", () => {
       sortDirection: "asc",
       limit: 25,
       offset: 50,
+      includeTotal: true,
     });
 
     expect(useApiQueryWithMetaMock).toHaveBeenCalledWith(
@@ -43,8 +44,10 @@ describe("useBlacklistEventsPage", () => {
         "asc",
         25,
         50,
+        "first",
+        true,
       ],
-      "/api/blacklist?stablecoin=USDC&chain=Ethereum&eventType=blacklist&q=0xabc&sortBy=stablecoin&sortDirection=asc&limit=25&offset=50",
+      "/api/blacklist?stablecoin=USDC&chain=Ethereum&eventType=blacklist&q=0xabc&sortBy=stablecoin&sortDirection=asc&limit=25&offset=50&includeTotal=true",
       CRON_BLACKLIST,
       expect.anything(),
     );
@@ -54,7 +57,7 @@ describe("useBlacklistEventsPage", () => {
     useBlacklistEventsPage({});
 
     expect(useApiQueryWithMetaMock).toHaveBeenCalledWith(
-      ["blacklist-events", "all", "all", "all", "", "date", "desc", 50, 0],
+      ["blacklist-events", "all", "all", "all", "", "date", "desc", 50, 0, "first", false],
       "/api/blacklist",
       CRON_BLACKLIST,
       expect.anything(),

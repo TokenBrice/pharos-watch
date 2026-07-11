@@ -22,6 +22,8 @@ import {
 } from "./sync-live-reserves-shared";
 import {
   clearCursorStateIfComplete,
+  retireRecoveryOwnedGlobalCursor,
+  type LiveReserveGlobalCursorOwner,
   type LiveReserveCursorTailState,
   type LoadedLiveReserveCursorState,
 } from "./sync-live-reserves-run-state";
@@ -59,8 +61,17 @@ export interface FinalizeReserveSyncRunArgs {
   cursorTailError: string | null;
   runBudgetTruncationCount: number;
   loadedCursorState: LoadedLiveReserveCursorState | null;
+  manageGlobalCursor: boolean;
+  checkpointOwned: boolean;
+  recoveryCursorOwner: LiveReserveGlobalCursorOwner | null;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
   budgetConfig: LiveReserveSyncBudgetConfig;
+  setupPhaseMs?: number;
+  queuePhaseMs?: number;
+  cohortItemsDoneBeforeRun?: number;
+  attemptedCoins?: number;
+  adapterPhaseMs?: number;
+  d1PhaseMs?: number;
 }
 
 interface LiveReserveFinalizationWarning {
@@ -194,18 +205,52 @@ async function recoverNoCandidateLiveReserveBreakers(
   }
 }
 
-async function persistCursorStateForRun(args: FinalizeReserveSyncRunArgs): Promise<{
+async function persistCursorStateForRun(
+  args: FinalizeReserveSyncRunArgs,
+  runStatus: CronResult["status"],
+): Promise<{
   cursorPersistFailed: boolean;
   cursorPersistError: string | null;
+  cursorRetiredByRecovery: boolean;
+  cursorPreservedAfterError: boolean;
 }> {
   try {
+    if (runStatus === "error") {
+      return {
+        cursorPersistFailed: false,
+        cursorPersistError: null,
+        cursorRetiredByRecovery: false,
+        cursorPreservedAfterError: true,
+      };
+    }
+    if (!args.manageGlobalCursor) {
+      const cursorRetiredByRecovery =
+        args.deferredCoins === 0
+        && args.recoveryCursorOwner != null
+        && await retireRecoveryOwnedGlobalCursor(
+          args.db,
+          args.recoveryCursorOwner,
+          args.signal,
+        );
+      return {
+        cursorPersistFailed: false,
+        cursorPersistError: null,
+        cursorRetiredByRecovery,
+        cursorPreservedAfterError: false,
+      };
+    }
     await clearCursorStateIfComplete(
       args.db,
       args.deferredCoins,
       args.nextCursorStablecoinId,
       args.signal,
     );
-    return { cursorPersistFailed: false, cursorPersistError: null };
+    return {
+      cursorPersistFailed: false,
+      cursorPersistError: null,
+      cursorRetiredByRecovery: false,
+      cursorPreservedAfterError: false,
+    };
   } catch (error) {
     const cursorPersistError = toErrorMessage(error);
     await logCronEvent(args.db, {
@@ -213,7 +258,9 @@ async function persistCursorStateForRun(args: FinalizeReserveSyncRunArgs): Promi
       eventType: "live-reserve-cursor-finalize-failed",
       severity: "warning",
       message:
-        args.deferredCoins > 0
+        !args.manageGlobalCursor
+          ? "Recovery could not compare-and-delete its source reserve cursor; a later normal run will retain or drain it."
+          : args.deferredCoins > 0
           ? "Live reserve cursor persistence failed; the next run may restart from the previous cursor."
           : "Live reserve cursor cleanup failed; status may show the previous deferred tail until cleanup succeeds.",
       metadata: {
@@ -222,7 +269,12 @@ async function persistCursorStateForRun(args: FinalizeReserveSyncRunArgs): Promi
         error: cursorPersistError,
       },
     });
-    return { cursorPersistFailed: true, cursorPersistError };
+    return {
+      cursorPersistFailed: true,
+      cursorPersistError,
+      cursorRetiredByRecovery: false,
+      cursorPreservedAfterError: false,
+    };
   }
 }
 
@@ -268,7 +320,12 @@ async function recordFinalizationWarning(
   return { eventType, message, error: errorMessage };
 }
 
-function resolveRunStatus(args: FinalizeReserveSyncRunArgs): CronResult["status"] {
+export function resolveReserveSyncRunStatus(
+  args: Pick<
+    FinalizeReserveSyncRunArgs,
+    "synced" | "failed" | "skipped" | "deferredSkipped" | "circuitSkipped" | "deferredCoins" | "total"
+  >,
+): CronResult["status"] {
   if (args.synced === 0 && (args.failed > 0 || args.skipped > 0)) {
     // A run that synced nothing because the circuit breaker legitimately held
     // every candidate (no genuine failures, no budget-deferred tail) is healthy
@@ -281,11 +338,14 @@ function resolveRunStatus(args: FinalizeReserveSyncRunArgs): CronResult["status"
     }
     return "error";
   }
+  if (args.deferredCoins > 0) return "degraded";
   return (args.failed + args.skipped) > Math.ceil(args.total * 0.1) ? "degraded" : "ok";
 }
 
 export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): Promise<CronResult> {
+  const finalizationStartedMs = Date.now();
   const finalizationBudget = resolveFinalizationBudget(args);
+  const runStatus = resolveReserveSyncRunStatus(args);
 
   await reportCronProgress(args.reportProgress, {
     stage: "finalizing",
@@ -300,7 +360,12 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
   });
 
   throwIfAborted(args.signal);
-  const { cursorPersistFailed, cursorPersistError } = await persistCursorStateForRun(args);
+  const {
+    cursorPersistFailed,
+    cursorPersistError,
+    cursorRetiredByRecovery,
+    cursorPreservedAfterError,
+  } = await persistCursorStateForRun(args, runStatus);
 
   throwIfAborted(args.signal);
   await recordBreakerOutcomesForRun(args, finalizationBudget);
@@ -380,7 +445,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
 
   return {
     itemCount: args.synced,
-    status: resolveRunStatus(args),
+    status: runStatus,
     metadata: JSON.stringify({
       structureVersion: 2,
       synced: args.synced,
@@ -402,12 +467,25 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       loadedCursorTailState: args.loadedCursorState?.tailState ?? null,
       loadedCursorDeferredAt: args.loadedCursorState?.deferredAt ?? null,
       loadedCursorTruncationCount: args.loadedCursorState?.runBudgetTruncationCount ?? 0,
+      cursorOwnership: args.manageGlobalCursor ? "global" : "checkpoint",
       budgetMs: args.budgetConfig.runBudgetMs,
       adapterTimeoutMs: args.budgetConfig.adapterTimeoutMs,
       d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
       finalizationMarginMs: args.budgetConfig.finalizationMarginMs,
       finalizationDeadlineMs: finalizationBudget.deadlineMs,
       finalizationRemainingMs: finalizationBudget.remainingMs,
+      phaseTimingsMs: {
+        setup: args.setupPhaseMs ?? 0,
+        queue: args.queuePhaseMs ?? 0,
+        adapter: args.adapterPhaseMs ?? 0,
+        d1CoinPersistence: args.d1PhaseMs ?? 0,
+        finalization: Date.now() - finalizationStartedMs,
+      },
+      attemptedCoins: args.attemptedCoins ?? args.synced + args.failed + args.circuitSkipped,
+      cohortItemsDoneBeforeRun: args.cohortItemsDoneBeforeRun ?? 0,
+      cohortItemsDoneAfterRun:
+        (args.cohortItemsDoneBeforeRun ?? 0)
+        + (args.attemptedCoins ?? args.synced + args.failed + args.circuitSkipped),
       finalizationTailBudgetExhausted:
         finalizationBudget.breakerOutcomeBudgetExhausted
         || finalizationBudget.artifactCleanupSkipped
@@ -421,6 +499,11 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       artifactCleanupSkipped: finalizationBudget.artifactCleanupSkipped,
       historyPruneSkipped: finalizationBudget.historyPruneSkipped,
       cursorPersistFailed,
+      cursorRetiredByRecovery,
+      cursorPreservedAfterError,
+      ...(args.checkpointOwned
+        ? { childDisposition: args.deferredCoins > 0 ? "not_started" : "completed" }
+        : {}),
       artifactCleanup,
       artifactCleanupWarningCount: artifactCleanupWarnings.length,
       ...(cursorPersistError ? { cursorPersistError } : {}),

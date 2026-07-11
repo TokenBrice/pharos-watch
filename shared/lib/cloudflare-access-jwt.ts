@@ -15,6 +15,11 @@ export interface JwtVerifyOptions {
   expectedSubject?: "user";
 }
 
+export interface VerifiedAccessUserIdentity {
+  email: string;
+  subject: string;
+}
+
 interface JwksKey {
   kid: string;
   kty: string;
@@ -68,10 +73,7 @@ function decodeJsonPart<T>(part: string): T | null {
   }
 }
 
-async function fetchJwks(
-  teamDomain: string,
-  options: { forceRefresh?: boolean } = {},
-): Promise<JwksResponse | null> {
+async function fetchJwks(teamDomain: string, options: { forceRefresh?: boolean } = {}): Promise<JwksResponse | null> {
   const now = Date.now();
   const cached = jwksCache.get(teamDomain);
   if (!options.forceRefresh && cached && now < cached.expiresAt) {
@@ -141,9 +143,7 @@ async function importPublicKey(jwk: JwksKey): Promise<CryptoKey | null> {
  */
 export function normalizeTeamDomain(input: string): string {
   const trimmed = input.trim();
-  const match = trimmed.match(
-    /^https?:\/\/([^.]+)\.cloudflareaccess\.com/,
-  );
+  const match = trimmed.match(/^https?:\/\/([^.]+)\.cloudflareaccess\.com/);
   return match ? match[1] : trimmed;
 }
 
@@ -173,12 +173,10 @@ export async function verifyAccessJwt(options: JwtVerifyOptions): Promise<boolea
   if (options.expectedType && payload.type !== options.expectedType) return false;
   if (
     options.expectedSubject === "user" &&
-    (
-      typeof payload.email !== "string" ||
+    (typeof payload.email !== "string" ||
       payload.email.trim().length === 0 ||
       typeof payload.sub !== "string" ||
-      payload.sub.trim().length === 0
-    )
+      payload.sub.trim().length === 0)
   ) {
     return false;
   }
@@ -217,4 +215,33 @@ export async function verifyAccessJwt(options: JwtVerifyOptions): Promise<boolea
   } catch {
     return false;
   }
+}
+
+function normalizeVerifiedEmail(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const email = value.trim().toLowerCase();
+  if (email.length === 0 || email.length > 254 || /[\s\u0000-\u001f\u007f]/u.test(email)) return null;
+  const separator = email.indexOf("@");
+  return separator > 0 && separator < email.length - 1 ? email : null;
+}
+
+function normalizeVerifiedSubject(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const subject = value.trim();
+  if (subject.length === 0 || subject.length > 512 || /[\u0000-\u001f\u007f]/u.test(subject)) return null;
+  return subject;
+}
+
+export async function verifyAccessJwtUserIdentity(
+  options: Omit<JwtVerifyOptions, "expectedSubject">,
+): Promise<VerifiedAccessUserIdentity | null> {
+  const verified = await verifyAccessJwt({ ...options, expectedSubject: "user" });
+  if (!verified) return null;
+
+  const parts = options.token.split(".");
+  if (parts.length !== 3) return null;
+  const payload = decodeJsonPart<JwtPayload>(parts[1]);
+  const email = normalizeVerifiedEmail(payload?.email);
+  const subject = normalizeVerifiedSubject(payload?.sub);
+  return email && subject ? { email, subject } : null;
 }

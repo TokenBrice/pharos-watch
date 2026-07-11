@@ -15,9 +15,7 @@ const FALLBACK_REFETCH_INTERVAL = 2 * 60 * 1000;
 export type StablecoinReserveResult = Omit<StablecoinReservesResponse, "stablecoinId">;
 
 function hasActiveSyncIssue(data: StablecoinReservesResponse | null | undefined): boolean {
-  return data?.mode === "live" && !!data.sync && (
-    data.sync?.status !== "ok" || data.sync?.uncertainWrite === true
-  );
+  return data?.mode === "live" && !!data.sync && (data.sync?.status !== "ok" || data.sync?.uncertainWrite === true);
 }
 
 function reserveQueryStaleTime(query: { state: { data?: StablecoinReservesResponse | null } }): number {
@@ -37,6 +35,8 @@ export interface StablecoinReservesQueryState {
   error: unknown | null;
   refetch: QueryRefetchFn;
   isFetching: boolean;
+  isLoading: boolean;
+  dataUpdatedAt: number;
 }
 
 export function toReserveResult(response: StablecoinReservesResponse): StablecoinReserveResult {
@@ -48,11 +48,8 @@ export function toReserveResult(response: StablecoinReservesResponse): Stablecoi
  * Fetches resolved reserve presentation data for a stablecoin from the API.
  * Returns `reserveResult = null` only when the coin is not live-enabled or unknown to the worker.
  */
-export function useStablecoinReserves(
-  stablecoinId: string,
-  enabled: boolean,
-): StablecoinReservesQueryState {
-  const { data, error, refetch, isFetching } = useQuery<StablecoinReservesResponse | null>({
+export function useStablecoinReserves(stablecoinId: string, enabled: boolean): StablecoinReservesQueryState {
+  const { data, error, refetch, isFetching, isLoading, dataUpdatedAt } = useQuery<StablecoinReservesResponse | null>({
     queryKey: ["stablecoin-reserves", stablecoinId],
     queryFn: (context: QueryFunctionContext) => fetchStablecoinReserves(stablecoinId, { signal: context.signal }),
     enabled,
@@ -66,5 +63,7 @@ export function useStablecoinReserves(
     error: error ?? null,
     refetch,
     isFetching,
+    isLoading,
+    dataUpdatedAt,
   };
 }

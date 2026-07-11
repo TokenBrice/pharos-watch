@@ -2,6 +2,7 @@ import { BOE_SONIA_CSV_BASE_URL, USER_AGENT } from "../../lib/constants";
 import { DAY_MS } from "@shared/lib/time-constants";
 import {
   addDays,
+  type BenchmarkResponseDiagnostic,
   fetchAndParseBenchmark,
   isValidBenchmarkRate,
   parseEnglishDate,
@@ -104,12 +105,16 @@ function buildBoeSoniaCompoundedIndexCsvUrl(now = new Date()): string {
   );
 }
 
-export async function tryBoeSoniaCompoundedIndex(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+export async function tryBoeSoniaCompoundedIndex(
+  signal?: AbortSignal,
+  onDiagnostic?: (diagnostic: BenchmarkResponseDiagnostic) => void,
+): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url: buildBoeSoniaCompoundedIndexCsvUrl(),
     headers: { "User-Agent": USER_AGENT },
     parse: parseBoeSoniaCompoundedIndexCsv,
     warnLabel: "BoE SONIA Compounded Index CSV",
     signal,
+    onDiagnostic,
   });
 }

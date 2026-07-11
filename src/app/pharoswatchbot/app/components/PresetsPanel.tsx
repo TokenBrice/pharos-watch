@@ -29,6 +29,8 @@ function FollowedPresetCard({ preset, canMutate, isMutating, pendingOperation, o
       depegStepBps: preset.depegStepBps,
     });
   };
+  const enabledAlertTypeCount = PRESET_ALERT_TYPES.filter((type) => preset.alertTypes[type]).length;
+  const finalFamilyHelpId = `preset-${preset.id}-final-family-help`;
 
   return (
     <article className="rounded-2xl border border-border/70 bg-card/90 p-4">
@@ -47,21 +49,34 @@ function FollowedPresetCard({ preset, canMutate, isMutating, pendingOperation, o
           Unfollow
         </MiniButton>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={`${preset.label} alert types`}>
-        {PRESET_ALERT_TYPES.map((type) => (
-          <TogglePill
-            key={type}
-            label={ALERT_LABELS[type]}
-            enabled={Boolean(preset.alertTypes[type])}
-            disabled={!canMutate || isMutating}
-            loading={pendingOperation?.kind === "follow-preset" && pendingOperation.presetId === preset.id}
-            ariaLabel={`${preset.label} ${ALERT_LABELS[type]}`}
-            onToggle={() => {
-              updateAlertTypes({ ...preset.alertTypes, [type]: !preset.alertTypes[type] });
-            }}
-          />
-        ))}
+      <div
+        className="mt-3 flex flex-wrap gap-2"
+        role="group"
+        aria-label={`${preset.label} alert types`}
+        aria-describedby={enabledAlertTypeCount === 1 ? finalFamilyHelpId : undefined}
+      >
+        {PRESET_ALERT_TYPES.map((type) => {
+          const isFinalEnabledFamily = enabledAlertTypeCount === 1 && Boolean(preset.alertTypes[type]);
+          return (
+            <TogglePill
+              key={type}
+              label={ALERT_LABELS[type]}
+              enabled={Boolean(preset.alertTypes[type])}
+              disabled={!canMutate || isMutating || isFinalEnabledFamily}
+              loading={pendingOperation?.kind === "follow-preset" && pendingOperation.presetId === preset.id}
+              ariaLabel={`${preset.label} ${ALERT_LABELS[type]}`}
+              onToggle={() => {
+                updateAlertTypes({ ...preset.alertTypes, [type]: !preset.alertTypes[type] });
+              }}
+            />
+          );
+        })}
       </div>
+      {enabledAlertTypeCount === 1 ? (
+        <p id={finalFamilyHelpId} className="mt-2 text-xs text-muted-foreground">
+          Keep at least one alert family enabled. Use Unfollow to stop this preset.
+        </p>
+      ) : null}
     </article>
   );
 }

@@ -22,7 +22,7 @@ npm run test:merge-gate
 npm run test:merge-gate:discover
 ```
 
-Use `package.json` for the full live npm-script list. Use `scripts/lib/validate-contract.mjs` for `validate:prebuild` guardrail membership, `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. `npm run typecheck:tests` runs the dedicated test-file TypeScript project and ratchets against `scripts/lib/test-typecheck-baseline.json`; use `npm run typecheck:tests:update-baseline` only after intentionally reducing or accepting the visible test type debt. Do not duplicate those inventories here.
+Use `package.json` for the full live npm-script list. Use `scripts/lib/validate-contract.mjs` for `validate:prebuild` guardrail membership, `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, `scripts/lib/cli-argv-policy.mjs` for the exact strict/exempt `process.argv` inventory, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. `npm run typecheck:tests` runs the dedicated test-file TypeScript project and ratchets against `scripts/lib/test-typecheck-baseline.json`; use `npm run typecheck:tests:update-baseline` only after intentionally reducing or accepting the visible test type debt. Do not duplicate those inventories here.
 
 Common targeted runners:
 
@@ -62,13 +62,14 @@ CI shape:
 4. `npm run test:merge-gate` mirrors the deploy-impact validate contract locally and skips cleanly for non-deploy-impacting diffs. Use `MERGE_GATE_DRY_RUN=1` to print the plan without requiring a fresh install.
 5. `npm run test:merge-gate:discover` mirrors the same local command plan for large failure-discovery passes. It keeps prebuild and independent postbuild lanes running after failures, skips smoke by default, and is diagnostic only; the final release check remains `npm run test:merge-gate`.
 
-Telegram load protection has two local shapes: `npm run check:telegram-load` is the blocking SLO/CPU guard, while direct `npx tsx scripts/ci/check-telegram-load.ts` is the advisory query-plan report. Both shapes print the same per-invocation CPU model used by the budget-before-format dispatcher path. The merge gate adds the advisory report for Telegram dispatch, pending-queue, admin broadcast, Telegram constants, load-guard workflow/script, and Worker migration changes, and full deploy fallback includes it unconditionally.
+Telegram load protection has two local shapes: `npm run check:telegram-load` is the blocking SLO/CPU guard, while direct `npx tsx scripts/ci/check-telegram-load.ts` is the advisory query-plan report. Both consume runtime delivery limits and reviewed model calibration from `shared/lib/telegram-delivery-policy.ts`. The dependency groups in `scripts/lib/telegram-load-guard.mjs` select the local merge-gate advisory and are parity-tested against `.github/workflows/telegram-load.yml`; sender, preset, formatter/chunker, scheduled-lane, durable schema, policy, migration, dispatch/pending, and admin-broadcast changes are covered. Full deploy fallback includes the advisory unconditionally.
 
 `npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on `coverage:critical` plus the `test:noncritical` complement.
 
 Selected specialized checks:
 
 - Cron schedule/connection changes: `npm run check:cron-sync`, `npm run check:cron-connections`, and `npm run validate:worker-scheduled-smoke`.
+- Worker deployment configuration: `npm run check:worker-config` verifies that production custom domains remain root-owned and asset rules fall through.
 - Worker fetch-body timeout guardrail: `npm run check:fetch-body-timeouts` blocks new raw `fetchWithRetry()` response-body reads unless they are explicitly tracked as migration debt.
 - Provider fetch resilience changes: `npm run check:provider-resilience` verifies the external-provider registry, required timeout/body/circuit/test markers, and raw Worker `fetch(...)` coverage.
 - Generated public artifacts: `npm run check:generated-artifacts`, with individual checks in `scripts/lib/automation-registry.mjs`.
@@ -318,7 +319,7 @@ Keep this section focused on how the suite is organized and which surfaces are g
 Critical gate coverage is intentionally smaller than the full suite:
 
 - `npm run test:invariants` covers numerical/schema invariants and critical cron-cache validation.
-- `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mjs` with line-coverage ratchets owned by `scripts/lib/critical-coverage.mjs`.
+- `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mjs` with line-coverage ratchets owned by `scripts/lib/critical-coverage.mjs`. Telegram enrollment includes authoritative target planning and legacy recovery, pending lifecycle and outage control, webhook effect fencing and watchlist import, Mini App authentication plus authenticated state/theme contracts, and aggregate-only adoption analytics. Real-SQL migration, crash-resume, rollback, and external-effect failure suites are preferred wherever the runtime owns durable state; authenticated axe coverage remains owned by the Playwright accessibility gate.
 - `npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on `coverage:critical` plus the two-shard `test:noncritical` complement.
 
 Lane ownership is script-owned, not prose-owned. Put critical source coverage membership in `scripts/lib/critical-coverage.mjs`; keep `test:noncritical` as the complement generated from that critical coverage test list; and keep targeted contract-runner membership in `scripts/lib/critical-test-files.mjs`. Do not duplicate either file list in this document; use the scripts when you need the live membership.
@@ -355,6 +356,7 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 
 ### Registry Guardrails
 
+- `npm run check:cli-args-policy` scans every committed JavaScript/TypeScript source file for `process.argv`, requires exact enrollment in `scripts/lib/cli-argv-policy.mjs`, and verifies that strict operator/mutating entrypoints reach a parser that imports and calls `scripts/lib/cli-args.mjs`. Read-only, build/local-artifact, and test/dev exemptions are exact path records with audited reasons; new unclassified scripts fail rather than increasing a baseline.
 - Six content-coverage guardrails run during the deploy-impacting prebuild pass alongside the code checks: `check:glossary-coverage`, `check:one-liner-coverage`, `check:attestor-tier-coverage`, and `check:oracle-risk-coverage:enforce` run on every pass, while `check:mechanism-archetype-coverage` and `check:archetype-explainer-coverage` are Pages-impact checks that are skipped on worker-only surfaces. They gate editorial/data completeness (glossary wiring, coin one-liners, mechanism archetypes and their explainers, attestor tiers, oracle-risk coverage) rather than code correctness; each is a sub-second registry scan.
 - `npm run check:redemption-backstops` validates the redemption-backstop registry split across `shared/lib/redemption-backstop-configs/*`, catches duplicate IDs across modules, enforces allowed route-family membership per module, and keeps the headline counts in `docs/redemption-backstops.md` synced to the real registry.
 - `npm run check:redemption-coverage-audit` validates the Redemption Backstop backlog audit against `scripts/lib/redemption-coverage-audit-baseline.json`, so default-inferred active gaps, total active gaps, and heuristic route counts cannot grow while the backlog is being researched.

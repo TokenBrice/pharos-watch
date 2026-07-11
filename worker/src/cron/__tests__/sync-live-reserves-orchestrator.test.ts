@@ -5,6 +5,7 @@ import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-he
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
 import {
   CONFIGURED_COINS,
+  LIVE_RESERVE_QUEUE_HASH,
   SYNC_ORDERED_CONFIGURED_COINS,
   breakerKeyForConfig,
   orderConfiguredCoinsForSync,
@@ -60,7 +61,13 @@ interface RunMetadata {
   artifactCleanupSkipped?: boolean;
   historyPruneSkipped?: boolean;
   breakerKeys?: string[];
+  cursorOwnership?: "global" | "checkpoint";
+  childDisposition?: "not_started" | "completed";
+  cursorRetiredByRecovery?: boolean;
+  cursorPreservedAfterError?: boolean;
 }
+
+type RecoveryCursorTestPhase = "producer" | "resume-producer" | "recovery" | "next-producer";
 
 function mockAdapterRegistry(
   fetchImpl: (
@@ -115,6 +122,69 @@ function cursorTable(cursorValue: string): MockTableConfig {
   };
 }
 
+function checkpointTable(input: {
+  attemptNo: number;
+  invocationId: string;
+  nextItemKey: string | null;
+  itemsDone: number;
+  state?: "running" | "recovering";
+  sourceAttemptNo?: number | null;
+  slotStartedAt?: number;
+}): MockTableConfig {
+  const slotStartedAt = input.slotStartedAt ?? 1_000;
+  return {
+    match: "FROM worker_scheduled_checkpoints",
+    rows: [{
+      schedule_key: "fourHourlyReserveSync",
+      slot_started_at: slotStartedAt,
+      job: "sync-live-reserves",
+      attempt_no: input.attemptNo,
+      execution_generation: input.attemptNo,
+      invocation_id: input.invocationId,
+      worker_version: "version-a",
+      queue_hash: LIVE_RESERVE_QUEUE_HASH,
+      state: input.state ?? "recovering",
+      next_item_key: input.nextItemKey,
+      current_item_key: null,
+      current_domain_attempt_id: null,
+      items_done: input.itemsDone,
+      items_total: CONFIGURED_COIN_COUNT,
+      child_dispositions_json: JSON.stringify({ "sync-live-reserves": "not_started" }),
+      recovery_owner: input.invocationId,
+      recovery_lease_until: 2_000,
+      source_attempt_no: input.sourceAttemptNo === undefined
+        ? input.attemptNo - 1
+        : input.sourceAttemptNo,
+      error: null,
+      created_at: slotStartedAt,
+      updated_at: slotStartedAt + 100,
+      completed_at: null,
+    }],
+  };
+}
+
+function checkpointIdentity(attemptNo: number, invocationId: string, slotStartedAt = 1_000) {
+  return {
+    scheduleKey: "fourHourlyReserveSync",
+    slotStartedAt,
+    job: "sync-live-reserves",
+    attemptNo,
+    executionGeneration: attemptNo,
+    invocationId,
+  };
+}
+
+function getGlobalCursorOperations(db: MockD1Database) {
+  return db.getHistory().filter((entry) => (
+    entry.binds[0] === CURSOR_CACHE_KEY
+    && (
+      entry.sql.includes("SELECT value, updated_at FROM cache")
+      || entry.sql.includes("INSERT OR REPLACE INTO cache")
+      || entry.sql.includes("DELETE FROM cache")
+    )
+  ));
+}
+
 /** Makes the Nth read of the run-cursor cache row throw, leaving other cache reads intact. */
 function failNthCursorRead(db: MockD1Database, failOnRead: number): MockD1Database {
   const originalPrepare = db.prepare.bind(db);
@@ -156,6 +226,76 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("classifies any productive deferred tail as degraded even below the ratio threshold", async () => {
+    const { resolveReserveSyncRunStatus } = await import("../sync-live-reserves-finalize");
+
+    expect(resolveReserveSyncRunStatus({
+      synced: 99,
+      failed: 0,
+      skipped: 1,
+      deferredSkipped: 1,
+      circuitSkipped: 0,
+      deferredCoins: 1,
+      total: 100,
+    })).toBe("degraded");
+  });
+
+  it("preserves an adopted global cursor when the entire suffix errors", async () => {
+    mockAdapterRegistry(async () => {
+      throw new Error("adapter unavailable");
+    });
+    const cursorCoin = SYNC_ORDERED_CONFIGURED_COINS[SYNC_ORDERED_CONFIGURED_COINS.length - 1]!;
+    const cursorValue = JSON.stringify({
+      nextStablecoinId: cursorCoin.id,
+      deferredCount: 1,
+      deferredAt: 1_700_000_000,
+      reason: "run-budget-exhausted",
+      tailState: "complete",
+      cursorRecordedAt: 1_700_000_000,
+      runBudgetTruncationCount: 1,
+      cursorOwner: {
+        scheduleKey: "fourHourlyReserveSync",
+        slotStartedAt: 1_000,
+        attemptNo: 1,
+        executionGeneration: 1,
+        invocationId: "producer-owner-1",
+        queueHash: LIVE_RESERVE_QUEUE_HASH,
+      },
+    });
+    const identity = checkpointIdentity(1, "producer-owner-2", 2_000);
+    const db = mockD1([
+      cursorTable(cursorValue),
+      checkpointTable({
+        attemptNo: 1,
+        invocationId: identity.invocationId,
+        nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id,
+        itemsDone: 0,
+        state: "running",
+        sourceAttemptNo: null,
+        slotStartedAt: 2_000,
+      }),
+    ]);
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+
+    const result = await syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      TIGHT_BUDGET,
+      identity,
+    );
+
+    expect(result.status).toBe("error");
+    expect(parseMetadata(result.metadata)).toMatchObject({
+      cursorOwnership: "global",
+      cursorPreservedAfterError: true,
+    });
+    expect(getGlobalCursorOperations(db).some((entry) => (
+      entry.sql.includes("DELETE FROM cache WHERE key")
+    ))).toBe(false);
   });
 
   it("truncates the queue tail on budget exhaustion, recording skipped rows and a resume cursor", async () => {
@@ -309,6 +449,261 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       && entry.binds[0] === CURSOR_CACHE_KEY
     ));
     expect(cursorDelete).toBeDefined();
+  });
+
+  it("keeps truncated recovery progress checkpoint-owned and resumes its suffix without touching a newer global cursor", async () => {
+    let activeAttempt = 2;
+    let firstAttemptFetches = 0;
+    const visitedByAttempt = new Map<number, string[]>();
+    mockAdapterRegistry(async (coin) => {
+      const visited = visitedByAttempt.get(activeAttempt) ?? [];
+      visited.push(coin?.id ?? "unknown");
+      visitedByAttempt.set(activeAttempt, visited);
+      if (activeAttempt === 2) {
+        firstAttemptFetches += 1;
+        if (firstAttemptFetches === 1) nowMs += TIGHT_BUDGET.runBudgetMs;
+      }
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+
+    const globalCursorCoin = SYNC_ORDERED_CONFIGURED_COINS[SYNC_ORDERED_CONFIGURED_COINS.length - 1]!;
+    const newerGlobalCursor = JSON.stringify({
+      nextStablecoinId: globalCursorCoin.id,
+      deferredCount: 1,
+      deferredAt: 1_800_000_000,
+      reason: "run-budget-exhausted",
+      tailState: "complete",
+      cursorRecordedAt: 1_800_000_000,
+      runBudgetTruncationCount: 7,
+      cursorOwner: {
+        scheduleKey: "fourHourlyReserveSync",
+        slotStartedAt: 2_000,
+        attemptNo: 1,
+        executionGeneration: 1,
+        invocationId: "newer-producer-owner",
+        queueHash: LIVE_RESERVE_QUEUE_HASH,
+      },
+    });
+    const firstIdentity = checkpointIdentity(2, "recovery-owner-2");
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const firstDb = mockD1([
+      cursorTable(newerGlobalCursor),
+      checkpointTable({
+        attemptNo: 2,
+        invocationId: firstIdentity.invocationId,
+        nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id,
+        itemsDone: 0,
+      }),
+    ]);
+
+    const firstResult = await syncLiveReserves(
+      firstDb,
+      new AbortController().signal,
+      {},
+      undefined,
+      TIGHT_BUDGET,
+      firstIdentity,
+    );
+    const firstMetadata = parseMetadata(firstResult.metadata);
+    const firstAdvances = firstDb.getHistory().filter((entry) => (
+      entry.sql.includes("UPDATE worker_scheduled_checkpoints")
+      && entry.sql.includes("items_done = ?")
+    ));
+    const partialAdvance = firstAdvances[firstAdvances.length - 1];
+    const suffixId = partialAdvance?.binds[0];
+    const itemsDone = partialAdvance?.binds[1];
+
+    expect(firstResult.status).toBe("degraded");
+    expect(firstMetadata).toMatchObject({
+      runBudgetTruncated: true,
+      cursorOwnership: "checkpoint",
+      runBudgetTruncationCount: 0,
+      childDisposition: "not_started",
+    });
+    expect(typeof suffixId).toBe("string");
+    expect(itemsDone).toBeGreaterThan(0);
+    expect(itemsDone).toBeLessThan(CONFIGURED_COIN_COUNT);
+    expect(getGlobalCursorOperations(firstDb)).toEqual([]);
+
+    activeAttempt = 3;
+    nowMs = 1_700_100_000_000;
+    const secondIdentity = checkpointIdentity(3, "recovery-owner-3");
+    const secondDb = mockD1([
+      cursorTable(newerGlobalCursor),
+      checkpointTable({
+        attemptNo: 3,
+        invocationId: secondIdentity.invocationId,
+        nextItemKey: suffixId as string,
+        itemsDone: itemsDone as number,
+      }),
+    ]);
+
+    const secondResult = await syncLiveReserves(
+      secondDb,
+      new AbortController().signal,
+      {},
+      undefined,
+      TIGHT_BUDGET,
+      secondIdentity,
+    );
+    const secondMetadata = parseMetadata(secondResult.metadata);
+    const secondAdvances = secondDb.getHistory().filter((entry) => (
+      entry.sql.includes("UPDATE worker_scheduled_checkpoints")
+      && entry.sql.includes("items_done = ?")
+    ));
+
+    expect(visitedByAttempt.get(3)?.[0]).toBe(suffixId);
+    expect(secondMetadata).toMatchObject({
+      runBudgetTruncated: false,
+      cursorOwnership: "checkpoint",
+      childDisposition: "completed",
+      cursorRetiredByRecovery: false,
+    });
+    expect(secondAdvances[secondAdvances.length - 1]?.binds.slice(0, 2)).toEqual([
+      null,
+      CONFIGURED_COIN_COUNT,
+    ]);
+    const secondCursorOperations = getGlobalCursorOperations(secondDb);
+    expect(secondCursorOperations).toHaveLength(1);
+    expect(secondCursorOperations[0]?.sql).toContain("SELECT value, updated_at FROM cache");
+  });
+
+  it("retires an exact producer cursor after recovery so the next normal checkpoint starts at the head", async () => {
+    let phase: RecoveryCursorTestPhase = "producer";
+    let fetches = 0;
+    const visitedByPhase = new Map<RecoveryCursorTestPhase, string[]>();
+    mockAdapterRegistry(async (coin) => {
+      const visited = visitedByPhase.get(phase) ?? [];
+      visited.push(coin?.id ?? "unknown");
+      visitedByPhase.set(phase, visited);
+      fetches += 1;
+      if (phase === "producer" && fetches === 1) nowMs += TIGHT_BUDGET.runBudgetMs;
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+    const identity = checkpointIdentity(1, "producer-owner-1");
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1([checkpointTable({
+      attemptNo: 1,
+      invocationId: identity.invocationId,
+      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id,
+      itemsDone: 0,
+      state: "running",
+      sourceAttemptNo: null,
+    })]);
+
+    const result = await syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      TIGHT_BUDGET,
+      identity,
+    );
+    const metadata = parseMetadata(result.metadata);
+
+    expect(metadata).toMatchObject({
+      runBudgetTruncated: true,
+      cursorOwnership: "global",
+      childDisposition: "not_started",
+    });
+    const cursorWrites = getCursorWrites(db);
+    expect(cursorWrites[cursorWrites.length - 1]).toMatchObject({
+      cursorOwner: {
+        scheduleKey: "fourHourlyReserveSync",
+        slotStartedAt: 1_000,
+        queueHash: LIVE_RESERVE_QUEUE_HASH,
+      },
+    });
+    const producerAdvances = db.getHistory().filter((entry) => (
+      entry.sql.includes("UPDATE worker_scheduled_checkpoints")
+      && entry.sql.includes("items_done = ?")
+    ));
+    const producerAdvance = producerAdvances[producerAdvances.length - 1];
+    const suffixId = producerAdvance?.binds[0] as string;
+    const itemsDone = producerAdvance?.binds[1] as number;
+
+    phase = "resume-producer";
+    nowMs = 1_700_050_000_000;
+    const resumeIdentity = checkpointIdentity(1, "producer-owner-resume", 1_500);
+    const resumeDb = mockD1([
+      cursorTable(JSON.stringify(cursorWrites[cursorWrites.length - 1])),
+      checkpointTable({
+        attemptNo: 1,
+        invocationId: resumeIdentity.invocationId,
+        nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id,
+        itemsDone: 0,
+        state: "running",
+        sourceAttemptNo: null,
+        slotStartedAt: 1_500,
+      }),
+    ]);
+    await syncLiveReserves(
+      resumeDb,
+      new AbortController().signal,
+      {},
+      undefined,
+      TIGHT_BUDGET,
+      resumeIdentity,
+    );
+    expect(visitedByPhase.get("resume-producer")?.[0]).toBe(suffixId);
+    const adoptedFrontier = resumeDb.getHistory().find((entry) => (
+      entry.sql.includes("UPDATE worker_scheduled_checkpoints")
+      && entry.binds[0] === suffixId
+      && entry.binds[1] === itemsDone
+    ));
+    expect(adoptedFrontier).toBeDefined();
+
+    phase = "recovery";
+    nowMs = 1_700_100_000_000;
+    const recoveryIdentity = checkpointIdentity(2, "recovery-owner-2");
+    const recoveryDb = mockD1([
+      cursorTable(JSON.stringify(cursorWrites[cursorWrites.length - 1])),
+      checkpointTable({
+        attemptNo: 2,
+        invocationId: recoveryIdentity.invocationId,
+        nextItemKey: suffixId,
+        itemsDone,
+      }),
+    ]);
+    const recoveryResult = await syncLiveReserves(
+      recoveryDb,
+      new AbortController().signal,
+      {},
+      undefined,
+      TIGHT_BUDGET,
+      recoveryIdentity,
+    );
+    expect(parseMetadata(recoveryResult.metadata)).toMatchObject({
+      cursorOwnership: "checkpoint",
+      cursorRetiredByRecovery: true,
+      childDisposition: "completed",
+    });
+    expect(getGlobalCursorOperations(recoveryDb).some((entry) => (
+      entry.sql.includes("DELETE FROM cache WHERE key = ? AND value = ?")
+    ))).toBe(true);
+
+    phase = "next-producer";
+    nowMs = 1_700_200_000_000;
+    const nextIdentity = checkpointIdentity(1, "producer-owner-2", 2_000);
+    const nextDb = mockD1([checkpointTable({
+      attemptNo: 1,
+      invocationId: nextIdentity.invocationId,
+      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id,
+      itemsDone: 0,
+      state: "running",
+      sourceAttemptNo: null,
+      slotStartedAt: 2_000,
+    })]);
+    await syncLiveReserves(
+      nextDb,
+      new AbortController().signal,
+      {},
+      undefined,
+      TIGHT_BUDGET,
+      nextIdentity,
+    );
+    expect(visitedByPhase.get("next-producer")?.[0]).toBe(SYNC_ORDERED_CONFIGURED_COINS[0]!.id);
+    expect(visitedByPhase.get("next-producer")?.[0]).not.toBe(suffixId);
   });
 
 

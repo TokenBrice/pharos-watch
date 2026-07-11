@@ -46,12 +46,14 @@ function getCacheInsert(db: MockD1Database): { sql: string; binds: unknown[] } |
     .find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "stablecoin-charts");
 }
 
-function getLastWriteMarker(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
+function getCadenceCompletion(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
   return db
     .getHistory()
     .find(
       (entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "stablecoin-charts:last-write",
+        entry.sql.includes("UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?")
+        && entry.binds[2] === "stablecoin-charts:cadence"
+        && String(entry.binds[0]).includes('\"state\":\"completed\"'),
     );
 }
 
@@ -109,7 +111,7 @@ describe("syncStablecoinCharts", () => {
     const cached = JSON.parse(String(insert?.binds[1])) as Array<{ totalCirculatingUSD: Record<string, number> }>;
     expect(cached.length).toBeGreaterThan(0);
     expect(cached[0].totalCirculatingUSD.peggedUSD).toBeTypeOf("number");
-    expect(getLastWriteMarker(db as MockD1Database)).toBeDefined();
+    expect(getCadenceCompletion(db as MockD1Database)).toBeDefined();
   });
 
   it("coerces upstream string dates before writing the cached chart payload", async () => {
@@ -312,19 +314,21 @@ describe("syncStablecoinCharts", () => {
 
     const result = await syncStablecoinCharts(db);
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       cacheWriteMode: string;
       casSkipped: boolean;
       lastWriteAdvanced: boolean;
       canonicalReadbackUpdatedAt: number | null;
+      cadence: { completed: boolean; retryable: boolean };
     };
     expect(metadata.cacheWriteMode).toBe("skipped-newer");
     expect(metadata.casSkipped).toBe(true);
     expect(metadata.lastWriteAdvanced).toBe(false);
     expect(metadata.canonicalReadbackUpdatedAt).toBeNull();
-    expect(getLastWriteMarker(db as MockD1Database)).toBeUndefined();
+    expect(metadata.cadence).toMatchObject({ completed: false, retryable: true });
+    expect(getCadenceCompletion(db as MockD1Database)).toBeUndefined();
   });
 
   it("advances the last-write marker after CAS skip only when readback confirms newer canonical chart cache", async () => {
@@ -371,7 +375,7 @@ describe("syncStablecoinCharts", () => {
     };
     expect(metadata.lastWriteAdvanced).toBe(true);
     expect(metadata.canonicalReadbackUpdatedAt).toBe(nowSec + 5);
-    expect(getLastWriteMarker(db as MockD1Database)).toBeDefined();
+    expect(getCadenceCompletion(db as MockD1Database)).toBeDefined();
   });
 
   it("skips FX-based repair when the source freshness is stale even if usable sync is fresh", async () => {

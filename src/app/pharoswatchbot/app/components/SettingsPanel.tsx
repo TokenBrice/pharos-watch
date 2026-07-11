@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { ALERT_LABELS, DEPEG_STEP_OPTIONS } from "../constants";
 import { formatHour, formatQuietHoursRange, formatQuietHoursTimezone } from "../format";
@@ -15,6 +15,18 @@ import { SegmentedControl } from "./SegmentedControl";
 import { TogglePill } from "./TogglePill";
 
 const FALLBACK_TIMEZONES = ["UTC", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Australia/Sydney"] as const;
+const COMMON_TIMEZONES = [
+  "UTC",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Belgrade",
+  "America/New_York",
+  "America/Los_Angeles",
+  "Asia/Dubai",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+] as const;
 const QUIET_HOUR_FIELDS = [
   { kind: "start", id: "mini-quiet-start", label: "Start" },
   { kind: "end", id: "mini-quiet-end", label: "End" },
@@ -26,7 +38,9 @@ function availableTimezones(): readonly string[] {
   if (typeof intl.supportedValuesOf === "function") {
     try {
       const values = intl.supportedValuesOf("timeZone");
-      if (Array.isArray(values) && values.length > 0) return values;
+      if (Array.isArray(values) && values.length > 0) {
+        return values.includes("UTC") ? values : ["UTC", ...values];
+      }
     } catch {
       // fall through to curated list
     }
@@ -139,7 +153,47 @@ function TimezonePicker({ state, canMutate, isMutating, pendingOperation, onMuta
   onMutate: (operation: TelegramMiniAppOperation) => void;
 }) {
   const current = state.subscriber.quietHours.timezone ?? "UTC";
-  const options = useMemo(() => availableTimezones(), []);
+  const allTimezones = useMemo(() => availableTimezones(), []);
+  const allTimezoneSet = useMemo(() => new Set(allTimezones), [allTimezones]);
+  const [detectedTimezone, setDetectedTimezone] = useState<string | null>(null);
+  const [timezoneUi, setTimezoneUi] = useState({
+    confirmed: current,
+    recent: [] as string[],
+    search: current,
+  });
+  if (timezoneUi.confirmed !== current) {
+    setTimezoneUi({
+      confirmed: current,
+      recent: [current, ...timezoneUi.recent.filter((zone) => zone !== current)].slice(0, 3),
+      search: current,
+    });
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    queueMicrotask(() => {
+      if (!cancelled && detected && allTimezoneSet.has(detected)) setDetectedTimezone(detected);
+    });
+    return () => { cancelled = true; };
+  }, [allTimezoneSet]);
+
+  const compactOptions = useMemo(() => {
+    const options: Array<{ zone: string; context: string }> = [];
+    const add = (zone: string | null, context: string) => {
+      if (!zone || (zone !== current && !allTimezoneSet.has(zone)) || options.some((option) => option.zone === zone)) return;
+      options.push({ zone, context });
+    };
+    add(current, "Current");
+    add(detectedTimezone, "Detected");
+    for (const zone of timezoneUi.recent) add(zone, "Recent");
+    for (const zone of COMMON_TIMEZONES) add(zone, "Common");
+    return options;
+  }, [allTimezoneSet, current, detectedTimezone, timezoneUi.recent]);
+
+  const searchedTimezone = timezoneUi.search.trim();
+  const searchIsValid = searchedTimezone === current || allTimezoneSet.has(searchedTimezone);
+  const controlsDisabled = !canMutate || isMutating;
 
   return (
     <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
@@ -155,17 +209,55 @@ function TimezonePicker({ state, canMutate, isMutating, pendingOperation, onMuta
         id="telegram-mini-app-timezone"
         className="pharos-focus-ring mt-3 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
         value={current}
-        disabled={!canMutate || isMutating}
+        disabled={controlsDisabled}
         onChange={(event) => onMutate({ kind: "set-timezone", timezone: event.target.value })}
       >
-        {options.map((zone) => (
-          <option key={zone} value={zone}>{zone}</option>
+        {compactOptions.map((option) => (
+          <option key={option.zone} value={option.zone}>{option.context}: {option.zone}</option>
         ))}
       </select>
+      <details className="mt-3 rounded-lg border border-border/60 bg-background/45 px-3">
+        <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center text-sm font-semibold text-foreground">
+          Search all timezones
+        </summary>
+        <div className="border-t border-border/50 py-3">
+          <label htmlFor="telegram-mini-app-timezone-search" className="text-xs font-semibold text-foreground">
+            Timezone name
+          </label>
+          <input
+            id="telegram-mini-app-timezone-search"
+            type="search"
+            list="telegram-mini-app-timezone-options"
+            className="pharos-focus-ring mt-2 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground"
+            value={timezoneUi.search}
+            disabled={controlsDisabled}
+            placeholder="Type Europe/Paris"
+            autoComplete="off"
+            onChange={(event) => setTimezoneUi((existing) => ({ ...existing, search: event.target.value }))}
+          />
+          <datalist id="telegram-mini-app-timezone-options">
+            {allTimezones.map((zone) => <option key={zone} value={zone} />)}
+          </datalist>
+          {searchedTimezone && !searchIsValid ? (
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300" role="status">
+              Choose an exact timezone from the search suggestions.
+            </p>
+          ) : null}
+          <div className="mt-3">
+            <MiniButton
+              disabled={controlsDisabled || !searchIsValid || searchedTimezone === current}
+              loading={pendingOperation?.kind === "set-timezone" && pendingOperation.timezone === searchedTimezone}
+              onClick={() => onMutate({ kind: "set-timezone", timezone: searchedTimezone })}
+            >
+              Apply timezone
+            </MiniButton>
+          </div>
+        </div>
+      </details>
       <div className="mt-3">
         <MiniButton
           variant="secondary"
-          disabled={!canMutate || isMutating || current === "UTC"}
+          disabled={controlsDisabled || current === "UTC"}
           loading={pendingOperation?.kind === "set-timezone" && pendingOperation.timezone == null}
           onClick={() => onMutate({ kind: "set-timezone", timezone: null })}
         >
@@ -273,14 +365,14 @@ export interface SettingsPanelProps {
   isMutating: boolean;
   pendingOperation: TelegramMiniAppOperation | null;
   onMutate: (operation: TelegramMiniAppOperation) => void;
-  optimisticGlobalAlerts: Record<TelegramAlertType, boolean> & { depegStepBps: TelegramDepegStepBps | null };
+  globalAlerts: Record<TelegramAlertType, boolean> & { depegStepBps: TelegramDepegStepBps | null };
   onUnsubscribeAll: () => void;
   onForgetMe: () => void;
   hasShowConfirm: boolean;
 }
 
-export function SettingsPanel({ state, canMutate, isMutating, pendingOperation, onMutate, optimisticGlobalAlerts, onUnsubscribeAll, onForgetMe, hasShowConfirm }: SettingsPanelProps) {
-  const currentDepegStep = optimisticGlobalAlerts.depegStepBps;
+export function SettingsPanel({ state, canMutate, isMutating, pendingOperation, onMutate, globalAlerts, onUnsubscribeAll, onForgetMe, hasShowConfirm }: SettingsPanelProps) {
+  const currentDepegStep = globalAlerts.depegStepBps;
 
   return (
     <div className="space-y-4">
@@ -294,10 +386,10 @@ export function SettingsPanel({ state, canMutate, isMutating, pendingOperation, 
             <TogglePill
               key={type}
               label={ALERT_LABELS[type]}
-              enabled={optimisticGlobalAlerts[type]}
+              enabled={globalAlerts[type]}
               disabled={!canMutate || isMutating}
               loading={pendingOperation?.kind === "set-global" && pendingOperation.alertType === type}
-              onToggle={() => onMutate({ kind: "set-global", alertType: type, enabled: !optimisticGlobalAlerts[type] })}
+              onToggle={() => onMutate({ kind: "set-global", alertType: type, enabled: !globalAlerts[type] })}
             />
           ))}
         </div>

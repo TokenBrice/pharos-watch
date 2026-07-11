@@ -1,6 +1,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { deleteOrphanYieldRows, deleteStaleYieldRows, purgeYieldHistoryOwnershipHandoffs } from "./history";
+import { isMissingColumnError, isMissingTableError } from "../../lib/db";
 
 export {
   readPreviousYieldRankingsCount,
@@ -20,6 +21,50 @@ export { buildYieldRankingsPayloadFromEvaluatedSources } from "./publication-ran
  *  (source switches, anomalies, rejected higher-confidence sources) are
  *  preserved beyond this window for long-running analytics. */
 const AUDIT_DECISION_RETENTION_DAYS = 30;
+
+/**
+ * Reclassify the historical linked-variant false-switch pattern only after the
+ * same coin has published the linked identity cleanly in two consecutive
+ * generations. This prevents a one-off winner change from rewriting evidence.
+ */
+export async function cleanupFalseLinkedVariantSourceSwitches(db: D1Database): Promise<number> {
+  try {
+    const result = await db
+      .prepare(
+        `WITH ranked_linked_generations AS (
+           SELECT d.stablecoin_id, d.generation_id, d.source_switch,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY d.stablecoin_id
+                    ORDER BY d.created_at DESC, d.generation_id DESC
+                  ) AS generation_rank
+             FROM yield_source_decisions d
+             JOIN yield_publication_generations g
+               ON g.generation_id = d.generation_id
+              AND g.state = 'published'
+            WHERE d.selected_source_key LIKE 'linked-variant:%'
+         ), verified_clean_identities AS (
+           SELECT stablecoin_id
+             FROM ranked_linked_generations
+            WHERE generation_rank <= 2
+            GROUP BY stablecoin_id
+           HAVING COUNT(*) = 2
+              AND SUM(CASE WHEN source_switch = 0 THEN 1 ELSE 0 END) = 2
+         )
+         UPDATE yield_source_decisions
+            SET source_switch = 0,
+                retention_reason = 'audit'
+          WHERE source_switch = 1
+            AND selected_source_key LIKE 'linked-variant:%'
+            AND previous_best_source_key = 'onchain:' || stablecoin_id
+            AND stablecoin_id IN (SELECT stablecoin_id FROM verified_clean_identities)`,
+      )
+      .run();
+    return result.meta?.changes ?? 0;
+  } catch (error) {
+    if (isMissingTableError(error) || isMissingColumnError(error)) return 0;
+    throw error;
+  }
+}
 
 export async function pruneYieldTables(
   db: D1Database,
@@ -47,6 +92,7 @@ export async function pruneYieldTables(
     .run();
 
   if (allowDestructiveCleanup) {
+    await cleanupFalseLinkedVariantSourceSwitches(db);
     const auditCutoffSec = startSec - AUDIT_DECISION_RETENTION_DAYS * DAY_SECONDS;
     await db
       .prepare(

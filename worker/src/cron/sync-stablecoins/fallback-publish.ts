@@ -30,6 +30,7 @@ export async function publishFallbackStablecoinsCache(
     syncStartSec: input.syncStartSec,
     signal: input.signal,
     alertWebhookUrl: input.alertWebhookUrl,
+    alertBrokerMode: input.alertBrokerMode,
     validationContext: "fallback",
     returnIfAborted: input.returnIfAborted,
     abortResult: input.abortResult,

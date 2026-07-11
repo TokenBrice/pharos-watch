@@ -5,6 +5,10 @@ const fetchWithRetryMock = vi.fn();
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
+  fetchJsonWithRetry: async (...args: unknown[]) => {
+    const response = await fetchWithRetryMock(...args) as Response | null;
+    return response ? { response, body: await response.json() } : null;
+  },
 }));
 
 import { fetchMarketBackfillPriceSeries } from "../backfill-price-sources";

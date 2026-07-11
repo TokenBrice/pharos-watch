@@ -32,37 +32,42 @@ import type { BackingType } from "@shared/types";
 // ---------------------------------------------------------------------------
 
 // Intentional per-isolate cache — WASM init runs once per Worker isolate; module-scope `let` is the documented exception. See docs/worker-infrastructure.md.
-let wasmInitialized = false;
+let wasmInitialization: Promise<void> | null = null;
 
 async function ensureWasm(): Promise<void> {
-  if (!wasmInitialized) {
-    const errors: unknown[] = [];
+  if (!wasmInitialization) {
+    wasmInitialization = (async () => {
+      const errors: unknown[] = [];
 
-    // Initialize yoga WASM for satori layout engine
-    try {
-      await initSatori(yogaWasm);
-    } catch (e: unknown) {
-      // Ignore if already initialized in this isolate
-      if (!(e instanceof Error && e.message.includes("already"))) {
-        errors.push(e);
+      // Initialize yoga WASM for satori layout engine
+      try {
+        await initSatori(yogaWasm);
+      } catch (e: unknown) {
+        // Ignore if already initialized in this isolate
+        if (!(e instanceof Error && e.message.includes("already"))) {
+          errors.push(e);
+        }
       }
-    }
 
-    // Initialize resvg WASM for SVG→PNG rendering
-    try {
-      await initResvg(resvgWasmModule);
-    } catch (e: unknown) {
-      // @cf-wasm/resvg throws if already initialized in this isolate
-      if (!(e instanceof Error && e.message.includes("already called"))) {
-        errors.push(e);
+      // Initialize resvg WASM for SVG→PNG rendering
+      try {
+        await initResvg(resvgWasmModule);
+      } catch (e: unknown) {
+        // @cf-wasm/resvg throws if already initialized in this isolate
+        if (!(e instanceof Error && e.message.includes("already called"))) {
+          errors.push(e);
+        }
       }
-    }
 
-    if (errors.length > 0) {
-      throw errors[0];
-    }
-    wasmInitialized = true;
+      if (errors.length > 0) {
+        throw errors[0];
+      }
+    })().catch((error) => {
+      wasmInitialization = null;
+      throw error;
+    });
   }
+  await wasmInitialization;
 }
 
 function nowUtcLabel(): string {

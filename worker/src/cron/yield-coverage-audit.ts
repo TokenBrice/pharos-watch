@@ -43,6 +43,10 @@ import {
   probeQuarantinedDeterministicAdapters,
   type QuarantineRestoreCandidate,
 } from "./yield-coverage-audit-quarantine";
+import {
+  applyYieldCoverageReviewDispositions,
+  type YieldCoverageReviewDispositionSummary,
+} from "./yield-coverage-review-dispositions";
 import type {
   YieldCoverageAuditQueueAction,
   YieldCoverageAuditQueueItem,
@@ -244,10 +248,12 @@ export function summarizeAdapterLifecycle(
 }
 
 export interface CoverageAuditOperatorQueue {
-  persistence: "deferred";
+  persistence: "deferred" | "durable";
+  promotionMode: "human-reviewed";
   allowedActions: YieldCoverageAuditQueueAction[];
   headlineGaps: CoverageAuditQueueItem[];
   recommendationCandidates: CoverageAuditQueueItem[];
+  suppressedItemCount: number;
 }
 
 export interface StaleAutoLendingOverride {
@@ -355,6 +361,10 @@ export interface CoverageAuditQueueItem extends YieldCoverageAuditQueueItem {
   sourceLinks?: ProtocolRecommendationSourceLink[];
   suggestedConfig?: ProtocolRecommendationSuggestedConfig | null;
   promotionMetadata?: ProtocolRecommendationPromotionMetadata;
+  reasonCodes?: string[];
+  sourceKey?: string;
+  reviewedAt?: string;
+  reviewConfidence?: string;
 }
 
 const SOURCE_FAMILY_ADAPTER_PROJECTS = new Set([
@@ -570,6 +580,7 @@ function buildStaleOverrideQueueItem(override: StaleAutoLendingOverride): Covera
     chain: override.chain ?? undefined,
     tvlUsd: override.tvlUsd ?? undefined,
     apy: override.apy ?? undefined,
+    reasonCodes: [...override.reasons],
   };
 }
 
@@ -683,6 +694,9 @@ export function buildCoverageAuditOperatorQueue({
       detail: `${candidate.chain} ${candidate.sourceKey} probe returned ${candidate.exchangeRate}`,
       actionHint: "accept" as const,
       stablecoinIds: [candidate.stablecoinId],
+      chain: candidate.chain,
+      sourceKey: candidate.sourceKey,
+      reasonCodes: [candidate.code],
     })),
     ...staleVenueRiskScores.map((stale) => ({
       id: queueId("stale-venue-risk-score", stale.protocol),
@@ -693,14 +707,18 @@ export function buildCoverageAuditOperatorQueue({
       }); re-verify audits, governance, and TVL.`,
       actionHint: "watch" as const,
       project: stale.protocol,
+      reviewedAt: stale.reviewedAt,
+      reviewConfidence: stale.confidence,
     })),
   ];
 
   return {
     persistence: "deferred",
+    promotionMode: "human-reviewed",
     allowedActions: [...OPERATOR_QUEUE_ACTIONS],
-    headlineGaps: headlineGaps.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
-    recommendationCandidates: recommendationCandidates.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
+    headlineGaps,
+    recommendationCandidates,
+    suppressedItemCount: 0,
   };
 }
 
@@ -1104,7 +1122,7 @@ export async function runYieldCoverageAudit(
   });
   const nowMs = Date.now();
   const staleVenueRiskScores = findStaleVenueRiskScores(nowMs);
-  const operatorQueue = buildCoverageAuditOperatorQueue({
+  const candidateOperatorQueue = buildCoverageAuditOperatorQueue({
     gaps,
     manifestMissingIds,
     yieldBearingMissingFromRankings,
@@ -1114,6 +1132,16 @@ export async function runYieldCoverageAudit(
   });
 
   const reportedAt = Math.floor(nowMs / 1000);
+  const {
+    queue: operatorQueue,
+    summary: operatorReviewSummary,
+  }: {
+    queue: CoverageAuditOperatorQueue & { persistence: "durable" };
+    summary: YieldCoverageReviewDispositionSummary;
+  } = await applyYieldCoverageReviewDispositions(db, candidateOperatorQueue, {
+    nowSec: reportedAt,
+    publishedItemLimit: OPERATOR_QUEUE_ITEM_LIMIT,
+  });
   // The 13 count fields shared between the persisted report payload and the
   // CronResult metadata. The two payloads otherwise diverge deliberately.
   const auditCounts = {
@@ -1152,6 +1180,7 @@ export async function runYieldCoverageAudit(
     staleAutoLendingOverrides: staleAutoLendingOverrides.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
     staleVenueRiskScores: staleVenueRiskScores.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
     operatorQueue,
+    operatorReviewSummary,
     lifecycleSummary: lifecycleBuckets.lifecycleSummary,
     quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
     quarantineReadyToRestore: quarantineProbe.readyToRestore,
@@ -1175,6 +1204,7 @@ export async function runYieldCoverageAudit(
       yieldBearingMissingFromRankings: yieldBearingMissingFromRankings.length,
       operatorHeadlineGaps: operatorQueue.headlineGaps.length,
       operatorRecommendationCandidates: operatorQueue.recommendationCandidates.length,
+      operatorSuppressedItems: operatorQueue.suppressedItemCount,
     },
   });
   await setCache(db, "yield-coverage-audit", JSON.stringify(report));
@@ -1186,6 +1216,7 @@ export async function runYieldCoverageAudit(
       yieldBearingMissingFromRankings: yieldBearingMissingFromRankings.length,
       operatorHeadlineGaps: operatorQueue.headlineGaps.length,
       operatorRecommendationCandidates: operatorQueue.recommendationCandidates.length,
+      operatorSuppressedItems: operatorQueue.suppressedItemCount,
     },
   });
 
@@ -1214,6 +1245,7 @@ export async function runYieldCoverageAudit(
       manifestMissingCount: manifestMissingIds.length,
       intentionalGapCount: intentionalGapIds.length,
       yieldBearingMissingFromRankingsCount: yieldBearingMissingFromRankings.length,
+      operatorSuppressedItemCount: operatorQueue.suppressedItemCount,
       protocolCategoryStatus,
       protocolCategoryCount: protocolCategoryLookup.meta.categorizedProtocolCount,
       quarantineReadyToRestoreCount: quarantineProbe.readyToRestore.length,

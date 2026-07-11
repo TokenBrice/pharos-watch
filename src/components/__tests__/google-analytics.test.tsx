@@ -22,6 +22,30 @@ afterEach(() => {
 });
 
 describe("GoogleAnalytics", () => {
+  it("does not bootstrap Google Analytics in the embedded Telegram Mini App", async () => {
+    pathnameMock.mockReturnValue("/pharoswatchbot/app/");
+
+    render(<GoogleAnalytics measurementId="G-TEST" />);
+
+    await new Promise((resolve) => window.setTimeout(resolve, 10));
+    expect(window.gtag).toBeUndefined();
+    expect(window.dataLayer).toBeUndefined();
+    expect(document.getElementById("pharos-google-analytics")).toBeNull();
+  });
+
+  it("keeps analytics enabled on the public PharosWatchBot page", async () => {
+    pathnameMock.mockReturnValue("/pharoswatchbot/");
+
+    render(<GoogleAnalytics measurementId="G-TEST" />);
+
+    await waitFor(() => expect(window.dataLayer?.length).toBeGreaterThanOrEqual(4));
+    expect(Array.from(window.dataLayer?.at(-1) ?? [])).toEqual([
+      "event",
+      "page_view",
+      expect.objectContaining({ page_path: "/pharoswatchbot/" }),
+    ]);
+  });
+
   it("queues native gtag arguments objects so gtag.js can emit collect hits", async () => {
     pathnameMock.mockReturnValue("/");
 

@@ -18,7 +18,8 @@ vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: mocks.loadStablecoinsCache,
 }));
 
-vi.mock("../../lib/telegram-log", () => ({
+vi.mock("../../lib/telegram-log", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/telegram-log")>()),
   logTelegramEvent: mocks.logTelegramEvent,
 }));
 
@@ -134,7 +135,7 @@ describe("buildAlertContextLines", () => {
       module: "telegram-alert-context",
       requestedStablecoinCount: 91,
       chunkSize: 1,
-      err: "D1 bind failure",
+      errorClass: "d1",
     }));
   });
 });

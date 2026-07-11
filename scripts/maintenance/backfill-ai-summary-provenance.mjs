@@ -20,90 +20,120 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import {
+  assertCliUsage,
+  parseStrictCliArgs,
+  runCliEntrypoint,
+  writeCliHelpIfRequested,
+} from "../lib/cli-args.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
+
 const ROOT = process.cwd();
 const SUMMARIES_PATH = resolve(ROOT, "data/ai-summaries.json");
+const USAGE = `Usage: npm run backfill:ai-summary-provenance -- [options]
 
-function getArgValue(name) {
-  const inlinePrefix = `${name}=`;
-  for (let index = 2; index < process.argv.length; index += 1) {
-    const arg = process.argv[index];
-    if (arg === name) return process.argv[index + 1]?.trim() || "";
-    if (arg.startsWith(inlinePrefix)) return arg.slice(inlinePrefix.length).trim();
-  }
-  return "";
-}
+Options:
+  --model <name>  Model identifier (overrides AI_SUMMARY_MODEL)
+  --dry-run       Validate and report changes without writing the file
+  -h, --help      Show this help
 
-const reviewedBy = process.env.AI_SUMMARY_REVIEWED_BY?.trim();
-const reviewedAt = process.env.AI_SUMMARY_REVIEWED_AT?.trim();
-const model = (
-  getArgValue("--model") ||
-  process.env.AI_SUMMARY_MODEL?.trim() ||
-  process.env.MODEL_OVERRIDE?.trim() ||
-  "claude-opus-4-7"
-);
+Required environment:
+  AI_SUMMARY_REVIEWED_BY
+  AI_SUMMARY_REVIEWED_AT (YYYY-MM-DD)`;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-if (!reviewedBy || !reviewedAt || !ISO_DATE_RE.test(reviewedAt) || !model) {
-  process.stderr.write(
-    [
-      "backfill: AI_SUMMARY_REVIEWED_BY, ISO-date AI_SUMMARY_REVIEWED_AT, and a non-empty model are required.",
-      "This script records human-review provenance; do not infer reviewedAt from updatedAt.",
-      'Example: AI_SUMMARY_REVIEWED_BY="@TokenBrice" AI_SUMMARY_REVIEWED_AT="2026-05-15" npm run backfill:ai-summary-provenance -- --model claude-opus-4-7',
-    ].join("\n") + "\n",
-  );
-  process.exit(1);
+function isIsoDate(value) {
+  if (!ISO_DATE_RE.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
-const DEFAULTS = {
-  authoredBy: "ai",
-  model,
-  reviewedBy,
-  reviewedAt,
-};
-
-const raw = readFileSync(SUMMARIES_PATH, "utf8");
-const data = JSON.parse(raw);
-
-if (!data || typeof data !== "object" || Array.isArray(data)) {
-  process.stderr.write(`backfill: ${SUMMARIES_PATH} did not parse to an object root\n`);
-  process.exit(1);
-}
-
-let updated = 0;
-let skipped = 0;
-
-for (const id of Object.keys(data)) {
-  const entry = data[id];
-  if (!entry || typeof entry !== "object") {
-    process.stderr.write(`backfill: entry ${id} is not an object, skipping\n`);
-    skipped += 1;
-    continue;
+/** @param {readonly string[]} argv @param {Record<string, string | undefined>} [env] */
+export function parseAiSummaryBackfillArgs(argv, env = process.env) {
+  const { values } = parseStrictCliArgs(argv, {
+    options: {
+      "dry-run": { type: "boolean" },
+      model: { type: "string" },
+    },
+  });
+  const help = values.help === true;
+  const reviewedBy = env.AI_SUMMARY_REVIEWED_BY?.trim() ?? "";
+  const reviewedAt = env.AI_SUMMARY_REVIEWED_AT?.trim() ?? "";
+  const model = typeof values.model === "string"
+    ? values.model.trim()
+    : env.AI_SUMMARY_MODEL?.trim() || env.MODEL_OVERRIDE?.trim() || "claude-opus-4-7";
+  if (!help) {
+    assertCliUsage(Boolean(reviewedBy), "AI_SUMMARY_REVIEWED_BY is required");
+    assertCliUsage(isIsoDate(reviewedAt), "AI_SUMMARY_REVIEWED_AT must be a real YYYY-MM-DD date");
+    assertCliUsage(Boolean(model), "--model must be non-empty");
   }
-  if (typeof entry.authoredBy === "string") {
-    skipped += 1;
-    continue;
-  }
-  const updatedAt = typeof entry.updatedAt === "string" ? entry.updatedAt : "";
-  // Rebuild the entry preserving original key order for the legacy fields
-  // (title, text, updatedAt) and then appending the provenance block.
-  const next = {
-    title: entry.title,
-    text: entry.text,
-    updatedAt: entry.updatedAt,
-    authoredBy: DEFAULTS.authoredBy,
-    model: DEFAULTS.model,
-    reviewedBy: DEFAULTS.reviewedBy,
-    reviewedAt: DEFAULTS.reviewedAt,
-    factsAsOf: updatedAt,
+  return {
+    dryRun: values["dry-run"] === true,
+    help,
+    model,
+    reviewedAt,
+    reviewedBy,
   };
-  data[id] = next;
-  updated += 1;
 }
 
-// Preserve the existing JSON style: 2-space indent + trailing newline.
-const serialized = `${JSON.stringify(data, null, 2)}\n`;
-writeFileSync(SUMMARIES_PATH, serialized, "utf8");
+export function backfillAiSummaryProvenance(data, defaults, { onInvalidEntry } = {}) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("AI summaries did not parse to an object root");
+  }
 
-process.stdout.write(
-  `backfill-ai-summary-provenance: ${updated} updated, ${skipped} skipped\n`,
-);
+  let updated = 0;
+  let skipped = 0;
+  for (const id of Object.keys(data)) {
+    const entry = data[id];
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      onInvalidEntry?.(id);
+      skipped += 1;
+      continue;
+    }
+    if (typeof entry.authoredBy === "string") {
+      skipped += 1;
+      continue;
+    }
+    const updatedAt = typeof entry.updatedAt === "string" ? entry.updatedAt : "";
+    data[id] = {
+      title: entry.title,
+      text: entry.text,
+      updatedAt: entry.updatedAt,
+      authoredBy: "ai",
+      model: defaults.model,
+      reviewedBy: defaults.reviewedBy,
+      reviewedAt: defaults.reviewedAt,
+      factsAsOf: updatedAt,
+    };
+    updated += 1;
+  }
+  return { data, skipped, updated };
+}
+
+export function runAiSummaryProvenanceBackfill({
+  argv = process.argv.slice(2),
+  env = process.env,
+  summariesPath = SUMMARIES_PATH,
+} = {}) {
+  const options = parseAiSummaryBackfillArgs(argv, env);
+  if (writeCliHelpIfRequested(options, USAGE)) return;
+
+  const data = JSON.parse(readFileSync(summariesPath, "utf8"));
+  const result = backfillAiSummaryProvenance(data, options, {
+    onInvalidEntry: (id) => process.stderr.write(`backfill: entry ${id} is not an object, skipping\n`),
+  });
+  if (!options.dryRun) {
+    writeFileSync(summariesPath, `${JSON.stringify(result.data, null, 2)}\n`, "utf8");
+  }
+
+  process.stdout.write(
+    `backfill-ai-summary-provenance: ${options.dryRun ? "would update" : "updated"} ${result.updated}, ${result.skipped} skipped\n`,
+  );
+}
+
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runCliEntrypoint(() => runAiSummaryProvenanceBackfill(), {
+    label: "backfill-ai-summary-provenance",
+    usage: USAGE,
+  });
+}

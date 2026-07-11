@@ -11,11 +11,11 @@ import { useAdminPollingQuery } from "./use-admin-polling-query";
  * Fetches /api/status through the ops-host admin proxy.
  * Auto-refreshes every 60s for live ops monitoring.
  */
-export function useStatus(): UseQueryResult<StatusResponse, Error> {
+export function useStatus(options: { enabled?: boolean } = {}): UseQueryResult<StatusResponse, Error> {
   return useAdminPollingQuery<StatusResponse>(
     ["status"],
     API_PATHS.status(),
     CRON_1MIN,
-    { schema: StatusResponseSchema },
+    { enabled: options.enabled, schema: StatusResponseSchema },
   );
 }

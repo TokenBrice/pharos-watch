@@ -1,7 +1,6 @@
 import { BLOCK_STRIKE_WINDOW_SEC } from "../../lib/telegram-constants";
 import { logTelegramEvent } from "../../lib/telegram-log";
-import { toErrorMessage } from "../../lib/error-utils";
-import { buildInClause, chunkArray } from "../../lib/db";
+import { buildInClause, chunkArray, executeAtomicBatch } from "../../lib/db";
 
 /**
  * Two-strike gate for 403 responses. Increments the per-subscriber consecutive
@@ -44,11 +43,9 @@ export async function registerSubscriberBlockAndShouldDisable(
       .bind(nextCount, nextFirstAt, chatId)
       .run();
     return nextCount >= 2;
-  } catch (error) {
-    const message = toErrorMessage(error);
+  } catch {
     logTelegramEvent({
-      message: `Failed to register block strike: ${message}`,
-      chatId,
+      message: "Failed to register block strike",
       action: "register-block-strike",
       module: "telegram-pending-lifecycle",
     });
@@ -99,11 +96,9 @@ export async function resetSubscriberBlockCount(db: D1Database, chatId: string):
       )
       .bind(chatId)
       .run();
-  } catch (error) {
-    const message = toErrorMessage(error);
+  } catch {
     logTelegramEvent({
-      message: `Failed to reset block count: ${message}`,
-      chatId,
+      message: "Failed to reset block count",
       action: "reset-block-count",
       module: "telegram-pending-lifecycle",
     });
@@ -129,10 +124,9 @@ export async function flushChatSuccessResets(
         )
         .bind(...inClause.binds)
         .run();
-    } catch (error) {
-      const message = toErrorMessage(error);
+    } catch {
       logTelegramEvent({
-        message: `Failed to batch reset block counts: ${message}`,
+        message: "Failed to batch reset block counts",
         action: "reset-block-count-batch",
         module: "telegram-pending-lifecycle",
         affectedChats: chunk.length,
@@ -143,7 +137,7 @@ export async function flushChatSuccessResets(
 
 export async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<boolean> {
   try {
-    await db.batch([
+    await executeAtomicBatch(db, [
       db
         .prepare(
           `UPDATE telegram_subscribers
@@ -157,7 +151,8 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
                   global_alert_safety=0,
                   global_alert_launch=0,
                   global_alert_reserve=0,
-                  global_depeg_worsening_bps_step=NULL
+                  global_depeg_worsening_bps_step=NULL,
+                  preference_generation=preference_generation + 1
             WHERE chat_id=?`,
         )
         .bind(chatId),
@@ -177,11 +172,9 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
         .bind(chatId),
     ]);
     return true;
-  } catch (error) {
-    const message = toErrorMessage(error);
+  } catch {
     logTelegramEvent({
-      message: `Failed to disable blocked subscriber: ${message}`,
-      chatId,
+      message: "Failed to disable blocked subscriber",
       action: "disable-blocked-subscriber",
       module: "telegram-pending-lifecycle",
     });

@@ -1,9 +1,9 @@
 import type { YieldBenchmarkMeta, YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import { shouldDegradeForRiskFreeRate } from "./evaluation";
 import type { EvaluatedYieldSource } from "./evaluation-types";
+import { classifyYieldBenchmarkFreshness } from "./benchmarks";
 import type { YieldEnvelopeRejection } from "./types";
 import type { YieldSupplementalCacheMeta } from "./state-loading";
-import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../yield-helpers";
+import { getComparisonAnchorStaleThresholdMs } from "../yield-helpers";
 
 const YIELD_METADATA_EXAMPLE_LIMIT = 25;
 
@@ -19,6 +19,7 @@ export interface YieldComparisonAnchorFreshnessMeta {
     sourceKey: string;
     dataSource: string;
     anchorAgeSeconds: number;
+    maxAgeSeconds: number;
     comparisonAnchorObservedAt: number;
   }>;
   staleAnchorExamplesTruncated: boolean;
@@ -32,6 +33,9 @@ export function buildComparisonAnchorFreshnessMeta(input: {
     .flatMap((source) => {
       if (source.comparisonAnchorObservedAt == null) return [];
       const anchorAgeSeconds = Math.max(0, input.startSec - source.comparisonAnchorObservedAt);
+      const maxAgeSeconds = Math.floor(
+        getComparisonAnchorStaleThresholdMs(source.dataSource, source.sourceKey) / 1000,
+      );
       return [
         {
           stablecoinId: source.id,
@@ -39,15 +43,14 @@ export function buildComparisonAnchorFreshnessMeta(input: {
           sourceKey: source.sourceKey,
           dataSource: source.dataSource,
           anchorAgeSeconds,
+          maxAgeSeconds,
           comparisonAnchorObservedAt: source.comparisonAnchorObservedAt,
         },
       ];
     })
     .sort((a, b) => b.anchorAgeSeconds - a.anchorAgeSeconds);
 
-  const staleAnchorRows = anchorRows.filter(
-    (row) => row.anchorAgeSeconds * 1000 > COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
-  );
+  const staleAnchorRows = anchorRows.filter((row) => row.anchorAgeSeconds > row.maxAgeSeconds);
   const oldest = anchorRows[0] ?? null;
 
   return {
@@ -67,6 +70,10 @@ export function buildYieldSafetySnapshotMeta(input: {
   coveredCount: number;
   trackedCount: number;
   reason: string | null;
+  source: "report-card-cache";
+  publicationGenerationId: string | null;
+  methodologyVersion: string | null;
+  publishedAt: number | null;
 }): YieldSafetySnapshotMeta {
   return {
     kind: input.kind,
@@ -74,13 +81,18 @@ export function buildYieldSafetySnapshotMeta(input: {
     coveredCount: input.coveredCount,
     trackedCount: input.trackedCount,
     reason: input.reason,
+    source: input.source,
+    publicationGenerationId: input.publicationGenerationId,
+    methodologyVersion: input.methodologyVersion,
+    publishedAt: input.publishedAt,
   };
 }
 
 export function buildYieldDegradationReasons(params: {
   safetySnapshotDegraded: boolean;
   safetySnapshotReason: string | null;
-  riskFreeRateMeta: YieldBenchmarkMeta;
+  defaultBenchmarkMeta: YieldBenchmarkMeta;
+  selectedSources: readonly EvaluatedYieldSource[];
   dlPoolsMeta: YieldSourceInputMeta;
   allDeterministicFailed: boolean;
   maskedAllDeterministicFailure: boolean;
@@ -96,8 +108,28 @@ export function buildYieldDegradationReasons(params: {
       degradationReasons.push(`safety-snapshot:${params.safetySnapshotReason}`);
     }
   }
-  if (shouldDegradeForRiskFreeRate(params.riskFreeRateMeta)) {
-    degradationReasons.push(`risk-free-rate:${params.riskFreeRateMeta.fallbackMode}`);
+  const defaultBenchmarkFreshness = classifyYieldBenchmarkFreshness(params.defaultBenchmarkMeta);
+  if (defaultBenchmarkFreshness !== "healthy") {
+    degradationReasons.push(
+      `risk-free-rate:${params.defaultBenchmarkMeta.fallbackMode ?? defaultBenchmarkFreshness}`,
+    );
+  }
+  const benchmarkByKey = new Map(
+    params.selectedSources
+      .filter((source) => source.benchmarkKey !== "USD")
+      .map((source) => [source.benchmarkKey, source] as const),
+  );
+  for (const [key, source] of benchmarkByKey) {
+    if (source.benchmarkFreshness === "healthy") continue;
+    const reason = source.benchmarkFallbackMode ?? source.benchmarkFreshness;
+    degradationReasons.push(
+      key === "USD"
+        ? `risk-free-rate:${reason}`
+        : `risk-free-rate:${key}:${reason}`,
+    );
+  }
+  if (params.selectedSources.some((source) => source.sourceFreshness === "stale")) {
+    degradationReasons.push("yield-source:expired-selected");
   }
   if (params.dlPoolsMeta.mode === "unavailable" || params.dlPoolsMeta.fallbackMode === "cache-parse-failed") {
     degradationReasons.push(`dl-pools:${params.dlPoolsMeta.fallbackMode ?? params.dlPoolsMeta.mode}`);
@@ -180,6 +212,7 @@ export function buildYieldSyncMetadata(input: {
       safetyScoresComputed: input.safetySnapshot.coveredCount,
       safetyScoresExpected: input.safetySnapshot.trackedCount,
       safetyCoverageRatio: input.safetySnapshot.coverageRatio,
+      safetySnapshot: input.safetySnapshot,
       resolvedYieldBearingCount: input.resolvedYieldBearingCount,
       expectedYieldBearingCount: input.expectedYieldBearingCount,
       publishedYieldBearingCount: input.publishedYieldBearingCount,

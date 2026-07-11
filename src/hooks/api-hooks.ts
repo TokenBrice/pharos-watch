@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useQuery, type UseQueryOptions, type UseQueryResult } from "@tanstack/react-query";
 import {
   type BluechipRatingsMap,
   type DailyDigestResponse,
@@ -25,13 +25,15 @@ import {
   type YieldHistoryResponse,
   type YieldRankingsResponse,
 } from "@shared/types";
+import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import {
   createApiQueryFn,
   createApiPollingQueryOptions,
   createApiPollingQueryOptionsWithMeta,
   createStaticQueryOptions,
+  type ApiQueryWithMetaResult,
   type PollingQueryControlOptions,
-  useApiQuery,
+  unwrapApiQueryWithMetaResult,
   useApiQueryWithMeta,
 } from "./use-api-query";
 import {
@@ -40,58 +42,82 @@ import {
   type FrontendStaticApiQueryDescriptor,
   type NonUsdSharePoint as RegistryNonUsdSharePoint,
 } from "@/lib/api-query-runtime-registry";
+import type { ApiMeta } from "@/lib/api";
 
 export type { StabilityContributor };
 export type { NonUsdSharePoint } from "@/lib/api-query-runtime-registry";
 
 export type QueryControlOverrides = PollingQueryControlOptions;
 
+type QueryWithMetaEnvelope<T> = { data: T; meta: ApiMeta | null };
+
+export function useRegisteredApiQuery<T>(
+  descriptor: FrontendApiQueryDescriptor<T, "plain">,
+  overrides?: QueryControlOverrides,
+): UseQueryResult<T, Error>;
+export function useRegisteredApiQuery<T>(
+  descriptor: FrontendApiQueryDescriptor<T, "meta">,
+  overrides?: QueryControlOverrides,
+): ApiQueryWithMetaResult<T>;
 export function useRegisteredApiQuery<T>(
   descriptor: FrontendApiQueryDescriptor<T>,
   overrides?: QueryControlOverrides,
-) {
-  return useApiQuery<T>(
-    descriptor.queryKey,
-    descriptor.path,
-    descriptor.producerIntervalMs,
-    { ...overrides, schema: descriptor.schema },
-  );
+): UseQueryResult<T, Error> | ApiQueryWithMetaResult<T> {
+  const options = createRegisteredApiPollingQueryOptions(descriptor, overrides);
+  const query = useQuery<unknown, Error>(options as UseQueryOptions<unknown, Error, unknown, readonly unknown[]>);
+  return descriptor.responseMode === "meta"
+    ? unwrapApiQueryWithMetaResult(query as UseQueryResult<QueryWithMetaEnvelope<T>, Error>)
+    : (query as UseQueryResult<T, Error>);
 }
 
 export function useRegisteredApiQueryWithMeta<T>(
-  descriptor: FrontendApiQueryDescriptor<T>,
+  descriptor: FrontendApiQueryDescriptor<T, "meta">,
   overrides?: QueryControlOverrides,
 ) {
-  return useApiQueryWithMeta<T>(
-    descriptor.queryKey,
-    descriptor.path,
-    descriptor.producerIntervalMs,
-    { ...overrides, schema: descriptor.schema, metaMaxAgeSec: descriptor.metaMaxAgeSec },
-  );
+  return useApiQueryWithMeta<T>(descriptor.queryKey, descriptor.path, descriptor.producerIntervalMs, {
+    ...overrides,
+    schema: descriptor.schema,
+    metaMaxAgeSec: descriptor.metaMaxAgeSec,
+  });
 }
 
 export function createRegisteredApiPollingQueryOptions<T>(
+  descriptor: FrontendApiQueryDescriptor<T, "plain">,
+  overrides?: QueryControlOverrides,
+): UseQueryOptions<T, Error, T, readonly unknown[]>;
+export function createRegisteredApiPollingQueryOptions<T>(
+  descriptor: FrontendApiQueryDescriptor<T, "meta">,
+  overrides?: QueryControlOverrides,
+): UseQueryOptions<QueryWithMetaEnvelope<T>, Error, QueryWithMetaEnvelope<T>, readonly unknown[]>;
+export function createRegisteredApiPollingQueryOptions<T>(
   descriptor: FrontendApiQueryDescriptor<T>,
   overrides?: QueryControlOverrides,
-) {
-  return createApiPollingQueryOptions<T>(
-    descriptor.queryKey,
-    descriptor.path,
-    descriptor.producerIntervalMs,
-    { ...overrides, schema: descriptor.schema },
-  );
+):
+  | UseQueryOptions<T, Error, T, readonly unknown[]>
+  | UseQueryOptions<QueryWithMetaEnvelope<T>, Error, QueryWithMetaEnvelope<T>, readonly unknown[]>;
+export function createRegisteredApiPollingQueryOptions<T>(
+  descriptor: FrontendApiQueryDescriptor<T>,
+  overrides?: QueryControlOverrides,
+):
+  | UseQueryOptions<T, Error, T, readonly unknown[]>
+  | UseQueryOptions<QueryWithMetaEnvelope<T>, Error, QueryWithMetaEnvelope<T>, readonly unknown[]> {
+  return descriptor.responseMode === "meta"
+    ? createApiPollingQueryOptionsWithMeta<T>(descriptor.queryKey, descriptor.path, descriptor.producerIntervalMs, {
+        ...overrides,
+        schema: descriptor.schema,
+        metaMaxAgeSec: descriptor.metaMaxAgeSec,
+      })
+    : createApiPollingQueryOptions<T>(descriptor.queryKey, descriptor.path, descriptor.producerIntervalMs, {
+        ...overrides,
+        schema: descriptor.schema,
+      });
 }
 
 export function createRegisteredApiPollingQueryOptionsWithMeta<T>(
-  descriptor: FrontendApiQueryDescriptor<T>,
+  descriptor: FrontendApiQueryDescriptor<T, "meta">,
   overrides?: QueryControlOverrides,
 ) {
-  return createApiPollingQueryOptionsWithMeta<T>(
-    descriptor.queryKey,
-    descriptor.path,
-    descriptor.producerIntervalMs,
-    { ...overrides, schema: descriptor.schema, metaMaxAgeSec: descriptor.metaMaxAgeSec },
-  );
+  return createRegisteredApiPollingQueryOptions(descriptor, overrides);
 }
 
 function createRegisteredStaticQueryOptions<T>(
@@ -103,17 +129,11 @@ function createRegisteredStaticQueryOptions<T>(
     staleTime?: number;
   },
 ) {
-  return createStaticQueryOptions(
-    descriptor.queryKey,
-    createApiQueryFn<T>(descriptor.path, descriptor.schema),
-    opts,
-  );
+  return createStaticQueryOptions(descriptor.queryKey, createApiQueryFn<T>(descriptor.path, descriptor.schema), opts);
 }
 
 export function useBluechipRatings() {
-  return useRegisteredApiQueryWithMeta<BluechipRatingsMap | null>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.bluechipRatings,
-  );
+  return useRegisteredApiQuery<BluechipRatingsMap | null>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.bluechipRatings);
 }
 
 export function useDailyDigest() {
@@ -121,16 +141,11 @@ export function useDailyDigest() {
 }
 
 export function useDexLiquidity(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQueryWithMeta<DexLiquidityMap>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.dexLiquidity,
-    overrides,
-  );
+  return useRegisteredApiQuery<DexLiquidityMap>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.dexLiquidity, overrides);
 }
 
 export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
-  return useQuery<DexLiquidityHistoryPoint[], Error>(
-    dexLiquidityHistoryQueryOptions(stablecoinId, days),
-  );
+  return useQuery<DexLiquidityHistoryPoint[], Error>(dexLiquidityHistoryQueryOptions(stablecoinId, days));
 }
 
 export function dexLiquidityHistoryQueryOptions(stablecoinId: string, days = 90) {
@@ -140,34 +155,29 @@ export function dexLiquidityHistoryQueryOptions(stablecoinId: string, days = 90)
 }
 
 export function useDigestArchive() {
-  return useRegisteredApiQueryWithMeta<DigestArchiveResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.digestArchive,
-  );
+  return useRegisteredApiQuery<DigestArchiveResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.digestArchive);
 }
 
 // Digest snapshots are immutable by date — static cache, no polling needed
 export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotResponse, Error> {
   return useQuery<DigestSnapshotResponse, Error>(
-    createRegisteredStaticQueryOptions(
-      FRONTEND_API_QUERY_RUNTIME_REGISTRY.digestSnapshot(date),
-      { enabled: !!date, retry: 1 },
-    ),
+    createRegisteredStaticQueryOptions(FRONTEND_API_QUERY_RUNTIME_REGISTRY.digestSnapshot(date), {
+      enabled: !!date,
+      retry: 1,
+    }),
   );
 }
 
-export function useHealth(): UseQueryResult<HealthResponse, Error> {
-  return useRegisteredApiQuery<HealthResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.health,
-    { retry: 1 },
-  );
+export function useHealth(overrides?: QueryControlOverrides): UseQueryResult<HealthResponse, Error> {
+  return useRegisteredApiQuery<HealthResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.health, { retry: 1, ...overrides });
 }
 
 export function usePegSummary() {
-  return useRegisteredApiQueryWithMeta<PegSummaryResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.pegSummary);
+  return useRegisteredApiQuery<PegSummaryResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.pegSummary);
 }
 
 export function useReportCards(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQueryWithMeta<ReportCardsResponse>(
+  return useRegisteredApiQuery<ReportCardsResponse>(
     FRONTEND_API_QUERY_RUNTIME_REGISTRY.reportCards,
     // M1: report cards back the safety-grade filters on home + screener.
     // Keep the prior cards visible across background refetches so toggling a
@@ -177,36 +187,32 @@ export function useReportCards(overrides?: QueryControlOverrides) {
 }
 
 export function useDepegResolver(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQueryWithMeta<DdrResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.depegResolver,
-    { keepPreviousData: true, ...overrides },
-  );
+  return useRegisteredApiQuery<DdrResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.depegResolver, {
+    keepPreviousData: true,
+    ...overrides,
+  });
 }
 
 export function useDepegResolverReview(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQueryWithMeta<DdrrResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.depegResolverReview,
-    { keepPreviousData: true, ...overrides },
-  );
+  return useRegisteredApiQuery<DdrrResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.depegResolverReview, {
+    keepPreviousData: true,
+    ...overrides,
+  });
 }
 
 export function useRedemptionBackstops() {
-  return useRegisteredApiQueryWithMeta<RedemptionBackstopsResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.redemptionBackstops,
-  );
+  return useRegisteredApiQuery<RedemptionBackstopsResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.redemptionBackstops);
 }
 
 export function useSafetyScoreHistory(stablecoinId: string, days = 3650) {
-  return useRegisteredApiQueryWithMeta<SafetyScoreHistoryResponse>(
+  return useRegisteredApiQuery<SafetyScoreHistoryResponse>(
     FRONTEND_API_QUERY_RUNTIME_REGISTRY.safetyScoreHistory(stablecoinId, days),
     { enabled: !!stablecoinId },
   );
 }
 
 export function useStablecoinCharts() {
-  return useRegisteredApiQuery<StablecoinChartPoint[]>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.stablecoinCharts,
-  );
+  return useRegisteredApiQuery<StablecoinChartPoint[]>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.stablecoinCharts);
 }
 
 export function useNonUsdShare() {
@@ -214,15 +220,11 @@ export function useNonUsdShare() {
 }
 
 export function useStabilityIndex() {
-  return useRegisteredApiQueryWithMeta<StabilityIndexResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.stabilityIndex,
-  );
+  return useRegisteredApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.stabilityIndex);
 }
 
 export function useStabilityIndexDetail() {
-  return useRegisteredApiQueryWithMeta<StabilityIndexResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.stabilityIndexDetail,
-  );
+  return useRegisteredApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.stabilityIndexDetail);
 }
 
 export function useUsdsStatus() {
@@ -241,33 +243,30 @@ export function useYieldHistory(
   const days = options?.days ?? 90;
   const mode = options?.sourceKey ? "source" : (options?.mode ?? "best");
   const sourceKey = options?.sourceKey ?? null;
-  return useRegisteredApiQueryWithMeta<YieldHistoryResponse>(
+  return useRegisteredApiQuery<YieldHistoryResponse>(
     FRONTEND_API_QUERY_RUNTIME_REGISTRY.yieldHistory(stablecoinId, days, mode, sourceKey),
     { enabled: options?.enabled ?? !!stablecoinId },
   );
 }
 
-export function useYieldRankings() {
-  return useRegisteredApiQueryWithMeta<YieldRankingsResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.yieldRankings,
-  );
+export function useYieldRankings(overrides?: QueryControlOverrides) {
+  return useRegisteredApiQuery<YieldRankingsResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.yieldRankings, overrides);
+}
+
+export function useYieldRankingsSummary() {
+  return useRegisteredApiQuery<YieldRankingsSummaryResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.yieldRankingsSummary);
 }
 
 export function useYieldAdapterManifest() {
-  return useRegisteredApiQueryWithMeta<YieldAdapterManifestResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.yieldAdapterManifest,
-  );
+  return useRegisteredApiQuery<YieldAdapterManifestResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.yieldAdapterManifest);
 }
 
 export function useStressSignals(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQueryWithMeta<StressSignalsAllResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.stressSignals,
-    overrides,
-  );
+  return useRegisteredApiQuery<StressSignalsAllResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.stressSignals, overrides);
 }
 
 export function useStressSignalDetail(stablecoinId: string, days = 30) {
-  return useRegisteredApiQueryWithMeta<StressSignalDetailResponse>(
+  return useRegisteredApiQuery<StressSignalDetailResponse>(
     FRONTEND_API_QUERY_RUNTIME_REGISTRY.stressSignalDetail(stablecoinId, days),
     { enabled: !!stablecoinId },
   );

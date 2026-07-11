@@ -14,7 +14,9 @@ import {
   getDexLiquidityTrendTolerances,
   normalizeTopPools,
   selectTrendBaseline,
+  buildDexDeploymentCoverage,
   type DexLiquidityCronRow,
+  type DexDeploymentOutcomeRow,
   type DexHistoryRow,
   type DexLiquidityRow,
   type DexPriceRow,
@@ -23,7 +25,7 @@ import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
 import { toErrorMessage } from "../lib/error-utils";
 
 export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D1Database): Promise<Response> => {
-  const [result, histResult, priceResult, latestCron, latestSuccessfulCron] = await Promise.all([
+  const [result, histResult, priceResult, deploymentResult, latestCron, latestSuccessfulCron] = await Promise.all([
     db
       .prepare(
         `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd, pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json, top_pools_json, liquidity_score, concentration_hhi, depth_stability, updated_at, effective_tvl_usd, avg_pool_stress, weighted_balance_ratio, organic_fraction, durability_score, score_components_json, locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json, balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version
@@ -47,6 +49,15 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
         return { results: [] as DexPriceRow[] };
       }
       console.error("[dex-liquidity] Unexpected error loading dex_prices:", msg);
+      throw err;
+    }),
+    db.prepare(
+      `SELECT stablecoin_id, chain, contract_address, outcome, provider_set_json, reason,
+              observed_pool_count, observed_at, waiver_owner, waiver_reason, waiver_expires_at
+         FROM dex_deployment_outcomes
+        ORDER BY stablecoin_id, chain, contract_address`,
+    ).all<DexDeploymentOutcomeRow>().catch((err) => {
+      if (isMissingTableError(err)) return { results: [] as DexDeploymentOutcomeRow[] };
       throw err;
     }),
     db
@@ -85,6 +96,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
   }
 
   const nowSec = Math.floor(Date.now() / 1000);
+  const deploymentCoverageById = buildDexDeploymentCoverage(deploymentResult.results ?? [], nowSec);
   const oneDayAgo = nowSec - 86_400;
   const sevenDaysAgo = nowSec - 7 * 86_400;
   const { day: trend24hToleranceSec, week: trend7dToleranceSec } = getDexLiquidityTrendTolerances();
@@ -150,6 +162,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       scoreComponents: safeJsonParse<unknown>(row.score_components_json, null, `dex-liquidity:${id}:score_components_json`),
       lockedLiquidityPct: row.locked_liquidity_pct ?? null,
       methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.updated_at),
+      deploymentCoverage: deploymentCoverageById.get(id) ?? null,
     };
   }
 

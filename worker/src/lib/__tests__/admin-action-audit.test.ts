@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { logAdminAction, DETAILS_MAX_LEN } from "../admin-action-audit";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
@@ -21,6 +21,21 @@ function lastInsert(db: ReturnType<typeof mockD1>): { sql: string; binds: unknow
 }
 
 describe("logAdminAction", () => {
+  it("reports a resolved D1 write with success=false as an audit failure", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = {
+      prepare: () => ({
+        bind: () => ({
+          run: async () => ({ success: false, meta: { changes: 0 } }),
+        }),
+      }),
+    } as unknown as D1Database;
+
+    await expect(logAdminAction(db, { action: "backfill", result: "ok" })).resolves.toBe(false);
+    expect(warning).toHaveBeenCalled();
+    warning.mockRestore();
+  });
+
   it("records actor from Cf-Access-Authenticated-User-Email header", async () => {
     const db = makeAuditMockDb();
     const req = new Request("https://ops-api.pharos.watch/api/reset-blacklist-sync", {
@@ -78,5 +93,43 @@ describe("logAdminAction", () => {
       maxSize: DETAILS_MAX_LEN,
       originalSize: JSON.stringify(huge).length,
     });
+  });
+
+  it("uses the unique intent insert only for canonical deduplicated rows", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT OR IGNORE INTO admin_action_audit",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ]);
+
+    await logAdminAction(db, {
+      action: "backfill-depegs",
+      result: "ok",
+      intentKey: "catalog:v1:opaque-hash",
+    });
+
+    const insert = db.getHistory().find((row) => row.sql.startsWith("INSERT OR IGNORE INTO admin_action_audit"));
+    expect(insert?.binds[7]).toBe("catalog:v1:opaque-hash");
+  });
+
+  it("uses an upsert for an authoritative original outcome", async () => {
+    const db = mockD1([
+      {
+        match: "ON CONFLICT(action, intent_key)",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ]);
+
+    await logAdminAction(db, {
+      action: "backfill-depegs",
+      result: "ok",
+      intentKey: "catalog:v1:opaque-hash",
+      intentWriteMode: "authoritative",
+    });
+
+    expect(db.getHistory()[0]?.sql).toContain("DO UPDATE SET");
   });
 });

@@ -27,6 +27,11 @@ const CRON_SCHEDULE_DEFINITIONS = {
     intervalSec: 300,
     offsetSec: 2 * 60,
   },
+  fiveMinuteReserveRecovery: {
+    schedule: "1,6,11,16,21,26,31,36,41,46,51,56 * * * *",
+    intervalSec: 300,
+    offsetSec: 60,
+  },
   digestTriggerPoll: { schedule: "*/5 * * * *", intervalSec: 300, offsetSec: 0 },
   daily0300Utc: { schedule: "0 3 * * *", intervalSec: DAY_SECONDS, offsetSec: 3 * 3600 },
   daily0800Utc: { schedule: "0 8 * * *", intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
@@ -223,6 +228,16 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "status-self-check-chain",
   },
   {
+    job: "reserve-recovery",
+    label: "Reserve recovery",
+    group: "five-minute",
+    scheduleKey: "fiveMinuteReserveRecovery",
+    triggerMode: "isolated",
+    statusImpact: "critical",
+    maxConnections: 2,
+    connectionGroup: "reserve-recovery-chain",
+  },
+  {
     job: "status-self-check",
     label: "Status self-check",
     group: "quarter-hourly",
@@ -264,7 +279,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "five-minute",
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
-    maxConnections: 0, // DB-only inspection plus optional webhook alert
+    maxConnections: 1, // DB inspection plus one serial durable-broker webhook retry
     connectionGroup: "five-minute-telegram-chain",
   },
   {
@@ -484,10 +499,10 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     label: "Weekly recap",
     group: "daily",
     intervalSec: 604800,
-    scheduleKey: "daily0805Utc",
+    scheduleKey: "daily0810Utc",
     triggerMode: "shared",
     maxConnections: 1, // Anthropic LLM call, then Telegram post (sequential)
-    connectionGroup: "digest-chain",
+    connectionGroup: "weekly-recap",
   },
   {
     job: "discovery-scan",
@@ -495,7 +510,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     intervalSec: 604800,
     scheduleKey: "daily0810Utc",
-    triggerMode: "isolated",
+    triggerMode: "shared",
     maxConnections: 1, // CoinGecko stablecoins market list fetch
   },
   {
@@ -593,6 +608,26 @@ const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefi
     statusTracked: false,
     notes:
       "Best-effort command, profile, and webhook reconciliation runs serially before dispatch when 15-minute cache markers expire.",
+  },
+  {
+    job: "alert-broker-delivery-drain",
+    label: "Alert broker delivery drain",
+    scheduleKey: "fiveMinuteTelegramAlerts",
+    maxConnections: 1,
+    connectionGroup: "five-minute-telegram-chain",
+    statusTracked: false,
+    notes:
+      "Retries due durable webhook deliveries serially after the status-tracked Telegram chain, independent of Telegram bot configuration.",
+  },
+  {
+    job: "telegram-digest-outbox-drain",
+    label: "Telegram digest outbox drain",
+    scheduleKey: "digestTriggerPoll",
+    maxConnections: 1,
+    connectionGroup: "digest-trigger-poll-chain",
+    statusTracked: false,
+    notes:
+      "Retries immutable Telegram daily/weekly digest editions without regenerating copy and surfaces ambiguous sends for operator reconciliation.",
   },
   {
     job: "digest-trigger-poll",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
 import { trackSearch } from "@/lib/analytics";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 
@@ -19,9 +19,15 @@ export function useUrlSearchSync(
   delayMs = 300,
 ): { searchInput: string; setSearchInput: (v: string) => void; deferredSearch: string } {
   const { getParam, setParam } = useUrlFilters();
-  const [searchInput, setSearchInput] = useState(() => getParam("q"));
+  const urlSearch = getParam("q");
+  const [searchDraft, setSearchDraft] = useState(() => ({ value: urlSearch, baseUrlSearch: urlSearch }));
+  const searchInput = searchDraft.baseUrlSearch === urlSearch ? searchDraft.value : urlSearch;
+  const setSearchInput = useCallback((value: string) => {
+    setSearchDraft({ value, baseUrlSearch: urlSearch });
+  }, [urlSearch]);
   const deferredSearch = useDeferredValue(searchInput);
   const urlSyncTimer = useRef<ReturnType<typeof setTimeout>>(null);
+
   useEffect(() => {
     if (urlSyncTimer.current) clearTimeout(urlSyncTimer.current);
     urlSyncTimer.current = setTimeout(() => {

@@ -6,19 +6,15 @@ import { round1 } from "@shared/lib/math";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { CronResult } from "../lib/cron-logger";
 import { getPriceCache } from "../lib/db-cache";
-import { readDewsPublishedGeneration } from "../lib/dews-publication-pointer";
 import { deriveDepegSignal } from "../lib/depeg-signals";
 import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { throwIfAborted } from "../lib/abort";
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 const DEWS_STRESS_MAX_AGE_SEC = CRON_INTERVALS["compute-dews"] * 2;
-// Bound the no-publication-pointer fallback scan. Wider than DEWS_STRESS_MAX_AGE_SEC so it never
-// tightens correctness beyond the staleness gate, but narrow enough to keep D1 from reading the
-// full stress_signals history when the publication pointer is missing.
-const DEWS_FALLBACK_SCAN_WINDOW_SEC = DEWS_STRESS_MAX_AGE_SEC * 2;
 const DEWS_STRESS_BANDS = new Set(["ALERT", "WARNING", "DANGER"]);
 
 export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
@@ -116,46 +112,13 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   let dewsFailureReason: string | null = null;
   let dewsLatestComputedAt: number | null = null;
   let dewsRowsRead = 0;
-  try {
-    let completedDewsAt: number | null = null;
-    try {
-      completedDewsAt = await readDewsPublishedGeneration(db, now);
-    } catch {
-      completedDewsAt = null;
-    }
-    // completedDewsAt is null on the first-ever run (no publication pointer yet) or if the
-    // pointer row is corrupt/unreadable. In that case we cannot replay against a known-good
-    // generation timestamp, so we fall back to the latest row per stablecoin. Once a published
-    // generation exists, read that exact generation only; retained latest rows for assets that
-    // dropped out of the current DEWS universe must not poison PSI freshness.
-    //
-    // The fallback remains safe because the staleness gate below (DEWS_STRESS_MAX_AGE_SEC)
-    // discards anything older than the freshness window; we additionally bound the subquery scan
-    // to the last DEWS_FALLBACK_SCAN_WINDOW_SEC so D1 does not read the full stress_signals
-    // history just to throw most of it away. The window is intentionally wider than
-    // DEWS_STRESS_MAX_AGE_SEC so it never tightens correctness beyond the staleness gate.
-    const dewsFallbackFloor = now - DEWS_FALLBACK_SCAN_WINDOW_SEC;
-    const dewsStmt = db.prepare(
-      completedDewsAt == null
-        ?
-        `SELECT s.stablecoin_id, s.score, s.band, s.computed_at
-         FROM stress_signals s
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(computed_at) as max_at
-           FROM stress_signals
-           WHERE computed_at >= ?
-           GROUP BY stablecoin_id
-         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`
-        :
-        `SELECT stablecoin_id, score, band, computed_at
-         FROM stress_signals
-         WHERE computed_at = ?`,
-    );
-    const dewsRows = await dewsStmt
-      .bind(completedDewsAt == null ? dewsFallbackFloor : completedDewsAt)
-      .all<{ stablecoin_id: string; score: number; band: string; computed_at: number }>();
-
-    const rows = dewsRows.results ?? [];
+  const publishedDews = await loadPublishedStressSignalGeneration(db, now);
+  throwIfAborted(signal);
+  if (publishedDews.status !== "ok") {
+    dewsUnavailable = true;
+    dewsFailureReason = publishedDews.reason;
+  } else {
+    const rows = publishedDews.rows;
     dewsRowsRead = rows.length;
     for (const row of rows) {
       if (!Number.isFinite(row.computed_at)) {
@@ -177,11 +140,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       }
     }
 
-    if (rows.length === 0) {
-      dewsUnavailable = true;
-      dewsFailureReason = "stress_signals returned no latest rows";
-    }
-
     if (!dewsUnavailable) {
       // Count stressed coins weighted by mcap after dependency freshness is proven.
       for (const row of rows) {
@@ -190,10 +148,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         dewsStressBreadth += Math.sqrt(coinMcap / 1e9) * DEWS_STRESS_BREADTH_SCALE;
       }
     }
-  } catch (error) {
-    dewsUnavailable = true;
-    dewsFailureReason = String(error);
-    console.warn("[stability-index] DEWS dependency unavailable; skipping fresh PSI sample publication:", error);
   }
 
   if (dewsUnavailable) {
@@ -327,6 +281,19 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   console.log(`[stability-index] score=${result.score} band=${result.band}`);
   return {
     itemCount: 1,
+    productivity: {
+      productive: true,
+      reason: "psi-sample-published",
+      publications: [{
+        surface: "psi",
+        generationId: `psi:${now}`,
+        publishedAt: now,
+        candidateRows: 1,
+        publishedRows: 1,
+        expectedRows: 1,
+        validationSummary: { methodologyVersion: PSI_METHODOLOGY_VERSION },
+      }],
+    },
     metadata: JSON.stringify({
       score: result.score,
       band: result.band,

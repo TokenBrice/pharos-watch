@@ -1,8 +1,10 @@
 import { pathToFileURL } from "node:url";
 import { buildBlacklistAddressCountKey } from "../../shared/lib/blacklist";
+import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import {
   fetchKycRipRows,
+  formatKycRipCliUsage,
   parseKycRipCliArgs,
   type KycRipCliOptions,
   type KycRipCurrentBalanceRow,
@@ -24,6 +26,13 @@ type ExistingCountRow = {
 
 export type CurrentBalanceCliOptions = KycRipCliOptions;
 
+const CURRENT_BALANCE_CLI_HELP = {
+  scriptName: "worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts",
+  applyDescription: "Execute the remote D1 replacement",
+  minRowsDescription: "Minimum accepted rows before replacement",
+} as const;
+const CURRENT_BALANCE_CLI_USAGE = formatKycRipCliUsage(CURRENT_BALANCE_CLI_HELP);
+
 export type CurrentBalanceReconcileDependencies = {
   fetchImpl?: typeof fetch;
   d1?: RemoteD1Client;
@@ -36,11 +45,7 @@ function buildCurrentBalanceId(stablecoin: "USDT" | "USDC", chainId: "ethereum" 
 }
 
 export function parseCurrentBalanceArgs(argv: string[]): CurrentBalanceCliOptions {
-  return parseKycRipCliArgs(argv, {
-    scriptName: "worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts",
-    applyDescription: "Execute the remote D1 replacement",
-    minRowsDescription: "Minimum accepted rows before replacement",
-  });
+  return parseKycRipCliArgs(argv, CURRENT_BALANCE_CLI_HELP);
 }
 
 export async function normalizeCurrentBalanceRows(rows: KycRipCurrentBalanceRow[]): Promise<SnapshotRow[]> {
@@ -200,12 +205,13 @@ export async function runCurrentBalanceReconciliation(
 
 async function main(): Promise<void> {
   const options = parseCurrentBalanceArgs(process.argv.slice(2));
+  if (writeCliHelpIfRequested(options, CURRENT_BALANCE_CLI_USAGE)) return;
   await runCurrentBalanceReconciliation(options, { log: console.log });
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error(error);
-    process.exit(1);
+  void runCliEntrypoint(() => main(), {
+    label: "reconcile-blacklist-current-balances-from-kyc-rip",
+    usage: CURRENT_BALANCE_CLI_USAGE,
   });
 }

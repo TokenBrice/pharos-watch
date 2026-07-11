@@ -5,6 +5,7 @@ import { buildInClause } from "./db";
 import { setCache } from "./db-cache";
 import { toErrorMessage } from "./error-utils";
 import { logWorkerEvent } from "./structured-log";
+import { recordProducerOutcome, type ProducerIdentity } from "./producer-history";
 
 const CACHE_PREFIX = "cron:budget-surface:";
 const CACHE_VERSION = 1;
@@ -21,6 +22,7 @@ export interface BudgetSurfaceTelemetryInput {
   skippedReason?: string | null;
   error?: string | null;
   metadata?: Record<string, unknown>;
+  producer?: ProducerIdentity;
 }
 
 interface BudgetSurfaceTelemetryPayload {
@@ -186,6 +188,24 @@ export async function recordBudgetSurfaceTelemetry(
       source: input.surface,
       message: "Budget-only scheduled surface telemetry could not be persisted",
       error,
+    });
+  }
+
+  if (input.producer) {
+    const invokedAt = Math.max(0, checkedAt - Math.ceil(payload.durationMs / 1_000));
+    await recordProducerOutcome(db, {
+      ...input.producer,
+      idempotencyKey: `budget-surface:${input.producer.invocationId}:${input.surface}`,
+      invokedAt,
+      completedAt: checkedAt,
+      outcome: input.outcome === "skipped" ? "skipped_neutral" : input.outcome,
+      itemCount: payload.processedCount,
+      metadata: JSON.stringify(payload),
+      error: payload.error ?? null,
+      productivity: {
+        productive: payload.processedCount > 0 && input.outcome !== "error",
+        reason: payload.processedCount > 0 ? "budget-work-processed" : payload.skippedReason ?? "no-due-work",
+      },
     });
   }
 }

@@ -13,6 +13,7 @@ import { buildFlowSummaryNarrative, getFlowDirectionUi, getFlowPressureUi } from
 import { cn } from "@/lib/utils";
 import { resolveNetDirection, resolvePressureScore, resolvePressureState } from "@/lib/mint-burn-coin-helpers";
 import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
+import { QueryStateNotice } from "@/components/query-state-notice";
 
 interface FlowSummaryCardProps {
   stablecoinId: string;
@@ -49,10 +50,26 @@ function SummarySkeleton() {
 }
 
 export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
-  const { data, isLoading } = useMintBurnFlows();
+  const query = useMintBurnFlows();
+  const { data, isLoading } = query;
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return <SummarySkeleton />;
+  }
+
+  if (query.error && !data) {
+    return (
+      <Card className="pharos-card-shell gap-0 overflow-hidden py-0">
+        <CardHeader>
+          <DetailSectionTitle as="h3" className="text-sm font-semibold tracking-normal text-muted-foreground">
+            Mint &amp; Burn Flows
+          </DetailSectionTitle>
+        </CardHeader>
+        <CardContent>
+          <QueryStateNotice state="unavailable" label="Mint and burn flow data" onRetry={() => void query.refetch()} />
+        </CardContent>
+      </Card>
+    );
   }
 
   if (!data?.coins) return null;
@@ -90,6 +107,17 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
           buttonClassName="!h-5 !min-h-0 !w-5 rounded-md !border-border/60 !bg-muted/50 !text-muted-foreground hover:!border-border hover:!bg-muted hover:!text-foreground dark:!border-border/60 dark:!bg-muted/50 dark:!text-muted-foreground md:!h-5 md:!w-5 md:!min-h-0"
         />
       </div>
+
+      {query.error ? (
+        <div className="border-b border-border/40 px-4 py-3 sm:px-5">
+          <QueryStateNotice
+            state="stale-with-data"
+            label="Mint and burn flow data"
+            dataUpdatedAt={query.dataUpdatedAt}
+            onRetry={() => void query.refetch()}
+          />
+        </div>
+      ) : null}
 
       <div className="grid border-b border-border/40 lg:grid-cols-2 lg:divide-x lg:divide-border/40">
         {/* Minting Pressure quadrant */}

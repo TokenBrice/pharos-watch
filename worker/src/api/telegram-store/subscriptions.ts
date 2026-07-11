@@ -1,4 +1,9 @@
-import { batchExecute } from "../../lib/db";
+import {
+  chunkArray,
+  D1_MAX_BOUND_PARAMETERS,
+  D1_SAFE_IN_CLAUSE_BIND_LIMIT,
+  executeAtomicBatch,
+} from "../../lib/db";
 import type { ResolvedCoin } from "../../lib/telegram-alerts";
 import type {
   ParsedSetCommand,
@@ -6,10 +11,14 @@ import type {
 } from "../telegram-webhook-shared";
 import {
   prepareUpsertSubscriberRow,
+  preparePreferenceGenerationBump,
   unixNow,
-  upsertSubscriberRow,
   type UpsertSubscriberInput,
 } from "./subscribers";
+import {
+  appendTelegramOperationStatements,
+  type TelegramOperationBatchOptions,
+} from "./_internals";
 
 export type DewsMinBandValue = "ALERT" | "WARNING" | "DANGER" | null;
 export type SafetyModeValue = "all" | "downgrade-only" | "upgrade-only" | null;
@@ -19,6 +28,12 @@ export interface BuiltSubscriptionUpsert {
   sql: string;
   binds: unknown[];
 }
+
+const SUBSCRIPTION_FOLLOW_BIND_COUNT = 13;
+const SUBSCRIPTION_FOLLOWS_PER_STATEMENT = Math.floor(
+  D1_MAX_BOUND_PARAMETERS / SUBSCRIPTION_FOLLOW_BIND_COUNT,
+);
+const SUBSCRIPTION_STATEMENT_COMPACTION_THRESHOLD = 50;
 
 function bindSubscriptionUpsert(db: D1Database, upsert: BuiltSubscriptionUpsert): D1PreparedStatement {
   return db.prepare(upsert.sql).bind(...upsert.binds);
@@ -195,11 +210,34 @@ export function prepareSubscriberAndSubscriptionStatements(
       db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
     );
   }
-  for (const stablecoinId of uniqueStablecoinIds) {
-    const depegStepUpdate =
-      options?.depegWorseningBpsStep === undefined
-        ? "depeg_worsening_bps_step = telegram_subscriptions.depeg_worsening_bps_step"
-        : "depeg_worsening_bps_step = excluded.depeg_worsening_bps_step";
+  const depegStepUpdate =
+    options?.depegWorseningBpsStep === undefined
+      ? "depeg_worsening_bps_step = telegram_subscriptions.depeg_worsening_bps_step"
+      : "depeg_worsening_bps_step = excluded.depeg_worsening_bps_step";
+  // Compact only large bulk-confirm payloads so every tracked-coin intent fits
+  // inside one 100-statement atomic D1 batch.
+  const stablecoinIdChunks = uniqueStablecoinIds.length > SUBSCRIPTION_STATEMENT_COMPACTION_THRESHOLD
+    ? chunkArray(uniqueStablecoinIds, SUBSCRIPTION_FOLLOWS_PER_STATEMENT)
+    : uniqueStablecoinIds.map((stablecoinId) => [stablecoinId]);
+  for (const stablecoinIdChunk of stablecoinIdChunks) {
+    const binds = stablecoinIdChunk.flatMap((stablecoinId) => [
+      chatId,
+      stablecoinId,
+      alertDews,
+      alertDepeg,
+      alertSafety,
+      alertLaunch,
+      alertReserve,
+      alertDews,
+      alertDepeg,
+      alertSafety,
+      alertLaunch,
+      alertReserve,
+      options?.depegWorseningBpsStep ?? null,
+    ]);
+    const values = stablecoinIdChunk
+      .map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .join(", ");
     statements.push(
       db.prepare(`
         INSERT INTO telegram_subscriptions (
@@ -210,26 +248,27 @@ export function prepareSubscriberAndSubscriptionStatements(
           alert_safety,
           alert_launch,
           alert_reserve,
+          alert_dews_override,
+          alert_depeg_override,
+          alert_safety_override,
+          alert_launch_override,
+          alert_reserve_override,
           depeg_worsening_bps_step
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ${values}
         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
           alert_dews = MAX(telegram_subscriptions.alert_dews, excluded.alert_dews),
           alert_depeg = MAX(telegram_subscriptions.alert_depeg, excluded.alert_depeg),
           alert_safety = MAX(telegram_subscriptions.alert_safety, excluded.alert_safety),
           alert_launch = MAX(telegram_subscriptions.alert_launch, excluded.alert_launch),
           alert_reserve = MAX(telegram_subscriptions.alert_reserve, excluded.alert_reserve),
+          alert_dews_override = MAX(telegram_subscriptions.alert_dews_override, excluded.alert_dews_override),
+          alert_depeg_override = MAX(telegram_subscriptions.alert_depeg_override, excluded.alert_depeg_override),
+          alert_safety_override = MAX(telegram_subscriptions.alert_safety_override, excluded.alert_safety_override),
+          alert_launch_override = MAX(telegram_subscriptions.alert_launch_override, excluded.alert_launch_override),
+          alert_reserve_override = MAX(telegram_subscriptions.alert_reserve_override, excluded.alert_reserve_override),
           ${depegStepUpdate}
-      `).bind(
-        chatId,
-        stablecoinId,
-        alertDews,
-        alertDepeg,
-        alertSafety,
-        alertLaunch,
-        alertReserve,
-        options?.depegWorseningBpsStep ?? null,
-      ),
+      `).bind(...binds),
     );
   }
   return statements;
@@ -241,7 +280,11 @@ export async function upsertSubscriberAndSubscriptions(
   username: string | null,
   alertTypes: Set<string>,
   stablecoinIds: string[],
-  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
+  options?: {
+    clearPending?: boolean;
+    depegWorseningBpsStep?: 100 | 250 | 500 | null;
+    operationStatements?: D1PreparedStatement[];
+  },
 ): Promise<void> {
   const statements = prepareSubscriberAndSubscriptionStatements(
     db,
@@ -251,7 +294,8 @@ export async function upsertSubscriberAndSubscriptions(
     stablecoinIds,
     options,
   );
-  if (statements.length > 0) await batchExecute(db, statements);
+  const atomicStatements = appendTelegramOperationStatements(statements, options);
+  if (atomicStatements.length > 0) await executeAtomicBatch(db, atomicStatements);
 }
 
 export async function applySettingToSubscriptions(
@@ -260,6 +304,7 @@ export async function applySettingToSubscriptions(
   username: string | null,
   coins: ResolvedCoin[],
   command: ParsedSetCommand,
+  options: TelegramOperationBatchOptions & { clearPending?: boolean } = {},
 ): Promise<void> {
   const now = unixNow();
   const perCoinAlertBumps: UpsertSubscriberInput["perCoinAlertBumps"] = {};
@@ -270,14 +315,19 @@ export async function applySettingToSubscriptions(
   if (command.setting === "launch" && command.enabled) perCoinAlertBumps.launch = 1;
   if (command.setting === "reserve" && command.enabled) perCoinAlertBumps.reserve = 1;
 
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: now,
-    perCoinAlertBumps,
-  });
-
-  const statements: D1PreparedStatement[] = [];
+  const statements: D1PreparedStatement[] = [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      perCoinAlertBumps,
+    }),
+  ];
+  if (options.clearPending) {
+    statements.push(
+      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
+    );
+  }
 
   for (const coin of coins) {
     switch (command.setting) {
@@ -320,7 +370,7 @@ export async function applySettingToSubscriptions(
     }
   }
 
-  if (statements.length > 0) await batchExecute(db, statements);
+  await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 
 export function validateGlobalSetCommand(command: ParsedSetCommand): string | null {
@@ -338,23 +388,28 @@ export async function setGlobalDepegWorseningStep(
   chatId: string,
   username: string | null,
   step: 100 | 250 | 500 | null,
+  options: TelegramOperationBatchOptions & { clearPending?: boolean } = {},
 ): Promise<void> {
   const now = unixNow();
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: now,
-    globalAlertBumps: { depeg: 1 },
-  });
-  await db
-    .prepare(
+  const statements: D1PreparedStatement[] = [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      globalAlertBumps: { depeg: 1 },
+    }),
+    db.prepare(
       `UPDATE telegram_subscribers
           SET global_depeg_worsening_bps_step = ?,
               last_active_at = ?
         WHERE chat_id = ?`,
     )
-    .bind(step, now, chatId)
-    .run();
+      .bind(step, now, chatId),
+  ];
+  if (options.clearPending) {
+    statements.push(db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId));
+  }
+  await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 
 export async function applyGlobalSetting(
@@ -362,47 +417,74 @@ export async function applyGlobalSetting(
   chatId: string,
   username: string | null,
   command: ParsedSetCommand,
+  options: TelegramOperationBatchOptions & { clearPending?: boolean } = {},
 ): Promise<void> {
   if (command.setting === "depeg-step") {
-    await setGlobalDepegWorseningStep(db, chatId, username, command.step);
+    await setGlobalDepegWorseningStep(db, chatId, username, command.step, options);
     return;
   }
   const override: 0 | 1 = command.enabled ? 1 : 0;
 
-  await upsertSubscriberRow(db, {
+  const statements = [prepareUpsertSubscriberRow(db, {
     chatId,
     username,
     nowSec: unixNow(),
     globalAlertOverrides: { [command.setting]: override },
-  });
+  })];
+  if (options.clearPending) {
+    statements.push(db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId));
+  }
+  await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 
 export function prepareRemoveSubscriptionStatements(
   db: D1Database,
   chatId: string,
   stablecoinIds: string[],
+  options: { touchSubscriber?: boolean } = {},
+): D1PreparedStatement[] {
+  const deletes = prepareRemoveSubscriptionRowStatements(db, chatId, stablecoinIds);
+  if (deletes.length === 0) return [];
+  if (options.touchSubscriber === false) return deletes;
+  return [
+    ...deletes,
+    prepareTouchSubscriberStatement(db, chatId),
+  ];
+}
+
+function prepareRemoveSubscriptionRowStatements(
+  db: D1Database,
+  chatId: string,
+  stablecoinIds: readonly string[],
 ): D1PreparedStatement[] {
   const uniqueIds = Array.from(new Set(stablecoinIds));
   if (uniqueIds.length === 0) return [];
 
-  const now = unixNow();
-  const placeholders = uniqueIds.map(() => "?").join(", ");
-  return [
-    db.prepare(
+  return chunkArray(uniqueIds, D1_SAFE_IN_CLAUSE_BIND_LIMIT - 1).map((idChunk) => {
+    const placeholders = idChunk.map(() => "?").join(", ");
+    return db.prepare(
       `DELETE FROM telegram_subscriptions WHERE chat_id = ? AND stablecoin_id IN (${placeholders})`,
-    ).bind(chatId, ...uniqueIds),
-    db.prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?").bind(now, chatId),
-  ];
+    ).bind(chatId, ...idChunk);
+  });
+}
+
+function prepareTouchSubscriberStatement(
+  db: D1Database,
+  chatId: string,
+): D1PreparedStatement {
+  return preparePreferenceGenerationBump(db, chatId);
 }
 
 export async function removeSubscriptions(
   db: D1Database,
   chatId: string,
   stablecoinIds: string[],
+  options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
   const statements = prepareRemoveSubscriptionStatements(db, chatId, stablecoinIds);
-  if (statements.length === 0) return;
-  await db.batch(statements);
+  const atomicStatements = appendTelegramOperationStatements(statements, options);
+  if (atomicStatements.length === 0) return;
+  await executeAtomicBatch(db, atomicStatements);
 }
 
 export async function loadSubscriptionsByIds(

@@ -1,4 +1,19 @@
 import type { ZodType } from "zod";
+import {
+  TELEGRAM_MINI_APP_CATALOG_VERSION,
+  TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
+  TELEGRAM_MINI_APP_CONTRACT_VERSION,
+  TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
+  TelegramMiniAppMutationRequestSchema,
+  TelegramMiniAppSessionRequestSchema,
+  createTelegramMiniAppSnapshot,
+  telegramMiniAppVersionCompatibility,
+  type TelegramMiniAppErrorCode,
+  type TelegramMiniAppMutableState,
+  type TelegramMiniAppOperation,
+  type TelegramMiniAppVersionCompatibility,
+} from "@shared/lib/telegram-mini-app-contract";
+import { TELEGRAM_MINI_APP_CATALOG } from "@shared/lib/telegram-mini-app-catalog";
 import { jsonResponse } from "../lib/api-utils";
 import type { JsonResponseOptions } from "../lib/api-response";
 import {
@@ -13,71 +28,75 @@ import {
   type TelegramUsageEventInput,
   type TelegramUsageEventType,
 } from "../lib/telegram-usage-analytics";
-import { acquireTelegramCommandCooldown, releaseTelegramCommandCooldown, unixNow } from "./telegram-webhook-store";
-import { TelegramMiniAppMutationRequestSchema, TelegramMiniAppSessionRequestSchema, type TelegramMiniAppOperation } from "./telegram-mini-app-schemas";
+import { acquireTelegramCommandCooldown, unixNow } from "./telegram-webhook-store";
 import { TelegramMiniAppMutationError, applyTelegramMiniAppMutation, mutationActionDetail } from "./telegram-mini-app-mutations";
+import { acquireTelegramMiniAppMutationBurst } from "./telegram-mini-app-rate-limit";
 import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
 import { logWorkerEvent } from "../lib/structured-log";
+import {
+  recordTelegramFirstFollow,
+  recordTelegramMiniAppAdoptionSession,
+  recordTelegramMiniAppFirstMutation,
+  telegramAdoptionDimensionsForMiniApp,
+} from "../lib/telegram-adoption-analytics";
+import type { TelegramAdoptionFeature } from "@shared/lib/telegram-adoption-analytics";
 
 export const TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC = 24 * 60 * 60;
 // 5-min mutation window per community consensus; 24h session window preserved for reads.
 export const TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC = 5 * 60;
 const SESSION_COOLDOWN_SEC = 2;
-const MUTATION_COOLDOWN_SEC = 5;
-const MUTATION_COOLDOWN_KEY = "mini-app:mutation:any";
+const MUTATION_AUTH_FAILURE_COOLDOWN_SEC = 5;
+const MUTATION_AUTH_FAILURE_COOLDOWN_KEY = "mini-app:mutation-auth-failure";
 const MAX_REQUEST_BODY_BYTES = 16 * 1024;
 const NO_STORE = { noStore: true };
 
-async function releaseMiniAppCooldownBestEffort(
-  db: D1Database,
-  input: { chatId: string; commandKey: string; operation: string },
-): Promise<void> {
-  try {
-    await releaseTelegramCommandCooldown(db, {
-      chatId: input.chatId,
-      commandKey: input.commandKey,
-    });
-  } catch (err) {
-    logWorkerEvent({
-      scope: "api",
-      level: "warn",
-      event: "telegram_mini_app_cooldown_release_failed",
-      route: "telegram-mini-app-mutation",
-      source: "telegram-mini-app",
-      message: "Telegram Mini App cooldown release failed",
-      metadata: { operation: input.operation },
-      error: err,
-    });
-  }
-}
-
-/**
- * Stable machine-readable error codes the Mini App frontend can switch on
- * without parsing free-form messages. Add new codes when extending the
- * mutation surface and update the consuming clients in lockstep.
- */
-type MiniAppErrorCode =
-  | "stale-auth"
-  | "not-private"
-  | "rate-limited"
-  | "validation-error"
-  | "body-too-large"
-  | "internal"
-  | "not-configured"
-  | "preset-unavailable"
-  | "unknown-coin"
-  | "unknown-preset"
-  | "invalid-coin-patch"
-  | "invalid-alert-types"
-  | "invalid-timezone";
-
 function miniAppError(
   status: number,
-  code: MiniAppErrorCode,
+  code: TelegramMiniAppErrorCode,
   message: string,
   options?: JsonResponseOptions,
+  details?: { contractVersion?: string; catalogVersion?: string },
 ): Response {
-  return jsonResponse({ error: message, code }, { ...NO_STORE, ...options, status });
+  const retryAfterSec = options?.retryAfterSec == null
+    ? null
+    : Math.max(1, Math.ceil(options.retryAfterSec));
+  return jsonResponse(
+    { error: message, code, ...(retryAfterSec == null ? {} : { retryAfterSec }), ...details },
+    { ...NO_STORE, ...options, status, ...(retryAfterSec == null ? {} : { retryAfterSec }) },
+  );
+}
+
+function versionMismatchResponse(
+  compatibility: Exclude<TelegramMiniAppVersionCompatibility, "legacy" | "compatible">,
+): Response {
+  const message = compatibility === "contract-version-mismatch"
+    ? "Telegram Mini App contract version changed"
+    : "Telegram Mini App catalog version changed";
+  return miniAppError(409, compatibility, message, undefined, {
+    contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
+    catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+  });
+}
+
+function stateResponse(
+  state: TelegramMiniAppMutableState,
+  compatibility: Extract<TelegramMiniAppVersionCompatibility, "legacy" | "compatible">,
+): Response {
+  if (compatibility === "legacy") {
+    return jsonResponse({ ...state, catalog: TELEGRAM_MINI_APP_CATALOG }, NO_STORE);
+  }
+  return jsonResponse(createTelegramMiniAppSnapshot(state), NO_STORE);
+}
+
+function requestVersionCompatibility(
+  request: Request,
+  parsed: { contractVersion?: string; catalogVersion?: string },
+): TelegramMiniAppVersionCompatibility {
+  const query = new URL(request.url).searchParams;
+  return telegramMiniAppVersionCompatibility({
+    contractVersion: parsed.contractVersion ?? query.get(TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM) ?? undefined,
+    catalogVersion: parsed.catalogVersion ?? query.get(TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM) ?? undefined,
+  });
 }
 
 type MiniAppHandler<T extends unknown[]> = (...args: T) => Promise<Response>;
@@ -228,7 +247,20 @@ async function validateOrResponse(
   db: D1Database,
   initData: string,
   botToken: string,
-  options: { maxAgeSec: number; start: number; cooldownKey: string; cooldownSec: number },
+  options: {
+    maxAgeSec: number;
+    start: number;
+    cooldownKey: string;
+    cooldownSec: number;
+    /**
+     * Usage event emitted on a signed-but-expired launch. Session reads keep
+     * `mini_app_session_invalid`; the mutation surface records
+     * `mini_app_mutation_denied` with a `stale-auth` failure class so TGB-022
+     * stale-auth mutation denials are measurable separately from session-read
+     * expiry in `telegram_usage_daily`.
+     */
+    staleAuthEvent: { eventType: TelegramUsageEventType; actionDetail?: string | null };
+  },
   botTokenPrevious?: string,
 ): Promise<TelegramMiniAppAuthContext | Response> {
   try {
@@ -261,8 +293,9 @@ async function validateOrResponse(
         // unauthenticated-write gate). Signed stale-auth carries user context,
         // so acquire the per-user cooldown before the analytics write.
         await recordMiniAppEvent(db, {
-          eventType: "mini_app_session_invalid",
+          eventType: options.staleAuthEvent.eventType,
           auth: staleAuth,
+          actionDetail: options.staleAuthEvent.actionDetail,
           outcome: err.code,
           failureClass: err.code,
           latencyMs: Date.now() - options.start,
@@ -287,6 +320,26 @@ function mutationEventType(operation: TelegramMiniAppOperation): TelegramUsageEv
   return "mini_app_mutation";
 }
 
+function adoptionMutationFeature(operation: TelegramMiniAppOperation): TelegramAdoptionFeature {
+  if (operation.kind === "recommended-setup") return "recommended_setup";
+  if (operation.kind === "set-coin" || operation.kind === "remove-coin") return "coin";
+  if (operation.kind === "set-quiet-hours") return "quiet_hours";
+  if (operation.kind === "set-snooze" || operation.kind === "set-coin-snooze" || operation.kind === "pause" || operation.kind === "clear-snooze") return "snooze";
+  if (operation.kind === "set-timezone") return "timezone";
+  if (operation.kind === "unsubscribe-all") return "unsubscribe";
+  if (operation.kind === "forget-me") return "forget";
+  if (operation.kind === "follow-preset" || operation.kind === "unfollow-preset") return "preset";
+  if (operation.kind === "set-global" || operation.kind === "set-global-depeg-step") return "global";
+  return "settings";
+}
+
+function firstFollowFeature(operation: TelegramMiniAppOperation): "direct" | "preset" | "global" | null {
+  if (operation.kind === "recommended-setup" || operation.kind === "follow-preset") return "preset";
+  if (operation.kind === "set-coin") return "direct";
+  if (operation.kind === "set-global" && operation.enabled) return "global";
+  return null;
+}
+
 function mutationErrorMessage(err: TelegramMiniAppMutationError): string {
   if (err.code === "not-private") return "Mini App mutations are private-chat only";
   if (err.code === "unknown-coin") return "Unknown stablecoin";
@@ -297,7 +350,7 @@ function mutationErrorMessage(err: TelegramMiniAppMutationError): string {
   return "Invalid Mini App mutation";
 }
 
-function mutationErrorResponseCode(code: TelegramMiniAppMutationError["code"]): MiniAppErrorCode {
+function mutationErrorResponseCode(code: TelegramMiniAppMutationError["code"]): TelegramMiniAppErrorCode {
   if (code === "empty-alert-types") return "invalid-alert-types";
   return code;
 }
@@ -315,12 +368,17 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     if (parsed instanceof Response) {
       return parsed;
     }
+    const compatibility = requestVersionCompatibility(request, parsed);
+    if (compatibility === "contract-version-mismatch" || compatibility === "catalog-version-mismatch") {
+      return versionMismatchResponse(compatibility);
+    }
 
     const auth = await validateOrResponse(db, parsed.initData, botToken, {
       maxAgeSec: TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC,
       start,
       cooldownKey: "mini-app:session",
       cooldownSec: SESSION_COOLDOWN_SEC,
+      staleAuthEvent: { eventType: "mini_app_session_invalid" },
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 
@@ -351,11 +409,18 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
       sessionEvents.push({ eventType: "mini_app_group_readonly", auth, outcome: "readonly", latencyMs });
     }
     await recordMiniAppEvents(db, sessionEvents);
+    await recordTelegramMiniAppAdoptionSession(db, {
+      userId: auth.userId,
+      startParam: auth.startParam,
+      canMutate: auth.canMutatePrivateChat,
+      nowSec: unixNow(),
+    });
 
-    return jsonResponse(await loadTelegramMiniAppState(db, auth, {
+    const state = await loadTelegramMiniAppState(db, auth, {
       nowSec: unixNow(),
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
-    }), NO_STORE);
+    });
+    return stateResponse(state, compatibility);
   },
 );
 
@@ -372,22 +437,28 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     if (parsed instanceof Response) {
       return parsed;
     }
+    const compatibility = requestVersionCompatibility(request, parsed);
+    if (compatibility === "contract-version-mismatch" || compatibility === "catalog-version-mismatch") {
+      return versionMismatchResponse(compatibility);
+    }
 
     const auth = await validateOrResponse(db, parsed.initData, botToken, {
       maxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
       start,
-      cooldownKey: MUTATION_COOLDOWN_KEY,
-      cooldownSec: MUTATION_COOLDOWN_SEC,
+      cooldownKey: MUTATION_AUTH_FAILURE_COOLDOWN_KEY,
+      cooldownSec: MUTATION_AUTH_FAILURE_COOLDOWN_SEC,
+      staleAuthEvent: {
+        eventType: "mini_app_mutation_denied",
+        actionDetail: mutationActionDetail(parsed.operation),
+      },
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 
-    const cooldown = await acquireTelegramCommandCooldown(db, {
-      chatId: auth.userId,
-      commandKey: MUTATION_COOLDOWN_KEY,
+    const burst = await acquireTelegramMiniAppMutationBurst(db, {
+      userId: auth.userId,
       nowSec: unixNow(),
-      cooldownSec: MUTATION_COOLDOWN_SEC,
     });
-    if (!cooldown.allowed) {
+    if (!burst.allowed) {
       await recordMiniAppEvent(db, {
         eventType: "mini_app_mutation_denied",
         auth,
@@ -396,8 +467,8 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         failureClass: "rate_limited",
         latencyMs: Date.now() - start,
       });
-      return miniAppError(429, "rate-limited", "Mini App mutation rate limited", {
-        retryAfterSec: cooldown.retryAfterSec,
+      return miniAppError(429, "rate-limited", "Pharos Mini App edit limit reached", {
+        retryAfterSec: burst.retryAfterSec,
       });
     }
 
@@ -405,13 +476,6 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       await applyTelegramMiniAppMutation(db, auth, parsed.operation);
     } catch (err) {
       if (err instanceof TelegramMiniAppMutationError) {
-        if (err.status >= 500) {
-          await releaseMiniAppCooldownBestEffort(db, {
-            chatId: auth.userId,
-            commandKey: MUTATION_COOLDOWN_KEY,
-            operation: parsed.operation.kind,
-          });
-        }
         await recordMiniAppEvent(db, {
           eventType: "mini_app_mutation_denied",
           auth,
@@ -422,11 +486,6 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         });
         return miniAppError(err.status, mutationErrorResponseCode(err.code), mutationErrorMessage(err));
       }
-      await releaseMiniAppCooldownBestEffort(db, {
-        chatId: auth.userId,
-        commandKey: MUTATION_COOLDOWN_KEY,
-        operation: parsed.operation.kind,
-      });
       throw err;
     }
 
@@ -437,9 +496,25 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       outcome: "success",
       latencyMs: Date.now() - start,
     });
-    return jsonResponse(await loadTelegramMiniAppState(db, auth, {
+    const adoptionNowSec = unixNow();
+    await recordTelegramMiniAppFirstMutation(db, {
+      userId: auth.userId,
+      feature: adoptionMutationFeature(parsed.operation),
+      nowSec: adoptionNowSec,
+    });
+    const followFeature = firstFollowFeature(parsed.operation);
+    if (followFeature) {
+      await recordTelegramFirstFollow(db, {
+        ...telegramAdoptionDimensionsForMiniApp(auth.startParam),
+        chatId: auth.userId,
+        feature: followFeature,
+        nowSec: adoptionNowSec,
+      });
+    }
+    const state = await loadTelegramMiniAppState(db, auth, {
       nowSec: unixNow(),
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
-    }), NO_STORE);
+    });
+    return stateResponse(state, compatibility);
   },
 );

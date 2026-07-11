@@ -1,35 +1,140 @@
-/**
- * Structured logger for the Telegram subsystem.
- *
- * Emits a single-line JSON record per event so log scrapers (and humans
- * tailing `wrangler tail`) can filter by chatId / action / level without
- * brittle regex on prose log lines.
- *
- * Pure, synchronous, no dependencies. Defaults `level` to "error" so a
- * bare `logTelegramEvent({ message })` mirrors the historical
- * `console.error(...)` ergonomics callers are replacing.
- */
+/** Privacy-bounded structured logging for the Telegram subsystem. */
 export type TelegramLogLevel = "info" | "warn" | "error";
+
+export type TelegramLogErrorClass =
+  | "abort"
+  | "auth_error"
+  | "bad_request"
+  | "blocked"
+  | "chat_migrated"
+  | "chat_not_found"
+  | "d1"
+  | "execution_unknown"
+  | "formatting_error"
+  | "network"
+  | "payload_too_large"
+  | "rate_limit"
+  | "server_error"
+  | "timeout"
+  | "unknown";
 
 export interface TelegramLogEvent {
   level?: TelegramLogLevel;
   message: string;
-  chatId?: string | number | null;
-  userId?: string | number | null;
   action?: string | null;
-  [key: string]: unknown;
+  module?: string | null;
+  signal?: string | null;
+  errorClass?: TelegramLogErrorClass | null;
+  statusCode?: number | null;
+  retryAfterSec?: number | null;
+  failureKind?: string | null;
+  alertType?: string | null;
+  reason?: string | null;
+  reasonClass?: string | null;
+  priorFailureReasonClass?: string | null;
+  sourceType?: string | null;
+  priority?: number | null;
+  attempts?: number | null;
+  ageSec?: number | null;
+  timezone?: string | null;
+  hasCurrentSecret?: boolean;
+  hasPreviousSecret?: boolean;
+  invalidSecretWindowCount?: number;
+  invalidSecretSpike?: boolean;
+  missingSecretWindowCount?: number;
+  missingSecretSpike?: boolean;
+  presentedLength?: number;
+  attemptedCount?: number;
+  sentCount?: number;
+  queuedCount?: number;
+  permanentFailureCount?: number;
+  pendingAttemptedCount?: number;
+  pendingSentCount?: number;
+  pendingEnqueuedCount?: number;
+  requestedStablecoinCount?: number;
+  presetCount?: number;
+  subscriberRowCount?: number;
+  chunkSize?: number;
+  updateCount?: number;
+  rowCount?: number;
+  affectedChatCount?: number;
+  dedupeKeyCount?: number;
+  affectedChats?: number;
+  quietHoursTzFallback?: boolean;
+  dedupeKeyPresent?: boolean;
+  cappedAtLimit?: number | boolean;
 }
 
 const SECRET_AUTH_SPIKE_WINDOW_MS = 60_000;
 const SECRET_AUTH_SPIKE_THRESHOLD = 5;
+const MAX_MESSAGE_LENGTH = 240;
+const MAX_METADATA_STRING_LENGTH = 96;
 
-// Intentional per-isolate cache — module-scope let used to throttle invalid-secret log noise within a Worker isolate. See docs/worker-infrastructure.md.
+const ALLOWED_METADATA_KEYS = [
+  "signal",
+  "errorClass",
+  "statusCode",
+  "retryAfterSec",
+  "failureKind",
+  "alertType",
+  "reason",
+  "reasonClass",
+  "priorFailureReasonClass",
+  "sourceType",
+  "priority",
+  "attempts",
+  "ageSec",
+  "timezone",
+  "hasCurrentSecret",
+  "hasPreviousSecret",
+  "invalidSecretWindowCount",
+  "invalidSecretSpike",
+  "missingSecretWindowCount",
+  "missingSecretSpike",
+  "presentedLength",
+  "attemptedCount",
+  "sentCount",
+  "queuedCount",
+  "permanentFailureCount",
+  "pendingAttemptedCount",
+  "pendingSentCount",
+  "pendingEnqueuedCount",
+  "requestedStablecoinCount",
+  "presetCount",
+  "subscriberRowCount",
+  "chunkSize",
+  "updateCount",
+  "rowCount",
+  "affectedChatCount",
+  "dedupeKeyCount",
+  "affectedChats",
+  "quietHoursTzFallback",
+  "dedupeKeyPresent",
+  "cappedAtLimit",
+] as const satisfies readonly (keyof TelegramLogEvent)[];
+
+const ERROR_CLASS_VALUES = new Set<TelegramLogErrorClass>([
+  "abort",
+  "auth_error",
+  "bad_request",
+  "blocked",
+  "chat_migrated",
+  "chat_not_found",
+  "d1",
+  "execution_unknown",
+  "formatting_error",
+  "network",
+  "payload_too_large",
+  "rate_limit",
+  "server_error",
+  "timeout",
+  "unknown",
+]);
+
+// Intentional per-isolate counters throttle invalid-secret noise.
 let invalidSecretWindowStartedAt = 0;
-// Intentional per-isolate cache — module-scope let used to throttle invalid-secret log noise within a Worker isolate. See docs/worker-infrastructure.md.
 let invalidSecretWindowCount = 0;
-// Intentional per-isolate cache — module-scope let used to throttle missing-secret log noise within a Worker isolate. See docs/worker-infrastructure.md.
 let missingSecretWindowStartedAt = 0;
-// Intentional per-isolate cache — module-scope let used to throttle missing-secret log noise within a Worker isolate. See docs/worker-infrastructure.md.
 let missingSecretWindowCount = 0;
 
 interface TelegramLogRecord {
@@ -37,63 +142,107 @@ interface TelegramLogRecord {
   scope: "telegram";
   level: TelegramLogLevel;
   message: string;
-  chatId?: string;
-  userId?: string;
   action?: string;
-  [key: string]: unknown;
+  module?: string;
+  [key: string]: string | number | boolean | null | undefined;
 }
 
-function normalizeId(value: string | number | null | undefined): string | undefined {
-  if (value === null || value === undefined) return undefined;
-  if (typeof value === "number") return Number.isFinite(value) ? String(value) : undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
+function sanitizeString(value: string, maxLength: number): string {
+  return value
+    .replace(/https?:\/\/\S+/gi, "[redacted-url]")
+    .replace(/\b\d{6,12}:[A-Za-z0-9_-]{20,64}\b/g, "[redacted-secret]")
+    .replace(/\bBearer [A-Za-z0-9._~-]{16,128}\b/gi, "[redacted-secret]")
+    .replace(/\b(?:init_?data|bot_?token|token|secret|signature|hash)\s*[=:]\s*[^\s,;]+/gi, "[redacted-secret]")
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, "[redacted-id]")
+    .replace(/\b[0-9a-f]{16,128}\b/gi, "[redacted-id]")
+    .replace(/\b(?=[A-Za-z0-9_-]{24,128}\b)(?=[A-Za-z0-9_-]*[A-Z])(?=[A-Za-z0-9_-]*[a-z])(?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]+\b/g, "[redacted-id]")
+    .replace(/(^|\D)-?\d{5,20}(?=\D|$)/g, "$1[redacted-id]")
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function sanitizeLabel(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const sanitized = sanitizeString(value, MAX_METADATA_STRING_LENGTH);
+  return /^[A-Za-z0-9][A-Za-z0-9:_./-]*$/.test(sanitized) ? sanitized : undefined;
+}
+
+function sanitizeMetadataValue(value: unknown): string | number | boolean | null | undefined {
+  if (value === null) return null;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  if (typeof value === "string") {
+    const sanitized = sanitizeString(value, MAX_METADATA_STRING_LENGTH);
+    return sanitized.length > 0 ? sanitized : undefined;
+  }
+  return undefined;
+}
+
+export function normalizeTelegramLogErrorClass(value: unknown): TelegramLogErrorClass {
+  return typeof value === "string" && ERROR_CLASS_VALUES.has(value as TelegramLogErrorClass)
+    ? value as TelegramLogErrorClass
+    : "unknown";
+}
+
+export function classifyTelegramLogError(error: unknown): TelegramLogErrorClass {
+  if (error && typeof error === "object" && "name" in error) {
+    const name = String((error as { name?: unknown }).name).toLowerCase();
+    if (name === "aborterror") return "abort";
+    if (name === "timeouterror") return "timeout";
+  }
+  if (error instanceof TypeError) return "network";
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (/\b(?:d1|database|sqlite|sql)\b/.test(message)) return "d1";
+  if (/\btimeout|timed out\b/.test(message)) return "timeout";
+  return "unknown";
+}
+
+export function logTelegramEvent(event: TelegramLogEvent): void {
+  const input = event as unknown as Record<string, unknown>;
+  const resolvedLevel: TelegramLogLevel =
+    input.level === "info" || input.level === "warn" ? input.level : "error";
+  const sanitizedMessage = sanitizeString(
+    typeof input.message === "string" ? input.message : "telegram event",
+    MAX_MESSAGE_LENGTH,
+  );
+  const record: TelegramLogRecord = {
+    ts: new Date().toISOString(),
+    scope: "telegram",
+    level: resolvedLevel,
+    message: sanitizedMessage || "telegram event",
+  };
+
+  const action = sanitizeLabel(input.action);
+  if (action) record.action = action;
+  const moduleName = sanitizeLabel(input.module);
+  if (moduleName) record.module = moduleName;
+
+  for (const key of ALLOWED_METADATA_KEYS) {
+    const value = key === "errorClass"
+      ? input[key] == null ? input[key] : normalizeTelegramLogErrorClass(input[key])
+      : sanitizeMetadataValue(input[key]);
+    if (value !== undefined) record[key] = value;
+  }
+
+  const line = JSON.stringify(record);
+  if (resolvedLevel === "warn") console.warn(line);
+  else if (resolvedLevel === "info") console.info(line);
+  else console.error(line);
 }
 
 function shouldEmitSecretAuthAttempt(windowCount: number): boolean {
   return windowCount <= SECRET_AUTH_SPIKE_THRESHOLD;
 }
 
-export function logTelegramEvent(event: TelegramLogEvent): void {
-  const { level, message, chatId, userId, action, ...rest } = event;
-  const resolvedLevel: TelegramLogLevel = level ?? "error";
-  const record: TelegramLogRecord = {
-    ts: new Date().toISOString(),
-    scope: "telegram",
-    level: resolvedLevel,
-    message,
-  };
-  const normalizedChatId = normalizeId(chatId);
-  if (normalizedChatId !== undefined) record.chatId = normalizedChatId;
-  const normalizedUserId = normalizeId(userId);
-  if (normalizedUserId !== undefined) record.userId = normalizedUserId;
-  if (action !== null && action !== undefined && action !== "") record.action = action;
-  for (const [key, value] of Object.entries(rest)) {
-    if (value === undefined) continue;
-    record[key] = value;
-  }
-  const line = JSON.stringify(record);
-  if (resolvedLevel === "warn") {
-    console.warn(line);
-  } else if (resolvedLevel === "info") {
-    console.info(line);
-  } else {
-    console.error(line);
-  }
-}
-
-export function logTelegramInvalidSecretAttempt(
-  context: {
-    hasCurrentSecret: boolean;
-    hasPreviousSecret: boolean;
-    presentedLength: number;
-  },
-): void {
+export function logTelegramInvalidSecretAttempt(context: {
+  hasCurrentSecret: boolean;
+  hasPreviousSecret: boolean;
+  presentedLength: number;
+}): void {
   const nowMs = Date.now();
-  if (
-    invalidSecretWindowStartedAt === 0 ||
-    nowMs - invalidSecretWindowStartedAt > SECRET_AUTH_SPIKE_WINDOW_MS
-  ) {
+  if (invalidSecretWindowStartedAt === 0 || nowMs - invalidSecretWindowStartedAt > SECRET_AUTH_SPIKE_WINDOW_MS) {
     invalidSecretWindowStartedAt = nowMs;
     invalidSecretWindowCount = 0;
   }
@@ -111,17 +260,12 @@ export function logTelegramInvalidSecretAttempt(
   });
 }
 
-export function logTelegramMissingSecretAttempt(
-  context: {
-    hasCurrentSecret: boolean;
-    hasPreviousSecret: boolean;
-  },
-): void {
+export function logTelegramMissingSecretAttempt(context: {
+  hasCurrentSecret: boolean;
+  hasPreviousSecret: boolean;
+}): void {
   const nowMs = Date.now();
-  if (
-    missingSecretWindowStartedAt === 0 ||
-    nowMs - missingSecretWindowStartedAt > SECRET_AUTH_SPIKE_WINDOW_MS
-  ) {
+  if (missingSecretWindowStartedAt === 0 || nowMs - missingSecretWindowStartedAt > SECRET_AUTH_SPIKE_WINDOW_MS) {
     missingSecretWindowStartedAt = nowMs;
     missingSecretWindowCount = 0;
   }

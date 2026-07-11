@@ -13,10 +13,8 @@ interface CircuitGatedScheduledJobOptions {
   skipMessage: string;
   job: string;
   fn: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1];
-  onSettledSuccess?: (
-    runtime: ScheduledRuntimeContext,
-    result: CronResult | void,
-  ) => Promise<void>;
+  /** @deprecated Keep follow-up publication inside `fn` so it shares job ownership. */
+  onSettledSuccess?: (runtime: ScheduledRuntimeContext, result: CronResult | void) => Promise<void>;
 }
 
 export async function runCircuitGatedLeasedScheduledJob(
@@ -47,9 +45,7 @@ export async function runCircuitGatedLeasedScheduledJob(
       console.error(`[cron] Failed to record ${options.outcomeLabel} success outcome:`, err);
     });
     if (options.onSettledSuccess) {
-      await options.onSettledSuccess(runtime, result).catch(() => {
-        // Non-blocking follow-up path.
-      });
+      await options.onSettledSuccess(runtime, result);
     }
     return result ?? null;
   } catch (err) {

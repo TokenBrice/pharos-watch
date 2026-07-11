@@ -391,15 +391,16 @@ async function main() {
   const recentRuns = d1Select(args, `
     SELECT job, started_at, duration_ms, status, error, item_count, slot_started_at, ${metadataSelect(args, "metadata")}
       FROM cron_runs
-     WHERE started_at >= unixepoch() - ${sinceSec}
-     ORDER BY started_at DESC
+     WHERE slot_started_at >= unixepoch() - ${sinceSec}
+        OR (slot_started_at IS NULL AND started_at >= unixepoch() - ${sinceSec})
+     ORDER BY COALESCE(slot_started_at, started_at) DESC, started_at DESC
      LIMIT ${limit}
   `);
   const slots = d1Select(args, `
     SELECT slot_key, slot_started_at, state, result_status, execution_owner, started_at, finished_at, updated_at, ${metadataSelect(args, "metadata")}
       FROM cron_slot_executions
-     WHERE updated_at >= unixepoch() - ${Math.max(sinceSec, 24 * 3600)}
-     ORDER BY updated_at DESC
+     WHERE slot_started_at >= unixepoch() - ${Math.max(sinceSec, 24 * 3600)}
+     ORDER BY slot_started_at DESC
      LIMIT 80
   `);
   const leases = d1Select(args, `

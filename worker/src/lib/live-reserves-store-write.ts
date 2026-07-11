@@ -11,10 +11,13 @@ import {
   type ReserveSyncStateRecord,
 } from "./live-reserves-store-shared";
 import {
+  buildReserveAuthoritativeHistoryRepairReadbackStatement,
+  buildReserveCompositionHistoryRepairStatement,
   buildReserveCompositionHistoryInsertStatement,
   buildReserveCompositionFinalizeSuccessStatement,
   buildReserveCompositionUpsertStatement,
   buildReserveSuccessAuthoritativeReadbackStatement,
+  buildReserveSyncAttemptHistoryRepairStatement,
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncAttemptStartStatement,
   buildReserveSyncFinalizeAttemptStatement,
@@ -57,11 +60,56 @@ export async function didReserveSyncSuccessBecomeAuthoritative(
   return row?.finalized === 1;
 }
 
+export async function didReserveSyncAttemptBecomeAuthoritative(
+  db: D1Database,
+  stablecoinId: string,
+  attemptId: string,
+): Promise<boolean> {
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT 1 AS finalized
+           FROM reserve_composition c
+           JOIN reserve_sync_state s
+             ON s.stablecoin_id = c.stablecoin_id
+          WHERE c.stablecoin_id = ?
+            AND c.attempt_id = ?
+            AND s.last_success_at = c.fetched_at
+            AND s.last_attempt_id = c.attempt_id
+            AND s.last_success_attempt_id = c.attempt_id
+            AND s.pending_attempt_id IS NULL
+          LIMIT 1`,
+      )
+      .bind(stablecoinId, attemptId)
+      .first<{ finalized: number }>(),
+  );
+  return row?.finalized === 1;
+}
+
+export async function repairAuthoritativeReserveSyncHistory(
+  db: D1Database,
+  stablecoinId: string,
+  attemptId: string,
+): Promise<boolean> {
+  await runWithOverloadRetry(() =>
+    db.batch([
+      buildReserveCompositionHistoryRepairStatement(db, stablecoinId, attemptId),
+      buildReserveSyncAttemptHistoryRepairStatement(db, stablecoinId, attemptId),
+    ]),
+  );
+  const row = await runWithOverloadRetry(() =>
+    buildReserveAuthoritativeHistoryRepairReadbackStatement(db, stablecoinId, attemptId)
+      .first<{ repaired: number }>(),
+  );
+  return row?.repaired === 1;
+}
+
 export async function finalizeReserveSyncSuccess(
   db: D1Database,
   composition: ReserveCompositionRecord,
   syncState: ReserveSyncStateRecord,
   finalizeDeadlineMs: number,
+  onAuthoritativeWrite?: () => Promise<void>,
 ): Promise<{ finalized: boolean; historyRecorded: boolean; historyError?: string }> {
   let compositionApplied = false;
   let finalized = false;
@@ -102,6 +150,8 @@ export async function finalizeReserveSyncSuccess(
       return { finalized: false, historyRecorded: false };
     }
   }
+
+  await onAuthoritativeWrite?.();
 
   try {
     await runWithOverloadRetry(() =>

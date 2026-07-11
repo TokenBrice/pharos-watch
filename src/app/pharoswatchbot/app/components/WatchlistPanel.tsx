@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ExternalLink, Info, Search, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PHAROS_COIN_PAGE_PREFIX, SUGGESTED_SEARCH_IDS } from "../constants";
@@ -107,10 +107,13 @@ export interface WatchlistPanelProps {
   highlightedCoinId: string | null;
   /** Launch-target coin id when it's not yet in subscriptions. */
   targetCoinId: string | null;
+  /** Focus and highlight an existing followed coin. */
+  onNavigateToCoin: (coinId: string) => void;
 }
 
-export function WatchlistPanel({ state, canMutate, isMutating, pendingOperation, onMutate, onRemove, onOpenInsight, pendingUndo, onUndo, webApp, nowSec, highlightedCoinId, targetCoinId }: WatchlistPanelProps) {
+export function WatchlistPanel({ state, canMutate, isMutating, pendingOperation, onMutate, onRemove, onOpenInsight, pendingUndo, onUndo, webApp, nowSec, highlightedCoinId, targetCoinId, onNavigateToCoin }: WatchlistPanelProps) {
   const [query, setQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const subscribed = useMemo(() => new Set(state.subscriptions.map((coin) => coin.stablecoinId)), [state.subscriptions]);
   const catalogById = useMemo(
     () => new Map(state.catalog.searchableCoins.map((coin) => [coin.stablecoinId, coin])),
@@ -160,6 +163,7 @@ export function WatchlistPanel({ state, canMutate, isMutating, pendingOperation,
         </div>
         <label className="sr-only" htmlFor="telegram-mini-app-coin-search">Search stablecoins</label>
         <input
+          ref={searchInputRef}
           id="telegram-mini-app-coin-search"
           className="pharos-focus-ring mt-3 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground"
           value={query}
@@ -168,21 +172,35 @@ export function WatchlistPanel({ state, canMutate, isMutating, pendingOperation,
         />
         {queryLength < 2 && suggestions.length > 0 ? (
           <div className="mt-3 grid grid-cols-3 gap-2">
-            {suggestions.map((coin) => (
-              <button
-                key={coin.stablecoinId}
-                type="button"
-                disabled={!canMutate || isMutating || subscribed.has(coin.stablecoinId)}
-                onClick={() => setQuery(coin.symbol)}
-                className={cn(
-                  "pharos-focus-ring min-h-11 rounded-lg border px-2 py-2 text-center text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                  "border-border/65 bg-background/55 text-foreground hover:bg-muted/40",
-                )}
-              >
-                <span className="block">{coin.symbol}</span>
-                <span className="block text-[10px] font-normal text-muted-foreground">{coin.name}</span>
-              </button>
-            ))}
+            {suggestions.map((coin) => {
+              const following = subscribed.has(coin.stablecoinId);
+              return (
+                <button
+                  key={coin.stablecoinId}
+                  type="button"
+                  aria-label={following ? `Go to followed ${coin.symbol}` : `Search for ${coin.symbol}`}
+                  onClick={() => {
+                    if (following) {
+                      onNavigateToCoin(coin.stablecoinId);
+                      return;
+                    }
+                    setQuery(coin.symbol);
+                    queueMicrotask(() => searchInputRef.current?.focus());
+                  }}
+                  className={cn(
+                    "pharos-focus-ring min-h-11 rounded-lg border px-2 py-2 text-center text-xs font-semibold transition-colors",
+                    following
+                      ? "mini-selected"
+                      : "border-border/65 bg-background/55 text-foreground hover:bg-muted/40",
+                  )}
+                >
+                  <span className="block">{coin.symbol}</span>
+                  <span className="block text-[10px] font-normal text-muted-foreground">
+                    {following ? "Following" : coin.name}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         ) : null}
         {queryLength >= 2 && results.length === 0 ? (

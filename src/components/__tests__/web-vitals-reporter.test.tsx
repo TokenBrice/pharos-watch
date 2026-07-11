@@ -29,6 +29,17 @@ afterEach(() => {
 });
 
 describe("WebVitalsReporter", () => {
+  it("does not send Web Vitals from the embedded Telegram Mini App", () => {
+    pathnameMock.mockReturnValue("/pharoswatchbot/app/");
+    const gtag = vi.fn();
+    window.gtag = gtag;
+
+    render(<WebVitalsReporter />);
+    reportCallbacks[0]({ name: "LCP", value: 1234.5, id: "v4-mini-app" });
+
+    expect(gtag).not.toHaveBeenCalled();
+  });
+
   it("forwards a web vital metric to window.gtag via trackEvent with page_path attached", () => {
     pathnameMock.mockReturnValue("/stablecoin/usdc/");
     const gtag = vi.fn();

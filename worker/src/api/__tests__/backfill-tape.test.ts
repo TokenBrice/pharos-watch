@@ -1,10 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillTape } from "../backfill-tape";
 import { TAPE_PROJECTOR_JOBS } from "../../cron/project-tape";
 
 stubCryptoForAuth();
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function emptyDb(): MockD1Database {
   // Provide rows for every read the projectors might attempt; an empty result
@@ -111,6 +115,29 @@ describe("handleBackfillTape", () => {
     expect(body.selectedClasses).toEqual(["depeg.opened", "score.upgraded"]);
   });
 
+  it("returns a non-success status when a selected projector fails", async () => {
+    const job = TAPE_PROJECTOR_JOBS[0]!;
+    vi.spyOn(job, "run").mockRejectedValueOnce(new Error("projector unavailable"));
+    const path = `/api/backfill-tape?class=${encodeURIComponent(job.name)}&dryRun=true`;
+
+    const res = await handleBackfillTape(
+      emptyDb(),
+      makeApiUrl(path),
+      true,
+      makeApiRequest(path, { method: "POST", adminKey: "secret" }),
+    );
+    const body = (await res.json()) as {
+      ok: boolean;
+      errors: Array<{ name: string; message: string }>;
+      projected: number;
+    };
+
+    expect(res.status).toBe(500);
+    expect(body.ok).toBe(false);
+    expect(body.projected).toBe(0);
+    expect(body.errors).toEqual([{ name: job.name, message: "projector unavailable" }]);
+  });
+
   it("does not write inserts when dryRun=true", async () => {
     const db = emptyDb();
     const res = await handleBackfillTape(
@@ -120,9 +147,7 @@ describe("handleBackfillTape", () => {
       makeApiRequest("/api/backfill-tape?dryRun=true", { method: "POST", adminKey: "secret" }),
     );
     expect(res.status).toBe(200);
-    const inserts = db.getHistory().filter((entry) =>
-      entry.sql.includes("INSERT OR REPLACE INTO tape_events"),
-    );
+    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO tape_events"));
     expect(inserts).toHaveLength(0);
   });
 });

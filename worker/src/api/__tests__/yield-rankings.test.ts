@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
   SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
@@ -29,9 +30,14 @@ const buildReportCardsSnapshotMock = vi.hoisted(() =>
     ],
   })),
 );
+const loadPublishedReportCardsSnapshotMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../lib/report-cards-snapshot", () => ({
   buildReportCardsSnapshot: buildReportCardsSnapshotMock,
+}));
+
+vi.mock("../../lib/report-cards-snapshot-cache", () => ({
+  loadPublishedReportCardsSnapshot: loadPublishedReportCardsSnapshotMock,
 }));
 
 import { handleYieldRankings } from "../cache-handlers";
@@ -194,6 +200,12 @@ describe("handleYieldRankings", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-13T16:00:00Z"));
     buildReportCardsSnapshotMock.mockClear();
+    loadPublishedReportCardsSnapshotMock.mockReset();
+    loadPublishedReportCardsSnapshotMock.mockResolvedValue({
+      kind: "error",
+      reason: "missing-cache",
+      updatedAt: null,
+    });
   });
 
   afterEach(() => {
@@ -341,6 +353,10 @@ describe("handleYieldRankings", () => {
           coveredCount: 1,
           trackedCount: 2,
           reason: null,
+          source: "report-card-cache",
+          publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          publishedAt: updatedAt,
         },
       },
     }, updatedAt);
@@ -353,9 +369,19 @@ describe("handleYieldRankings", () => {
         id: string;
         safetyGrade: string;
         safetyScore: number;
+        safetyReason?: string | null;
         yieldToRisk: number | null;
         pharosYieldScore: number | null;
-        provenance: { usedDefaultSafety: boolean; safetyProvenance?: string } | null;
+        provenance: {
+          usedDefaultSafety: boolean;
+          safetyProvenance?: string;
+          safetyReason?: string | null;
+          calculationMode?: string;
+          evidenceClass?: string;
+          evidenceCompleteness?: number;
+          scoreQualification?: string;
+          scoreQualified?: boolean;
+        } | null;
       }>;
       provenance: {
         safetySnapshot: {
@@ -364,6 +390,21 @@ describe("handleYieldRankings", () => {
           coveredCount: number;
           trackedCount: number;
           reason: string | null;
+          source?: string;
+          publicationGenerationId?: string | null;
+          methodologyVersion?: string | null;
+          publishedAt?: number | null;
+        };
+        liveSafetyHydration?: {
+          kind: string;
+          coverageRatio: number;
+          coveredCount: number;
+          trackedCount: number;
+          reason: string | null;
+          source: string;
+          publicationGenerationId: string | null;
+          methodologyVersion: string | null;
+          publishedAt: number | null;
         };
       };
       warnings?: Array<{ code: string; reasons?: string[] }>;
@@ -379,6 +420,7 @@ describe("handleYieldRankings", () => {
 
     expect(orphan?.safetyGrade).toBe("NR");
     expect(orphan?.safetyScore).toBe(40);
+    expect(orphan?.safetyReason).toBe("report-card-score-missing");
     expect(orphan?.provenance?.usedDefaultSafety).toBeUndefined();
 
     expect(rated?.safetyGrade).toBe("B-");
@@ -387,18 +429,48 @@ describe("handleYieldRankings", () => {
     expect(rated?.pharosYieldScore).toBe(12);
     expect(rated?.provenance?.usedDefaultSafety).toBe(false);
     expect(rated?.provenance?.safetyProvenance).toBe("live-report-card");
+    expect(rated?.safetyReason).toBeNull();
+    expect(rated?.provenance).toMatchObject({
+      calculationMode: "market-api",
+      evidenceClass: "curated-observation",
+      evidenceCompleteness: 0.5714,
+      scoreQualification: "partial",
+      scoreQualified: true,
+    });
 
     expect(unrated?.safetyGrade).toBe("NR");
     expect(unrated?.safetyScore).toBe(40);
     expect(unrated?.provenance?.usedDefaultSafety).toBe(true);
     expect(unrated?.provenance?.safetyProvenance).toBe("default-safety");
+    expect(unrated?.safetyReason).toBe("report-card-score-missing");
+    expect(unrated?.provenance?.safetyReason).toBe("report-card-score-missing");
+    expect(unrated?.pharosYieldScore).toBeNull();
+    expect(unrated?.provenance).toMatchObject({
+      scoreQualification: "NR",
+      scoreQualified: false,
+    });
 
     expect(body.provenance.safetySnapshot).toEqual({
       kind: "ok",
+      coverageRatio: 0.5,
+      coveredCount: 1,
+      trackedCount: 2,
+      reason: null,
+      source: "report-card-cache",
+      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publishedAt: updatedAt,
+    });
+    expect(body.provenance.liveSafetyHydration).toEqual({
+      kind: "degraded",
       coverageRatio: 0.3333,
       coveredCount: 1,
       trackedCount: 3,
       reason: "low-row-safety-coverage",
+      source: "computed-report-cards",
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      publishedAt: null,
     });
     expect(body.warnings?.[0]).toMatchObject({
       code: "yield-safety-hydration-degraded",
@@ -406,6 +478,89 @@ describe("handleYieldRankings", () => {
     });
     expect(res.headers.get("Warning")).toContain("199");
     expect(body._meta.ageSeconds).toBe(30);
+  });
+
+  it("keeps hourly publication provenance separate from a newer live report-card generation", async () => {
+    const hourlyPublishedAt = Math.floor(Date.now() / 1000) - 3_600;
+    const livePublishedAt = Math.floor(Date.now() / 1000) - 30;
+    const hourlyGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${hourlyPublishedAt}`;
+    const liveGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${livePublishedAt}`;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [{
+        ...v748RankingsPayload.rankings[0],
+        id: "rated-coin",
+        symbol: "RATE",
+        name: "Rated Coin",
+        safetyScore: 40,
+        safetyGrade: "NR" as const,
+      }],
+      updatedAt: hourlyPublishedAt,
+      provenance: {
+        ...v748RankingsPayload.provenance,
+        safetySnapshot: {
+          kind: "ok" as const,
+          coverageRatio: 0.8462,
+          coveredCount: 308,
+          trackedCount: 364,
+          reason: null,
+          source: "report-card-cache" as const,
+          publicationGenerationId: hourlyGenerationId,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          publishedAt: hourlyPublishedAt,
+        },
+      },
+    } satisfies YieldRankingsResponse;
+    loadPublishedReportCardsSnapshotMock.mockResolvedValueOnce({
+      kind: "ok",
+      updatedAt: livePublishedAt,
+      payload: {
+        cards: [{
+          id: "rated-coin",
+          symbol: "RATE",
+          overallGrade: "B-",
+          overallScore: 66,
+          isDefunct: false,
+        }],
+        updatedAt: livePublishedAt,
+        publication: {
+          generationId: liveGenerationId,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          expectedCount: 364,
+          scoredCount: 308,
+          notRatedCount: 56,
+          notRatedIds: [],
+        },
+        liquidityStale: true,
+      },
+    });
+    const db = makeCacheDb(payload, hourlyPublishedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+
+    expect(body.rankings[0]).toMatchObject({
+      id: "rated-coin",
+      safetyScore: 66,
+      safetyGrade: "B-",
+    });
+    expect(body.provenance?.safetySnapshot).toEqual(payload.provenance.safetySnapshot);
+    expect(body.provenance?.liveSafetyHydration).toEqual({
+      kind: "degraded",
+      coverageRatio: 1,
+      coveredCount: 1,
+      trackedCount: 1,
+      reason: "dex-liquidity-input-stale",
+      source: "report-cards:snapshot",
+      publicationGenerationId: liveGenerationId,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publishedAt: livePublishedAt,
+    });
+    expect(body.provenance?.liveSafetyHydration?.publicationGenerationId).not.toBe(hourlyGenerationId);
+    expect(body.warnings).toContainEqual(expect.objectContaining({
+      code: "yield-safety-hydration-degraded",
+      reasons: ["dex-liquidity-input-stale"],
+    }));
   });
 
   it("parses a production-shaped v7.48 old rankings payload through the schema and handler", async () => {
@@ -456,6 +611,41 @@ describe("handleYieldRankings", () => {
       benchmarkRate: payload.rankings[0].benchmarkRate ?? null,
       sourceRiskPenalty: 2,
     }));
+  });
+
+  it("does not requalify a stale published PYS during live safety hydration", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          pharosYieldScore: null,
+          pysNullReason: "source-stale",
+          warningSignals: ["data-stale"],
+          provenance: {
+            ...v748RankingsPayload.rankings[0].provenance,
+            sourceFreshness: "stale",
+            benchmarkFreshness: "healthy",
+            scoreQualified: false,
+          },
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+
+    expect(body.rankings[0]).toMatchObject({
+      pharosYieldScore: null,
+      pysNullReason: "source-stale",
+      warningSignals: ["data-stale"],
+    });
   });
 
   it("hydrates Royco tranche rows with opportunity-level safety instead of raw underlying safety", async () => {
@@ -558,6 +748,103 @@ describe("handleYieldRankings", () => {
       benchmarkRate: payload.rankings[0].benchmarkRate ?? null,
       sourceRiskPenalty: 1.2,
     }));
+  });
+
+  it("rehydrates generic external opportunities with market-level safety", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          safetyScore: 50,
+          safetyGrade: "C-",
+          sourceRisk: {
+            venueRiskWeighted: 3,
+            venueRiskTier: "medium",
+            sourceRiskPenalty: 1.1,
+            opportunityRisk: {
+              opportunityClass: "lending",
+              underlyingSafetyScore: 50,
+              opportunitySafetyScore: 45,
+              opportunitySafetyPenalty: 5,
+              venueReviewed: true,
+              missingCriticalEvidence: [],
+            },
+          },
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+
+    const res = await handleYieldRankings(makeCacheDb(payload, updatedAt));
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    expect(row?.safetyScore).toBe(61);
+    expect(row?.safetyGrade).toBe("C+");
+    expect(row?.provenance?.safetyProvenance).toBe("opportunity-safety");
+    expect(row?.sourceRisk?.opportunityRisk).toMatchObject({
+      opportunityClass: "lending",
+      underlyingSafetyScore: 66,
+      opportunitySafetyScore: 61,
+      opportunitySafetyPenalty: 5,
+      missingCriticalEvidence: [],
+    });
+    expect(row?.pharosYieldScore).toBe(computePYS({
+      apy30d: payload.rankings[0].apy30d,
+      safetyScore: 61,
+      apyVarianceScore: yieldStabilityToApyVarianceScore(payload.rankings[0].yieldStability),
+      scalingFactor: payload.scalingFactor,
+      benchmarkRate: payload.rankings[0].benchmarkRate ?? null,
+      sourceRiskPenalty: 1.1,
+    }));
+  });
+
+  it("does not requalify an external opportunity with missing critical market evidence", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          sourceTvlUsd: null,
+          pharosYieldScore: null,
+          pysNullReason: "opportunity-evidence-missing",
+          sourceRisk: {
+            venueRiskTier: "unknown",
+            opportunityRisk: {
+              opportunityClass: "lending",
+              underlyingSafetyScore: 50,
+              opportunitySafetyScore: null,
+              opportunitySafetyPenalty: null,
+              venueReviewed: false,
+              missingCriticalEvidence: ["venue-review", "market-size"],
+            },
+          },
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+
+    const res = await handleYieldRankings(makeCacheDb(payload, updatedAt));
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    expect(row?.pharosYieldScore).toBeNull();
+    expect(row?.pysNullReason).toBe("opportunity-evidence-missing");
+    expect(row?.provenance?.scoreQualification).toBe("NR");
+    expect(row?.sourceRisk?.opportunityRisk).toMatchObject({
+      underlyingSafetyScore: 66,
+      opportunitySafetyScore: null,
+      missingCriticalEvidence: ["venue-review", "market-size"],
+    });
   });
 
   it("synthesizes publication metadata from generation-aware rows and preserves nested source risk", async () => {

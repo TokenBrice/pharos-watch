@@ -20,6 +20,7 @@ import {
   validateFreshnessSentinelPayload,
 } from "./freshness-sentinels";
 import { toErrorMessage } from "./error-utils";
+import { readDewsPublishedGenerationResult } from "./dews-publication-pointer";
 
 export type { CacheStatus };
 export type { FreshnessStatus };
@@ -67,14 +68,14 @@ interface SentinelBackedFreshnessResult {
 }
 
 const SENTINEL_BACKED_CACHE_KEYS = Object.keys(FRESHNESS_SENTINEL_CONFIGS) as FreshnessSentinelBackedCacheKey[];
+const SENTINEL_BACKED_CACHE_KEY_SET = new Set<string>(SENTINEL_BACKED_CACHE_KEYS);
 
-const TABLE_FRESHNESS_FALLBACK_QUERIES: Record<FreshnessSentinelBackedCacheKey, string> = {
+const TABLE_FRESHNESS_FALLBACK_QUERIES: Partial<Record<FreshnessSentinelBackedCacheKey, string>> = {
   "dex-liquidity": `SELECT (? - MAX(updated_at)) as age
     FROM dex_liquidity
     WHERE liquidity_score > 0
       AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
   "yield-data": "SELECT (? - MAX(updated_at)) as age FROM yield_data WHERE is_best = 1 AND (publication_generation_id IS NULL OR publication_state = 'published')",
-  dews: "SELECT (? - MAX(computed_at)) as age FROM stress_signals",
 };
 
 export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): FreshnessMeta {
@@ -198,11 +199,27 @@ async function resolveSentinelBackedFreshness(params: {
   const sentinelFailureSource: CacheStatusFailure["source"] | null = params.cacheLookupFailed ? "cache-table" : null;
 
   try {
-    const row = await params.db
-      .prepare(TABLE_FRESHNESS_FALLBACK_QUERIES[params.key])
-      .bind(params.now)
-      .first<{ age: number | null }>();
-    const tableAge = row?.age != null ? Math.max(0, row.age) : null;
+    let tableAge: number | null;
+    if (params.key === "dews") {
+      const published = await readDewsPublishedGenerationResult(params.db, params.now);
+      if (published.status !== "ok") {
+        const detail = published.status === "read-failed"
+          ? published.error
+          : published.status === "invalid-pointer"
+            ? published.reason
+            : "publication pointer is missing";
+        throw new Error(`DEWS published generation unavailable (${published.status}): ${detail}`);
+      }
+      tableAge = Math.max(0, params.now - published.computedAt);
+    } else {
+      const query = TABLE_FRESHNESS_FALLBACK_QUERIES[params.key];
+      if (!query) throw new Error(`No table freshness fallback configured for ${params.key}`);
+      const row = await params.db
+        .prepare(query)
+        .bind(params.now)
+        .first<{ age: number | null }>();
+      tableAge = row?.age != null ? Math.max(0, row.age) : null;
+    }
     if (tableAge != null) {
       const warning = sentinelValidation?.reason
         ? buildSentinelValidationWarning(params.key, "table-fallback", sentinelValidation.reason)
@@ -240,6 +257,16 @@ async function resolveSentinelBackedFreshness(params: {
       source: "table-freshness",
       message: toErrorMessage(error),
     });
+    if (params.key === "dews") {
+      return {
+        ageSeconds: null,
+        freshnessSource: null,
+        ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
+        diagnostics,
+        failures,
+        warnings,
+      };
+    }
   }
 
   const cronFallbackTimestamp = params.cronFallbacks.get(params.key) ?? null;
@@ -302,7 +329,7 @@ export async function buildCacheStatuses(
 }> {
   const sentinelCacheKeys = listFreshnessSentinelCacheKeys();
   const cacheOnlyKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS).filter(
-    (key) => !(key in TABLE_FRESHNESS_FALLBACK_QUERIES),
+    (key) => !SENTINEL_BACKED_CACHE_KEY_SET.has(key),
   );
   const fxMetaKey = getFxRatesMetaKey();
   const cacheLookupKeys = Array.from(
@@ -369,7 +396,7 @@ export async function buildCacheStatuses(
       } else if (fx.statusFloor === "degraded" && statusFloor === "healthy") {
         statusFloor = "degraded";
       }
-    } else if (key in TABLE_FRESHNESS_FALLBACK_QUERIES) {
+    } else if (SENTINEL_BACKED_CACHE_KEY_SET.has(key)) {
       const freshness = await resolveSentinelBackedFreshness({
         db,
         key: key as FreshnessSentinelBackedCacheKey,

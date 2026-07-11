@@ -331,6 +331,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   );
 
   const directApiFetchers = buildDexDirectApiFetchers({
+    db: ctx.db,
     graphApiKey: ctx.graphApiKey,
     chainAddressToId: lookups.chainAddressToId,
     symbolToChainScopedIds: lookups.symbolToChainScopedIds,
@@ -819,6 +820,9 @@ function buildDexLiquidityCronResult(
           excludedByReason: poolState.directApiIntegration.excludedByReason,
           circuitEvents: sourceState.directApiPhase.circuitEvents,
           sourceWarnings: sourceState.directApiPhase.sourceWarnings,
+          pagination: sourceState.directApiPhase.results.flatMap((entry) => entry.result.pagination
+            ? [{ source: entry.circuitKey, ...entry.result.pagination }]
+            : []),
         },
         sourceCoverage: scoreState.analysis.sourceCoverage,
         challengerPublication: persistenceState.challengerPublication,

@@ -29,6 +29,13 @@ import {
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
 import { PYS_NULL_REASON_TEXT, buildRankChangeChipDisplay } from "@/lib/yield-presentation";
+import { trackEvent } from "@/lib/analytics";
+import {
+  getYieldAlternateSourceCount,
+  getYieldAvailableSources,
+  getYieldRankChangeAttribution,
+  getYieldBenchmarkSelectionMode,
+} from "@/lib/yield-workbench-row";
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
@@ -86,13 +93,7 @@ function scaleApy(apy: number): number {
   return clampScore((apy / 20) * 100);
 }
 
-function ApyBenchmarkBar({
-  apy30d,
-  benchmarkRate,
-}: {
-  apy30d: number;
-  benchmarkRate: number | null;
-}) {
+function ApyBenchmarkBar({ apy30d, benchmarkRate }: { apy30d: number; benchmarkRate: number | null }) {
   const fillWidth = Math.max(3, scaleApy(apy30d));
   const benchPos = benchmarkRate != null ? clampScore(scaleApy(benchmarkRate)) : null;
   const excess = benchmarkRate != null ? apy30d - benchmarkRate : null;
@@ -247,7 +248,8 @@ function YieldInstrumentRowBase({
   const sourceRiskScore = row.sourceRisk?.sourceRiskScore ?? null;
   const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
   const sourceRiskMaterial = rawSourceRiskPenalty !== null && rawSourceRiskPenalty > 1.05;
-  const rankChip = useMemo(() => buildRankChangeChipDisplay(row.rankChangeAttribution), [row.rankChangeAttribution]);
+  const rankAttribution = getYieldRankChangeAttribution(row);
+  const rankChip = useMemo(() => buildRankChangeChipDisplay(rankAttribution), [rankAttribution]);
   const pysNullReasonText =
     row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
   const benchmarkReferenceText = useMemo(() => getYieldBenchmarkReferenceText(row), [row]);
@@ -259,18 +261,12 @@ function YieldInstrumentRowBase({
       }),
     [row.provenance?.sourceSwitch, row.sourceRisk],
   );
-  const availableSources = useMemo(
-    () => [
-      ...(row.provenance?.sourceKey ? [{ sourceKey: row.provenance.sourceKey, yieldSource: row.yieldSource }] : []),
-      ...(row.altSources ?? []).map((source) => ({ sourceKey: source.sourceKey, yieldSource: source.yieldSource })),
-    ],
-    [row],
-  );
+  const availableSources = useMemo(() => getYieldAvailableSources(row), [row]);
 
   // WHY: USD-fallback benchmark on a non-USD peg yields a currency-mismatched score; surface a caveat.
   const isCurrencyMismatchedBenchmark =
-    row.benchmarkSelectionMode === "fallback-usd" && row.peg !== null && row.peg !== "USD";
-  const altSourceCount = row.altSources?.length ?? 0;
+    getYieldBenchmarkSelectionMode(row) === "fallback-usd" && row.peg !== null && row.peg !== "USD";
+  const altSourceCount = getYieldAlternateSourceCount(row);
   const totalSourceCount = 1 + altSourceCount;
   const warningCount = row.warningSignals.length;
   const benchmarkRate = row.benchmarkRate ?? riskFreeRate;
@@ -452,7 +448,14 @@ function YieldInstrumentRowBase({
           <Link
             href={`${buildStablecoinUrl(row.id)}yield/`}
             prefetch={false}
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              trackEvent("yield_row_action", {
+                action: "deep_dive_opened",
+                coin_id: row.id,
+                warning_count: warningCount,
+              });
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") event.stopPropagation();
             }}
@@ -475,7 +478,9 @@ function YieldInstrumentRowBase({
             aria-controls={`yield-row-${row.id}-details`}
             title={expanded ? "Hide yield history" : "Show yield history"}
           >
-            <ChevronDown className={expanded ? "h-4 w-4 rotate-180 transition-transform" : "h-4 w-4 transition-transform"} />
+            <ChevronDown
+              className={expanded ? "h-4 w-4 rotate-180 transition-transform" : "h-4 w-4 transition-transform"}
+            />
           </button>
         </div>
       </div>
@@ -554,10 +559,7 @@ export function YieldInstrumentBoard({
   emptyMessage,
 }: YieldInstrumentBoardProps) {
   return (
-    <div
-      data-testid="yield-instrument-board"
-      className="pharos-table-shell"
-    >
+    <div data-testid="yield-instrument-board" className="pharos-table-shell">
       {/* Sort pills + range summary */}
       <div className="pharos-table-toolbar flex-row flex-wrap items-center justify-between">
         <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Sort yield leaderboard">
@@ -600,10 +602,18 @@ export function YieldInstrumentBoard({
         <HeaderCell label="Coin" />
         <HeaderCell label="APY 30d" title="30-day average annual percentage yield" />
         <HeaderCell label="Safety" title="Pharos Safety Grade / Score" />
-        <HeaderCell label="PYS" adornment={<MethodologyHint topic="pys" />} title="Pharos Yield Score: risk-adjusted yield ranking" />
+        <HeaderCell
+          label="PYS"
+          adornment={<MethodologyHint topic="pys" />}
+          title="Pharos Yield Score: risk-adjusted yield ranking"
+        />
         <HeaderCell label="Source" />
         <HeaderCell label="TVL" title="Total value locked in yield source" />
-        <HeaderCell label="Stability" adornment={<MethodologyHint topic="yieldStability" />} title="Yield stability over 30 days" />
+        <HeaderCell
+          label="Stability"
+          adornment={<MethodologyHint topic="yieldStability" />}
+          title="Yield stability over 30 days"
+        />
         <HeaderCell label="30d Range" className="hidden xl:flex" />
         <HeaderCell label="" className="justify-end" />
       </div>

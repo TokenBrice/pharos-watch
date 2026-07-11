@@ -4,10 +4,9 @@ import { derivePegRates } from "@shared/lib/peg-rates";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import type { D1Database } from "@cloudflare/workers-types";
 import type { StablecoinMeta } from "@shared/types/core";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { RATE_LIMITS } from "../../lib/rate-limit";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import {
@@ -104,19 +103,17 @@ export async function buildBackfillPlan(opts: {
     let detail: CoinDetail | null = null;
     const dlId = meta.llamaId ?? meta.id;
     try {
-      const res = await fetchWithRetry(
+      const result = await fetchJsonWithRetry<CoinDetail>(
         `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`,
         { headers: { "User-Agent": USER_AGENT } },
         1,
         { timeoutMs: 10_000 },
       );
-      if (res?.ok) {
-        const raw = await res.json();
+      if (result?.response.ok) {
+        const raw = result.body;
         if (raw && typeof raw === "object") {
           detail = raw as CoinDetail;
         }
-      } else {
-        await cancelResponseBodyQuietly(res);
       }
     } catch (err) {
       console.error(`[backfill-depegs] Failed to fetch detail for ${meta.symbol}:`, err);
@@ -144,7 +141,10 @@ export async function buildBackfillPlan(opts: {
       // Fetch the CG ATL/genesis date to anchor the window to the coin's actual inception.
       try {
         await new Promise((r) => setTimeout(r, RATE_LIMITS.COINGECKO_BACKFILL_MS));
-        const cgRes = await fetchWithRetry(
+        const cgResult = await fetchJsonWithRetry<{
+          genesis_date?: string | null;
+          market_data?: { atl_date?: Record<string, string> };
+        }>(
           cgUrl(
             `/coins/${geckoId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`,
             coingeckoApiKey ?? null,
@@ -153,11 +153,8 @@ export async function buildBackfillPlan(opts: {
           1,
           { timeoutMs: 10_000 },
         );
-        if (cgRes?.ok) {
-          const cgData = (await cgRes.json()) as {
-            genesis_date?: string | null;
-            market_data?: { atl_date?: Record<string, string> };
-          };
+        if (cgResult?.response.ok) {
+          const cgData = cgResult.body;
           const inceptionStr = cgData.genesis_date ?? cgData.market_data?.atl_date?.["usd"];
           if (inceptionStr) {
             const d = new Date(inceptionStr);
@@ -167,7 +164,6 @@ export async function buildBackfillPlan(opts: {
             earliestDate = defaultStartDate;
           }
         } else {
-          await cancelResponseBodyQuietly(cgRes);
           earliestDate = defaultStartDate;
         }
       } catch {

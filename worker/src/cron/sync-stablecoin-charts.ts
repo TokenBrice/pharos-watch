@@ -1,4 +1,4 @@
-import { getCache, setCache, setCacheIfNewer } from "../lib/db-cache";
+import { getCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchTextWithRetry } from "../lib/fetch-retry";
 import { DEFILLAMA_BASE } from "../lib/constants";
@@ -8,6 +8,15 @@ import { chunkArray } from "../lib/collections";
 import { normalizeStablecoinChartDateSeconds } from "../lib/stablecoin-charts-payload";
 import { mergeStructuralSupplementalHistoryIntoCharts, STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../lib/stablecoin-charts-reconciliation";
 import { throwIfAborted } from "../lib/abort";
+import {
+  appendCadenceResultMetadata,
+  cadenceBucketFor,
+  claimCadenceBucket,
+  completeCadenceBucket,
+  failCadenceBucket,
+} from "../lib/cadence-bucket";
+import { logWorkerEvent } from "../lib/structured-log";
+import { parseJson, parseJsonObject } from "../lib/json-parse";
 
 // D1 caps bound parameters per query at 100; keep headroom for non-IN binds.
 const SUPPLEMENTAL_HISTORY_IN_CHUNK_SIZE = 90;
@@ -80,15 +89,83 @@ function downsample(data: NormalizedRawChartPoint[]): DownsampledPoint[] {
   return result;
 }
 
-export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+export interface SyncStablecoinChartsOptions {
+  scheduledAtSec?: number;
+}
+
+const CHART_CADENCE_SEC = 60 * 60;
+const CHART_CADENCE_KEY = "stablecoin-charts:cadence";
+const CHART_STALE_CLAIM_SEC = 25 * 60;
+
+export async function syncStablecoinCharts(
+  db: D1Database,
+  signal?: AbortSignal,
+  options: SyncStablecoinChartsOptions = {},
+): Promise<CronResult> {
   throwIfAborted(signal);
   const syncStartSec = Math.floor(Date.now() / 1000);
-
-  const COOLDOWN_SEC = 3600;
-  const lastWrite = await getCache(db, "stablecoin-charts:last-write");
-  if (lastWrite && (syncStartSec - lastWrite.updatedAt) < COOLDOWN_SEC) {
-    return { itemCount: 0, metadata: JSON.stringify({ reason: "cooldown_active", lastWriteAgeSec: syncStartSec - lastWrite.updatedAt }) };
+  const scheduledAtSec = options.scheduledAtSec ?? syncStartSec;
+  const bucket = cadenceBucketFor(scheduledAtSec, CHART_CADENCE_SEC);
+  const claimResult = await claimCadenceBucket(db, {
+    key: CHART_CADENCE_KEY,
+    bucket,
+    nowSec: syncStartSec,
+    staleClaimAfterSec: CHART_STALE_CLAIM_SEC,
+  });
+  if (claimResult.kind === "skip") {
+    return {
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: claimResult.reason === "already-completed"
+          ? "cadence_bucket_completed"
+          : "cadence_bucket_in_progress",
+        cadence: {
+          bucket,
+          observedBucket: claimResult.bucket,
+          cadenceSec: CHART_CADENCE_SEC,
+        },
+      }),
+    };
   }
+
+  try {
+    const result = await runStablecoinChartsPublication(db, syncStartSec, signal);
+    const resultMetadata = parseJsonObject(result.metadata) ?? {};
+    if (resultMetadata.lastWriteAdvanced !== true) {
+      await failCadenceBucket(db, claimResult.claim);
+      return appendCadenceResultMetadata(
+        { ...result, status: "degraded" },
+        { bucket, cadenceSec: CHART_CADENCE_SEC, completed: false, retryable: true },
+      );
+    }
+    const completed = await completeCadenceBucket(db, claimResult.claim);
+    return appendCadenceResultMetadata(
+      completed ? result : { ...result, status: "degraded" },
+      { bucket, cadenceSec: CHART_CADENCE_SEC, completed, retryable: !completed },
+    );
+  } catch (error) {
+    try {
+      await failCadenceBucket(db, claimResult.claim);
+    } catch (transitionError) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "sync_stablecoin_charts.cadence_claim_release_failed",
+        job: "sync-stablecoin-charts",
+        message: "Failed to release chart cadence claim after publication failure",
+        error: transitionError,
+        metadata: { bucket },
+      });
+    }
+    throw error;
+  }
+}
+
+async function runStablecoinChartsPublication(
+  db: D1Database,
+  syncStartSec: number,
+  signal?: AbortSignal,
+): Promise<CronResult> {
 
   const chartResult = await fetchTextWithRetry(
     `${DEFILLAMA_BASE}/stablecoincharts/all`,
@@ -107,10 +184,8 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
   }
   const res = chartResult.response;
 
-  let raw: RawChartPoint[];
-  try {
-    raw = JSON.parse(chartResult.body) as RawChartPoint[];
-  } catch {
+  const parsedBody = parseJson(chartResult.body);
+  if (!parsedBody.ok) {
     /* non-blocking: DL charts API returned non-JSON; degrade gracefully so other cron jobs continue */
     console.error(`[sync-charts] Failed to parse JSON from DefiLlama charts API: ${res.status}`);
     return {
@@ -119,6 +194,7 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
       metadata: JSON.stringify({ reason: "DL API invalid JSON", apiStatus: res.status }),
     };
   }
+  const raw = parsedBody.value as RawChartPoint[];
 
   if (!Array.isArray(raw) || raw.length < 100) {
     console.error(`[sync-charts] Unexpected data length (${raw?.length}), skipping cache write`);
@@ -228,14 +304,12 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
   let lastWriteAdvanced = false;
   let canonicalReadbackUpdatedAt: number | null = null;
   if (cacheResult.written) {
-    await setCache(db, "stablecoin-charts:last-write", "1");
     lastWriteAdvanced = true;
     console.log(`[sync-charts] Cached ${downsampled.length} points (from ${normalizedRaw.length} raw)`);
   } else {
     const canonicalCache = await getCache(db, "stablecoin-charts");
     canonicalReadbackUpdatedAt = canonicalCache?.updatedAt ?? null;
     if (canonicalCache && canonicalCache.updatedAt > syncStartSec) {
-      await setCache(db, "stablecoin-charts:last-write", "1");
       lastWriteAdvanced = true;
       console.log(
         `[sync-charts] Skipped chart cache write; newer canonical cache exists ` +

@@ -4,6 +4,8 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CACHE_PROFILES, DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../../lib/constants";
 import { binarySearchNearest } from "../../lib/binary-search";
 import { errorResponse } from "../../lib/api-utils";
+import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 export const CACHE_TTL_SECONDS = PER_COIN_CACHE_TTL_SECONDS;
 export const DETAIL_UPSTREAM_TIMEOUT_MS = 12_000;
@@ -116,7 +118,6 @@ export function createDetailResponseHelpers(config: {
   execCtx: ExecutionContext;
 }): DetailResponseHelpers {
   const cacheKey = `detail:${config.stablecoinId}`;
-
   // Failed/oversized cache writes used to vanish into sampled console logs,
   // leaving flagship coins on a synchronous-refetch-per-request path for
   // weeks. A small marker row makes the failure visible to the staleness
@@ -145,7 +146,21 @@ export function createDetailResponseHelpers(config: {
           return;
         }
         try {
-          await setCache(config.db, cacheKey, body);
+          const claim = await claimDetailCacheGeneration(config.db, config.stablecoinId);
+          const write = await publishDetailCacheGeneration(config.db, cacheKey, body, claim);
+          if (!write.written) {
+            logWorkerEvent({
+              scope: "api",
+              level: "info",
+              event: "stablecoin_detail.cache_write_superseded",
+              route: "stablecoin-detail",
+              message: "Skipped detail cache write because a newer refresh owns publication",
+              metadata: {
+                stablecoinId: config.stablecoinId,
+                generation: write.generation,
+              },
+            });
+          }
         } catch (err) {
           console.error(
             `[detail] cache write failed stablecoin=${config.stablecoinId} bytes=${bodyBytes} error=${String(err).slice(0, 300)}`,

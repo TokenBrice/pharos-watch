@@ -5,7 +5,7 @@ import { budgetExhausted } from "../../lib/evm-logs";
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
-import { deferConfig, loadDeferredConfigs, shouldDeferConfig } from "./run-state";
+import { deferConfig, loadActiveConfigDeferrals, shouldDeferConfig } from "./run-state";
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
 
 const MINT_BURN_RUNTIME_BUDGET_MS = 9 * 60_000;
@@ -44,6 +44,7 @@ export interface MintBurnRunConfigPhaseResult {
   criticalContractsSatisfied: number;
   criticalContractsUnsatisfied: number;
   configBreakdown: MintBurnConfigSummary[];
+  activeProviderDeferrals: Map<string, number>;
   runtimeBudgetHit: boolean;
 }
 
@@ -98,7 +99,8 @@ export async function runMintBurnConfigPhase(input: {
   const minimumConfigWindowMs = input.minimumConfigWindowMs ?? MINT_BURN_MIN_CONFIG_WINDOW_MS;
 
   const nowSec = Math.floor(Date.now() / 1000);
-  const deferredKeys = await loadDeferredConfigs(input.db, nowSec);
+  const activeProviderDeferrals = await loadActiveConfigDeferrals(input.db, nowSec);
+  const deferredKeys = new Set(activeProviderDeferrals.keys());
 
   for (let i = 0; i < input.configs.length; i++) {
     if (input.signal?.aborted) {
@@ -248,8 +250,10 @@ export async function runMintBurnConfigPhase(input: {
     bridgeClassificationDeferredRows += summary.bridgeClassificationDeferredRows;
 
     if (result.newLastBlock != null) {
-      await upsertMintBurnSyncState(input.db, key, result.newLastBlock, "replace");
-      input.lastBlocksAfterRun.set(key, result.newLastBlock);
+      const previousLastBlock = input.lastBlocksAfterRun.get(key) ?? (config.startBlock - 1);
+      const nextLastBlock = Math.max(previousLastBlock, result.newLastBlock);
+      await upsertMintBurnSyncState(input.db, key, nextLastBlock, "monotonic-max");
+      input.lastBlocksAfterRun.set(key, nextLastBlock);
     }
     input.budget.count += summary.requestBudgetUsed;
 
@@ -304,6 +308,7 @@ export async function runMintBurnConfigPhase(input: {
     criticalContractsSatisfied,
     criticalContractsUnsatisfied,
     configBreakdown,
+    activeProviderDeferrals,
     runtimeBudgetHit,
   };
 }

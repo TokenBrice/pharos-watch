@@ -4,8 +4,7 @@ import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadPublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
 import { buildInClause, chunkArray } from "../lib/db";
-import { toErrorMessage } from "../lib/error-utils";
-import { logTelegramEvent } from "../lib/telegram-log";
+import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { perCoinFlowCacheKey } from "../api/mint-burn-flows-shared";
 import { getCache } from "../lib/db-cache";
@@ -95,7 +94,7 @@ async function loadLiquidityRows(
         module: "telegram-alert-context",
         requestedStablecoinCount: uniqueIds.length,
         chunkSize: idChunk.length,
-        err: toErrorMessage(error),
+        errorClass: classifyTelegramLogError(error),
       });
     }
   }

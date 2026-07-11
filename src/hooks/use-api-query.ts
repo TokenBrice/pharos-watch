@@ -8,10 +8,11 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
-import type { SchemaLike, SchemaLikeSource } from "@/lib/schema-like";
+import { resolveSchemaLike, type SchemaLikeSource } from "@/lib/schema-like";
 
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
 type ApiQueryFunction<T> = (context?: Pick<QueryFunctionContext<readonly unknown[]>, "signal">) => Promise<T>;
+type PollingQueryFunction<T> = (context: Pick<QueryFunctionContext<readonly unknown[]>, "signal">) => Promise<T>;
 
 export interface PollingQueryControlOptions {
   enabled?: boolean;
@@ -76,7 +77,10 @@ function mergeAbortSignals(signals: readonly AbortSignal[]): AbortSignal {
   return controller.signal;
 }
 
-function mergeFetchInitSignal(fetchInit: RequestInit | undefined, signal: AbortSignal | undefined): RequestInit | undefined {
+function mergeFetchInitSignal(
+  fetchInit: RequestInit | undefined,
+  signal: AbortSignal | undefined,
+): RequestInit | undefined {
   if (!signal) return fetchInit;
   if (!fetchInit) return { signal };
   if (!fetchInit.signal || fetchInit.signal === signal) return { ...fetchInit, signal };
@@ -91,7 +95,7 @@ export function createApiQueryFn<T>(
 ): ApiQueryFunction<T> {
   return async (context) => {
     const requestInit = mergeFetchInitSignal(fetchInit, context?.signal);
-    return apiFetch<T>(path, await resolveSchema(schema), requestInit, contractMode);
+    return apiFetch<T>(path, await resolveSchemaLike(schema), requestInit, contractMode);
   };
 }
 
@@ -104,22 +108,13 @@ export function createApiQueryFnWithMeta<T>(
 ): ApiQueryFunction<{ data: T; meta: ApiMeta | null }> {
   return async (context) => {
     const requestInit = mergeFetchInitSignal(fetchInit, context?.signal);
-    return apiFetchWithMeta<T>(path, await resolveSchema(schema), requestInit, metaMaxAgeSec, contractMode);
+    return apiFetchWithMeta<T>(path, await resolveSchemaLike(schema), requestInit, metaMaxAgeSec, contractMode);
   };
-}
-
-function isSchemaLike<T>(value: SchemaLikeSource<T>): value is SchemaLike<T> {
-  return typeof value === "object" && value !== null && typeof value.safeParse === "function";
-}
-
-async function resolveSchema<T>(schema: SchemaLikeSource<T> | undefined): Promise<SchemaLike<T> | undefined> {
-  if (!schema) return undefined;
-  return isSchemaLike(schema) ? schema : schema();
 }
 
 export function createPollingQueryOptions<T>(
   key: readonly unknown[],
-  queryFn: () => Promise<T>,
+  queryFn: PollingQueryFunction<T>,
   cronInterval: number,
   opts?: PollingQueryControlOptions,
 ): UseQueryOptions<T, Error, T, readonly unknown[]> {
@@ -174,16 +169,11 @@ export function createApiPollingQueryOptionsWithMeta<T>(
 
 export function usePollingQuery<T>(
   key: readonly unknown[],
-  queryFn: () => Promise<T>,
+  queryFn: PollingQueryFunction<T>,
   cronInterval: number,
   opts?: PollingQueryControlOptions,
 ): UseQueryResult<T, Error> {
-  return useQuery<T, Error>(createPollingQueryOptions(
-    key,
-    queryFn,
-    cronInterval,
-    opts,
-  ));
+  return useQuery<T, Error>(createPollingQueryOptions(key, queryFn, cronInterval, opts));
 }
 
 export function createStaticQueryOptions<T>(
@@ -221,13 +211,15 @@ export function useApiQuery<T>(
   return useQuery<T, Error>(createApiPollingQueryOptions(key, path, cronInterval, opts));
 }
 
-export interface ApiQueryWithMetaResult<T>
-  extends Omit<UseQueryResult<{ data: T; meta: ApiMeta | null }, Error>, "data"> {
+export interface ApiQueryWithMetaResult<T> extends Omit<
+  UseQueryResult<{ data: T; meta: ApiMeta | null }, Error>,
+  "data"
+> {
   data: T | undefined;
   meta: ApiMeta | null;
 }
 
-function unwrapApiQueryWithMetaResult<T>(
+export function unwrapApiQueryWithMetaResult<T>(
   query: UseQueryResult<{ data: T; meta: ApiMeta | null }, Error>,
 ): ApiQueryWithMetaResult<T> {
   const { data, ...rest } = query;

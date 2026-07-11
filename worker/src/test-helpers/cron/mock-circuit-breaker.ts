@@ -1,9 +1,9 @@
 /**
  * Factory for stubbing `worker/src/lib/circuit-breaker` in cron tests.
  *
- * Captures the common shape used inline by `sync-yield-data.test.ts`,
- * `sync-stablecoins.test.ts`, `enrich-prices.test.ts`, and
- * `dispatch-telegram-alerts.test.ts`: `shouldAttemptFetch` defaults to `true`
+ * Captures the common shape used by `sync-yield-data-*.test.ts`,
+ * `sync-stablecoins.test.ts`, `enrich-prices-*.test.ts`, and
+ * `dispatch-telegram-alerts-*.test.ts`: `shouldAttemptFetch` defaults to `true`
  * (circuit closed), `recordOutcome`/`recordOutcomeSafe` are no-ops.
  *
  * Tests can pass pre-built spies to allow `vi.mocked(...).mockResolvedValue(...)`

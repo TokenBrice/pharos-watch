@@ -16,6 +16,8 @@
  */
 const STRIP_TOP_LEVEL: ReadonlySet<string> = new Set([
   "debug",
+  "provenance",
+  "snapshotSchemaVersion",
   "timestamp",
   "perInputStaleness",
 ]);

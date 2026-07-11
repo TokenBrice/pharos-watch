@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { loadPublicationHealth } from "../publication-contract";
+import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 const NOW = 1_775_890_000;
 
@@ -397,14 +399,17 @@ describe("loadPublicationHealth", () => {
     const dewsAt = NOW - 300;
     const psiAt = NOW - 240;
     const reportCardsAt = NOW - 180;
+    const reportCardIds = [...ACTIVE_IDS].sort();
+    const reportCardGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${reportCardsAt}`;
+    const dewsRows = [
+      { stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: "{}", computed_at: dewsAt },
+      { stablecoin_id: "usdt-tether", score: 20, band: "WATCH", signals_json: "{}", computed_at: dewsAt },
+    ];
     const db = mockD1([
       {
-        match: "FROM stress_signals_latest",
-        rows: [],
-        first: {
-          computed_at: dewsAt,
-          row_count: 407,
-        },
+        match: "pharos:stress-signals:published-exact",
+        matchBinds: [dewsAt],
+        rows: dewsRows,
       },
       {
         match: "FROM stability_index_samples",
@@ -420,16 +425,29 @@ describe("loadPublicationHealth", () => {
         match: "FROM cache WHERE key = ?",
         rows: [
           {
-            key: "dews",
-            value: "{}",
+            key: "dews:published-generation",
+            value: JSON.stringify({
+              updatedAt: dewsAt,
+              source: "compute-dews",
+              publishStatus: "published",
+              coverageVersion: 2,
+              expectedRowCount: dewsRows.length,
+              stablecoinIdsDigest: buildDewsStablecoinIdsDigest(dewsRows.map((row) => row.stablecoin_id)),
+            }),
             updated_at: dewsAt,
           },
           {
             key: "report_card_cache",
             value: JSON.stringify({
-              scores: {
-                "usdt-tether": { score: 92, grade: "A" },
-                "usdc-circle": { score: 91, grade: "A" },
+              scores: Object.fromEntries(reportCardIds.map((id) => [id, { score: 92, grade: "A" }])),
+              publicationGenerationId: reportCardGenerationId,
+              completeness: {
+                generationId: reportCardGenerationId,
+                methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+                expectedCount: reportCardIds.length,
+                scoredCount: reportCardIds.length,
+                notRatedCount: 0,
+                notRatedIds: [],
               },
               updatedAt: reportCardsAt,
               methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
@@ -443,11 +461,11 @@ describe("loadPublicationHealth", () => {
     const health = await loadPublicationHealth(db, NOW);
 
     expect(health.surfaces.dews).toMatchObject({
-      sourceOfTruth: "stress_signals_latest",
+      sourceOfTruth: "cache[dews:published-generation]+stress_signals",
       lastPublishedGeneration: {
         generationId: `dews:${dewsAt}`,
         state: "published",
-        publishedRows: 407,
+        publishedRows: 2,
       },
     });
     expect(health.surfaces.psi).toMatchObject({
@@ -463,9 +481,50 @@ describe("loadPublicationHealth", () => {
       lastPublishedGeneration: {
         generationId: `report-card-cache:${reportCardsAt}`,
         state: "published",
-        publishedRows: 2,
+        publishedRows: ACTIVE_IDS.size,
       },
     });
+  });
+
+  it("fails DEWS publication health closed when the pointed generation is partial", async () => {
+    const dewsAt = NOW - 300;
+    const publishedIds = ["usdc-circle", "usdt-tether"];
+    const pointer = {
+      key: "dews:published-generation",
+      value: JSON.stringify({
+        updatedAt: dewsAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: publishedIds.length,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(publishedIds),
+      }),
+      updated_at: dewsAt,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:published-exact",
+        matchBinds: [dewsAt],
+        rows: [
+          { stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: "{}", computed_at: dewsAt },
+        ],
+      },
+    ]);
+
+    const health = await loadPublicationHealth(db, NOW);
+
+    expect(health.surfaces.dews).toMatchObject({
+      sourceOfTruth: "cache[dews:published-generation]+stress_signals",
+      lastPublishedGeneration: null,
+      lastFailureReason: "published generation coverage mismatch: rows=1/2",
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("stress_signals_latest"))).toBe(false);
   });
 
   it("returns present surfaces with null generation details when ledgers are empty", async () => {

@@ -55,5 +55,14 @@ describe("buildStaticContentSecurityPolicy", () => {
     const csp = buildStaticContentSecurityPolicy({ telegramMiniApp: true });
     expect(csp).toContain("frame-ancestors https://telegram.org");
     expect(csp).toContain("https://telegram.org");
+    expect(csp).not.toContain("google-analytics.com");
+    expect(csp).not.toContain("analytics.google.com");
+    expect(csp).not.toContain("googletagmanager.com");
+  });
+
+  it("keeps Google Analytics origins on standard public pages", () => {
+    const csp = buildStaticContentSecurityPolicy();
+    expect(csp).toContain("https://www.google-analytics.com");
+    expect(csp).toContain("https://www.googletagmanager.com");
   });
 });

@@ -39,7 +39,9 @@ function hasCanonicalDegradation(source: EvaluatedYieldSource): boolean {
     source.anomalies.includes("canonical-zero-vs-positive") ||
     source.anomalies.includes("anchor-stale") ||
     source.warnings.includes("zero-yield") ||
-    source.warnings.includes("data-stale")
+    source.warnings.includes("data-stale") ||
+    source.warnings.includes("benchmark-degraded") ||
+    source.warnings.includes("benchmark-stale")
   );
 }
 
@@ -47,6 +49,9 @@ export function deriveYieldSourceRole(
   source: EvaluatedYieldSource,
   options: { isSelected: boolean },
 ): YieldSourceRole {
+  if (source.sourceKey.startsWith("linked-variant:") && isExternalOpportunitySource(source)) {
+    return "external-opportunity";
+  }
   if (source.confidenceTier === "fallback" || source.dataSource === "price-derived") {
     return "fallback-proxy";
   }
@@ -66,6 +71,12 @@ export function deriveRejectionReasonCode(
   selected: EvaluatedYieldSource,
   candidate: EvaluatedYieldSource,
 ): YieldDecisionRejectionReasonCode {
+  if (
+    candidate.rejected &&
+    (candidate.anomalies.includes("source-stale") || candidate.anomalies.includes("benchmark-stale"))
+  ) {
+    return "stale";
+  }
   const altDepth = finiteNumber(candidate.sourceDepthRatio);
   const selDepth = finiteNumber(selected.sourceDepthRatio);
   if (altDepth != null && selDepth != null && altDepth > 0 && selDepth >= altDepth * THINNER_RATIO) {
@@ -192,6 +203,10 @@ export function buildPublicDecisionLedger(params: {
       apy30dDelta: candidate.apy30d - params.selected.apy30d,
       rejectionReasonCode: deriveRejectionReasonCode(params.selected, candidate),
       confidenceTier: candidate.confidenceTier,
+      calculationMode: candidate.calculationMode,
+      evidenceClass: candidate.evidenceClass,
+      evidenceCompleteness: candidate.evidenceCompleteness,
+      scoreQualification: candidate.scoreQualification,
       sourceRole: deriveYieldSourceRole(candidate, { isSelected: false }),
       selectionRank: selectionRankBySourceKey.get(candidate.sourceKey),
     }));

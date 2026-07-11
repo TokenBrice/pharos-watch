@@ -4,7 +4,7 @@ This policy governs the addition of new cron trigger expressions to `worker/wran
 
 ## Current state
 
-The worker declares **~19 cron expressions** in `worker/wrangler.toml`. Each expression maps to one Cloudflare scheduled-trigger invocation, dispatched in `worker/src/handlers/scheduled.ts` to the jobs configured for that slot in `shared/lib/scheduled-runner-registry.ts`.
+The worker declares **20 cron expressions** in `worker/wrangler.toml`. Each expression maps to one Cloudflare scheduled-trigger invocation, dispatched in `worker/src/handlers/scheduled.ts` to the jobs configured for that slot in `shared/lib/scheduled-runner-registry.ts`.
 
 Cloudflare Workers enforce a **6 concurrent `fetch()` connection** limit per cron trigger invocation. Every job dispatched within a single trigger slot competes for that shared pool. The constraint is documented in:
 
@@ -15,7 +15,7 @@ Cloudflare Workers enforce a **6 concurrent `fetch()` connection** limit per cro
 
 **Do not add a new cron trigger expression unless every existing 6-budget slot has been audited for headroom and rebalanced.**
 
-The soft cap is **20 trigger expressions** before re-architecting batched dispatch. Adding the 20th trigger should prompt a design pass on whether the slot plans in `shared/lib/scheduled-runner-registry.ts` can fan out instead of growing the cron table.
+The soft cap is **20 trigger expressions** before re-architecting batched dispatch, and it is fully allocated. The 20th expression is the isolated five-minute reserve-recovery lane: sharing that recovery work with the affected reserve slot or an unrelated status lane would defeat its failure isolation. A 21st expression requires an ADR plus a trigger consolidation or rebalance plan.
 
 ## Process for new scheduled work
 

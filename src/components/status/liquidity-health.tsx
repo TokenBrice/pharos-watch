@@ -52,7 +52,7 @@ export function LiquidityHealthCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base">Liquidity Health</CardTitle>
+          <CardTitle as="h3" className="text-base">Liquidity Health</CardTitle>
           <span className="text-xs text-muted-foreground">
             Last run {health.lastRunStatus ?? "unknown"}
           </span>

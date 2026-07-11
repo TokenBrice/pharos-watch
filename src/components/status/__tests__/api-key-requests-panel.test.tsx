@@ -3,6 +3,8 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApiKeySelfServeRequestAdminListResponse, ApiKeySelfServeRequestAdminSummary } from "@shared/types";
+import { buildAdminMutationReceiptMetadata } from "../admin-mutation-feedback";
+import type { AdminMutationIntentExecution } from "../admin-mutation-intent";
 
 const { useApiKeyRequestsMock } = vi.hoisted(() => ({
   useApiKeyRequestsMock: vi.fn(),
@@ -74,6 +76,31 @@ afterEach(() => {
 });
 
 describe("ApiKeyRequestsPanel", () => {
+  it("serializes successful receipts without retaining response bodies or raw output", () => {
+    const secret = "ph_live_one_time_secret";
+    const execution = {
+      httpStatus: 201,
+      idempotentReplay: false,
+      executionCertainty: "confirmed",
+      idempotencyKey: "intent-key",
+      data: { token: secret },
+      output: JSON.stringify({ token: secret }),
+    } as AdminMutationIntentExecution;
+
+    const receipt = buildAdminMutationReceiptMetadata(execution);
+    const serialized = JSON.stringify(receipt);
+
+    expect(receipt).toEqual({
+      httpStatus: 201,
+      idempotentReplay: false,
+      executionCertainty: "confirmed",
+      idempotencyKey: "intent-key",
+    });
+    expect(serialized).not.toContain(secret);
+    expect(serialized).not.toContain("data");
+    expect(serialized).not.toContain("output");
+  });
+
   it("uses server-side status and limit query options", () => {
     renderPanel();
 
@@ -84,6 +111,18 @@ describe("ApiKeyRequestsPanel", () => {
 
     expect(useApiKeyRequestsMock).toHaveBeenLastCalledWith({ status: undefined, limit: 50 });
     expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("returns focus to the request action when confirmation is cancelled", async () => {
+    renderPanel();
+    const trigger = screen.getByRole("button", { name: "Reject pending request" });
+    trigger.focus();
+
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    expect(trigger.className).toContain("min-h-11");
   });
 
   it("renders triage summary and request-level next action guidance", () => {
@@ -109,22 +148,49 @@ describe("ApiKeyRequestsPanel", () => {
     expect(within(summary).getByText("safe to release")).toBeTruthy();
     expect(screen.getByText(/Waiting on email verification/i)).toBeTruthy();
     expect(screen.getByText(/Release the stale claim to unblock a future self-serve request/i)).toBeTruthy();
-    expect((screen.getAllByRole("button", { name: "Release stale claim" })[0] as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getAllByRole("button", { name: "Release stale claim" })[1] as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getAllByRole("button", { name: "Release stale claim" })[0] as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect((screen.getAllByRole("button", { name: "Release stale claim" })[1] as HTMLButtonElement).disabled).toBe(
+      false,
+    );
+  });
+
+  it("wraps hostile endpoint and project values within narrow request cards", () => {
+    const endpoint = `/api/${"unbroken-endpoint-segment".repeat(10)}`;
+    const projectUrl = `https://example.invalid/${"unbroken-project-segment".repeat(10)}`;
+    renderPanel([makeRequest({ intendedEndpoints: [endpoint], projectUrl })]);
+
+    const endpointValue = screen.getByText(endpoint);
+    const projectValue = screen.getByText(projectUrl);
+    expect(endpointValue.className).toContain("max-w-full");
+    expect(endpointValue.className).toContain("break-all");
+    expect(endpointValue.className).toContain("whitespace-normal");
+    expect(projectValue.className).toContain("break-all");
+    expect(projectValue.parentElement?.className).toContain("min-w-0");
   });
 
   it("does not render durable request ids in the admin cards or notices", async () => {
     const request = makeRequest({ requestId: "akr_do_not_show" });
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      ok: true,
-      requestId: request.requestId,
-      status: "rejected",
-      claimStatus: "released",
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              requestId: request.requestId,
+              status: "rejected",
+              claimStatus: "released",
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+      ),
+    );
     renderPanel([request]);
 
     expect(screen.queryByText(request.requestId)).toBeNull();
@@ -141,15 +207,20 @@ describe("ApiKeyRequestsPanel", () => {
 
   it("requires confirmation and sends reason plus idempotency header for mutations", async () => {
     const request = makeRequest({ requestId: "akr_mutation_target" });
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
-      ok: true,
-      requestId: request.requestId,
-      status: "rejected",
-      claimStatus: "released",
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          requestId: request.requestId,
+          status: "rejected",
+          claimStatus: "released",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
 
@@ -160,10 +231,54 @@ describe("ApiKeyRequestsPanel", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     const [, init] = fetchMock.mock.calls[0] ?? [];
-    const headers = new Headers((init as RequestInit).headers);
+    const headers = new Headers(init?.headers);
     expect(headers.get("X-Pharos-Admin")).toBe("1");
     expect(headers.get("Idempotency-Key")).toBe("api-key-request:reject:akr_mutation_target:uuid-for-test");
-    expect(JSON.parse(String((init as RequestInit).body))).toEqual({ reason: "manual abuse review" });
+    expect(JSON.parse(String(init?.body))).toEqual({ reason: "manual abuse review" });
+  });
+
+  it("reconciles an uncertain mutation with the same intent key and reports replay metadata", async () => {
+    const request = makeRequest({ requestId: "akr_uncertain_target" });
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(new TypeError("connection closed"))
+      .mockImplementationOnce(async (_input, init) => {
+        const idempotencyKey = new Headers(init?.headers).get("Idempotency-Key") ?? "";
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            requestId: request.requestId,
+            status: "rejected",
+            claimStatus: "released",
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              "Idempotency-Key": idempotencyKey,
+              "X-Idempotent-Replay": "true",
+              "X-Execution-Certainty": "confirmed",
+            },
+          },
+        );
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("crypto", { randomUUID: () => "uncertain-uuid" });
+    renderPanel([request]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reject pending request" }));
+    fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: "manual abuse review" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await screen.findByText("Outcome unknown");
+    fireEvent.click(screen.getByRole("button", { name: "Retry same intent" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const firstKey = new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get("Idempotency-Key");
+    const secondKey = new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get("Idempotency-Key");
+    expect(secondKey).toBe(firstKey);
+    expect(await screen.findByText("Request marked rejected; claim released.")).toBeTruthy();
+    expect(screen.getByText(/replay yes · certainty confirmed/)).toBeTruthy();
   });
 
   it("labels issued-key rejection and stale claim release by their effect", async () => {
@@ -174,15 +289,20 @@ describe("ApiKeyRequestsPanel", () => {
       linkedKeyExpiresAt: GENERATED_AT + 3600,
       claimStatus: "issued",
     });
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
-      ok: true,
-      requestId: request.requestId,
-      status: "issued",
-      claimStatus: "released",
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          requestId: request.requestId,
+          status: "issued",
+          claimStatus: "released",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-release-test" });
 
@@ -215,10 +335,12 @@ describe("ApiKeyRequestsPanel", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     const [url, init] = fetchMock.mock.calls[0] ?? [];
-    const headers = new Headers((init as RequestInit).headers);
+    const headers = new Headers(init?.headers);
     expect(String(url)).toContain("/api/admin/api-key-requests-admin/akr_release_target/release-claim");
-    expect(headers.get("Idempotency-Key")).toBe("api-key-request:release-claim:akr_release_target:uuid-for-release-test");
-    expect(JSON.parse(String((init as RequestInit).body))).toEqual({ reason: "inactive key cleanup" });
+    expect(headers.get("Idempotency-Key")).toBe(
+      "api-key-request:release-claim:akr_release_target:uuid-for-release-test",
+    );
+    expect(JSON.parse(String(init?.body))).toEqual({ reason: "inactive key cleanup" });
   });
 
   it("announces admin list fetch failures as alerts", () => {

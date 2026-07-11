@@ -40,6 +40,10 @@ export function buildYieldSourceProvenance(params: {
     comparisonAnchorObservedAt,
     comparisonAnchorAgeSeconds,
     confidenceTier: source.confidenceTier,
+    calculationMode: source.calculationMode,
+    evidenceClass: source.evidenceClass,
+    evidenceCompleteness: source.evidenceCompleteness,
+    scoreQualification: source.scoreQualification,
     selectionMethod: "confidence-weighted",
     selectionReason: isBest
       ? buildSelectionReason(source, rejectedPeers)
@@ -52,6 +56,7 @@ export function buildYieldSourceProvenance(params: {
         : null,
     usedLegacyHistory: source.usedLegacyHistory,
     usedDefaultSafety: source.usedDefaultSafety,
+    safetyReason: source.safetyReason,
     benchmarkKey: source.benchmarkKey,
     benchmarkLabel: source.benchmarkLabel,
     benchmarkCurrency: source.benchmarkCurrency,
@@ -61,6 +66,9 @@ export function buildYieldSourceProvenance(params: {
     benchmarkFallbackMode: source.benchmarkFallbackMode,
     benchmarkSelectionMode: source.benchmarkSelectionMode,
     benchmarkIsProxy: source.benchmarkIsProxy,
+    sourceFreshness: source.sourceFreshness,
+    benchmarkFreshness: source.benchmarkFreshness,
+    scoreQualified: source.scoreQualified,
     anomalies: source.anomalies,
   };
 }

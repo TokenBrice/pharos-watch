@@ -11,7 +11,6 @@ import type {
   PendingActionType,
 } from "./telegram-webhook-shared";
 import {
-  clearPendingDisambiguation,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingDisambiguation,
 } from "./telegram-webhook-store";
@@ -75,6 +74,7 @@ interface RunCoinResolutionFlowOptions<TActionPayload extends object> {
   initialCoins?: ResolvedCoin[];
   clearPendingOnTerminal?: boolean;
   resolutionScope?: TickerResolutionScope;
+  persistAmbiguous?: (resolution: Extract<CoinResolution, { kind: "ambiguous" }>) => Promise<boolean>;
 }
 
 function buildDisambiguationKeyboard(candidates: readonly ResolvedCoin[]): {
@@ -102,19 +102,19 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
   initialCoins = [],
   clearPendingOnTerminal = false,
   resolutionScope = "subscribable",
+  persistAmbiguous,
 }: RunCoinResolutionFlowOptions<TActionPayload>): Promise<void> {
   const resolution = resolveCoinTargets(tickers, initialCoins, resolutionScope);
 
   if (resolution.kind === "not_found") {
-    if (clearPendingOnTerminal) {
-      await clearPendingDisambiguation(db, chatId);
-    }
     await reply(buildNotFoundMessage(resolution.ticker, resolution.suggestion));
     return;
   }
 
   if (resolution.kind === "ambiguous") {
-    const persisted = await persistPendingDisambiguation(db, {
+    const persisted = persistAmbiguous
+      ? await persistAmbiguous(resolution)
+      : await persistPendingDisambiguation(db, {
       chatId,
       actionType,
       actionPayload,
@@ -124,7 +124,7 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
       candidates: resolution.candidates,
       remainingTickers: resolution.remainingTickers,
       initiatorUserId,
-    });
+        });
     if (!persisted) {
       await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
       return;

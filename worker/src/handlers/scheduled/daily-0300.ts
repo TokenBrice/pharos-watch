@@ -33,8 +33,7 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
         },
         {
           job: "telegram-inactive-cleanup",
-          run: (signal) =>
-            runTelegramInactiveCleanup(runtime.db, signal, runtime.env.TELEGRAM_BOT_TOKEN),
+          run: (signal) => runTelegramInactiveCleanup(runtime.db, signal),
         },
         {
           job: "telegram-retention-cleanup",
@@ -42,11 +41,21 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
         },
         {
           job: "mint-burn-growth-watchdog",
-          run: (signal) => runMintBurnGrowthWatchdog(runtime.db, runtime.alertWebhookUrl, signal),
+          run: (signal) => runMintBurnGrowthWatchdog(
+            runtime.db,
+            runtime.alertWebhookUrl,
+            signal,
+            runtime.env.ALERT_BROKER_MODE,
+          ),
         },
         {
           job: "cron-duration-watchdog",
-          run: (signal) => runCronDurationWatchdog(runtime.db, runtime.alertWebhookUrl, signal),
+          run: (signal) => runCronDurationWatchdog(
+            runtime.db,
+            runtime.alertWebhookUrl,
+            signal,
+            runtime.env.ALERT_BROKER_MODE,
+          ),
         },
       ],
     },

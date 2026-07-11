@@ -1,103 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { CG_CHAIN_MAP, DS_CHAIN_MAP } from "@shared/lib/chains";
-
-/** Chains with no standard DEX infrastructure — intentionally unsupported */
-const UNSUPPORTED_CHAINS = new Set([
-  "algorand",
-  "aptos",
-  "astar",
-  "aurora",
-  "bittorrent",
-  "boba",
-  "fraxtal",
-  "hedera",
-  "hydration",
-  "icp",
-  "kava",
-  "klaytn",
-  "mantra",
-  "metis",
-  "moonbeam",
-  "moonriver",
-  "morph-l2",
-  "near",
-  "noble",
-  "osmosis",
-  "polkadot",
-  "polygon-zkevm",
-  "starknet",
-  "stellar",
-  "swellchain",
-  "tezos",
-  "ton",
-  "viction",
-  "xdc",
-  "xlayer",
-  "xrpl",
-  "zircuit",
-  "bitlayer",
-  "apechain",
-  // Added with 78-contract enrichment batch — not yet mapped to CG/DS liquidity sources
-  "injective",
-  "flare",
-  "corn",
-  "cronos",
-  "stacks",
-  "etherlink",
-  "cardano",
-  "pulsechain",
-  "abstract",
-  "katana",
-  "abcore",
-  "flow",
-  "provenance",
-  "movement",
-  "nibiru",
-  "immutable-zkevm",
-  "bsquared",
-  "songbird",
-  "sophon",
-  "mezo",
-  "bifrost",
-  "hemi",
-  "stable",
-  "hyperliquid",
-  "codex",
-  "edgechain",
-  "bevm",
-  "ethereum-classic",
-  // Tracked for contract display, but not yet wired into the DEX liquidity pipeline
-  "citrea",
-  "conflux",
-  "harmony",
-  "secret",
-  "tempo",
-  "fluent",
-  "initia",
-  "agoric",
-  "iota",
-  "iota-evm",
-]);
+import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
 
 describe("liquidity coverage", () => {
-  it("every contract chain is mapped in CG, DS, or explicitly unsupported", () => {
-    const unmapped: string[] = [];
-    const allChains = new Set<string>();
+  it("classifies every deployment through the canonical provider inventory", () => {
+    const classified: string[] = [];
     for (const meta of ACTIVE_STABLECOINS) {
       for (const c of meta.contracts ?? []) {
-        allChains.add(c.chain);
+        classified.push(`${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain).join(",") || "provider-inaccessible"}`);
       }
       for (const c of meta.tradedContracts ?? []) {
-        allChains.add(c.chain);
+        classified.push(`${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain).join(",") || "provider-inaccessible"}`);
       }
     }
-    for (const chain of allChains) {
-      if (!CG_CHAIN_MAP[chain] && !DS_CHAIN_MAP[chain] && !UNSUPPORTED_CHAINS.has(chain)) {
-        unmapped.push(chain);
-      }
-    }
-    expect(unmapped).toEqual([]);
+    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(262);
   });
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {

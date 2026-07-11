@@ -8,19 +8,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-export function SummaryBadge({
-  label,
-  value,
-  className,
-}: {
-  label: string;
-  value: string;
-  className?: string;
-}) {
+export function SummaryBadge({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
     <div
       className={cn(
-        "rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs shadow-[inset_0_1px_0_oklch(1_0_0_/0.55)] dark:bg-background/45 dark:shadow-none",
+        // Static value chip: intentionally flat (no control-pill inset sheen)
+        // so read-only metrics do not read as interactive mode controls.
+        "rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs dark:bg-background/45",
         className,
       )}
     >
@@ -43,13 +37,7 @@ export function StatusSummaryBadge({
 }) {
   const tone = getStatusTone(status);
 
-  return (
-    <SummaryBadge
-      label={label}
-      value={value ?? tone.label}
-      className={cn(tone.badgeClassName, className)}
-    />
-  );
+  return <SummaryBadge label={label} value={value ?? tone.label} className={cn(tone.badgeClassName, className)} />;
 }
 
 export function StatusSection({
@@ -59,6 +47,8 @@ export function StatusSection({
   description,
   accentClassName,
   summary,
+  headingLevel = "h2",
+  variant = "card",
   children,
 }: {
   id: DashboardSectionId;
@@ -67,40 +57,51 @@ export function StatusSection({
   description?: string;
   accentClassName?: string;
   summary?: ReactNode;
+  headingLevel?: "h1" | "h2";
+  variant?: "card" | "workspace";
   children: ReactNode;
 }) {
+  const Heading = headingLevel;
+
   return (
     <section
       id={id}
+      aria-labelledby={`${id}-title`}
       className={cn(
-        "pharos-card-shell scroll-mt-36 px-4 py-5 md:scroll-mt-28 sm:px-5 lg:px-6",
+        variant === "card"
+          ? "pharos-card-shell scroll-mt-36 px-4 py-5 md:scroll-mt-28 sm:px-5 lg:px-6"
+          : "min-w-0 max-w-full scroll-mt-[var(--ops-sticky-offset)]",
         accentClassName,
       )}
     >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <div
+        className={cn(
+          "flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between",
+          variant === "workspace" && "border-b border-border/70 pb-4",
+        )}
+      >
         <div className="space-y-1">
           {kicker && <p className="pharos-kicker">{kicker}</p>}
-          <h2 className="pharos-display text-2xl font-bold leading-tight tracking-tight text-foreground">{title}</h2>
+          <Heading id={`${id}-title`} className="text-2xl font-bold leading-tight text-foreground">
+            {title}
+          </Heading>
           {description && <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
         </div>
         {summary ? <div className="flex flex-wrap gap-2 lg:justify-end">{summary}</div> : null}
       </div>
-      <div className="mt-5 space-y-5">{children}</div>
+      <div className="mt-5 space-y-5">
+        {headingLevel === "h1" ? <h2 className="sr-only">{title} workspace content</h2> : null}
+        {children}
+      </div>
     </section>
   );
 }
 
-export function StatusCardEmptyState({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+export function StatusCardEmptyState({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle as="h3" className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">{children}</p>

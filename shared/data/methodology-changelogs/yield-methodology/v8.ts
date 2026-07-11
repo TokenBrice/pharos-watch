@@ -2,6 +2,94 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.33",
+    title: "Distinct-Day History Maturity",
+    date: "2026-07-11",
+    effectiveAt: 1783728000,
+    summary:
+      "Yield history maturity now counts distinct UTC observation days instead of raw hourly samples, preventing a few hours of data from receiving mature-history treatment. PYS weights and the existing limited-history penalty are unchanged.",
+    impact: [
+      "`sourceRisk.observationCount30d` now means distinct UTC days represented by source-specific history plus the current publication day",
+      "The existing limited-history penalty remains active until seven distinct observation days are available; multiple samples within one UTC day no longer advance maturity",
+      "APY7d, APY30d, variance, source-specific history ownership, and the limited-history penalty magnitude are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "8.32",
+    title: "Opportunity-Level Risk for External Opportunities",
+    date: "2026-07-11",
+    effectiveAt: 1783728000,
+    summary:
+      "External yield opportunities (lending markets, fixed-yield products, structured tranches) are scored at the market level through a source-keyed OpportunityRisk contract. The underlying stablecoin's Safety Score becomes one input rather than the opportunity's score, and missing critical market evidence produces NR instead of a neutral exact score. Report Card scores, PYS formula weights, and source-risk calibration are unchanged.",
+    impact: [
+      "Every external opportunity row publishes `sourceRisk.opportunityRisk` with its opportunity class, the underlying Safety Score used as input, the derived opportunity safety score and penalty, venue review status, and any missing critical evidence",
+      "External opportunities with a reviewed venue and observable market size score safety at the opportunity level: reviewed venue risk above the blue-chip threshold, thin market size, observed high utilization, KYC/access restrictions, and withdrawal constraints deduct safety points from the underlying input",
+      "Missing critical market evidence (unreviewed venue, unknown market size, or unknown market status for structured tranches) withholds the exact PYS with pysNullReason opportunity-evidence-missing and an NR score qualification instead of inheriting the underlying stablecoin's safety with a neutral penalty",
+      "Royco Dawn tranches keep their bespoke market-health safety model and now publish the same OpportunityRisk contract for uniform completeness auditing",
+      "Blue-chip venues at or below the existing 2.0 weighted venue-risk threshold deduct no venue points, so well-reviewed Aave, Compound, Morpho, Yearn, and Pendle markets are unaffected by the venue component",
+      "The underlying stablecoin's own Report Card score and grade are never modified; holder yield on the coin itself is scored exactly as before",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "8.31",
+    title: "Evidence Qualification and Reproducible History",
+    date: "2026-07-10",
+    effectiveAt: 1783641600,
+    summary:
+      "Yield Intelligence separates deterministic calculation from evidence quality, qualifies incomplete scores, and persists the exact versioned PYS inputs needed to reproduce every new history point. PYS formula weights and source-risk calibration are unchanged.",
+    impact: [
+      "Ranking provenance distinguishes calculation mode, evidence class, evidence completeness, and score qualification instead of treating deterministic math as direct evidence",
+      "Rate-derived benchmark products are modeled proxies, so a fresh direct first-party, on-chain, or curated observation cannot lose solely to the proxy's deterministic calculation path",
+      "Missing or stale source freshness, stale benchmark evidence, and missing or NR safety produce an NR row with a null PYS; modeled/fallback evidence is estimated and noncritical evidence gaps are partial",
+      "Each new yield-history point stores a versioned snapshot of APY30d, safety, variance, benchmark, source-risk, scaling, qualification, benchmark key, evidence class, and methodology version",
+      "The history API marks post-migration points as exactly reproducible and legacy rows as partial rather than implying inputs that were never stored",
+      "PYS formula weights, benchmark rates, source-risk calibration, and stablecoin Report Card scores are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "8.3",
+    title: "Registry-Wide Freshness Eligibility",
+    date: "2026-07-10",
+    effectiveAt: 1783641600,
+    summary:
+      "Yield Intelligence applies source-family and benchmark TTLs before arbitration, withholds exact PYS from expired rows, and rolls health up across every benchmark used by published rankings. PYS formula weights and benchmark derivation are unchanged.",
+    impact: [
+      "Source-family freshness is evaluated before confidence arbitration, so a fresh curated observation outranks an expired deterministic or rate-derived candidate",
+      "Expired candidates remain auditable as retained alternatives; a stale-only winner remains visible as last-known context with `pharosYieldScore: null` and `pysNullReason: source-stale` or `benchmark-stale`",
+      "Ranking provenance publishes source freshness, benchmark freshness, and score qualification, while row warnings distinguish degraded and stale benchmark evidence",
+      "The benchmark scoring TTL is 48 hours; fallback or retained benchmarks degrade health, while benchmarks beyond the TTL cannot support an exact current PYS",
+      "Yield Health aggregates every benchmark key used by published rows, so a fresh USD benchmark cannot mask a stale GBP, EUR, or other row-bearing benchmark",
+      "PYS formula weights, source-risk calibration, benchmark provider order, and benchmark rate derivation are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "8.299",
+    title: "Source Identity and Freshness Correctness",
+    date: "2026-07-10",
+    effectiveAt: 1783641600,
+    summary:
+      "Yield Intelligence preserves modern source identities, aligns freshness warnings with each source's real production and anchor cadence, makes safety fallbacks explainable, and adds verifiable GBP benchmark response diagnostics. PYS math, venue-risk calibration, benchmark derivation, and source arbitration order are unchanged.",
+    impact: [
+      "Source-aware history aliases only pre-source-key rows (`null` / `legacy-best`) and the explicit LUSD `bprotocol-lqty-only` legacy identity; linked-variant, protocol-specific, and other modern on-chain keys remain distinct so they cannot generate false parent-source switches",
+      "Historical linked-variant false-switch decisions are reclassified from trend to audit only after two consecutive published generations preserve the linked identity with no switch; ordinary 30-day audit retention can then remove the corrected noise",
+      "Read-time freshness now gives daily rate-derived observations 48 hours, keeps price-derived source observations at 36 hours, expires price-derived and Midas/Ondo NAV comparison anchors after their configured 45-day window, and retains the 14-day anchor threshold for ordinary exchange-rate sources",
+      "Ranking rows and provenance expose a stable nullable `safetyReason`: `report-card-score-missing`, `report-card-grade-not-rated`, or `underlying-report-card-score-missing`, so every default/NR safety input is attributable",
+      "vaults.fyi telemetry classifies disabled, probe-only, and rankable consumption explicitly; an enabled source with an empty rankable allowlist is a bounded audit probe and cannot be mistaken for a consumable ranking source",
+      "GBP SONIA attempts record bounded status/content-type/body-size/parse diagnostics for FRED, ALFRED, and BoE without response bodies or URLs; a Worker canary remains degraded until a direct, current GBP benchmark has published in two consecutive daily generations",
+      "PYS formula shape, source-risk and venue-risk penalties, benchmark source order and rate derivation, APY sanity limits, and confidence-weighted source arbitration are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.298",
     title: "Yearn-Report Venue-Risk Recalibration",
     date: "2026-07-01",

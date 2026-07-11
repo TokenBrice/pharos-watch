@@ -10,6 +10,7 @@ import {
   runCanaryChecks,
 } from "../canary-checks";
 import { REPORT_CARD_CACHE_GENERATION } from "../report-card-cache";
+import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 
 const NOW = 1_775_900_000;
 
@@ -29,17 +30,93 @@ function stablecoinsPayload(activeCount = ACTIVE_IDS.size) {
 }
 
 function reportCardPayload(updatedAt = NOW - 60) {
+  const scoreIds = [...ACTIVE_IDS].sort();
+  const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
   return JSON.stringify({
     generation: REPORT_CARD_CACHE_GENERATION,
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
     payload: {
       updatedAt,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      scores: {
-        "usdt-tether": { score: 92, grade: "A" },
+      publicationGenerationId,
+      completeness: {
+        generationId: publicationGenerationId,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        expectedCount: scoreIds.length,
+        scoredCount: scoreIds.length,
+        notRatedCount: 0,
+        notRatedIds: [],
       },
+      scores: Object.fromEntries(scoreIds.map((id) => [id, { score: 92, grade: "A" }])),
     },
   });
+}
+
+function gbpCanaryCacheRows(options: { freshRuns?: number; fallback?: boolean } = {}) {
+  const recordDate = new Date((NOW - 24 * 3600) * 1000).toISOString().slice(0, 10);
+  const benchmark = (key: "USD" | "GBP", source: string) => ({
+    key,
+    rate: 4.1,
+    recordDate,
+    fetchedAt: NOW - 60,
+    source,
+    isFallback: false,
+    fallbackMode: null,
+    lastMarketRate: 4.1,
+    lastMarketRecordDate: recordDate,
+    lastMarketFetchedAt: NOW - 60,
+    lastMarketSource: source,
+  });
+  return [
+    {
+      key: "risk_free_rates",
+      value: JSON.stringify({
+        version: 1,
+        benchmarks: {
+          USD: benchmark("USD", "fred-dgs3mo"),
+          GBP: {
+            ...benchmark("GBP", "fred-sonia-compounded-index"),
+            isFallback: options.fallback ?? false,
+            fallbackMode: options.fallback ? "gbp-sonia-compounded-index-failed-retained" : null,
+          },
+        },
+      }),
+      updatedAt: NOW - 60,
+      updated_at: NOW - 60,
+    },
+    {
+      key: "fetch-tbill-rate:gbp-retained-fallback-streak",
+      value: JSON.stringify({ consecutiveFreshRuns: options.freshRuns ?? 2 }),
+      updatedAt: NOW - 60,
+      updated_at: NOW - 60,
+    },
+  ];
+}
+
+function dewsRows(computedAt = NOW - 60, outOfRangeCount = 0) {
+  return Array.from({ length: 20 }, (_, index) => ({
+    stablecoin_id: `stablecoin-${String(index).padStart(2, "0")}`,
+    score: index < outOfRangeCount ? 101 : 20 + index,
+    band: "CALM",
+    signals_json: "{}",
+    computed_at: computedAt,
+  }));
+}
+
+function dewsPointerRow(rows: ReturnType<typeof dewsRows>, computedAt = NOW - 60) {
+  return {
+    key: "dews:published-generation",
+    value: JSON.stringify({
+      updatedAt: computedAt,
+      source: "compute-dews",
+      publishStatus: "published",
+      coverageVersion: 2,
+      expectedRowCount: rows.length,
+      stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((row) => row.stablecoin_id)),
+    }),
+    updatedAt: computedAt,
+    updated_at: computedAt,
+  };
 }
 
 function healthyD1(
@@ -51,6 +128,9 @@ function healthyD1(
     retainedOlderPublishedRows?: number;
     unpublishedRows?: number;
     generationCount?: number;
+    stablecoinsActiveCount?: number;
+    gbpFreshRuns?: number;
+    gbpFallback?: boolean;
   } = {},
 ) {
   const rowCount = dex.rowCount ?? 408;
@@ -60,6 +140,7 @@ function healthyD1(
   const retainedOlderPublishedRows = dex.retainedOlderPublishedRows ?? 0;
   const unpublishedRows = dex.unpublishedRows ?? 0;
   const generationCount = dex.generationCount ?? 1;
+  const publishedDewsRows = dewsRows();
   return mockD1([
     {
       match: "FROM dex_liquidity_publication_generations",
@@ -99,8 +180,15 @@ function healthyD1(
     {
       match: "FROM cache WHERE key = ?",
       rows: [
-        { key: "stablecoins", value: stablecoinsPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+        {
+          key: "stablecoins",
+          value: stablecoinsPayload(dex.stablecoinsActiveCount),
+          updatedAt: NOW - 60,
+          updated_at: NOW - 60,
+        },
         { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+        dewsPointerRow(publishedDewsRows),
+        ...gbpCanaryCacheRows({ freshRuns: dex.gbpFreshRuns, fallback: dex.gbpFallback }),
       ],
     },
     {
@@ -114,14 +202,9 @@ function healthyD1(
       rows: [],
     },
     {
-      match: "FROM stress_signals_latest",
-      first: {
-        source_table: "stress_signals_latest",
-        row_count: 20,
-        latest_computed_at: NOW - 60,
-        out_of_range_scores: 0,
-      },
-      rows: [],
+      match: "pharos:stress-signals:published-exact",
+      matchBinds: [NOW - 60],
+      rows: publishedDewsRows,
     },
   ]);
 }
@@ -141,13 +224,75 @@ describe("worker data invariant canaries", () => {
 
     expect(summary).toMatchObject({
       mode: "status",
-      totalChecks: 6,
-      okCount: 6,
+      totalChecks: 7,
+      okCount: 7,
       degradedCount: 0,
       errorCount: 0,
       skippedCount: 0,
       worstStatus: "ok",
       worstSeverity: "info",
+    });
+  });
+
+  it("derives DEWS canary health from the exact published generation", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const db = healthyD1();
+
+    const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
+    const dews = summary.results.find((result) => result.checkId === "dews-latest-signal");
+
+    expect(dews).toMatchObject({
+      status: "ok",
+      metadata: expect.objectContaining({
+        sourceTable: "stress_signals",
+        latestComputedAt: NOW - 60,
+        exactCoverageVerified: true,
+      }),
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("stress_signals_latest"))).toBe(false);
+  });
+
+  it("degrades and names even one missing active stablecoin", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const summary = await runCanaryChecks(
+      healthyD1({ stablecoinsActiveCount: ACTIVE_IDS.size - 1 }),
+      { observedAt: NOW, mode: "status" },
+    );
+    const check = summary.results.find((result) => result.checkId === "stablecoins-cache-active-count");
+
+    expect(check).toMatchObject({
+      status: "degraded",
+      severity: "warning",
+      metadata: expect.objectContaining({
+        activeCount: ACTIVE_IDS.size - 1,
+        expectedActiveCount: ACTIVE_IDS.size,
+      }),
+    });
+    expect((check?.metadata?.missingActiveIds as string[])).toHaveLength(1);
+    expect(check?.error).toContain((check?.metadata?.missingActiveIds as string[])[0]!);
+  });
+
+  it("keeps the GBP benchmark canary degraded until two direct publications", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const oneRun = await runCanaryChecks(healthyD1({ gbpFreshRuns: 1 }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    expect(oneRun.results.find((result) => result.checkId === "yield-gbp-benchmark-current")).toMatchObject({
+      status: "degraded",
+      error: expect.stringContaining("1/2 consecutive fresh publications"),
+    });
+
+    const fallback = await runCanaryChecks(healthyD1({ gbpFreshRuns: 0, gbpFallback: true }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    expect(fallback.results.find((result) => result.checkId === "yield-gbp-benchmark-current")).toMatchObject({
+      status: "degraded",
+      error: expect.stringContaining("GBP benchmark is fallback"),
     });
   });
 
@@ -235,6 +380,7 @@ describe("worker data invariant canaries", () => {
   it("degrades noisy invariants without aborting the rest of the run", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
+    const unhealthyDewsRows = dewsRows(NOW - 60, 2);
     const db = mockD1([
       {
         match: "FROM dex_liquidity_publication_generations",
@@ -261,6 +407,8 @@ describe("worker data invariant canaries", () => {
         rows: [
           { key: "stablecoins", value: stablecoinsPayload(1), updatedAt: NOW - 60, updated_at: NOW - 60 },
           { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+          dewsPointerRow(unhealthyDewsRows),
+          ...gbpCanaryCacheRows(),
         ],
       },
       {
@@ -274,14 +422,9 @@ describe("worker data invariant canaries", () => {
         rows: [],
       },
       {
-        match: "FROM stress_signals_latest",
-        first: {
-          source_table: "stress_signals_latest",
-          row_count: 20,
-          latest_computed_at: NOW - 60,
-          out_of_range_scores: 2,
-        },
-        rows: [],
+        match: "pharos:stress-signals:published-exact",
+        matchBinds: [NOW - 60],
+        rows: unhealthyDewsRows,
       },
     ]);
 
@@ -304,7 +447,7 @@ describe("worker data invariant canaries", () => {
     await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
     await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
     const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO worker_canary_runs"));
-    expect(inserts).toHaveLength(12);
+    expect(inserts).toHaveLength(14);
 
     const status = await loadCanaryStatus(
       mockD1([
@@ -319,7 +462,7 @@ describe("worker data invariant canaries", () => {
               duration_ms: 5,
               metadata_json: JSON.stringify({
                 label: "Stablecoins cache active count",
-                description: "The stablecoins cache contains nearly all active registry assets.",
+                description: "The stablecoins cache contains every active registry asset or an owned unexpired waiver.",
                 activeCount: ACTIVE_IDS.size,
                 mode: "status",
               }),
@@ -426,6 +569,7 @@ describe("worker data invariant canaries", () => {
         rows: [
           { key: "stablecoins", value: stablecoinsPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
           { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+          ...gbpCanaryCacheRows(),
         ],
       },
       {
@@ -447,8 +591,9 @@ describe("worker data invariant canaries", () => {
 
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
-    expect(summary.skippedCount).toBe(4);
-    expect(summary.okCount).toBe(2);
-    expect(summary.worstStatus).toBe("ok");
+    expect(summary.skippedCount).toBe(3);
+    expect(summary.degradedCount).toBe(1);
+    expect(summary.okCount).toBe(3);
+    expect(summary.worstStatus).toBe("degraded");
   });
 });

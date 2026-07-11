@@ -81,7 +81,7 @@ const dai = {
   circulating: { peggedUSD: 90_000_000 },
 } as unknown as StablecoinData;
 
-const reportCard = {
+const reportCard: ReportCard = {
   id: "usdt-tether",
   name: "Tether",
   symbol: "USDT",
@@ -99,6 +99,7 @@ const reportCard = {
   rawInputs: {
     pegScore: 95,
     activeDepeg: false,
+    activeDepegBps: null,
     depegEventCount: 0,
     lastEventAt: null,
     liquidityScore: 89,
@@ -113,17 +114,18 @@ const reportCard = {
     bluechipGrade: null,
     canBeBlacklisted: true,
     chainTier: "ethereum",
-    deploymentModel: "multi-chain",
-    collateralQuality: "cash",
+    deploymentModel: "native-multichain",
+    collateralQuality: "rwa",
     custodyModel: "institutional-regulated",
     governanceTier: "centralized",
     governanceQuality: "single-entity",
     dependencies: [],
     navToken: false,
     collateralFromLive: false,
+    dependencyFromLive: false,
   },
   isDefunct: false,
-} as const satisfies ReportCard;
+};
 
 describe("StablecoinTable", () => {
   beforeEach(() => {

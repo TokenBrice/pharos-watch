@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
-import { SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
+import { ReserveRecoveryFaultInjectionTermination } from "../../lib/reserve-recovery-fault-injection";
 
 const getReserveAdapterMock = vi.fn();
 const shouldAttemptFetchMock = vi.fn();
@@ -259,6 +260,156 @@ describe("syncLiveReserves", () => {
       });
 
     expect(missingRpc).toEqual([]);
+  });
+
+  it("refuses a recovery suffix when the configured queue hash changed", async () => {
+    const checkpointIdentity = {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 1_000,
+      job: "sync-live-reserves",
+      attemptNo: 2,
+      executionGeneration: 2,
+      invocationId: "recovery-owner",
+    };
+    const db = mockD1([{
+      match: "FROM worker_scheduled_checkpoints",
+      rows: [{
+        schedule_key: checkpointIdentity.scheduleKey,
+        slot_started_at: checkpointIdentity.slotStartedAt,
+        job: checkpointIdentity.job,
+        attempt_no: checkpointIdentity.attemptNo,
+        execution_generation: checkpointIdentity.executionGeneration,
+        invocation_id: checkpointIdentity.invocationId,
+        worker_version: "version-a",
+        queue_hash: "stale-queue-hash",
+        state: "recovering",
+        next_item_key: SYNC_ORDERED_CONFIGURED_COINS[0]?.id ?? null,
+        current_item_key: null,
+        current_domain_attempt_id: null,
+        items_done: 0,
+        items_total: SYNC_ORDERED_CONFIGURED_COINS.length,
+        child_dispositions_json: "{}",
+        recovery_owner: checkpointIdentity.invocationId,
+        recovery_lease_until: 2_000,
+        source_attempt_no: 1,
+        error: null,
+        created_at: 1_000,
+        updated_at: 1_100,
+        completed_at: null,
+      }],
+    }]);
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+
+    await expect(syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      undefined,
+      checkpointIdentity,
+    )).rejects.toThrow("refusing unsafe suffix replay");
+    expect(getReserveAdapterMock).not.toHaveBeenCalled();
+  });
+
+  it("repairs crash-omitted history before advancing an authoritative item on retry", async () => {
+    const lastCoin = SYNC_ORDERED_CONFIGURED_COINS[SYNC_ORDERED_CONFIGURED_COINS.length - 1];
+    expect(lastCoin).toBeDefined();
+    const checkpointIdentity = {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 2_000,
+      job: "sync-live-reserves",
+      attemptNo: 2,
+      executionGeneration: 2,
+      invocationId: "recovery-owner",
+    };
+    const checkpointAdvanceError = new Error("checkpoint advance interrupted");
+    const checkpointAdvanceConfig: MockTableConfig = {
+      match: "items_done = ?",
+      rows: [],
+      throwError: checkpointAdvanceError,
+    };
+    const db = mockD1([
+      {
+        match: "FROM worker_scheduled_checkpoints",
+        rows: [{
+          schedule_key: checkpointIdentity.scheduleKey,
+          slot_started_at: checkpointIdentity.slotStartedAt,
+          job: checkpointIdentity.job,
+          attempt_no: checkpointIdentity.attemptNo,
+          execution_generation: checkpointIdentity.executionGeneration,
+          invocation_id: checkpointIdentity.invocationId,
+          worker_version: "version-a",
+          queue_hash: LIVE_RESERVE_QUEUE_HASH,
+          state: "recovering",
+          next_item_key: lastCoin!.id,
+          current_item_key: lastCoin!.id,
+          current_domain_attempt_id: "authoritative-attempt",
+          items_done: SYNC_ORDERED_CONFIGURED_COINS.length - 1,
+          items_total: SYNC_ORDERED_CONFIGURED_COINS.length,
+          child_dispositions_json: "{}",
+          recovery_owner: checkpointIdentity.invocationId,
+          recovery_lease_until: 3_000,
+          source_attempt_no: 1,
+          error: null,
+          created_at: 2_000,
+          updated_at: 2_100,
+          completed_at: null,
+        }],
+      },
+      {
+        match: "FROM reserve_composition c",
+        rows: [{ finalized: 1, repaired: 1 }],
+      },
+      checkpointAdvanceConfig,
+    ]);
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+
+    await expect(syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      undefined,
+      checkpointIdentity,
+    )).rejects.toBe(checkpointAdvanceError);
+
+    delete checkpointAdvanceConfig.throwError;
+    const result = await syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      undefined,
+      checkpointIdentity,
+    );
+
+    expect(getReserveAdapterMock).not.toHaveBeenCalled();
+    expect(result?.itemCount).toBe(0);
+    const history = db.getHistory();
+    const checkpointAdvances = history.filter((entry) => (
+      entry.sql.includes("UPDATE worker_scheduled_checkpoints")
+      && entry.sql.includes("items_done = ?")
+    ));
+    expect(checkpointAdvances).toHaveLength(2);
+    expect(checkpointAdvances[1]?.binds.slice(0, 2)).toEqual([
+      null,
+      SYNC_ORDERED_CONFIGURED_COINS.length,
+    ]);
+    const compositionRepairs = history.filter((entry) => (
+      entry.sql.includes("INSERT OR IGNORE INTO reserve_composition_history")
+      && entry.sql.includes("SELECT c.stablecoin_id")
+    ));
+    const attemptRepairs = history.filter((entry) => (
+      entry.sql.includes("INSERT OR IGNORE INTO reserve_sync_attempt_history")
+      && entry.sql.includes("SELECT s.stablecoin_id")
+    ));
+    expect(compositionRepairs).toHaveLength(2);
+    expect(attemptRepairs).toHaveLength(2);
+    for (let index = 0; index < checkpointAdvances.length; index += 1) {
+      const advanceIndex = history.indexOf(checkpointAdvances[index]!);
+      expect(history.indexOf(compositionRepairs[index]!)).toBeLessThan(advanceIndex);
+      expect(history.indexOf(attemptRepairs[index]!)).toBeLessThan(advanceIndex);
+    }
   });
 
   it("persists reserve snapshot + sync state and returns ok on a clean run", async () => {
@@ -1022,6 +1173,9 @@ describe("syncLiveReserves", () => {
       && typeof update.metadata?.currentAdapter === "string"
       && typeof update.metadata?.currentBreakerKey === "string"
     ))).toBe(true);
+    const syncingCalls = progressCalls.filter(([update]) => update.stage === "syncing");
+    expect(syncingCalls.length).toBeLessThanOrEqual(Math.ceil(configuredCoinCount / 10));
+    expect(progressCalls.length).toBeLessThanOrEqual(Math.ceil(configuredCoinCount / 10) + 2);
     const finalUpdate = progressCalls[progressCalls.length - 1]?.[0];
     expect(finalUpdate).toMatchObject({
       stage: "finalizing",
@@ -1515,6 +1669,72 @@ describe("syncLiveReserves", () => {
       lastSuccessAt,
     });
     expect(scoringMap.has(coin.id)).toBe(false);
+  });
+
+  function abruptFault(killPoint: "after_pending_begin" | "after_authoritative_write", targetItemKey: string) {
+    return new ReserveRecoveryFaultInjectionTermination({
+      workerVersion: "preview-v1",
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 1_000,
+      attemptNo: 1,
+      killPoint,
+      targetItemKey,
+      armedAt: 900,
+      expiresAt: 1_200,
+    });
+  }
+
+  it("leaves the exact domain attempt pending when injection fires after pending begin", async () => {
+    const coin = getIndependentConfiguredCoin();
+    const { syncReserveCoin } = await import("../sync-live-reserves-core");
+    const db = mockD1();
+
+    await expect(syncReserveCoin({
+      db,
+      coin,
+      signal: new AbortController().signal,
+      adapter: adapterForCoin(coin),
+      runAdapter: vi.fn(),
+      breakerCanFetch: new Map(),
+      d1FinalizeTimeoutMs: 30_000,
+      previousState: null,
+      onAttemptPending: async () => {
+        throw abruptFault("after_pending_begin", coin.id);
+      },
+    })).rejects.toBeInstanceOf(ReserveRecoveryFaultInjectionTermination);
+
+    expect(db.getHistory().some((entry) => entry.sql.includes("pending_attempt_id = excluded.pending_attempt_id"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("pending_attempt_id = NULL"))).toBe(false);
+  });
+
+  it("leaves the authoritative write intact and skips history finalization at its kill point", async () => {
+    const coin = getIndependentConfiguredCoin();
+    const { syncReserveCoin } = await import("../sync-live-reserves-core");
+    const db = mockD1();
+
+    await expect(syncReserveCoin({
+      db,
+      coin,
+      signal: new AbortController().signal,
+      adapter: adapterForCoin(coin),
+      runAdapter: async () => ({
+        slices: [{ name: "Preview reserve", pct: 100, risk: "low" as const }],
+        metadata: { freshnessMode: "not-applicable" as const },
+      }),
+      breakerCanFetch: new Map([[
+        `live-reserves:${coin.liveReservesConfig.breakerScope ?? coin.liveReservesConfig.adapter}`,
+        true,
+      ]]),
+      d1FinalizeTimeoutMs: 30_000,
+      previousState: null,
+      onAuthoritativeWrite: async () => {
+        throw abruptFault("after_authoritative_write", coin.id);
+      },
+    })).rejects.toBeInstanceOf(ReserveRecoveryFaultInjectionTermination);
+
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO reserve_composition ("))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_composition_history"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("reserve_sync_attempt_history"))).toBe(false);
   });
 
   it("preserves prior reserve detail and skips scoring when the circuit is open", async () => {

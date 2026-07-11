@@ -216,6 +216,21 @@ export async function computeAndStoreDEWS(
   return {
     itemCount: results.length,
     ...(degraded ? { status: "degraded" as const } : {}),
+    productivity: {
+      productive: publicationPointerWritten && publishedGeneration != null,
+      reason: publicationPointerWritten ? "dews-generation-published" : "dews-generation-not-published",
+      publications: publicationPointerWritten && publishedGeneration != null
+        ? [{
+            surface: "dews" as const,
+            generationId: `dews:${publishedGeneration}`,
+            publishedAt: publishedGeneration,
+            candidateRows: results.length,
+            publishedRows: latestGenerationRows,
+            expectedRows: currentGenerationRows,
+            artifactCacheKey: "dews",
+          }]
+        : [],
+    },
     metadata: JSON.stringify({
       rowsRead: assets.length + sourceState.dexLiqRows.results.length + sourceState.liqHistRowsRead,
       rowsWritten: results.length,

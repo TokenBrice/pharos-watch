@@ -24,6 +24,8 @@ export function useBlacklistEventsPage(params: FetchBlacklistEventsParams) {
       params.sortDirection ?? "desc",
       params.limit ?? 50,
       params.offset ?? 0,
+      params.cursor ?? "first",
+      params.includeTotal ?? false,
     ],
     path: buildBlacklistEventsPath(params),
   });

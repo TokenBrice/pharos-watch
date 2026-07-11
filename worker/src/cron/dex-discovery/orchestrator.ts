@@ -15,6 +15,10 @@ import {
   updateDiscoveryMeta,
   upsertStagedPools,
 } from "./persistence";
+import {
+  buildStaticInaccessibleDeploymentOutcomes,
+  upsertDexDeploymentOutcomes,
+} from "./deployment-outcomes";
 import { toErrorMessage } from "../../lib/error-utils";
 
 export type EffectiveTier = "t1" | "t2" | "t3" | "dormant" | "skip";
@@ -175,6 +179,7 @@ export async function syncDexDiscovery(
   let budgetExhausted = false;
   let stagingWritesSkippedForBudget = 0;
   let cleanupSkippedForBudget = false;
+  let deploymentOutcomesWritten = 0;
   const failedCoins: string[] = [];
   const failedCoinErrors: Record<string, string> = {};
   const tierBreakdown = { t1: 0, t2: 0, t3: 0, dormant: 0, skipped: 0 };
@@ -184,6 +189,11 @@ export async function syncDexDiscovery(
   try {
     throwIfAborted(signal);
     const validationReferences = await loadPriceValidationReferences(db);
+    deploymentOutcomesWritten += await upsertDexDeploymentOutcomes(
+      db,
+      buildStaticInaccessibleDeploymentOutcomes(nowSec),
+      signal,
+    );
 
     const liquidityCoverage = await readLiquidityCoverage(db);
     const metaById = await readDiscoveryMeta(db, signal);
@@ -272,6 +282,7 @@ export async function syncDexDiscovery(
             break;
           }
           await upsertStagedPools(db, result.pools, signal);
+          deploymentOutcomesWritten += await upsertDexDeploymentOutcomes(db, result.deploymentOutcomes, signal);
           await updateDiscoveryMeta(db, candidate.stablecoinId, result.pools.length, nowSec, signal);
 
           coinsCrawled += 1;
@@ -333,6 +344,7 @@ export async function syncDexDiscovery(
         stagingWritesSkippedForBudget,
         cleanupSkippedForBudget,
         runSeq,
+        deploymentOutcomesWritten,
       },
     });
 
@@ -348,6 +360,7 @@ export async function syncDexDiscovery(
         cleanupSkippedForBudget,
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         runSeq,
+        deploymentOutcomesWritten,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
         unresolvedChains: allUnresolvedChains.size > 0 ? [...allUnresolvedChains] : undefined,
@@ -369,6 +382,7 @@ export async function syncDexDiscovery(
         cleanupSkippedForBudget,
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         runSeq,
+        deploymentOutcomesWritten,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
         unresolvedChains: allUnresolvedChains.size > 0 ? [...allUnresolvedChains] : undefined,

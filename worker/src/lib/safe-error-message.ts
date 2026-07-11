@@ -25,6 +25,12 @@ export function safeErrorMessage(error: unknown, maxLength: number = 200): strin
  */
 export function stripSensitive(message: string): string {
   return message
+    // Strip authorization headers and common credential-shaped key/value pairs.
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [redacted]")
+    .replace(
+      /\b((?:api[_-]?key|apikey|app[_-]?id|access[_-]?token|auth(?:orization)?|token|secret|password|cookie)\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
+      "$1[redacted]",
+    )
     // Strip common SQL DML keywords + trailing fragment up to the next sentence boundary.
     .replace(/\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b[^.\n]*/gi, "[sql]")
     // Strip email-like patterns.

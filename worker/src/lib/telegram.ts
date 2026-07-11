@@ -1,12 +1,19 @@
-import { drainResponseBody } from "./response-body";
+import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
+import { logTelegramEvent } from "./telegram-log";
 import {
-  TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD,
-  TELEGRAM_GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC,
-} from "./telegram-constants";
+  classifyTelegramCaughtFailure,
+  classifyTelegramResponseFailure,
+  type TelegramTransportErrorClass,
+} from "./telegram-transport-errors";
 
 export interface TelegramCreds {
   botToken: string;
   chatId: string;
+}
+
+interface PendingAlertScopeItem {
+  stablecoinId: string;
+  family: import("@shared/types/status").TelegramAlertType;
 }
 
 /** Telegram Bot API inline keyboard button shape. */
@@ -132,15 +139,7 @@ export interface SendToChatOpts {
   signal?: AbortSignal;
 }
 
-export type TelegramSendErrorClass =
-  | "blocked"
-  | "rate_limit"
-  | "server_error"
-  | "bad_request"
-  | "auth_error"
-  | "timeout"
-  | "network"
-  | "unknown";
+export type TelegramSendErrorClass = TelegramTransportErrorClass;
 
 export interface SendToChatResult {
   ok: boolean;
@@ -152,139 +151,26 @@ export interface SendToChatResult {
   delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
   retryAfterSec: number | null;
   rateLimitScope?: "chat" | "global";
+  migrateToChatId?: string;
 }
 
 export interface SendBatchOptions {
   softDeadlineAtMs?: number;
+  beforeSendBatch?: (
+    entries: readonly ScheduledBatchEntry<BatchMessage>[],
+  ) => Promise<ReadonlyMap<number, PreSendBatchResult> | void>;
+  afterSendBatch?: (
+    entries: readonly ScheduledBatchEntry<BatchMessage>[],
+    results: readonly BatchResult[],
+  ) => Promise<void>;
 }
 
-function inferRateLimitScope(responseBody: string, retryAfterSec: number | null): "chat" | "global" {
-  const lower = responseBody.toLowerCase();
-  if (lower.includes("global") || lower.includes("bot-wide") || lower.includes("bot wide")) {
-    return "global";
-  }
-  if (lower.includes("chat") || lower.includes("group") || lower.includes("user")) {
-    return "chat";
-  }
-  if (retryAfterSec != null && retryAfterSec >= TELEGRAM_GLOBAL_RATE_LIMIT_RETRY_AFTER_THRESHOLD_SEC) {
-    return "global";
-  }
-  return "chat";
-}
-
-function parseTelegramRetryAfter(responseBody: string): number | null {
-  if (!responseBody.trim()) return null;
-  try {
-    const parsed = JSON.parse(responseBody) as {
-      parameters?: { retry_after?: unknown };
-      response_parameters?: { retry_after?: unknown };
-    };
-    const raw = parsed.parameters?.retry_after ?? parsed.response_parameters?.retry_after;
-    const value = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : null;
-    return value != null && Number.isFinite(value) && value >= 0 ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-function buildResponseFailure(statusCode: number, responseBody = "", retryAfterSec: number | null = null): SendToChatResult {
-  if (statusCode === 403) {
-    return {
-      ok: false,
-      blocked: true,
-      retryable: false,
-      permanentFailure: true,
-      statusCode,
-      errorClass: "blocked",
-      delivery: "blocked",
-      retryAfterSec: null,
-    };
-  }
-  if (statusCode === 429) {
-    return {
-      ok: false,
-      blocked: false,
-      retryable: true,
-      permanentFailure: false,
-      statusCode,
-      errorClass: "rate_limit",
-      delivery: "retryable_failure",
-      retryAfterSec: null,
-      rateLimitScope: inferRateLimitScope(responseBody, retryAfterSec),
-    };
-  }
-  if (statusCode >= 500) {
-    return {
-      ok: false,
-      blocked: false,
-      retryable: true,
-      permanentFailure: false,
-      statusCode,
-      errorClass: "server_error",
-      delivery: "retryable_failure",
-      retryAfterSec: null,
-    };
-  }
-  if (statusCode === 400 || statusCode === 404 || statusCode === 413) {
-    return {
-      ok: false,
-      blocked: false,
-      retryable: false,
-      permanentFailure: true,
-      statusCode,
-      errorClass: "bad_request",
-      delivery: "permanent_failure",
-      retryAfterSec: null,
-    };
-  }
-  if (statusCode === 401) {
-    return {
-      ok: false,
-      blocked: false,
-      retryable: false,
-      permanentFailure: true,
-      statusCode,
-      errorClass: "auth_error",
-      delivery: "permanent_failure",
-      retryAfterSec: null,
-    };
-  }
-  return {
-    ok: false,
-    blocked: false,
-    retryable: true,
-    permanentFailure: false,
-    statusCode,
-    errorClass: "unknown",
-    delivery: "retryable_failure",
-    retryAfterSec: null,
-  };
-}
-
-function buildCaughtFailure(error: unknown): SendToChatResult {
-  if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
-    return {
-      ok: false,
-      blocked: false,
-      retryable: true,
-      permanentFailure: false,
-      statusCode: null,
-      errorClass: "timeout",
-      delivery: "retryable_failure",
-      retryAfterSec: null,
-    };
-  }
-
-  return {
-    ok: false,
-    blocked: false,
-    retryable: true,
-    permanentFailure: false,
-    statusCode: null,
-    errorClass: "network",
-    delivery: "retryable_failure",
-    retryAfterSec: null,
-  };
+function classifyCallbackAcknowledgementFailure(statusCode: number): TelegramSendErrorClass {
+  if (statusCode === 429) return "rate_limit";
+  if (statusCode >= 500) return "server_error";
+  if (statusCode === 401 || statusCode === 403) return "auth_error";
+  if (statusCode === 400 || statusCode === 404 || statusCode === 413) return "bad_request";
+  return "unknown";
 }
 
 /** Send an HTML message to a specific Telegram chat. */
@@ -321,13 +207,16 @@ export async function sendToChat(
     if (!res.ok) {
       const retryAfterRaw = res.headers.get("Retry-After");
       const retryAfterSec = retryAfterRaw ? parseInt(retryAfterRaw, 10) : null;
-      const body = await res.text().catch(() => "");
-      const telegramRetryAfterSec = parseTelegramRetryAfter(body);
-      const resolvedRetryAfterSec = telegramRetryAfterSec ?? (Number.isFinite(retryAfterSec) ? retryAfterSec : null);
-      const failure = buildResponseFailure(res.status, body, resolvedRetryAfterSec);
+      const body = await readResponseTextBoundedWithSignal(res, 16_384, signal).catch(() => "");
+      const failure = classifyTelegramResponseFailure(
+        res.status,
+        body,
+        Number.isFinite(retryAfterSec) ? retryAfterSec : null,
+      );
       return {
+        ok: false,
         ...failure,
-        retryAfterSec: resolvedRetryAfterSec,
+        statusCode: res.status,
       };
     }
     await drainResponseBody(res);
@@ -342,7 +231,11 @@ export async function sendToChat(
       retryAfterSec: null,
     };
   } catch (error) {
-    return buildCaughtFailure(error);
+    return {
+      ok: false,
+      ...classifyTelegramCaughtFailure(error),
+      statusCode: null,
+    };
   }
 }
 
@@ -350,6 +243,8 @@ export interface BatchMessage {
   chatId: string;
   html: string;
   disableNotification: boolean;
+  /** Persisted parse-mode policy for durable pending delivery. */
+  disableWebPagePreview?: boolean;
   replyMarkup?: unknown;
   chunkIndex?: number;
   /**
@@ -374,6 +269,12 @@ export interface BatchMessage {
    * chunk of single-coin alerts.
    */
   linkPreviewOptions?: LinkPreviewOptions;
+  /** Immutable source identity for queued risk-alert provenance. */
+  sourceEventId?: string;
+  /** Chat preference generation observed while this alert target was planned. */
+  preferenceGeneration?: number;
+  /** Exact coin/family pairs represented by this immutable rendered target. */
+  alertScope?: PendingAlertScopeItem[];
 }
 
 export interface BatchResult {
@@ -387,23 +288,48 @@ export interface BatchResult {
   delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
   retryAfterSec: number | null;
   rateLimitScope?: "chat" | "global";
+  migrateToChatId?: string;
   attempted?: boolean;
+  skippedReason?:
+    | "predecessor_failure"
+    | "global_rate_limit"
+    | "aborted"
+    | "soft_deadline"
+    | "pre_send"
+    | "transport_control"
+    | "delivery_mode_pause";
 }
 
+export type PreSendBatchResult = Omit<BatchResult, "chatId" | "attempted">;
+
 /**
- * Send messages in parallel batches. Each batch sends up to `batchSize`
- * messages concurrently (must stay <= 6 to respect Workers connection limit).
- * Individual send failures are caught — a single 500 error does NOT abort the batch.
- * Returns one result per input message in the same order.
+ * One input selected for a distinct-chat send wave. `index` always refers to
+ * the item's position in the original input, even when the scheduler moves a
+ * different chat forward to fill a concurrency slot.
  */
+export interface ScheduledBatchEntry<T> {
+  index: number;
+  item: T;
+}
+
+interface PerChatBatchScheduleOptions<T> {
+  signal?: AbortSignal;
+  softDeadlineAtMs?: number | null;
+  beforeSendBatch?: (
+    entries: readonly ScheduledBatchEntry<T>[],
+  ) => Promise<ReadonlyMap<number, PreSendBatchResult> | void>;
+  afterSendBatch?: (entries: readonly ScheduledBatchEntry<T>[], results: readonly BatchResult[]) => Promise<void>;
+}
+
 function buildUnsentRetryResult(
-  message: BatchMessage,
+  chatId: string,
   errorClass: TelegramSendErrorClass,
   retryAfterSec: number | null,
   rateLimitScope?: "chat" | "global",
+  skippedReason?: BatchResult["skippedReason"],
 ): BatchResult {
   return {
-    chatId: message.chatId,
+    chatId,
     ok: false,
     blocked: false,
     retryable: true,
@@ -414,9 +340,165 @@ function buildUnsentRetryResult(
     retryAfterSec,
     ...(rateLimitScope ? { rateLimitScope } : {}),
     attempted: false,
+    ...(skippedReason ? { skippedReason } : {}),
   };
 }
 
+function buildPredecessorFailureResult(chatId: string, predecessor: BatchResult): BatchResult {
+  return {
+    ...predecessor,
+    chatId,
+    attempted: false,
+    skippedReason:
+      predecessor.skippedReason === "transport_control" || predecessor.skippedReason === "delivery_mode_pause"
+        ? predecessor.skippedReason
+        : "predecessor_failure",
+  };
+}
+
+interface PerChatQueue {
+  chatId: string;
+  indexes: number[];
+  nextIndex: number;
+}
+
+/**
+ * Run at most one item per chat in each bounded-concurrency wave. Chat queues
+ * are round-robin, so a multi-chunk chat cannot monopolize the available
+ * connection slots. A failed predecessor classifies the untouched same-chat
+ * tail without launching it; successful chunks advance in stable input order.
+ */
+export async function schedulePerChatBatches<T extends { chatId: string }>(
+  items: readonly T[],
+  batchSize: number,
+  send: (item: T) => Promise<SendToChatResult>,
+  options: PerChatBatchScheduleOptions<T> = {},
+): Promise<BatchResult[]> {
+  if (!Number.isInteger(batchSize) || batchSize <= 0) {
+    throw new RangeError(`schedulePerChatBatches requires a positive integer batchSize (received ${batchSize})`);
+  }
+  if (items.length === 0) return [];
+
+  const results = new Array<BatchResult | undefined>(items.length);
+  const queueByChat = new Map<string, PerChatQueue>();
+  const readyQueues: PerChatQueue[] = [];
+  for (const [index, item] of items.entries()) {
+    let queue = queueByChat.get(item.chatId);
+    if (!queue) {
+      queue = { chatId: item.chatId, indexes: [], nextIndex: 0 };
+      queueByChat.set(item.chatId, queue);
+      readyQueues.push(queue);
+    }
+    queue.indexes.push(index);
+  }
+
+  const fillQueueTail = (queue: PerChatQueue, buildResult: (item: T) => BatchResult): void => {
+    while (queue.nextIndex < queue.indexes.length) {
+      const index = queue.indexes[queue.nextIndex++];
+      results[index] = buildResult(items[index]);
+    }
+  };
+  const fillAllReady = (buildResult: (item: T) => BatchResult): void => {
+    for (const queue of readyQueues) fillQueueTail(queue, buildResult);
+    readyQueues.length = 0;
+  };
+
+  while (readyQueues.length > 0) {
+    if (options.signal?.aborted) {
+      fillAllReady((item) => buildUnsentRetryResult(item.chatId, "timeout", null, undefined, "aborted"));
+      break;
+    }
+    if (options.softDeadlineAtMs != null && Date.now() >= options.softDeadlineAtMs) {
+      fillAllReady((item) => buildUnsentRetryResult(item.chatId, "timeout", null, undefined, "soft_deadline"));
+      break;
+    }
+
+    const waveQueues = readyQueues.splice(0, batchSize);
+    const entries = waveQueues.map((queue): ScheduledBatchEntry<T> => {
+      const index = queue.indexes[queue.nextIndex++];
+      return { index, item: items[index] };
+    });
+    const preSendResults = await options.beforeSendBatch?.(entries);
+
+    const waveResults = await Promise.all(
+      entries.map(async ({ index, item }) => {
+        const preSendResult = preSendResults?.get(index);
+        if (preSendResult) {
+          return {
+            ...preSendResult,
+            chatId: item.chatId,
+            attempted: false,
+            skippedReason: preSendResult.skippedReason ?? "pre_send",
+          } satisfies BatchResult;
+        }
+        const result = await send(item);
+        return { chatId: item.chatId, ...result, attempted: true } satisfies BatchResult;
+      }),
+    );
+    for (const [waveIndex, entry] of entries.entries()) {
+      results[entry.index] = waveResults[waveIndex];
+    }
+    await options.afterSendBatch?.(entries, waveResults);
+
+    const transportStop = waveResults.find(
+      (result) => result.attempted === false && result.skippedReason === "transport_control",
+    );
+    if (
+      transportStop &&
+      waveResults.every(
+        (result) => result.attempted === false && result.skippedReason === "transport_control",
+      )
+    ) {
+      const buildTransportStop = (item: T): BatchResult => ({
+        ...transportStop,
+        chatId: item.chatId,
+        attempted: false,
+      });
+      for (const queue of waveQueues) fillQueueTail(queue, buildTransportStop);
+      fillAllReady(buildTransportStop);
+      break;
+    }
+
+    const globalRateLimitedResult = waveResults.find(
+      (result) =>
+        result.attempted !== false && result.errorClass === "rate_limit" && result.rateLimitScope === "global",
+    );
+    if (globalRateLimitedResult) {
+      const buildGlobalResult = (item: T) =>
+        buildUnsentRetryResult(
+          item.chatId,
+          "rate_limit",
+          globalRateLimitedResult?.retryAfterSec ?? null,
+          "global",
+          "global_rate_limit",
+        );
+      for (const queue of waveQueues) fillQueueTail(queue, buildGlobalResult);
+      fillAllReady(buildGlobalResult);
+      break;
+    }
+
+    for (const [waveIndex, queue] of waveQueues.entries()) {
+      const result = waveResults[waveIndex];
+      if (!result.ok) {
+        fillQueueTail(queue, (item) => buildPredecessorFailureResult(item.chatId, result));
+      } else if (queue.nextIndex < queue.indexes.length) {
+        readyQueues.push(queue);
+      }
+    }
+  }
+
+  return results.map((result, index) => {
+    if (result) return result;
+    return buildUnsentRetryResult(items[index].chatId, "unknown", null);
+  });
+}
+
+/**
+ * Send messages serially within each chat and concurrently across distinct
+ * chats. Concurrency must stay <= 6 to respect the Workers connection limit.
+ * Individual send failures are caught by `sendToChat`; one failed chat does
+ * not abort other chat queues. Results retain the original input order.
+ */
 export async function sendBatch(
   messages: BatchMessage[],
   botToken: string,
@@ -424,84 +506,28 @@ export async function sendBatch(
   signal?: AbortSignal,
   options: SendBatchOptions = {},
 ): Promise<BatchResult[]> {
-  const results: BatchResult[] = [];
-  const chatRateLimitedUntil = new Map<string, number | null>();
-  const distinctRateLimitedChats = new Set<string>();
   const softDeadlineAtMs = Number.isFinite(options.softDeadlineAtMs)
     ? options.softDeadlineAtMs
     : null;
-  for (let i = 0; i < messages.length; i += batchSize) {
-    if (signal?.aborted) {
-      results.push(...messages.slice(i).map((message) => buildUnsentRetryResult(message, "timeout", null)));
-      break;
-    }
-    if (softDeadlineAtMs != null && Date.now() >= softDeadlineAtMs) {
-      results.push(...messages.slice(i).map((message) => buildUnsentRetryResult(message, "timeout", null)));
-      break;
-    }
-    const batch = messages.slice(i, i + batchSize);
-    const batchResults = await Promise.all(
-      batch.map(async (msg) => {
-        if (chatRateLimitedUntil.has(msg.chatId)) {
-          return buildUnsentRetryResult(
-            msg,
-            "rate_limit",
-            chatRateLimitedUntil.get(msg.chatId) ?? null,
-            "chat",
-          );
-        }
-        const result = await sendToChat(msg.chatId, msg.html, botToken, {
-          // Caller-supplied preview options win; otherwise default to no preview
-          // for batch alert sends to keep the message dense on mobile.
-          ...(msg.linkPreviewOptions
-            ? { linkPreviewOptions: msg.linkPreviewOptions }
-            : { disableWebPagePreview: true }),
-          disableNotification: msg.disableNotification,
-          replyMarkup: msg.replyMarkup,
-          signal,
-        });
-        return { chatId: msg.chatId, ...result, attempted: true };
+  return schedulePerChatBatches(
+    messages,
+    batchSize,
+    (msg) =>
+      sendToChat(msg.chatId, msg.html, botToken, {
+        // Caller-supplied preview options win; otherwise default to no preview
+        // for batch alert sends to keep the message dense on mobile.
+        ...(msg.linkPreviewOptions ? { linkPreviewOptions: msg.linkPreviewOptions } : { disableWebPagePreview: true }),
+        disableNotification: msg.disableNotification,
+        replyMarkup: msg.replyMarkup,
+        signal,
       }),
-    );
-    results.push(...batchResults);
-    // Stop sending further batches only when the response context indicates a
-    // bot-wide limit. Single-chat 429s remain isolated to that chat.
-    const globalRateLimitedResult = batchResults.find(
-      (r) => r.errorClass === "rate_limit" && r.rateLimitScope === "global",
-    );
-    let escalatedGlobalRateLimitedResult = globalRateLimitedResult;
-    if (!escalatedGlobalRateLimitedResult) {
-      for (const result of batchResults) {
-        if (result.attempted === false) continue;
-        if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
-          distinctRateLimitedChats.add(result.chatId);
-          chatRateLimitedUntil.set(result.chatId, result.retryAfterSec);
-        }
-      }
-      if (distinctRateLimitedChats.size >= TELEGRAM_GLOBAL_RATE_LIMIT_DISTINCT_CHAT_THRESHOLD) {
-        escalatedGlobalRateLimitedResult = batchResults.find(
-          (r) => r.errorClass === "rate_limit" && r.rateLimitScope !== "global" && r.attempted !== false,
-        );
-        for (const result of batchResults) {
-          if (result.errorClass === "rate_limit" && result.rateLimitScope !== "global") {
-            result.rateLimitScope = "global";
-          }
-        }
-      }
-    }
-    if (escalatedGlobalRateLimitedResult) {
-      for (const skippedMessage of messages.slice(i + batchSize)) {
-        results.push(buildUnsentRetryResult(
-          skippedMessage,
-          "rate_limit",
-          escalatedGlobalRateLimitedResult.retryAfterSec,
-          "global",
-        ));
-      }
-      break;
-    }
-  }
-  return results;
+    {
+      signal,
+      softDeadlineAtMs,
+      beforeSendBatch: options.beforeSendBatch,
+      afterSendBatch: options.afterSendBatch,
+    },
+  );
 }
 
 export interface EditMessageOpts {
@@ -578,4 +604,13 @@ export async function answerCallbackQuery(
     },
   );
   await drainResponseBody(res);
+  if (!res.ok) {
+    logTelegramEvent({
+      level: "warn",
+      message: "callback acknowledgement rejected",
+      action: "answer-callback-query",
+      statusCode: res.status,
+      errorClass: classifyCallbackAcknowledgementFailure(res.status),
+    });
+  }
 }

@@ -12,6 +12,12 @@ import { escapeHtml, type ForceReplyMarkup, type InlineKeyboardButton, type Inli
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
+import { parseTelegramAdoptionToken } from "@shared/lib/telegram-adoption-analytics";
+import {
+  recordTelegramFirstFollow,
+  recordTelegramFirstSetupComplete,
+  telegramAdoptionDimensionsForStart,
+} from "../lib/telegram-adoption-analytics";
 import {
   TELEGRAM_PRESET_LABEL_BY_ID,
   resolveTelegramPresetTargets,
@@ -20,6 +26,7 @@ import {
 import { resolveTicker } from "../lib/telegram-alerts";
 import {
   buildNotFoundMessage,
+  buildPresetSubscriptionSummaryMessage,
   buildPresetUnavailableMessage,
   buildStatusAmbiguousMessage,
   buildSubscriptionSummaryMessage,
@@ -32,15 +39,18 @@ import {
   type SetupWizardTarget,
 } from "./telegram-webhook-shared";
 import {
+  applySubscribeIntent,
   clearPendingDisambiguation,
+  loadPendingDisambiguation,
   loadSubscriptionsByIds,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingDisambiguationRow,
-  upsertPresetSubscriptions,
-  upsertSubscriberAndSubscriptions,
   upsertGlobalAlertTypes,
+  unixNow,
 } from "./telegram-webhook-store";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
+import { createTelegramWebhookIntent } from "./telegram-webhook-effect-fence";
+import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
 
 const ALERT_TYPE_ORDER = ["dews", "depeg", "safety", "launch"] as const;
 
@@ -164,11 +174,13 @@ async function persistSetupState(
   db: D1Database,
   chatId: string,
   state: SetupWizardState,
+  operationStatements?: D1PreparedStatement[],
 ): Promise<boolean> {
   const payload = {
     step: state.step,
     alertTypes: state.alertTypes,
     target: state.target,
+    ...(state.adoptionToken ? { adoptionToken: state.adoptionToken } : {}),
   };
   return persistPendingDisambiguationRow(db, {
     chatId,
@@ -180,6 +192,7 @@ async function persistSetupState(
     candidates: [],
     remainingTickers: [],
     initiatorUserId: state.initiatorUserId,
+    operationStatements,
   });
 }
 
@@ -225,7 +238,11 @@ export function parseSetupState(
       target = { kind: "ticker", coinId: rawTarget.coinId, symbol: rawTarget.symbol };
     }
   }
-  return { step, alertTypes, target, initiatorUserId };
+  const adoptionToken = typeof record.adoptionToken === "string"
+    && parseTelegramAdoptionToken(record.adoptionToken)?.destination === "setup"
+    ? record.adoptionToken
+    : null;
+  return { step, alertTypes, target, initiatorUserId, adoptionToken };
 }
 
 export async function sendWizardIntro(
@@ -233,20 +250,54 @@ export async function sendWizardIntro(
   botToken: string,
   chatId: string,
   initiatorUserId: string | null,
-  options: { includeMiniAppButton?: boolean } = {},
+  options: {
+    adoptionToken?: string | null;
+    includeMiniAppButton?: boolean;
+    beforeIrreversibleEffect?: (kind: string) => Promise<void>;
+    planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
+    prepareMutationAppliedStatement?: () => D1PreparedStatement;
+    confirmAtomicMutationApplied?: () => void;
+    wasMutationApplied?: boolean;
+  } = {},
 ): Promise<void> {
-  const persisted = await persistSetupState(db, chatId, {
-    step: "branch",
-    alertTypes: [],
-    target: null,
-    initiatorUserId,
-  });
-  if (!persisted) {
+  const existingPending = await loadPendingDisambiguation(db, chatId);
+  if (
+    existingPending
+    && existingPending.expires_at > unixNow()
+    && existingPending.initiator_user_id != null
+    && initiatorUserId != null
+    && existingPending.initiator_user_id !== initiatorUserId
+  ) {
+    await options.beforeIrreversibleEffect?.("setup-reply");
     await sendAuditedTelegramReply(db, chatId, PENDING_OWNERSHIP_CONFLICT_MESSAGE, botToken, {
       actionDetail: "setup_conflict",
     });
     return;
   }
+  const state: SetupWizardState = {
+    step: "branch",
+    alertTypes: [],
+    target: null,
+    initiatorUserId,
+    adoptionToken: parseTelegramAdoptionToken(options.adoptionToken)?.destination === "setup"
+      ? options.adoptionToken
+      : null,
+  };
+  await options.planIntent?.(createTelegramWebhookIntent("command:start", {
+    stage: "setup-intro",
+    nextState: setupIntentState(state),
+  }, "required"));
+  const operationStatements = options.prepareMutationAppliedStatement
+    ? [options.prepareMutationAppliedStatement()]
+    : undefined;
+  const persisted = options.wasMutationApplied
+    ? true
+    : await persistSetupState(db, chatId, state, operationStatements);
+  if (!persisted) {
+    throw new Error(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
+  }
+  if (!options.wasMutationApplied && operationStatements) options.confirmAtomicMutationApplied?.();
+  await options.beforeIrreversibleEffect?.("setup-reply");
   await sendAuditedTelegramReply(db, chatId, WIZARD_INTRO_MESSAGE, botToken, {
     actionDetail: "setup",
     replyMarkup: buildBranchKeyboard(options),
@@ -259,6 +310,76 @@ interface CallbackContext {
   chatId: string;
   actorUserId: string | null;
   username: string | null;
+  beforeIrreversibleEffect?: (kind: string) => Promise<void>;
+  planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
+  prepareMutationAppliedStatement?: () => D1PreparedStatement;
+  confirmAtomicMutationApplied?: () => void;
+  storedIntent?: TelegramWebhookOperationIntent | null;
+  wasMutationApplied?: boolean;
+}
+
+async function recordSetupAdoptionMilestones(
+  context: CallbackContext,
+  state: SetupWizardState,
+  feature: "direct" | "preset" | "global",
+): Promise<void> {
+  const nowSec = unixNow();
+  const dimensions = telegramAdoptionDimensionsForStart(state.adoptionToken);
+  await recordTelegramFirstSetupComplete(context.db, {
+    ...dimensions,
+    chatId: context.chatId,
+    feature,
+    nowSec,
+  });
+  await recordTelegramFirstFollow(context.db, {
+    ...dimensions,
+    chatId: context.chatId,
+    feature,
+    nowSec,
+  });
+}
+
+function setupIntentState(state: SetupWizardState): Record<string, unknown> {
+  return {
+    step: state.step,
+    alertTypes: [...state.alertTypes],
+    target: state.target,
+    ...(state.adoptionToken ? { adoptionToken: state.adoptionToken } : {}),
+  };
+}
+
+async function persistSetupTransition(
+  context: CallbackContext,
+  action: string,
+  nextState: SetupWizardState,
+): Promise<void> {
+  await context.planIntent?.(createTelegramWebhookIntent("callback:setup", {
+    action,
+    nextState: setupIntentState(nextState),
+  }, "required"));
+  if (context.wasMutationApplied) return;
+  const operationStatements = context.prepareMutationAppliedStatement
+    ? [context.prepareMutationAppliedStatement()]
+    : undefined;
+  await persistSetupState(context.db, context.chatId, nextState, operationStatements);
+  if (operationStatements) context.confirmAtomicMutationApplied?.();
+}
+
+async function clearSetupTransition(
+  context: CallbackContext,
+  action: string,
+  state: SetupWizardState,
+): Promise<void> {
+  await context.planIntent?.(createTelegramWebhookIntent("callback:setup", {
+    action,
+    previousState: setupIntentState(state),
+  }, "required"));
+  if (context.wasMutationApplied) return;
+  const operationStatements = context.prepareMutationAppliedStatement
+    ? [context.prepareMutationAppliedStatement()]
+    : undefined;
+  await clearPendingDisambiguation(context.db, context.chatId, { operationStatements });
+  if (operationStatements) context.confirmAtomicMutationApplied?.();
 }
 
 export async function handleSetupBranch(
@@ -294,7 +415,7 @@ export async function handleSetupBranch(
       step: "custom-types",
       alertTypes: [...RECOMMENDED_ALERT_TYPES],
     };
-    await persistSetupState(context.db, context.chatId, nextState);
+    await persistSetupTransition(context, "branch-custom", nextState);
     await sendSetupReply(
       context,
       "Pick alert types, then tap Next.\n\n" +
@@ -310,7 +431,7 @@ export async function handleSetupBranch(
     return { text: "Pick alert types." };
   }
   if (arg === "skip") {
-    await clearPendingDisambiguation(context.db, context.chatId);
+    await clearSetupTransition(context, "branch-skip", state);
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_choice",
       sourceCategory: "wizard",
@@ -338,7 +459,7 @@ async function openRecommendedConfirm(
     target: { kind: "preset", presetId: RECOMMENDED_PRESET_ID },
     initiatorUserId: state.initiatorUserId,
   };
-  await persistSetupState(context.db, context.chatId, nextState);
+  await persistSetupTransition(context, "branch-recommended", nextState);
 
   const head = `You'll get DEWS and Depeg alerts for these ${preview.count} coins:`;
   const body = preview.symbolPreview;
@@ -383,7 +504,7 @@ export async function handleSetupTypeToggle(
   }
   const nextAlertTypes = ALERT_TYPE_ORDER.filter((type) => selected.has(type));
   const nextState: SetupWizardState = { ...state, alertTypes: nextAlertTypes };
-  await persistSetupState(context.db, context.chatId, nextState);
+  await persistSetupTransition(context, "type-toggle", nextState);
   await sendSetupReply(
     context,
     `Selected: ${alertTypesSummary(nextAlertTypes)}`,
@@ -406,7 +527,7 @@ export async function handleSetupNext(
     return { text: "Pick at least one alert type first." };
   }
   const nextState: SetupWizardState = { ...state, step: "custom-target" };
-  await persistSetupState(context.db, context.chatId, nextState);
+  await persistSetupTransition(context, "next", nextState);
   await sendSetupReply(
     context,
     `Selected alerts: ${alertTypesSummary(state.alertTypes)}\nPick a target watchlist:`,
@@ -429,7 +550,7 @@ export async function handleSetupTarget(
 
   if (arg === "type") {
     const nextState: SetupWizardState = { ...state, step: "awaiting-ticker" };
-    await persistSetupState(context.db, context.chatId, nextState);
+    await persistSetupTransition(context, "target-type", nextState);
     await sendSetupReply(
       context,
       "Reply with a ticker (e.g. USDC) or send /cancel to abort.",
@@ -468,7 +589,7 @@ async function advanceToCustomConfirm(
   }
 
   const nextState: SetupWizardState = { ...state, step: "confirm-custom", target };
-  await persistSetupState(context.db, context.chatId, nextState);
+  await persistSetupTransition(context, "target-confirm", nextState);
   await sendSetupReply(context, escapeHtml(summary), {
     replyMarkup: buildConfirmKeyboard(),
   });
@@ -523,10 +644,23 @@ export async function handleSetupConfirm(
   }
 
   const alertTypes = new Set(state.alertTypes);
+  await context.planIntent?.(createTelegramWebhookIntent("callback:setup", {
+    action: "confirm",
+    state: setupIntentState(state),
+  }, "required"));
+  const operationStatements = context.prepareMutationAppliedStatement
+    ? [context.prepareMutationAppliedStatement()]
+    : undefined;
 
   if (state.target.kind === "all") {
-    await upsertGlobalAlertTypes(context.db, context.chatId, context.username, alertTypes);
-    await clearPendingDisambiguation(context.db, context.chatId);
+    if (!context.wasMutationApplied) {
+      await upsertGlobalAlertTypes(context.db, context.chatId, context.username, alertTypes, {
+        clearPending: true,
+        operationStatements,
+      });
+      if (operationStatements) context.confirmAtomicMutationApplied?.();
+    }
+    await recordSetupAdoptionMilestones(context, state, "global");
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_complete",
       sourceCategory: state.step === "confirm-recommended" ? "recommended" : "custom",
@@ -552,21 +686,19 @@ export async function handleSetupConfirm(
       return { text: "Preset data unavailable." };
     }
     const coins = result.presets.flatMap((preset) => preset.coins);
-    const coinIds = coins.map((coin) => coin.id);
-    await upsertSubscriberAndSubscriptions(
-      context.db,
-      context.chatId,
-      context.username,
-      alertTypes,
-      coinIds,
-      { clearPending: true },
-    );
-    await upsertPresetSubscriptions(
-      context.db,
-      context.chatId,
-      [state.target.presetId as TelegramPresetId],
-      alertTypes,
-    );
+    if (!context.wasMutationApplied) {
+      await applySubscribeIntent(context.db, {
+        chatId: context.chatId,
+        username: context.username,
+        alertTypes,
+        directStablecoinIds: [],
+        presetIds: [state.target.presetId as TelegramPresetId],
+        clearPending: true,
+        operationStatements,
+      });
+      if (operationStatements) context.confirmAtomicMutationApplied?.();
+    }
+    await recordSetupAdoptionMilestones(context, state, "preset");
     await recordTelegramUsageEvent(context.db, {
       eventType: "setup_complete",
       sourceCategory: state.step === "confirm-recommended" ? "recommended" : "custom",
@@ -578,24 +710,30 @@ export async function handleSetupConfirm(
       actionDetail: "setup",
       outcome: "success",
     });
-    const subscriptions = await loadSubscriptionsByIds(context.db, context.chatId, coinIds);
-    const intro = `Subscribed via ${TELEGRAM_PRESET_LABEL_BY_ID.get(state.target.presetId as TelegramPresetId) ?? state.target.presetId} (${coins.length} coins). Use /list anytime.`;
     await sendSetupReply(
       context,
-      buildSubscriptionSummaryMessage(intro, subscriptions),
+      buildPresetSubscriptionSummaryMessage([], {
+        presetIds: [state.target.presetId as TelegramPresetId],
+        presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+        presetCoinCount: coins.length,
+      }),
     );
     return { text: "Subscribed." };
   }
 
   // ticker target
-  await upsertSubscriberAndSubscriptions(
-    context.db,
-    context.chatId,
-    context.username,
-    alertTypes,
-    [state.target.coinId],
-    { clearPending: true },
-  );
+  if (!context.wasMutationApplied) {
+    await applySubscribeIntent(context.db, {
+      chatId: context.chatId,
+      username: context.username,
+      alertTypes,
+      directStablecoinIds: [state.target.coinId],
+      clearPending: true,
+      operationStatements,
+    });
+    if (operationStatements) context.confirmAtomicMutationApplied?.();
+  }
+  await recordSetupAdoptionMilestones(context, state, "direct");
   await recordTelegramUsageEvent(context.db, {
     eventType: "setup_complete",
     sourceCategory: "custom",
@@ -620,7 +758,7 @@ export async function handleSetupCancel(
   if (!canActOnPendingOwner(state.initiatorUserId, context.actorUserId)) {
     return { text: "Only the user who started this setup can cancel." };
   }
-  await clearPendingDisambiguation(context.db, context.chatId);
+  await clearSetupTransition(context, "cancel", state);
   await sendSetupReply(context, "Setup cancelled. Send /start to begin again.");
   return { text: "Cancelled." };
 }
@@ -630,6 +768,7 @@ async function sendSetupReply(
   message: string,
   options: { replyMarkup?: unknown } = {},
 ): Promise<void> {
+  await context.beforeIrreversibleEffect?.("setup-reply");
   await sendAuditedTelegramReply(context.db, context.chatId, message, context.botToken, {
     ...options,
     actionDetail: "setup",

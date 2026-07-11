@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../../lib/constants";
-import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import type { ContractDeployment } from "@shared/types/core";
 import {
@@ -228,22 +228,26 @@ export async function handleDefiLlamaDetail(
   }
 
   try {
-    const res = await fetchWithRetry(
+    const result = await fetchTextWithRetry(
       `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(config.llamaId)}`,
       undefined,
       DETAIL_UPSTREAM_MAX_RETRIES,
       { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
     );
 
-    if (!res?.ok) {
+    if (!result?.response.ok) {
       await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
-      logUpstreamFailure("defillama-stablecoin-detail", config.stablecoinId, res?.status ?? "no-response");
+      logUpstreamFailure(
+        "defillama-stablecoin-detail",
+        config.stablecoinId,
+        result?.response.status ?? "no-response",
+      );
       const fallback = await detail.trySupplyHistoryFallback("defillama-upstream-failure");
       if (fallback) return fallback;
       return detail.staleCacheOrError(502, `Failed to fetch stablecoin ${config.stablecoinId}`);
     }
 
-    const upstreamBody = await res.text();
+    const upstreamBody = result.body;
     let body: string;
     try {
       body = normalizeDefiLlamaDetailBody(upstreamBody, config.meta);

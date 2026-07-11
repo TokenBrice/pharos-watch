@@ -30,9 +30,13 @@ export function fetchGtTokenPools(
           signal,
         },
         maxRetries,
-        { timeoutMs },
+        { timeoutMs, passthrough404: true },
       );
-      if (!result?.response.ok) return [];
+      if (!result) throw new Error(`GeckoTerminal ${gtChain} token-pools request failed`);
+      if (result.response.status === 404) return [];
+      if (!result.response.ok) {
+        throw new Error(`GeckoTerminal ${gtChain} token-pools returned ${result.response.status}`);
+      }
       const json = result.body;
       return Array.isArray(json.data) ? (json.data as GtPool[]) : [];
     },

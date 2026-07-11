@@ -1,10 +1,60 @@
 import { describe, expect, it } from "vitest";
+import { DatabaseSync } from "node:sqlite";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
+  buildTelegramDeliverySliStatus,
   getTelegramBotStats,
   loadTelegramMiniAppDailyAggregate,
   mapTelegramBotStats,
+  TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL,
 } from "../status/telegram-bot-stats";
+import type { TelegramDeliverySliStatus } from "@shared/types/status";
+
+function unavailableDeliverySli(): TelegramDeliverySliStatus {
+  return {
+    availability: "unavailable",
+    quality: "unavailable",
+    freshness: "unknown",
+    acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
+    rollup: null,
+    error: {
+      code: "telegram_delivery_sli_query_failed",
+      message: "Telegram delivery SLI telemetry unavailable.",
+    },
+  };
+}
+
+describe("Telegram delivery telemetry SQL", () => {
+  it("counts a fresh execution-unknown target when the pending table is empty", () => {
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE telegram_pending_alerts (
+          delivery_state TEXT,
+          created_at INTEGER,
+          expires_at INTEGER,
+          not_before_at INTEGER,
+          delivery_started_at INTEGER
+        );
+        CREATE TABLE telegram_alert_job_targets (
+          effect_state TEXT NOT NULL,
+          created_at INTEGER,
+          effect_started_at INTEGER,
+          effect_completed_at INTEGER
+        );
+        INSERT INTO telegram_alert_job_targets (effect_state, created_at)
+        VALUES ('execution_unknown', 100);
+      `);
+      const bindCount = TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL.match(/\?/g)?.length ?? 0;
+      const row = sqlite
+        .prepare(TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL)
+        .get(...new Array(bindCount).fill(5_001)) as { fresh_execution_unknown_count: number };
+      expect(row.fresh_execution_unknown_count).toBe(1);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
 
 describe("mapTelegramBotStats", () => {
   it("coerces aggregate rows into the public Telegram status shape", () => {
@@ -40,6 +90,23 @@ describe("mapTelegramBotStats", () => {
         deferred_count: "3",
         expired_count: "1",
         near_ttl_count: "2",
+        pending_sending_count: "1",
+        pending_execution_unknown_count: "1",
+        fresh_sending_count: "2",
+        fresh_execution_unknown_count: "1",
+        oldest_pending_execution_unknown_at: "1710000010",
+        oldest_fresh_execution_unknown_at: "1710000020",
+        execution_unknown_sample_count: "2",
+        completed_cleanup_count: "1",
+      },
+      webhookEffectUnknown: {
+        pending_count: "3",
+        planned_count: "4",
+        started_count: "1",
+        execution_unknown_count: "2",
+        oldest_planned_at: "1710000040",
+        oldest_ambiguous_at: "1710000010",
+        sample_count: "7",
       },
       retryErrorClasses: [
         { error_class: "rate_limit", pending_count: "4" },
@@ -75,6 +142,7 @@ describe("mapTelegramBotStats", () => {
         quietHoursEnabledChats: 2,
         pendingDeliveries: 12,
       },
+      deliverySli: unavailableDeliverySli(),
     });
 
     expect(result).toEqual({
@@ -90,7 +158,7 @@ describe("mapTelegramBotStats", () => {
       activePresetFollowers: 2,
       avgSubscriptionsPerSubscribedChat: 3.5,
       pendingDisambiguations: 11,
-      pendingDeliveries: 12,
+      pendingDeliveries: 11,
       quality: {
         status: "complete",
         unavailableFields: [],
@@ -151,11 +219,32 @@ describe("mapTelegramBotStats", () => {
         server_error: 2,
       },
       pendingDeliveryBacklog: {
+        claimable: 8,
         due: 8,
         deferred: 3,
         expired: 1,
         nearTtl: 2,
+        sending: 3,
+        executionUnknown: 2,
+        pendingExecutionUnknown: 1,
+        freshExecutionUnknown: 1,
+        oldestExecutionUnknownAgeSec: 90,
+        executionUnknownSampleLimit: 5001,
+        executionUnknownLowerBound: false,
+        sentCleanup: 1,
+        completedPendingCleanup: 1,
       },
+      webhookEffectUnknown: 3,
+      webhookEffectLifecycle: {
+        planned: 4,
+        started: 1,
+        executionUnknown: 2,
+        oldestPlannedAgeSec: 60,
+        oldestAmbiguousAgeSec: 90,
+        sampleLimit: 5001,
+        lowerBound: false,
+      },
+      deliverySli: unavailableDeliverySli(),
     });
   });
 
@@ -184,6 +273,7 @@ describe("mapTelegramBotStats", () => {
       pendingDisambiguations: null,
       pendingDeliveries: { pending_count: "bad" },
       topStablecoins: [{ stablecoin_id: "usdt-tether", subscribers: "bad" }],
+      deliverySli: unavailableDeliverySli(),
     });
 
     expect(result).toEqual({
@@ -224,6 +314,26 @@ describe("mapTelegramBotStats", () => {
           presetImpliedSubscribers: 0,
         },
       ],
+      deliverySli: unavailableDeliverySli(),
+    });
+  });
+
+  it("keeps delivery SLI failure and evidence quality visible", () => {
+    expect(buildTelegramDeliverySliStatus({ value: null, error: "database unavailable" }))
+      .toEqual(unavailableDeliverySli());
+
+    const rollup = {
+      evidence: { freshness: "stale" },
+      detectionToPlan: { quality: "complete" },
+      planToTelegramAcceptance: { quality: "partial" },
+      telegramAcceptanceBeforeTtl: { quality: "complete" },
+    } as Parameters<typeof buildTelegramDeliverySliStatus>[0]["value"];
+    expect(buildTelegramDeliverySliStatus({ value: rollup })).toMatchObject({
+      availability: "available",
+      quality: "partial",
+      freshness: "stale",
+      acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
+      rollup,
     });
   });
 });
@@ -264,9 +374,12 @@ describe("getTelegramBotStats", () => {
           deferred_count: 1,
           expired_count: 0,
           near_ttl_count: 0,
+          execution_unknown_count: 0,
+          completed_cleanup_count: 0,
         },
         rows: [],
       },
+      { match: "FROM telegram_processed_updates", first: { pending_count: 1 }, rows: [] },
       {
         match: "last_error_class AS error_class",
         rows: [{ error_class: "rate_limit", pending_count: 1 }],
@@ -280,9 +393,7 @@ describe("getTelegramBotStats", () => {
     const history = db.getHistory();
     const aggregateQuery = history.find((entry) => entry.sql.includes("FROM telegram_subscribers s"));
     const topCoinsQuery = history.find(
-      (entry) =>
-        entry.sql.includes("FROM telegram_subscriptions") &&
-        entry.sql.includes("GROUP BY stablecoin_id"),
+      (entry) => entry.sql.includes("FROM telegram_subscriptions") && entry.sql.includes("GROUP BY stablecoin_id"),
     );
 
     expect(aggregateQuery?.sql).toContain("global_alert_launch");
@@ -293,7 +404,23 @@ describe("getTelegramBotStats", () => {
     expect(result.oldestPendingDeliveryAgeSec).toBe(60);
     expect(result.oldestDuePendingAgeSec).toBe(30);
     expect(result.estimatedDrainTimeSec).toBe(300);
-    expect(result.pendingDeliveryBacklog).toEqual({ due: 1, deferred: 1, expired: 0, nearTtl: 0 });
+    expect(result.pendingDeliveryBacklog).toEqual({
+      claimable: 1,
+      due: 1,
+      deferred: 1,
+      expired: 0,
+      nearTtl: 0,
+      sending: 0,
+      executionUnknown: 0,
+      pendingExecutionUnknown: 0,
+      freshExecutionUnknown: 0,
+      oldestExecutionUnknownAgeSec: null,
+      executionUnknownSampleLimit: 5001,
+      executionUnknownLowerBound: false,
+      sentCleanup: 0,
+      completedPendingCleanup: 0,
+    });
+    expect(result.webhookEffectUnknown).toBe(1);
     expect(result.retryErrorClassCounts).toEqual({ rate_limit: 1 });
     expect(result.topStablecoins[0]).toEqual({
       stablecoinId: "usdpt-western-union",
@@ -495,9 +622,7 @@ describe("loadTelegramMiniAppDailyAggregate", () => {
 
     const history = db.getHistory();
     const aggregateSql = history.find((entry) => entry.sql.includes("FROM telegram_usage_daily"));
-    expect(aggregateSql?.sql).toContain(
-      "event_type IN (?, ?, ?, ?, ?, ?, ?, ?)",
-    );
+    expect(aggregateSql?.sql).toContain("event_type IN (?, ?, ?, ?, ?, ?, ?, ?)");
     expect(aggregateSql?.binds).toEqual([
       "mini_app_mutation",
       "mini_app_recommended_setup",

@@ -15,7 +15,7 @@ const TSC_COMMAND = [
   "false",
 ];
 
-function parseDiagnostics(output) {
+function parseDiagnostics(output, cwd = process.cwd()) {
   const diagnosticsByKey = new Map();
   const unparsedErrors = [];
   const diagnosticPattern = /^(.+\.(?:ts|tsx))\((\d+),(\d+)\): error TS(\d+): (.+)$/;
@@ -27,11 +27,12 @@ function parseDiagnostics(output) {
       continue;
     }
     const [, file, lineNumber, columnNumber, code, message] = match;
-    const key = `${file}\0${code}\0${message}`;
+    const normalizedMessage = normalizeDiagnosticMessage(message, cwd);
+    const key = `${file}\0${code}\0${normalizedMessage}`;
     const entry = diagnosticsByKey.get(key) ?? {
       file,
       code: `TS${code}`,
-      message,
+      message: normalizedMessage,
       count: 0,
       examples: [],
     };
@@ -62,7 +63,17 @@ function failTscExecution(message, output) {
 }
 
 function baselineKey(entry) {
-  return `${entry.file}\0${entry.code}`;
+  return `${entry.file}\0${entry.code}\0${normalizeDiagnosticMessage(entry.message)}`;
+}
+
+function normalizeDiagnosticMessage(message, cwd = process.cwd()) {
+  const repoRoot = resolve(cwd).replace(/[\\/]+$/, "");
+  const repoRootForwardSlashes = repoRoot.replaceAll("\\", "/");
+  return String(message)
+    .replaceAll(repoRoot, "<repo>")
+    .replaceAll(repoRootForwardSlashes, "<repo>")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function readBaseline() {
@@ -87,7 +98,7 @@ function aggregateDiagnostics(entries) {
     const aggregate = byKey.get(key) ?? {
       file: entry.file,
       code: entry.code,
-      message: `${entry.code} diagnostics`,
+      message: entry.message,
       count: 0,
       examples: [],
     };
@@ -104,7 +115,7 @@ const tsc = spawnSync("npx", TSC_COMMAND, {
   shell: process.platform === "win32",
 });
 const output = `${tsc.stdout ?? ""}${tsc.stderr ?? ""}`;
-const { diagnostics, unparsedErrors } = parseDiagnostics(output);
+const { diagnostics, unparsedErrors } = parseDiagnostics(output, process.cwd());
 
 if (tsc.error) {
   failTscExecution(`Failed to start ${TSC_COMMAND[0]}: ${tsc.error.message}`, output);

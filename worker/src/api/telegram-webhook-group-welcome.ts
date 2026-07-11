@@ -39,7 +39,7 @@ function isBotAddedTransition(
   return wasAbsent && isPresent;
 }
 
-function isBotRemovedTransition(
+export function isBotRemovedTransition(
   oldStatus: string | undefined,
   newStatus: string | undefined,
 ): boolean {
@@ -85,6 +85,12 @@ export async function handleMyChatMember(
   db: D1Database,
   botToken: string,
   payload: TelegramChatMemberUpdated,
+  options: {
+    beforeIrreversibleEffect?: (kind: string) => Promise<void>;
+    prepareMutationAppliedStatement?: () => D1PreparedStatement;
+    confirmAtomicMutationApplied?: () => void;
+    wasMutationApplied?: boolean;
+  } = {},
 ): Promise<void> {
   const chatType = payload.chat?.type;
   // `my_chat_member` for private/sender chats is emitted on /start, on
@@ -96,12 +102,17 @@ export async function handleMyChatMember(
   const chatIdStr = String(chatId);
   const botRemoved = isBotRemovedTransition(payload.old_chat_member?.status, payload.new_chat_member?.status);
   if ((isGroupChatType(chatType) || isChannelChatType(chatType)) && botRemoved) {
-    await forgetSubscriber(db, chatIdStr);
+    if (!options.wasMutationApplied) {
+      const operationStatements = options.prepareMutationAppliedStatement
+        ? [options.prepareMutationAppliedStatement()]
+        : undefined;
+      await forgetSubscriber(db, chatIdStr, { operationStatements });
+      if (operationStatements) options.confirmAtomicMutationApplied?.();
+    }
     await clearGroupLifecycleCache(db, chatIdStr);
     logTelegramEvent({
       level: "info",
       message: `telegram ${isChannelChatType(chatType) ? "channel" : "group"} removed bot; subscriber state cleared`,
-      chatId: chatIdStr,
       action: isChannelChatType(chatType) ? "channel-removal" : "group-removal",
     });
     return;
@@ -120,6 +131,7 @@ export async function handleMyChatMember(
   }
 
   const adderMention = formatAdderMention(payload.from);
+  await options.beforeIrreversibleEffect?.("group-welcome");
   const welcomeSend = await sendAuditedTelegramReply(
     db,
     chatIdStr,

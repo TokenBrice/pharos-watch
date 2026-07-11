@@ -2,8 +2,9 @@
 
 /**
  * Build-time projection of `shared/data/stablecoins/coins.generated.json`
- * into a slim client-facing JSON consumed by
- * `shared/lib/stablecoins/client-registry.ts`.
+ * into slim client-facing JSON consumed by
+ * `shared/lib/stablecoins/client-registry.ts`, the compliance route, and the
+ * bundled Telegram Mini App catalog.
  *
  * Client surfaces read a curated subset of the full generated registry fields
  * for routing, labels, filtering, classification, reserve coverage summaries,
@@ -12,8 +13,8 @@
  * `blacklistabilityReview`, mint-authority review evidence, `featuredContent`,
  * obituary prose, etc.) and emits an array with deterministic key ordering.
  *
- * The output file is checked in (not generated at runtime) so the Next.js
- * client bundle can `import` it directly without a runtime fetch.
+ * The output files are checked in (not generated at runtime) so Next.js client
+ * bundles can `import` them directly without runtime fetches.
  *
  * Modes:
  *   node scripts/build-data/build-client-registry.mjs           # write file
@@ -32,10 +33,12 @@ const REPO_ROOT = resolve(__dirname, "../..");
 const SOURCE_JSON_REL = "shared/data/stablecoins/coins.generated.json";
 const OUTPUT_JSON_REL = "shared/data/stablecoins/coins.client.generated.json";
 const COMPLIANCE_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.compliance.generated.json";
+const TELEGRAM_MINI_APP_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.telegram-mini-app.generated.json";
 const CLIENT_META_TS_REL = "shared/types/stablecoin-client-meta.ts";
 const SOURCE_JSON_ABS = resolve(REPO_ROOT, SOURCE_JSON_REL);
 const OUTPUT_JSON_ABS = resolve(REPO_ROOT, OUTPUT_JSON_REL);
 const COMPLIANCE_OUTPUT_JSON_ABS = resolve(REPO_ROOT, COMPLIANCE_OUTPUT_JSON_REL);
+const TELEGRAM_MINI_APP_OUTPUT_JSON_ABS = resolve(REPO_ROOT, TELEGRAM_MINI_APP_OUTPUT_JSON_REL);
 const CLIENT_META_TS_ABS = resolve(REPO_ROOT, CLIENT_META_TS_REL);
 const CLIENT_FIELDS_EXPORT = "STABLECOIN_CLIENT_META_FIELDS";
 const GENIUS_CLIENT_FIELDS_EXPORT = "GENIUS_CLIENT_PROFILE_FIELDS";
@@ -478,21 +481,66 @@ export function buildComplianceRegistryOutput({
   };
 }
 
+export function buildTelegramMiniAppCatalogOutput({ sourceJsonPath = SOURCE_JSON_ABS } = {}) {
+  const rawJson = readFileSync(sourceJsonPath, "utf8");
+  const parsed = JSON.parse(rawJson);
+
+  if (!Array.isArray(parsed)) {
+    throw new Error(`[client-registry] ${SOURCE_JSON_REL} is not a JSON array`);
+  }
+
+  const searchableCoins = parsed
+    .filter((coin) => (coin.status ?? "active") !== "frozen")
+    .map((coin, index) => {
+      if (
+        typeof coin.id !== "string"
+        || typeof coin.symbol !== "string"
+        || typeof coin.name !== "string"
+        || typeof coin.flags?.pegCurrency !== "string"
+      ) {
+        throw new Error(`[client-registry] Mini App catalog entry ${index} has invalid metadata`);
+      }
+      return {
+        stablecoinId: coin.id,
+        symbol: coin.symbol,
+        name: coin.name,
+        peg: coin.flags.pegCurrency,
+        status: coin.status ?? "active",
+      };
+    });
+
+  return {
+    output: `${JSON.stringify(searchableCoins, null, 2)}\n`,
+    searchableCoins,
+  };
+}
+
 export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
   const { output, slimCoins } = buildClientRegistryOutput();
   const {
     output: complianceOutput,
     geniusEntries,
   } = buildComplianceRegistryOutput();
+  const {
+    output: telegramMiniAppOutput,
+    searchableCoins,
+  } = buildTelegramMiniAppCatalogOutput();
 
   if (checkMode) {
     const current = existsSync(OUTPUT_JSON_ABS) ? readFileSync(OUTPUT_JSON_ABS, "utf8") : "";
     const currentCompliance = existsSync(COMPLIANCE_OUTPUT_JSON_ABS)
       ? readFileSync(COMPLIANCE_OUTPUT_JSON_ABS, "utf8")
       : "";
-    if (current !== output || currentCompliance !== complianceOutput) {
+    const currentTelegramMiniApp = existsSync(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS)
+      ? readFileSync(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS, "utf8")
+      : "";
+    if (
+      current !== output
+      || currentCompliance !== complianceOutput
+      || currentTelegramMiniApp !== telegramMiniAppOutput
+    ) {
       console.error(
-        `${OUTPUT_JSON_REL} or ${COMPLIANCE_OUTPUT_JSON_REL} is stale. Run: node scripts/build-data/build-client-registry.mjs`,
+        `${OUTPUT_JSON_REL}, ${COMPLIANCE_OUTPUT_JSON_REL}, or ${TELEGRAM_MINI_APP_OUTPUT_JSON_REL} is stale. Run: node scripts/build-data/build-client-registry.mjs`,
       );
       process.exit(1);
     }
@@ -502,16 +550,24 @@ export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
     console.log(
       `${COMPLIANCE_OUTPUT_JSON_REL}: compliance registry is current (${geniusEntries.length} GENIUS entries, ${complianceOutput.length} bytes)`,
     );
+    console.log(
+      `${TELEGRAM_MINI_APP_OUTPUT_JSON_REL}: Mini App catalog is current (${searchableCoins.length} entries, ${telegramMiniAppOutput.length} bytes)`,
+    );
   } else {
     mkdirSync(dirname(OUTPUT_JSON_ABS), { recursive: true });
     writeFileSync(OUTPUT_JSON_ABS, output, "utf8");
     mkdirSync(dirname(COMPLIANCE_OUTPUT_JSON_ABS), { recursive: true });
     writeFileSync(COMPLIANCE_OUTPUT_JSON_ABS, complianceOutput, "utf8");
+    mkdirSync(dirname(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS), { recursive: true });
+    writeFileSync(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS, telegramMiniAppOutput, "utf8");
     console.log(
       `${OUTPUT_JSON_REL}: wrote client registry (${slimCoins.length} entries, ${output.length} bytes)`,
     );
     console.log(
       `${COMPLIANCE_OUTPUT_JSON_REL}: wrote compliance registry (${geniusEntries.length} GENIUS entries, ${complianceOutput.length} bytes)`,
+    );
+    console.log(
+      `${TELEGRAM_MINI_APP_OUTPUT_JSON_REL}: wrote Mini App catalog (${searchableCoins.length} entries, ${telegramMiniAppOutput.length} bytes)`,
     );
   }
 }

@@ -57,12 +57,15 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
   // ArrowLeft steps toward stricter bands. Visual layer stays unlit because
   // we drive that off `hasMatch`, not `activeIndex`.
   const activeIndex = hasMatch ? matchedIndex : Math.max(0, stopCount - 1);
-  const activeStop = hasMatch ? stops[activeIndex] ?? null : null;
+  const activeStop = hasMatch ? (stops[activeIndex] ?? null) : null;
   const activeStyle = activeStop ? RISK_BUDGET_STYLES[activeStop.key] : null;
   const fillPercentage = stopCount <= 1 ? 0 : (activeIndex / (stopCount - 1)) * 100;
   const valueText = activeStop
     ? `${activeStop.label} — ${activeStop.count} rows`
     : "No band selected — custom filters active";
+  const zeroStopIndex = stops.findIndex((stop) => stop.count === 0);
+  const zeroStop = zeroStopIndex >= 0 ? stops[zeroStopIndex] : null;
+  const nearestBroaderStop = zeroStop ? (stops.slice(zeroStopIndex + 1).find((stop) => stop.count > 0) ?? null) : null;
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const next = Number(event.target.value);
@@ -76,10 +79,7 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
     <div
       role="group"
       aria-label="Risk tolerance"
-      className={cn(
-        "flex flex-col gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3.5",
-        className,
-      )}
+      className={cn("flex flex-col gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3.5", className)}
     >
       <div className="flex items-baseline justify-between gap-3">
         <div className="flex items-baseline gap-2">
@@ -93,14 +93,12 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
             ·
           </span>
           {activeStop && activeStyle ? (
-            <span className={cn("text-xs font-semibold tracking-tight", activeStyle.text)}>
-              {activeStop.label}
-            </span>
+            <span className={cn("text-xs font-semibold tracking-tight", activeStyle.text)}>{activeStop.label}</span>
           ) : (
             <span className="text-xs font-medium text-muted-foreground">Custom</span>
           )}
         </div>
-        <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">Drag to adjust</p>
+        <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">Matching rows</p>
       </div>
       <div className="relative px-2.5 pt-3 pb-1">
         {/* Background track — runs through the center of the dot row */}
@@ -150,10 +148,7 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
                   isActive ? style.text : "text-muted-foreground",
                 )}
               >
-                <span
-                  aria-hidden="true"
-                  className="relative inline-flex h-6 w-6 items-center justify-center"
-                >
+                <span aria-hidden="true" className="relative inline-flex h-6 w-6 items-center justify-center">
                   {isActive ? (
                     <span
                       className={cn(
@@ -170,20 +165,13 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
                     <span className="h-2.5 w-2.5 rounded-full border-2 border-border/60 bg-background" />
                   )}
                 </span>
-                <span
-                  className={cn(
-                    "text-[12px] tracking-tight",
-                    isActive ? "font-semibold" : "font-medium",
-                  )}
-                >
+                <span className={cn("text-[12px] tracking-tight", isActive ? "font-semibold" : "font-medium")}>
                   {stop.label}
                 </span>
                 <span
                   className={cn(
                     "font-mono text-[12px] tabular-nums",
-                    isActive
-                      ? cn("font-semibold", style.activeCount)
-                      : "font-normal text-muted-foreground/70",
+                    isActive ? cn("font-semibold", style.activeCount) : "font-normal text-muted-foreground/70",
                   )}
                 >
                   {stop.count}
@@ -193,6 +181,18 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
           })}
         </div>
       </div>
+      {zeroStop ? (
+        <p className="text-xs text-muted-foreground" role="status">
+          <span className="font-medium text-foreground">{zeroStop.label} has no current matches.</span>{" "}
+          {zeroStop.description}.
+          {nearestBroaderStop ? (
+            <>
+              {" "}
+              Nearest broader band: {nearestBroaderStop.label} ({nearestBroaderStop.count}).
+            </>
+          ) : null}
+        </p>
+      ) : null}
     </div>
   );
 }

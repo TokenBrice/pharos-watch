@@ -10,6 +10,7 @@ import {
   parseSetupState,
 } from "../telegram-webhook-setup";
 import { SETUP_PENDING_ACTION_TYPE } from "../telegram-webhook-shared";
+import type { TelegramWebhookOperationIntent } from "../telegram-webhook-store";
 import {
   callbackActorUserId,
   callbackUsername,
@@ -32,7 +33,23 @@ export async function handleSetupCallback(
   cb: TelegramCallbackQuery,
   chatId: string,
   parsed: ParsedCallbackData,
+  effectInput: {
+    beforeIrreversibleEffect: (kind: string) => Promise<void>;
+    planIntent?: (intent: TelegramWebhookOperationIntent) => Promise<void>;
+    prepareMutationAppliedStatement?: () => D1PreparedStatement;
+    confirmAtomicMutationApplied?: () => void;
+    storedIntent?: TelegramWebhookOperationIntent | null;
+    wasMutationApplied?: boolean;
+  } | ((kind: string) => Promise<void>) = async () => undefined,
 ): Promise<void> {
+  const effect = typeof effectInput === "function"
+    ? { beforeIrreversibleEffect: effectInput }
+    : effectInput;
+  const { beforeIrreversibleEffect } = effect;
+  const answer = async (text: string): Promise<void> => {
+    await beforeIrreversibleEffect("callback-ack");
+    await answerCallbackQuery(cb.id, botToken, { text });
+  };
   const { arg: subAction = "", parts } = parsed;
   const subArg = parts[2] ?? "";
   const validSetupCallback =
@@ -41,11 +58,18 @@ export async function handleSetupCallback(
     (subAction === "target" && hasExactParts(parts, 3)) ||
     ((subAction === "next" || subAction === "confirm" || subAction === "cancel") && parts.length === 2);
   if (!validSetupCallback) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    await answer("Action not recognized.");
     return;
   }
   const mutatingSetupCallback = !(subAction === "cancel" || (subAction === "branch" && subArg === "skip"));
-  if (mutatingSetupCallback && !(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+  if (mutatingSetupCallback && !(await requireAdminForMutatingCallback(
+    db,
+    botToken,
+    cb,
+    chatId,
+    undefined,
+    beforeIrreversibleEffect,
+  ))) {
     return;
   }
 
@@ -61,6 +85,12 @@ export async function handleSetupCallback(
     chatId,
     actorUserId: callbackActorUserId(cb),
     username: callbackUsername(cb),
+    beforeIrreversibleEffect,
+    planIntent: effect.planIntent,
+    prepareMutationAppliedStatement: effect.prepareMutationAppliedStatement,
+    confirmAtomicMutationApplied: effect.confirmAtomicMutationApplied,
+    storedIntent: effect.storedIntent,
+    wasMutationApplied: effect.wasMutationApplied,
   };
 
   let result: { text: string };
@@ -80,5 +110,5 @@ export async function handleSetupCallback(
     result = { text: "Action not recognized." };
   }
 
-  await answerCallbackQuery(cb.id, botToken, { text: result.text });
+  await answer(result.text);
 }

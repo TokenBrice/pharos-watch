@@ -1,11 +1,14 @@
 import { describe, it, expect } from "vitest";
+import { DatabaseSync } from "node:sqlite";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
+import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
+import { writeDewsPublishedGeneration } from "../../dews-publication-pointer";
 import { projectDewsEscalated, projectDewsDeescalated, projectDewsBandTransitions } from "../dews";
 
 const SEC = 1_700_000_000;
 
 const MATCH_FETCH_SAMPLES = "WHERE computed_at > ?";
-const MATCH_PRIOR_BAND = "MAX(computed_at) as max_at";
+const MATCH_PRIOR_BAND = "pharos:tape:dews-prior-band-seek";
 
 function extractInsertBinds(db: MockD1Database): unknown[][] {
   return db
@@ -24,6 +27,83 @@ function baseTables(samples: Record<string, unknown>[], priors: Record<string, u
     { match: MATCH_FETCH_SAMPLES, rows: samples },
     { match: MATCH_PRIOR_BAND, rows: priors },
   ];
+}
+
+function openDewsProjectorSqlite(): {
+  sqlite: DatabaseSync;
+  db: D1Database;
+} {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec(`
+    CREATE TABLE cache (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE stress_signals (
+      stablecoin_id TEXT NOT NULL,
+      computed_at INTEGER NOT NULL,
+      score REAL NOT NULL,
+      band TEXT NOT NULL,
+      signals_json TEXT NOT NULL DEFAULT '{}',
+      PRIMARY KEY (stablecoin_id, computed_at)
+    );
+    CREATE TABLE surface_publication_generations (
+      surface TEXT NOT NULL,
+      generation_id TEXT NOT NULL,
+      started_at INTEGER NOT NULL,
+      validated_at INTEGER,
+      published_at INTEGER,
+      state TEXT NOT NULL,
+      candidate_rows INTEGER,
+      published_rows INTEGER,
+      expected_rows INTEGER,
+      previous_generation_id TEXT,
+      input_watermarks_json TEXT,
+      dependency_snapshot_json TEXT,
+      validation_summary_json TEXT,
+      artifact_checksum TEXT,
+      artifact_cache_key TEXT,
+      failure_reason TEXT,
+      PRIMARY KEY (surface, generation_id)
+    );
+    CREATE TABLE tape_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      ends_at INTEGER,
+      coin_id TEXT,
+      issuer_id TEXT,
+      peg_currency TEXT,
+      chain TEXT,
+      title TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      source_table TEXT NOT NULL,
+      source_row_id TEXT NOT NULL,
+      transition TEXT NOT NULL,
+      source_url TEXT,
+      methodology_version TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE UNIQUE INDEX idx_tape_source_key
+      ON tape_events(source_table, source_row_id, transition);
+  `);
+  return { sqlite, db: createSqliteD1(sqlite) };
+}
+
+function seedStressSignal(
+  sqlite: DatabaseSync,
+  computedAt: number,
+  score: number,
+  band: string,
+): void {
+  sqlite.prepare(
+    `INSERT INTO stress_signals (stablecoin_id, computed_at, score, band)
+     VALUES ('usdt-tether', ?, ?, ?)`,
+  ).run(computedAt, score, band);
 }
 
 describe("dews projector", () => {
@@ -91,6 +171,10 @@ describe("dews projector", () => {
     const inserts = extractInsertBindsForType(db, "dews.escalated");
     expect(inserts).toHaveLength(1);
     expect(inserts[0]![2]).toBe("critical"); // DANGER → critical
+    const priorQuery = db.getHistory().find((entry) => entry.sql.includes(MATCH_PRIOR_BAND));
+    expect(priorQuery?.sql).toContain("ORDER BY candidate.computed_at DESC");
+    expect(priorQuery?.sql).toContain("LIMIT 1");
+    expect(priorQuery?.sql).not.toContain("GROUP BY");
   });
 
   it("emits dews.deescalated with severity=info", async () => {
@@ -232,6 +316,95 @@ describe("dews projector", () => {
     expect(deescalated[0]![2]).toBe("info");
   });
 
+  it("skips a failed partial generation and later projects T2 from the last published band", async () => {
+    const { sqlite, db } = openDewsProjectorSqlite();
+    const publishedP = SEC;
+    const failedT = SEC + 900;
+    const publishedT2 = SEC + 1_800;
+    try {
+      seedStressSignal(sqlite, publishedP, 10, "CALM");
+      seedStressSignal(sqlite, failedT, 90, "DANGER");
+      await writeDewsPublishedGeneration(db, publishedP, ["usdt-tether"]);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        "tape-projector:cursor:dews.escalated",
+        String(publishedP),
+        publishedP,
+      );
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        "tape-projector:cursor:dews.deescalated",
+        String(publishedP),
+        publishedP,
+      );
+
+      const afterFailedT = await projectDewsBandTransitions(db);
+
+      expect(afterFailedT).toEqual({ projected: 0, advanced: null });
+      expect(sqlite.prepare("SELECT COUNT(*) AS cnt FROM tape_events").get()).toEqual({ cnt: 0 });
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(
+        "tape-projector:cursor:dews.escalated",
+      )).toEqual({ value: String(publishedP) });
+
+      seedStressSignal(sqlite, publishedT2, 50, "ALERT");
+      await writeDewsPublishedGeneration(db, publishedT2, ["usdt-tether"]);
+      const afterPublishedT2 = await projectDewsBandTransitions(db);
+
+      expect(afterPublishedT2).toEqual({ projected: 1, advanced: publishedT2 });
+      const events = sqlite.prepare(
+        "SELECT type, source_row_id, payload_json FROM tape_events ORDER BY id",
+      ).all() as Array<{ type: string; source_row_id: string; payload_json: string }>;
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        type: "dews.escalated",
+        source_row_id: `usdt-tether:${publishedT2}:ALERT`,
+      });
+      expect(JSON.parse(events[0]!.payload_json)).toMatchObject({
+        prevBand: "CALM",
+        newBand: "ALERT",
+      });
+      expect(events[0]!.source_row_id).not.toContain(String(failedT));
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(
+        "tape-projector:cursor:dews.escalated",
+      )).toEqual({ value: String(publishedT2) });
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(
+        "tape-projector:cursor:dews.deescalated",
+      )).toEqual({ value: String(publishedT2) });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("recovers T2 even when a legacy projector already advanced its watermark through failed T", async () => {
+    const { sqlite, db } = openDewsProjectorSqlite();
+    const publishedP = SEC;
+    const failedT = SEC + 900;
+    const publishedT2 = SEC + 1_800;
+    try {
+      seedStressSignal(sqlite, publishedP, 10, "CALM");
+      seedStressSignal(sqlite, failedT, 90, "DANGER");
+      seedStressSignal(sqlite, publishedT2, 50, "ALERT");
+      await writeDewsPublishedGeneration(db, publishedP, ["usdt-tether"]);
+      await writeDewsPublishedGeneration(db, publishedT2, ["usdt-tether"]);
+      for (const variant of ["escalated", "deescalated"]) {
+        sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+          `tape-projector:cursor:dews.${variant}`,
+          String(failedT),
+          failedT,
+        );
+      }
+
+      const result = await projectDewsBandTransitions(db);
+
+      expect(result).toEqual({ projected: 1, advanced: publishedT2 });
+      const event = sqlite.prepare(
+        "SELECT source_row_id, payload_json FROM tape_events",
+      ).get() as { source_row_id: string; payload_json: string };
+      expect(event.source_row_id).toBe(`usdt-tether:${publishedT2}:ALERT`);
+      expect(JSON.parse(event.payload_json)).toMatchObject({ prevBand: "CALM", newBand: "ALERT" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("single-pass projector preserves already-advanced divergent watermarks", async () => {
     const db = mockD1([
       {
@@ -274,5 +447,28 @@ describe("dews projector", () => {
     expect(result.projected).toBe(0);
     expect(extractInsertBindsForType(db, "dews.escalated")).toHaveLength(0);
     expect(extractInsertBindsForType(db, "dews.deescalated")).toHaveLength(0);
+  });
+
+  it("keeps dry-run projection read-only instead of reconciling the pointer ledger", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [{
+          key: "dews:published-generation",
+          value: JSON.stringify({
+            updatedAt: SEC,
+            source: "compute-dews",
+            publishStatus: "published",
+          }),
+          updated_at: SEC,
+        }],
+      },
+      { match: MATCH_FETCH_SAMPLES, rows: [] },
+    ]) as MockD1Database;
+
+    await projectDewsBandTransitions(db, { dryRun: true });
+
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO surface_publication_generations"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
   });
 });

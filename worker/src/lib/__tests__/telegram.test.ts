@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
-const { buildTelegramMessage, postDigestToTelegram, sendToChat, sendBatch } = await import("../telegram");
+const { answerCallbackQuery, buildTelegramMessage, postDigestToTelegram, sendToChat, sendBatch } = await import("../telegram");
 
 const digestCreds = {
   botToken: "bot-token",
@@ -135,7 +135,7 @@ describe("sendToChat", () => {
     expect(fetchSpy.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it("treats ambiguous long retry-after 429s as global", async () => {
+  it("keeps ambiguous long retry-after 429s chat-local", async () => {
     fetchSpy.mockResolvedValueOnce(
       new Response("Too Many Requests", {
         status: 429,
@@ -151,7 +151,7 @@ describe("sendToChat", () => {
       statusCode: 429,
       errorClass: "rate_limit",
       delivery: "retryable_failure",
-      rateLimitScope: "global",
+      rateLimitScope: "chat",
     });
     expect(result.retryAfterSec).toBe(30);
   });
@@ -181,7 +181,7 @@ describe("sendToChat", () => {
     expect(result.rateLimitScope).toBe("chat");
   });
 
-  it("classifies explicit bot-wide Telegram rate limits as global", async () => {
+  it("does not infer global scope from Telegram description text", async () => {
     fetchSpy.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -197,7 +197,36 @@ describe("sendToChat", () => {
     const result = await sendToChat("12345", "test", "bot-token");
 
     expect(result.retryAfterSec).toBe(38);
-    expect(result.rateLimitScope).toBe("global");
+    expect(result.rateLimitScope).toBe("chat");
+  });
+
+  it.each([
+    [{ description: "Bad Request: chat not found" }, 400, "chat_not_found"],
+    [{ description: "Bad Request: can't parse entities: unsupported start tag" }, 400, "formatting_error"],
+    [{ description: "Bad Request: message is too long" }, 400, "payload_too_large"],
+  ] as const)("classifies Telegram JSON failures as %s", async (body, status, errorClass) => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: false, error_code: status, ...body }), { status }));
+    await expect(sendToChat("12345", "test", "bot-token")).resolves.toMatchObject({
+      ok: false,
+      errorClass,
+      permanentFailure: true,
+    });
+  });
+
+  it("returns the migration target without retrying the old chat", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({
+      ok: false,
+      error_code: 400,
+      description: "Bad Request: group chat was upgraded to a supergroup chat",
+      parameters: { migrate_to_chat_id: -1001234567890 },
+    }), { status: 400 }));
+
+    await expect(sendToChat("-123", "test", "bot-token")).resolves.toMatchObject({
+      ok: false,
+      errorClass: "chat_migrated",
+      migrateToChatId: "-1001234567890",
+      permanentFailure: true,
+    });
   });
 
   it("returns retryAfterSec null for non-429 errors", async () => {
@@ -215,6 +244,50 @@ describe("sendToChat", () => {
       errorClass: "timeout",
       retryAfterSec: null,
     });
+  });
+});
+
+describe("answerCallbackQuery", () => {
+  it.each([
+    [400, "bad_request"],
+    [401, "auth_error"],
+    [403, "auth_error"],
+    [429, "rate_limit"],
+    [503, "server_error"],
+  ] as const)("classifies a non-OK %i response as %s without logging identifiers", async (status, errorClass) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const response = new Response("sensitive Telegram response body", { status });
+    fetchSpy.mockResolvedValueOnce(response);
+
+    await answerCallbackQuery("callback-secret-id", "bot-secret-token");
+
+    expect(response.bodyUsed).toBe(true);
+    expect(warn).toHaveBeenCalledTimes(1);
+    const record = JSON.parse(String(warn.mock.calls[0]?.[0])) as Record<string, unknown>;
+    expect(record).toMatchObject({
+      scope: "telegram",
+      level: "warn",
+      action: "answer-callback-query",
+      statusCode: status,
+      errorClass,
+    });
+    const serialized = JSON.stringify(record);
+    expect(serialized).not.toContain("callback-secret-id");
+    expect(serialized).not.toContain("bot-secret-token");
+    expect(serialized).not.toContain("sensitive Telegram response body");
+    expect(record).not.toHaveProperty("chatId");
+    expect(record).not.toHaveProperty("userId");
+    warn.mockRestore();
+  });
+
+  it("does not emit failure telemetry for a successful acknowledgement", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    await answerCallbackQuery("callback-id", "bot-token");
+
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
 
@@ -238,6 +311,93 @@ describe("sendBatch", () => {
     expect(results.every((r) => r.ok)).toBe(true);
     // 3 batches: [0,1,2], [3,4,5], [6]
     expect(fetchSpy).toHaveBeenCalledTimes(7);
+  });
+
+  it("sends same-chat chunks serially in ordinal order while other chats use bounded concurrency", async () => {
+    const started: string[] = [];
+    const completed: string[] = [];
+    const releases = new Map<string, () => void>();
+    let active = 0;
+    let maxActive = 0;
+    let sameChatActive = 0;
+    let maxSameChatActive = 0;
+
+    fetchSpy.mockImplementation(async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as { chat_id: string; text: string };
+      const key = `${body.chat_id}:${body.text}`;
+      started.push(key);
+      active++;
+      maxActive = Math.max(maxActive, active);
+      if (body.chat_id === "same-chat") {
+        sameChatActive++;
+        maxSameChatActive = Math.max(maxSameChatActive, sameChatActive);
+      }
+      return new Promise<Response>((resolve) => {
+        releases.set(key, () => {
+          completed.push(key);
+          active--;
+          if (body.chat_id === "same-chat") sameChatActive--;
+          resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+        });
+      });
+    });
+
+    const messages = [
+      ...Array.from({ length: 4 }, (_, index) => ({
+        chatId: "same-chat",
+        html: `chunk-${index}`,
+        disableNotification: false,
+        chunkIndex: index,
+      })),
+      ...["other-a", "other-b", "other-c", "other-d"].map((chatId) => ({
+        chatId,
+        html: "only-chunk",
+        disableNotification: false,
+      })),
+    ];
+
+    const sendPromise = sendBatch(messages, "bot-token", 4);
+    await vi.waitFor(() => expect(started).toHaveLength(4));
+    expect(started).toEqual([
+      "same-chat:chunk-0",
+      "other-a:only-chunk",
+      "other-b:only-chunk",
+      "other-c:only-chunk",
+    ]);
+
+    releases.get("other-a:only-chunk")?.();
+    releases.get("other-b:only-chunk")?.();
+    releases.get("other-c:only-chunk")?.();
+    await Promise.resolve();
+    expect(started).toHaveLength(4);
+
+    releases.get("same-chat:chunk-0")?.();
+    await vi.waitFor(() => expect(started).toHaveLength(6));
+    expect(started.slice(4)).toEqual(["other-d:only-chunk", "same-chat:chunk-1"]);
+    releases.get("other-d:only-chunk")?.();
+    releases.get("same-chat:chunk-1")?.();
+    await vi.waitFor(() => expect(started).toContain("same-chat:chunk-2"));
+    releases.get("same-chat:chunk-2")?.();
+    await vi.waitFor(() => expect(started).toContain("same-chat:chunk-3"));
+    releases.get("same-chat:chunk-3")?.();
+
+    const results = await sendPromise;
+    expect(results).toHaveLength(messages.length);
+    expect(results.every((result) => result.ok)).toBe(true);
+    expect(started.filter((key) => key.startsWith("same-chat:"))).toEqual([
+      "same-chat:chunk-0",
+      "same-chat:chunk-1",
+      "same-chat:chunk-2",
+      "same-chat:chunk-3",
+    ]);
+    expect(completed.filter((key) => key.startsWith("same-chat:"))).toEqual([
+      "same-chat:chunk-0",
+      "same-chat:chunk-1",
+      "same-chat:chunk-2",
+      "same-chat:chunk-3",
+    ]);
+    expect(maxActive).toBe(4);
+    expect(maxSameChatActive).toBe(1);
   });
 
   it("reports blocked chats without throwing", async () => {
@@ -295,7 +455,7 @@ describe("sendBatch", () => {
     expect(results.slice(5).every((result) => result.ok)).toBe(true);
   });
 
-  it("short-circuits later messages for a chat already rate-limited in the same run", async () => {
+  it("does not launch later same-chat chunks after the first chunk is rate-limited", async () => {
     fetchSpy
       .mockResolvedValueOnce(
         new Response("Too Many Requests: chat retry after 45", {
@@ -303,20 +463,20 @@ describe("sendBatch", () => {
           headers: { "Retry-After": "45" },
         }),
       )
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
     const messages = [
       { chatId: "same-chat", html: "<b>Alert 1</b>", disableNotification: false },
-      { chatId: "other-chat", html: "<b>Alert 2</b>", disableNotification: false },
+      { chatId: "same-chat", html: "<b>Alert 2</b>", disableNotification: false },
       { chatId: "same-chat", html: "<b>Alert 3</b>", disableNotification: false },
-      { chatId: "third-chat", html: "<b>Alert 4</b>", disableNotification: false },
+      { chatId: "same-chat", html: "<b>Alert 4</b>", disableNotification: false },
+      { chatId: "other-chat", html: "<b>Other alert</b>", disableNotification: false },
     ];
 
-    const results = await sendBatch(messages, "bot-token", 1);
+    const results = await sendBatch(messages, "bot-token", 4);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
-    expect(results).toHaveLength(4);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(results).toHaveLength(5);
     expect(results[0]).toMatchObject({
       chatId: "same-chat",
       errorClass: "rate_limit",
@@ -324,18 +484,50 @@ describe("sendBatch", () => {
       rateLimitScope: "chat",
       attempted: true,
     });
-    expect(results[2]).toMatchObject({
-      chatId: "same-chat",
-      errorClass: "rate_limit",
-      retryAfterSec: 45,
-      rateLimitScope: "chat",
-      attempted: false,
-    });
-    expect(results[1].ok).toBe(true);
-    expect(results[3].ok).toBe(true);
+    expect(results.slice(1, 4).every((result) =>
+      result.chatId === "same-chat" &&
+      result.errorClass === "rate_limit" &&
+      result.retryAfterSec === 45 &&
+      result.rateLimitScope === "chat" &&
+      result.attempted === false &&
+      result.skippedReason === "predecessor_failure"
+    )).toBe(true);
+    expect(results[4].ok).toBe(true);
   });
 
-  it("escalates repeated 429s across distinct chats to global backoff", async () => {
+  it.each([
+    { status: 500, errorClass: "server_error", delivery: "retryable_failure" },
+    { status: 400, errorClass: "bad_request", delivery: "permanent_failure" },
+    { status: 403, errorClass: "blocked", delivery: "blocked" },
+  ])("classifies an unattempted same-chat tail from a $status predecessor", async ({
+    status,
+    errorClass,
+    delivery,
+  }) => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response("failed", { status }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const results = await sendBatch([
+      { chatId: "same-chat", html: "chunk-0", disableNotification: false },
+      { chatId: "same-chat", html: "chunk-1", disableNotification: false },
+      { chatId: "same-chat", html: "chunk-2", disableNotification: false },
+      { chatId: "other-chat", html: "other", disableNotification: false },
+    ], "bot-token", 4);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(results[0]).toMatchObject({ statusCode: status, errorClass, delivery, attempted: true });
+    expect(results.slice(1, 3).every((result) =>
+      result.statusCode === status &&
+      result.errorClass === errorClass &&
+      result.delivery === delivery &&
+      result.attempted === false &&
+      result.skippedReason === "predecessor_failure"
+    )).toBe(true);
+    expect(results[3]).toMatchObject({ ok: true, attempted: true });
+  });
+
+  it("leaves repeated distinct-chat 429 inference to the durable controller", async () => {
     fetchSpy
       .mockResolvedValueOnce(
         new Response("Too Many Requests: chat retry after 10", {
@@ -365,13 +557,13 @@ describe("sendBatch", () => {
 
     const results = await sendBatch(messages, "bot-token", 3);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy).toHaveBeenCalledTimes(5);
     expect(results).toHaveLength(5);
-    expect(results.slice(0, 3).every((result) => result.rateLimitScope === "global" && result.attempted === true)).toBe(true);
-    expect(results.slice(3).every((result) => result.rateLimitScope === "global" && result.attempted === false)).toBe(true);
+    expect(results.slice(0, 3).every((result) => result.rateLimitScope === "chat" && result.attempted === true)).toBe(true);
+    expect(results.slice(3).every((result) => result.ok && result.attempted === true)).toBe(true);
   });
 
-  it("stops later batches after an ambiguous long Telegram JSON retry_after", async () => {
+  it("keeps later batches moving after an ambiguous long Telegram JSON retry_after", async () => {
     fetchSpy
       .mockResolvedValueOnce(
         new Response(
@@ -394,20 +586,20 @@ describe("sendBatch", () => {
 
     const results = await sendBatch(messages, "bot-token", 2);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(5);
     expect(results).toHaveLength(5);
     expect(results[0]).toMatchObject({
       chatId: "chat-0",
       errorClass: "rate_limit",
       retryAfterSec: 38,
-      rateLimitScope: "global",
+      rateLimitScope: "chat",
       attempted: true,
     });
     expect(results[1]).toMatchObject({ ok: true, attempted: true });
-    expect(results.slice(2).every((result) => result.rateLimitScope === "global" && result.attempted === false)).toBe(true);
+    expect(results.slice(2).every((result) => result.ok && result.attempted === true)).toBe(true);
   });
 
-  it("marks the untouched tail as global retryable after a global rate limit stop", async () => {
+  it("does not trust global-looking description text as a machine-readable scope", async () => {
     fetchSpy
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
       .mockResolvedValueOnce(
@@ -415,7 +607,8 @@ describe("sendBatch", () => {
           status: 429,
           headers: { "Retry-After": "45" },
         }),
-      );
+      )
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
     const messages = Array.from({ length: 5 }, (_, index) => ({
       chatId: `chat-${index}`,
@@ -425,7 +618,7 @@ describe("sendBatch", () => {
 
     const results = await sendBatch(messages, "bot-token", 2);
 
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(5);
     expect(results).toHaveLength(5);
     expect(results[0]).toMatchObject({ ok: true, attempted: true });
     expect(results[1]).toMatchObject({
@@ -434,10 +627,10 @@ describe("sendBatch", () => {
       retryable: true,
       errorClass: "rate_limit",
       retryAfterSec: 45,
-      rateLimitScope: "global",
+      rateLimitScope: "chat",
       attempted: true,
     });
-    expect(results.slice(2).every((result) => result.errorClass === "rate_limit" && result.rateLimitScope === "global" && result.attempted === false)).toBe(true);
+    expect(results.slice(2).every((result) => result.ok && result.attempted === true)).toBe(true);
   });
 
   it("catches transient errors without crashing the batch", async () => {
