@@ -2003,23 +2003,6 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
     "defillama-stablecoins": { "state": "closed", "consecutiveFailures": 0, "lastSuccessAt": 1772190029 },
     "coingecko-prices": { "state": "closed", "consecutiveFailures": 0, "lastSuccessAt": 1772190030 }
   },
-  "d1Capacity": {
-    "observedAt": 1771856400,
-    "databaseSizeBytes": 4079546368,
-    "maximumSizeBytes": 10000000000,
-    "utilizationRatio": 0.407955,
-    "utilizationPercent": 40.8,
-    "thresholdState": "normal",
-    "crossedThresholdPercent": null,
-    "nextThresholdPercent": 60,
-    "sampleCount": 72,
-    "forecastBasis": "linear-30d",
-    "forecastSpanHours": 71,
-    "growthBytesPerDay": 12000000,
-    "nextThresholdAt": 1787860189,
-    "exhaustionAt": 1814488989,
-    "daysUntilExhaustion": 493.4
-  },
   "telegramSummary": {
     "totalChats": 142,
     "pendingDeliveries": 0,
@@ -2078,7 +2061,6 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
 | `mintBurn.sync.warning`                       | `string \| null`                                                          | Human-readable warning when the critical lane is stale, degraded, or errored                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `mintBurn.sync.criticalLaneHealthy`           | `boolean`                                                                 | `true` when the latest critical-lane run is `ok`, `degraded`, or `skipped_locked`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `circuits`                                    | `Record<string, CircuitRecord>`                                           | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `dexscreener-liquidity`, `dexscreener-search`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fx-realtime` |
-| `d1Capacity`                                  | `D1CapacityAssessment \| null`                                            | Latest hourly D1 file-size assessment. `watch` starts at 60%, `warning` at 75%, and `critical` at 90% of the 10 GB ceiling. Forecast fields remain null until enough growing history exists. Optional for old-Worker compatibility.                                                                                                                                                                                                                                                                                                                                 |
 
 **`CacheStatus`**
 
@@ -4310,7 +4292,7 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 
 `coingeckoPriceDiff` is an admin-only live comparison block. It reads the cached tracked assets with `geckoId`, fetches current CoinGecko spot prices through one or more batched `simple/price` calls, and reports the rows where `abs(pharosPrice - coinGeckoPrice) / coinGeckoPrice > 0.05`. The field is `null` when the comparison is unavailable in the current environment or when the loader fails; failures are surfaced through `sectionErrors.coingeckoPriceDiff`.
 
-`d1Usage` is an admin-only live D1 telemetry block. It uses Cloudflare's D1 database info endpoint plus a trailing-24h `d1AnalyticsAdaptiveGroups` GraphQL query to surface current storage size, table count, replication mode, and recent query/row volume. Its additive `capacity` member carries the latest hourly 60/75/90% threshold classification and a 30-day linear forecast when at least three observations span 24 hours. The same assessment is exposed as optional `d1Capacity` on public health and evaluated by the scheduled status lane through the durable alert broker. The field is `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker; loader/config failures are surfaced through `sectionErrors.d1Usage`.
+`d1Usage` is an admin-only live D1 telemetry block. It uses Cloudflare's D1 database info endpoint plus a trailing-24h `d1AnalyticsAdaptiveGroups` GraphQL query to surface current storage size, table count, replication mode, and recent query/row volume. Its additive `capacity` member carries the latest hourly 60/75/90% threshold classification and a 30-day linear forecast when at least three observations span 24 hours. The same assessment is evaluated by the scheduled status lane through the durable alert broker, but exact D1 capacity telemetry is not exposed by the no-key public health endpoint. The field is `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker; loader/config failures are surfaced through `sectionErrors.d1Usage`.
 
 `liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
 

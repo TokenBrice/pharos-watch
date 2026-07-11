@@ -1,5 +1,6 @@
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { getD1CapacityImpactStatus } from "@shared/lib/d1-capacity";
+import type { D1CapacityAssessment } from "@shared/types/status";
 import {
   countPublicImpactOpenCircuits,
   getCircuitImpactStatus,
@@ -101,7 +102,7 @@ export interface PublicHealthAssessment {
   openCircuitCount: number;
   circuitImpactStatus: HealthResponse["status"];
   circuitQueryError: string | null;
-  d1Capacity: HealthResponse["d1Capacity"];
+  d1Capacity: D1CapacityAssessment | null;
   d1CapacityImpactStatus: HealthResponse["status"];
   d1CapacityQueryError: string | null;
   alertBroker: AlertBrokerSummary;
@@ -473,7 +474,7 @@ export async function assessPublicHealth(
     warnings.push("d1-capacity-query-failed");
   } else if (d1CapacityResult.assessment?.thresholdState !== "normal" && d1CapacityResult.assessment) {
     warnings.push(
-      `d1-capacity-${d1CapacityResult.assessment.thresholdState}:${d1CapacityResult.assessment.utilizationPercent}`,
+      `d1-capacity-${d1CapacityResult.assessment.thresholdState}`,
     );
   }
 
