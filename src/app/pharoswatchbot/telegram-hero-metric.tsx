@@ -25,7 +25,7 @@ export function TelegramHeroMetric() {
         <span className="absolute inset-0 animate-ping rounded-full bg-[var(--brand-accent)]/70 motion-reduce:animate-none" />
         <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--brand-accent)]" />
       </span>
-      <span className="pharos-numeric text-xl font-semibold leading-none tracking-tight text-frost-blue">
+      <span className="pharos-numeric text-2xl font-semibold leading-none tracking-tight text-frost-blue">
         {NUMBER_FORMATTER.format(data.activeWatchers)}
       </span>
       <span className="text-xs text-muted-foreground">active watchers</span>

@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, type SVGProps } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -71,6 +71,32 @@ const DISPATCH_CADENCE_LABEL = formatPolicyDuration(TELEGRAM_DISPATCH_INTERVAL_S
 const RISK_ALERT_TTL_LABEL = formatPolicyDuration(PENDING_TTL_SEC);
 const LAUNCH_ALERT_TTL_LABEL = formatPolicyDuration(TELEGRAM_ALERT_TTL_SEC.launch);
 const ADMIN_ALERT_TTL_LABEL = formatPolicyDuration(TELEGRAM_ALERT_TTL_SEC.adminBroadcast);
+
+// Same drawn lighthouse as the top-nav overflow trigger; local copy keeps the
+// hero self-contained.
+function LighthouseGlyph(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M10 4h4" />
+      <path d="M9 8h6" />
+      <path d="M10 8 8 21" />
+      <path d="M14 8l2 13" />
+      <path d="M7 21h10" />
+      <path d="M9 14h6" />
+      <path d="m4 7 3 1" />
+      <path d="m20 7-3 1" />
+      <path d="M12 4v4" />
+    </svg>
+  );
+}
 
 function CommandLine({ command }: { command: string }) {
   return (
@@ -520,7 +546,7 @@ export default function PharosWatchBotPage() {
               </p>
               <h2
                 id="telegram-hero-title"
-                className="mt-3 max-w-xl text-balance font-display text-3xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl"
+                className="pharoswatchbot-hero-title mt-3 max-w-xl text-balance font-display font-extrabold text-foreground"
               >
                 Stablecoin alerts, before you have to check.
               </h2>
@@ -549,9 +575,13 @@ export default function PharosWatchBotPage() {
                 </Button>
               </div>
             </div>
-            <div aria-label="The six alert families">
+            <div aria-label="The six alert families" className="pharoswatchbot-watch">
+              <span aria-hidden="true" className="pharoswatchbot-watch-beam" />
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 pb-2.5">
-                <p className="pharos-kicker !tracking-normal">Six alert families</p>
+                <p className="pharos-kicker !tracking-normal flex items-center gap-2">
+                  <LighthouseGlyph className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  Six alert families
+                </p>
                 <TelegramHeroMetric />
               </div>
               <ul>
