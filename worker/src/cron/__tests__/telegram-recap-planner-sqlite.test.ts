@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import { planTelegramPersonalizedRecaps } from "../telegram-recap-planner";
 
 const NOW = 1_800_000_000;
@@ -44,6 +45,15 @@ function insertTape(
 
 function markTapeFresh(sqlite: DatabaseSync, atSec = NOW - 1): void {
   sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('project-tape', ?, 1, 'ok')").run(atSec);
+}
+
+function insertStablecoinsCache(sqlite: DatabaseSync): void {
+  sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)").run(JSON.stringify({
+    peggedAssets: [
+      { id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 1_000_000_000 } },
+      { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 2_000_000_000 } },
+    ],
+  }), NOW);
 }
 
 afterEach(() => { while (databases.length > 0) databases.pop()?.close(); });
@@ -133,6 +143,60 @@ describe("telegram personalized recap planner", () => {
       { chat_id: "snooze-only", status: "skipped_no_changes" },
     ]);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+  });
+
+  it("collapses overlapping direct and current preset membership to one fact", async () => {
+    const { sqlite, db } = setup();
+    insertSubscriber(sqlite, "overlap");
+    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES ('overlap', 'usdc-circle', 1)").run();
+    sqlite.prepare(`INSERT INTO telegram_preset_subscriptions
+      (chat_id, preset_id, alert_depeg, created_at, updated_at)
+      VALUES ('overlap', 'usd-top25', 1, ?, ?)`).run(NOW - 100, NOW - 100);
+    insertStablecoinsCache(sqlite);
+    markTapeFresh(sqlite);
+    insertTape(sqlite, "recap-depeg-1", NOW - 60);
+
+    const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
+
+    expect(JSON.parse(result.metadata)).toMatchObject({ queued: 1, presetDeferred: 0 });
+    expect(sqlite.prepare("SELECT material_coin_count, material_fact_count FROM telegram_recap_targets").get())
+      .toEqual({ material_coin_count: 1, material_fact_count: 1 });
+  });
+
+  it("defers preset recipients without advancing when dynamic membership is unavailable", async () => {
+    const { sqlite, db } = setup();
+    insertSubscriber(sqlite, "preset");
+    sqlite.prepare(`INSERT INTO telegram_preset_subscriptions
+      (chat_id, preset_id, alert_depeg, created_at, updated_at)
+      VALUES ('preset', 'usd-top25', 1, ?, ?)`).run(NOW - 100, NOW - 100);
+    markTapeFresh(sqlite);
+
+    const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata)).toMatchObject({ queued: 0, presetDeferred: 1, pagesDeferred: 1 });
+    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = 'preset'").get())
+      .toEqual({ next_due_at: NOW - 1 });
+  });
+
+  it("skips only a durable pause while leaving timed snooze delivery to the queue", async () => {
+    const { sqlite, db } = setup();
+    for (const chatId of ["paused", "timed-snooze"]) {
+      insertSubscriber(sqlite, chatId);
+      sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES (?, 'usdc-circle', 1)").run(chatId);
+    }
+    sqlite.prepare("UPDATE telegram_subscribers SET alert_snooze_until_ts = ? WHERE chat_id = 'paused'").run(PAUSE_SENTINEL_TS);
+    sqlite.prepare("UPDATE telegram_subscribers SET alert_snooze_until_ts = ? WHERE chat_id = 'timed-snooze'").run(NOW + 3600);
+    markTapeFresh(sqlite);
+    insertTape(sqlite, "recap-depeg-1", NOW - 60);
+
+    const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
+
+    expect(JSON.parse(result.metadata)).toMatchObject({ paused: 1, queued: 1 });
+    expect(sqlite.prepare("SELECT chat_id, status FROM telegram_recap_targets ORDER BY chat_id").all()).toEqual([
+      { chat_id: "paused", status: "skipped_paused" },
+      { chat_id: "timed-snooze", status: "queued" },
+    ]);
   });
 
   it("stops cooperatively at its soft deadline without advancing due work", async () => {

@@ -21,6 +21,7 @@ import { buildInClause } from "../lib/db";
 import { sha256Hex } from "../lib/hash";
 import { serializePendingMarkupPolicy } from "../lib/telegram-pending-provenance";
 import { listTelegramPresets, resolveTelegramPresetTargets } from "../lib/telegram-presets";
+import { isPausedSentinel } from "../lib/telegram-constants";
 import { formatTelegramRecap } from "../lib/telegram-recap-formatting";
 import { parseTelegramRecapFacts, type TelegramRecapFact, type TelegramRecapTapeRow } from "../lib/telegram-recap-facts";
 import { type TelegramRecapMembership, type TelegramRecapScopedFact } from "../lib/telegram-recap-ranking";
@@ -117,8 +118,8 @@ function buildScopedFacts(scope: RecipientScope, facts: readonly TelegramRecapFa
   });
 }
 
-function isPaused(row: SubscriberRecapRow, nowSec: number): boolean {
-  return row.alert_snooze_until_ts != null && Number(row.alert_snooze_until_ts) > nowSec;
+function isPaused(row: SubscriberRecapRow): boolean {
+  return isPausedSentinel(row.alert_snooze_until_ts);
 }
 
 function nextDueAtSec(nowSec: number, timezone: string, deliveryHourLocal: number): number | null {
@@ -447,7 +448,7 @@ export async function planTelegramPersonalizedRecaps(
         expectedNextDueAt: preference.expectedNextDueAt,
         nextDueAtAfter: nextDueAt,
       };
-      if (isPaused(subscriber, nowSec)) {
+      if (isPaused(subscriber)) {
         if (await recordTelegramRecapSkip(db, { target, status: "skipped_paused", reason: "chat-paused" })) counts.paused += 1;
         continue;
       }
