@@ -595,6 +595,10 @@ const BASE_ENDPOINT_DEFINITIONS = [
     siteDataAccess: "denied",
   }),
   adminGet({
+    key: "credential-lifecycle-summary",
+    path: API_PATHS.credentialLifecycleSummary(),
+  }),
+  adminGet({
     key: "api-key-audit-log",
     path: API_PATHS.apiKeyAuditLog(),
   }),

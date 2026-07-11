@@ -53,6 +53,7 @@ describe("api endpoint registry", () => {
       "/api/api-key-requests/verify",
       "/api/api-keys",
       "/api/api-keys/audit-log",
+      "/api/api-keys/lifecycle-summary",
       "/api/audit-depeg-history",
       "/api/audit-depeg-history?dry-run=true",
       "/api/backfill-blacklist-current-balances",

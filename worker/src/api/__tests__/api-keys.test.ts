@@ -8,7 +8,12 @@ import {
   stubCryptoForAuth,
 } from "../../test-helpers/__shared/auth";
 import { makeApiKeyRow } from "../../test-helpers/__shared/fixtures";
-import { handleApiKeyRotate, handleApiKeyUpdate, handleApiKeys } from "./api-keys.test-helpers";
+import {
+  handleApiKeyRotate,
+  handleApiKeyUpdate,
+  handleApiKeys,
+  handleCredentialLifecycleSummary,
+} from "./api-keys.test-helpers";
 import { resetApiKeyStateForTests } from "../../lib/api-keys";
 import { resetRateLimitStateForTests } from "../../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../../lib/request-source-attribution";
@@ -70,6 +75,52 @@ describe("api key handlers", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.keys).toHaveLength(1);
     expect(body.keys[0]?.expiresAt).toBe(900);
+  });
+
+  it("returns counts-only credential lifecycle summary", async () => {
+    const nowSec = 10_000;
+    const db = mockD1(
+      [
+        {
+          match: "ORDER BY created_at DESC, id DESC",
+          rows: [
+            makeApiKeyRow({ id: 1, is_active: 1, expires_at: nowSec + 90 * 86_400 }),
+            makeApiKeyRow({ id: 2, is_active: 1, expires_at: nowSec + 2 * 86_400 }),
+            makeApiKeyRow({ id: 3, is_active: 1, expires_at: nowSec - 86_400 }),
+            makeApiKeyRow({ id: 4, is_active: 0, expires_at: null }),
+          ],
+        },
+        {
+          match: "SELECT COUNT(*) AS count",
+          matchBinds: ["rotated", "deactivated", nowSec - 7 * 86_400],
+          rows: [{ count: 2 }],
+          first: { count: 2 },
+        },
+      ],
+      { requireMatch: true },
+    );
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(nowSec * 1000));
+
+    const response = await handleCredentialLifecycleSummary(db, true);
+    const body = (await response.json()) as Record<string, unknown>;
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(body).toEqual({
+      generatedAt: nowSec,
+      totalKeys: 4,
+      active: 3,
+      expiringSoon: 1,
+      expired: 1,
+      nonExpiring: 1,
+      auditAnomalies7d: 2,
+    });
+    expect(JSON.stringify(body)).not.toContain("ownerEmail");
+    expect(JSON.stringify(body)).not.toContain("maskedToken");
+
+    vi.useRealTimers();
   });
 
   it("creates keys with the default 90-day expiry when expiresAt is omitted", async () => {
