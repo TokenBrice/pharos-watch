@@ -3,6 +3,9 @@
   "name": "JPY Coin v1",
   "symbol": "JPYC",
   "oneLiner": "JPYC v1 is the legacy prepaid-payment yen token series from JPYC Inc., predating the funds-transfer-token migration to the current JPYC contracts.",
+  "marketAvailability": "legacy-or-wind-down",
+  "status": "frozen",
+  "frozenAt": "2026-07-11",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "JPY",
@@ -201,5 +204,14 @@
         "url": "https://jpyc-support.freshdesk.com/support/solutions/articles/70000675847-jpyc-sdk%EF%BC%88english%EF%BC%89"
       }
     ]
+  },
+  "obituary": {
+    "causeOfDeath": "regulatory",
+    "deathDate": "2025-06-01",
+    "epitaph": "A prepaid yen rail yielded to Japan's new stablecoin regime",
+    "obituary": "JPYC Inc. permanently ended new issuance and exchange support for its prepaid JPYC series on June 1, 2025 as Japan's revised Payment Services Act took effect. Existing balances remain usable for the issuer's prepaid-payment services and transfers, but cannot be redeemed for cash and no longer have a primary issuance path. The separately tracked funds-transfer-token JPYC is the successor product; Pharos freezes v1 as its historical legacy series.",
+    "peakMcap": 21528400,
+    "sourceUrl": "https://corporate.jpyc.co.jp/news/posts/prepaid-important-notice",
+    "sourceLabel": "JPYC Prepaid issuance and exchange termination notice"
   }
 }

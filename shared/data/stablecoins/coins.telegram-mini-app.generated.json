@@ -35,13 +35,6 @@
     "status": "pre-launch"
   },
   {
-    "stablecoinId": "aeur-anchored-coins",
-    "symbol": "AEUR",
-    "name": "Anchored Coins AEUR",
-    "peg": "EUR",
-    "status": "active"
-  },
-  {
     "stablecoinId": "aid-gaib",
     "symbol": "AID",
     "name": "GAIB AID",
@@ -122,13 +115,6 @@
     "stablecoinId": "ausd-agora",
     "symbol": "AUSD",
     "name": "Agora Dollar",
-    "peg": "USD",
-    "status": "active"
-  },
-  {
-    "stablecoinId": "ausdt-tether-alloy",
-    "symbol": "aUSD₮",
-    "name": "Alloy Tether",
     "peg": "USD",
     "status": "active"
   },
@@ -1019,13 +1005,6 @@
     "symbol": "JAAA",
     "name": "Janus Henderson Anemoy AAA CLO Fund",
     "peg": "USD",
-    "status": "active"
-  },
-  {
-    "stablecoinId": "jpyc-jpyc-v1",
-    "symbol": "JPYC",
-    "name": "JPY Coin v1",
-    "peg": "JPY",
     "status": "active"
   },
   {
@@ -2142,13 +2121,6 @@
     "status": "active"
   },
   {
-    "stablecoinId": "usdh-native-markets",
-    "symbol": "USDH",
-    "name": "USDH Stablecoin",
-    "peg": "USD",
-    "status": "active"
-  },
-  {
     "stablecoinId": "usdk-kast",
     "symbol": "USDK",
     "name": "KAST Dollar",
@@ -2531,13 +2503,6 @@
     "symbol": "WCOP",
     "name": "Ripio wCOP",
     "peg": "OTHER",
-    "status": "active"
-  },
-  {
-    "stablecoinId": "wemix-dollar-wemix",
-    "symbol": "WEMIX$",
-    "name": "WEMIX Dollar",
-    "peg": "USD",
     "status": "active"
   },
   {

@@ -3,6 +3,8 @@
   "name": "USDH Stablecoin",
   "symbol": "USDH",
   "oneLiner": "USDH is Native Markets' Hyperliquid dollar stablecoin issued by Bridge (Stripe), redeemable 1:1 against cash, U.S. Treasuries, repos, and tokenized treasuries.",
+  "status": "frozen",
+  "frozenAt": "2026-07-11",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -281,5 +283,14 @@
       "title": "USDH sunset and redemption migration",
       "message": "Bridge and Native Markets announced the USDH migration in May 2026. New issuance is ending except for migration liquidity, the USDH dashboard is supported only during the migration period, and holders should use the fee-free USDH-to-USDC or fiat redemption routes while they remain available."
     }
-  ]
+  ],
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-05-14",
+    "epitaph": "A Hyperliquid native made way for USDC",
+    "obituary": "Native Markets and Bridge announced USDH's sunset in May 2026 as Hyperliquid markets migrated to USDC. New issuance ended except to support migration liquidity; the USDH dashboard was scheduled to close on July 17, while Bridge continued USDH-to-USDC and fiat redemption for onboarded holders. USDH remained fully backed during the transition, but its role as an active stablecoin product ended, so Pharos freezes it as an archived migration asset.",
+    "peakMcap": 106412008,
+    "sourceUrl": "https://usdh.com/migration",
+    "sourceLabel": "USDH migration and sunset notice"
+  }
 }

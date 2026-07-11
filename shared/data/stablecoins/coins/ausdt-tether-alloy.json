@@ -3,6 +3,8 @@
   "name": "Alloy Tether",
   "symbol": "aUSD₮",
   "oneLiner": "aUSDT is Alloy by Tether's dollar stablecoin, minted by KYC-verified users depositing Tether Gold (XAUT) into Ethereum vaults at up to 75% LTV.",
+  "status": "frozen",
+  "frozenAt": "2026-07-11",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -248,5 +250,14 @@
       "title": "Wind-down in progress",
       "message": "Tether announced on June 17, 2026 that Alloy by Tether minting is halted and holders should redeem aUSDT by September 17, 2026."
     }
-  ]
+  ],
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-06-17",
+    "epitaph": "Tether closed the gold-dollar experiment",
+    "obituary": "Tether began winding down Alloy by Tether and aUSDt on June 17, 2026 after reviewing activity, demand, and product priorities. New positions and minting were closed, while existing users were given until September 17, 2026 to return aUSDt and recover XAUt collateral. The protocol remains available only to unwind existing exposure, so Pharos freezes it as an archived wind-down asset rather than an active issuance venue.",
+    "peakMcap": 50122663,
+    "sourceUrl": "https://tether.io/news/tether-updates-users-on-strategic-changes-to-its-product-support-offering/",
+    "sourceLabel": "Tether Alloy by Tether wind-down announcement"
+  }
 }

@@ -3,6 +3,8 @@
   "name": "WEMIX Dollar",
   "symbol": "WEMIX$",
   "oneLiner": "WEMIX Dollar is the WEMIX ecosystem's centralized dollar token, backed 100% by USDC held in the WEMIX3.0 Treasury on the non-EVM-indexed WEMIX chain.",
+  "status": "frozen",
+  "frozenAt": "2026-07-11",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -161,5 +163,14 @@
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
     }
+  },
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-04",
+    "epitaph": "The game-chain dollar stepped aside for bridged USDC",
+    "obituary": "WEMIX transitioned its USD stablecoin activity from WEMIX$ to USDC.e, withdrawing Foundation liquidity from WEMIX$ pools and ending swap support across WEMIX.Fi and WEMIX PLAY in April 2026. Holders retained a conversion route through the WEMIX$ Module and a longer claim window for discontinued liquidity pools, but the ecosystem's active dollar rail became USDC.e. Pharos freezes WEMIX$ as the retired native stablecoin while keeping its residual supply and history available in the archive.",
+    "peakMcap": 22400000,
+    "sourceUrl": "https://www.wemix.com/news/wemix30-usd-stablecoin-transition-plan-5cfef91c838e",
+    "sourceLabel": "WEMIX3.0 USD stablecoin transition plan"
   }
 }
