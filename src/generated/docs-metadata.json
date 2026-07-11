@@ -1,6 +1,6 @@
 {
   "api-reference": {
-    "dateModified": "2026-07-11T11:39:20+02:00",
+    "dateModified": "2026-07-11T13:29:50+02:00",
     "dateCreated": "2026-02-23T15:28:17+01:00"
   },
   "architecture": {
@@ -8,7 +8,7 @@
     "dateCreated": "2026-02-19T17:42:02+01:00"
   },
   "data-flow-map": {
-    "dateModified": "2026-07-10T17:25:54+02:00",
+    "dateModified": "2026-07-11T13:29:50+02:00",
     "dateCreated": "2026-03-03T14:17:10+01:00"
   },
   "data-pipeline": {

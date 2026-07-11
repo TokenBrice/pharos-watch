@@ -551,7 +551,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/depeg-resolver.ts` - handleDepegResolver
 - `worker/src/api/dex-liquidity-evidence.ts` - LiquidityEvidenceClassification, classifyLiquidityEvidence, isTrendworthyLiquiditySnapshot
 - `worker/src/api/dex-liquidity-history.ts` - handleDexLiquidityHistory
-- ... 135 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 136 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -635,7 +635,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dews/source-state/hydration.ts` - BlacklistHydration, DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC, DEWS_STALE_DEX_LIQUIDITY_SEC, DewsSourceCoverage, DexLiquidityHistoryHydration, DexLiquidityHydration
 - `worker/src/cron/dews/source-state/legacy-bridge.ts` - LegacyDecodeResult, decodeLegacyStressSignals, getBoolean, getNumber, getObject, getString
 - `worker/src/cron/dex-discovery/crawl-coingecko-pools.ts` - CoinGeckoPoolsStageDependencies, CoinGeckoPoolsStageResult, crawlCoinGeckoPoolsStage
-- ... 382 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 384 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
