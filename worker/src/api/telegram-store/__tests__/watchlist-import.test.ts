@@ -56,10 +56,11 @@ function direct(stablecoinId: string, alertDews: boolean): WatchlistTokenDirectS
 function seed(
   sqlite: DatabaseSync,
   payload: object,
-  options: { updateId?: number; generation?: number } = {},
+  options: { updateId?: number; generation?: number; activeSnoozeUntilTs?: number } = {},
 ): void {
   const updateId = options.updateId ?? 7001;
   const generation = options.generation ?? 5;
+  const activeSnoozeUntilTs = options.activeSnoozeUntilTs ?? NOW + 100_000;
   sqlite.prepare(`
     INSERT INTO telegram_subscribers (
       chat_id, username, created_at, last_active_at, preference_generation,
@@ -77,7 +78,7 @@ function seed(
       ('chat', 'dai-makerdao', 1, 0, 1, 1, 'WARNING', NULL, ?),
       ('chat', 'usdt-tether', 0, 0, 0, 0, NULL, NULL, ?),
       ('chat', 'frax-frax', 0, 0, 0, 0, NULL, NULL, ?)
-  `).run(NOW + 100_000, NOW + 100_000, NOW - 1, NOW + 100_000);
+  `).run(activeSnoozeUntilTs, activeSnoozeUntilTs, NOW - 1, activeSnoozeUntilTs);
   sqlite.prepare(`
     INSERT INTO telegram_preset_subscriptions (
       chat_id, preset_id, alert_dews, alert_depeg, alert_safety,
@@ -214,8 +215,9 @@ describe("watchlist v2 atomic replacement", () => {
       depegWorseningBpsStep: 500 as const,
     }];
     const payload = { kind: "watchlist-import-v2", directEntries: desiredDirect.map(packWatchlistDirectState) };
+    const activeSnoozeUntilTs = Math.floor(Date.now() / 1000) + 100_000;
     try {
-      seed(sqlite, payload);
+      seed(sqlite, payload, { activeSnoozeUntilTs });
       const outcome = await applyWatchlistImportV2(db, {
         chatId: "chat",
         expectedPreferenceGeneration: 5,
@@ -244,7 +246,7 @@ describe("watchlist v2 atomic replacement", () => {
             alert_depeg: 0,
             dews_min_band: null,
             depeg_worsening_bps_step: null,
-            alert_snooze_until_ts: NOW + 100_000,
+            alert_snooze_until_ts: activeSnoozeUntilTs,
           },
           {
             stablecoin_id: "pyusd-paypal",
@@ -260,7 +262,7 @@ describe("watchlist v2 atomic replacement", () => {
             alert_depeg: 1,
             dews_min_band: null,
             depeg_worsening_bps_step: 250,
-            alert_snooze_until_ts: NOW + 100_000,
+            alert_snooze_until_ts: activeSnoozeUntilTs,
           },
         ],
         presets: [{
