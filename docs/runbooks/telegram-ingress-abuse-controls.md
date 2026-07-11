@@ -2,15 +2,15 @@
 
 ## Scope
 
-This runbook covers the three unauthenticated public POST entrypoints that authenticate with Telegram credentials inside the Worker:
+This runbook covers the three unauthenticated public POST entrypoints that authenticate with Telegram credentials inside the Worker. `api.pharos.watch` uses the canonical limiter budget shown below; requests reaching the same paths on another Worker host use a separate noncanonical-host budget.
 
-| Route | Worker per-colo ceiling | WAF per-IP ceiling | Body cap |
-| --- | ---: | ---: | ---: |
-| `POST /api/telegram-webhook` | 2,400/min | 2,400/min | 128 KiB |
-| `POST /api/telegram-mini-app/session` | 1,600/min | 120/min | 16 KiB |
-| `POST /api/telegram-mini-app/mutate` | 9,600/min | 360/min | 16 KiB |
+| Route                                 | Worker per-colo ceiling | WAF per-IP ceiling | Body cap |
+| ------------------------------------- | ----------------------: | -----------------: | -------: |
+| `POST /api/telegram-webhook`          |               2,400/min |          2,400/min |  128 KiB |
+| `POST /api/telegram-mini-app/session` |               1,600/min |            120/min |   16 KiB |
+| `POST /api/telegram-mini-app/mutate`  |               9,600/min |            360/min |   16 KiB |
 
-The Worker ceilings are native Cloudflare Workers [Rate Limiting bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/). They are permissive, eventually consistent, and local to the Cloudflare location serving the request. They bound work; they are not exact accounting.
+The Worker ceilings are native Cloudflare Workers [Rate Limiting bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/). They are permissive, eventually consistent, and local to the Cloudflare location serving the request. They bound work; they are not exact accounting. Noncanonical hosts share a separate key per route, so preview, site-data, or ops-origin traffic cannot consume the canonical public API budget while still remaining pre-auth rate limited.
 
 The WAF rules are **required operator configuration, not deployed state represented by this repository**. `worker/config/telegram-ingress-abuse-policy.json` is the configuration of record. `wrangler deploy` installs the Worker bindings but does not create zone WAF rules.
 
@@ -18,7 +18,7 @@ The WAF rules are **required operator configuration, not deployed state represen
 
 `worker/src/handlers/http/request-dispatch.ts` applies the ingress guard after CORS preflight and maintenance mode, but before Access/API-key gates, routing, Telegram authentication, D1, request attribution, or usage analytics:
 
-1. Match the exact pathname and `POST` method.
+1. Match the exact pathname and `POST` method. `api.pharos.watch` uses the canonical route key; every other routed hostname uses the route's shared noncanonical-host key before continuing to the normal host/lane gate.
 2. Reject malformed declared `Content-Length` with `400` and declared oversize bodies with `413`.
 3. Charge the path-specific Rate Limiting binding. Exhaustion returns `429`; a missing or failed binding fails closed with `503` and `Retry-After: 1`.
 4. Read at most the path body cap so chunked or misleading requests cannot bypass the declared-size check.
@@ -31,11 +31,11 @@ An over-budget request therefore does not read its body, execute Telegram HMAC w
 
 Cloudflare evaluates zone [rate limiting rules](https://developers.cloudflare.com/waf/rate-limiting-rules/) before the Worker. Create these rules from `worker/config/telegram-ingress-abuse-policy.json` in the `pharos.watch` zone using Security -> WAF -> Rate limiting rules or the Rulesets API:
 
-| Rule | Exact match | Characteristics | Threshold | Action |
-| --- | --- | --- | ---: | --- |
-| `telegram-webhook-ingress-limit` | host `api.pharos.watch`, `POST`, path `/api/telegram-webhook` | IP, data center ID | 2,400/60s | Block 60s |
-| `telegram-mini-app-session-ingress-limit` | host `api.pharos.watch`, `POST`, path `/api/telegram-mini-app/session` | IP, data center ID | 120/60s | Block 60s |
-| `telegram-mini-app-mutation-ingress-limit` | host `api.pharos.watch`, `POST`, path `/api/telegram-mini-app/mutate` | IP, data center ID | 360/60s | Block 60s |
+| Rule                                       | Exact match                                                            | Characteristics    | Threshold | Action    |
+| ------------------------------------------ | ---------------------------------------------------------------------- | ------------------ | --------: | --------- |
+| `telegram-webhook-ingress-limit`           | host `api.pharos.watch`, `POST`, path `/api/telegram-webhook`          | IP, data center ID | 2,400/60s | Block 60s |
+| `telegram-mini-app-session-ingress-limit`  | host `api.pharos.watch`, `POST`, path `/api/telegram-mini-app/session` | IP, data center ID |   120/60s | Block 60s |
+| `telegram-mini-app-mutation-ingress-limit` | host `api.pharos.watch`, `POST`, path `/api/telegram-mini-app/mutate`  | IP, data center ID |   360/60s | Block 60s |
 
 The data center ID characteristic is mandatory for API-created Cloudflare rate limiting rules. Keep the exact expressions from the policy artifact; do not use `starts_with()` for these three rules.
 
@@ -84,7 +84,7 @@ npx tsc -p worker/tsconfig.json --noEmit
 npx wrangler deploy --dry-run --config worker/wrangler.toml --outdir /tmp/pharos-worker-dry-run
 ```
 
-The tests enforce exact path/method matching, request cost order, streamed body caps, fail-closed binding behavior, the 800-session launch burst, route isolation, telemetry fields, Wrangler binding budgets, and the broad WAF-rule exclusion.
+The tests enforce exact host/path/method matching, request cost order, streamed body caps, fail-closed binding behavior, the 800-session launch burst, route isolation, telemetry fields, Wrangler binding budgets, and the broad WAF-rule exclusion.
 
 After production rollout, verify one ordinary Mini App launch and mutation, then confirm no unexpected `429` or `503` increase. Do not generate enough requests to trip production limits merely to test the rule.
 

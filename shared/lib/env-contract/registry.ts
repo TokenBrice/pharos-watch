@@ -758,6 +758,16 @@ export const ENV_BINDINGS = [
       pagesSiteData: { order: 4, status: "required" },
     },
   },
+  {
+    key: "TELEGRAM_ADOPTION_IP_HASH_SECRET",
+    valueType: "string",
+    description: "Dedicated HMAC pepper for PharosWatchBot CTA telemetry per-client minute quotas; raw IP addresses are never stored.",
+    docs: { includeInOperatorOriginAccess: true },
+    example: { section: "pagesSiteDataRequired", value: "" },
+    runtimes: {
+      pagesSiteData: { order: 6, status: "required" },
+    },
+  },
 ] satisfies readonly EnvBindingDefinition[];
 
 export type EnvBindingKey = (typeof ENV_BINDINGS)[number]["key"];

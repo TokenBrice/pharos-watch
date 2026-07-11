@@ -1,4 +1,3 @@
-import { throwIfAborted } from "../../lib/abort";
 import { buildInClause, chunkArray, batchExecute, executeAtomicBatch } from "../../lib/db";
 import {
   schedulePerChatBatches,
@@ -1090,7 +1089,6 @@ export async function drainPendingQueue(
 
   const predecessorRetryAtByChat = new Map<string, number>();
   for (const [index, scheduledResult] of scheduledResults.entries()) {
-    throwIfAborted(signal);
     const sendable = sendableRows[index];
     if (!sendable) continue;
     const result: PendingSendResult = {

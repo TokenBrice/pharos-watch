@@ -8,5 +8,10 @@
     "file": "worker/src/lib/cron-logger.ts",
     "lineIncludes": "await runWithOverloadRetry(() =>",
     "reason": "Terminal cron_run logging is wrapper cleanup and must still run after the job signal aborts."
+  },
+  {
+    "file": "worker/src/cron/telegram-pending/drain.ts",
+    "lineIncludes": "for (const [index, scheduledResult] of scheduledResults.entries())",
+    "reason": "Telegram has already accepted or rejected these completed sends, so every result must be durably reconciled even if the cron signal aborts after delivery."
   }
 ]

@@ -8,7 +8,12 @@ import {
   maxPublicStatus,
 } from "@shared/lib/public-health";
 import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
-import type { CacheStatus, HealthResponse, StablecoinPublicationHealth } from "@shared/types/status";
+import type {
+  CacheStatus,
+  D1CapacityAssessment,
+  HealthResponse,
+  StablecoinPublicationHealth,
+} from "@shared/types/status";
 import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-utils";
 import {
   BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
@@ -101,7 +106,7 @@ export interface PublicHealthAssessment {
   openCircuitCount: number;
   circuitImpactStatus: HealthResponse["status"];
   circuitQueryError: string | null;
-  d1Capacity: HealthResponse["d1Capacity"];
+  d1Capacity: D1CapacityAssessment | null;
   d1CapacityImpactStatus: HealthResponse["status"];
   d1CapacityQueryError: string | null;
   alertBroker: AlertBrokerSummary;
@@ -473,7 +478,7 @@ export async function assessPublicHealth(
     warnings.push("d1-capacity-query-failed");
   } else if (d1CapacityResult.assessment?.thresholdState !== "normal" && d1CapacityResult.assessment) {
     warnings.push(
-      `d1-capacity-${d1CapacityResult.assessment.thresholdState}:${d1CapacityResult.assessment.utilizationPercent}`,
+      `d1-capacity-${d1CapacityResult.assessment.thresholdState}`,
     );
   }
 

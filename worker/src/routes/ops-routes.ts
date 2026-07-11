@@ -3,7 +3,7 @@ import { handleStatusHistoryRoute } from "../api/status-history";
 import { handleRequestSourceStats } from "../api/request-source-stats";
 import { handleYieldSourceDecisions } from "../api/yield-source-decisions";
 import { handleApiKeyAuditLog } from "../api/api-key-audit-log";
-import { handleApiKeysRoute } from "../api/api-keys";
+import { handleApiKeysRoute, handleCredentialLifecycleSummaryRoute } from "../api/api-keys";
 import { handleApiKeyRequestsAdminRoute } from "../api/api-key-requests";
 import { handleDiscoveryCandidates } from "../api/discovery";
 import { handleAdminActionLog } from "../api/admin-action-log";
@@ -19,6 +19,7 @@ export const OPS_STATIC_ROUTES = [
     handleRequestSourceStats(db, trustedAdmin, request)),
   defineStaticRoute("yield-source-decisions", handleYieldSourceDecisions),
   defineStaticRoute("api-keys", handleApiKeysRoute),
+  defineStaticRoute("credential-lifecycle-summary", handleCredentialLifecycleSummaryRoute),
   defineStaticRoute("api-key-audit-log", ({ db, trustedAdmin, request }) =>
     handleApiKeyAuditLog(db, trustedAdmin, request)),
   defineStaticRoute("api-key-requests-admin", handleApiKeyRequestsAdminRoute),

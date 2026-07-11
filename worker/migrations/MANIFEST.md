@@ -139,6 +139,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0193     | `0193_yield_coverage_review_dispositions.sql`                 | Add durable evidence-fingerprinted Yield Intelligence coverage-review dispositions with bounded owner, review, and expiry metadata                      |
 | 0194     | `0194_yield_history_reproducible_pys_inputs.sql`              | Add versioned exact PYS input snapshots to Yield Intelligence history rows                                                                               |
 | 0195     | `0195_brla_native_recovery_price_repair.sql`                   | Clear BRLA event 90509's mixed-unit USD recovery price from its native-BRL quote-domain row                                                               |
+| 0196     | `0196_telegram_adoption_client_quota.sql`                     | Add hashed-IP per-client minute quotas for public PharosWatchBot CTA telemetry                                                                           |
 
 ## Retired Individual Migrations
 
@@ -216,6 +217,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0193_yield_coverage_review_dispositions.sql`: roll back coverage-review suppression by restoring the prior Worker. Keep the additive disposition rows as operator evidence; older Workers ignore the table and no promotion is applied automatically.
 - `0194_yield_history_reproducible_pys_inputs.sql`: roll back exact PYS history snapshots by restoring the prior Worker. Keep the nullable JSON input column; older Workers ignore it and existing history rows remain readable.
 - `0195_brla_native_recovery_price_repair.sql`: roll back the runtime quote-domain fix by restoring the prior Worker. Keep event 90509's repaired `NULL` recovery price; the discarded USD value was not comparable to the row's native-BRL prices.
+- `0196_telegram_adoption_client_quota.sql`: roll back per-client CTA quota enforcement by restoring the prior Pages version. Keep the additive hashed-IP quota table for forensic inspection; older Pages code ignores it and no raw IP addresses are stored.
 
 ## Rollback Procedure
 

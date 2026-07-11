@@ -73,5 +73,6 @@
         "mitigationTimeoutSec": 60
       }
     ]
-  }
+  },
+  "protectedHostname": "api.pharos.watch"
 }

@@ -42,8 +42,26 @@ export function decodeAddressArrayWord(raw: string | null | undefined): `0x${str
   }
 }
 
-export function decodeBytes32ArrayWord(raw: string | null | undefined): `0x${string}`[] | null {
-  if (typeof raw !== "string" || !raw.startsWith("0x")) return null;
+export function decodeBytes32ArrayWord(
+  raw: string | null | undefined,
+  options: { maxItems?: number } = {},
+): `0x${string}`[] | null {
+  if (typeof raw !== "string" || !/^0x[0-9a-fA-F]*$/.test(raw)) return null;
+  const { maxItems } = options;
+  if (maxItems != null) {
+    if (!Number.isSafeInteger(maxItems) || maxItems < 0 || raw.length < 130) return null;
+    try {
+      const arrayOffsetBytes = Number(BigInt(`0x${raw.slice(2, 66)}`));
+      if (!Number.isSafeInteger(arrayOffsetBytes) || arrayOffsetBytes < 0) return null;
+      const arrayLengthWordStart = 2 + arrayOffsetBytes * 2;
+      const arrayLengthWordEnd = arrayLengthWordStart + 64;
+      if (arrayLengthWordEnd > raw.length) return null;
+      const itemCount = BigInt(`0x${raw.slice(arrayLengthWordStart, arrayLengthWordEnd)}`);
+      if (itemCount > BigInt(maxItems)) return null;
+    } catch {
+      return null;
+    }
+  }
   try {
     const [items] = decodeAbiParameters(
       [{ type: "bytes32[]" }],

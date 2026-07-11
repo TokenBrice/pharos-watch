@@ -42,6 +42,7 @@ interface StubState {
   deadLetters: DeadLetterRow[];
   jobTargets: CreatedAtRow[];
   jobs: CreatedAtRow[];
+  adoptionClientQuota: UpdatedAtRow[];
   diagnostics: UpdatedAtRow[];
   cache: CacheRow[];
 }
@@ -54,6 +55,7 @@ function makeState(): StubState {
     deadLetters: [],
     jobTargets: [],
     jobs: [],
+    adoptionClientQuota: [],
     diagnostics: [],
     cache: [],
   };
@@ -66,10 +68,7 @@ function makeState(): StubState {
  * `reconcileExpiredTelegramAlertJobTargets`). Mirrors the pattern in
  * prune-cron-history.test.ts and telegram-inactive-cleanup.test.ts.
  */
-function createStubDb(
-  state: StubState,
-  options: { afterProcessedUpdateDelete?: () => void } = {},
-): D1Database {
+function createStubDb(state: StubState, options: { afterProcessedUpdateDelete?: () => void } = {}): D1Database {
   function boundDeleteLimit(bound: unknown[]): number {
     const limit = Number(bound[2]);
     return Number.isFinite(limit) ? limit : Number.POSITIVE_INFINITY;
@@ -77,7 +76,7 @@ function createStubDb(
 
   function deleteMatching<T>(rows: T[], predicate: (row: T) => boolean, limit = Number.POSITIVE_INFINITY): number {
     let removed = 0;
-    for (let i = 0; i < rows.length && removed < limit; ) {
+    for (let i = 0; i < rows.length && removed < limit;) {
       if (predicate(rows[i])) {
         rows.splice(i, 1);
         removed += 1;
@@ -142,6 +141,15 @@ function createStubDb(
           const removed = deleteMatching(state.watcherLifecycle, (row) => row.day < cutoff, boundDeleteLimit(bound));
           return { success: true, meta: { changes: removed } };
         }
+        if (sql.startsWith("DELETE FROM telegram_adoption_client_quota")) {
+          const [cutoff] = bound as [number];
+          const removed = deleteMatching(
+            state.adoptionClientQuota,
+            (row) => row.updated_at < cutoff,
+            boundDeleteLimit(bound),
+          );
+          return { success: true, meta: { changes: removed } };
+        }
         if (sql.startsWith("DELETE FROM telegram_chat_delivery_diagnostics")) {
           const [cutoff] = bound as [number];
           const removed = deleteMatching(state.diagnostics, (row) => row.updated_at < cutoff, boundDeleteLimit(bound));
@@ -162,10 +170,7 @@ function createStubDb(
       first: async () => {
         if (sql.includes("SELECT COUNT(*) AS count") && sql.includes("FROM telegram_processed_updates")) {
           const [cutoff, _unknownCutoff, limit] = bound as [number, number, number];
-          const count = Math.min(
-            state.processedUpdates.filter((row) => row.received_at < cutoff).length,
-            limit,
-          );
+          const count = Math.min(state.processedUpdates.filter((row) => row.received_at < cutoff).length, limit);
           return { count };
         }
         return null;
@@ -374,6 +379,19 @@ describe("runTelegramRetentionCleanup", () => {
       probeLimit: 5_001,
     });
     expect(metadata.runBudgetTruncated).toBe(true);
+  });
+
+  it("prunes stale Telegram adoption client quota rows after two days", async () => {
+    const state = makeState();
+    const now = Math.floor(Date.now() / 1000);
+    state.adoptionClientQuota.push({ updated_at: now - 3 * 24 * 60 * 60 }, { updated_at: now - 3600 });
+    const db = createStubDb(state);
+
+    const result = await runTelegramRetentionCleanup(db);
+
+    expect(state.adoptionClientQuota).toEqual([{ updated_at: now - 3600 }]);
+    const metadata = JSON.parse(result.metadata!) as { adoptionClientQuotaPruned: number };
+    expect(metadata.adoptionClientQuotaPruned).toBe(1);
   });
 
   it("prunes stale Telegram chat cache residue by prefix", async () => {

@@ -3,6 +3,7 @@ import {
   handleApiKeyRotateRoute,
   handleApiKeyUpdateRoute,
   handleApiKeysRoute,
+  handleCredentialLifecycleSummaryRoute,
 } from "../api-keys";
 
 // Request-synthesis adapters used only by api-keys.test.ts to call the route
@@ -39,4 +40,12 @@ export function handleApiKeyRotate(
   apiKeyHashPepper?: string,
 ): Promise<Response> {
   return handleApiKeyRotateRoute({ db, apiKeyId: id, trustedAdmin, request, apiKeyHashPepper });
+}
+
+export function handleCredentialLifecycleSummary(
+  db: D1Database,
+  trustedAdmin = false,
+  request: Request = fallbackAdminRequest(API_PATHS.credentialLifecycleSummary()),
+): Promise<Response> {
+  return handleCredentialLifecycleSummaryRoute({ db, trustedAdmin, request });
 }

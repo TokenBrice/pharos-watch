@@ -247,6 +247,7 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and en
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints, `GET /api/backfill-dews`, and dry-run repair previews for `GET /api/backfill-dews?repair=...&dry-run=true`).
 - `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`.
 - `GET, POST` is accepted on `/api/api-keys` so operators can list keys and create a new key through the same route.
+- `GET` is accepted on `/api/api-keys/lifecycle-summary` for counts-only Triage credential monitoring.
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
 - `/api/backfill-dews` allows `GET` for the historical backtest and for `repair=...&dry-run=true` previews; mutating repair runs are `POST`-only.
@@ -971,7 +972,7 @@ The four `perCoin*` maps power the per-coin "Blacklist Activity" block on stable
   },
   "reconciliation": {
     "status": "verified",
-    "runId": "night-watch-usdt-tron-2026-07-09:<bookmark>",
+    "runId": "night-watch-usdt-tron-2026-07-09:apply:1783660000",
     "manifestId": "night-watch-usdt-tron-2026-07-09",
     "manifestSha256": "bc46bbce09a1c7e926499c07e6f968a914ae9df58c8acec552b7ebff1425f917",
     "bookmarkRecorded": true,
@@ -2003,23 +2004,6 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
     "defillama-stablecoins": { "state": "closed", "consecutiveFailures": 0, "lastSuccessAt": 1772190029 },
     "coingecko-prices": { "state": "closed", "consecutiveFailures": 0, "lastSuccessAt": 1772190030 }
   },
-  "d1Capacity": {
-    "observedAt": 1771856400,
-    "databaseSizeBytes": 4079546368,
-    "maximumSizeBytes": 10000000000,
-    "utilizationRatio": 0.407955,
-    "utilizationPercent": 40.8,
-    "thresholdState": "normal",
-    "crossedThresholdPercent": null,
-    "nextThresholdPercent": 60,
-    "sampleCount": 72,
-    "forecastBasis": "linear-30d",
-    "forecastSpanHours": 71,
-    "growthBytesPerDay": 12000000,
-    "nextThresholdAt": 1787860189,
-    "exhaustionAt": 1814488989,
-    "daysUntilExhaustion": 493.4
-  },
   "telegramSummary": {
     "totalChats": 142,
     "pendingDeliveries": 0,
@@ -2078,7 +2062,6 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
 | `mintBurn.sync.warning`                       | `string \| null`                                                          | Human-readable warning when the critical lane is stale, degraded, or errored                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `mintBurn.sync.criticalLaneHealthy`           | `boolean`                                                                 | `true` when the latest critical-lane run is `ok`, `degraded`, or `skipped_locked`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `circuits`                                    | `Record<string, CircuitRecord>`                                           | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `dexscreener-liquidity`, `dexscreener-search`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fx-realtime` |
-| `d1Capacity`                                  | `D1CapacityAssessment \| null`                                            | Latest hourly D1 file-size assessment. `watch` starts at 60%, `warning` at 75%, and `critical` at 90% of the 10 GB ceiling. Forecast fields remain null until enough growing history exists. Optional for old-Worker compatibility.                                                                                                                                                                                                                                                                                                                                 |
 
 **`CacheStatus`**
 
@@ -3748,7 +3731,7 @@ New values carry both `provenance: "pharos-verified"` / `snapshotSchemaVersion: 
 
 Same-origin Pages Function used by allowlisted `/pharoswatchbot/` CTA links. It accepts a strict JSON body containing `campaign="landing"` and one canonical placement (`hero`, `setup`, `miniapp_setup`, `miniapp_home`, or `miniapp_watchlist`). The request body is capped at 512 bytes and must carry a permitted Pharos Pages `Origin` or `Referer`.
 
-The function writes one aggregate `cta_click` count through the Pages project's primary `DB` D1 binding. It stores no IP address, IP hash, User-Agent, referrer, cookie, request ID, chat ID, or user ID. An identifier-free global quota admits at most 3,000 requests per UTC minute; exhausted quota returns `429` with `Retry-After: 60`. Success returns `204 No Content`. Invalid method/origin/schema, missing binding, and D1 failures return `405`, `404`, `400`, `503`, and `500` respectively. Telemetry is best-effort and never blocks the link navigation.
+The function writes one aggregate `cta_click` count through the Pages project's primary `DB` D1 binding. It stores no raw IP address, User-Agent, referrer, cookie, request ID, chat ID, or user ID. A dedicated-pepper HMAC of `CF-Connecting-IP` is used only in the minute-quota table, where a per-client quota admits at most 10 requests per minute before the identifier-free global quota admits at most 3,000 requests per UTC minute; exhausted quota returns `429` with `Retry-After: 60`. Success returns `204 No Content`. Invalid method/origin/schema, missing binding, and D1 failures return `405`, `404`, `400`, `503`, and `500` respectively. Telemetry is best-effort and never blocks the link navigation.
 
 ### `POST /selector-snapshot`
 
@@ -4310,7 +4293,7 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 
 `coingeckoPriceDiff` is an admin-only live comparison block. It reads the cached tracked assets with `geckoId`, fetches current CoinGecko spot prices through one or more batched `simple/price` calls, and reports the rows where `abs(pharosPrice - coinGeckoPrice) / coinGeckoPrice > 0.05`. The field is `null` when the comparison is unavailable in the current environment or when the loader fails; failures are surfaced through `sectionErrors.coingeckoPriceDiff`.
 
-`d1Usage` is an admin-only live D1 telemetry block. It uses Cloudflare's D1 database info endpoint plus a trailing-24h `d1AnalyticsAdaptiveGroups` GraphQL query to surface current storage size, table count, replication mode, and recent query/row volume. Its additive `capacity` member carries the latest hourly 60/75/90% threshold classification and a 30-day linear forecast when at least three observations span 24 hours. The same assessment is exposed as optional `d1Capacity` on public health and evaluated by the scheduled status lane through the durable alert broker. The field is `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker; loader/config failures are surfaced through `sectionErrors.d1Usage`.
+`d1Usage` is an admin-only live D1 telemetry block. It uses Cloudflare's D1 database info endpoint plus a trailing-24h `d1AnalyticsAdaptiveGroups` GraphQL query to surface current storage size, table count, replication mode, and recent query/row volume. Its additive `capacity` member carries the latest hourly 60/75/90% threshold classification and a 30-day linear forecast when at least three observations span 24 hours. The same assessment is evaluated by the scheduled status lane through the durable alert broker, but exact D1 capacity telemetry is not exposed by the no-key public health endpoint. The field is `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker; loader/config failures are surfaced through `sectionErrors.d1Usage`.
 
 `liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
 
@@ -4463,6 +4446,25 @@ Admin-only read-only debug endpoint for the Yield Intelligence publication ledge
 Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material. Expired keys remain listed for operator review; callers should use `isActive` plus `expiresAt` to distinguish `active`, `expired`, and deliberate non-expiring exceptions.
 
 **Response shape:** `ApiKeyListResponse` (defined in `shared/types/api-keys.ts`)
+
+
+### `GET /api/api-keys/lifecycle-summary`
+
+Admin-only counts projection for the Triage workspace. Returns aggregate credential lifecycle counts and the 7-day rotate/deactivate anomaly count without exposing API-key row metadata, owner emails, masked tokens, audit actors, or audit detail payloads.
+
+**Response shape:** `CredentialLifecycleSummaryResponse` (defined in `shared/types/api-keys.ts`)
+
+```json
+{
+  "generatedAt": 1710500000,
+  "totalKeys": 12,
+  "active": 10,
+  "expiringSoon": 2,
+  "expired": 1,
+  "nonExpiring": 1,
+  "auditAnomalies7d": 3
+}
+```
 
 ### `GET /api/api-keys/audit-log`
 

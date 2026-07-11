@@ -6,13 +6,13 @@ import type { ApiKeyAuditEntry } from "@shared/types";
 import { makeApiKeySummary } from "@/test-utils/api-key-fixtures";
 import { STATUS_FIXTURE_NOW_SECONDS } from "@/test-utils/status-fixtures";
 
-const { useApiKeysMock, useApiKeyAuditLogMock } = vi.hoisted(() => ({
-  useApiKeysMock: vi.fn(),
-  useApiKeyAuditLogMock: vi.fn(),
+const { useCredentialLifecycleSummaryMock } = vi.hoisted(() => ({
+  useCredentialLifecycleSummaryMock: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-api-keys", () => ({ useApiKeys: useApiKeysMock }));
-vi.mock("@/hooks/use-api-key-audit-log", () => ({ useApiKeyAuditLog: useApiKeyAuditLogMock }));
+vi.mock("@/hooks/use-credential-lifecycle-summary", () => ({
+  useCredentialLifecycleSummary: useCredentialLifecycleSummaryMock,
+}));
 
 import { buildCredentialSummaryItems, CredentialSummaryCard } from "../credential-summary-card";
 
@@ -78,13 +78,20 @@ describe("buildCredentialSummaryItems", () => {
 
 describe("CredentialSummaryCard", () => {
   it("summarizes the inventory and links lifecycle work to API Management", () => {
-    useApiKeysMock.mockReturnValue({
-      data: { generatedAt: NOW, keys: KEYS },
+    useCredentialLifecycleSummaryMock.mockReturnValue({
+      data: {
+        generatedAt: NOW,
+        totalKeys: KEYS.length,
+        active: 3,
+        expiringSoon: 1,
+        expired: 1,
+        nonExpiring: 1,
+        auditAnomalies7d: 2,
+      },
       isLoading: false,
       isError: false,
       refetch: vi.fn(),
     });
-    useApiKeyAuditLogMock.mockReturnValue({ data: { entries: AUDIT_ENTRIES }, isLoading: false, isError: false });
 
     render(<CredentialSummaryCard />);
 
@@ -99,8 +106,7 @@ describe("CredentialSummaryCard", () => {
 
   it("keeps counts Unknown with a local retry when the inventory fails", () => {
     const refetch = vi.fn();
-    useApiKeysMock.mockReturnValue({ data: undefined, isLoading: false, isError: true, refetch });
-    useApiKeyAuditLogMock.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+    useCredentialLifecycleSummaryMock.mockReturnValue({ data: undefined, isLoading: false, isError: true, refetch });
 
     render(<CredentialSummaryCard />);
 

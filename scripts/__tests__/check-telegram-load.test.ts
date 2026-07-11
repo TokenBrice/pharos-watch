@@ -230,7 +230,28 @@ describe("Telegram status-path budgets", () => {
       expect(check.budget?.rowsReadTables.length).toBeGreaterThan(0);
       expect(check.budget?.maxRowsRead).toBeGreaterThan(0);
       expect(check.budget?.maxDurationMs).toBeGreaterThan(0);
+      if (
+        check.id === "pulse-aggregate" ||
+        check.id === "status-top-stablecoins" ||
+        check.id === "lifecycle-current-active-history"
+      ) {
+        expect(check.budget?.rowsReadTables).toContain("telegram_preset_subscriptions");
+      }
     }
+  });
+
+  it("models the two production top-followed aggregate queries", () => {
+    const check = buildQueryPlanChecks().find((candidate) => candidate.id === "status-top-stablecoins");
+
+    expect(check?.sql).toContain("COUNT(DISTINCT chat_id)");
+    expect(check?.sql.match(/COUNT\(DISTINCT chat_id\)/g)).toHaveLength(2);
+    expect(check?.sql).toContain("GROUP BY stablecoin_id");
+    expect(check?.sql).toContain("GROUP BY preset_id");
+    expect(check?.sql).not.toContain("GROUP BY source_id");
+    expect(check?.allowedFullScanTables).toEqual([
+      "telegram_subscriptions",
+      "telegram_preset_subscriptions",
+    ]);
   });
 
   it("passes a measurement within the reviewed maxima", () => {

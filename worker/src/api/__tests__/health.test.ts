@@ -183,6 +183,7 @@ describe("handleHealth", () => {
     expect(body).toHaveProperty("blacklist");
     expect(body).toHaveProperty("mintBurn");
     expect(body).toHaveProperty("circuits");
+    expect(body).not.toHaveProperty("d1Capacity");
     expect(body.blacklist).toMatchObject({
       totalEvents: 0,
       missingAmounts: 0,
@@ -201,6 +202,55 @@ describe("handleHealth", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_events"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("sqlite_sequence"))).toBe(false);
+  });
+
+  it("does not expose exact D1 capacity telemetry on the public response", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const assessment = {
+      observedAt: now,
+      databaseSizeBytes: 7_500_000_000,
+      maximumSizeBytes: 10_000_000_000,
+      utilizationRatio: 0.75,
+      utilizationPercent: 75,
+      thresholdState: "warning",
+      crossedThresholdPercent: 75,
+      nextThresholdPercent: 90,
+      sampleCount: 72,
+      forecastBasis: "linear-30d",
+      forecastSpanHours: 71,
+      growthBytesPerDay: 100_000_000,
+      nextThresholdAt: now + 15 * 86_400,
+      exhaustionAt: now + 25 * 86_400,
+      daysUntilExhaustion: 25,
+    };
+    const db = makeHealthyHealthDb(now, {
+      extras: [
+        {
+          match: "SELECT value, updated_at FROM cache WHERE key = ?",
+          matchBinds: ["ops:d1-capacity:v1"],
+          rows: [],
+          first: {
+            value: JSON.stringify({ version: 1, assessment }),
+            updated_at: now,
+          },
+        },
+      ],
+    });
+
+    const res = await handleHealth(db);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      status: "healthy" | "degraded" | "stale";
+      warnings: string[];
+      d1Capacity?: unknown;
+    };
+
+    expect(body.status).toBe("degraded");
+    expect(body).not.toHaveProperty("d1Capacity");
+    expect(JSON.stringify(body)).not.toContain("databaseSizeBytes");
+    expect(JSON.stringify(body)).not.toContain("daysUntilExhaustion");
+    expect(body.warnings).toContain("d1-capacity-warning");
+    expect(body.warnings.join(" ")).not.toContain("75");
   });
 
   it("returns the bounded realtime Cache-Control profile", async () => {

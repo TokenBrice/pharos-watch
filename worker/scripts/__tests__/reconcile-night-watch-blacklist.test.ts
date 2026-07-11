@@ -17,6 +17,7 @@ const SCRIPT_NAME = "worker/scripts/reconcile-night-watch-blacklist.ts";
 const frozenManifest = frozenManifestJson as FrozenManifest;
 const bookmark = "00001d80-000109c2-000050a4-9f8ee3f29d2234f14494a399c6769f35";
 const nowMs = frozenManifest.cutoffInclusive + 15 * 60_000;
+const expectedApplyRunId = `${frozenManifest.manifestId}:apply:${Math.floor(nowMs / 1000)}`;
 const migrationsDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../migrations");
 
 function amountNative(event: FrozenManifestEvent): number | null {
@@ -209,6 +210,8 @@ describe("Night Watch blacklist reconciliation", () => {
     expect(mutationStatements.some((sql) => sql.includes("night-watch-reconciliation:trongrid"))).toBe(true);
     expect(mutationStatements.join("\n")).not.toContain("DELETE FROM blacklist_events");
     expect(mutationStatements.join("\n")).not.toContain("DELETE FROM blacklist_current_balances");
+    expect(summary.runId).toBe(expectedApplyRunId);
+    expect(JSON.stringify(summary)).not.toContain(bookmark);
 
     const sqlite = new DatabaseSync(":memory:");
     const migrationFiles = readdirSync(migrationsDir)
@@ -234,7 +237,7 @@ describe("Night Watch blacklist reconciliation", () => {
     };
     expect(tail).toEqual({
       reconciliation_manifest_id: null,
-      reconciliation_run_id: `${frozenManifest.manifestId}:${bookmark}`,
+      reconciliation_run_id: expectedApplyRunId,
     });
     sqlite.close();
   });
