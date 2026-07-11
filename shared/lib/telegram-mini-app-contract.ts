@@ -24,6 +24,7 @@ export const TELEGRAM_MINI_APP_ERROR_CODES = [
   "invalid-timezone",
   "recap-timezone-required",
   "recap-subscriber-required",
+  "recap-unavailable",
   "stale-recap-preference",
   "invalid-portable-token",
   "empty-portable-state",
@@ -369,6 +370,7 @@ export const TelegramMiniAppMutableStateSchema = z
           .passthrough(),
         recap: z
           .object({
+            available: z.boolean().default(false),
             enabled: z.boolean(),
             deliveryHourLocal: z.number().int().min(0).max(23),
             timezoneConfirmed: z.boolean(),
@@ -378,6 +380,7 @@ export const TelegramMiniAppMutableStateSchema = z
             lastOutcome: z.string().nullable(),
           })
           .default({
+            available: false,
             enabled: false,
             deliveryHourLocal: TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL,
             timezoneConfirmed: false,

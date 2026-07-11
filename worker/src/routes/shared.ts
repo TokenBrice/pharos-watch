@@ -13,6 +13,7 @@ import type { TelegramCreds } from "../lib/telegram";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { FeedbackEnv } from "../api/feedback";
 import type { ApiKeySelfServeEnv } from "../api/api-key-requests/types";
+import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 /** Core context available to every route handler. */
 export interface RouteContext {
@@ -31,6 +32,10 @@ export interface TelegramRouteFields {
   telegramBotToken: string | undefined;
   telegramBotTokenPrevious: string | undefined;
   telegramCreds: TelegramCreds | null;
+}
+
+export interface TelegramRecapRolloutRouteFields {
+  telegramRecapRollout: TelegramRecapRolloutPolicy;
 }
 
 export interface DigestRouteFields {
@@ -90,6 +95,7 @@ export interface RouteDependencyFieldMap {
   mintBurnFreshnessConfig: MintBurnFreshnessRouteFields;
   workerVersion: WorkerVersionRouteFields;
   telegram: TelegramRouteFields;
+  telegramRecapRollout: TelegramRecapRolloutRouteFields;
 }
 
 type UnionToIntersection<U> = (

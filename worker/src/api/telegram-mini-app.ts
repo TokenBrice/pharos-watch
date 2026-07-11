@@ -49,6 +49,11 @@ import {
 } from "../lib/telegram-adoption-analytics";
 import type { TelegramAdoptionFeature } from "@shared/lib/telegram-adoption-analytics";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
+import {
+  TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+  isTelegramRecapAvailableToChat,
+  type TelegramRecapRolloutPolicy,
+} from "@shared/lib/telegram-recap-rollout";
 
 export const TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC = 24 * 60 * 60;
 // 5-min mutation window per community consensus; 24h session window preserved for reads.
@@ -381,7 +386,13 @@ function mutationErrorResponseCode(code: TelegramMiniAppMutationError["code"]): 
 
 export const handleTelegramMiniAppSession = miniAppErrorHandler(
   "telegram-mini-app-session",
-  async (db: D1Database, request: Request, botToken: string | undefined, botTokenPrevious?: string | undefined): Promise<Response> => {
+  async (
+    db: D1Database,
+    request: Request,
+    botToken: string | undefined,
+    botTokenPrevious?: string | undefined,
+    recapRollout: TelegramRecapRolloutPolicy = TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+  ): Promise<Response> => {
     const start = Date.now();
     if (!botToken?.trim()) return miniAppError(503, "not-configured", "Telegram Mini App auth is not configured");
     const parsed = await parseMiniAppRequestJson(
@@ -449,6 +460,7 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     const state = await loadTelegramMiniAppState(db, auth, {
       nowSec: unixNow(),
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
+      recapRollout,
     });
     return stateResponse(state, compatibility);
   },
@@ -456,7 +468,13 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
 
 export const handleTelegramMiniAppMutation = miniAppErrorHandler(
   "telegram-mini-app-mutation",
-  async (db: D1Database, request: Request, botToken: string | undefined, botTokenPrevious?: string | undefined): Promise<Response> => {
+  async (
+    db: D1Database,
+    request: Request,
+    botToken: string | undefined,
+    botTokenPrevious?: string | undefined,
+    recapRollout: TelegramRecapRolloutPolicy = TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+  ): Promise<Response> => {
     const start = Date.now();
     if (!botToken?.trim()) return miniAppError(503, "not-configured", "Telegram Mini App auth is not configured");
     const parsed = await parseMiniAppRequestJson(
@@ -496,6 +514,13 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       },
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
+
+    if (
+      parsed.operation.kind === "set-recap" &&
+      !isTelegramRecapAvailableToChat(recapRollout, auth.userId)
+    ) {
+      return miniAppError(404, "recap-unavailable", "Daily recap is not available for this chat");
+    }
 
     if (readOnlyPortability) {
       const cooldown = await acquireTelegramCommandCooldown(db, {
@@ -564,6 +589,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         const state = await loadTelegramMiniAppState(db, auth, {
           nowSec: unixNow(),
           mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
+          recapRollout,
         });
         return stateResponse(state, compatibility);
       }
@@ -608,6 +634,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     const state = await loadTelegramMiniAppState(db, auth, {
       nowSec: unixNow(),
       mutationMaxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
+      recapRollout,
     });
     return stateResponse(state, compatibility);
   },

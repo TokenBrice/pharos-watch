@@ -51,6 +51,10 @@ import {
   resolveCallbackCooldownCommandKey,
 } from "./telegram-webhook-ingress-policy";
 import type { TelegramWebhookUpdateWithChatMember } from "./telegram-webhook-update-normalization";
+import {
+  TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+  type TelegramRecapRolloutPolicy,
+} from "@shared/lib/telegram-recap-rollout";
 
 /**
  * Intent dispatch for claimed webhook updates: route callback taps and message
@@ -86,6 +90,7 @@ export async function handleTelegramCallbackQueryUpdate(args: {
   effectFence: TelegramWebhookEffectFence | null;
   beforeIrreversibleEffect: (kind: string) => Promise<void>;
   answerWebhookCallback: (callbackQueryId: string, options?: { text?: string }) => Promise<void>;
+  recapRollout?: TelegramRecapRolloutPolicy;
 }): Promise<Response> {
   const {
     db,
@@ -96,6 +101,7 @@ export async function handleTelegramCallbackQueryUpdate(args: {
     effectFence,
     beforeIrreversibleEffect,
     answerWebhookCallback,
+    recapRollout = TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
   } = args;
   let callbackErrorClass: string | null = null;
   let callbackCooldownKey: string | null = null;
@@ -165,6 +171,7 @@ export async function handleTelegramCallbackQueryUpdate(args: {
       confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
       storedIntent: effectFence?.storedIntent ?? null,
       wasMutationApplied: effectFence?.wasMutationApplied ?? false,
+      recapRollout,
     });
   } catch (err) {
     if (callbackChatId && callbackCooldownKey) {
@@ -201,8 +208,12 @@ export async function handleTelegramMessageUpdate(args: {
   effectFence: TelegramWebhookEffectFence | null;
   beforeIrreversibleEffect: (kind: string) => Promise<void>;
   operationNowSec: number;
+  recapRollout?: TelegramRecapRolloutPolicy;
 }): Promise<Response> {
-  const { db, update, botToken, finishOk, effectFence, beforeIrreversibleEffect, operationNowSec } = args;
+  const {
+    db, update, botToken, finishOk, effectFence, beforeIrreversibleEffect, operationNowSec,
+    recapRollout = TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+  } = args;
   const chatId = update.message?.chat?.id?.toString();
   const text = update.message?.text?.trim();
   const username = update.message?.chat?.username ?? null;
@@ -225,6 +236,7 @@ export async function handleTelegramMessageUpdate(args: {
     username,
     actorUserId,
     botToken,
+    recapRollout,
     operationNowSec,
     beforeIrreversibleEffect,
     planIntent: async (intent) => effectFence?.plan(intent),

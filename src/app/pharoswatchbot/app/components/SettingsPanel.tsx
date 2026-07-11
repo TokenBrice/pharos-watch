@@ -184,6 +184,7 @@ function DailyRecapSection({ state, canMutate, isMutating, pendingOperation, onM
   onMutate: (operation: TelegramMiniAppOperation) => void;
 }) {
   const recap = state.subscriber.recap;
+  if (!recap.available) return null;
   const timezone = state.subscriber.quietHours.timezone;
   const controlsDisabled = !canMutate || isMutating;
   const enableDisabled = controlsDisabled || (!recap.enabled && !recap.timezoneConfirmed);

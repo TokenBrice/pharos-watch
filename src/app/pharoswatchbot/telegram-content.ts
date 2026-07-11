@@ -8,7 +8,7 @@ import {
 import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-samples";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
-  "PharosWatchBot delivers customizable stablecoin risk alerts, watchlists, quiet hours, and a private daily recap in Telegram.";
+  "PharosWatchBot delivers customizable stablecoin risk alerts, watchlists, and quiet hours in Telegram.";
 
 /**
  * One-line utility blurb per alert family for the hero signal board. Keyed by
@@ -247,12 +247,6 @@ export const TELEGRAM_COMMAND_GROUPS = [
         description:
           "Set the chat's IANA timezone used to resolve /mute quiet hours locally (e.g. Europe/Paris, America/New_York). Sending /timezone with no argument shows the current zone and an inline keyboard of common zones.",
         example: "/timezone Europe/Paris",
-      },
-      {
-        command: "/recap [on|off|time <hour>]",
-        description:
-          "Configure a private daily recap of material changes for your watchlist and presets. It uses your /timezone and remains separate from immediate alert toggles.",
-        example: "/recap time 9",
       },
       {
         command: "/settings",

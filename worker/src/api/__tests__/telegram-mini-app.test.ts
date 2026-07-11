@@ -267,6 +267,7 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.subscriber.exists).toBe(true);
     expect(body.subscriber.snoozeUntilTs).toBeNull();
     expect(body.subscriber.recap).toEqual({
+      available: true,
       enabled: false,
       deliveryHourLocal: 9,
       timezoneConfirmed: false,
@@ -282,6 +283,39 @@ describe("handleTelegramMiniAppSession", () => {
       alertOverrides: { dews: true, depeg: true },
     });
     expect(body.catalog.searchableCoins.length).toBeGreaterThan(0);
+  });
+
+  it("marks recap unavailable in an off rollout and rejects its mutation before a preference write", async () => {
+    const initData = await privateInitData();
+    const offPolicy = { mode: "off" as const, allowedChatIds: new Set<string>() };
+    const sessionDb = mockD1(stateReadTables());
+
+    const session = await handleTelegramMiniAppSession(
+      sessionDb,
+      request("/api/telegram-mini-app/session", { initData }),
+      BOT_TOKEN,
+      undefined,
+      offPolicy,
+    );
+
+    expect(session.status).toBe(200);
+    await expect(session.json()).resolves.toMatchObject({ subscriber: { recap: { available: false } } });
+
+    const mutationDb = mockD1();
+    const mutation = await handleTelegramMiniAppMutation(
+      mutationDb,
+      request("/api/telegram-mini-app/mutate", {
+        initData,
+        operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 9 },
+      }),
+      BOT_TOKEN,
+      undefined,
+      offPolicy,
+    );
+
+    expect(mutation.status).toBe(404);
+    await expect(mutation.json()).resolves.toMatchObject({ code: "recap-unavailable" });
+    expect(historyHas(mutationDb, "telegram_recap_preferences")).toBe(false);
   });
 
   it("loads private-chat state through one D1 batch plus separate health diagnostics", async () => {

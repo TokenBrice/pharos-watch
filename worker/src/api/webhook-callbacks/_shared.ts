@@ -15,6 +15,7 @@ import { SNOOZE_SECONDS } from "../../lib/telegram-constants";
 import { isSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
 import { requireGroupAdminForCallback } from "../telegram-webhook-auth";
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
+import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { TelegramWebhookOperationIntent } from "../telegram-webhook-store";
 
 export { SNOOZE_SECONDS };
@@ -288,6 +289,7 @@ export interface CallbackContext {
   botToken: string;
   cb: TelegramCallbackQuery;
   chatId: string;
+  recapRollout?: TelegramRecapRolloutPolicy;
   parsed: ParsedCallbackData<CallbackAction>;
   beforeIrreversibleEffect: (kind: string) => Promise<void>;
   answerCallback: (options?: { text?: string }) => Promise<void>;

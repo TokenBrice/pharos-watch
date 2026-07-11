@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
+  cancelQueuedTelegramRecapsForRollout,
   getTelegramRecapPreference,
   listDueTelegramRecapPreferences,
   projectTelegramRecapTerminalOutcome,
@@ -99,6 +100,31 @@ describe("telegram recap store on latest SQLite schema", () => {
     expect(sqlite.prepare("SELECT source_type, priority, source_event_id, preference_generation FROM telegram_pending_alerts").get()).toEqual({ source_type: "personalized_recap", priority: 100, source_event_id: "recap:42:2026-07-11:v1", preference_generation: 1 });
     expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = '42'").get()).toEqual({ next_due_at: NOW + 86400 });
     await expect(queueTelegramRecapTarget(db, target("42"))).resolves.toBe("stale");
+  });
+
+  it("atomically cancels only queued personalized recap work for the off rollout", async () => {
+    const { sqlite, db } = setup();
+    for (const chatId of ["42", "43"]) {
+      subscriber(sqlite, chatId);
+      await setTelegramRecapPreference(db, preferenceInput(chatId));
+      await queueTelegramRecapTarget(db, target(chatId));
+    }
+    sqlite.prepare(`INSERT INTO telegram_pending_alerts
+      (chat_id, message_html, created_at, updated_at, dedupe_key, source_type)
+      VALUES ('risk-chat', 'risk', ?, ?, 'risk:1', 'risk_alert')`).run(NOW, NOW);
+
+    await expect(cancelQueuedTelegramRecapsForRollout(db, {
+      mode: "off",
+      allowedChatIds: new Set(),
+    }, NOW + 1)).resolves.toEqual({ targetRowsCancelled: 2, pendingRowsDeleted: 2 });
+
+    expect(sqlite.prepare("SELECT status, terminal_reason FROM telegram_recap_targets ORDER BY chat_id").all()).toEqual([
+      { status: "cancelled", terminal_reason: "recap_rollout_disabled" },
+      { status: "cancelled", terminal_reason: "recap_rollout_disabled" },
+    ]);
+    expect(sqlite.prepare("SELECT source_type FROM telegram_pending_alerts").all()).toEqual([
+      { source_type: "risk_alert" },
+    ]);
   });
 
   it("never advances a schedule when a concurrent generation change rejects the target", async () => {

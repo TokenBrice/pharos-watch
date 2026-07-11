@@ -103,6 +103,9 @@ WORKER_CANARY_MODE = "shadow"
 WORKER_REPAIR_RUNNER_MODE = "shadow"
 WORKER_RESERVE_RECOVERY_MODE = "shadow"
 ALERT_BROKER_MODE = "shadow"
+# Personalized recap is disabled until an operator selects a rollout mode.
+# Set canary chat IDs separately with `wrangler secret put TELEGRAM_RECAP_ROLLOUT_CHAT_IDS`.
+TELEGRAM_RECAP_ROLLOUT_MODE = "off"
 VAULTS_FYI_ENABLED = "true"
 VAULTS_FYI_MAX_PAGES_PER_RUN = "1"
 VAULTS_FYI_MAX_CREDITS_PER_RUN = "13"

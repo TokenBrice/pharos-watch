@@ -95,6 +95,30 @@ describe("telegram personalized recap planner", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets WHERE status = 'queued'").get()).toEqual({ count: 2 });
   });
 
+  it("projects dark rollout material recaps without writing targets, pending rows, or schedules", async () => {
+    const { sqlite, db } = setup();
+    insertSubscriber(sqlite, "direct");
+    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES ('direct', 'usdc-circle', 1)").run();
+    markTapeFresh(sqlite);
+    insertTape(sqlite, "recap-depeg-1", NOW - 60);
+
+    const result = await planTelegramPersonalizedRecaps(db, undefined, {
+      nowSec: NOW,
+      rolloutPolicy: { mode: "dark", allowedChatIds: new Set() },
+    });
+
+    expect(JSON.parse(result.metadata)).toMatchObject({
+      projected: 1,
+      projectedMaterial: 1,
+      queued: 0,
+      rollout: { mode: "dark", pendingEffects: false },
+    });
+    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = 'direct'").get())
+      .toEqual({ next_due_at: NOW - 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+  });
+
   it("fails closed while Tape is stale without advancing a retryable schedule", async () => {
     const { sqlite, db } = setup();
     insertSubscriber(sqlite, "direct");

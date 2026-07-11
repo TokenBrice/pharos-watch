@@ -16,6 +16,12 @@ import {
   TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS,
   TELEGRAM_RECAP_TAPE_PAGE_LIMIT,
 } from "@shared/lib/telegram-recap-policy";
+import {
+  TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+  shouldPlanTelegramRecap,
+  shouldQueueTelegramRecap,
+  type TelegramRecapRolloutPolicy,
+} from "@shared/lib/telegram-recap-rollout";
 import { localDateInIanaTimezone, nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 import type { TelegramPresetId } from "@shared/lib/telegram-presets";
 import { throwIfAborted } from "../lib/abort";
@@ -89,6 +95,8 @@ export interface TelegramRecapPlannerOptions {
   tapePageLimit?: number;
   /** Test override for the cooperative wall-clock deadline. */
   softDeadlineMs?: number;
+  /** Production supplies the normalized rollout policy; direct unit callers use public explicitly. */
+  rolloutPolicy?: TelegramRecapRolloutPolicy;
 }
 
 function safeNowSec(options: TelegramRecapPlannerOptions): number {
@@ -318,12 +326,19 @@ export async function planTelegramPersonalizedRecaps(
   const maxPages = Math.max(1, Math.min(TELEGRAM_RECAP_MAX_PAGES_PER_RUN, Math.floor(options.maxPages ?? TELEGRAM_RECAP_MAX_PAGES_PER_RUN)));
   const tapePageLimit = Math.max(1, Math.floor(options.tapePageLimit ?? TELEGRAM_RECAP_TAPE_PAGE_LIMIT));
   const softDeadlineMs = Math.max(0, Math.floor(options.softDeadlineMs ?? TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS));
+  const rolloutPolicy = options.rolloutPolicy ?? TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY;
+  const dryRun = !shouldQueueTelegramRecap(rolloutPolicy);
+  const eligibleChatIds = rolloutPolicy.mode === "canary"
+    ? [...rolloutPolicy.allowedChatIds]
+    : undefined;
   const counts = {
     pagesAttempted: 0,
     pagesCompleted: 0,
     pagesDeferred: 0,
     due: 0,
     queued: 0,
+    projected: 0,
+    projectedMaterial: 0,
     noChanges: 0,
     paused: 0,
     stale: 0,
@@ -350,19 +365,28 @@ export async function planTelegramPersonalizedRecaps(
       tapeFreshness,
       wallDurationMs: Math.max(0, Date.now() - startedAtMs),
       maxRecipientsPerRun: TELEGRAM_RECAP_MAX_RECIPIENTS_PER_RUN,
+      rollout: {
+        mode: rolloutPolicy.mode,
+        pendingEffects: !dryRun,
+        eligibleChatCount: eligibleChatIds?.length ?? null,
+      },
       aiCalls: 0,
       externalPlanningFetches: 0,
     }),
   });
   const deadlineReached = () => Date.now() - startedAtMs >= softDeadlineMs;
 
+  if (rolloutPolicy.mode === "off") return finish("ok", "fresh");
+
   throwIfAborted(signal);
   const freshAt = await loadFreshProjectTapeAt(db);
   if (freshAt == null || nowSec - freshAt > TELEGRAM_RECAP_TAPE_FRESHNESS_SEC) {
-    const due = await listDueTelegramRecapPreferences(db, nowSec, pageSize);
+    const due = await listDueTelegramRecapPreferences(db, nowSec, pageSize, { chatIds: eligibleChatIds });
     const subscribers = await loadSubscriberRows(db, due.map((preference) => preference.chatId));
     counts.due = due.length;
-    counts.stale = await recordStalePage(db, due, subscribers, nowSec);
+    counts.stale = dryRun
+      ? due.filter((preference) => shouldRecordStaleSkip(preference, nowSec)).length
+      : await recordStalePage(db, due, subscribers, nowSec);
     counts.oldestDueAgeSec = Math.max(0, ...due.map((preference) => nowSec - preference.expectedNextDueAt));
     return finish("degraded", "stale");
   }
@@ -375,7 +399,12 @@ export async function planTelegramPersonalizedRecaps(
       counts.pagesDeferred += 1;
       break;
     }
-    const preferences = await listDueTelegramRecapPreferences(db, nowSec, pageSize);
+    const preferences = await listDueTelegramRecapPreferences(db, nowSec, pageSize, {
+      chatIds: eligibleChatIds,
+      // A dark projection cannot advance next_due_at, so its durable page
+      // cursor is an offset rather than the normal schedule re-read.
+      offset: dryRun ? page * pageSize : 0,
+    });
     if (preferences.length === 0) break;
     counts.pagesAttempted += 1;
     counts.due += preferences.length;
@@ -422,6 +451,7 @@ export async function planTelegramPersonalizedRecaps(
         break pageLoop;
       }
       const subscriber = subscriberByChat.get(preference.chatId);
+      if (!shouldPlanTelegramRecap(rolloutPolicy, preference.chatId)) continue;
       const timezone = subscriber?.timezone;
       if (!subscriber || !timezone) {
         counts.invalidTimezone += 1;
@@ -454,7 +484,7 @@ export async function planTelegramPersonalizedRecaps(
         nextDueAtAfter: nextDueAt,
       };
       if (isPaused(subscriber)) {
-        if (await recordTelegramRecapSkip(db, { target, status: "skipped_paused", reason: "chat-paused" })) counts.paused += 1;
+        if (dryRun || await recordTelegramRecapSkip(db, { target, status: "skipped_paused", reason: "chat-paused" })) counts.paused += 1;
         continue;
       }
       const facts = loadedFacts.facts.filter((fact) => fact.ts > window.startSec * 1000 && fact.ts <= window.endSec * 1000);
@@ -465,10 +495,15 @@ export async function planTelegramPersonalizedRecaps(
         timezone,
       });
       if (!formatted) {
-        if (await recordTelegramRecapSkip(db, { target, status: "skipped_no_changes" })) counts.noChanges += 1;
+        if (dryRun || await recordTelegramRecapSkip(db, { target, status: "skipped_no_changes" })) counts.noChanges += 1;
         continue;
       }
       counts.factsOmittedByMessageCap += formatted.omittedFactCount;
+      if (dryRun) {
+        counts.projected += 1;
+        counts.projectedMaterial += 1;
+        continue;
+      }
       const queued = await queueTelegramRecapTarget(db, {
         ...target,
         pendingDedupeKey: recapKey,

@@ -43,6 +43,7 @@ const mutableState: TelegramMiniAppMutableState = {
       timezone: "UTC",
     },
     recap: {
+      available: true,
       enabled: false,
       deliveryHourLocal: 9,
       timezoneConfirmed: true,

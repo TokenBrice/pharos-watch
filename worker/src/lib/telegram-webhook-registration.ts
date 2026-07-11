@@ -8,6 +8,7 @@ import {
   TELEGRAM_BOT_SHORT_DESCRIPTION,
   TELEGRAM_BOT_USERNAME,
 } from "@shared/lib/telegram-bot-registration";
+import { getTelegramPrivateBotCommands } from "@shared/lib/telegram-bot-registration";
 import { getCache, setCache } from "./db-cache";
 import { sha256Hex } from "./hash";
 import { postTelegramBotApi } from "./telegram";
@@ -115,11 +116,11 @@ async function buildExpectedWebhookCacheValue(expectedUrl: string, webhookSecret
   });
 }
 
-function buildExpectedCommandsCacheValue(): string {
+function buildExpectedCommandsCacheValue(includeRecap: boolean): string {
   return JSON.stringify({
-    version: TELEGRAM_COMMANDS_CACHE_VERSION,
+    version: TELEGRAM_COMMANDS_CACHE_VERSION + (includeRecap ? 0 : 1),
     scopes: {
-      all_private_chats: TELEGRAM_BOT_COMMANDS,
+      all_private_chats: getTelegramPrivateBotCommands(includeRecap),
       all_group_chats: TELEGRAM_BOT_GROUP_COMMANDS,
     },
   });
@@ -374,14 +375,17 @@ export async function reconcileTelegramCommandRegistration(
   options: {
     botToken?: string | null;
     signal?: AbortSignal;
+    /** Explicit rollout injection; compatibility callers retain the public command list. */
+    includeRecap?: boolean;
   },
 ): Promise<ReconcileTelegramCommandResult> {
   const botToken = options.botToken?.trim();
+  const includeRecap = options.includeRecap ?? true;
   if (!botToken) {
     return { attempted: false, skipped: true, reason: "missing-bot-token" };
   }
 
-  const expectedCacheValue = buildExpectedCommandsCacheValue();
+  const expectedCacheValue = buildExpectedCommandsCacheValue(includeRecap);
   if (await shouldSkipFreshMatchingCache(db, TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY, TELEGRAM_COMMANDS_RECONCILE_TTL_SEC, expectedCacheValue)) {
     return { attempted: false, skipped: true, reason: "fresh-cache" };
   }
@@ -389,7 +393,7 @@ export async function reconcileTelegramCommandRegistration(
   const privateResult = await setMyCommandsForScope(
     db,
     botToken,
-    TELEGRAM_BOT_COMMANDS,
+    getTelegramPrivateBotCommands(includeRecap),
     TELEGRAM_PRIVATE_COMMAND_SCOPE,
     options.signal,
   );

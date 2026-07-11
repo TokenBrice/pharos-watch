@@ -1,4 +1,8 @@
 import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
+import {
+  TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+  isTelegramRecapAvailableToChat,
+} from "@shared/lib/telegram-recap-rollout";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import {
   getTelegramRecapPreference,
@@ -22,9 +26,13 @@ function parseRecapCallback(parts: readonly string[]): { enabled: boolean; hour:
 }
 
 export const handleRecapCallback: CallbackHandler = async ({
-  db, cb, chatId, parsed, answerCallback, planIntent, prepareMutationAppliedStatement,
+  db, cb, chatId, recapRollout, parsed, answerCallback, planIntent, prepareMutationAppliedStatement,
   confirmAtomicMutationApplied, markMutationApplied, storedIntent, wasMutationApplied,
 }) => {
+  if (!isTelegramRecapAvailableToChat(recapRollout ?? TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY, chatId)) {
+    await answerCallback({ text: "Daily recaps are not available for this chat." });
+    return;
+  }
   if (callbackChatType(cb) !== "private" || callbackActorUserId(cb) !== chatId) {
     await answerCallback({ text: "Daily recap settings are private-chat only." });
     return;

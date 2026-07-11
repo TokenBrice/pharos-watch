@@ -6,6 +6,7 @@ import {
   TELEGRAM_RECAP_PENDING_PRIORITY,
   TELEGRAM_RECAP_TTL_SEC,
 } from "@shared/lib/telegram-recap-policy";
+import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 export function buildTelegramRecapDedupeKey(chatId: string, localDate: string): string {
   if (!chatId || !localDate) throw new Error("Telegram recap dedupe identity is required");
@@ -245,8 +246,14 @@ export async function listDueTelegramRecapPreferences(
   db: D1Database,
   nowSec: number,
   limit: number = TELEGRAM_RECAP_DUE_PAGE_SIZE,
+  options: { chatIds?: readonly string[]; offset?: number } = {},
 ): Promise<DueTelegramRecapPreference[]> {
   const boundedLimit = Math.max(1, Math.min(TELEGRAM_RECAP_DUE_PAGE_SIZE, Math.floor(limit)));
+  const offset = Math.max(0, Math.floor(options.offset ?? 0));
+  if (options.chatIds?.length === 0) return [];
+  const allowedChatIdsClause = options.chatIds
+    ? "AND p.chat_id IN (SELECT value FROM json_each(?))"
+    : "";
   const rows = await db.prepare(`
     SELECT p.chat_id, p.enabled, p.cadence, p.delivery_hour_local,
            p.next_due_at, p.last_window_end_at, p.last_delivered_local_date,
@@ -256,13 +263,70 @@ export async function listDueTelegramRecapPreferences(
        WHERE p.enabled = 1 AND p.chat_kind = 'private'
        AND p.next_due_at IS NOT NULL
        AND p.next_due_at <= ?
+       ${allowedChatIdsClause}
      ORDER BY p.next_due_at ASC, p.chat_id ASC
-     LIMIT ?
-  `).bind(nowSec, boundedLimit).all<PreferenceRow>();
+     LIMIT ? OFFSET ?
+  `).bind(
+    nowSec,
+    ...(options.chatIds ? [JSON.stringify(options.chatIds)] : []),
+    boundedLimit,
+    offset,
+  ).all<PreferenceRow>();
   return (rows.results ?? []).map((row) => ({
     ...mapPreference(row),
     expectedNextDueAt: Number(row.next_due_at),
   }));
+}
+
+export interface TelegramRecapRolloutCleanupResult {
+  targetRowsCancelled: number;
+  pendingRowsDeleted: number;
+}
+
+/**
+ * Atomically remove only not-yet-sent recap work. This deliberately never
+ * touches risk/admin/digest rows or a recap that has crossed the send fence.
+ */
+export async function cancelQueuedTelegramRecapsForRollout(
+  db: D1Database,
+  policy: TelegramRecapRolloutPolicy,
+  nowSec: number,
+): Promise<TelegramRecapRolloutCleanupResult> {
+  const disallowedClause = policy.mode === "canary"
+    ? "AND chat_id NOT IN (SELECT value FROM json_each(?))"
+    : "";
+  const disallowedBinds = policy.mode === "canary"
+    ? [JSON.stringify([...policy.allowedChatIds])]
+    : [];
+  const targets = db.prepare(`
+    UPDATE telegram_recap_targets
+       SET status = 'cancelled', terminal_reason = 'recap_rollout_disabled',
+           completed_at = ?, updated_at = ?
+     WHERE status = 'queued'
+       ${disallowedClause}
+       AND EXISTS (
+         SELECT 1 FROM telegram_pending_alerts pending
+          WHERE pending.source_type = 'personalized_recap'
+            AND pending.delivery_state = 'pending'
+            AND pending.source_event_id = telegram_recap_targets.recap_key
+       )
+  `).bind(nowSec, nowSec, ...disallowedBinds);
+  const pending = db.prepare(`
+    DELETE FROM telegram_pending_alerts
+     WHERE source_type = 'personalized_recap'
+       AND delivery_state = 'pending'
+       ${disallowedClause}
+       AND source_event_id IN (
+         SELECT recap_key FROM telegram_recap_targets
+          WHERE status = 'cancelled' AND terminal_reason = 'recap_rollout_disabled'
+            AND updated_at = ?
+       )
+  `).bind(...disallowedBinds, nowSec);
+  const results = await db.batch([targets, pending]);
+  return {
+    targetRowsCancelled: Number(results[0]?.meta?.changes ?? 0),
+    pendingRowsDeleted: Number(results[1]?.meta?.changes ?? 0),
+  };
 }
 
 function targetValues(input: TelegramRecapTargetInput, status: TelegramRecapTargetStatus): unknown[] {

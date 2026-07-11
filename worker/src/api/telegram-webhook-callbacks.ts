@@ -42,6 +42,10 @@ import {
 import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
 import { handleSetupCallback } from "./webhook-callbacks/setup";
 import { handleSettingsInlineCallback } from "./webhook-callbacks/settings";
+import {
+  TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+  type TelegramRecapRolloutPolicy,
+} from "@shared/lib/telegram-recap-rollout";
 
 // Re-export so any caller importing `SNOOZE_SECONDS` from this module keeps working.
 export { SNOOZE_SECONDS };
@@ -59,6 +63,7 @@ export async function handleCallbackQuery(
     confirmAtomicMutationApplied?: () => void;
     storedIntent?: TelegramWebhookOperationIntent | null;
     wasMutationApplied?: boolean;
+    recapRollout?: TelegramRecapRolloutPolicy;
   } = {
     beforeIrreversibleEffect: async () => undefined,
     markMutationApplied: async () => undefined,
@@ -134,5 +139,6 @@ export async function handleCallbackQuery(
     confirmAtomicMutationApplied: effect.confirmAtomicMutationApplied,
     storedIntent: effect.storedIntent,
     wasMutationApplied: effect.wasMutationApplied,
+    recapRollout: effect.recapRollout ?? TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
   });
 }

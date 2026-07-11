@@ -85,6 +85,8 @@ export function miniAppErrorMessage(err: unknown, context: MiniAppErrorContext):
         return "Your watchlist changed after this preview. Preview the token again before applying it.";
       case "stale-recap-preference":
         return "Your recap settings changed. Refresh and try again.";
+      case "recap-unavailable":
+        return "Daily recap is not available for this chat.";
       case "body-too-large":
         return "Request was too large to send.";
       case "not-configured":

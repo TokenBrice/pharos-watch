@@ -10,6 +10,8 @@ import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram-l
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
 import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";
 import { planTelegramPersonalizedRecaps } from "../../cron/telegram-recap-planner";
+import { cancelQueuedTelegramRecapsForRollout } from "../../cron/telegram-recap-store";
+import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import { publishTelegramPulseSnapshotWithOutcome } from "../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambiguation";
@@ -151,6 +153,7 @@ function buildTelegramSlotGroups(
 ): ScheduledSlotGroup[] {
   const sharedTelegramState: TelegramDispatchSharedState = {};
   const tasks: ScheduledSlotTask[] = [];
+  const recapRollout = resolveTelegramRecapRolloutPolicy(runtime.env);
   if (botToken) {
     tasks.push({
       job: "dispatch-telegram-alerts",
@@ -164,10 +167,47 @@ function buildTelegramSlotGroups(
           reportProgress,
         ),
     });
+  }
+  const shouldRunRecap = recapRollout.mode === "off" || recapRollout.mode === "dark" || Boolean(botToken);
+  if (shouldRunRecap) {
     tasks.push({
       job: "telegram-personalized-recap-planner",
       errorMessage: "[cron] telegram-personalized-recap-planner failed:",
-      run: (signal) => planTelegramPersonalizedRecaps(runtime.db, signal),
+      run: async (signal) => {
+        const cleanup = recapRollout.mode === "public"
+          ? { targetRowsCancelled: 0, pendingRowsDeleted: 0 }
+          : await cancelQueuedTelegramRecapsForRollout(
+            runtime.db,
+            recapRollout,
+            Math.floor(Date.now() / 1000),
+          );
+        if (recapRollout.mode === "off") {
+          return {
+            status: "ok" as const,
+            itemCount: cleanup.targetRowsCancelled + cleanup.pendingRowsDeleted,
+            metadata: JSON.stringify({
+              rollout: { mode: recapRollout.mode, pendingEffects: false },
+              cleanup,
+              skipped: "recap-rollout-off",
+            }),
+          };
+        }
+        if (!botToken && recapRollout.mode !== "dark") {
+          return {
+            status: "skipped_neutral" as const,
+            metadata: JSON.stringify({
+              rollout: { mode: recapRollout.mode, pendingEffects: true },
+              cleanup,
+              skipped: "missing-telegram-bot-token",
+            }),
+          };
+        }
+        const planned = await planTelegramPersonalizedRecaps(runtime.db, signal, { rolloutPolicy: recapRollout });
+        return {
+          ...planned,
+          metadata: JSON.stringify({ ...JSON.parse(planned.metadata), cleanup }),
+        };
+      },
     });
   }
   tasks.push(
@@ -226,6 +266,8 @@ function buildTelegramSlotGroups(
 export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext) {
   const reconciliationStartedMs = Date.now();
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
+    const recapRollout = resolveTelegramRecapRolloutPolicy(runtime.env);
+    const recapRequiresBotToken = recapRollout.mode === "canary" || recapRollout.mode === "public";
     const message = "TELEGRAM_BOT_TOKEN missing; skipping Telegram transport work";
     const skippedJobs = [
       {
@@ -234,9 +276,14 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
         error: "missing-telegram-bot-token",
       },
       summarizeSkippedScheduledJob("dispatch-telegram-alerts", "missing-telegram-bot-token"),
-      summarizeSkippedScheduledJob("telegram-personalized-recap-planner", "missing-telegram-bot-token"),
+      ...(recapRequiresBotToken
+        ? [summarizeSkippedScheduledJob("telegram-personalized-recap-planner", "missing-telegram-bot-token")]
+        : []),
     ];
-    for (const job of ["dispatch-telegram-alerts", "telegram-personalized-recap-planner"]) {
+    for (const job of [
+      "dispatch-telegram-alerts",
+      ...(recapRequiresBotToken ? ["telegram-personalized-recap-planner"] : []),
+    ]) {
       await logSkippedCronRun(runtime, {
         job,
         reason: "missing-telegram-bot-token",
@@ -292,6 +339,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
   }> = [
     { action: "reconcile-commands", run: (signal) => reconcileTelegramCommandRegistration(runtime.db, {
       botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+      includeRecap: resolveTelegramRecapRolloutPolicy(runtime.env).mode === "public",
       signal,
     }) },
     { action: "reconcile-profile", run: (signal) => reconcileTelegramProfileRegistration(runtime.db, {

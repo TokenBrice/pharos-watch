@@ -120,9 +120,6 @@ Quiet hours in your <code>/timezone</code> (defaults to UTC; notifications silen
 <code>/timezone Europe/Paris</code>
 Set chat timezone for quiet hours, or send <code>/timezone</code> alone to pick from common zones
 
-<code>/recap</code>
-Private daily watchlist recap settings, separate from immediate alert toggles. Set a timezone first, then use <code>/recap on</code>, <code>/recap off</code>, or <code>/recap time 9</code>
-
 <code>/unsnooze</code>
 Clear an active alert snooze immediately
 

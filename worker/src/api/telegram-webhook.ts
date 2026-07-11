@@ -27,6 +27,10 @@ import {
   handleTelegramChosenInlineResultUpdate,
   handleTelegramInlineQueryUpdate,
 } from "./telegram-inline-queries";
+import {
+  TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+  type TelegramRecapRolloutPolicy,
+} from "@shared/lib/telegram-recap-rollout";
 
 /**
  * Group admin gating mode for group-wide mutating commands in
@@ -45,6 +49,7 @@ export const handleTelegramWebhook = withErrorHandler(
     webhookSecret?: string,
     botToken?: string,
     previousWebhookSecret?: string,
+    recapRollout: TelegramRecapRolloutPolicy = TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
   ): Promise<Response> => {
     const ok = () => new Response("ok", { status: 200 });
 
@@ -115,6 +120,7 @@ export const handleTelegramWebhook = withErrorHandler(
           effectFence,
           beforeIrreversibleEffect,
           answerWebhookCallback,
+          recapRollout,
         });
       }
 
@@ -187,6 +193,7 @@ export const handleTelegramWebhook = withErrorHandler(
         effectFence,
         beforeIrreversibleEffect,
         operationNowSec: nowSec,
+        recapRollout,
       });
     } catch (err) {
       await effectFence?.fail(classifyWebhookError(err));

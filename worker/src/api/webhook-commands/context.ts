@@ -1,5 +1,6 @@
 import type { TelegramWebhookOperationIntent } from "../telegram-webhook-store";
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
+import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 /**
  * Shared context passed to every command handler in the Telegram webhook
@@ -14,6 +15,7 @@ export interface WebhookCommandContext {
   username: string | null;
   actorUserId: string | null;
   botToken: string;
+  recapRollout?: TelegramRecapRolloutPolicy;
   /** Stable timestamp captured when the operation was normalized. */
   operationNowSec?: number;
   /** Crosses the at-most-once boundary immediately before a Bot API effect. */

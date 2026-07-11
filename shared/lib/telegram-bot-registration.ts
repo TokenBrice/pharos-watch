@@ -66,3 +66,10 @@ export const TELEGRAM_BOT_GROUP_COMMANDS = TELEGRAM_BOT_COMMANDS
       ? { ...entry, description: "Apply a watchlist token from /export (admins only)" }
       : entry,
   );
+
+/** `/recap` is only advertised after the rollout reaches the public mode. */
+export function getTelegramPrivateBotCommands(includeRecap: boolean): readonly (typeof TELEGRAM_BOT_COMMANDS)[number][] {
+  return includeRecap
+    ? TELEGRAM_BOT_COMMANDS
+    : TELEGRAM_BOT_COMMANDS.filter((entry) => entry.command !== "recap");
+}

@@ -16,7 +16,8 @@ export type EndpointDependency =
   | "coingeckoApiKey"
   | "apiKeySelfServeEnv"
   | "workerVersion"
-  | "telegram";
+  | "telegram"
+  | "telegramRecapRollout";
 
 export type StatusPageActionGroup = "recovery" | "audit" | "communications";
 
@@ -528,12 +529,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicPostExempt({
     key: "telegram-mini-app-session",
     path: API_PATHS.telegramMiniAppSession(),
-    routeDependencies: ["telegram"],
+    routeDependencies: ["telegram", "telegramRecapRollout"],
   }),
   publicPostExempt({
     key: "telegram-mini-app-mutation",
     path: API_PATHS.telegramMiniAppMutation(),
-    routeDependencies: ["telegram"],
+    routeDependencies: ["telegram", "telegramRecapRollout"],
   }),
   publicPostExempt({
     key: "feedback",
@@ -553,7 +554,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicPostExempt({
     key: "telegram-webhook",
     path: API_PATHS.telegramWebhook(),
-    routeDependencies: ["telegram"],
+    routeDependencies: ["telegram", "telegramRecapRollout"],
   }),
 
   // Admin status/probe endpoints.

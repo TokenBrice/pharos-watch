@@ -485,6 +485,24 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "TELEGRAM_RECAP_ROLLOUT_MODE",
+    valueType: "string",
+    description: "Personalized recap rollout mode: `off` (default), `dark` (DB-only projection), `canary` (exact chat-ID allowlist), or `public`.",
+    example: { section: "workerOptional", value: "off" },
+    runtimes: {
+      worker: { order: 30.1, status: "optional" },
+    },
+  },
+  {
+    key: "TELEGRAM_RECAP_ROLLOUT_CHAT_IDS",
+    valueType: "string",
+    description: "Comma-separated exact Telegram chat IDs eligible for personalized recap canary controls and delivery; ignored outside `canary` mode.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 30.2, status: "optional" },
+    },
+  },
+  {
     key: "MINT_BURN_DISABLED_IDS",
     valueType: "string",
     description: "Mint/burn runtime disable list by stablecoin ID (CSV).",

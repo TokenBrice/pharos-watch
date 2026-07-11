@@ -3,6 +3,7 @@ import type { ScheduledRuntimeContext } from "../context";
 
 vi.mock("../../../cron/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: vi.fn() }));
 vi.mock("../../../cron/telegram-recap-planner", () => ({ planTelegramPersonalizedRecaps: vi.fn() }));
+vi.mock("../../../cron/telegram-recap-store", () => ({ cancelQueuedTelegramRecapsForRollout: vi.fn() }));
 vi.mock("../../../api/telegram-pulse", () => ({ publishTelegramPulseSnapshotWithOutcome: vi.fn() }));
 vi.mock("../../../cron/telegram-degradation-watchdog", () => ({ runTelegramDegradationWatchdog: vi.fn() }));
 vi.mock("../../../api/telegram-store/disambiguation", () => ({ cleanExpiredDisambiguations: vi.fn() }));
@@ -24,6 +25,7 @@ import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-teleme
 import { dispatchPendingAlertBrokerDeliveries } from "../../../lib/alert-broker";
 import { dispatchTelegramAlerts } from "../../../cron/dispatch-telegram-alerts";
 import { planTelegramPersonalizedRecaps } from "../../../cron/telegram-recap-planner";
+import { cancelQueuedTelegramRecapsForRollout } from "../../../cron/telegram-recap-store";
 import { publishTelegramPulseSnapshotWithOutcome } from "../../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../../api/telegram-store/disambiguation";
@@ -34,10 +36,12 @@ import {
   reconcileTelegramWebhookRegistration,
 } from "../../../lib/telegram-webhook-registration";
 
-function buildRuntime(token?: string): ScheduledRuntimeContext {
+function buildRuntime(token?: string, recapRolloutMode: string = "public"): ScheduledRuntimeContext {
   return {
     db: {} as D1Database,
-    env: (token ? { TELEGRAM_BOT_TOKEN: token } : {}) as ScheduledRuntimeContext["env"],
+    env: (token
+      ? { TELEGRAM_BOT_TOKEN: token, TELEGRAM_RECAP_ROLLOUT_MODE: recapRolloutMode }
+      : { TELEGRAM_RECAP_ROLLOUT_MODE: recapRolloutMode }) as ScheduledRuntimeContext["env"],
     ctx: {} as ExecutionContext,
     cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
     scheduleKey: "fiveMinuteTelegramAlerts",
@@ -58,6 +62,7 @@ beforeEach(() => {
   vi.spyOn(Date, "now").mockReturnValue(0);
   vi.mocked(dispatchTelegramAlerts).mockResolvedValue({ itemCount: 1, metadata: "{}" } as never);
   vi.mocked(planTelegramPersonalizedRecaps).mockResolvedValue({ itemCount: 0, metadata: "{}", status: "ok" } as never);
+  vi.mocked(cancelQueuedTelegramRecapsForRollout).mockResolvedValue({ targetRowsCancelled: 0, pendingRowsDeleted: 0 });
   vi.mocked(runTelegramDegradationWatchdog).mockResolvedValue({ itemCount: 0, metadata: "{}" } as never);
   vi.mocked(cleanExpiredDisambiguations).mockResolvedValue({ status: "ok", itemCount: 0 } as never);
   vi.mocked(publishTelegramPulseSnapshotWithOutcome).mockResolvedValue({
@@ -104,6 +109,38 @@ describe("runFiveMinuteTelegramSlot", () => {
       processedCount: 0,
       metadata: expect.objectContaining({ failedCount: 4, lastSuccessAt: null }),
     }));
+  });
+
+  it("runs the off-mode recap cleanup without a bot token and does not double-report it as skipped", async () => {
+    const runtime = buildRuntime(undefined, "off");
+
+    const summary = await runFiveMinuteTelegramSlot(runtime);
+
+    expect(cancelQueuedTelegramRecapsForRollout).toHaveBeenCalledWith(
+      runtime.db,
+      expect.objectContaining({ mode: "off" }),
+      0,
+    );
+    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
+    expect(vi.mocked(logSkippedCronRun).mock.calls.map(([, options]) => options.job)).toEqual([
+      "dispatch-telegram-alerts",
+    ]);
+    expect(summary.jobs.filter((job) => job.job === "telegram-personalized-recap-planner")).toHaveLength(1);
+  });
+
+  it("runs dark recap projection without a bot token and does not report a token skip", async () => {
+    const runtime = buildRuntime(undefined, "dark");
+
+    await runFiveMinuteTelegramSlot(runtime);
+
+    expect(planTelegramPersonalizedRecaps).toHaveBeenCalledWith(
+      runtime.db,
+      expect.any(AbortSignal),
+      expect.objectContaining({ rolloutPolicy: expect.objectContaining({ mode: "dark" }) }),
+    );
+    expect(vi.mocked(logSkippedCronRun).mock.calls.map(([, options]) => options.job)).toEqual([
+      "dispatch-telegram-alerts",
+    ]);
   });
 
   it("runs critical dispatch and sidecars before all registration units", async () => {

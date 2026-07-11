@@ -23,9 +23,9 @@ import {
 } from "@shared/lib/telegram-mini-app-payloads";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import {
-  TELEGRAM_BOT_COMMANDS,
   TELEGRAM_BOT_DESCRIPTION,
   TELEGRAM_BOT_SHORT_DESCRIPTION,
+  getTelegramPrivateBotCommands,
 } from "@shared/lib/telegram-bot-registration";
 import {
   TELEGRAM_ALERT_FAMILIES,
@@ -112,7 +112,7 @@ describe("PharosWatchBotPage", () => {
     expect(metadata.description).toBe(TELEGRAM_PAGE_DESCRIPTION);
     // Metadata and registration copy derive from the canonical family manifest.
     expect(TELEGRAM_BOT_DESCRIPTION).toContain(TELEGRAM_ALERT_FAMILY_PHRASE_LIST);
-    expect(TELEGRAM_PAGE_DESCRIPTION).toContain("private daily recap");
+    expect(TELEGRAM_PAGE_DESCRIPTION).not.toContain("daily recap");
     expect(TELEGRAM_PAGE_DESCRIPTION.length).toBeLessThanOrEqual(180);
     expect(TELEGRAM_BOT_SHORT_DESCRIPTION).not.toMatch(/\d/);
   });
@@ -136,7 +136,7 @@ describe("PharosWatchBotPage", () => {
         group.commands.map((entry) => entry.command.match(/^\/([a-z]+)/)?.[1]).filter(Boolean),
       ),
     );
-    expect([...publicCommands].sort()).toEqual(TELEGRAM_BOT_COMMANDS.map((entry) => entry.command).sort());
+    expect([...publicCommands].sort()).toEqual(getTelegramPrivateBotCommands(false).map((entry) => entry.command).sort());
   });
 
   it("builds the recommended setup deep link from a registry-valid start payload", () => {

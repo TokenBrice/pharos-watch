@@ -1,6 +1,11 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { TelegramMiniAppMutableState } from "@shared/lib/telegram-mini-app-contract";
 import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "@shared/lib/telegram-recap-policy";
+import {
+  TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+  isTelegramRecapAvailableToChat,
+  type TelegramRecapRolloutPolicy,
+} from "@shared/lib/telegram-recap-rollout";
 import { listTelegramPresets, type TelegramPresetDefinition } from "../lib/telegram-presets";
 import { loadTelegramChatHealthDiagnostics } from "../lib/telegram-usage-analytics";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
@@ -8,6 +13,7 @@ import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
 interface LoadTelegramMiniAppStateOptions {
   nowSec: number;
   mutationMaxAgeSec: number;
+  recapRollout?: TelegramRecapRolloutPolicy;
 }
 
 interface SubscriberRow {
@@ -156,6 +162,10 @@ export async function loadTelegramMiniAppState(
   const mutationBlockReason = auth.canMutatePrivateChat
     ? mutationAuthExpired ? "stale-auth" : null
     : "not-private";
+  const recapAvailable = chatId != null && isTelegramRecapAvailableToChat(
+    options.recapRollout ?? TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
+    chatId,
+  );
 
   const [subscriber, subscriptions, presets, health, pending, recap] = chatId
     ? await (async () => {
@@ -252,6 +262,7 @@ export async function loadTelegramMiniAppState(
         timezone: subscriber?.timezone ?? null,
       },
       recap: {
+        available: recapAvailable,
         enabled: boolFlag(recap?.enabled),
         deliveryHourLocal: recap?.delivery_hour_local ?? TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL,
         timezoneConfirmed: subscriber?.timezone != null,
