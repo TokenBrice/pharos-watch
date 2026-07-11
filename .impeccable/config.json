@@ -3,7 +3,9 @@
     "ignoreRules": [
       "side-tab"
     ],
-    "ignoreFiles": [],
+    "ignoreFiles": [
+      "src/app/pharoswatchbot/page.test.tsx"
+    ],
     "ignoreValues": [
       {
         "rule": "bounce-easing",
@@ -52,6 +54,24 @@
         "value": "oklch(0.7 0.2 25 / 0.25)",
         "reason": "Owner-confirmed: bespoke status hue with no exact --p-* token match; pixel-frozen, tokenizing would shift the color (risk-pulse box-shadow)",
         "createdAt": "2026-06-27T16:56:56.447Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#172534",
+        "reason": "Owner-confirmed: theme-invariant dark hero band + hero button colors on /pharoswatchbot; semantic tokens would flip in dark mode, so fixed literals are correct here",
+        "createdAt": "2026-07-10T20:14:32.181Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#101a24",
+        "reason": "Owner-confirmed: theme-invariant dark hero band + hero button colors on /pharoswatchbot; semantic tokens would flip in dark mode, so fixed literals are correct here",
+        "createdAt": "2026-07-10T20:14:32.181Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#e8edf2",
+        "reason": "Owner-confirmed: theme-invariant dark hero band + hero button colors on /pharoswatchbot; semantic tokens would flip in dark mode, so fixed literals are correct here",
+        "createdAt": "2026-07-10T20:14:32.181Z"
       }
     ]
   }
