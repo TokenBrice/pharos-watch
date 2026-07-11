@@ -141,6 +141,7 @@ export const API_PATHS = {
       includePublicAlternatives: params?.includePublicAlternatives ? 1 : undefined,
     }),
   apiKeys: () => "/api/api-keys",
+  credentialLifecycleSummary: () => "/api/api-keys/lifecycle-summary",
   apiKeyAuditLog: () => "/api/api-keys/audit-log",
   apiKeyUpdate: (id: number) => `/api/api-keys/${id}/update`,
   apiKeyDeactivate: (id: number) => `/api/api-keys/${id}/deactivate`,

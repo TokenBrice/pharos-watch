@@ -1,3 +1,5 @@
+import { WEEK_SECONDS } from "@shared/lib/time-constants";
+import type { ApiKeySummary } from "@shared/types";
 import {
   createApiKey,
   deactivateApiKey,
@@ -70,6 +72,55 @@ function redactOneTimeTokenForReplay(responseBody: string, responseStatus: numbe
 }
 
 const SENSITIVE_TOKEN_REPLAY = { sensitiveReplayBody: redactOneTimeTokenForReplay } as const;
+
+
+const AUDIT_ANOMALY_ACTIONS = ["rotated", "deactivated"] as const;
+
+function isApiKeyExpiringSoon(key: ApiKeySummary, nowSeconds: number): boolean {
+  return key.isActive
+    && key.expiresAt != null
+    && key.expiresAt > nowSeconds
+    && key.expiresAt - nowSeconds <= WEEK_SECONDS;
+}
+
+export const handleCredentialLifecycleSummaryRoute = makeAdminRoute<ApiKeysRouteContext>(
+  "credential-lifecycle-summary",
+  async ({ db }) => {
+    const inventory = await listApiKeys(db);
+    const nowSeconds = inventory.generatedAt;
+
+    let active = 0;
+    let expiringSoon = 0;
+    let expired = 0;
+    let nonExpiring = 0;
+
+    for (const key of inventory.keys) {
+      if (key.isActive) active += 1;
+      if (isApiKeyExpiringSoon(key, nowSeconds)) expiringSoon += 1;
+      if (key.expiresAt != null && key.expiresAt <= nowSeconds) expired += 1;
+      if (key.expiresAt == null) nonExpiring += 1;
+    }
+
+    const anomalyResult = await db.prepare(
+      `SELECT COUNT(*) AS count
+       FROM api_key_audit_log
+       WHERE action IN (?, ?)
+         AND created_at >= ?`,
+    )
+      .bind(...AUDIT_ANOMALY_ACTIONS, nowSeconds - WEEK_SECONDS)
+      .first<{ count: number | null }>();
+
+    return jsonResponse({
+      generatedAt: nowSeconds,
+      totalKeys: inventory.keys.length,
+      active,
+      expiringSoon,
+      expired,
+      nonExpiring,
+      auditAnomalies7d: anomalyResult?.count ?? null,
+    }, { noStore: true });
+  },
+);
 
 export const handleApiKeysRoute = makeAdminRoute<ApiKeysRouteContext>(
   "api-keys",

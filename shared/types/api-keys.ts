@@ -61,6 +61,16 @@ export interface ApiKeyAuditLogResponse {
   entries: ApiKeyAuditEntry[];
 }
 
+export interface CredentialLifecycleSummaryResponse {
+  generatedAt: number;
+  totalKeys: number;
+  active: number;
+  expiringSoon: number;
+  expired: number;
+  nonExpiring: number;
+  auditAnomalies7d: number | null;
+}
+
 export const ApiKeyAuditEntrySchema: z.ZodType<ApiKeyAuditEntry> = z.object({
   id: z.number(),
   apiKeyId: z.number(),
@@ -72,6 +82,16 @@ export const ApiKeyAuditEntrySchema: z.ZodType<ApiKeyAuditEntry> = z.object({
 
 export const ApiKeyAuditLogResponseSchema: z.ZodType<ApiKeyAuditLogResponse> = z.object({
   entries: z.array(ApiKeyAuditEntrySchema),
+});
+
+export const CredentialLifecycleSummaryResponseSchema: z.ZodType<CredentialLifecycleSummaryResponse> = z.object({
+  generatedAt: z.number(),
+  totalKeys: z.number(),
+  active: z.number(),
+  expiringSoon: z.number(),
+  expired: z.number(),
+  nonExpiring: z.number(),
+  auditAnomalies7d: z.number().nullable(),
 });
 
 export interface ApiKeyCreateRequest {

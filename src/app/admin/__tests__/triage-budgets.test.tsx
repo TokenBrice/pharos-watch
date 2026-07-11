@@ -3,29 +3,23 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildStatusDashboardData } from "@/lib/status-dashboard-model";
-import { makeLargeApiKeyInventory } from "@/test-utils/api-key-fixtures";
 import {
   STATUS_FIXTURE_NOW_MS,
   makeHealthyHealthResponse,
   makeHealthyStatusResponse,
 } from "@/test-utils/status-fixtures";
 
-const { useCriticalOpsModelMock, useApiKeysMock, useApiKeyAuditLogMock } = vi.hoisted(() => ({
+const { useCriticalOpsModelMock, useCredentialLifecycleSummaryMock } = vi.hoisted(() => ({
   useCriticalOpsModelMock: vi.fn(),
-  useApiKeysMock: vi.fn(),
-  useApiKeyAuditLogMock: vi.fn(),
+  useCredentialLifecycleSummaryMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-critical-ops-model", () => ({
   useCriticalOpsModel: useCriticalOpsModelMock,
 }));
 
-vi.mock("@/hooks/use-api-keys", () => ({
-  useApiKeys: useApiKeysMock,
-}));
-
-vi.mock("@/hooks/use-api-key-audit-log", () => ({
-  useApiKeyAuditLog: useApiKeyAuditLogMock,
+vi.mock("@/hooks/use-credential-lifecycle-summary", () => ({
+  useCredentialLifecycleSummary: useCredentialLifecycleSummaryMock,
 }));
 
 import TriageClient from "../client";
@@ -72,13 +66,12 @@ beforeEach(() => {
   useCriticalOpsModelMock.mockReturnValue(makeCriticalOpsResult());
   // The credential summary must stay inside the Triage budgets even with a
   // large inventory behind it: it renders counts, never rows.
-  useApiKeysMock.mockReturnValue({
-    data: makeLargeApiKeyInventory(75),
+  useCredentialLifecycleSummaryMock.mockReturnValue({
+    data: { generatedAt: 1_700_000_000, totalKeys: 75, active: 75, expiringSoon: 0, expired: 0, nonExpiring: 0, auditAnomalies7d: 0 },
     isLoading: false,
     isError: false,
     refetch: vi.fn(),
   });
-  useApiKeyAuditLogMock.mockReturnValue({ data: { entries: [] }, isLoading: false, isError: false });
 });
 
 afterEach(() => {

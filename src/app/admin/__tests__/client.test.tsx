@@ -2,7 +2,6 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeLargeApiKeyInventory } from "@/test-utils/api-key-fixtures";
 import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
 const {
@@ -10,27 +9,21 @@ const {
   useStatusHistoryMock,
   useRequestSourceStatsMock,
   useReleaseMetadataMock,
-  useApiKeysMock,
-  useApiKeyAuditLogMock,
+  useCredentialLifecycleSummaryMock,
 } = vi.hoisted(() => ({
   useCriticalOpsModelMock: vi.fn(),
   useStatusHistoryMock: vi.fn(),
   useRequestSourceStatsMock: vi.fn(),
   useReleaseMetadataMock: vi.fn(),
-  useApiKeysMock: vi.fn(),
-  useApiKeyAuditLogMock: vi.fn(),
+  useCredentialLifecycleSummaryMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-critical-ops-model", () => ({
   useCriticalOpsModel: useCriticalOpsModelMock,
 }));
 
-vi.mock("@/hooks/use-api-keys", () => ({
-  useApiKeys: useApiKeysMock,
-}));
-
-vi.mock("@/hooks/use-api-key-audit-log", () => ({
-  useApiKeyAuditLog: useApiKeyAuditLogMock,
+vi.mock("@/hooks/use-credential-lifecycle-summary", () => ({
+  useCredentialLifecycleSummary: useCredentialLifecycleSummaryMock,
 }));
 
 vi.mock("@/hooks/use-status-history", () => ({
@@ -110,13 +103,12 @@ beforeEach(() => {
     lastUpdated: 1_700_000_000_000,
     model: makeCriticalModel(),
   });
-  useApiKeysMock.mockReturnValue({
-    data: makeLargeApiKeyInventory(4),
+  useCredentialLifecycleSummaryMock.mockReturnValue({
+    data: { generatedAt: 1_700_000_000, totalKeys: 4, active: 4, expiringSoon: 0, expired: 0, nonExpiring: 0, auditAnomalies7d: 0 },
     isLoading: false,
     isError: false,
     refetch: vi.fn(),
   });
-  useApiKeyAuditLogMock.mockReturnValue({ data: { entries: [] }, isLoading: false, isError: false });
 });
 
 afterEach(() => {
