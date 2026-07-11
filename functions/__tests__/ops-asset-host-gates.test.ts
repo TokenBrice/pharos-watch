@@ -11,12 +11,10 @@ const SURFACES = [
 describe("ops asset host gates", () => {
   it("keeps both static route families behind Pages Functions", () => {
     expect(routes.include).toContain("/*");
-    expect(routes.exclude).not.toEqual(expect.arrayContaining([
-      "/admin",
-      "/admin/*",
-      "/admin-api",
-      "/admin-api/*",
-    ]));
+
+    for (const pattern of ["/admin", "/admin/*", "/admin-api", "/admin-api/*"] as const) {
+      expect(routes.exclude).not.toContain(pattern);
+    }
   });
 
   for (const surface of SURFACES) {
