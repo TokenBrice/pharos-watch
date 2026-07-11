@@ -280,6 +280,28 @@ describe("yield source-risk registry", () => {
     expect(derivePysSourceRiskPenalty({ dependencyConcentrationSeverity: "low" })).toBe(1);
   });
 
+  it("preserves opportunity-level risk evidence for published source-risk payloads", () => {
+    const opportunityRisk = {
+      opportunityClass: "lending" as const,
+      underlyingSafetyScore: 82,
+      opportunitySafetyScore: 77,
+      opportunitySafetyPenalty: 5,
+      venueReviewed: true,
+      missingCriticalEvidence: [],
+    };
+
+    const sourceRisk = buildYieldSourceRisk({
+      source: makeSource({
+        yieldType: "lending-opportunity",
+        sourceRisk: { opportunityRisk },
+      }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+
+    expect(sourceRisk.opportunityRisk).toEqual(opportunityRisk);
+  });
+
   it("normalizes sourceRiskScore from the resolved sourceRiskPenalty", () => {
     const neutralSource = buildYieldSourceRisk({
       source: makeSource({ sourceRiskPenalty: 1 }),

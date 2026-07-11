@@ -367,7 +367,7 @@ describe("decideDepegAsset", () => {
         bps: -242,
         price: 0.9758,
         pegReference: 1,
-        reason: "large-cap",
+        reason: "large-cap+native-origin",
       },
     });
     expect(decision.diagnostics).toEqual([
@@ -414,7 +414,7 @@ describe("decideDepegAsset", () => {
         bps: -8000,
         price: 0.2,
         pegReference: 1,
-        reason: "extreme-move",
+        reason: "extreme-move+native-origin",
       },
     });
     expect(decision.diagnostics).toEqual([

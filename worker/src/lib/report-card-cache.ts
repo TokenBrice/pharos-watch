@@ -91,6 +91,14 @@ function isValidCompleteness(value: unknown): value is ReportCardPublicationComp
     && value.expectedCount === value.scoredCount + value.notRatedCount;
 }
 
+function isValidReportCardScoreEntry(value: unknown): value is ReportCardScoreEntry {
+  return isRecord(value)
+    && typeof value.score === "number"
+    && Number.isFinite(value.score)
+    && typeof value.grade === "string"
+    && value.grade.length > 0;
+}
+
 function isValidReportCardCachePayload(value: unknown): value is ParsedReportCardCachePayload {
   if (!isRecord(value)) return false;
   const parsed = value as {
@@ -170,10 +178,7 @@ function hasExactReportCardCacheCompleteness(payload: ReportCardCachePayload): b
   for (const [id, score] of Object.entries(payload.scores)) {
     if (
       notRatedIdSet.has(id)
-      || typeof score.score !== "number"
-      || !Number.isFinite(score.score)
-      || typeof score.grade !== "string"
-      || score.grade.length === 0
+      || !isValidReportCardScoreEntry(score)
     ) {
       return false;
     }
