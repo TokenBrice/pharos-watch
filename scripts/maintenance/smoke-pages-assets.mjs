@@ -232,46 +232,57 @@ async function verifyBrowserPass(page, routeInfo, baseUrl, diagnostics, label, w
 
 async function verifyBrowserRoute(browser, routeInfo, baseUrl, warmCacheIds, waitTimeoutMs, settleMs) {
   const context = await browser.newContext();
-  const page = await context.newPage();
   const expectedOrigin = new URL(baseUrl).origin;
-  let diagnostics = createDiagnostics();
+  async function verifyNavigation(label) {
+    const page = await context.newPage();
+    const diagnostics = createDiagnostics();
 
-  page.on("response", (response) => {
-    const request = response.request();
-    const assetType = classifyFirstPartyAsset(response.url(), request.resourceType(), expectedOrigin);
-    if (!assetType) return;
-    diagnostics.assetResponses += 1;
-    const contentType = response.headers()["content-type"] ?? "";
-    if (response.status() >= 400) {
-      diagnostics.assetFailures.push(`${response.status()} ${response.url()}`);
-    } else if (!hasExpectedAssetMime(assetType, contentType)) {
-      diagnostics.assetFailures.push(`${assetType} MIME "${contentType || "missing"}" ${response.url()}`);
+    page.on("response", (response) => {
+      const request = response.request();
+      const assetType = classifyFirstPartyAsset(response.url(), request.resourceType(), expectedOrigin);
+      if (!assetType) return;
+      diagnostics.assetResponses += 1;
+      const contentType = response.headers()["content-type"] ?? "";
+      if (response.status() >= 400) {
+        diagnostics.assetFailures.push(`${response.status()} ${response.url()}`);
+      } else if (!hasExpectedAssetMime(assetType, contentType)) {
+        diagnostics.assetFailures.push(`${assetType} MIME "${contentType || "missing"}" ${response.url()}`);
+      }
+    });
+    page.on("requestfailed", (request) => {
+      const assetType = classifyFirstPartyAsset(request.url(), request.resourceType(), expectedOrigin);
+      if (!assetType) return;
+      diagnostics.assetFailures.push(`${request.failure()?.errorText ?? "request failed"} ${request.url()}`);
+    });
+    page.on("pageerror", (error) => {
+      if (isFatalRuntimeMessage(error.message)) diagnostics.pageErrors.push(error.message);
+    });
+    page.on("console", (message) => {
+      if (message.type() === "error" && isFatalRuntimeMessage(message.text())) {
+        diagnostics.consoleErrors.push(message.text());
+      }
+    });
+
+    try {
+      await verifyBrowserPass(page, routeInfo, baseUrl, diagnostics, label, waitTimeoutMs, settleMs);
+      return diagnostics;
+    } finally {
+      // Keep cache state in the context but prevent a navigation's late requests
+      // from being attributed to the next pass when this page is closed.
+      page.removeAllListeners();
+      await page.close();
     }
-  });
-  page.on("requestfailed", (request) => {
-    const assetType = classifyFirstPartyAsset(request.url(), request.resourceType(), expectedOrigin);
-    if (!assetType) return;
-    diagnostics.assetFailures.push(`${request.failure()?.errorText ?? "request failed"} ${request.url()}`);
-  });
-  page.on("pageerror", (error) => {
-    if (isFatalRuntimeMessage(error.message)) diagnostics.pageErrors.push(error.message);
-  });
-  page.on("console", (message) => {
-    if (message.type() === "error" && isFatalRuntimeMessage(message.text())) {
-      diagnostics.consoleErrors.push(message.text());
-    }
-  });
+  }
 
   try {
-    await verifyBrowserPass(page, routeInfo, baseUrl, diagnostics, "fresh-cache", waitTimeoutMs, settleMs);
+    const freshDiagnostics = await verifyNavigation("fresh-cache");
     assert(
-      diagnostics.assetResponses > 0,
+      freshDiagnostics.assetResponses > 0,
       `${routeInfo.route} fresh-cache navigation observed no first-party script/style/font responses`,
     );
 
     if (warmCacheIds.has(routeInfo.id)) {
-      diagnostics = createDiagnostics();
-      await verifyBrowserPass(page, routeInfo, baseUrl, diagnostics, "warm-cache", waitTimeoutMs, settleMs);
+      await verifyNavigation("warm-cache");
     }
   } finally {
     await context.close();
