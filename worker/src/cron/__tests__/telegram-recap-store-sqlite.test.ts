@@ -43,6 +43,7 @@ function target(chatId: string, generation = 1, localDate = "2026-07-11") {
     preferenceGeneration: generation, watchlistFingerprint: "watch:v1",
     payloadHash: "payload:v1", materialCoinCount: 1, materialFactCount: 1,
     pendingDedupeKey: `recap:${chatId}:${localDate}:v1`, messageHtml: "<b>USDC</b> changed",
+    nextDueAtAfter: NOW + 86400,
     nowSec: NOW, expectedNextDueAt: NOW - 1,
   };
 }
@@ -69,7 +70,7 @@ describe("telegram recap store on latest SQLite schema", () => {
     await expect(queueTelegramRecapTarget(db, target("42"))).resolves.toBe("queued");
     expect(sqlite.prepare("SELECT status, pending_id FROM telegram_recap_targets").get()).toMatchObject({ status: "queued" });
     expect(sqlite.prepare("SELECT source_type, priority, source_event_id, preference_generation FROM telegram_pending_alerts").get()).toEqual({ source_type: "personalized_recap", priority: 100, source_event_id: "recap:42:2026-07-11:v1", preference_generation: 1 });
-    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = '42'").get()).toEqual({ next_due_at: null });
+    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = '42'").get()).toEqual({ next_due_at: NOW + 86400 });
     await expect(queueTelegramRecapTarget(db, target("42"))).resolves.toBe("stale");
   });
 
