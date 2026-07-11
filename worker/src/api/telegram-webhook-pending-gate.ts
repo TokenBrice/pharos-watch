@@ -43,7 +43,8 @@ const MUTATING_PENDING_REPLACEMENT_COMMANDS = new Set([
 
 function mutatesAfterPendingClear(command: ParsedTelegramCommand): boolean {
   return MUTATING_PENDING_REPLACEMENT_COMMANDS.has(command.command)
-    || (command.command === "/timezone" && command.args.trim().length > 0);
+    || (command.command === "/timezone" && command.args.trim().length > 0)
+    || (command.command === "/recap" && /^(?:on|off|time\s+(?:[0-9]|1[0-9]|2[0-3]))$/i.test(command.args.trim()));
 }
 
 function normalizedPendingActionType(value: string | null | undefined): string {
@@ -139,6 +140,7 @@ const PENDING_CLEAR_AND_RUN_COMMANDS = new Set([
   "/unmutehours",
   "/unsnooze",
   "/timezone",
+  "/recap",
 ]);
 
 /**
@@ -316,7 +318,7 @@ export async function handlePendingActionBeforeDispatch(args: {
     return "finished";
   }
 
-  if (PENDING_PASSTHROUGH_COMMANDS.has(command)) {
+  if (PENDING_PASSTHROUGH_COMMANDS.has(command) || (command === "/recap" && parsedCommand.args.trim().length === 0)) {
     return "continue";
   }
   if (PENDING_CLEAR_AND_RUN_COMMANDS.has(command)) {

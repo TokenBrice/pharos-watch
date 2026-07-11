@@ -40,6 +40,7 @@ const CALLBACK_ACTIONS = [
   "help",
   "settings",
   "tz",
+  "recap",
 ] as const;
 
 export type CallbackAction = (typeof CALLBACK_ACTIONS)[number];

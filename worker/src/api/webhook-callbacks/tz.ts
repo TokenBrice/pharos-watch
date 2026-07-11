@@ -76,7 +76,7 @@ export const handleTimezoneCallback: CallbackHandler = async ({
       [
         `Current timezone: ${escapeHtml(zone)}.`,
         "",
-        "Quiet hours from /mute will now be interpreted in this zone.",
+        "Quiet hours from /mute and daily recap delivery will now use this zone.",
       ].join("\n"),
       botToken,
       { disableWebPagePreview: true },

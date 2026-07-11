@@ -71,6 +71,7 @@ const RESUMABLE_NORMALIZED_COMMANDS = new Set([
   "/set",
   "/subscribe",
   "/timezone",
+  "/recap",
   "/unmutehours",
   "/unsnooze",
   "/unsubscribe",
@@ -599,6 +600,7 @@ function commandMutatesLocalState(command: string, args: string): boolean {
   return commandRequiresGroupAdmin(command, args)
     || command === "/forget"
     || command === "/cancel"
+    || (command === "/recap" && /^(?:on|off|time\s+(?:[0-9]|1[0-9]|2[0-3]))$/i.test(args.trim()))
     || (command === "/start" && (
       parseStartPayload(args).kind === "setup" || parseStartPayload(args).kind === "none"
     ));

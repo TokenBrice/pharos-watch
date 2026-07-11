@@ -46,6 +46,12 @@ export interface TelegramRecapPreferenceInput {
   expectedPreferenceGeneration?: number;
 }
 
+/** Additional statements for webhook effect-fence markers. They execute in
+ * the same D1 batch as the recap preference mutation. */
+export interface TelegramRecapPreferenceMutationOptions {
+  operationStatements?: D1PreparedStatement[];
+}
+
 export interface DueTelegramRecapPreference extends TelegramRecapPreference {
   expectedNextDueAt: number;
 }
@@ -160,6 +166,7 @@ export async function getTelegramRecapPreference(
 export async function setTelegramRecapPreference(
   db: D1Database,
   input: TelegramRecapPreferenceInput,
+  options: TelegramRecapPreferenceMutationOptions = {},
 ): Promise<boolean> {
   validateInput(input);
   const expected = input.expectedPreferenceGeneration;
@@ -198,6 +205,28 @@ export async function setTelegramRecapPreference(
          AND ${expected == null ? "1 = 1" : "preference_generation = ?"}
     `).bind(input.chatId, ...(expected == null ? [] : [expected])),
   ];
+  if (!input.enabled) {
+    // A disabled recap must not be delivered after the acknowledgement has
+    // been sent. Keep the audit target, but cancel only intents that have not
+    // crossed the Telegram effect boundary.
+    statements.push(
+      db.prepare(`
+        UPDATE telegram_recap_targets
+           SET status = 'cancelled', terminal_reason = 'recap_disabled',
+               completed_at = ?, updated_at = ?
+         WHERE chat_id = ? AND status IN ('planned', 'queued')
+      `).bind(input.nowSec, input.nowSec, input.chatId),
+      db.prepare(`
+        DELETE FROM telegram_pending_alerts
+         WHERE chat_id = ? AND source_type = 'personalized_recap'
+           AND source_event_id IN (
+             SELECT recap_key FROM telegram_recap_targets
+              WHERE chat_id = ? AND status = 'cancelled'
+           )
+      `).bind(input.chatId, input.chatId),
+    );
+  }
+  statements.push(...(options.operationStatements ?? []));
   await executeAtomicBatch(db, statements);
   // The first statement is deliberately guarded by the old generation. The
   // second statement's changes count is not portable across D1 mocks, so read
@@ -387,7 +416,7 @@ export type TelegramRecapTerminalOutcome =
   | "expired"
   | "failed_permanent";
 
-/** Project one terminal pending outcome and consume the window monotonically. */
+/** Project one terminal pending outcome; only accepted/ambiguous effects consume the window. */
 export async function projectTelegramRecapTerminalOutcome(
   db: D1Database,
   recapKey: string,
@@ -401,6 +430,7 @@ export async function projectTelegramRecapTerminalOutcome(
   `).bind(recapKey).first<TargetRow>();
   if (!target || (target.status !== "planned" && target.status !== "queued")) return false;
   const status: TelegramRecapTargetStatus = outcome === "accepted" ? "sent" : outcome;
+  const consumesWindow = status === "sent" || status === "execution_unknown";
   const targetUpdate = db.prepare(`
     UPDATE telegram_recap_targets
        SET status = ?, terminal_reason = COALESCE(?, terminal_reason),
@@ -409,12 +439,14 @@ export async function projectTelegramRecapTerminalOutcome(
   `).bind(status, reason ?? null, atSec, atSec, recapKey);
   const preferenceUpdate = db.prepare(`
     UPDATE telegram_recap_preferences
-       SET last_window_end_at = MAX(COALESCE(last_window_end_at, 0), ?),
+       SET last_window_end_at = CASE WHEN ? = 1
+             THEN MAX(COALESCE(last_window_end_at, 0), ?)
+             ELSE last_window_end_at END,
            last_delivered_local_date = CASE WHEN ? IN ('sent', 'execution_unknown')
              THEN ? ELSE last_delivered_local_date END,
            updated_at = ?
      WHERE chat_id = ?
-  `).bind(target.window_end_at, status, target.local_date, atSec, target.chat_id);
+  `).bind(consumesWindow ? 1 : 0, target.window_end_at, status, target.local_date, atSec, target.chat_id);
   await executeAtomicBatch(db, [targetUpdate, preferenceUpdate]);
   const updated = await db.prepare(
     "SELECT status FROM telegram_recap_targets WHERE recap_key = ?",

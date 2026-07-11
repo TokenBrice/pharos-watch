@@ -320,6 +320,7 @@ function mutationEventType(operation: TelegramMiniAppOperation): TelegramUsageEv
   if (operation.kind === "set-coin") return "mini_app_coin_add";
   if (operation.kind === "remove-coin") return "mini_app_coin_remove";
   if (operation.kind === "set-quiet-hours") return "mini_app_quiet_hours";
+  if (operation.kind === "set-recap") return "mini_app_recap";
   if (operation.kind === "set-snooze") return "mini_app_snooze";
   if (operation.kind === "set-coin-snooze") return "mini_app_coin_snooze";
   if (operation.kind === "set-timezone") return "timezone_change";
@@ -334,6 +335,7 @@ function adoptionMutationFeature(operation: TelegramMiniAppOperation): TelegramA
   if (operation.kind === "set-quiet-hours") return "quiet_hours";
   if (operation.kind === "set-snooze" || operation.kind === "set-coin-snooze" || operation.kind === "pause" || operation.kind === "clear-snooze") return "snooze";
   if (operation.kind === "set-timezone") return "timezone";
+  if (operation.kind === "set-recap") return "settings";
   if (operation.kind === "unsubscribe-all") return "unsubscribe";
   if (operation.kind === "forget-me") return "forget";
   if (operation.kind === "follow-preset" || operation.kind === "unfollow-preset") return "preset";
@@ -355,6 +357,8 @@ function mutationErrorMessage(err: TelegramMiniAppMutationError): string {
   if (err.code === "empty-alert-types") return "Choose at least one alert type";
   if (err.code === "preset-unavailable") return "Preset data is temporarily unavailable";
   if (err.code === "invalid-timezone") return "Unknown timezone";
+  if (err.code === "recap-timezone-required") return "Set and confirm a timezone before enabling the daily recap";
+  if (err.code === "recap-subscriber-required") return "Add a watchlist before configuring the daily recap";
   if (err.code === "invalid-portable-token") return "This watchlist token is invalid or no longer available for new alerts";
   if (err.code === "empty-portable-state") return "There are no direct watchlist rows or presets to export";
   if (err.code === "stale-import-preview") return "Your watchlist changed after this preview. Review the token again before applying it";

@@ -9,6 +9,7 @@ import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
 } from "./_internals";
+import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 
 /**
  * Replace the subscriber's IANA timezone (used to interpret quiet hours
@@ -23,16 +24,60 @@ export async function setSubscriberTimezone(
   timezone: string | null,
   options: TelegramOperationBatchOptions = {},
 ): Promise<void> {
+  const nowSec = unixNow();
+  const recap = await db.prepare(
+    `SELECT enabled, delivery_hour_local
+       FROM telegram_recap_preferences
+      WHERE chat_id = ? AND chat_kind = 'private'`,
+  ).bind(chatId).first<{ enabled: number; delivery_hour_local: number }>();
+  const recapEnabled = recap?.enabled === 1;
+  const nextDueAt = recapEnabled && timezone != null
+    ? nextIanaLocalHourDueAt(nowSec * 1000, timezone, recap.delivery_hour_local)
+    : null;
   const { sql, binds } = buildSubscriberUpsert({
     kind: "preference",
     chatId,
     username,
-    nowSec: unixNow(),
+    nowSec,
     timezone,
   });
+  const statements: D1PreparedStatement[] = [db.prepare(sql).bind(...binds)];
+  if (recapEnabled) {
+    if (nextDueAt != null) {
+      statements.push(db.prepare(`
+        UPDATE telegram_recap_preferences
+           SET next_due_at = ?, updated_at = ?
+         WHERE chat_id = ? AND enabled = 1 AND chat_kind = 'private'
+      `).bind(Math.floor(nextDueAt / 1000), nowSec, chatId));
+    } else {
+      // A cleared zone can no longer meet the explicit-timezone contract. Do
+      // not leave a logically enabled recap stranded without a schedule.
+      statements.push(
+        db.prepare(`
+          UPDATE telegram_recap_preferences
+             SET enabled = 0, next_due_at = NULL, updated_at = ?
+           WHERE chat_id = ? AND enabled = 1 AND chat_kind = 'private'
+        `).bind(nowSec, chatId),
+        db.prepare(`
+          UPDATE telegram_recap_targets
+             SET status = 'cancelled', terminal_reason = 'timezone_cleared',
+                 completed_at = ?, updated_at = ?
+           WHERE chat_id = ? AND status IN ('planned', 'queued')
+        `).bind(nowSec, nowSec, chatId),
+        db.prepare(`
+          DELETE FROM telegram_pending_alerts
+           WHERE chat_id = ? AND source_type = 'personalized_recap'
+             AND source_event_id IN (
+               SELECT recap_key FROM telegram_recap_targets
+                WHERE chat_id = ? AND status = 'cancelled'
+             )
+        `).bind(chatId, chatId),
+      );
+    }
+  }
   await executeAtomicBatch(
     db,
-    appendTelegramOperationStatements([db.prepare(sql).bind(...binds)], options),
+    appendTelegramOperationStatements(statements, options),
   );
 }
 

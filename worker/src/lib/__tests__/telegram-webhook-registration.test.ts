@@ -585,6 +585,7 @@ describe("reconcileTelegramCommandRegistration", () => {
       "mute",
       "pause",
       "timezone",
+      "recap",
       "unsnooze",
       "unmutehours",
       "cancel",

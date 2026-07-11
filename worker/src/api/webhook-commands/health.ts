@@ -27,6 +27,13 @@ interface ExplicitActiveCountRow {
   active_count: number | string | null;
 }
 
+interface RecapHealthRow {
+  enabled: number | null;
+  next_due_at: number | null;
+  last_delivered_local_date: string | null;
+  last_outcome: string | null;
+}
+
 function formatAge(ts: number | null, nowSec: number): string {
   return formatTelegramAge(ts, nowSec, {
     invalidFallback: "Not recorded yet",
@@ -107,6 +114,19 @@ async function loadExplicitActiveFollowCount(
   return coerceCount(row?.active_count);
 }
 
+async function loadRecapHealth(db: D1Database, chatId: string): Promise<RecapHealthRow | null> {
+  return db.prepare(`
+    SELECT p.enabled, p.next_due_at, p.last_delivered_local_date,
+           (SELECT target.status
+              FROM telegram_recap_targets target
+             WHERE target.chat_id = p.chat_id
+             ORDER BY target.created_at DESC, target.recap_key DESC
+             LIMIT 1) AS last_outcome
+      FROM telegram_recap_preferences p
+     WHERE p.chat_id = ? AND p.chat_kind = 'private'
+  `).bind(chatId).first<RecapHealthRow>();
+}
+
 export const handleHealth: WebhookCommandHandler = async (ctx) => {
   const { db, chatId } = ctx;
   const nowSec = unixNow();
@@ -117,6 +137,7 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
     pendingAlerts,
     recentPendingFailure,
     deliveryDiagnostics,
+    recap,
   ] = await Promise.all([
     loadSubscriberByChat(db, chatId),
     loadPresetSubscriptions(db, chatId),
@@ -124,6 +145,7 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
     loadPendingAlertCount(db, chatId),
     loadRecentPendingFailureClass(db, chatId),
     loadTelegramChatHealthDiagnostics(db, chatId),
+    loadRecapHealth(db, chatId),
   ]);
 
   const recentFailure =
@@ -154,6 +176,10 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
     )}`,
     `Snooze: ${formatSnooze(subscriber?.alert_snooze_until_ts, nowSec)}`,
     `Alert readiness: ${readiness}`,
+    `Daily recap: ${recap?.enabled === 1 ? "On" : "Off"}`,
+    `Recap next due: ${recap?.next_due_at == null ? "Not scheduled" : new Date(recap.next_due_at * 1000).toISOString()}`,
+    `Recap last local date: ${recap?.last_delivered_local_date ?? "Not recorded yet"}`,
+    `Recap last outcome: ${recap?.last_outcome ?? "Not recorded yet"}`,
     "",
     "Use /list for full settings or /settings for inline controls.",
   ];

@@ -23,6 +23,7 @@ import { handleCancel } from "./cancel";
 import { handleForget } from "./forget";
 import { handleExport } from "./export";
 import { handleImport } from "./import";
+import { handleRecap } from "./recap";
 
 export type { WebhookCommandContext, WebhookCommandHandler } from "./context";
 
@@ -60,4 +61,5 @@ export const COMMAND_HANDLERS: Record<string, WebhookCommandHandler> = {
   "/forget": handleForget,
   "/export": handleExport,
   "/import": handleImport,
+  "/recap": handleRecap,
 };

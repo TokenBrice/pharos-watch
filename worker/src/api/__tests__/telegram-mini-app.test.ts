@@ -220,7 +220,19 @@ describe("handleTelegramMiniAppSession", () => {
     const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
     const body = await response.json() as {
       viewer: { canMutate: boolean; chatId: string | null };
-      subscriber: { exists: boolean; snoozeUntilTs: number | null };
+      subscriber: {
+        exists: boolean;
+        snoozeUntilTs: number | null;
+        recap: {
+          enabled: boolean;
+          deliveryHourLocal: number;
+          timezoneConfirmed: boolean;
+          nextDueAt: number | null;
+          lastWindowEndAt: number | null;
+          lastDeliveredLocalDate: string | null;
+          lastOutcome: string | null;
+        };
+      };
       subscriptions: Array<{ stablecoinId: string; symbol: string; alertTypes: { dews: boolean; depeg: boolean }; alertOverrides: { dews: boolean; depeg: boolean } }>;
       catalog: { searchableCoins: Array<{ stablecoinId: string }> };
     };
@@ -231,6 +243,15 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.viewer.chatId).toBe("42");
     expect(body.subscriber.exists).toBe(true);
     expect(body.subscriber.snoozeUntilTs).toBeNull();
+    expect(body.subscriber.recap).toEqual({
+      enabled: false,
+      deliveryHourLocal: 9,
+      timezoneConfirmed: false,
+      nextDueAt: null,
+      lastWindowEndAt: null,
+      lastDeliveredLocalDate: null,
+      lastOutcome: null,
+    });
     expect(body.subscriptions[0]).toMatchObject({
       stablecoinId: "usdc-circle",
       symbol: "USDC",
@@ -250,7 +271,7 @@ describe("handleTelegramMiniAppSession", () => {
     expect(response.status).toBe(200);
     expect(batchSpy).toHaveBeenCalledTimes(2);
     expect(batchSpy.mock.calls[0]?.[0]).toHaveLength(2);
-    expect(batchSpy.mock.calls[1]?.[0]).toHaveLength(4);
+    expect(batchSpy.mock.calls[1]?.[0]).toHaveLength(5);
     const history = db.getHistory();
     expect(history.filter((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toHaveLength(1);
   });
@@ -887,7 +908,7 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "alert_safety = excluded.alert_safety", ["42", "usdc-circle", 1, "downgrade-only"])).toBe(true);
     expect(historyHas(db, "alert_launch = excluded.alert_launch", ["42", "usdc-circle", 1])).toBe(true);
     expect(batchSizes[0]).toBeGreaterThan(1);
-    expect(batchSizes).toContain(4);
+    expect(batchSizes).toContain(5);
   });
 
   it("enables per-coin depeg alerts when setting a worsening step", async () => {

@@ -100,6 +100,25 @@ describe("telegram recap store on latest SQLite schema", () => {
     await expect(projectTelegramRecapTerminalOutcome(db, "recap:42:2026-07-11:v1", "accepted", NOW + 2)).resolves.toBe(false);
   });
 
+  it("does not consume a fact window after a permanent failure and cancels queued work on disable", async () => {
+    const { sqlite, db } = setup();
+    subscriber(sqlite, "42");
+    await setTelegramRecapPreference(db, preferenceInput("42"));
+    await queueTelegramRecapTarget(db, target("42"));
+    await expect(projectTelegramRecapTerminalOutcome(db, "recap:42:2026-07-11:v1", "failed_permanent", NOW + 1)).resolves.toBe(true);
+    expect(sqlite.prepare("SELECT last_window_end_at FROM telegram_recap_preferences WHERE chat_id = '42'").get()).toEqual({ last_window_end_at: null });
+
+    await setTelegramRecapPreference(db, {
+      chatId: "42", enabled: true, deliveryHourLocal: 9, nextDueAt: NOW - 1, nowSec: NOW + 2,
+    });
+    await queueTelegramRecapTarget(db, target("42", 2, "2026-07-12"));
+    await expect(setTelegramRecapPreference(db, {
+      chatId: "42", enabled: false, deliveryHourLocal: 9, nextDueAt: null, nowSec: NOW + 3,
+    })).resolves.toBe(true);
+    expect(sqlite.prepare("SELECT status FROM telegram_recap_targets WHERE recap_key = 'recap:42:2026-07-12:v1'").get()).toEqual({ status: "cancelled" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE source_event_id = 'recap:42:2026-07-12:v1'").get()).toEqual({ count: 0 });
+  });
+
   it("prunes aggregate rows at 30 days and uncertain outcomes at 90 days", async () => {
     const { sqlite, db } = setup();
     sqlite.prepare(`INSERT INTO telegram_recap_targets

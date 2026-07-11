@@ -13,6 +13,7 @@ import { handleSelectCallback } from "./select";
 import { handleHelpCallback } from "./help";
 import { handleTimezoneCallback } from "./tz";
 import { handleSettingsCallbackEntry } from "./settings";
+import { handleRecapCallback } from "./recap";
 import type { CallbackAction, CallbackHandler } from "./_shared";
 
 export type {
@@ -54,4 +55,5 @@ export const CALLBACK_HANDLERS: Record<CallbackAction, CallbackHandler> = {
   help: handleHelpCallback,
   tz: handleTimezoneCallback,
   settings: handleSettingsCallbackEntry,
+  recap: handleRecapCallback,
 };

@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
@@ -56,6 +57,7 @@ import {
   type WatchlistImportPreview,
 } from "./telegram-store/watchlist-import";
 import { loadSubscriberByChat } from "./telegram-store/subscribers";
+import { setTelegramRecapPreference } from "../cron/telegram-recap-store";
 
 export type TelegramMiniAppMutationErrorCode =
   | "not-private"
@@ -65,6 +67,8 @@ export type TelegramMiniAppMutationErrorCode =
   | "preset-unavailable"
   | "invalid-coin-patch"
   | "invalid-timezone"
+  | "recap-timezone-required"
+  | "recap-subscriber-required"
   | "invalid-portable-token"
   | "empty-portable-state"
   | "stale-import-preview"
@@ -755,6 +759,32 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       }
       await setSubscriberTimezone(db, chatId, username, operation.timezone);
       return;
+    case "set-recap": {
+      const subscriber = await loadSubscriberByChat(db, chatId);
+      if (subscriber == null) {
+        throw new TelegramMiniAppMutationError("recap-subscriber-required", 409);
+      }
+      const timezone = subscriber?.timezone ?? null;
+      if (operation.enabled && timezone == null) {
+        throw new TelegramMiniAppMutationError("recap-timezone-required", 409);
+      }
+      const nowSec = unixNow();
+      const nextDueMs = operation.enabled && timezone != null
+        ? nextIanaLocalHourDueAt(nowSec * 1000, timezone, operation.deliveryHourLocal)
+        : null;
+      if (operation.enabled && nextDueMs == null) {
+        throw new TelegramMiniAppMutationError("recap-timezone-required", 409);
+      }
+      const applied = await setTelegramRecapPreference(db, {
+        chatId,
+        enabled: operation.enabled,
+        deliveryHourLocal: operation.deliveryHourLocal,
+        nextDueAt: nextDueMs == null ? null : Math.floor(nextDueMs / 1000),
+        nowSec,
+      });
+      if (!applied) throw new TelegramMiniAppMutationError("invalid-coin-patch", 409);
+      return;
+    }
     case "unsubscribe-all":
       await unsubscribeAll(db, chatId);
       return;
@@ -802,6 +832,7 @@ export function mutationActionDetail(operation: TelegramMiniAppOperation): strin
   if (operation.kind === "set-snooze") return "chat";
   if (operation.kind === "set-coin-snooze") return "coin";
   if (operation.kind === "set-timezone") return "timezone";
+  if (operation.kind === "set-recap") return "recap";
   if (operation.kind === "unsubscribe-all") return "all";
   return operation.kind;
 }

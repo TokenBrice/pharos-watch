@@ -56,6 +56,15 @@ interface PendingAlertCountRow {
   queued_alerts: number | string | null;
 }
 
+interface RecapStateRow {
+  enabled: number | null;
+  delivery_hour_local: number | null;
+  next_due_at: number | null;
+  last_window_end_at: number | null;
+  last_delivered_local_date: string | null;
+  last_outcome: string | null;
+}
+
 function boolFlag(value: number | null | undefined): boolean {
   return value === 1;
 }
@@ -147,7 +156,7 @@ export async function loadTelegramMiniAppState(
     ? mutationAuthExpired ? "stale-auth" : null
     : "not-private";
 
-  const [subscriber, subscriptions, presets, health, pending] = chatId
+  const [subscriber, subscriptions, presets, health, pending, recap] = chatId
     ? await (async () => {
       const [stateResults, diagnostics] = await Promise.all([
         db.batch([
@@ -175,11 +184,23 @@ export async function loadTelegramMiniAppState(
           ).bind(chatId),
           db.prepare("SELECT COUNT(*) AS queued_alerts FROM telegram_pending_alerts WHERE chat_id = ?")
             .bind(chatId),
+          db.prepare(
+            `SELECT p.enabled, p.delivery_hour_local, p.next_due_at,
+                    p.last_window_end_at, p.last_delivered_local_date,
+                    (SELECT target.status
+                       FROM telegram_recap_targets target
+                      WHERE target.chat_id = p.chat_id
+                      ORDER BY target.created_at DESC, target.recap_key DESC
+                      LIMIT 1) AS last_outcome
+               FROM telegram_recap_preferences p
+              WHERE p.chat_id = ? AND p.chat_kind = 'private'`,
+          ).bind(chatId),
         ]) as Promise<[
           D1Result<SubscriberRow>,
           D1Result<SubscriptionRow>,
           D1Result<PresetSubscriptionRow>,
           D1Result<PendingAlertCountRow>,
+          D1Result<RecapStateRow>,
         ]>,
         loadTelegramChatHealthDiagnostics(db, chatId),
       ]);
@@ -189,12 +210,14 @@ export async function loadTelegramMiniAppState(
         { results: stateResults[2].results ?? [] },
         diagnostics,
         stateResults[3].results?.[0] ?? null,
+        stateResults[4].results?.[0] ?? null,
       ] as const;
     })()
     : [
       null,
       { results: [] as SubscriptionRow[] },
       { results: [] as PresetSubscriptionRow[] },
+      null,
       null,
       null,
     ] as const;
@@ -225,7 +248,16 @@ export async function loadTelegramMiniAppState(
         enabled: boolFlag(subscriber?.quiet_hours_enabled),
         startHourUtc: subscriber?.quiet_hours_start_utc ?? null,
         endHourUtc: subscriber?.quiet_hours_end_utc ?? null,
-        timezone: subscriber?.timezone ?? "UTC",
+        timezone: subscriber?.timezone ?? null,
+      },
+      recap: {
+        enabled: boolFlag(recap?.enabled),
+        deliveryHourLocal: recap?.delivery_hour_local ?? 9,
+        timezoneConfirmed: subscriber?.timezone != null,
+        nextDueAt: recap?.next_due_at ?? null,
+        lastWindowEndAt: recap?.last_window_end_at ?? null,
+        lastDeliveredLocalDate: recap?.last_delivered_local_date ?? null,
+        lastOutcome: recap?.last_outcome ?? null,
       },
       snoozeUntilTs: subscriber?.alert_snooze_until_ts ?? null,
     },

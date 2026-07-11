@@ -44,6 +44,7 @@ export const TELEGRAM_BOT_COMMANDS = [
   { command: "mute", description: "Enable quiet hours (e.g. /mute 22-07; uses your /timezone)" },
   { command: "pause", description: "Pause all alerts indefinitely; /pause off to resume" },
   { command: "timezone", description: "Set chat timezone for quiet hours (e.g. /timezone Europe/Paris)" },
+  { command: "recap", description: "Set your private daily watchlist recap" },
   { command: "unsnooze", description: "Clear active alert snooze" },
   { command: "unmutehours", description: "Disable quiet hours" },
   { command: "cancel", description: "Cancel a pending ticker selection" },
@@ -53,7 +54,7 @@ export const TELEGRAM_BOT_COMMANDS = [
 ] as const;
 
 // Commands that are personal-only and must not appear in the group scope.
-const PERSONAL_ONLY_COMMANDS = new Set(["start", "forget"]);
+const PERSONAL_ONLY_COMMANDS = new Set(["start", "forget", "recap"]);
 
 // Derive the group command list from the personal list so descriptions stay in
 // sync: filter out personal-only commands and remap /import's description to
