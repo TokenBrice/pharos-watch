@@ -20,7 +20,7 @@ const baseState: TelegramMiniAppState = {
     exists: true,
     globalAlerts: { dews: true, depeg: true, safety: false, launch: false, reserve: false, freeze: false, depegStepBps: 250 },
     quietHours: { enabled: false, startHourUtc: null, endHourUtc: null, timezone: "UTC" },
-    recap: { enabled: false, deliveryHourLocal: 9, timezoneConfirmed: true, nextDueAt: null, lastWindowEndAt: null, lastDeliveredLocalDate: null, lastOutcome: null },
+    recap: { available: true, enabled: false, deliveryHourLocal: 9, timezoneConfirmed: true, nextDueAt: null, lastWindowEndAt: null, lastDeliveredLocalDate: null, lastOutcome: null },
     snoozeUntilTs: null,
   },
   presets: [],
@@ -1007,6 +1007,24 @@ describe("PharosWatchBotMiniAppPage", () => {
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-recap", enabled: true, deliveryHourLocal: 14 } }),
     }));
     expect(screen.getByText("No material changes")).toBeTruthy();
+  });
+
+  it("hides recap controls when the server rollout does not expose them", async () => {
+    const state: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        recap: { ...baseState.subscriber.recap, available: false },
+      },
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => state }));
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+
+    expect(screen.queryByRole("switch", { name: "Daily recap" })).toBeNull();
   });
 
   it("requires an explicitly confirmed timezone before enabling a recap", async () => {

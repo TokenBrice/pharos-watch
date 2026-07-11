@@ -6,6 +6,7 @@ import {
   TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
+  TelegramMiniAppStateSchema,
   createTelegramMiniAppSnapshot,
   telegramMiniAppStateRevision,
   type TelegramMiniAppMutableState,
@@ -62,6 +63,12 @@ const legacyState: TelegramMiniAppState = {
   },
 };
 
+const normalizedLegacyState = (() => {
+  const state = TelegramMiniAppStateSchema.parse(legacyState);
+  const { catalog: _catalog, ...mutable } = state;
+  return { state, mutable };
+})();
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -93,7 +100,8 @@ describe("Mini App versioned API client", () => {
     const snapshot = await postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" });
 
     expect(snapshot.state.catalog.searchableCoins).toEqual(legacyState.catalog.searchableCoins);
-    expect(snapshot.stateRevision).toBe(telegramMiniAppStateRevision(mutableState));
+    expect(snapshot.state.subscriber.recap.available).toBe(false);
+    expect(snapshot.stateRevision).toBe(telegramMiniAppStateRevision(normalizedLegacyState.mutable));
   });
 
   it.each([
@@ -119,7 +127,8 @@ describe("Mini App versioned API client", () => {
   it("keeps the state-only compatibility wrapper for callers that do not need revision metadata", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => legacyState }));
 
-    await expect(postMiniAppState("/api/telegram-mini-app/session", { initData: "signed" })).resolves.toEqual(legacyState);
+    await expect(postMiniAppState("/api/telegram-mini-app/session", { initData: "signed" }))
+      .resolves.toEqual(normalizedLegacyState.state);
   });
 
   it("validates a versioned portable watchlist preview without hydrating state", async () => {
