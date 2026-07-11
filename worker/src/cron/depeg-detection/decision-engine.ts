@@ -17,6 +17,7 @@ import {
   countDexProtocolCorroborations,
   dexPoolIndependentGroupKey,
   isExtremeMovePending,
+  markNativeOriginPending,
   type DepegRow,
   type DexPriceRow,
   type PendingDepegReason,
@@ -538,7 +539,7 @@ function decideNewNativePegDepeg(ctx: DecisionContext): Omit<DepegAssetDecision,
   if (ctx.nativeSignal.absBps >= DEPEG_EXTREME_MOVE_BPS) reasonFlags.push("extreme-move");
 
   if (reasonFlags.length > 0) {
-    const pendingReason = buildPendingReason(reasonFlags);
+    const pendingReason = markNativeOriginPending(buildPendingReason(reasonFlags));
     commands.push(buildPendingCommand(
       ctx.asset,
       ctx.now,
