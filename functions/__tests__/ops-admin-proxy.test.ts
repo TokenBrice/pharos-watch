@@ -205,6 +205,32 @@ describe("ops admin proxy", () => {
     );
   });
 
+  it("accepts the Cloudflare Access token header when the assertion header is absent", async () => {
+    verifyAccessJwtUserIdentity.mockResolvedValueOnce({
+      email: "operator@pharos.watch",
+      subject: "operator-subject",
+    });
+    const fetchSpy = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://ops.pharos.watch/api/admin/status", {
+        headers: { "cf-access-token": "valid-access-token" },
+      }),
+      env: BASE_ENV,
+      params: { path: "status" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(verifyAccessJwtUserIdentity).toHaveBeenCalledWith({
+      token: "valid-access-token",
+      aud: "ui-aud",
+      teamDomain: "pharos-watch",
+      expectedType: "app",
+    });
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
   it("forwards only the verified JWT actor and ignores a browser-supplied actor header", async () => {
     verifyAccessJwtUserIdentity.mockResolvedValueOnce({
       email: "verified@pharos.watch",
