@@ -147,7 +147,9 @@ export async function readResponseJsonWithinLimitWithSignal<TResult = unknown>(
 ): Promise<TResult> {
   if (response.body || typeof response.json !== "function") {
     const text = await readResponseTextWithinLimitWithSignal(response, maxBytes, signal);
-    return JSON.parse(text) as TResult;
+    const parsed = parseJson(text);
+    if (!parsed.ok) throw new SyntaxError(parsed.message);
+    return parsed.value as TResult;
   }
 
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
@@ -272,3 +274,4 @@ export async function readResponseTextBoundedWithSignal(
     if (signal && onAbort) signal.removeEventListener("abort", onAbort);
   }
 }
+import { parseJson } from "./json-parse";
