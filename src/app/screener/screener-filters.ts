@@ -21,10 +21,19 @@ import {
   type MintAuthorityStatusKind,
 } from "@/lib/mint-authority-display";
 import type { UrlStateSchema } from "@/lib/url-state";
-import { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES, STABLECOIN_STATUS_VALUES } from "@shared/types/core";
+import {
+  GOVERNANCE_TYPE_VALUES,
+  MECHANISM_ARCHETYPE_VALUES,
+  STABLECOIN_STATUS_VALUES,
+} from "@shared/types/stablecoin-taxonomy";
 import { PEG_METADATA } from "@shared/lib/classification";
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
-import type { GovernanceType, MechanismArchetype, PegCurrency, ReportCardGrade, StablecoinStatus } from "@shared/types";
+import type { PegCurrency, ReportCardGrade } from "@shared/types";
+import type {
+  GovernanceType,
+  MechanismArchetype,
+  StablecoinStatus,
+} from "@shared/types/stablecoin-taxonomy";
 
 export const PEG_VALUES = Object.keys(PEG_METADATA) as readonly PegCurrency[];
 export const SAFETY_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"] as const satisfies readonly ReportCardGrade[];

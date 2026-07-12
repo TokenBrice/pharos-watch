@@ -124,6 +124,9 @@ describe("BlacklistSection", () => {
     expect(getByTestId("stablecoin-blacklist-events-table").getAttribute("data-table-id")).toBe(
       "stablecoin-blacklist-events",
     );
+    const eventBadge = screen.getByText("Freeze");
+    expect(eventBadge.className).toContain("bg-red-500/15");
+    expect(screen.queryByText("Blacklist")).toBeNull();
     expect(getByRole("link", { name: "See all events →" }).getAttribute("href")).toBe("/freezewatch/?stablecoin=USDC");
   });
 

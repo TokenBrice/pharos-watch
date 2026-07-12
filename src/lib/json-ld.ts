@@ -1,4 +1,5 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 
 /**
  * Escapes JSON-LD strings for safe embedding inside <script type="application/ld+json">.
@@ -44,7 +45,7 @@ export const PHAROS_ORG_NODE = {
     "https://x.com/PharosWatch",
     "https://github.com/TokenBrice/pharos-watch",
     "https://t.me/pharoswatch",
-    "https://t.me/PharosWatchBot",
+    TELEGRAM_BOT_URL,
     "https://t.me/pharoswatchers",
     "https://pharosville.pharos.watch/",
     "https://farcaster.xyz/tokenbrice",

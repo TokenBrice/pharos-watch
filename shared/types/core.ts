@@ -3,8 +3,20 @@ import type { DependencyType } from "./dependency-types";
 import type { LiveReservesConfig } from "./live-reserves";
 import type { CauseOfDeath } from "./cause-of-death";
 import type { ReserveSlice } from "./reserves";
+import {
+  GOVERNANCE_TYPE_VALUES,
+  type GovernanceType,
+  type MechanismArchetype,
+  type StablecoinStatus,
+} from "./stablecoin-taxonomy";
 export type { DependencyType } from "./dependency-types";
 export type { ReserveRisk, ReserveSlice } from "./reserves";
+export {
+  GOVERNANCE_TYPE_VALUES,
+  MECHANISM_ARCHETYPE_VALUES,
+  STABLECOIN_STATUS_VALUES,
+} from "./stablecoin-taxonomy";
+export type { GovernanceType, MechanismArchetype, StablecoinStatus } from "./stablecoin-taxonomy";
 export { RESERVE_RISK_VALUES, ReserveRiskSchema } from "./reserves";
 export { DEPENDENCY_TYPE_VALUES, DependencyTypeSchema } from "./dependency-types";
 
@@ -49,10 +61,6 @@ export const PEG_CURRENCY_VALUES = [
   "OTHER",
 ] as const;
 export type PegCurrency = (typeof PEG_CURRENCY_VALUES)[number];
-
-/** Governance model */
-export const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
-export type GovernanceType = (typeof GOVERNANCE_TYPE_VALUES)[number];
 
 export interface StablecoinFlags {
   backing: BackingType;
@@ -559,15 +567,6 @@ export const VARIANT_KIND_VALUES = [
   "bond-maturity",
 ] as const;
 export type VariantKind = (typeof VARIANT_KIND_VALUES)[number];
-export const MECHANISM_ARCHETYPE_VALUES = [
-  "fiat-cash",
-  "tbill",
-  "cdp",
-  "synthetic-delta-neutral",
-  "algorithmic",
-  "rwa-credit-fund",
-] as const;
-export type MechanismArchetype = (typeof MECHANISM_ARCHETYPE_VALUES)[number];
 export const GovernanceTypeSchema = z.enum(GOVERNANCE_TYPE_VALUES);
 export const ChainTierSchema = z.enum(CHAIN_TIER_VALUES);
 export const DeploymentModelSchema = z.enum(DEPLOYMENT_MODEL_VALUES);
@@ -649,9 +648,6 @@ export interface FeaturedContent {
   image?: string;
   source?: string;
 }
-
-export const STABLECOIN_STATUS_VALUES = ["pre-launch", "active", "frozen"] as const;
-export type StablecoinStatus = (typeof STABLECOIN_STATUS_VALUES)[number];
 
 export const MARKET_AVAILABILITY_VALUES = [
   "market-traded",

@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import {
-  TableCell,
-  TableRow,
-} from "@/components/table";
+import { TableCell, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, ShieldOff } from "lucide-react";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
 import { isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
+import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { formatAddress, formatCurrency, timeAgo, formatEventDate } from "@shared/lib/format";
 import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
 
@@ -29,21 +27,9 @@ interface Props {
 }
 
 function eventBadge(eventType: BlacklistEvent["eventType"]) {
-  if (eventType === "blacklist") {
-    return {
-      label: "Blacklist",
-      className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 text-xs",
-    };
-  }
-  if (eventType === "unblacklist") {
-    return {
-      label: "Unblacklist",
-      className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 text-xs",
-    };
-  }
   return {
-    label: "Destroy",
-    className: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 text-xs",
+    label: EVENT_LABELS[eventType],
+    className: `${EVENT_BADGE_STYLES[eventType]} text-xs`,
   };
 }
 
@@ -162,7 +148,9 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
                 </a>
               </TableCell>
               <TableCell className="text-right font-mono tabular-nums text-sm">
-                <span className={evt.amountUsdAtEvent == null && evt.amountNative == null ? "text-muted-foreground" : ""}>
+                <span
+                  className={evt.amountUsdAtEvent == null && evt.amountNative == null ? "text-muted-foreground" : ""}
+                >
                   {amount.primary}
                 </span>
                 <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">{amount.detail}</span>

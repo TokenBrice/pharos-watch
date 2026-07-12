@@ -1,5 +1,6 @@
 import { API_PATHS } from "./api-endpoints/paths";
 import { CRON_INTERVALS } from "./cron-jobs";
+import { STABLECOINS_QUERY_KEY } from "./query-keys";
 import type { DependencyCriticality } from "../types/status";
 
 export type DataSurfaceDescriptorKey =
@@ -40,7 +41,7 @@ export const DATA_SURFACE_DESCRIPTORS = {
   stablecoins: {
     key: "stablecoins",
     apiPath: API_PATHS.stablecoins(),
-    queryKey: ["stablecoins"],
+    queryKey: STABLECOINS_QUERY_KEY,
     cacheKey: "stablecoins",
     producerJob: "sync-stablecoins",
     producerIntervalSec: CRON_INTERVALS["sync-stablecoins"],

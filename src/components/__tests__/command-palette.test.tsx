@@ -1,15 +1,16 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CommandPalette } from "@/components/command-palette";
 import { makeStablecoin } from "@/test/fixtures/safety-scores";
+import { STABLECOINS_QUERY_KEY } from "@shared/lib/query-keys";
 import type { StablecoinListResponse } from "@shared/types";
 
 const {
   pushMock,
-  useStablecoinsMock,
   addToHistoryMock,
   clearHistoryMock,
   toggleThemeMock,
@@ -18,7 +19,6 @@ const {
   clearWatchlistMock,
 } = vi.hoisted(() => ({
   pushMock: vi.fn(),
-  useStablecoinsMock: vi.fn(),
   addToHistoryMock: vi.fn(),
   clearHistoryMock: vi.fn(),
   toggleThemeMock: vi.fn(),
@@ -37,10 +37,6 @@ vi.mock("next/image", () => ({
 
 vi.mock("@/hooks/use-logos", () => ({
   useLogos: () => ({ data: {} }),
-}));
-
-vi.mock("@/hooks/use-stablecoins", () => ({
-  useStablecoins: useStablecoinsMock,
 }));
 
 vi.mock("@/hooks/use-command-palette-history", () => ({
@@ -96,13 +92,27 @@ function stablecoinsPayload(): StablecoinListResponse {
 }
 
 describe("CommandPalette", () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
       callback(0);
       return 0;
     });
-    useStablecoinsMock.mockReturnValue({ data: stablecoinsPayload() });
+    queryClient = new QueryClient();
+    queryClient.setQueryData(STABLECOINS_QUERY_KEY, {
+      data: stablecoinsPayload(),
+      meta: null,
+    });
   });
+
+  function renderPalette() {
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <CommandPalette open={true} onOpenChange={vi.fn()} />
+      </QueryClientProvider>,
+    );
+  }
 
   afterEach(() => {
     cleanup();
@@ -111,7 +121,7 @@ describe("CommandPalette", () => {
   });
 
   it("renders NAV wrappers with a NAV state instead of an off-peg alert", () => {
-    render(<CommandPalette open={true} onOpenChange={vi.fn()} />);
+    renderPalette();
 
     const navRow = screen.getByRole("option", {
       name: /Sky Savings USDSsUSDS.*NAV-priced token/i,
@@ -122,7 +132,7 @@ describe("CommandPalette", () => {
   });
 
   it("keeps rendered search ordering aligned with live market caps", () => {
-    render(<CommandPalette open={true} onOpenChange={vi.fn()} />);
+    renderPalette();
 
     fireEvent.change(screen.getByRole("combobox", { name: "Search" }), {
       target: { value: "USDC" },
@@ -132,5 +142,16 @@ describe("CommandPalette", () => {
     expect(optionLabels.findIndex((label) => label.includes("Maple syrupUSDC"))).toBeLessThan(
       optionLabels.findIndex((label) => label.includes("Movement USDCx")),
     );
+  });
+
+  it("keeps static stablecoin search available when the validated list cache is absent", () => {
+    queryClient.clear();
+    renderPalette();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), {
+      target: { value: "USDCx" },
+    });
+
+    expect(screen.getByRole("option", { name: /Movement USDCx/i })).toBeTruthy();
   });
 });

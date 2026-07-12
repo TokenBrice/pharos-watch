@@ -11,6 +11,7 @@ import { TermText } from "@/components/term-text";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { clampScore } from "@shared/lib/math";
+import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import {
   LAUNCH_PHASE_LABELS,
   PHASE_BADGE,
@@ -235,7 +236,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
             <p className="max-w-2xl text-sm text-muted-foreground">
               Copy this exact command and send it to{" "}
               <a
-                href="https://t.me/PharosWatchBot"
+                href={TELEGRAM_BOT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
@@ -264,7 +265,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
 
       <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
         <a
-          href="https://t.me/PharosWatchBot"
+          href={TELEGRAM_BOT_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"

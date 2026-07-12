@@ -6,8 +6,9 @@ import {
   telegramAdoptionEntryForPlacement,
   type TelegramAdoptionCatalogPlacement,
 } from "@shared/lib/telegram-adoption-analytics";
+import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 
-export const PHAROSWATCHBOT_BOT_URL = "https://t.me/PharosWatchBot";
+export const PHAROSWATCHBOT_BOT_URL = TELEGRAM_BOT_URL;
 
 export const RECOMMENDED_SETUP = {
   alertTypes: ["dews", "depeg"],

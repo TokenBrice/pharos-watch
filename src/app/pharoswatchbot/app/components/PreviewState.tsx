@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { Bot, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const BOT_URL = "https://t.me/PharosWatchBot";
+import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 
 export function PreviewState({ previewName }: { previewName: string | null }) {
   return (
@@ -24,7 +23,7 @@ export function PreviewState({ previewName }: { previewName: string | null }) {
         </p>
         <div className="mt-5 grid gap-2">
           <Button asChild className="gap-2">
-            <a href={BOT_URL} target="_blank" rel="noopener noreferrer">Open PharosWatchBot <ExternalLink className="h-4 w-4" aria-hidden="true" /></a>
+            <a href={TELEGRAM_BOT_URL} target="_blank" rel="noopener noreferrer">Open PharosWatchBot <ExternalLink className="h-4 w-4" aria-hidden="true" /></a>
           </Button>
           <Button asChild variant="outline"><Link href="/pharoswatchbot/">View setup guide</Link></Button>
         </div>

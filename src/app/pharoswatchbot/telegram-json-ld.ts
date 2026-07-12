@@ -2,6 +2,7 @@ import {
   TELEGRAM_ALERT_FAMILIES,
   TELEGRAM_ALERT_FAMILY_PHRASE_LIST,
 } from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import { RECOMMENDED_SETUP_COMMAND } from "./telegram-route-constants";
 
 const TELEGRAM_HOW_TO_STEPS = [
@@ -56,7 +57,7 @@ export function buildTelegramPageJsonLd(siteUrl: string) {
       operatingSystem: "Telegram",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       url: `${siteUrl}/pharoswatchbot/`,
-      installUrl: "https://t.me/PharosWatchBot",
+      installUrl: TELEGRAM_BOT_URL,
       description: `Opt-in Telegram bot for stablecoin alerts: ${TELEGRAM_ALERT_FAMILY_PHRASE_LIST}.`,
       featureList: TELEGRAM_FEATURE_LIST,
       publisher: { "@id": `${siteUrl}#organization` },

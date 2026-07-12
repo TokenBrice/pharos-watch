@@ -15,7 +15,7 @@ import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS } from "@shared/lib/classification";
 import depegEventSearchData from "@/generated/depeg-event-search-data.json";
 import {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PipelineModeSummary } from "@/lib/pipeline-workspace-model";
 import { PipelineModeTabs } from "../pipeline-mode-tabs";
@@ -30,5 +30,18 @@ describe("PipelineModeTabs", () => {
     expect(screen.getAllByRole("tab")).toHaveLength(MODES.length);
     expect(screen.getByRole("tab", { name: /Quality/ }).className).toContain("min-h-11");
     expect(screen.getByRole("tab", { name: /Quality/ }).className).toContain("min-w-[6.5rem]");
+  });
+
+  it("moves selection and focus with the shared roving-tab keyboard controls", () => {
+    const onModeChange = vi.fn();
+    render(<PipelineModeTabs activeMode="quality" modes={MODES} onModeChange={onModeChange} />);
+
+    const qualityTab = screen.getByRole("tab", { name: /Quality/ });
+    const marketsTab = screen.getByRole("tab", { name: /Markets/ });
+    qualityTab.focus();
+    fireEvent.keyDown(qualityTab, { key: "ArrowRight" });
+
+    expect(onModeChange).toHaveBeenCalledWith("markets");
+    expect(document.activeElement).toBe(marketsTab);
   });
 });

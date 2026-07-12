@@ -13,6 +13,7 @@ export const TELEGRAM_ALLOWED_UPDATES = [
 // so a rename is a one-line change. Telegram usernames are case-insensitive;
 // keep the display casing here and lowercase at the comparison/path site.
 export const TELEGRAM_BOT_USERNAME = "PharosWatchBot";
+export const TELEGRAM_BOT_URL = `https://t.me/${TELEGRAM_BOT_USERNAME}`;
 
 // Profile metadata shown on the bot's About page, card preview, and chat
 // header. Kept in shared code so Worker reconciliation and manual recovery

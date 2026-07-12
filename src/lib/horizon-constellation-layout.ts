@@ -1,3 +1,35 @@
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
+import type { LaunchPhase } from "@shared/types";
+import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
+import { dateScore } from "@/lib/pre-launch";
+
+export type HorizonPreLaunchCoin = StablecoinClientMeta & { launchPhase: LaunchPhase };
+
+export const HORIZON_PHASE_ORDER: readonly LaunchPhase[] = [
+  "announced",
+  "testnet",
+  "auditing",
+  "beta",
+  "launching-soon",
+];
+
+export const HORIZON_PHASE_SHORT_LABELS: Record<LaunchPhase, string> = {
+  announced: "Announced",
+  testnet: "Testnet",
+  auditing: "Auditing",
+  beta: "Beta",
+  "launching-soon": "Launching",
+};
+
+export const HORIZON_PHASE_FIELD_CLASSES: Record<LaunchPhase, string> = {
+  announced: "border-amber-500/35 bg-amber-500/[0.05] dark:border-amber-400/35 dark:bg-amber-400/[0.07]",
+  testnet: "border-indigo-500/35 bg-indigo-500/[0.05] dark:border-indigo-400/35 dark:bg-indigo-400/[0.07]",
+  auditing: "border-violet-500/35 bg-violet-500/[0.05] dark:border-violet-400/35 dark:bg-violet-400/[0.07]",
+  beta: "border-emerald-500/35 bg-emerald-500/[0.05] dark:border-emerald-400/35 dark:bg-emerald-400/[0.07]",
+  "launching-soon": "border-sky-500/45 bg-sky-500/[0.07] dark:border-sky-400/45 dark:bg-sky-400/[0.09]",
+};
+
 export interface HorizonPoint {
   x: number;
   y: number;
@@ -26,6 +58,16 @@ export const HORIZON_CONSTELLATION_LAYOUT = {
   overflowRing: 8,
   narrowLaneDots: 8,
 } as const;
+
+export const HORIZON_PRE_LAUNCH_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter(
+  (coin): coin is HorizonPreLaunchCoin => isPreLaunchStablecoinMeta(coin) && Boolean(coin.launchPhase),
+);
+
+export const HORIZON_COINS_BY_PHASE = HORIZON_PHASE_ORDER.map((phase) =>
+  HORIZON_PRE_LAUNCH_STABLECOINS.filter((coin) => coin.launchPhase === phase).sort(
+    (a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate),
+  ),
+);
 
 // Pack dots into a circular cluster centered on (0, 0). Up to 6 form a single
 // polygon ring; 7+ get a center dot wrapped by concentric rings.
@@ -76,6 +118,8 @@ export function layoutHorizonPhase(count: number): HorizonPhaseLayout {
   });
   return { pts, fieldR: r + dot / 2 + pad, hidden: count - overflowRing };
 }
+
+export const HORIZON_PHASE_LAYOUTS = HORIZON_COINS_BY_PHASE.map((coins) => layoutHorizonPhase(coins.length));
 
 function phaseFieldRadius(count: number, layout: HorizonPhaseLayout): number {
   const { countFieldScale, maxFieldRadius, minFieldRadius } = HORIZON_CONSTELLATION_LAYOUT;
