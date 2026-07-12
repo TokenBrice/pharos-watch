@@ -48,6 +48,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
   exemptions: Object.freeze([
     exempt(".github/scripts/parse-pages-deployment-id.mjs", "read-only"),
     exempt("scripts/build-data/build-client-registry.mjs", "build"),
+    exempt("scripts/ci/check-build-attribution.mjs", "read-only"),
     exempt("scripts/ci/check-critical-coverage.mjs", "test"),
     exempt("scripts/ci/check-cron-connection-budget.ts", "read-only"),
     exempt("scripts/ci/check-cron-console-usage.mjs", "build"),
@@ -60,6 +61,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/check-node-modules-fresh.mjs", "test"),
     exempt("scripts/ci/check-oracle-risk-coverage.ts", "read-only"),
     exempt("scripts/ci/check-redemption-backstops.ts", "build"),
+    exempt("scripts/ci/check-script-entrypoints.mjs", "read-only"),
     exempt("scripts/ci/check-seo-live-smoke.mjs", "test"),
     exempt("scripts/ci/check-seo-static.mjs", "test"),
     exempt("scripts/ci/check-shared-types-imports.mjs", "read-only"),

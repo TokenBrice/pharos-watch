@@ -1,0 +1,6 @@
+[
+  {
+    "Id": "pages-deployment-uppercase",
+    "Environment": "production"
+  }
+]

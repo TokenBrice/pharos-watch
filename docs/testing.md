@@ -388,6 +388,7 @@ CI does **not** run a full-suite coverage gate. CI runs the critical-path gate v
 - Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 40%, currently pinned to 40 in CI)
 - Applies explicit per-file minimums for selected reliability paths (`alerts`, `auth`, `evm-rpc`, `discovery`, `health`, `stablecoin-detail`, `dex-liquidity/orchestrator`, plus the other file-specific overrides in `scripts/ci/check-critical-coverage.mjs`)
 - For touched critical files, enforces a no-regression ratchet using `.ci/critical-coverage-baseline.json`
+- Fails closed when an explicit `CRITICAL_COVERAGE_COMPARE_REF` cannot be diffed, so a bad ref cannot silently disable the touched-file ratchet
 - The weekly `Critical Coverage Ratchet` workflow sets `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked regularly without making every PR pay that full ratchet cost.
 - The local merge gate now passes its changed-file set into `coverage:critical`, so touched critical-file regressions fail locally too
 

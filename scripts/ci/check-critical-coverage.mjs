@@ -58,8 +58,9 @@ export function getChangedFilesFromGit(ref, { execFile = execFileSync, consoleIm
       .map((line) => normalizePath(line.trim()))
       .filter(Boolean);
   } catch (err) {
-    consoleImpl.warn(`[coverage] Could not diff against ref "${ref}", skipping ratchet compare: ${String(err).slice(0, 200)}`);
-    return [];
+    const message = `[coverage] Could not diff against explicit ref "${ref}": ${String(err).slice(0, 200)}`;
+    consoleImpl.error(message);
+    throw new Error(message, { cause: err });
   }
 }
 
@@ -179,7 +180,15 @@ export function runCriticalCoverageCheck({
   const parsed = parseLcov(lcov);
   const baseline = loadCoverageBaseline(baselinePath, { fsImpl, consoleImpl, exit });
   const changedFromEnv = parseChangedFilesFromEnv(env);
-  const changedFromRef = changedFromEnv.length > 0 ? [] : getChangedFilesFromGit(compareRef, { execFile, consoleImpl });
+  let changedFromRef = [];
+  if (changedFromEnv.length === 0) {
+    try {
+      changedFromRef = getChangedFilesFromGit(compareRef, { execFile, consoleImpl });
+    } catch {
+      exit(1);
+      return;
+    }
+  }
   const changedFiles = changedFromEnv.length > 0 ? changedFromEnv : changedFromRef;
   const touchedCritical = CRITICAL_FILES.filter((file) => changedFiles.includes(file));
 

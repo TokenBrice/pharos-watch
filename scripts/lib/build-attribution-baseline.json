@@ -3,67 +3,42 @@
   "groups": [
     {
       "key": "(unclassified)",
-      "totalBytes": 4729618,
-      "chunkCount": 150
-    },
-    {
-      "key": "recharts-component",
-      "totalBytes": 2866296,
-      "chunkCount": 8
-    },
-    {
-      "key": "error-boundary",
-      "totalBytes": 1467313,
-      "chunkCount": 20
-    },
-    {
-      "key": "methodology-version",
-      "totalBytes": 1280670,
-      "chunkCount": 18
+      "totalBytes": 2595620,
+      "chunkCount": 131
     },
     {
       "key": "stablecoin-client-registry",
-      "totalBytes": 878815,
+      "totalBytes": 571737,
+      "chunkCount": 1
+    },
+    {
+      "key": "recharts+recharts-component",
+      "totalBytes": 501423,
       "chunkCount": 1
     },
     {
       "key": "next-framework",
-      "totalBytes": 443046,
-      "chunkCount": 4
-    },
-    {
-      "key": "market-data-chart",
-      "totalBytes": 312467,
+      "totalBytes": 378677,
       "chunkCount": 3
     },
     {
-      "key": "zod",
-      "totalBytes": 286552,
+      "key": "depeg-event-related-data",
+      "totalBytes": 229806,
       "chunkCount": 1
     },
     {
-      "key": "recharts",
-      "totalBytes": 167628,
+      "key": "error-boundary",
+      "totalBytes": 123013,
       "chunkCount": 4
     },
     {
-      "key": "recharts-component+stablecoin-registry-zod",
-      "totalBytes": 134404,
-      "chunkCount": 1
-    },
-    {
-      "key": "stablecoin-registry-zod",
-      "totalBytes": 37904,
-      "chunkCount": 1
-    },
-    {
-      "key": "pre-launch-shell",
-      "totalBytes": 28007,
+      "key": "zod",
+      "totalBytes": 71593,
       "chunkCount": 1
     },
     {
       "key": "react-tweet",
-      "totalBytes": 16787,
+      "totalBytes": 29516,
       "chunkCount": 1
     }
   ]

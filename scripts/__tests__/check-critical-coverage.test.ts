@@ -54,21 +54,48 @@ describe("critical coverage changed-file detection", () => {
     ]);
   });
 
-  it("returns no changed files when git diff fails", () => {
-    const warnings: string[] = [];
+  it("throws when an explicit compare ref cannot be diffed", () => {
+    const errors: string[] = [];
     const execFile = mockExecFileSync(() => {
       throw new Error("bad ref");
     });
 
     expect(
-      getChangedFilesFromGit("bad-ref", {
+      () => getChangedFilesFromGit("bad-ref", {
         execFile,
         consoleImpl: mockConsole({
-          warn: (message: string) => warnings.push(message),
+          error: (message: string) => errors.push(message),
         }),
       }),
-    ).toEqual([]);
-    expect(warnings[0]).toContain('Could not diff against ref "bad-ref"');
+    ).toThrow('Could not diff against explicit ref "bad-ref"');
+    expect(errors[0]).toContain('Could not diff against explicit ref "bad-ref"');
+  });
+
+  it("fails closed when the configured compare ref cannot be diffed", () => {
+    const errors: string[] = [];
+    const exits: number[] = [];
+
+    runCriticalCoverageCheck({
+      env: testEnv({ CRITICAL_COVERAGE_COMPARE_REF: "missing-ref" }),
+      fsImpl: mockFsImpl({
+        existsSync: () => true,
+        readFileSync: (path: string) => path === "coverage/lcov.info" ? "" : JSON.stringify({ files: {} }),
+      }),
+      execFile: mockExecFileSync(() => {
+        throw new Error("unknown revision");
+      }),
+      consoleImpl: mockConsole({
+        log: () => {},
+        error: (message: string) => errors.push(message),
+      }),
+      exit: captureProcessExit((code) => {
+        if (code !== undefined) exits.push(code);
+      }),
+    });
+
+    expect(exits).toEqual([1]);
+    expect(errors).toContainEqual(expect.stringContaining('Could not diff against explicit ref "missing-ref"'));
+    expect(errors).not.toContain("[coverage] Critical coverage gate passed.");
   });
 
   it("derives high-stakes pricing, depeg, reserve, score, publication, and proxy candidates from source paths", () => {

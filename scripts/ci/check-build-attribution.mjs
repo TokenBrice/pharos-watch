@@ -5,12 +5,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { formatBytes } from "../lib/format-bytes.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const BASELINE_PATH = path.join(root, "scripts/lib/build-attribution-baseline.json");
 const EXPLAIN_SCRIPT = path.join(root, "scripts/maintenance/explain-build-chunks.mjs");
 
 const KNOWN_CHUNK_GROWTH_LIMIT_BYTES = 50 * 1024;
+const NEW_CLASSIFIED_GROUP_LIMIT_BYTES = 200 * 1024;
 const UNCLASSIFIED_CHUNK_LIMIT_BYTES = 200 * 1024;
 
 function runClassifier() {
@@ -35,11 +37,11 @@ function loadBaseline() {
   return JSON.parse(readFileSync(BASELINE_PATH, "utf8"));
 }
 
-function classificationKey(classifications) {
+export function classificationKey(classifications) {
   return classifications.length > 0 ? classifications.slice().sort().join("+") : "(unclassified)";
 }
 
-function aggregateByClassification(report) {
+export function aggregateByClassification(report) {
   const groups = new Map();
   for (const entry of report.entries) {
     const key = classificationKey(entry.classifications);
@@ -51,20 +53,26 @@ function aggregateByClassification(report) {
   return groups;
 }
 
-function main() {
-  const baseline = loadBaseline();
+export function findBuildAttributionFailures({ baseline, report }) {
   const baselineByKey = new Map(baseline.groups.map((group) => [group.key, group]));
-
-  const report = runClassifier();
   const current = aggregateByClassification(report);
-
   const failures = [];
 
   for (const [key, group] of current) {
     if (key === "(unclassified)") continue;
     const base = baselineByKey.get(key);
     if (!base) {
-      // New classification group is allowed; the baseline-update script will record it.
+      if (group.totalBytes > NEW_CLASSIFIED_GROUP_LIMIT_BYTES) {
+        failures.push(
+          `${key} is a new classified group at ${formatBytes(group.totalBytes)}, above the ${formatBytes(
+            NEW_CLASSIFIED_GROUP_LIMIT_BYTES,
+          )} absolute limit; review the classification before refreshing the baseline`,
+        );
+      } else {
+        failures.push(
+          `${key} is a new classified group at ${formatBytes(group.totalBytes)}; review it before refreshing the baseline`,
+        );
+      }
       continue;
     }
     const growth = group.totalBytes - base.totalBytes;
@@ -86,6 +94,14 @@ function main() {
     }
   }
 
+  return failures;
+}
+
+export function main() {
+  const baseline = loadBaseline();
+  const report = runClassifier();
+  const failures = findBuildAttributionFailures({ baseline, report });
+
   if (failures.length === 0) {
     console.log("Build attribution check passed.");
     process.exit(0);
@@ -101,4 +117,6 @@ function main() {
   process.exit(1);
 }
 
-main();
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  main();
+}

@@ -1,0 +1,11 @@
+[
+  {
+    "id": "pages-deployment-current",
+    "environment": "production",
+    "url": "https://pages-deployment-current.pharos-watch.pages.dev"
+  },
+  {
+    "id": "pages-deployment-previous",
+    "environment": "production"
+  }
+]
