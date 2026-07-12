@@ -68,7 +68,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/check-supply-helper-usage.mjs", "read-only"),
     exempt("scripts/ci/check-table-primitives.mjs", "read-only"),
     exempt("scripts/ci/check-telegram-load.ts", "test"),
-    exempt("scripts/ci/check-test-typecheck.mjs", "test"),
     exempt("scripts/ci/check-unused-code.mjs", "read-only"),
     exempt("scripts/ci/check-worker-migrations.mjs", "build"),
     exempt("scripts/ci/check-worker-wrangler-config.ts", "read-only"),

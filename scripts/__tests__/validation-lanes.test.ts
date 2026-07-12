@@ -119,7 +119,7 @@ describe("validation lane authority", () => {
 
   it("keeps lane-owned impact path buckets", () => {
     expect(VALIDATION_IMPACT_PATHS.full).toHaveLength(35);
-    expect(VALIDATION_IMPACT_PATHS["validation-only"]).toHaveLength(21);
+    expect(VALIDATION_IMPACT_PATHS["validation-only"]).toHaveLength(19);
     expect(VALIDATION_IMPACT_PATHS.pages).toHaveLength(11);
     expect(VALIDATION_IMPACT_PATHS.worker).toHaveLength(9);
     expect(VALIDATION_IMPACT_PATHS.full).toEqual(flattenValidationImpactPaths("full"));

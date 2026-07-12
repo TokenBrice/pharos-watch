@@ -22,7 +22,7 @@ npm run test:merge-gate
 npm run test:merge-gate:discover
 ```
 
-Use `package.json` for the full live npm-script list. Use `scripts/lib/validation-lanes.mjs` for the ten-lane ownership of `validate:prebuild`, postbuild, Pages/Worker, smoke commands, and validation-owned deploy-impact paths; use `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, `scripts/lib/cli-argv-policy.mjs` for the exact strict/exempt `process.argv` inventory, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. `npm run typecheck:tests` runs the dedicated test-file TypeScript project and ratchets against `scripts/lib/test-typecheck-baseline.json`; use `npm run typecheck:tests:update-baseline` only after intentionally reducing or accepting the visible test type debt. Do not duplicate those inventories here.
+Use `package.json` for the full live npm-script list. Use `scripts/lib/validation-lanes.mjs` for the ten-lane ownership of `validate:prebuild`, postbuild, Pages/Worker, smoke commands, and validation-owned deploy-impact paths; use `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, `scripts/lib/cli-argv-policy.mjs` for the exact strict/exempt `process.argv` inventory, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. `npm run typecheck:tests` runs the dedicated test-file TypeScript project and requires zero diagnostics. Do not duplicate those inventories here.
 
 Common targeted runners:
 

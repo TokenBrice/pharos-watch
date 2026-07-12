@@ -29,11 +29,7 @@ export const VALIDATION_LANES = [
   {
     id: "root-and-worker-typecheck",
     impactPaths: impactPaths({
-      validationOnly: [
-        "scripts/ci/check-test-typecheck.mjs",
-        "scripts/lib/test-typecheck-baseline.json",
-        "tsconfig.test-typecheck.json",
-      ],
+      validationOnly: ["tsconfig.test-typecheck.json"],
     }),
     leaves: [
       prebuild("npm run typecheck", 7),
