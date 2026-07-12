@@ -5,10 +5,14 @@ import {
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
 } from "@shared/types/market";
-import { READABLE_IDS } from "@shared/lib/stablecoins/registry";
+import { PRE_LAUNCH_STABLECOINS, READABLE_IDS } from "@shared/lib/stablecoins/registry";
 
 const nowSec = Math.floor(Date.now() / 1000);
 const completedDewsAt = nowSec - 60;
+const preLaunchStablecoinId = PRE_LAUNCH_STABLECOINS[0]?.id;
+if (!preLaunchStablecoinId) {
+  throw new Error("stress-signals tests require at least one pre-launch stablecoin");
+}
 
 const signalsJson = JSON.stringify({
   supply: { value: 10, available: true },
@@ -466,7 +470,7 @@ describe("handleStressSignals contract tests", () => {
 
   it("rejects pre-launch stablecoin ID with 404", async () => {
     const db = mockD1();
-    const url = new URL("https://x/api/stress-signals?stablecoin=krw1-bdacs&days=7");
+    const url = new URL(`https://x/api/stress-signals?stablecoin=${preLaunchStablecoinId}&days=7`);
     const res = await handleStressSignals(db, url);
 
     expect(res.status).toBe(404);
@@ -887,7 +891,7 @@ describe("handleStressSignals contract tests", () => {
   it("marks aggregate rows unavailable when none are readable", async () => {
     const db = makeStrictAggregateDb([
       {
-        stablecoin_id: "usdpt-western-union",
+        stablecoin_id: preLaunchStablecoinId,
         score: 12,
         band: "CALM",
         signals_json: signalsJson,
