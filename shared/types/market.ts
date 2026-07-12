@@ -27,10 +27,10 @@ const PriceSourceConfidenceProfileSchema = z.object({
 const ChainCirculatingSchema = z.record(
   z.string(),
   z.object({
-    current: z.number(),
-    circulatingPrevDay: z.number(),
-    circulatingPrevWeek: z.number(),
-    circulatingPrevMonth: z.number(),
+    current: z.number().finite().nonnegative(),
+    circulatingPrevDay: z.number().finite().nonnegative(),
+    circulatingPrevWeek: z.number().finite().nonnegative(),
+    circulatingPrevMonth: z.number().finite().nonnegative(),
   }),
 );
 

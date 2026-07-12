@@ -9,6 +9,9 @@ export interface RequestJsonSchemaOptions {
   maxBytes?: number;
 }
 
+export const DEFAULT_REQUEST_JSON_MAX_BYTES = 128 * 1024;
+export const DEFAULT_ADMIN_REQUEST_JSON_MAX_BYTES = DEFAULT_REQUEST_JSON_MAX_BYTES;
+
 function contentLengthExceedsCap(request: Request, maxBytes: number): boolean {
   const contentLength = request.headers.get("content-length");
   if (contentLength == null) return false;
@@ -16,17 +19,13 @@ function contentLengthExceedsCap(request: Request, maxBytes: number): boolean {
   return Number.isFinite(length) && length > maxBytes;
 }
 
-async function readBoundedRequestText(
+export async function readRequestTextBounded(
   request: Request,
   maxBytes: number,
-  options: RequestJsonSchemaOptions,
+  options: Pick<RequestJsonSchemaOptions, "invalidJsonMessage" | "bodyTooLargeMessage" | "responseOptions"> = {},
 ): Promise<string | Response> {
   if (contentLengthExceedsCap(request, maxBytes)) {
-    return errorResponse(
-      413,
-      options.bodyTooLargeMessage ?? "Request body too large",
-      options.responseOptions,
-    );
+    return errorResponse(413, options.bodyTooLargeMessage ?? "Request body too large", options.responseOptions);
   }
 
   if (!request.body) return "";
@@ -43,21 +42,15 @@ async function readBoundedRequestText(
 
       totalBytes += value.byteLength;
       if (totalBytes > maxBytes) {
-        await reader.cancel().catch(() => undefined);
-        return errorResponse(
-          413,
-          options.bodyTooLargeMessage ?? "Request body too large",
-          options.responseOptions,
-        );
+        // A cloned request body is a tee. Awaiting cancellation can block until
+        // the other branch is consumed, but the caller still needs that branch.
+        void reader.cancel().catch(() => undefined);
+        return errorResponse(413, options.bodyTooLargeMessage ?? "Request body too large", options.responseOptions);
       }
       chunks.push(value);
     }
   } catch {
-    return errorResponse(
-      400,
-      options.invalidJsonMessage ?? "Invalid JSON body",
-      options.responseOptions,
-    );
+    return errorResponse(400, options.invalidJsonMessage ?? "Invalid JSON body", options.responseOptions);
   }
 
   const bytes = new Uint8Array(totalBytes);
@@ -76,19 +69,11 @@ export async function parseRequestJsonWithSchema<T>(
 ): Promise<T | Response> {
   let raw: unknown;
   try {
-    if (options.maxBytes == null) {
-      raw = await request.json();
-    } else {
-      const text = await readBoundedRequestText(request, options.maxBytes, options);
-      if (text instanceof Response) return text;
-      raw = JSON.parse(text);
-    }
+    const text = await readRequestTextBounded(request, options.maxBytes ?? DEFAULT_REQUEST_JSON_MAX_BYTES, options);
+    if (text instanceof Response) return text;
+    raw = JSON.parse(text);
   } catch {
-    return errorResponse(
-      400,
-      options.invalidJsonMessage ?? "Invalid JSON body",
-      options.responseOptions,
-    );
+    return errorResponse(400, options.invalidJsonMessage ?? "Invalid JSON body", options.responseOptions);
   }
 
   const parsed = schema.safeParse(raw);
@@ -96,19 +81,16 @@ export async function parseRequestJsonWithSchema<T>(
 
   return errorResponse(
     400,
-    options.formatSchemaError?.(parsed.error.issues)
-      ?? parsed.error.issues[0]?.message
-      ?? "Invalid JSON body",
+    options.formatSchemaError?.(parsed.error.issues) ?? parsed.error.issues[0]?.message ?? "Invalid JSON body",
     options.responseOptions,
   );
 }
 
-export async function parseOptionalRequestJsonObject(
-  request?: Request,
-): Promise<Record<string, unknown> | Response> {
+export async function parseOptionalRequestJsonObject(request?: Request): Promise<Record<string, unknown> | Response> {
   if (!request || request.method !== "POST") return {};
 
-  const rawBody = await request.clone().text();
+  const rawBody = await readRequestTextBounded(request.clone(), DEFAULT_ADMIN_REQUEST_JSON_MAX_BYTES);
+  if (rawBody instanceof Response) return rawBody;
   if (!rawBody.trim()) return {};
 
   try {

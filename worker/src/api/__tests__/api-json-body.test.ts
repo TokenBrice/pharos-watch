@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { parseRequestJsonWithSchema } from "../../lib/api-utils";
+import {
+  DEFAULT_REQUEST_JSON_MAX_BYTES,
+  parseOptionalRequestJsonObject,
+  parseRequestJsonWithSchema,
+} from "../../lib/api-utils";
 
 const encoder = new TextEncoder();
 const schema = z.object({ ok: z.boolean() });
@@ -67,7 +71,7 @@ describe("parseRequestJsonWithSchema bounded JSON parsing", () => {
 
   it("rejects oversized chunked bodies without relying on Content-Length", async () => {
     const response = await parseRequestJsonWithSchema(
-      streamedRequest(["{\"ok\":", "true", ",\"pad\":\"", "x".repeat(80), "\"}"]),
+      streamedRequest(['{"ok":', "true", ',"pad":"', "x".repeat(80), '"}']),
       schema,
       { maxBytes: 64 },
     );
@@ -81,9 +85,34 @@ describe("parseRequestJsonWithSchema bounded JSON parsing", () => {
 
   it("rejects lying-small Content-Length bodies while streaming", async () => {
     const response = await parseRequestJsonWithSchema(
-      streamedRequest(["{\"ok\":true,\"pad\":\"", "x".repeat(80), "\"}"], { "Content-Length": "12" }),
+      streamedRequest(['{"ok":true,"pad":"', "x".repeat(80), '"}'], { "Content-Length": "12" }),
       schema,
       { maxBytes: 64 },
+    );
+
+    expect(response).toBeInstanceOf(Response);
+    if (response instanceof Response) {
+      expect(response.status).toBe(413);
+      await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
+    }
+  });
+
+  it("applies the default byte cap when callers do not provide one", async () => {
+    const response = await parseRequestJsonWithSchema(
+      streamedRequest(['{"ok":true,"pad":"', "x".repeat(DEFAULT_REQUEST_JSON_MAX_BYTES), '"}']),
+      schema,
+    );
+
+    expect(response).toBeInstanceOf(Response);
+    if (response instanceof Response) {
+      expect(response.status).toBe(413);
+      await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
+    }
+  });
+
+  it("bounds optional admin JSON bodies", async () => {
+    const response = await parseOptionalRequestJsonObject(
+      streamedRequest(['{"pad":"', "x".repeat(DEFAULT_REQUEST_JSON_MAX_BYTES), '"}']),
     );
 
     expect(response).toBeInstanceOf(Response);

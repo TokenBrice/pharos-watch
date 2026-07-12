@@ -6,7 +6,12 @@ import { isRecord } from "@shared/lib/type-guards";
 import type { ApiDependencyMeta, ApiMeta as ApiMetaWithAge } from "@shared/types/api-meta";
 import type { StablecoinReservesResponse } from "@shared/types";
 import { buildRequestUrl } from "@/lib/api-url";
-import type { SchemaLike } from "@/lib/schema-like";
+import { formatSchemaLikeIssues, type SchemaLike } from "@/lib/schema-like";
+import {
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  normalizeRequestTimeoutMs,
+  resolveRequestSignal,
+} from "@/lib/request-lifecycle";
 
 export { API_BASE, buildApiUrl, buildRequestUrl, resolveApiBase } from "@/lib/api-url";
 
@@ -21,7 +26,7 @@ export type ApiMeta =
     };
 
 export type ApiContractMode = "strict" | "warn";
-export const DEFAULT_API_REQUEST_TIMEOUT_MS = 10_000;
+export const DEFAULT_API_REQUEST_TIMEOUT_MS = DEFAULT_REQUEST_TIMEOUT_MS;
 
 function withPublicApiAcceptMarker(path: string, init?: RequestInit): RequestInit | undefined {
   if (typeof window === "undefined") return init;
@@ -46,26 +51,6 @@ export interface ApiRequestOptions {
   timeoutMs?: number | null;
 }
 
-function resolveApiRequestSignal(init?: RequestInit, options?: ApiRequestOptions): AbortSignal | undefined {
-  return options?.signal ?? init?.signal ?? undefined;
-}
-
-function resolveApiRequestTimeoutMs(options?: ApiRequestOptions): number | null {
-  if (options?.timeoutMs === null) {
-    return null;
-  }
-
-  if (options?.timeoutMs === undefined) {
-    return DEFAULT_API_REQUEST_TIMEOUT_MS;
-  }
-
-  if (!Number.isFinite(options.timeoutMs)) {
-    return DEFAULT_API_REQUEST_TIMEOUT_MS;
-  }
-
-  return Math.max(1, Math.ceil(options.timeoutMs));
-}
-
 function resolveResponseUpdatedAtSec(headers: Headers, ageSeconds: number): number {
   const dateHeader = headers.get("Date");
   const serverDateMs = dateHeader ? Date.parse(dateHeader) : Number.NaN;
@@ -76,12 +61,12 @@ function resolveResponseUpdatedAtSec(headers: Headers, ageSeconds: number): numb
 }
 
 export async function apiRequest(path: string, init?: RequestInit, options?: ApiRequestOptions): Promise<Response> {
-  const parentSignal = resolveApiRequestSignal(init, options);
+  const parentSignal = resolveRequestSignal(init?.signal, options?.signal, "explicit-over-init");
   const requestInit = withPublicApiAcceptMarker(path, {
     ...init,
     signal: parentSignal,
   });
-  const timeoutMs = resolveApiRequestTimeoutMs(options);
+  const timeoutMs = normalizeRequestTimeoutMs(options?.timeoutMs);
 
   if (timeoutMs == null) {
     return fetch(buildRequestUrl(path, requestInit), requestInit);
@@ -127,10 +112,6 @@ export class ApiFetchError extends Error {
     this.path = path;
     this.bodyText = bodyText;
   }
-}
-
-function formatIssues(issues: readonly { path: readonly PropertyKey[]; message: string }[]): string {
-  return issues.map((i) => `${i.path.map(String).join(".")}: ${i.message}`).join(", ");
 }
 
 function isFreshnessWarningHeader(warningHeader: string): boolean {
@@ -216,7 +197,7 @@ function validateApiPayload<T>(path: string, data: unknown, schema?: SchemaLike<
     return result.data;
   }
 
-  const issues = formatIssues(result.error.issues);
+  const issues = formatSchemaLikeIssues(result.error.issues);
   if (resolvedMode === "strict") {
     throw new SchemaValidationError(path, issues);
   }

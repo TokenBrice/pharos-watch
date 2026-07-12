@@ -2,10 +2,14 @@ import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { sleepWithSignal, throwIfAborted } from "./abort";
 import {
   cancelResponseBodyQuietly,
-  readResponseJsonWithSignal,
+  readResponseJsonWithinLimitWithSignal,
   readResponseTextWithSignal,
+  readResponseTextWithinLimitWithSignal,
 } from "./response-body";
 import { redactProviderUrls } from "./safe-error-message";
+
+export const DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
+
 interface FetchWithRetryOptions {
   logUrl?: string;
   passthrough404?: boolean;
@@ -13,6 +17,8 @@ interface FetchWithRetryOptions {
   returnFinalResponse?: boolean;
   timeoutMs?: number;
   maxRetryDelayMs?: number;
+  /** Applies only when this helper consumes a JSON or text response body. */
+  maxResponseBytes?: number;
   waitOnPassthrough429?: boolean;
 }
 
@@ -21,7 +27,11 @@ export interface FetchWithRetryBodyResult<TResult> {
   body: TResult;
 }
 
-type FetchWithRetryBodyReader<TResult> = (response: Response, signal: AbortSignal) => Promise<TResult>;
+type FetchWithRetryBodyReader<TResult> = (
+  response: Response,
+  signal: AbortSignal,
+  maxResponseBytes: number,
+) => Promise<TResult>;
 
 function jitterDelayMs(delayMs: number): number {
   return Math.max(0, Math.round(delayMs * (0.5 + Math.random() * 0.5)));
@@ -29,7 +39,7 @@ function jitterDelayMs(delayMs: number): number {
 
 function getRetryDelayMs(response: Response, attempt: number, maxRetryDelayMs?: number): number | null {
   if (response.status === 429) {
-    const retryAfter = response.headers.get("Retry-After");
+    const retryAfter = response.headers?.get?.("Retry-After");
     const waitSec = retryAfter ? parseInt(retryAfter, 10) : 0;
     const delayMs = waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : 5000;
     return maxRetryDelayMs != null ? Math.min(delayMs, maxRetryDelayMs) : delayMs;
@@ -69,7 +79,8 @@ export async function fetchJsonWithRetry<TResult = unknown>(
     opts,
     maxRetries,
     options,
-    async (response, signal) => await readResponseJsonWithSignal<TResult>(response, signal),
+    async (response, signal, maxResponseBytes) =>
+      await readResponseJsonWithinLimitWithSignal<TResult>(response, maxResponseBytes, signal),
   );
 }
 
@@ -84,7 +95,8 @@ export async function fetchTextWithRetry(
     opts,
     maxRetries,
     options,
-    async (response, signal) => await readResponseTextWithSignal(response, signal),
+    async (response, signal, maxResponseBytes) =>
+      await readResponseTextWithinLimitWithSignal(response, maxResponseBytes, signal),
   );
 }
 
@@ -114,6 +126,12 @@ async function fetchWithRetryInternal<TResult>(
   if (passthrough404) passthroughStatuses.add(404);
   const timeoutMs = options?.timeoutMs ?? 15_000;
   const maxRetryDelayMs = options?.maxRetryDelayMs;
+  const maxResponseBytes = readBody
+    ? options?.maxResponseBytes ?? DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES
+    : DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES;
+  if (readBody && (!Number.isSafeInteger(maxResponseBytes) || maxResponseBytes < 0)) {
+    throw new RangeError(`maxResponseBytes must be a non-negative safe integer; received ${maxResponseBytes}`);
+  }
   const signal = opts?.signal ?? undefined;
   for (let i = 0; i <= maxRetries; i++) {
     throwIfAborted(signal);
@@ -127,7 +145,7 @@ async function fetchWithRetryInternal<TResult>(
         if (!readBody) return response;
         return {
           response,
-          body: await readBody(response, perRequestTimeout.signal),
+          body: await readBody(response, perRequestTimeout.signal, maxResponseBytes),
         };
       };
       try {
@@ -140,7 +158,7 @@ async function fetchWithRetryInternal<TResult>(
           const passthroughDelayMs = res.status === 429 ? getRetryDelayMs(res, i, maxRetryDelayMs) : null;
           if (passthroughDelayMs != null && options?.waitOnPassthrough429 !== false) {
             if (readBody) {
-              const body = await readBody(res, perRequestTimeout.signal);
+              const body = await readBody(res, perRequestTimeout.signal, maxResponseBytes);
               perRequestTimeout.dispose();
               console.warn(`[fetch-retry] ${logUrl} rate-limited (${res.status}), waiting ${passthroughDelayMs}ms before passthrough`);
               await sleepWithSignal(passthroughDelayMs, signal);

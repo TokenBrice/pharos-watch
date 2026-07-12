@@ -18,10 +18,11 @@ import { handleSample } from "./sample";
 import { handleStatus } from "./status";
 import { handleWhy } from "./why";
 import { handleCoverage } from "./coverage";
+import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 
 const APP_PRIVATE_MESSAGE = "Open the Pharos Mini App to manage your alerts.";
 const APP_GROUP_MESSAGE = "DM the bot to open the Pharos Mini App for your personal alerts.";
-const BOT_DM_DEEP_LINK = "https://t.me/PharosWatchBot?start=app";
+const BOT_DM_DEEP_LINK = `${TELEGRAM_BOT_URL}?start=app`;
 
 export const handleStart: WebhookCommandHandler = async (ctx, args) => {
   const sourceCategory = classifyTelegramStartSource(args);

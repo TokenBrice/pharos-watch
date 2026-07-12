@@ -49,3 +49,4 @@ export const TapeEventsResponseSchema = z.object({
   totalExact: z.boolean(),
   _meta: TapeEventsResponseMetaSchema,
 });
+export type TapeEventsResponse = z.infer<typeof TapeEventsResponseSchema>;

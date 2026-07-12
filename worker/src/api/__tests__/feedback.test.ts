@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { DatabaseSync } from "node:sqlite";
+import {
+  mockD1 as createMockD1,
+  type MockD1Database,
+  type MockD1Options,
+  type MockTableConfig,
+} from "../../test-helpers/__shared/mock-d1";
 import { stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import type { FeedbackEnv } from "../feedback";
 
 // Stub fetch and crypto.subtle before importing the handler
@@ -11,6 +18,60 @@ stubCryptoForAuth();
 
 const { handleFeedback } = await import("../feedback");
 const encoder = new TextEncoder();
+const FEEDBACK_IDEMPOTENCY_KEY = "feedback-test-key";
+
+function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): MockD1Database {
+  const canned = createMockD1(tables, options);
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec(`
+    CREATE TABLE admin_idempotency_keys (
+      action TEXT NOT NULL,
+      idempotency_key TEXT NOT NULL,
+      request_hash TEXT NOT NULL,
+      response_status INTEGER NOT NULL,
+      response_body TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      reservation_owner TEXT,
+      reservation_generation INTEGER NOT NULL DEFAULT 0,
+      execution_started_at INTEGER,
+      PRIMARY KEY (action, idempotency_key)
+    );
+  `);
+  const durable = createSqliteD1(sqlite);
+  const durableHistory: Array<{ sql: string; binds: unknown[] }> = [];
+  return {
+    ...canned,
+    prepare(query: string) {
+      if (!query.includes("admin_idempotency_keys")) return canned.prepare(query);
+      durableHistory.push({ sql: query, binds: [] });
+      return durable.prepare(query);
+    },
+    getHistory: () => [...canned.getHistory(), ...durableHistory],
+  } as MockD1Database;
+}
+
+function createDurableFeedbackDb(): { sqlite: DatabaseSync; db: D1Database } {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec(`
+    CREATE TABLE feedback_rate_limit (
+      ip_hash TEXT NOT NULL,
+      submitted_at INTEGER NOT NULL
+    );
+    CREATE TABLE admin_idempotency_keys (
+      action TEXT NOT NULL,
+      idempotency_key TEXT NOT NULL,
+      request_hash TEXT NOT NULL,
+      response_status INTEGER NOT NULL,
+      response_body TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      reservation_owner TEXT,
+      reservation_generation INTEGER NOT NULL DEFAULT 0,
+      execution_started_at INTEGER,
+      PRIMARY KEY (action, idempotency_key)
+    );
+  `);
+  return { sqlite, db: createSqliteD1(sqlite) };
+}
 
 /** Build a valid feedback request body */
 function makeFeedbackBody(
@@ -39,12 +100,13 @@ function makeFeedbackBody(
   };
 }
 
-function makeRequest(body: unknown): Request {
+function makeRequest(body: unknown, idempotencyKey = FEEDBACK_IDEMPOTENCY_KEY): Request {
   return new Request("https://x/api/feedback", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "CF-Connecting-IP": "1.2.3.4",
+      "Idempotency-Key": idempotencyKey,
     },
     body: JSON.stringify(body),
   });
@@ -56,6 +118,7 @@ function makeRawRequest(body: BodyInit, headers: Record<string, string> = {}): R
     headers: {
       "Content-Type": "application/json",
       "CF-Connecting-IP": "1.2.3.4",
+      "Idempotency-Key": FEEDBACK_IDEMPOTENCY_KEY,
       ...headers,
     },
     body,
@@ -76,6 +139,7 @@ function makeStreamedRequest(chunks: string[], headers: Record<string, string> =
     headers: {
       "Content-Type": "application/json",
       "CF-Connecting-IP": "1.2.3.4",
+      "Idempotency-Key": FEEDBACK_IDEMPOTENCY_KEY,
       ...headers,
     },
     body,
@@ -127,9 +191,9 @@ describe("handleFeedback", () => {
     const res = await handleFeedback(
       db,
       makeStreamedRequest([
-        "{\"type\":\"bug\",\"title\":\"Broken\",\"description\":\"",
+        '{"type":"bug","title":"Broken","description":"',
         "x".repeat(17 * 1024),
-        "\",\"pageUrl\":\"/stablecoin/usdt-tether\"}",
+        '","pageUrl":"/stablecoin/usdt-tether"}',
       ]),
       makeEnv(),
     );
@@ -194,24 +258,38 @@ describe("handleFeedback", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("requires a well-formed idempotency key only after payload validation", async () => {
+    const db = mockD1([], { requireMatch: true });
+    const missingKeyRequest = new Request("https://x/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "CF-Connecting-IP": "1.2.3.4" },
+      body: JSON.stringify(makeFeedbackBody()),
+    });
+    const missing = await handleFeedback(db, missingKeyRequest, makeEnv());
+    const malformed = await handleFeedback(db, makeRequest(makeFeedbackBody(), "bad key"), makeEnv());
+
+    expect(missing.status).toBe(400);
+    expect(malformed.status).toBe(400);
+    await expect(missing.json()).resolves.toEqual({ error: "A valid Idempotency-Key header is required" });
+    await expect(malformed.json()).resolves.toEqual({ error: "A valid Idempotency-Key header is required" });
+    expect(db.getHistory()).toHaveLength(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("silently accepts honeypot submissions", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ website: "I am a bot" })), makeEnv());
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean };
     expect(body.ok).toBe(true);
-    // Should NOT call GitHub API for honeypot
+    expect(db.getHistory()).toHaveLength(0);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("rejects oversized honeypot fields before side effects", async () => {
     const db = mockD1([], { requireMatch: true });
-    const res = await handleFeedback(
-      db,
-      makeRequest(makeFeedbackBody({ website: "x".repeat(301) })),
-      makeEnv(),
-    );
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({ website: "x".repeat(301) })), makeEnv());
 
     expect(res.status).toBe(400);
     expect(db.getHistory()).toHaveLength(0);
@@ -227,10 +305,35 @@ describe("handleFeedback", () => {
     expect(body.error).toMatch(/Too many/i);
   });
 
+  it("retries the same key after a 429 without persisting or consuming the rejected attempt", async () => {
+    const { sqlite, db } = createDurableFeedbackDb();
+    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }));
+
+    for (const key of ["feedback-quota-1", "feedback-quota-2", "feedback-quota-3"]) {
+      const response = await handleFeedback(db, makeRequest(makeFeedbackBody(), key), makeEnv());
+      expect(response.status).toBe(200);
+    }
+
+    const limited = await handleFeedback(db, makeRequest(makeFeedbackBody(), "feedback-quota-retry"), makeEnv());
+    expect(limited.status).toBe(429);
+    expect(
+      sqlite
+        .prepare("SELECT COUNT(*) AS count FROM admin_idempotency_keys WHERE idempotency_key = ?")
+        .get("feedback-quota-retry"),
+    ).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 3 });
+
+    sqlite.prepare("DELETE FROM feedback_rate_limit WHERE rowid = (SELECT MIN(rowid) FROM feedback_rate_limit)").run();
+    const retry = await handleFeedback(db, makeRequest(makeFeedbackBody(), "feedback-quota-retry"), makeEnv());
+
+    expect(retry.status).toBe(200);
+    expect(retry.headers.get("X-Idempotent-Replay")).toBe("false");
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 3 });
+  });
+
   it("returns explicit degraded-service 503 when feedback rate-limit storage fails", async () => {
-    const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], throwError: new Error("D1 unavailable") },
-    ]);
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], throwError: new Error("D1 unavailable") }]);
 
     const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
 
@@ -260,7 +363,24 @@ describe("handleFeedback", () => {
     expect(res.status).toBe(503);
     const body = (await res.json()) as { error: string };
     expect(body.error).toMatch(/unavailable/i);
-    expect(db.getHistory()).toHaveLength(0);
+    expect(db.getHistory().some((entry) => entry.sql.includes("feedback_rate_limit"))).toBe(false);
+  });
+
+  it("retries the same key after pre-execution configuration recovers", async () => {
+    const { sqlite, db } = createDurableFeedbackDb();
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }));
+
+    const unavailable = await handleFeedback(db, makeRequest(makeFeedbackBody()), { FEEDBACK_IP_SALT: "test-salt" });
+    expect(unavailable.status).toBe(503);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM admin_idempotency_keys").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 0 });
+
+    const retry = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
+
+    expect(retry.status).toBe(200);
+    expect(retry.headers.get("X-Idempotent-Replay")).toBe("false");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 1 });
   });
 
   it("returns 200 and creates GitHub issue for bug report", async () => {
@@ -437,16 +557,50 @@ describe("handleFeedback", () => {
     expect(issueResponse.bodyUsed).toBe(true);
   });
 
-  it("returns 500 when GitHub API call fails", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+  it("releases quota and terminally replays a confirmed GitHub rejection", async () => {
+    const { sqlite, db } = createDurableFeedbackDb();
 
     fetchSpy.mockResolvedValueOnce(new Response("Forbidden", { status: 403 }));
 
-    const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
+    const first = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
+    const replay = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
 
-    expect(res.status).toBe(500);
-    const body = (await res.json()) as { error: string };
+    expect(first.status).toBe(500);
+    const body = (await first.json()) as { error: string };
     expect(body.error).toMatch(/Failed to submit/i);
+    expect(replay.status).toBe(500);
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 0 });
+  });
+
+  it("keeps quota reserved and suppresses retry after an ambiguous GitHub transport failure", async () => {
+    const { sqlite, db } = createDurableFeedbackDb();
+    fetchSpy.mockRejectedValueOnce(new TypeError("network reset"));
+
+    const first = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
+    const replay = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
+
+    expect(first.status).toBe(503);
+    expect(first.headers.get("X-Execution-Certainty")).toBe("unknown");
+    expect(replay.status).toBe(503);
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 1 });
+  });
+
+  it("replays a successful submission without consuming quota or posting twice", async () => {
+    const { sqlite, db } = createDurableFeedbackDb();
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }));
+
+    const first = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
+    const replay = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
+
+    expect(first.status).toBe(200);
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 1 });
   });
 
   it("does not require title for data-correction type", async () => {

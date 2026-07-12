@@ -1,4 +1,8 @@
-import { TELEGRAM_ALERT_TYPES } from "../types/status";
+import {
+  RESERVE_ALERT_SOURCE_STATE_VALUES,
+  SAFETY_ALERT_SOURCE_STATE_VALUES,
+  TELEGRAM_ALERT_TYPES,
+} from "../types/status";
 import type {
   PerAlertTypeDelivery,
   PerAlertTypeDeliveryStats,
@@ -30,6 +34,8 @@ export function readMetadataRecord(value: unknown): Record<string, unknown> | nu
 }
 
 export function readMetadataNumber(value: unknown): number | null {
+  if (value == null || typeof value === "boolean") return null;
+  if (typeof value === "string" && value.trim().length === 0) return null;
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -51,18 +57,23 @@ export function readMetadataBoolean(value: unknown): boolean | null {
   return null;
 }
 
+function readMetadataEnum<const TValue extends string>(
+  value: unknown,
+  values: readonly TValue[],
+): TValue | null {
+  return typeof value === "string" && (values as readonly string[]).includes(value)
+    ? value as TValue
+    : null;
+}
+
 function parsePerAlertTypeStats(value: unknown): PerAlertTypeDeliveryStats {
   const record = readMetadataRecord(value);
-  // `firstSendLatencyMs` is intentionally nullable to mean "no successful send
-  // recorded for this category". `readMetadataNumber(null)` returns 0 because
-  // `Number(null) === 0`, so guard explicitly to preserve the null signal.
-  const rawLatency = record?.firstSendLatencyMs;
   return {
     sent: readMetadataNumber(record?.sent) ?? 0,
     enqueued: readMetadataNumber(record?.enqueued) ?? 0,
     failed: readMetadataNumber(record?.failed) ?? 0,
     blocked: readMetadataNumber(record?.blocked) ?? 0,
-    firstSendLatencyMs: rawLatency == null ? null : readMetadataNumber(rawLatency),
+    firstSendLatencyMs: readMetadataNumber(record?.firstSendLatencyMs),
   };
 }
 
@@ -110,11 +121,11 @@ export function parseTelegramDispatchCronMetadata(value: unknown): TelegramDispa
     pendingEnqueued: readMetadataNumber(record.pendingEnqueued),
     pendingExpired: readMetadataNumber(record.pendingExpired),
     chatsWithActiveSnooze: readMetadataNumber(record.chatsWithActiveSnooze),
-    safetyAlertSourceState: readMetadataString(record.safetyAlertSourceState) as TelegramDispatchCronMetadata["safetyAlertSourceState"],
+    safetyAlertSourceState: readMetadataEnum(record.safetyAlertSourceState, SAFETY_ALERT_SOURCE_STATE_VALUES),
     safetyAlertSourceAgeSeconds: readMetadataNumber(record.safetyAlertSourceAgeSeconds),
     safetyAlertsSuppressed: readMetadataBoolean(record.safetyAlertsSuppressed) === true,
     safetyAlertSourceGeneration: readMetadataString(record.safetyAlertSourceGeneration),
-    reserveAlertSourceState: readMetadataString(record.reserveAlertSourceState) as TelegramDispatchCronMetadata["reserveAlertSourceState"],
+    reserveAlertSourceState: readMetadataEnum(record.reserveAlertSourceState, RESERVE_ALERT_SOURCE_STATE_VALUES),
     reserveAlertSourceAgeSeconds: readMetadataNumber(record.reserveAlertSourceAgeSeconds),
     reserveAlertsSuppressed: readMetadataBoolean(record.reserveAlertsSuppressed) === true,
     reserveAlertSourceGeneration: readMetadataString(record.reserveAlertSourceGeneration),

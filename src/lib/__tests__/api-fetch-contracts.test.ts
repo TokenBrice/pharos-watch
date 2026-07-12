@@ -44,6 +44,29 @@ describe("api contract validation policy", () => {
     ).rejects.toBeInstanceOf(SchemaValidationError);
   });
 
+  it("preserves formatted schema issues on SchemaValidationError", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({ ok: "no" }));
+    const schema = {
+      safeParse: () => ({
+        success: false as const,
+        error: {
+          issues: [
+            { path: ["payload", 0, "ok"], message: "Expected boolean" },
+            { path: [], message: "Invalid response" },
+          ],
+        },
+      }),
+    };
+
+    await expect(apiFetch("/api/custom", schema)).rejects.toMatchObject({
+      name: "SchemaValidationError",
+      path: "/api/custom",
+      issues: "payload.0.ok: Expected boolean, : Invalid response",
+      message:
+        "Schema validation failed for /api/custom: payload.0.ok: Expected boolean, : Invalid response",
+    });
+  });
+
   it("returns parsed data on strict endpoint when schema matches", async () => {
     const body = { summary: null, coins: [] };
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
@@ -452,6 +475,30 @@ describe("api contract validation policy", () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
+  it("keeps explicit request options signal precedence over RequestInit", async () => {
+    const initController = new AbortController();
+    const optionsController = new AbortController();
+    let capturedSignal: AbortSignal | undefined;
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          capturedSignal = init?.signal ?? undefined;
+          capturedSignal?.addEventListener("abort", () => reject(capturedSignal?.reason), { once: true });
+        }),
+    );
+
+    const pending = apiRequest(
+      "/api/stablecoins",
+      { signal: initController.signal },
+      { signal: optionsController.signal, timeoutMs: null },
+    );
+    initController.abort(new DOMException("init aborted", "AbortError"));
+    expect(capturedSignal?.aborted).toBe(false);
+
+    optionsController.abort(new DOMException("options aborted", "AbortError"));
+    await expect(pending).rejects.toMatchObject({ name: "AbortError", message: "options aborted" });
+  });
+
   it("applies the default shared API timeout when callers do not provide one", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     vi.useFakeTimers();
@@ -492,6 +539,25 @@ describe("api contract validation policy", () => {
       message: "API request timed out after 250ms",
     });
     await vi.advanceTimersByTimeAsync(250);
+
+    await rejection;
+  });
+
+  it("normalizes non-finite API timeouts to the shared default", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+        }),
+    );
+
+    const pending = apiRequest("/api/stablecoins", undefined, { timeoutMs: Number.NaN });
+    const rejection = expect(pending).rejects.toMatchObject({
+      name: "TimeoutError",
+      message: `API request timed out after ${DEFAULT_API_REQUEST_TIMEOUT_MS}ms`,
+    });
+    await vi.advanceTimersByTimeAsync(DEFAULT_API_REQUEST_TIMEOUT_MS);
 
     await rejection;
   });

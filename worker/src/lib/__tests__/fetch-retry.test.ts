@@ -14,7 +14,12 @@ vi.mock("../abort", () => ({
   throwIfAborted: throwIfAbortedMock,
 }));
 
-import { fetchJsonWithRetry, fetchTextWithRetry, fetchWithRetry } from "../fetch-retry";
+import {
+  DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES,
+  fetchJsonWithRetry,
+  fetchTextWithRetry,
+  fetchWithRetry,
+} from "../fetch-retry";
 
 function neverEndingResponse(prefix = ""): Response {
   const encoder = new TextEncoder();
@@ -27,6 +32,29 @@ function neverEndingResponse(prefix = ""): Response {
   }));
 }
 
+function streamedResponse(
+  chunks: Uint8Array[],
+  headers?: HeadersInit,
+): { response: Response; cancel: ReturnType<typeof vi.fn> } {
+  let index = 0;
+  const cancel = vi.fn();
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      const chunk = chunks[index];
+      index += 1;
+      if (chunk) {
+        controller.enqueue(chunk);
+      } else {
+        controller.close();
+      }
+    },
+    cancel,
+  }, { highWaterMark: 0 });
+  return { response: new Response(body, { headers }), cancel };
+}
+
+const encode = (value: string) => new TextEncoder().encode(value);
+
 describe("fetchWithRetry", () => {
   beforeEach(() => {
     sleepWithSignalMock.mockClear();
@@ -35,6 +63,10 @@ describe("fetchWithRetry", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("keeps the shared consumed-body default at 16 MiB", () => {
+    expect(DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES).toBe(16 * 1024 * 1024);
   });
 
   it("passes through configured non-ok statuses", async () => {
@@ -90,6 +122,21 @@ describe("fetchWithRetry", () => {
     expect(res?.ok).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(sleepWithSignalMock).toHaveBeenCalledWith(1000, undefined);
+  });
+
+  it("handles a Response-like 429 without headers", async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 429, body: { cancel } })
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await fetchWithRetry("https://example.com/token", undefined, 1);
+
+    expect(res?.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(sleepWithSignalMock).toHaveBeenCalledWith(5000, undefined);
   });
 
   it("caps provider-controlled retry delays when configured", async () => {
@@ -276,6 +323,179 @@ describe("fetchWithRetry", () => {
     } finally {
       warnSpy.mockRestore();
       vi.useRealTimers();
+    }
+  });
+
+  it("preserves raw response behavior when a body exceeds the configured wrapper limit", async () => {
+    const response = new Response("raw response", { headers: { "Content-Length": "12" } });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
+
+    const result = await fetchWithRetry(
+      "https://example.com/raw",
+      undefined,
+      0,
+      { maxResponseBytes: -1 },
+    );
+
+    expect(result).toBe(response);
+    await expect(result?.text()).resolves.toBe("raw response");
+  });
+
+  it.each([
+    ["JSON", fetchJsonWithRetry],
+    ["text", fetchTextWithRetry],
+  ])("retries and rejects declared %s bodies above the configured limit", async (_label, fetchBody) => {
+    const attempts: Array<ReturnType<typeof streamedResponse>> = [];
+    const fetchMock = vi.fn().mockImplementation(() => {
+      const attempt = streamedResponse([encode("{}")], { "Content-Length": "6" });
+      attempts.push(attempt);
+      return Promise.resolve(attempt.response);
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      const result = await fetchBody(
+        "https://example.com/declared-overflow",
+        undefined,
+        1,
+        { maxResponseBytes: 5 },
+      );
+
+      expect(result).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(attempts.every((attempt) => attempt.cancel.mock.calls.length === 1)).toBe(true);
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[fetch-retry] https://example.com/declared-overflow failed (attempt 1/2):",
+        expect.objectContaining({
+          name: "ResponseBodyTooLargeError",
+          maxBytes: 5,
+          observedBytes: 6,
+        }),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("retries and rejects a chunked JSON body instead of parsing a partial payload", async () => {
+    const attempts: Array<ReturnType<typeof streamedResponse>> = [];
+    const fetchMock = vi.fn().mockImplementation(() => {
+      const attempt = streamedResponse([encode('{"ok":"'), encode("overflow"), encode('"}')]);
+      attempts.push(attempt);
+      return Promise.resolve(attempt.response);
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      const result = await fetchJsonWithRetry(
+        "https://example.com/chunked.json",
+        undefined,
+        1,
+        { maxResponseBytes: 10 },
+      );
+
+      expect(result).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(attempts.every((attempt) => attempt.cancel.mock.calls.length === 1)).toBe(true);
+      expect(warnSpy.mock.calls.filter((call) =>
+        call[1] instanceof Error && call[1].name === "ResponseBodyTooLargeError"
+      )).toHaveLength(2);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("retries and rejects a chunked text body above the configured limit", async () => {
+    const attempts: Array<ReturnType<typeof streamedResponse>> = [];
+    const fetchMock = vi.fn().mockImplementation(() => {
+      const attempt = streamedResponse([encode("abcd"), encode("ef")]);
+      attempts.push(attempt);
+      return Promise.resolve(attempt.response);
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      const result = await fetchTextWithRetry(
+        "https://example.com/chunked.txt",
+        undefined,
+        1,
+        { maxResponseBytes: 5 },
+      );
+
+      expect(result).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(attempts.every((attempt) => attempt.cancel.mock.calls.length === 1)).toBe(true);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("counts UTF-8 bytes while preserving an under-limit multibyte body", async () => {
+    const bytes = encode("€🙂");
+    const attempt = streamedResponse([bytes.slice(0, 2), bytes.slice(2)]);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(attempt.response));
+
+    const result = await fetchTextWithRetry(
+      "https://example.com/multibyte.txt",
+      undefined,
+      0,
+      { maxResponseBytes: bytes.byteLength },
+    );
+
+    expect(bytes.byteLength).toBe(7);
+    expect(result?.body).toBe("€🙂");
+    expect(attempt.cancel).not.toHaveBeenCalled();
+  });
+
+  it("reads JSON from a bodyless Response-like test double", async () => {
+    const responseLike = {
+      ok: true,
+      status: 200,
+      json: vi.fn().mockResolvedValue({ price: 1 }),
+    } as unknown as Response;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseLike));
+
+    const result = await fetchJsonWithRetry<{ price: number }>(
+      "https://example.com/mock.json",
+      undefined,
+      0,
+    );
+
+    expect(result).toEqual({ response: responseLike, body: { price: 1 } });
+    expect(responseLike.json).toHaveBeenCalledTimes(1);
+  });
+
+  it("enforces the limit after reading a bodyless Response-like test double", async () => {
+    const responseLike = {
+      ok: true,
+      status: 200,
+      text: vi.fn().mockResolvedValue("oversized"),
+    } as unknown as Response;
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(responseLike));
+
+    try {
+      const result = await fetchTextWithRetry(
+        "https://example.com/mock.txt",
+        undefined,
+        0,
+        { maxResponseBytes: 5 },
+      );
+
+      expect(result).toBeNull();
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[fetch-retry] https://example.com/mock.txt failed (attempt 1/1):",
+        expect.objectContaining({
+          name: "ResponseBodyTooLargeError",
+          maxBytes: 5,
+          observedBytes: 9,
+        }),
+      );
+    } finally {
+      warnSpy.mockRestore();
     }
   });
 });

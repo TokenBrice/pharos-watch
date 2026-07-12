@@ -1,8 +1,6 @@
 import { z } from "zod";
-export {
-  FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
-  FEEDBACK_RATE_LIMIT_WINDOW_SEC,
-} from "@shared/lib/ops-limits";
+import type { FeedbackRateLimitReservation } from "../../lib/rate-limit";
+export { FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS, FEEDBACK_RATE_LIMIT_WINDOW_SEC } from "@shared/lib/ops-limits";
 
 const HONEYPOT_MAX_LENGTH = 300;
 
@@ -18,7 +16,10 @@ export const FeedbackBodySchema = z.object({
   expectedValue: z.string().max(500).optional(),
   stablecoinId: z.string().max(100).optional(),
   stablecoinName: z.string().max(100).optional(),
-  pageUrl: z.string().max(300).regex(/^\/(?!\/)[^\r\n]*$/, "Invalid pageUrl"),
+  pageUrl: z
+    .string()
+    .max(300)
+    .regex(/^\/(?!\/)[^\r\n]*$/, "Invalid pageUrl"),
   pegValue: z.string().max(100).optional(),
   contactHandle: z.string().max(100).optional(),
   website: z.string().max(HONEYPOT_MAX_LENGTH).optional(),
@@ -40,6 +41,12 @@ export interface VerificationResult {
 export interface PreparedFeedbackSubmission {
   feedback: FeedbackBody;
   pat: string;
+  canonicalStablecoinId?: string;
+  rateLimitReservation: FeedbackRateLimitReservation;
+}
+
+export interface ValidatedFeedbackSubmission {
+  feedback: FeedbackBody;
   canonicalStablecoinId?: string;
 }
 

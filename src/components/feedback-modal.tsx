@@ -79,6 +79,13 @@ function getCurrentPageUrl() {
     : `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
+function createFeedbackIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `feedback-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 export function FeedbackModal({
   open,
   onOpenChange,
@@ -97,6 +104,7 @@ export function FeedbackModal({
   const [errorMsg, setErrorMsg] = useState("");
   const [pageUrl, setPageUrl] = useState(getCurrentPageUrl);
   const requestSequence = useRef(new RequestSequence());
+  const submissionIdentity = useRef<{ payload: string; key: string } | null>(null);
 
   useEffect(() => () => requestSequence.current.cancel(), []);
 
@@ -109,6 +117,7 @@ export function FeedbackModal({
     setWebsite("");
     setStatus("idle");
     setErrorMsg("");
+    submissionIdentity.current = null;
   }, [defaultType]);
 
   const handleOpenChange = useCallback(
@@ -141,6 +150,11 @@ export function FeedbackModal({
       pageUrl: currentPageUrl,
       website,
     };
+    const payload = JSON.stringify(body);
+    if (submissionIdentity.current?.payload !== payload) {
+      submissionIdentity.current = { payload, key: createFeedbackIdempotencyKey() };
+    }
+    const idempotencyKey = submissionIdentity.current.key;
 
     try {
       const data = await requestSequence.current.run((signal) =>
@@ -152,8 +166,9 @@ export function FeedbackModal({
             headers: {
               "Content-Type": "application/json",
               Accept: `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`,
+              "Idempotency-Key": idempotencyKey,
             },
-            body: JSON.stringify(body),
+            body: payload,
           },
         }),
       );
@@ -161,10 +176,16 @@ export function FeedbackModal({
         setErrorMsg(data.error ?? "Something went wrong. Please try again.");
         setStatus("error");
       } else {
+        submissionIdentity.current = null;
         setStatus("success");
       }
     } catch (error) {
       if (isRequestCancellation(error)) return;
+      if (error instanceof RequestFailure && error.kind === "http" && error.status === 500) {
+        // GitHub explicitly rejected this attempt, so the Worker persisted a
+        // terminal no-effect response and released its quota reservation.
+        submissionIdentity.current = null;
+      }
       setErrorMsg(feedbackRequestErrorMessage(error));
       setStatus("error");
     }

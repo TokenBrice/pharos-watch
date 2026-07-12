@@ -41,7 +41,7 @@ const EXPECTED_RESPONSE_MODES: {
   yieldHistory: "meta",
   yieldRankings: "meta",
   yieldRankingsSummary: "meta",
-  yieldAdapterManifest: "meta",
+  yieldAdapterManifest: "static",
   stressSignals: "meta",
   stressSignalDetail: "meta",
   supplyHistory: "plain",
@@ -82,6 +82,16 @@ describe("frontend API query descriptors", () => {
     expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsSummary.queryKey).not.toEqual(
       FRONTEND_API_QUERY_DESCRIPTORS.yieldRankings.queryKey,
     );
+  });
+
+  it("treats the build-derived yield adapter manifest as static", () => {
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest).toMatchObject({
+      queryKey: ["yield-adapter-manifest"],
+      path: "/api/yield-adapter-manifest",
+      responseMode: "static",
+    });
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest).not.toHaveProperty("producerIntervalMs");
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest).not.toHaveProperty("metaMaxAgeSec");
   });
 
   it("derives the policy-only projection from the one descriptor table", () => {

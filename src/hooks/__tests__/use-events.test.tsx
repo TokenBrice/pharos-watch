@@ -2,9 +2,10 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { useInfiniteQueryMock, apiFetchWithMetaMock } = vi.hoisted(() => ({
+const { useInfiniteQueryMock, apiFetchWithMetaMock, useApiQueryWithMetaMock } = vi.hoisted(() => ({
   useInfiniteQueryMock: vi.fn(),
   apiFetchWithMetaMock: vi.fn(),
+  useApiQueryWithMetaMock: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -16,12 +17,18 @@ vi.mock("@/lib/api", () => ({
   apiFetchWithMeta: apiFetchWithMetaMock,
 }));
 
-import { useEvents } from "../use-events";
+vi.mock("../use-api-query", () => ({
+  getPollingWindow: () => ({ staleTime: 900_000, refetchInterval: 1_800_000 }),
+  useApiQueryWithMeta: useApiQueryWithMetaMock,
+}));
+
+import { useEvents, useLatestEvents } from "../use-events";
 
 describe("useEvents", () => {
   beforeEach(() => {
     useInfiniteQueryMock.mockReset();
     apiFetchWithMetaMock.mockReset();
+    useApiQueryWithMetaMock.mockReset();
   });
 
   it("flattens paged results and auto-loads remaining pages when requested", async () => {
@@ -104,10 +111,29 @@ describe("useEvents", () => {
     await options.queryFn({ pageParam: "cursor-2" });
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/events?type=peg.alert&type=depeg.confirmed&coin=usdc-circle&limit=500&cursor=cursor-2",
-      undefined,
+      expect.any(Object),
       expect.objectContaining({
         signal: undefined,
       }),
     );
+
+    const schema = apiFetchWithMetaMock.mock.calls[0]?.[1];
+    expect(schema.safeParse({ events: [{ id: "incomplete" }], nextCursor: null }).success).toBe(false);
+  });
+
+  it("uses the canonical Tape events runtime schema for latest-event queries", async () => {
+    useApiQueryWithMetaMock.mockReturnValue({ data: undefined, meta: null });
+
+    renderHook(() => useLatestEvents({ coin: "usdc-circle", limit: 10 }));
+
+    expect(useApiQueryWithMetaMock).toHaveBeenCalledWith(
+      expect.any(Array),
+      "/api/events?coin=usdc-circle&limit=10",
+      expect.any(Number),
+      expect.objectContaining({ enabled: true, schema: expect.any(Function) }),
+    );
+    const schema = await useApiQueryWithMetaMock.mock.calls[0]?.[3]?.schema();
+    expect(schema.safeParse({ events: [], nextCursor: null, total: null, totalExact: true }).success).toBe(true);
+    expect(schema.safeParse({ events: [], nextCursor: null }).success).toBe(false);
   });
 });

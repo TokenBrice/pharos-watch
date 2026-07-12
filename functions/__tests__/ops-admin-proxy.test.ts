@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS, getEndpointOpsProxyTimeoutMs } from "@shared/lib/api-endpoints";
-import { onRequest } from "../api/admin/[[path]].ts";
+import { MAX_OPS_ADMIN_REQUEST_BODY_BYTES, onRequest } from "../api/admin/[[path]].ts";
 import {
   matchesHttpResponseObservation,
   observeHttpResponse,
@@ -49,6 +49,21 @@ function makeCookieAuthedRequest(url: string, init: RequestInit = {}) {
     ...init,
     headers,
   });
+}
+
+function makeStreamedAuthedPost(chunks: string[], headers: Record<string, string> = {}): Request {
+  const encoder = new TextEncoder();
+  return makeAuthedRequest("https://ops.pharos.watch/api/admin/backfill-depegs", {
+    method: "POST",
+    headers: { Origin: "https://ops.pharos.watch", ...headers },
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+        controller.close();
+      },
+    }),
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
 }
 
 describe("ops admin proxy", () => {
@@ -290,6 +305,62 @@ describe("ops admin proxy", () => {
         method: "POST",
       }),
     );
+  });
+
+  it("rejects declared oversized request bodies before proxying", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeStreamedAuthedPost(["{}"], {
+        "Content-Length": String(MAX_OPS_ADMIN_REQUEST_BODY_BYTES + 1),
+      }),
+      env: BASE_ENV,
+      params: { path: "backfill-depegs" },
+    });
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ error: "Request body too large" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("keeps allowed request bodies streaming to the upstream", async () => {
+    const fetchSpy = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.body).toBeInstanceOf(ReadableStream);
+      const body = await new Response(init?.body).text();
+      expect(body).toBe('{"dryRun":true}');
+      return Response.json({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeStreamedAuthedPost(['{"dry', 'Run":true}']),
+      env: BASE_ENV,
+      params: { path: "backfill-depegs" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it("aborts streamed request bodies that cross the cap", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const fetchSpy = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      await new Response(init?.body).arrayBuffer();
+      return Response.json({ impossible: true });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeStreamedAuthedPost(["x".repeat(MAX_OPS_ADMIN_REQUEST_BODY_BYTES), "x"]),
+      env: BASE_ENV,
+      params: { path: "backfill-depegs" },
+    });
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ error: "Request body too large" });
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    warnSpy.mockRestore();
   });
 
   it("proxies the self-serve request admin list route", async () => {

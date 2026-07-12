@@ -3,6 +3,7 @@ import { errorResponse, withResponseHeaders } from "./api-utils";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { sha256Hex } from "./hash";
 import { logWorkerEvent } from "./structured-log";
+import { DEFAULT_ADMIN_REQUEST_JSON_MAX_BYTES, readRequestTextBounded } from "./api-json-body";
 
 interface IdempotencyRecord {
   request_hash: string;
@@ -19,10 +20,18 @@ interface ReservationToken {
   generation: number;
 }
 
-export interface IdempotentAdminActionOptions {
+export interface IdempotentActionOptions {
   /** Persist a secret-free replay body while leaving the first live response untouched. */
   sensitiveReplayBody?: (responseBody: string, responseStatus: number) => string;
+  /** Body cap used while hashing the cloned request. */
+  requestMaxBytes?: number;
+  /** Override which returned responses have an unconfirmed execution outcome. */
+  isExecutionOutcomeUnknown?: (response: Response) => boolean;
+  /** Identify a retryable response returned before the protected action began. */
+  isPreExecutionRetryable?: (response: Response) => boolean;
 }
+
+export type IdempotentAdminActionOptions = IdempotentActionOptions;
 
 const PENDING_RESPONSE_STATUS = -1;
 const EXECUTION_UNKNOWN_RESPONSE_STATUS = -2;
@@ -38,6 +47,13 @@ function createReservationOwner(action: string): string {
 }
 
 export const MAX_IDEMPOTENCY_KEY_LENGTH = 128;
+const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
+
+export function isWellFormedIdempotencyKey(value: string | null): boolean {
+  if (!value) return false;
+  const key = value.trim();
+  return key.length <= MAX_IDEMPOTENCY_KEY_LENGTH && IDEMPOTENCY_KEY_PATTERN.test(key);
+}
 
 export function getIdempotencyKey(request: Request | undefined): string | null {
   const raw = request?.headers.get("Idempotency-Key");
@@ -75,9 +91,10 @@ function hasUnconfirmedExecutionOutcome(response: Response): boolean {
   return response.status >= 500 || response.headers.get("X-Execution-Certainty")?.trim().toLowerCase() === "unknown";
 }
 
-async function requestFingerprint(request: Request): Promise<string> {
+async function requestFingerprint(request: Request, maxBytes: number): Promise<string | Response> {
   const clone = request.clone();
-  const body = await clone.text().catch(() => "");
+  const body = await readRequestTextBounded(clone, maxBytes);
+  if (body instanceof Response) return body;
   const url = new URL(request.url);
   const sortedSearchParams = new URLSearchParams(url.searchParams);
   sortedSearchParams.sort();
@@ -209,6 +226,49 @@ async function persistTerminalResponse(
   return record?.response_status === status && record.response_body === body;
 }
 
+async function releasePreExecutionReservation(
+  db: D1Database,
+  action: string,
+  key: string,
+  fingerprint: string,
+  token: ReservationToken,
+): Promise<boolean> {
+  try {
+    const result = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `DELETE FROM admin_idempotency_keys
+            WHERE action = ?
+              AND idempotency_key = ?
+              AND request_hash = ?
+              AND response_status = ?
+              AND reservation_owner = ?
+              AND reservation_generation = ?
+              AND execution_started_at IS NOT NULL`,
+        )
+        .bind(action, key, fingerprint, PENDING_RESPONSE_STATUS, token.owner, token.generation)
+        .run(),
+    );
+    if ((result.meta?.changes ?? 0) === 1) return true;
+  } catch (error) {
+    logWorkerEvent({
+      scope: "admin",
+      level: "error",
+      event: "idempotency_pre_execution_release_failed",
+      route: action,
+      source: "admin_idempotency_keys",
+      message: "Failed to release a retryable pre-execution idempotency reservation",
+      error,
+    });
+  }
+
+  try {
+    return (await loadIdempotencyRecord(db, action, key)) === null;
+  } catch {
+    return false;
+  }
+}
+
 async function pruneTerminalIdempotencyRecords(db: D1Database, action: string, now: number): Promise<void> {
   await db
     .prepare(
@@ -231,17 +291,21 @@ async function pruneTerminalIdempotencyRecords(db: D1Database, action: string, n
     });
 }
 
-export async function runIdempotentAdminAction(
+export async function runIdempotentAction(
   db: D1Database,
   action: string,
   request: Request | undefined,
   execute: () => Promise<Response>,
-  options: IdempotentAdminActionOptions = {},
+  options: IdempotentActionOptions = {},
 ): Promise<Response> {
   const key = getIdempotencyKey(request);
   if (!key || !request) return execute();
 
-  const fingerprint = await requestFingerprint(request);
+  const fingerprint = await requestFingerprint(
+    request,
+    options.requestMaxBytes ?? DEFAULT_ADMIN_REQUEST_JSON_MAX_BYTES,
+  );
+  if (fingerprint instanceof Response) return fingerprint;
   const now = Math.floor(Date.now() / 1000);
   const owner = createReservationOwner(action);
   const reserveResult = await db
@@ -330,7 +394,14 @@ export async function runIdempotentAdminAction(
     return withIdempotencyHeaders(buildExecutionUnknownResponse(failureBody), key, false);
   }
 
-  if (hasUnconfirmedExecutionOutcome(response)) {
+  if (options.isPreExecutionRetryable?.(response)) {
+    const released = await releasePreExecutionReservation(db, action, key, fingerprint, token);
+    return withIdempotencyHeaders(released ? response : buildExecutionUnknownResponse(), key, false);
+  }
+
+  const executionOutcomeUnknown =
+    options.isExecutionOutcomeUnknown?.(response) ?? hasUnconfirmedExecutionOutcome(response);
+  if (executionOutcomeUnknown) {
     const failureBody = buildExecutionUnknownBody();
     const persisted = await persistTerminalResponse(
       db,
@@ -400,4 +471,14 @@ export async function runIdempotentAdminAction(
 
   await pruneTerminalIdempotencyRecords(db, action, now);
   return withIdempotencyHeaders(response, key, false);
+}
+
+export function runIdempotentAdminAction(
+  db: D1Database,
+  action: string,
+  request: Request | undefined,
+  execute: () => Promise<Response>,
+  options: IdempotentAdminActionOptions = {},
+): Promise<Response> {
+  return runIdempotentAction(db, action, request, execute, options);
 }

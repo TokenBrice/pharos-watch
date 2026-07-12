@@ -296,6 +296,8 @@ After `syncStablecoins()` filters DL assets against `REGISTRY_BY_LLAMA_ID`, untr
 
 Untracked coins with market cap > $5M are upserted. Coins found by both sources get `source: "both"`.
 
+The response boundary validates the top-level array and every candidate identity, label, symbol, and market-cap field before D1 writes. Valid rows from a mixed payload still persist, but rejected source rows set `status: "degraded"` with `reason: "malformed-source-rows"`. If a D1 batch falls back to individual writes and any candidate still fails, the run reports `reason: "partial-persistence"` plus attempted, persisted, failed, and invalid counters instead of presenting the partial ledger as a clean success.
+
 ### Circuit Breaker
 
 Uses `CG_DISCOVERY` — independent from `CG_PRICES`, but it still follows the shared circuit-breaker defaults: open after 3 consecutive failures and probe again after 30 minutes.

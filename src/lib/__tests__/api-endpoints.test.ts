@@ -454,7 +454,9 @@ describe("api endpoint registry", () => {
     });
     expect(matchDynamicAdminEndpoint("/api/discovery-candidates/not-a-number/dismiss")).toBeNull();
     expect(matchDynamicAdminEndpoint("/api/discovery-candidates/0/dismiss")).toBeNull();
+    expect(matchDynamicAdminEndpoint("/api/discovery-candidates/9007199254740992/dismiss")).toBeNull();
     expect(matchDynamicAdminEndpoint("/api/api-keys/0/update")).toBeNull();
+    expect(matchDynamicAdminEndpoint("/api/api-keys/9007199254740992/update")).toBeNull();
     expect(isAdminPath("/api/status")).toBe(true);
     expect(isAdminPath("/api/api-keys")).toBe(true);
     expect(isAdminPath("/api/request-source-stats")).toBe(true);

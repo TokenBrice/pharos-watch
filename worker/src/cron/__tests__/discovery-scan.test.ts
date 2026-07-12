@@ -78,16 +78,9 @@ describe("upsertDiscoveryCandidates", () => {
     expect(history[1].sql).toContain("ON CONFLICT (llama_id)");
   });
 
-  it("falls back to per-candidate upserts when a discovery batch fails", async () => {
+  it("rejects malformed candidates before D1 while preserving valid candidates", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const db = mockD1([
-      {
-        match: "INSERT INTO discovery_candidates",
-        matchBinds: ["bad-stable", null, null, "BAD", 9_000_000, "coingecko", 1771934400, 1771934400],
-        rows: [],
-        throwError: new Error("NOT NULL constraint failed: discovery_candidates.name"),
-      },
-    ]);
+    const db = mockD1();
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-02-24T12:00:00Z"));
@@ -106,12 +99,8 @@ describe("upsertDiscoveryCandidates", () => {
 
       expect(upserted).toBe(2);
       expect(warn).toHaveBeenCalledWith(
-        "[discovery] Upsert batch failed; retrying candidates individually:",
-        expect.any(Error),
-      );
-      expect(warn).toHaveBeenCalledWith(
-        "[discovery] Skipping discovery candidate after upsert failure:",
-        expect.any(Error),
+        "[discovery] Skipping invalid discovery candidate before upsert",
+        { geckoId: "bad-stable", llamaId: null },
       );
     } finally {
       vi.useRealTimers();
@@ -176,5 +165,85 @@ describe("runDiscoveryScan", () => {
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as { reason: string };
     expect(metadata.reason).toBe("fetch-failed");
+  });
+
+  it("returns degraded when a successful upstream response violates the array contract", async () => {
+    mockFetch([{ match: "coins/markets", body: { data: [] } }]);
+    const db = mockD1();
+
+    const result = await runDiscoveryScan(db);
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "invalid-payload",
+      cgFetched: false,
+      persistenceAttempted: 0,
+    });
+  });
+
+  it("persists valid rows but degrades when the upstream array contains malformed rows", async () => {
+    mockFetch([
+      {
+        match: "coins/markets",
+        body: [
+          { id: "new-stable", name: "New Stable", symbol: "nst", market_cap: 9_000_000 },
+          { id: "broken", name: "Broken", symbol: 42, market_cap: 8_000_000 },
+        ],
+      },
+    ]);
+    const db = mockD1();
+
+    const result = await runDiscoveryScan(db);
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(1);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "malformed-source-rows",
+      cgCandidates: 1,
+      cgInvalidRows: 1,
+      persistencePersisted: 1,
+      persistenceFailed: 0,
+    });
+  });
+
+  it("reports degraded partial persistence when an individual fallback upsert fails", async () => {
+    mockFetch([
+      {
+        match: "coins/markets",
+        body: [
+          { id: "good-stable", name: "Good Stable", symbol: "good", market_cap: 10_000_000 },
+          { id: "bad-stable", name: "Bad Stable", symbol: "bad", market_cap: 9_000_000 },
+        ],
+      },
+    ]);
+    const db = mockD1([
+      {
+        match: "INSERT INTO discovery_candidates",
+        matchBinds: [
+          "bad-stable",
+          null,
+          "Bad Stable",
+          "BAD",
+          9_000_000,
+          "coingecko",
+          1_774_267_200,
+          1_774_267_200,
+        ],
+        rows: [],
+        throwError: new Error("D1 write rejected"),
+      },
+    ]);
+
+    const result = await runDiscoveryScan(db);
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(1);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "partial-persistence",
+      persistenceAttempted: 2,
+      persistencePersisted: 1,
+      persistenceFailed: 1,
+    });
   });
 });

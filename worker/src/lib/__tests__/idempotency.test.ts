@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { runIdempotentAdminAction } from "../idempotency";
+import { runIdempotentAction, runIdempotentAdminAction } from "../idempotency";
+import { DEFAULT_ADMIN_REQUEST_JSON_MAX_BYTES } from "../api-json-body";
 
 interface TestIdempotencyRecord {
   request_hash: string;
@@ -16,6 +17,7 @@ interface TestDbOptions {
   failTerminalUpdates?: boolean;
   ambiguousTerminalCommitOnce?: boolean;
   beforeTerminalUpdate?: (record: TestIdempotencyRecord) => void;
+  beforePreExecutionRelease?: (record: TestIdempotencyRecord) => void;
 }
 
 function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
@@ -143,6 +145,32 @@ function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
           return { success: true, meta: { changes: 1 } };
         }
 
+        if (sql.includes("DELETE FROM admin_idempotency_keys") && sql.includes("reservation_owner = ?")) {
+          const [action, idempotencyKey, requestHash, expectedStatus, owner, generation] = args as [
+            string,
+            string,
+            string,
+            number,
+            string,
+            number,
+          ];
+          const mapKey = `${action}:${idempotencyKey}`;
+          const record = store.get(mapKey);
+          if (record) options.beforePreExecutionRelease?.(record);
+          if (
+            !record ||
+            record.request_hash !== requestHash ||
+            record.response_status !== expectedStatus ||
+            record.execution_started_at == null ||
+            record.reservation_owner !== owner ||
+            record.reservation_generation !== generation
+          ) {
+            return { success: true, meta: { changes: 0 } };
+          }
+          store.delete(mapKey);
+          return { success: true, meta: { changes: 1 } };
+        }
+
         if (sql.includes("DELETE FROM admin_idempotency_keys")) {
           const [cutoff, pendingStatus] = args as [number, number];
           let changes = 0;
@@ -180,7 +208,155 @@ function request(key: string, query = "batch=1"): Request {
   });
 }
 
+function streamedRequest(key: string, chunks: string[]): Request {
+  const encoder = new TextEncoder();
+  return new Request("https://x/api/backfill-depegs?batch=1", {
+    method: "POST",
+    headers: { "Idempotency-Key": key },
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+        controller.close();
+      },
+    }),
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+}
+
 describe("runIdempotentAdminAction", () => {
+  it("releases an explicitly retryable pre-execution result for the same-key retry", async () => {
+    const db = makeIdempotencyDb();
+    let calls = 0;
+    const options = { isPreExecutionRetryable: (response: Response) => response.status === 429 };
+    const execute = async () =>
+      ++calls === 1 ? Response.json({ error: "try later" }, { status: 429 }) : Response.json({ ok: true });
+
+    const first = await runIdempotentAction(db, "feedback-submit", request("pre-execution"), execute, options);
+    const retry = await runIdempotentAction(db, "feedback-submit", request("pre-execution"), execute, options);
+
+    expect(first.status).toBe(429);
+    expect(first.headers.get("X-Idempotent-Replay")).toBe("false");
+    expect(retry.status).toBe(200);
+    expect(retry.headers.get("X-Idempotent-Replay")).toBe("false");
+    expect(calls).toBe(2);
+  });
+
+  it("blocks a concurrent duplicate until the retryable pre-execution owner releases", async () => {
+    const db = makeIdempotencyDb();
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let finish!: (response: Response) => void;
+    const gate = new Promise<Response>((resolve) => {
+      finish = resolve;
+    });
+    let calls = 0;
+    const execute = async () => {
+      calls++;
+      if (calls === 1) {
+        started();
+        return gate;
+      }
+      return Response.json({ ok: true });
+    };
+    const options = { isPreExecutionRetryable: (response: Response) => response.status === 429 };
+
+    const firstPromise = runIdempotentAction(
+      db,
+      "feedback-submit",
+      request("pre-execution-concurrent"),
+      execute,
+      options,
+    );
+    await startedPromise;
+    const concurrent = await runIdempotentAction(
+      db,
+      "feedback-submit",
+      request("pre-execution-concurrent"),
+      execute,
+      options,
+    );
+    finish(Response.json({ error: "try later" }, { status: 429 }));
+    const first = await firstPromise;
+    const retry = await runIdempotentAction(
+      db,
+      "feedback-submit",
+      request("pre-execution-concurrent"),
+      execute,
+      options,
+    );
+
+    expect(concurrent.status).toBe(503);
+    expect(concurrent.headers.get("X-Execution-Certainty")).toBe("unknown");
+    expect(first.status).toBe(429);
+    expect(retry.status).toBe(200);
+    expect(calls).toBe(2);
+  });
+
+  it("does not release a pre-execution reservation after its ownership changes", async () => {
+    const db = makeIdempotencyDb({
+      beforePreExecutionRelease: (record) => {
+        record.reservation_owner = "new-owner";
+        record.reservation_generation += 1;
+      },
+    });
+
+    const response = await runIdempotentAction(
+      db,
+      "feedback-submit",
+      request("pre-execution-owner-change"),
+      async () => Response.json({ error: "try later" }, { status: 503 }),
+      { isPreExecutionRetryable: () => true },
+    );
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("X-Execution-Certainty")).toBe("unknown");
+    expect(db.getRecord("feedback-submit", "pre-execution-owner-change")).toMatchObject({
+      response_status: -1,
+      reservation_owner: "new-owner",
+      reservation_generation: 2,
+    });
+  });
+
+  it("allows a generic caller to persist a confirmed 5xx response", async () => {
+    const db = makeIdempotencyDb();
+    let calls = 0;
+    const execute = async () => {
+      calls++;
+      return Response.json({ error: "confirmed rejection" }, { status: 500 });
+    };
+
+    const first = await runIdempotentAction(db, "feedback-submit", request("confirmed-5xx"), execute, {
+      isExecutionOutcomeUnknown: () => false,
+    });
+    const replay = await runIdempotentAction(db, "feedback-submit", request("confirmed-5xx"), execute, {
+      isExecutionOutcomeUnknown: () => false,
+    });
+
+    expect(first.status).toBe(500);
+    expect(replay.status).toBe(500);
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(calls).toBe(1);
+  });
+
+  it("rejects an oversized fingerprint before reserving or executing", async () => {
+    const db = makeIdempotencyDb();
+    const execute = vi.fn(async () => Response.json({ impossible: true }));
+
+    const response = await runIdempotentAdminAction(
+      db,
+      "backfill-depegs",
+      streamedRequest("oversized", ['{"pad":"', "x".repeat(DEFAULT_ADMIN_REQUEST_JSON_MAX_BYTES), '"}']),
+      execute,
+    );
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toEqual({ error: "Request body too large" });
+    expect(db.getHistory()).toEqual([]);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it("replays a stored terminal response", async () => {
     const db = makeIdempotencyDb();
     let calls = 0;

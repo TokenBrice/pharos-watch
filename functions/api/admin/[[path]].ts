@@ -38,6 +38,14 @@ const FORWARDED_RESPONSE_HEADERS = [
   "X-Idempotent-Replay",
 ] as const;
 const ACCESS_SESSION_COOKIE = "CF_Authorization";
+export const MAX_OPS_ADMIN_REQUEST_BODY_BYTES = 128 * 1024;
+
+class OpsAdminRequestBodyTooLargeError extends Error {
+  constructor() {
+    super(`Operator API request exceeded ${MAX_OPS_ADMIN_REQUEST_BODY_BYTES} bytes`);
+    this.name = "OpsAdminRequestBodyTooLargeError";
+  }
+}
 
 type OpsAdminProxyContext = PagesProxyContext<OpsAdminProxyEnv>;
 
@@ -150,8 +158,55 @@ function requireSameOriginForMutatingRequest(request: Request, env: OpsAdminProx
   return hasMatchingOpsUiOriginHeader(request, env) ? null : jsonError(403, "Forbidden");
 }
 
+function contentLengthExceedsRequestCap(request: Request): boolean {
+  const contentLength = request.headers.get("Content-Length");
+  if (contentLength == null) return false;
+  const parsed = Number(contentLength);
+  return Number.isFinite(parsed) && parsed > MAX_OPS_ADMIN_REQUEST_BODY_BYTES;
+}
+
+function createCappedRequestBody(request: Request, onTooLarge: () => void): BodyInit | Response | undefined {
+  if (request.method === "GET" || request.method === "HEAD" || request.body === null) {
+    return undefined;
+  }
+  if (contentLengthExceedsRequestCap(request)) {
+    return jsonError(413, "Request body too large");
+  }
+
+  const reader = request.body.getReader();
+  let totalBytes = 0;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          controller.close();
+          return;
+        }
+        if (!value) return;
+
+        totalBytes += value.byteLength;
+        if (totalBytes > MAX_OPS_ADMIN_REQUEST_BODY_BYTES) {
+          onTooLarge();
+          const error = new OpsAdminRequestBodyTooLargeError();
+          await reader.cancel(error).catch(() => undefined);
+          controller.error(error);
+          return;
+        }
+        controller.enqueue(value);
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    },
+  });
+}
+
 export const onRequest = async (context: OpsAdminProxyContext): Promise<Response> => {
   let verifiedActor: string | undefined;
+  let requestBodyTooLarge = false;
   return runPagesProxy(context, {
     logPrefix: "ops-proxy",
     finalizeResponse: (_proxyContext, response) => applyAdminResponsePolicy(response),
@@ -209,18 +264,25 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
       }
       const requestUrl = new URL(request.url);
       const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
+      const body = createCappedRequestBody(request, () => {
+        requestBodyTooLarge = true;
+      });
+      if (body instanceof Response) {
+        return body;
+      }
       return {
         upstreamUrl: upstreamUrl.toString(),
         method: request.method,
         headers: upstreamHeaders,
-        body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
+        body,
         timeoutMs: resolveOpsAdminProxyTimeoutMs(upstreamPath),
         timeoutReason: new DOMException("Operator API upstream timed out", "TimeoutError"),
         timeoutMessage: "Operator API upstream timed out",
         fetchFailedMessage: "Operator API upstream fetch failed",
       };
     },
-    onFetchError: (_context, _upstreamPath, _errorKind, response) => response,
+    onFetchError: (_context, _upstreamPath, _errorKind, response) =>
+      requestBodyTooLarge ? jsonError(413, "Request body too large") : response,
     buildResponse: ({ request }, _upstreamPath, upstreamResponse) => {
       const redirectLocation = upstreamResponse.headers.get("Location");
       if (

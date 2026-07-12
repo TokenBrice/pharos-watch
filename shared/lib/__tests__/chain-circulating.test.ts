@@ -115,4 +115,37 @@ describe("chain-circulating", () => {
     expect(canonicalizeChainCirculating(chainCirculating).size).toBe(0);
     expect(findCanonicalChainData(chainCirculating, "ethereum")).toBeNull();
   });
+
+  it("does not propagate invalid supply values from loose callers", () => {
+    const canonical = canonicalizeChainCirculating({
+      Ethereum: {
+        current: Number.NaN,
+        circulatingPrevDay: -1,
+        circulatingPrevWeek: Number.POSITIVE_INFINITY,
+        circulatingPrevMonth: 4,
+      },
+      ethereum: {
+        current: 2,
+        circulatingPrevDay: 3,
+        circulatingPrevWeek: 4,
+        circulatingPrevMonth: Number.NEGATIVE_INFINITY,
+      },
+    });
+
+    expect(canonical.get("ethereum")).toEqual({
+      current: 2,
+      circulatingPrevDay: 3,
+      circulatingPrevWeek: 4,
+      circulatingPrevMonth: 4,
+    });
+  });
+
+  it("keeps alias accumulation finite when numeric addition overflows", () => {
+    const canonical = canonicalizeChainCirculating({
+      hyperliquid: { current: Number.MAX_VALUE },
+      "hyperliquid-l1": { current: Number.MAX_VALUE },
+    });
+
+    expect(canonical.get("hyperliquid")?.current).toBe(Number.MAX_VALUE);
+  });
 });

@@ -1,5 +1,5 @@
 import { errorResponse, jsonResponse, parseRequestJsonWithSchema } from "../../lib/api-utils";
-import { checkFeedbackRateLimit } from "../../lib/rate-limit";
+import { reserveFeedbackRateLimit } from "../../lib/rate-limit";
 import { safeErrorMessage } from "../../lib/safe-error-message";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import {
@@ -9,11 +9,12 @@ import {
   type FeedbackBody,
   type FeedbackEnv,
   type PreparedFeedbackSubmission,
+  type ValidatedFeedbackSubmission,
 } from "./types";
 import { logWorkerEvent } from "../../lib/structured-log";
 
 const FEEDBACK_DEPENDENCY_RETRY_AFTER_SEC = 60;
-const FEEDBACK_REQUEST_MAX_BYTES = 16 * 1024;
+export const FEEDBACK_REQUEST_MAX_BYTES = 16 * 1024;
 
 export async function parseFeedbackRequest(request: Request): Promise<FeedbackBody | Response> {
   return parseRequestJsonWithSchema(request, FeedbackBodySchema, {
@@ -22,12 +23,7 @@ export async function parseFeedbackRequest(request: Request): Promise<FeedbackBo
   });
 }
 
-export async function prepareFeedbackSubmission(
-  db: D1Database,
-  request: Request,
-  env: FeedbackEnv,
-  feedback: FeedbackBody,
-): Promise<PreparedFeedbackSubmission | Response> {
+export function validateFeedbackSubmission(feedback: FeedbackBody): ValidatedFeedbackSubmission | Response {
   if (feedback.website) return jsonResponse({ ok: true });
 
   if (feedback.type === "bug" || feedback.type === "feature-request") {
@@ -54,6 +50,21 @@ export async function prepareFeedbackSubmission(
     };
   }
 
+  return {
+    feedback: {
+      ...feedback,
+      contactHandle: feedback.contactHandle?.trim() || undefined,
+    },
+    canonicalStablecoinId,
+  };
+}
+
+export async function prepareFeedbackSubmission(
+  db: D1Database,
+  request: Request,
+  env: FeedbackEnv,
+  validated: ValidatedFeedbackSubmission,
+): Promise<PreparedFeedbackSubmission | Response> {
   if (!env.FEEDBACK_IP_SALT) {
     logWorkerEvent({
       scope: "api",
@@ -80,9 +91,9 @@ export async function prepareFeedbackSubmission(
     return errorResponse(503, "Feedback service temporarily unavailable");
   }
 
-  let allowed: boolean;
+  let rateLimitReservation;
   try {
-    allowed = await checkFeedbackRateLimit(
+    rateLimitReservation = await reserveFeedbackRateLimit(
       db,
       resolveFeedbackClientIp(request),
       env.FEEDBACK_IP_SALT,
@@ -99,24 +110,20 @@ export async function prepareFeedbackSubmission(
       message: "Feedback rate-limit dependency unavailable",
       error: safeErrorMessage(error),
     });
-    return errorResponse(
-      503,
-      "Feedback service temporarily unavailable. Please try again.",
-      { retryAfterSec: FEEDBACK_DEPENDENCY_RETRY_AFTER_SEC },
-    );
+    return errorResponse(503, "Feedback service temporarily unavailable. Please try again.", {
+      retryAfterSec: FEEDBACK_DEPENDENCY_RETRY_AFTER_SEC,
+    });
   }
 
-  if (!allowed) {
+  if (!rateLimitReservation) {
     return errorResponse(429, "Too many submissions. Please wait a few minutes.");
   }
 
   return {
-    feedback: {
-      ...feedback,
-      contactHandle: feedback.contactHandle?.trim() || undefined,
-    },
+    feedback: validated.feedback,
     pat: env.GITHUB_PAT,
-    canonicalStablecoinId,
+    canonicalStablecoinId: validated.canonicalStablecoinId,
+    rateLimitReservation,
   };
 }
 

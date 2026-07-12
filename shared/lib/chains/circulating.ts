@@ -14,6 +14,15 @@ export type RawChainCirculating = Record<string, {
   circulatingPrevMonth?: number;
 }>;
 
+function sanitizeSupply(value: number | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function addSupply(current: number, value: number): number {
+  const total = current + value;
+  return Number.isFinite(total) ? total : Number.MAX_VALUE;
+}
+
 export function canonicalizeChainCirculating(
   chainCirculating: RawChainCirculating | null | undefined,
 ): Map<string, ChainCirculatingPoint> {
@@ -27,17 +36,17 @@ export function canonicalizeChainCirculating(
     const chainId = resolveChainId(rawChainId);
     if (!chainId) continue;
 
-    const current = data.current ?? 0;
-    const circulatingPrevDay = data.circulatingPrevDay ?? 0;
-    const circulatingPrevWeek = data.circulatingPrevWeek ?? 0;
-    const circulatingPrevMonth = data.circulatingPrevMonth ?? 0;
+    const current = sanitizeSupply(data.current);
+    const circulatingPrevDay = sanitizeSupply(data.circulatingPrevDay);
+    const circulatingPrevWeek = sanitizeSupply(data.circulatingPrevWeek);
+    const circulatingPrevMonth = sanitizeSupply(data.circulatingPrevMonth);
     const existing = canonical.get(chainId);
 
     if (existing) {
-      existing.current += current;
-      existing.circulatingPrevDay += circulatingPrevDay;
-      existing.circulatingPrevWeek += circulatingPrevWeek;
-      existing.circulatingPrevMonth += circulatingPrevMonth;
+      existing.current = addSupply(existing.current, current);
+      existing.circulatingPrevDay = addSupply(existing.circulatingPrevDay, circulatingPrevDay);
+      existing.circulatingPrevWeek = addSupply(existing.circulatingPrevWeek, circulatingPrevWeek);
+      existing.circulatingPrevMonth = addSupply(existing.circulatingPrevMonth, circulatingPrevMonth);
       continue;
     }
 

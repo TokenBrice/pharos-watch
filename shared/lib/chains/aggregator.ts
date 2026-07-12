@@ -108,22 +108,26 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   }
 
   // Phase 2: compute summaries
-  let chainAttributedTotalUsd = 0;
+  let rawChainAttributedTotalUsd = 0;
   let chainPrevDayUsd = 0;
   let chainPrevWeekUsd = 0;
   let chainPrevMonthUsd = 0;
   for (const a of accumulators.values()) {
-    chainAttributedTotalUsd += a.totalUsd;
+    rawChainAttributedTotalUsd += a.totalUsd;
     chainPrevDayUsd += a.prevDay;
     chainPrevWeekUsd += a.prevWeek;
     chainPrevMonthUsd += a.prevMonth;
   }
   const useAggregateSupply = hasAggregateSupply && aggregateTotalUsd > 0;
-  const globalTotalUsd = useAggregateSupply ? aggregateTotalUsd : chainAttributedTotalUsd;
+  const globalTotalUsd = useAggregateSupply ? aggregateTotalUsd : rawChainAttributedTotalUsd;
   const globalPrevDayUsd = useAggregateSupply ? aggregatePrevDayUsd : chainPrevDayUsd;
   const globalPrevWeekUsd = useAggregateSupply ? aggregatePrevWeekUsd : chainPrevWeekUsd;
   const globalPrevMonthUsd = useAggregateSupply ? aggregatePrevMonthUsd : chainPrevMonthUsd;
-  const unattributedTotalUsd = Math.max(0, globalTotalUsd - chainAttributedTotalUsd);
+  const chainAttributedTotalUsd = Math.min(rawChainAttributedTotalUsd, globalTotalUsd);
+  const chainAttributionScale = rawChainAttributedTotalUsd > globalTotalUsd
+    ? globalTotalUsd / rawChainAttributedTotalUsd
+    : 1;
+  const unattributedTotalUsd = globalTotalUsd - chainAttributedTotalUsd;
   const chains: ChainSummary[] = [];
 
   for (const [chainId, acc] of accumulators) {
@@ -207,7 +211,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
         share: dominant.supplyUsd / acc.totalUsd,
       },
       topStablecoins,
-      dominanceShare: globalTotalUsd > 0 ? acc.totalUsd / globalTotalUsd : 0,
+      dominanceShare: globalTotalUsd > 0 ? (acc.totalUsd * chainAttributionScale) / globalTotalUsd : 0,
       healthScore,
       healthBand,
       healthFactors,

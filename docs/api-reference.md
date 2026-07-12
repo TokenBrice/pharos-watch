@@ -623,7 +623,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | -------------------------- | ---------------- | ---------------------------------------------------------------------------------------- |
 | `chains`                   | `ChainSummary[]` | Chains sorted by `totalUsd` descending                                                   |
 | `globalTotalUsd`           | `number`         | Total tracked stablecoin supply in USD, matching `GET /api/stablecoins` aggregate supply |
-| `chainAttributedTotalUsd`  | `number`         | Supply that the source data attributes to concrete chains in USD                         |
+| `chainAttributedTotalUsd`  | `number`         | Chain-attributed USD supply, capped at `globalTotalUsd`                                  |
 | `unattributedTotalUsd`     | `number`         | Positive residual between tracked supply and chain-attributed supply in USD              |
 | `globalChange24hPct`       | `number`         | 24h change for total tracked stablecoin supply as a decimal share                        |
 | `globalChange7dPct`        | `number`         | 7d change for total tracked stablecoin supply as a decimal share                         |
@@ -651,7 +651,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | `stablecoinCount`          | `number`                             | Number of distinct stablecoins on this chain                                                                                       |
 | `dominantStablecoin`       | `{ id, symbol, share }`              | Largest stablecoin by supply on the chain                                                                                          |
 | `topStablecoins`           | `{ id, symbol, share, supplyUsd }[]` | Up to five largest stablecoins by supply on the chain; `share` is chain-local (0–1) and `supplyUsd` is USD-denominated             |
-| `dominanceShare`           | `number`                             | Chain share of `globalTotalUsd` (0–1); chain rows may sum below 1 when source data has unattributed supply                         |
+| `dominanceShare`           | `number`                             | Bounded chain share of global supply; normalized when raw chain attribution exceeds it                                             |
 | `healthScore`              | `number \| null`                     | Chain Health Score 0–100, or `null` if insufficient data                                                                           |
 | `healthBand`               | `string \| null`                     | Health band label: `"robust"` (80–100), `"healthy"` (60–79), `"mixed"` (40–59), `"fragile"` (20–39), `"concentrated"` (0–19)       |
 | `healthFactors`            | `ChainHealthFactors`                 | Raw sub-factor scores (0–100 each; `quality` may still be `null`)                                                                  |
@@ -2226,7 +2226,7 @@ Direct `https://api.pharos.watch/api/telegram-pulse` access is protected and req
 | `miniAppMutationsToday`            | `number \| null`                | Successful Mini App mutations today; `null` when unavailable or suppressed by low-cardinality privacy filtering                                                                                                                                                                                                                                                             |
 | `miniAppDeniedToday`               | `number \| null`                | Mini App denial count for abuse/health monitoring. This field is not suppressed by the low-cardinality privacy rule because it is an operational counter, not an adoption signal.                                                                                                                                                                                           |
 | `miniAppReplayClaimsToday`         | `number \| null`                | Mini App replay-protection claim count for abuse/health monitoring. This field is not suppressed by the low-cardinality privacy rule because it is an operational counter, not an adoption signal.                                                                                                                                                                          |
-| `miniAppOpenToFirstMutationP50Sec` | `number \| null`                | Approximate P50 selected from first-party open-to-first-mutation bucket midpoints; `null` when unavailable, no known correlations exist, or the daily sample is privacy-suppressed below five                                                                                                                                                                                   |
+| `miniAppOpenToFirstMutationP50Sec` | `number \| null`                | Approximate P50 selected from first-party open-to-first-mutation bucket midpoints; `null` when unavailable, no known correlations exist, or the daily sample is privacy-suppressed below five                                                                                                                                                                               |
 | `currentSnapshotAt`                | `number`                        | Unix seconds when the current aggregate pulse snapshot was measured                                                                                                                                                                                                                                                                                                         |
 | `lifecycleHistoryUpdatedAt`        | `number \| null`                | Unix seconds of the latest daily lifecycle snapshot when any snapshot row exists; can be non-null while `historySource="live-fallback"` when subscriber-created-at aggregation yields older chart points; `null` when no snapshot history exists                                                                                                                            |
 | `lifecycleHistoryEverySeconds`     | `number`                        | Expected lifecycle-history snapshot cadence, currently 900 seconds                                                                                                                                                                                                                                                                                                          |
@@ -3062,7 +3062,7 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
 | `sourceRisk`              | `object \| null \| undefined` | Optional nested source-risk payload for historical rows; missing or unknown values are neutral                                                    |
 | `pysAtPublish`            | `number \| null \| undefined` | PYS stored at publication time                                                                                                                    |
 | `pysInputsAtPublish`      | `object \| null \| undefined` | Versioned formula and evidence inputs for exact post-v8.31 recomputation; `null` for legacy or malformed snapshots                                |
-| `pysReproducibility`      | `"exact" \| "legacy-partial"` | Whether the stored point has every input required for exact recomputation                                                                       |
+| `pysReproducibility`      | `"exact" \| "legacy-partial"` | Whether the stored point has every input required for exact recomputation                                                                         |
 
 ---
 
@@ -3467,9 +3467,12 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 **Cache:** no edge cache (POST passthrough)
 
+**Required header:** `Idempotency-Key` with 8–128 characters matching `[A-Za-z0-9][A-Za-z0-9._:-]*`. Reuse the same key only for an exact retry of the same request body. Completed responses are replayed with `X-Idempotent-Replay: true`; reusing a key with a different body returns `409`.
+
 **Rate limits**
 
 - Feedback endpoint limiter: `3 submissions / 10 minutes` per salted IP hash in D1.
+- Idempotent replays do not reserve another limiter slot. A confirmed GitHub non-2xx rejection releases the submission's one reserved slot; an ambiguous network or timeout failure keeps the slot because issue creation may have completed.
 - Feedback limiter dependency failure: `503` with `Retry-After: 60` and `{ "error": "Feedback service temporarily unavailable. Please try again." }`.
 
 **Request body**
@@ -3508,9 +3511,12 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 **Error responses**
 
 - `400` invalid payload
+- `400` missing or malformed `Idempotency-Key` for an otherwise valid submission
+- `409` idempotency key currently reserved or reused with a different request payload
 - `413` request body above the 16 KiB defensive cap
 - `429` rate limited (3 submissions / 10 minutes per salted IP hash)
-- `500` forwarding/processing failure
+- `500` confirmed GitHub rejection/processing failure; the terminal response is idempotently replayable
+- `503` ambiguous upstream execution outcome, with `X-Execution-Certainty: unknown`; retries with the same key are suppressed and replay the unknown outcome
 - `503` service misconfigured (missing `FEEDBACK_IP_SALT` or `GITHUB_PAT`) or feedback limiter/storage dependency failure (`Retry-After: 60`)
 
 ---
@@ -4453,7 +4459,6 @@ Admin-only read-only debug endpoint for the Yield Intelligence publication ledge
 Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material. Expired keys remain listed for operator review; callers should use `isActive` plus `expiresAt` to distinguish `active`, `expired`, and deliberate non-expiring exceptions.
 
 **Response shape:** `ApiKeyListResponse` (defined in `shared/types/api-keys.ts`)
-
 
 ### `GET /api/api-keys/lifecycle-summary`
 
@@ -5421,7 +5426,14 @@ The endpoint still returns `200` with `subscriber: null` when a subscriber was d
       "freeze": false,
       "depegWorseningBpsStep": 250
     },
-    "directAlertDefaults": { "dews": true, "depeg": false, "safety": true, "launch": false, "reserve": true, "freeze": false },
+    "directAlertDefaults": {
+      "dews": true,
+      "depeg": false,
+      "safety": true,
+      "launch": false,
+      "reserve": true,
+      "freeze": false
+    },
     "deliveryControls": {
       "timezone": "Europe/Belgrade",
       "quietHours": { "enabled": true, "startHourUtc": 22, "endHourUtc": 7 },

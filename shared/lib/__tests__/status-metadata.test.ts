@@ -13,9 +13,31 @@ describe("status-metadata", () => {
     expect(readMetadataRecord(["not-a-record"])).toBeNull();
     expect(readMetadataNumber("42")).toBe(42);
     expect(readMetadataNumber("bad")).toBeNull();
+    expect(readMetadataNumber(null)).toBeNull();
+    expect(readMetadataNumber("")).toBeNull();
+    expect(readMetadataNumber("   ")).toBeNull();
+    expect(readMetadataNumber(false)).toBeNull();
     expect(readMetadataBoolean("true")).toBe(true);
     expect(readMetadataBoolean("false")).toBe(false);
     expect(readMetadataBoolean("nope")).toBeNull();
+  });
+
+  it("preserves missing source ages and rejects unknown source states", () => {
+    const metadata = parseTelegramDispatchCronMetadata({
+      pendingRetryAfterSec: null,
+      safetyAlertSourceState: "future-state",
+      safetyAlertSourceAgeSeconds: null,
+      reserveAlertSourceState: "recovering",
+      reserveAlertSourceAgeSeconds: null,
+    });
+
+    expect(metadata).toMatchObject({
+      pendingRetryAfterSec: null,
+      safetyAlertSourceState: null,
+      safetyAlertSourceAgeSeconds: null,
+      reserveAlertSourceState: "recovering",
+      reserveAlertSourceAgeSeconds: null,
+    });
   });
 
   it("parses telegram dispatch metadata from mixed JSON-compatible values", () => {

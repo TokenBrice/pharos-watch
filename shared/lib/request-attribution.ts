@@ -117,6 +117,7 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
   let pendingPrune: Promise<void> | null = null;
   const buffered = new Map<string, TEntry>();
   let pendingFlush: Promise<void> | null = null;
+  let automaticRetryBudget = 0;
   let generation = 0;
 
   function reset(): void {
@@ -125,6 +126,7 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
     pendingPrune = null;
     buffered.clear();
     pendingFlush = null;
+    automaticRetryBudget = 0;
   }
 
   async function maybePrune(db: TDb, nowSec: number): Promise<void> {
@@ -162,7 +164,21 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
         const statements = chunk.map((entry) => db
           .prepare(options.insertSql)
           .bind(...options.bindInsertParams(entry)));
-        await db.batch(statements as never[]);
+        try {
+          await db.batch(statements as never[]);
+        } catch (error) {
+          // D1 batches are atomic. Restore the failed chunk and untouched tail,
+          // but not chunks that already committed before this failure.
+          for (const entry of entries.slice(index)) {
+            const key = options.buildKey(entry);
+            const newerEntry = buffered.get(key);
+            if (newerEntry) {
+              options.mergeBuffered(entry, newerEntry);
+            }
+            buffered.set(key, entry);
+          }
+          throw error;
+        }
       }
     }
 
@@ -175,6 +191,7 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
     }
 
     const flushGeneration = generation;
+    let flushFailed = false;
     const flushPromise = new Promise<void>((resolve) => {
       setTimeout(resolve, options.flushDelayMs);
     })
@@ -183,15 +200,27 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
         return flush(db, nowSec);
       })
       .catch((error: unknown) => {
+        flushFailed = true;
         console.warn(`[request-attribution] ${options.logLabel} attribution flush failed:`, error);
       })
       .finally(() => {
         if (pendingFlush === flushPromise) {
           pendingFlush = null;
         }
-        if (buffered.size > 0 && !pendingFlush) {
-          pendingFlush = scheduleFlush(db, Math.floor(Date.now() / 1000));
+
+        if (flushGeneration !== generation || buffered.size === 0) {
+          return;
         }
+
+        if (flushFailed) {
+          if (automaticRetryBudget === 0) return;
+          automaticRetryBudget--;
+        }
+
+        // A failed atomic chunk or rows recorded during the final prune need a
+        // fresh delayed flush. The retry budget prevents a persistent D1 error
+        // from turning this follow-up into an unbounded timer loop.
+        return scheduleFlush(db, Math.floor(Date.now() / 1000));
       });
     pendingFlush = flushPromise;
     return flushPromise;
@@ -206,6 +235,7 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
       buffered.set(key, entry);
     }
 
+    automaticRetryBudget = 1;
     await scheduleFlush(db, nowSec);
   }
 

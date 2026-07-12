@@ -136,6 +136,36 @@ describe("aggregateChains", () => {
     expect(eth.dominanceShare).toBeCloseTo(550 / 1000, 4);
   });
 
+  it("bounds chain attribution and dominance when chain rows exceed aggregate supply", () => {
+    const result = aggregateChains(makeInput({
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          price: 1,
+          pegType: "peggedUSD",
+          circulating: { peggedUSD: 600 },
+          chainCirculating: { ethereum: { current: 800 } },
+        },
+        {
+          id: "usdc-circle",
+          symbol: "USDC",
+          price: 1,
+          pegType: "peggedUSD",
+          circulating: { peggedUSD: 400 },
+          chainCirculating: { bsc: { current: 700 } },
+        },
+      ],
+    }));
+
+    expect(result.globalTotalUsd).toBe(1000);
+    expect(result.chainAttributedTotalUsd).toBe(1000);
+    expect(result.unattributedTotalUsd).toBe(0);
+    expect(result.chains.find((chain) => chain.id === "ethereum")?.dominanceShare).toBeCloseTo(800 / 1500);
+    expect(result.chains.find((chain) => chain.id === "bsc")?.dominanceShare).toBeCloseTo(700 / 1500);
+    expect(result.chains.reduce((sum, chain) => sum + chain.dominanceShare, 0)).toBeCloseTo(1);
+  });
+
   it("includes the top stablecoins per chain by local supply", () => {
     const result = aggregateChains(makeInput());
     const eth = result.chains.find((c) => c.id === "ethereum")!;

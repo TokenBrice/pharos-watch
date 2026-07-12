@@ -76,7 +76,7 @@ export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMat
 
   if (dynamicDescriptor.key === "discovery-candidate-dismiss") {
     const candidateId = Number.parseInt(match[1] ?? "", 10);
-    if (!Number.isFinite(candidateId) || candidateId <= 0) {
+    if (!Number.isSafeInteger(candidateId) || candidateId <= 0) {
       return null;
     }
     return {
@@ -122,7 +122,7 @@ export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMat
   }
 
   const apiKeyId = Number.parseInt(match[1] ?? "", 10);
-  if (!Number.isFinite(apiKeyId) || apiKeyId <= 0) {
+  if (!Number.isSafeInteger(apiKeyId) || apiKeyId <= 0) {
     return null;
   }
   if (

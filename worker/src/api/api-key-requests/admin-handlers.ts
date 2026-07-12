@@ -60,6 +60,38 @@ async function revokeAndDeactivateLinkedSelfServeKey(
   await deactivateLinkedSelfServeKey(db, input);
 }
 
+async function finalizeRejectedRequest(
+  db: D1Database,
+  input: {
+    requestId: string;
+    emailHash: string;
+    apiKeyId: number | null;
+    linkedKeyPrefix: string | null;
+    reason: string | null;
+    nowSec: number;
+  },
+): Promise<Response> {
+  if (input.apiKeyId != null && input.linkedKeyPrefix) {
+    await revokeAndDeactivateLinkedSelfServeKey(db, {
+      apiKeyId: input.apiKeyId,
+      keyPrefix: input.linkedKeyPrefix,
+      requestId: input.requestId,
+      nowSec: input.nowSec,
+    });
+  }
+  await releaseEmailClaim(db, input.emailHash, input.requestId, input.nowSec);
+  await recordRequestAdminAction(db, {
+    action: "api_key_request_reject",
+    requestId: input.requestId,
+    status: 200,
+    resultStatus: "rejected",
+    claimStatus: "released",
+    reason: input.reason,
+    nowSec: input.nowSec,
+  });
+  return adminJsonResponse(buildAdminMutationResponse(input.requestId, "rejected", "released"));
+}
+
 export const handleApiKeyRequestsAdminRoute = makeAdminRoute<AdminRouteContext>(
   "api-key-requests-admin",
   async ({ db, request }) => {
@@ -104,25 +136,14 @@ export const handleApiKeyRequestRejectRoute = makeIdempotentAdminRoute<ApiKeyReq
       }
     }
     if (row.status === "rejected") {
-      if (row.api_key_id != null && linkedKeyPrefix) {
-        await revokeAndDeactivateLinkedSelfServeKey(db, {
-          apiKeyId: row.api_key_id,
-          keyPrefix: linkedKeyPrefix,
-          requestId,
-          nowSec,
-        });
-      }
-      await releaseEmailClaim(db, row.email_hash, requestId, nowSec);
-      await recordRequestAdminAction(db, {
-        action: "api_key_request_reject",
+      return finalizeRejectedRequest(db, {
         requestId,
-        status: 200,
-        resultStatus: "rejected",
-        claimStatus: "released",
+        emailHash: row.email_hash,
+        apiKeyId: row.api_key_id,
+        linkedKeyPrefix,
         reason: parsedBody.reason,
         nowSec,
       });
-      return adminJsonResponse(buildAdminMutationResponse(requestId, "rejected", "released"));
     }
     if (row.status !== "pending_verification" && row.status !== "issued") {
       return adminErrorResponse(409, "Only pending or issued self-serve requests can be rejected");
@@ -139,25 +160,14 @@ export const handleApiKeyRequestRejectRoute = makeIdempotentAdminRoute<ApiKeyReq
     if ((updated.meta?.changes ?? 0) === 0) {
       return adminErrorResponse(409, "API key request state changed before rejection");
     }
-    if (row.api_key_id != null && linkedKeyPrefix) {
-      await revokeAndDeactivateLinkedSelfServeKey(db, {
-        apiKeyId: row.api_key_id,
-        keyPrefix: linkedKeyPrefix,
-        requestId,
-        nowSec,
-      });
-    }
-    await releaseEmailClaim(db, row.email_hash, requestId, nowSec);
-    await recordRequestAdminAction(db, {
-      action: "api_key_request_reject",
+    return finalizeRejectedRequest(db, {
       requestId,
-      status: 200,
-      resultStatus: "rejected",
-      claimStatus: "released",
+      emailHash: row.email_hash,
+      apiKeyId: row.api_key_id,
+      linkedKeyPrefix,
       reason: parsedBody.reason,
       nowSec,
     });
-    return adminJsonResponse(buildAdminMutationResponse(requestId, "rejected", "released"));
   },
 );
 

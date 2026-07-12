@@ -3,21 +3,19 @@
 import { useMemo } from "react";
 import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import {
-  TAPE_EVENT_SEVERITY_VALUES,
-  type TapeEventSeverity,
-} from "@shared/types/tape-event-constants";
-import type { TapeEvent } from "@shared/types/tape-event";
+import { TAPE_EVENT_SEVERITY_VALUES, type TapeEventSeverity } from "@shared/types/tape-event-constants";
+import type { TapeEvent, TapeEventsResponse } from "@shared/types/tape-event";
 import { apiFetchWithMeta } from "@/lib/api";
 import { CRON_15MIN } from "@/lib/cron-intervals";
+import { createLazySchema } from "@/lib/schema-like";
 import { useApiQueryWithMeta, getPollingWindow } from "./use-api-query";
 import { useAutoLoadInfinitePages } from "@/hooks/use-auto-load-infinite-pages";
 
-interface TapeEventsResponseBody {
-  events: TapeEvent[];
-  nextCursor?: string | null;
-  total?: number | null;
-}
+type TapeEventsResponseBody = Omit<TapeEventsResponse, "_meta">;
+
+const loadTapeEventsResponseBodySchema = createLazySchema<TapeEventsResponseBody>(async () =>
+  (await import("@shared/types/tape-event")).TapeEventsResponseSchema.omit({ _meta: true }),
+);
 
 const TAPE_EVENTS_PAGE_SIZE = 500;
 
@@ -61,10 +59,7 @@ interface BuildEventsPathOptions {
   includeTotal?: boolean;
 }
 
-function buildEventsParams(
-  filter: UseEventsFilter,
-  options: BuildEventsPathOptions,
-): URLSearchParams {
+function buildEventsParams(filter: UseEventsFilter, options: BuildEventsPathOptions): URLSearchParams {
   const params = new URLSearchParams();
   if (filter.type) {
     for (const slug of filter.type) {
@@ -103,16 +98,18 @@ function eventsInfiniteQueryOptions(filter: UseEventsFilter = {}) {
     // `includeTotal` runs an extra COUNT(*) on D1; only request it on the
     // first page so the badge can show "Showing N of M" without paying the
     // cost on every paginated load.
-    queryFn: async ({ pageParam, signal }) =>
-      apiFetchWithMeta<TapeEventsResponseBody>(
+    queryFn: async ({ pageParam, signal }) => {
+      const schema = await loadTapeEventsResponseBodySchema();
+      return apiFetchWithMeta<TapeEventsResponseBody>(
         buildEventsPath(filter, {
           limit: TAPE_EVENTS_PAGE_SIZE,
           cursor: pageParam,
           includeTotal: pageParam == null,
         }),
-        undefined,
+        schema,
         { signal },
-      ),
+      );
+    },
     getNextPageParam: (lastPage) => lastPage.data.nextCursor ?? undefined,
   });
 }
@@ -152,14 +149,8 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
   // invalidate on unrelated re-renders.
   const pages = query.data?.pages;
 
-  const events = useMemo<TapeEvent[]>(
-    () => pages?.flatMap((page) => page.data.events) ?? [],
-    [pages],
-  );
-  const nextCursor = useMemo(
-    () => pages?.[pages.length - 1]?.data.nextCursor ?? null,
-    [pages],
-  );
+  const events = useMemo<TapeEvent[]>(() => pages?.flatMap((page) => page.data.events) ?? [], [pages]);
+  const nextCursor = useMemo(() => pages?.[pages.length - 1]?.data.nextCursor ?? null, [pages]);
   const meta = useMemo(() => pages?.[0]?.meta ?? null, [pages]);
   const total = useMemo(() => pages?.[0]?.data.total ?? null, [pages]);
   const data = useMemo(() => ({ events, nextCursor }), [events, nextCursor]);
@@ -194,10 +185,7 @@ export interface UseLatestEventsOptions {
 export function useLatestEvents(options: UseLatestEventsOptions = {}) {
   const { limit = 20, coin, classSlug, since, type, severityFloor, enabled = true } = options;
   const typeFilters = classSlug ? [`${classSlug}.*`] : type;
-  const path = buildEventsPath(
-    { coin, since, type: typeFilters, severityFloor },
-    { limit },
-  );
+  const path = buildEventsPath({ coin, since, type: typeFilters, severityFloor }, { limit });
   const result = useApiQueryWithMeta<TapeEventsResponseBody>(
     [
       "events",
@@ -212,7 +200,7 @@ export function useLatestEvents(options: UseLatestEventsOptions = {}) {
     ],
     path,
     CRON_15MIN,
-    { enabled },
+    { enabled, schema: loadTapeEventsResponseBodySchema },
   );
   return result;
 }

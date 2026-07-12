@@ -57,7 +57,56 @@ describe("request lifecycle", () => {
       }),
     };
 
-    await expect(requestJsonWithResponse("/schema", { schema })).rejects.toMatchObject({ kind: "schema" });
+    await expect(requestJsonWithResponse("/schema", { schema })).rejects.toMatchObject({
+      kind: "schema",
+      message: "Response schema validation failed: ok: Expected boolean",
+    });
+  });
+
+  it.each(["init", "explicit"] as const)("composes the %s abort signal", async (source) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async (_input, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+          }),
+      ),
+    );
+    const initController = new AbortController();
+    const explicitController = new AbortController();
+    const pending = requestJson("/composed-signal", {
+      init: { signal: initController.signal },
+      signal: explicitController.signal,
+      timeoutMs: null,
+    });
+
+    const controller = source === "init" ? initController : explicitController;
+    controller.abort(new DOMException(`${source} aborted`, "AbortError"));
+
+    await expect(pending).rejects.toMatchObject({ kind: "aborted", message: "Request was aborted" });
+  });
+
+  it("normalizes non-finite timeouts to 10 seconds", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async (_input, init) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+          }),
+      ),
+    );
+
+    const pending = requestJson("/default-timeout", { timeoutMs: Number.POSITIVE_INFINITY });
+    const rejection = expect(pending).rejects.toMatchObject({
+      kind: "timeout",
+      message: "Request timed out after 10000ms",
+    });
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    await rejection;
   });
 
   it("rejects a late result when a newer request supersedes it", async () => {

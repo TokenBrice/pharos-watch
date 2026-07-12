@@ -15,6 +15,11 @@ interface RateLimitDb {
   prepare(query: string): RateLimitStatement;
 }
 
+export interface FeedbackRateLimitReservation {
+  ipHash: string;
+  submittedAt: number;
+}
+
 const _rl = new IsolateLocalState(() => ({
   feedbackPruneFailures: 0,
   pendingFeedbackPrune: null as Promise<void> | null,
@@ -27,7 +32,10 @@ const _rl = new IsolateLocalState(() => ({
  */
 export function flushPendingPrunes(): Promise<void> {
   const promises: Promise<void>[] = [];
-  if (_rl.state.pendingFeedbackPrune) { promises.push(_rl.state.pendingFeedbackPrune); _rl.state.pendingFeedbackPrune = null; }
+  if (_rl.state.pendingFeedbackPrune) {
+    promises.push(_rl.state.pendingFeedbackPrune);
+    _rl.state.pendingFeedbackPrune = null;
+  }
   return promises.length > 0 ? Promise.all(promises).then(() => {}) : Promise.resolve();
 }
 
@@ -62,13 +70,13 @@ async function hashIpWithSalt(ip: string, salt: string): Promise<string> {
   return bytesToHex(new Uint8Array(hashBuffer)).slice(0, 32);
 }
 
-export async function checkFeedbackRateLimit(
+export async function reserveFeedbackRateLimit(
   db: RateLimitDb,
   ip: string,
   salt: string,
   windowSec: number,
   maxSubmissions: number,
-): Promise<boolean> {
+): Promise<FeedbackRateLimitReservation | null> {
   const now = Math.floor(Date.now() / 1000);
   const ipHash = await hashIpWithSalt(ip, salt);
 
@@ -81,26 +89,52 @@ export async function checkFeedbackRateLimit(
          WHERE ip_hash = ? AND submitted_at > ?
        ) < ?`,
     )
-    .bind(
-      ipHash,
-      now,
-      ipHash,
-      now - windowSec,
-      maxSubmissions,
-    )
+    .bind(ipHash, now, ipHash, now - windowSec, maxSubmissions)
     .run();
   if ((insertResult.meta?.changes ?? 0) === 0) {
-    return false;
+    return null;
   }
 
-  _rl.state.pendingFeedbackPrune = db.prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
+  _rl.state.pendingFeedbackPrune = db
+    .prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
     .bind(now - 3600)
     .run()
-    .then(() => { _rl.state.feedbackPruneFailures = 0; })
+    .then(() => {
+      _rl.state.feedbackPruneFailures = 0;
+    })
     .catch((e) => {
       _rl.state.feedbackPruneFailures++;
       console.warn(`[feedback] rate-limit prune failed (${_rl.state.feedbackPruneFailures} consecutive):`, e);
     });
 
-  return true;
+  return { ipHash, submittedAt: now };
+}
+
+export async function releaseFeedbackRateLimit(
+  db: RateLimitDb,
+  reservation: FeedbackRateLimitReservation,
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `DELETE FROM feedback_rate_limit
+        WHERE rowid = (
+          SELECT rowid
+            FROM feedback_rate_limit
+           WHERE ip_hash = ? AND submitted_at = ?
+           LIMIT 1
+        )`,
+    )
+    .bind(reservation.ipHash, reservation.submittedAt)
+    .run();
+  return (result.meta?.changes ?? 0) === 1;
+}
+
+export async function checkFeedbackRateLimit(
+  db: RateLimitDb,
+  ip: string,
+  salt: string,
+  windowSec: number,
+  maxSubmissions: number,
+): Promise<boolean> {
+  return (await reserveFeedbackRateLimit(db, ip, salt, windowSec, maxSubmissions)) != null;
 }

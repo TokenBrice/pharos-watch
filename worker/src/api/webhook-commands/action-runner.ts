@@ -365,16 +365,55 @@ async function persistAndPromptBulkConfirm(
           coinIds,
           unsubscribeAll: false,
         };
-  const storedExpiresAt = Number(context.storedIntent?.payload.expiresAt);
+  const persisted = await persistBulkConfirmPrompt(context, payload, { clearPending });
+  if (!persisted) {
+    throw new Error(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
+  }
+  await context.beforeIrreversibleEffect?.("command-reply");
+  await sendAuditedTelegramReply(
+    context.db,
+    context.chatId,
+    buildBulkConfirmMessage(
+      gate.kind,
+      previewCoins.length,
+      gate.kind === "subscribe" ? gate.alertTypes : [],
+      symbols,
+    ),
+    botToken,
+    { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
+  );
+  // We have already replied with the inline keyboard, so signal the flow to skip
+  // its own outer reply.
+  return { kind: "gated" };
+}
+
+export async function persistBulkConfirmPrompt(
+  context: TelegramActionContext,
+  payload: ConfirmBulkPayload,
+  options: {
+    clearPending?: boolean;
+    requireMatchingStoredIntent?: boolean;
+  } = {},
+): Promise<boolean> {
+  const intentKind = `command:${payload.kind}`;
+  const canReuseStoredExpiry = !options.requireMatchingStoredIntent
+    || context.storedIntent?.kind === intentKind;
+  const storedExpiresAt = canReuseStoredExpiry
+    ? Number(context.storedIntent?.payload.expiresAt)
+    : NaN;
   const expiresAt = Number.isFinite(storedExpiresAt)
     ? storedExpiresAt
     : (context.operationNowSec ?? Math.floor(Date.now() / 1000)) + DISAMBIGUATION_TTL_SEC;
-  await context.planIntent?.(createTelegramWebhookIntent(`command:${gate.kind}`, {
+  const intentPayload: Record<string, unknown> = {
     stage: "bulk-confirm-prompt",
     payload,
     expiresAt,
-    clearPending,
-  }, "required"));
+  };
+  if (options.clearPending != null) {
+    intentPayload.clearPending = options.clearPending;
+  }
+  await context.planIntent?.(createTelegramWebhookIntent(intentKind, intentPayload, "required"));
+
   const actionPayload = JSON.stringify(payload);
   const operationStatements = context.preparePendingMutationAppliedStatement
     ? [context.preparePendingMutationAppliedStatement({
@@ -393,26 +432,10 @@ async function persistAndPromptBulkConfirm(
         expiresAt,
         operationStatements,
       });
-  if (!persisted) {
-    throw new Error(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
+  if (persisted && !context.wasMutationApplied && operationStatements) {
+    context.confirmAtomicMutationApplied?.();
   }
-  if (!context.wasMutationApplied && operationStatements) context.confirmAtomicMutationApplied?.();
-  await context.beforeIrreversibleEffect?.("command-reply");
-  await sendAuditedTelegramReply(
-    context.db,
-    context.chatId,
-    buildBulkConfirmMessage(
-      gate.kind,
-      previewCoins.length,
-      gate.kind === "subscribe" ? gate.alertTypes : [],
-      symbols,
-    ),
-    botToken,
-    { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },
-  );
-  // We have already replied with the inline keyboard, so signal the flow to skip
-  // its own outer reply.
-  return { kind: "gated" };
+  return persisted;
 }
 
 export function makeActionRunner(

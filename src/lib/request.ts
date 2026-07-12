@@ -1,7 +1,6 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
-import type { SchemaLike, SchemaLikeSource } from "@/lib/schema-like";
-
-const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
+import { formatSchemaLikeIssues, resolveSchemaLike, type SchemaLikeSource } from "@/lib/schema-like";
+import { normalizeRequestTimeoutMs, resolveRequestSignal } from "@/lib/request-lifecycle";
 
 export type RequestFailureKind = "http" | "network" | "timeout" | "aborted" | "superseded" | "parse" | "schema";
 
@@ -48,50 +47,14 @@ function inputLabel(input: RequestInfo | URL): string {
   return input.url;
 }
 
-function mergeSignals(signals: readonly AbortSignal[]): AbortSignal | undefined {
-  const active = signals.filter(Boolean);
-  if (active.length === 0) return undefined;
-  if (active.length === 1) return active[0];
-  if (typeof AbortSignal.any === "function") return AbortSignal.any([...active]);
-
-  const controller = new AbortController();
-  const abort = (source: AbortSignal) => {
-    if (!controller.signal.aborted) controller.abort(source.reason);
-  };
-  for (const source of active) {
-    if (source.aborted) {
-      abort(source);
-      break;
-    }
-    source.addEventListener("abort", () => abort(source), { once: true });
-  }
-  return controller.signal;
-}
-
-function normalizedTimeoutMs(timeoutMs: number | null | undefined): number | null {
-  if (timeoutMs === null) return null;
-  if (timeoutMs === undefined || !Number.isFinite(timeoutMs)) return DEFAULT_REQUEST_TIMEOUT_MS;
-  return Math.max(1, Math.ceil(timeoutMs));
-}
-
-async function resolveSchema<T>(schema: SchemaLikeSource<T>): Promise<SchemaLike<T>> {
-  return typeof schema === "function" ? schema() : schema;
-}
-
-function formatSchemaIssues(issues: readonly { path: readonly PropertyKey[]; message: string }[]): string {
-  return issues.map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`).join(", ");
-}
-
 async function executeRequest<T>(
   input: RequestInfo | URL,
   options: RequestLifecycleOptions,
   readSuccessBody: (response: Response) => Promise<T>,
 ): Promise<RequestResult<T>> {
   const url = inputLabel(input);
-  const parentSignal = mergeSignals(
-    [options.init?.signal, options.signal].filter((signal): signal is AbortSignal => signal !== undefined),
-  );
-  const timeoutMs = normalizedTimeoutMs(options.timeoutMs);
+  const parentSignal = resolveRequestSignal(options.init?.signal, options.signal, "compose");
+  const timeoutMs = normalizeRequestTimeoutMs(options.timeoutMs);
   const timeout =
     timeoutMs == null
       ? null
@@ -157,13 +120,14 @@ export async function requestJsonWithResponse<T>(
   });
 
   if (!options.schema) return result as RequestResult<T>;
-  const schema = await resolveSchema(options.schema);
+  const schema = await resolveSchemaLike(options.schema);
+  if (!schema) return result as RequestResult<T>;
   const parsed = schema.safeParse(result.data);
   if (!parsed.success) {
     throw new RequestFailure(
       "schema",
       url,
-      `Response schema validation failed: ${formatSchemaIssues(parsed.error.issues)}`,
+      `Response schema validation failed: ${formatSchemaLikeIssues(parsed.error.issues)}`,
     );
   }
   return { data: parsed.data, response: result.response };

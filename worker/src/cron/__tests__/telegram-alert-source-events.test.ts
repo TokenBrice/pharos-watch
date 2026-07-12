@@ -127,6 +127,14 @@ function createHarness(): Harness {
     );
   `);
   sqlite.exec(MIGRATION_SQL);
+  sqlite.exec(`
+    ALTER TABLE telegram_alert_source_events
+      ADD COLUMN target_plan_state TEXT NOT NULL DEFAULT 'unstarted'
+      CHECK (target_plan_state IN (
+        'unstarted', 'capturing', 'planning', 'materializing', 'ready',
+        'delivery_open', 'degraded', 'expired'
+      ));
+  `);
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 

@@ -82,3 +82,18 @@ describe("/api/stablecoins payload shape — contracts field", () => {
     expect((withEmpty.peggedAssets[0] as { contracts?: unknown }).contracts).toBeUndefined();
   });
 });
+
+describe("/api/stablecoins payload shape — chain supply", () => {
+  it.each([
+    ["current", -1],
+    ["circulatingPrevDay", Number.NaN],
+    ["circulatingPrevWeek", Number.POSITIVE_INFINITY],
+    ["circulatingPrevMonth", Number.NEGATIVE_INFINITY],
+  ])("rejects invalid %s values", (field, value) => {
+    const asset = makeRawAsset();
+    const chainCirculating = asset.chainCirculating as Record<string, Record<string, number>>;
+    chainCirculating.Ethereum[field] = value;
+
+    expect(StablecoinListResponseSchema.safeParse({ peggedAssets: [asset] }).success).toBe(false);
+  });
+});

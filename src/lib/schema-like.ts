@@ -14,6 +14,10 @@ export interface SchemaLike<T> {
 export type SchemaLikeLoader<T> = () => Promise<SchemaLike<T>>;
 export type SchemaLikeSource<T> = SchemaLike<T> | SchemaLikeLoader<T>;
 
+export function formatSchemaLikeIssues(issues: readonly SchemaLikeIssue[]): string {
+  return issues.map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`).join(", ");
+}
+
 export function createLazySchema<T>(loader: () => Promise<SchemaLike<T>>): SchemaLikeLoader<T> {
   let cached: Promise<SchemaLike<T>> | null = null;
   return () => {

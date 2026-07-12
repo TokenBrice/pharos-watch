@@ -42,7 +42,6 @@ import {
   CRON_MINT_BURN,
   CRON_RESERVE_SYNC,
   CRON_TELEGRAM_PULSE,
-  CRON_YIELD,
 } from "@/lib/cron-intervals";
 import { createLazySchema } from "@/lib/schema-like";
 import type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
@@ -62,7 +61,6 @@ type BlacklistEventsDescriptorInput = {
   path: string;
 };
 
-const YIELD_META_MAX_AGE_SEC = CRON_YIELD / 1000;
 const DATA_SURFACE_PRODUCER_INTERVAL_MS = {
   stablecoins: DATA_SURFACE_DESCRIPTORS.stablecoins.producerIntervalSec * 1000,
   dexLiquidity: DATA_SURFACE_DESCRIPTORS.dexLiquidity.producerIntervalSec * 1000,
@@ -399,18 +397,15 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       async () => (await import("@shared/types/yield-summary")).YieldRankingsSummaryResponseSchema,
     ),
   ),
-  yieldAdapterManifest: defineApiQuery(
-    {
-      queryKey: ["yield-adapter-manifest"] as const,
-      path: API_PATHS.yieldAdapterManifest(),
-      producerIntervalMs: CRON_YIELD,
-      metaMaxAgeSec: YIELD_META_MAX_AGE_SEC,
-    },
-    "meta",
+  yieldAdapterManifest: defineParameterizedStaticApiQuery(
     createLazySchema<YieldAdapterManifestResponse>(
       async () => (await import("@shared/types/yield")).YieldAdapterManifestResponseSchema,
     ),
-  ),
+    () => ({
+      queryKey: ["yield-adapter-manifest"] as const,
+      path: API_PATHS.yieldAdapterManifest(),
+    }),
+  )(),
   stressSignals: defineApiQuery(
     {
       queryKey: DATA_SURFACE_DESCRIPTORS.stressSignals.queryKey,

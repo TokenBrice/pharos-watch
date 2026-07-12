@@ -1,4 +1,4 @@
-import { TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
+import { TELEGRAM_BOT_URL, TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { escapeHtml } from "../lib/telegram";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import { logTelegramEvent } from "../lib/telegram-log";
@@ -69,7 +69,7 @@ function buildGroupWelcomeReplyMarkup(): {
   return {
     inline_keyboard: [
       [{ text: "Read the docs →", url: `https://pharos.watch/${TELEGRAM_BOT_USERNAME.toLowerCase()}/` }],
-      [{ text: "Personal alerts in DM →", url: `https://t.me/${TELEGRAM_BOT_USERNAME}?start=setup` }],
+      [{ text: "Personal alerts in DM →", url: `${TELEGRAM_BOT_URL}?start=setup` }],
     ],
   };
 }

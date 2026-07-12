@@ -1,5 +1,13 @@
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
-import { parseFeedbackRequest, prepareFeedbackSubmission } from "./feedback/request";
+import { isWellFormedIdempotencyKey, runIdempotentAction } from "../lib/idempotency";
+import { releaseFeedbackRateLimit } from "../lib/rate-limit";
+import { GitHubIssueRejectedError } from "./feedback/github";
+import {
+  FEEDBACK_REQUEST_MAX_BYTES,
+  parseFeedbackRequest,
+  prepareFeedbackSubmission,
+  validateFeedbackSubmission,
+} from "./feedback/request";
 import { submitFeedback } from "./feedback/submission";
 import type { FeedbackEnv } from "./feedback/types";
 export type { FeedbackEnv } from "./feedback/types";
@@ -9,18 +17,51 @@ export type { FeedbackEnv } from "./feedback/types";
 export const handleFeedback = withErrorHandler(
   "feedback",
   async (db: D1Database, request: Request, env: FeedbackEnv): Promise<Response> => {
+    const idempotencyRequest = request.clone();
     const parsed = await parseFeedbackRequest(request);
     if (parsed instanceof Response) return parsed;
 
-    const prepared = await prepareFeedbackSubmission(db, request, env, parsed);
-    if (prepared instanceof Response) return prepared;
+    const validated = validateFeedbackSubmission(parsed);
+    if (validated instanceof Response) return validated;
 
-    try {
-      await submitFeedback(db, prepared);
-      return jsonResponse({ ok: true });
-    } catch (err) {
-      console.error("[feedback] GitHub API error:", err);
-      return errorResponse(500, "Failed to submit feedback. Please try again.");
+    if (!isWellFormedIdempotencyKey(request.headers.get("Idempotency-Key"))) {
+      return errorResponse(400, "A valid Idempotency-Key header is required");
     }
+
+    let preExecutionRetryableResponse: Response | null = null;
+    return runIdempotentAction(
+      db,
+      "feedback-submit",
+      idempotencyRequest,
+      async () => {
+        const prepared = await prepareFeedbackSubmission(db, request, env, validated);
+        if (prepared instanceof Response) {
+          preExecutionRetryableResponse = prepared;
+          return prepared;
+        }
+
+        try {
+          await submitFeedback(db, prepared);
+          return jsonResponse({ ok: true });
+        } catch (error) {
+          if (error instanceof GitHubIssueRejectedError) {
+            const released = await releaseFeedbackRateLimit(db, prepared.rateLimitReservation);
+            if (!released) {
+              throw new Error(`Failed to release rejected feedback rate-limit reservation: ${error.message}`);
+            }
+            console.error("[feedback] GitHub API rejected issue creation:", error);
+            return errorResponse(500, "Failed to submit feedback. Please try again.");
+          }
+          console.error("[feedback] GitHub API execution outcome unknown:", error);
+          throw error;
+        }
+      },
+      {
+        requestMaxBytes: FEEDBACK_REQUEST_MAX_BYTES,
+        isPreExecutionRetryable: (response) => response === preExecutionRetryableResponse,
+        isExecutionOutcomeUnknown: (response) =>
+          response.headers.get("X-Execution-Certainty")?.trim().toLowerCase() === "unknown",
+      },
+    );
   },
 );

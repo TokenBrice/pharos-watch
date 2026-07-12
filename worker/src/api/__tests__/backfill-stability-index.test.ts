@@ -92,13 +92,19 @@ function makeDb(options?: {
     all: async <T>() => {
       if (sql.includes("FROM depeg_events")) {
         const filtered = sql.includes("WHERE started_at <= ? AND (ended_at IS NULL OR ended_at > ?)")
-          ? depegRows.filter((row) => row.started_at <= Number(boundArgs[0]) && (row.ended_at === null || row.ended_at > Number(boundArgs[1])))
+          ? depegRows.filter(
+              (row) =>
+                row.started_at <= Number(boundArgs[0]) &&
+                (row.ended_at === null || row.ended_at > Number(boundArgs[1])),
+            )
           : depegRows;
         return { results: filtered as T[], success: true, meta: {} };
       }
       if (sql.includes("FROM supply_history")) {
         const filtered = sql.includes("WHERE snapshot_date >= ? AND snapshot_date <= ?")
-          ? supplyRows.filter((row) => row.snapshot_date >= Number(boundArgs[0]) && row.snapshot_date <= Number(boundArgs[1]))
+          ? supplyRows.filter(
+              (row) => row.snapshot_date >= Number(boundArgs[0]) && row.snapshot_date <= Number(boundArgs[1]),
+            )
           : supplyRows;
         return { results: filtered as T[], success: true, meta: {} };
       }
@@ -106,7 +112,9 @@ function makeDb(options?: {
         return { results: [] as T[], success: true, meta: {} };
       }
       if (sql.includes("FROM stability_index WHERE computed_at >= ? AND computed_at <= ?")) {
-        const filtered = currentStabilityRows.filter((row) => row.computed_at >= Number(boundArgs[0]) && row.computed_at <= Number(boundArgs[1]));
+        const filtered = currentStabilityRows.filter(
+          (row) => row.computed_at >= Number(boundArgs[0]) && row.computed_at <= Number(boundArgs[1]),
+        );
         return { results: filtered as T[], success: true, meta: {} };
       }
       return { results: [] as T[], success: true, meta: {} };
@@ -145,11 +153,15 @@ function makeDb(options?: {
           currentStabilityRows = currentStabilityRows.filter(
             (row) => row.computed_at < Number(boundArgs[0]) || row.computed_at > Number(boundArgs[1]),
           );
-        } else if (sql.includes("INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)")) {
+        } else if (
+          sql.includes(
+            "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)",
+          )
+        ) {
           const rowsToInsert = sql.includes("WHERE computed_at >= ? AND computed_at <= ?")
             ? rebuildRows.filter(
-              (row) => row.computed_at >= Number(boundArgs[0]) && row.computed_at <= Number(boundArgs[1]),
-            )
+                (row) => row.computed_at >= Number(boundArgs[0]) && row.computed_at <= Number(boundArgs[1]),
+              )
             : rebuildRows;
           currentStabilityRows = [
             ...currentStabilityRows,
@@ -261,9 +273,7 @@ describe("handleBackfillStabilityIndex", () => {
           ended_at: null,
         },
       ],
-        supplyRows: [
-          { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000, price: 0.998 },
-        ],
+      supplyRows: [{ stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000, price: 0.998 }],
       onExec: (sql) => execCalls.push(sql),
     });
 
@@ -279,7 +289,9 @@ describe("handleBackfillStabilityIndex", () => {
     const origBatch = db.batch.bind(db);
     db.batch = (async (stmts: D1PreparedStatement[]) => {
       batchCalls.push(
-        stmts.map((s) => stmtSqlMap.get(s as unknown as object) ?? ((s as unknown as { __sql?: string }).__sql ?? "<unknown>")),
+        stmts.map(
+          (s) => stmtSqlMap.get(s as unknown as object) ?? (s as unknown as { __sql?: string }).__sql ?? "<unknown>",
+        ),
       );
       return origBatch(stmts);
     }) as typeof db.batch;
@@ -297,9 +309,7 @@ describe("handleBackfillStabilityIndex", () => {
       "CREATE TABLE stability_index_rebuild ( computed_at INTEGER PRIMARY KEY, score REAL NOT NULL, band TEXT NOT NULL, components TEXT NOT NULL, input_snapshot TEXT NOT NULL, methodology_version TEXT NOT NULL )",
     ]);
     // Cleanup exec still runs
-    expect(execCalls).toEqual([
-      "DROP TABLE IF EXISTS stability_index_rebuild",
-    ]);
+    expect(execCalls).toEqual(["DROP TABLE IF EXISTS stability_index_rebuild"]);
   });
 
   it("returns a no-op when there are no completed UTC days to rebuild yet", async () => {
@@ -350,9 +360,7 @@ describe("handleBackfillStabilityIndex", () => {
           { stablecoin_id: "usdt-tether", snapshot_date: day1, circulating_usd: 100_000_000, price: 0.996 },
           { stablecoin_id: "usdt-tether", snapshot_date: day2, circulating_usd: 101_000_000, price: 0.999 },
         ],
-        stabilityRows: [
-          { computed_at: day1, score: 99.9, band: "BEDROCK", methodology_version: "2.1" },
-        ],
+        stabilityRows: [{ computed_at: day1, score: 99.9, band: "BEDROCK", methodology_version: "2.1" }],
       } as Parameters<typeof makeDb>[0]),
       true,
       makeApiRequest(`/api/backfill-stability-index?dry-run=true&startDay=${day1}&endDay=${day1}`, {
@@ -419,7 +427,9 @@ describe("handleBackfillStabilityIndex", () => {
       expect.objectContaining({ computed_at: targetDay }),
       { computed_at: preservedAfter, score: 33, band: "Stable", methodology_version: "2.0" },
     ]);
-    expect(state.stabilityRows?.find((row: { computed_at: number; score: number }) => row.computed_at === targetDay)?.score).not.toBe(22);
+    expect(
+      state.stabilityRows?.find((row: { computed_at: number; score: number }) => row.computed_at === targetDay)?.score,
+    ).not.toBe(22);
   });
 
   it("preserves an existing row when replay inputs are insufficient for that day", async () => {
@@ -584,6 +594,168 @@ describe("handleBackfillStabilityIndex", () => {
     const res = await pending;
 
     expect(res.status).toBe(200);
+  });
+
+  it("fails closed when the authoritative pre-swap lease renewal loses ownership", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const targetDay = Math.floor((nowSec - 86400) / 86400) * 86400;
+    const state: CapturedBackfillState = {};
+    const execCalls: string[] = [];
+    const originalRow = {
+      computed_at: targetDay,
+      score: 22,
+      band: "Stable",
+      methodology_version: "2.0",
+    };
+    const db = makeDb({
+      earliest: targetDay,
+      depegRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          peak_deviation_bps: -120,
+          peg_reference: 1,
+          started_at: targetDay,
+          ended_at: null,
+        },
+      ],
+      supplyRows: [
+        { stablecoin_id: "usdt-tether", snapshot_date: targetDay - 7 * 86400, circulating_usd: 99_000_000, price: 1 },
+        { stablecoin_id: "usdt-tether", snapshot_date: targetDay, circulating_usd: 100_000_000, price: 0.998 },
+      ],
+      stabilityRows: [originalRow],
+      captureState: state,
+      onExec: (sql) => execCalls.push(sql),
+    });
+
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => {
+      const stmt = origPrepare(sql);
+      if (!sql.includes("UPDATE cron_leases")) return stmt;
+      const bind = stmt.bind.bind(stmt);
+      return {
+        ...stmt,
+        bind: (...args: unknown[]) => {
+          const bound = bind(...args);
+          return { ...bound, run: async () => ({ success: true, meta: { changes: 0 } }) };
+        },
+      } as unknown as typeof stmt;
+    }) as typeof db.prepare;
+
+    const response = await handleBackfillStabilityIndex(
+      db,
+      true,
+      makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
+        method: "POST",
+        adminKey: "secret",
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(state.stabilityRows).toEqual([originalRow]);
+    expect(execCalls).toEqual([]);
+    expect(errorSpy.mock.calls.flat().join(" ")).toContain("backfill_stability_index_lease_lost");
+    expect(warnSpy.mock.calls.flat().join(" ")).toContain("backfill_stability_index_scratch_cleanup_deferred");
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it("cleans up the scratch table when filling it fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const targetDay = Math.floor((nowSec - 86400) / 86400) * 86400;
+    const execCalls: string[] = [];
+    const db = makeDb({
+      earliest: targetDay,
+      depegRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          peak_deviation_bps: -120,
+          peg_reference: 1,
+          started_at: targetDay,
+          ended_at: null,
+        },
+      ],
+      supplyRows: [
+        { stablecoin_id: "usdt-tether", snapshot_date: targetDay - 7 * 86400, circulating_usd: 99_000_000, price: 1 },
+        { stablecoin_id: "usdt-tether", snapshot_date: targetDay, circulating_usd: 100_000_000, price: 0.998 },
+      ],
+      onExec: (sql) => execCalls.push(sql),
+    });
+    const origBatch = db.batch.bind(db);
+    let batchCalls = 0;
+    db.batch = (async (statements: D1PreparedStatement[]) => {
+      batchCalls++;
+      if (batchCalls === 2) throw new Error("scratch fill failed");
+      return origBatch(statements);
+    }) as typeof db.batch;
+
+    const response = await handleBackfillStabilityIndex(
+      db,
+      true,
+      makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
+        method: "POST",
+        adminKey: "secret",
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(execCalls).toEqual(["DROP TABLE IF EXISTS stability_index_rebuild"]);
+    errorSpy.mockRestore();
+  });
+
+  it("logs advisory lease release failures without replacing a successful result", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const targetDay = Math.floor((nowSec - 86400) / 86400) * 86400;
+    const db = makeDb({
+      earliest: targetDay,
+      depegRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          peak_deviation_bps: -120,
+          peg_reference: 1,
+          started_at: targetDay,
+          ended_at: null,
+        },
+      ],
+      supplyRows: [
+        { stablecoin_id: "usdt-tether", snapshot_date: targetDay - 7 * 86400, circulating_usd: 99_000_000, price: 1 },
+        { stablecoin_id: "usdt-tether", snapshot_date: targetDay, circulating_usd: 100_000_000, price: 0.998 },
+      ],
+    });
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => {
+      const stmt = origPrepare(sql);
+      if (!sql.includes("DELETE FROM cron_leases")) return stmt;
+      const bind = stmt.bind.bind(stmt);
+      return {
+        ...stmt,
+        bind: (...args: unknown[]) => {
+          const bound = bind(...args);
+          return {
+            ...bound,
+            run: async () => {
+              throw new Error("release failed");
+            },
+          };
+        },
+      } as unknown as typeof stmt;
+    }) as typeof db.prepare;
+
+    const response = await handleBackfillStabilityIndex(
+      db,
+      true,
+      makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
+        method: "POST",
+        adminKey: "secret",
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(warnSpy.mock.calls.flat().join(" ")).toContain("backfill_stability_index_lease_release_failed");
+    warnSpy.mockRestore();
   });
 
   it("rejects invalid day parameters", async () => {

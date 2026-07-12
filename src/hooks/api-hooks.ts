@@ -257,7 +257,9 @@ export function useYieldRankingsSummary() {
 }
 
 export function useYieldAdapterManifest() {
-  return useRegisteredApiQuery<YieldAdapterManifestResponse>(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest);
+  return useQuery<YieldAdapterManifestResponse, Error>(
+    createRegisteredStaticQueryOptions(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest, { retry: 1 }),
+  );
 }
 
 export function useStressSignals(overrides?: QueryControlOverrides) {

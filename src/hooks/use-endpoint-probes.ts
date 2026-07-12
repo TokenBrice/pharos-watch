@@ -242,9 +242,20 @@ async function probeEndpoint(path: string, signal?: AbortSignal): Promise<Endpoi
 
       if (parser && res.ok && typeof res.json === "function") {
         try {
-          semanticFields = parser(await res.json()) ?? undefined;
+          const parsed = parser(await res.json());
+          semanticFields = parsed ?? {
+            semanticStatus: "stale",
+            semanticScope: semanticKind,
+            semanticDetail: `Response did not match the ${semanticKind} probe contract.`,
+            error: `Invalid ${semanticKind} probe response`,
+          };
         } catch {
-          semanticFields = undefined;
+          semanticFields = {
+            semanticStatus: "stale",
+            semanticScope: semanticKind,
+            semanticDetail: `Response was not valid JSON for the ${semanticKind} probe.`,
+            error: `Invalid JSON from ${semanticKind} probe`,
+          };
         }
       } else {
         // This fan-out probe loop only needs transport reachability for non-semantic routes.

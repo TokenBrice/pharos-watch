@@ -49,23 +49,66 @@ describe("collectEndpointProbes", () => {
 
   it("parses semantic probe routes via endpoint metadata", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({
-        status: "degraded",
-        warnings: ["Health cache is delayed."],
-      }), {
+      new Response(
+        JSON.stringify({
+          status: "degraded",
+          warnings: ["Health cache is delayed."],
+        }),
+        {
+          status: 200,
+        },
+      ),
+    );
+
+    const result = await collectEndpointProbes(["/api/health"]);
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        path: "/api/health",
         status: 200,
+        semanticStatus: "degraded",
+        semanticScope: "health",
+        semanticDetail: "Health cache is delayed.",
+      }),
+    );
+  });
+
+  it("marks malformed semantic probe JSON as stale instead of transport-healthy", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("not-json", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
       }),
     );
 
     const result = await collectEndpointProbes(["/api/health"]);
 
-    expect(result[0]).toEqual(expect.objectContaining({
-      path: "/api/health",
-      status: 200,
-      semanticStatus: "degraded",
-      semanticScope: "health",
-      semanticDetail: "Health cache is delayed.",
-    }));
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        path: "/api/health",
+        status: 200,
+        semanticStatus: "stale",
+        semanticScope: "health",
+        error: "Invalid JSON from health probe",
+      }),
+    );
+  });
+
+  it("marks semantic probe contract mismatches as stale", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ status: "ok" }), { status: 200 }));
+
+    const result = await collectEndpointProbes(["/api/health"]);
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        path: "/api/health",
+        status: 200,
+        semanticStatus: "stale",
+        semanticScope: "health",
+        semanticDetail: "Response did not match the health probe contract.",
+        error: "Invalid health probe response",
+      }),
+    );
   });
 
   it("routes admin probe paths through the same-origin proxy", async () => {
@@ -114,13 +157,15 @@ describe("collectEndpointProbes", () => {
 
     const result = await collectEndpointProbes(["/api/stress-signals"]);
 
-    expect(result[0]).toEqual(expect.objectContaining({
-      path: "/api/stress-signals",
-      status: 200,
-      semanticStatus: "stale",
-      semanticScope: "freshness",
-      semanticDetail: '110 - "Response is stale (7200s old, max 900s)"',
-    }));
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        path: "/api/stress-signals",
+        status: 200,
+        semanticStatus: "stale",
+        semanticScope: "freshness",
+        semanticDetail: '110 - "Response is stale (7200s old, max 900s)"',
+      }),
+    );
   });
 
   it("preserves degraded freshness Warning severity on 200 responses", async () => {
@@ -135,37 +180,44 @@ describe("collectEndpointProbes", () => {
 
     const result = await collectEndpointProbes(["/api/chains"]);
 
-    expect(result[0]).toEqual(expect.objectContaining({
-      path: "/api/chains",
-      status: 200,
-      semanticStatus: "degraded",
-      semanticScope: "freshness",
-      semanticDetail: '110 - "Response is degraded (3600s old, max 1800s)"',
-    }));
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        path: "/api/chains",
+        status: 200,
+        semanticStatus: "degraded",
+        semanticScope: "freshness",
+        semanticDetail: '110 - "Response is degraded (3600s old, max 1800s)"',
+      }),
+    );
   });
 
   it("lets stale freshness Warning severity override healthy parsed semantics", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({
-        status: "healthy",
-        warnings: [],
-      }), {
-        status: 200,
-        headers: {
-          Warning: '110 - "Response is stale (7200s old, max 900s)"',
+      new Response(
+        JSON.stringify({
+          status: "healthy",
+          warnings: [],
+        }),
+        {
+          status: 200,
+          headers: {
+            Warning: '110 - "Response is stale (7200s old, max 900s)"',
+          },
         },
-      }),
+      ),
     );
 
     const result = await collectEndpointProbes(["/api/health"]);
 
-    expect(result[0]).toEqual(expect.objectContaining({
-      path: "/api/health",
-      status: 200,
-      semanticStatus: "stale",
-      semanticScope: "freshness",
-      semanticDetail: '110 - "Response is stale (7200s old, max 900s)"',
-    }));
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        path: "/api/health",
+        status: 200,
+        semanticStatus: "stale",
+        semanticScope: "freshness",
+        semanticDetail: '110 - "Response is stale (7200s old, max 900s)"',
+      }),
+    );
   });
 
   it("returns the existing timeout error shape", async () => {
@@ -193,10 +245,7 @@ describe("collectEndpointProbes", () => {
   });
 
   it("limits concurrent browser probes to avoid transport saturation", async () => {
-    const paths = Array.from(
-      { length: ENDPOINT_PROBE_CONCURRENCY + 2 },
-      (_value, index) => `/api/test-${index}`,
-    );
+    const paths = Array.from({ length: ENDPOINT_PROBE_CONCURRENCY + 2 }, (_value, index) => `/api/test-${index}`);
     const deferreds = paths.map(() => createDeferred<Response>());
     const started: string[] = [];
     let active = 0;
