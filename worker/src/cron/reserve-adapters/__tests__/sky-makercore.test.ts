@@ -53,13 +53,55 @@ function encodeAddressWord(address: string): string {
 }
 
 const SAMPLE_GROUPS: SkyGroupResult[] = [
-  { group: "stablecoins", group_name: "Stablecoins", debt: "4848053264.74", collateral: "4848920495.92", datetime: "2026-04-05T17:33:24.053849" },
-  { group: "spark", group_name: "Spark", debt: "3604127984.82", collateral: "3604127984.82", datetime: "2026-04-05T17:33:24.053849" },
-  { group: "grove", group_name: "Grove", debt: "2942299611.45", collateral: "2942299611.45", datetime: "2026-04-05T17:33:24.053849" },
-  { group: "obex", group_name: "Obex", debt: "605813016.00", collateral: "605813016.00", datetime: "2026-04-05T17:33:24.053849" },
-  { group: "core", group_name: "Core", debt: "524177048.08", collateral: "1744997221.98", datetime: "2026-04-05T17:33:24.053849" },
-  { group: "staked", group_name: "Staking Engine", debt: "153348644.44", collateral: "1213000185.95", datetime: "2026-04-05T17:33:24.053849" },
-  { group: "legacy-rwa", group_name: "Legacy RWA", debt: "104787191.81", collateral: "104787191.81", datetime: "2026-04-05T17:33:24.053849" },
+  {
+    group: "stablecoins",
+    group_name: "Stablecoins",
+    debt: "4848053264.74",
+    collateral: "4848920495.92",
+    datetime: "2026-04-05T17:33:24.053849",
+  },
+  {
+    group: "spark",
+    group_name: "Spark",
+    debt: "3604127984.82",
+    collateral: "3604127984.82",
+    datetime: "2026-04-05T17:33:24.053849",
+  },
+  {
+    group: "grove",
+    group_name: "Grove",
+    debt: "2942299611.45",
+    collateral: "2942299611.45",
+    datetime: "2026-04-05T17:33:24.053849",
+  },
+  {
+    group: "obex",
+    group_name: "Obex",
+    debt: "605813016.00",
+    collateral: "605813016.00",
+    datetime: "2026-04-05T17:33:24.053849",
+  },
+  {
+    group: "core",
+    group_name: "Core",
+    debt: "524177048.08",
+    collateral: "1744997221.98",
+    datetime: "2026-04-05T17:33:24.053849",
+  },
+  {
+    group: "staked",
+    group_name: "Staking Engine",
+    debt: "153348644.44",
+    collateral: "1213000185.95",
+    datetime: "2026-04-05T17:33:24.053849",
+  },
+  {
+    group: "legacy-rwa",
+    group_name: "Legacy RWA",
+    debt: "104787191.81",
+    collateral: "104787191.81",
+    datetime: "2026-04-05T17:33:24.053849",
+  },
 ];
 
 describe("adaptSkyModules", () => {
@@ -78,7 +120,7 @@ describe("adaptSkyModules", () => {
     // Sky PSM aggregates multiple stables (USDC/USDT/USDP) without per-stable
     // breakdown; the slice is intentionally unattributed.
     expect(byName["Stablecoins (PSM)"].coinId).toBeUndefined();
-    expect(byName["Stablecoins (PSM)"].depType).toBe("mechanism");
+    expect(byName["Stablecoins (PSM)"].depType).toBeUndefined();
 
     expect(byName["Spark (lending)"].risk).toBe("low");
     expect(byName["Grove (RWA)"].risk).toBe("low");
@@ -97,7 +139,13 @@ describe("adaptSkyModules", () => {
 
   it("omits modules with zero debt", () => {
     const withZero: SkyGroupResult[] = [
-      { group: "stablecoins", group_name: "Stablecoins", debt: "5000000000", collateral: "5000000000", datetime: "2026-04-05T17:33:24" },
+      {
+        group: "stablecoins",
+        group_name: "Stablecoins",
+        debt: "5000000000",
+        collateral: "5000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
       { group: "legacy-rwa", group_name: "Legacy RWA", debt: "0", collateral: "0", datetime: "2026-04-05T17:33:24" },
     ];
     const slices = adaptSkyModules(withZero);
@@ -114,8 +162,20 @@ describe("adaptSkyModules", () => {
 
   it("buckets unknown groups into Other modules with high risk", () => {
     const withUnknown: SkyGroupResult[] = [
-      { group: "stablecoins", group_name: "Stablecoins", debt: "9000000000", collateral: "9000000000", datetime: "2026-04-05T17:33:24" },
-      { group: "new-module", group_name: "New Module", debt: "1000000000", collateral: "1000000000", datetime: "2026-04-05T17:33:24" },
+      {
+        group: "stablecoins",
+        group_name: "Stablecoins",
+        debt: "9000000000",
+        collateral: "9000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
+      {
+        group: "new-module",
+        group_name: "New Module",
+        debt: "1000000000",
+        collateral: "1000000000",
+        datetime: "2026-04-05T17:33:24",
+      },
     ];
     const slices = adaptSkyModules(withUnknown);
     const otherSlice = slices.find((s) => s.name === "Other modules");
@@ -132,7 +192,13 @@ describe("resolveSkyImmediateRedeemableUsd", () => {
 
   it("returns 0 when no stablecoins module exists", () => {
     const noStable: SkyGroupResult[] = [
-      { group: "core", group_name: "Core", debt: "500000000", collateral: "1500000000", datetime: "2026-04-05T17:33:24" },
+      {
+        group: "core",
+        group_name: "Core",
+        debt: "500000000",
+        collateral: "1500000000",
+        datetime: "2026-04-05T17:33:24",
+      },
     ];
     expect(resolveSkyImmediateRedeemableUsd(noStable)).toBe(0);
   });
@@ -141,7 +207,13 @@ describe("resolveSkyImmediateRedeemableUsd", () => {
 describe("listUnknownGroups", () => {
   it("identifies groups not in the known set", () => {
     const groups: SkyGroupResult[] = [
-      { group: "stablecoins", group_name: "Stablecoins", debt: "100", collateral: "100", datetime: "2026-04-05T17:33:24" },
+      {
+        group: "stablecoins",
+        group_name: "Stablecoins",
+        debt: "100",
+        collateral: "100",
+        datetime: "2026-04-05T17:33:24",
+      },
       { group: "mystery", group_name: "Mystery", debt: "50", collateral: "50", datetime: "2026-04-05T17:33:24" },
     ];
     const unknown = listUnknownGroups(groups);
@@ -153,7 +225,13 @@ describe("listUnknownGroups", () => {
 describe("resolveSkyTimestampSummary", () => {
   it("uses the oldest positive-debt group datetime as source timestamp", () => {
     const summary = resolveSkyTimestampSummary([
-      { group: "stablecoins", group_name: "Stablecoins", debt: "100", collateral: "100", datetime: "2026-04-05T17:33:24" },
+      {
+        group: "stablecoins",
+        group_name: "Stablecoins",
+        debt: "100",
+        collateral: "100",
+        datetime: "2026-04-05T17:33:24",
+      },
       { group: "spark", group_name: "Spark", debt: "50", collateral: "50", datetime: "2026-04-05T18:33:24" },
       { group: "legacy-rwa", group_name: "Legacy", debt: "0", collateral: "0", datetime: "2026-04-01T00:00:00" },
     ]);
@@ -195,8 +273,20 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({
       count: 2,
       results: [
-        { group: "stablecoins", group_name: "Stablecoins", debt: "4000000000", collateral: "4000000000", datetime: "2026-04-05T17:33:24" },
-        { group: "spark", group_name: "Spark", debt: "3000000000", collateral: "3000000000", datetime: "2026-04-05T17:33:24" },
+        {
+          group: "stablecoins",
+          group_name: "Stablecoins",
+          debt: "4000000000",
+          collateral: "4000000000",
+          datetime: "2026-04-05T17:33:24",
+        },
+        {
+          group: "spark",
+          group_name: "Spark",
+          debt: "3000000000",
+          collateral: "3000000000",
+          datetime: "2026-04-05T17:33:24",
+        },
       ],
     });
 
@@ -204,6 +294,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     const psmSlice = result.slices.find((s) => s.name === "Stablecoins (PSM)");
     expect(psmSlice).toBeDefined();
     expect(psmSlice?.coinId).toBeUndefined();
+    expect(psmSlice?.depType).toBeUndefined();
 
     const details = result.metadata?.details as { psmComposition?: string };
     expect(details?.psmComposition).toMatch(/USDC.*USDT.*USDP/);
@@ -218,18 +309,32 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
       holderEligibility: "any-holder",
       settlementDelaySec: 0,
     });
-    expect(fetchOnchainUint256).toHaveBeenCalledWith(expect.objectContaining({
-      chain: "ethereum",
-      contract: SKY_LITE_PSM_USDC_ADDRESS,
-    }));
+    expect(fetchOnchainUint256).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chain: "ethereum",
+        contract: SKY_LITE_PSM_USDC_ADDRESS,
+      }),
+    );
   });
 
   it("falls back without redemption metadata when LitePSM capacity is unavailable", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({
       count: 2,
       results: [
-        { group: "stablecoins", group_name: "Stablecoins", debt: "4000000000", collateral: "4000000000", datetime: "2026-04-05T17:33:24" },
-        { group: "spark", group_name: "Spark", debt: "3000000000", collateral: "3000000000", datetime: "2026-04-05T17:33:24" },
+        {
+          group: "stablecoins",
+          group_name: "Stablecoins",
+          debt: "4000000000",
+          collateral: "4000000000",
+          datetime: "2026-04-05T17:33:24",
+        },
+        {
+          group: "spark",
+          group_name: "Spark",
+          debt: "3000000000",
+          collateral: "3000000000",
+          datetime: "2026-04-05T17:33:24",
+        },
       ],
     });
     vi.mocked(fetchOnchainRawCall).mockResolvedValue(null);
@@ -246,8 +351,20 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({
       count: 2,
       results: [
-        { group: "stablecoins", group_name: "Stablecoins", debt: "4000000000", collateral: "4000000000", datetime: "2026-04-05T17:33:24" },
-        { group: "spark", group_name: "Spark", debt: "3000000000", collateral: "3000000000", datetime: "2026-04-05T17:33:24" },
+        {
+          group: "stablecoins",
+          group_name: "Stablecoins",
+          debt: "4000000000",
+          collateral: "4000000000",
+          datetime: "2026-04-05T17:33:24",
+        },
+        {
+          group: "spark",
+          group_name: "Spark",
+          debt: "3000000000",
+          collateral: "3000000000",
+          datetime: "2026-04-05T17:33:24",
+        },
       ],
     });
     const controller = new AbortController();

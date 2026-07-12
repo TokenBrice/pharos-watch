@@ -119,6 +119,29 @@
       "type": "collateral"
     }
   ],
+  "dependencyReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Flipcash USDF launch disclosure",
+        "url": "https://www.flipcash.com/blog/usdf"
+      },
+      {
+        "label": "Flipcash terms",
+        "url": "https://www.flipcash.com/terms"
+      }
+    ],
+    "rationale": "Flipcash states that USDF is fully backed by USDC and that deposits and withdrawals convert between the two assets. The relationship is a direct proportional collateral dependency and cannot yet be represented by a reserve composition because the pre-launch record has no separate reserve slices.",
+    "relationships": [
+      {
+        "id": "usdc-circle",
+        "type": "collateral",
+        "reason": "USDC is the disclosed 1:1 backing asset for Flipcash USDF."
+      }
+    ]
+  },
   "featuredContent": [
     {
       "type": "article",

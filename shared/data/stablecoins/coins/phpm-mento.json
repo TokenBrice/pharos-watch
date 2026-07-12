@@ -194,15 +194,6 @@
     }
   },
   "mechanismArchetype": "cdp",
-  "infrastructures": [
-    "liquity-v2"
-  ],
-  "dependencies": [
-    {
-      "id": "cusd-celo",
-      "type": "collateral",
-      "weight": 1
-    }
-  ],
+  "infrastructures": ["liquity-v2"],
   "launchDate": "2024-09-09"
 }

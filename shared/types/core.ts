@@ -11,11 +11,7 @@ import {
 } from "./stablecoin-taxonomy";
 export type { DependencyType } from "./dependency-types";
 export type { ReserveRisk, ReserveSlice } from "./reserves";
-export {
-  GOVERNANCE_TYPE_VALUES,
-  MECHANISM_ARCHETYPE_VALUES,
-  STABLECOIN_STATUS_VALUES,
-} from "./stablecoin-taxonomy";
+export { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES, STABLECOIN_STATUS_VALUES } from "./stablecoin-taxonomy";
 export type { GovernanceType, MechanismArchetype, StablecoinStatus } from "./stablecoin-taxonomy";
 export { RESERVE_RISK_VALUES, ReserveRiskSchema } from "./reserves";
 export { DEPENDENCY_TYPE_VALUES, DependencyTypeSchema } from "./dependency-types";
@@ -105,6 +101,58 @@ export interface ProofOfReserves {
 export interface StablecoinLink {
   label: string;
   url: string;
+}
+
+export const RESEARCH_REVIEW_CONFIDENCE_VALUES = ["verified", "probable", "manual-review", "unknown"] as const;
+export type ResearchReviewConfidence = (typeof RESEARCH_REVIEW_CONFIDENCE_VALUES)[number];
+
+export const RESERVE_REVIEW_SCOPE_VALUES = ["full-composition", "dependency-relationships", "selected-slices"] as const;
+export type ReserveReviewScope = (typeof RESERVE_REVIEW_SCOPE_VALUES)[number];
+
+export const RESERVE_NON_LINK_DISPOSITION_VALUES = [
+  "untracked-exogenous-asset",
+  "self-reserve",
+  "basket-needs-split",
+  "insufficient-evidence",
+  "not-applicable",
+] as const;
+export type ReserveNonLinkDisposition = (typeof RESERVE_NON_LINK_DISPOSITION_VALUES)[number];
+
+export interface ReserveNonLinkReview {
+  reserveIndex: number;
+  reserveName: string;
+  disposition: ReserveNonLinkDisposition;
+  rationale: string;
+  candidateCoinIds?: string[];
+}
+
+export interface ReserveReview {
+  reviewedAt: string;
+  reviewer: string;
+  confidence: ResearchReviewConfidence;
+  sources: StablecoinLink[];
+  rationale: string;
+  compositionBasis: string;
+  compositionAsOf?: string;
+  scope: ReserveReviewScope;
+  knownUnknownExposure: string;
+  knownUnknownExposurePct?: number;
+  nonLinkDispositions?: ReserveNonLinkReview[];
+}
+
+export interface DependencyReviewRelationship {
+  id: string;
+  type: DependencyType;
+  reason: string;
+}
+
+export interface DependencyReview {
+  reviewedAt: string;
+  reviewer: string;
+  confidence: ResearchReviewConfidence;
+  sources: StablecoinLink[];
+  rationale: string;
+  relationships: DependencyReviewRelationship[];
 }
 
 export const MINT_AUTHORITY_MINT_PATH_VALUES = [
@@ -703,6 +751,7 @@ export interface StablecoinMeta {
   contracts?: ContractDeployment[];
   tradedContracts?: ContractDeployment[];
   dependencies?: DependencyWeight[];
+  dependencyReview?: DependencyReview;
   canBeBlacklisted?: BlacklistabilityStatus;
   blacklistabilityReview?: BlacklistabilityReview;
   chainTier?: ChainTier;
@@ -718,6 +767,7 @@ export interface StablecoinMeta {
   /** When true, this coin's mechanismArchetype is an intentional departure from its parent's archetype. */
   archetypeOverride?: boolean;
   reserves?: ReserveSlice[];
+  reserveReview?: ReserveReview;
   liveReservesConfig?: LiveReservesConfig;
   notices?: CoinNotice[];
   tags?: string[];

@@ -266,6 +266,25 @@
       "risk": "low"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [{ "label": "GAIB transparency", "url": "https://aid.gaib.ai/transparency" }],
+    "rationale": "The single reserve category combines Treasury assets with accepted stablecoins and provides no constituent split.",
+    "compositionBasis": "GAIB aggregate reserve observation",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The stablecoin share and identities inside the full aggregate are unresolved.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. Treasuries and accepted stablecoin reserves",
+        "disposition": "basket-needs-split",
+        "rationale": "Treasuries and stablecoins are combined without allocation weights."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -301,10 +320,7 @@
         "name": "LayerZero OFT",
         "slug": "layerzero",
         "url": "https://blog.gaib.ai/the-ai-dollar-is-live/",
-        "bridgeTypes": [
-          "oft",
-          "burnAndMint"
-        ]
+        "bridgeTypes": ["oft", "burnAndMint"]
       }
     ],
     "sources": [

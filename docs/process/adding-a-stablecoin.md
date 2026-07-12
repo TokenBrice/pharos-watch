@@ -295,15 +295,18 @@ Use `dependencies[]` separately to describe asset relationships:
 - `mechanism`: the upstream asset is central to the mint/redeem mechanism
 - `collateral`: the upstream asset sits in the reserves/collateral stack
 
+Prefer `reserves[].coinId` plus an explicit `depType` when reserve composition expresses the relationship. Keep a manual `dependencies[]` row only for a non-reserve mechanism or another relationship the reserve list cannot encode; every such manual-only set requires a sourced `dependencyReview` whose typed relationships exactly match the authored edges. Do not duplicate a reserve-derived relationship manually.
+
 ### Reserve composition rules
 
 Populate `reserves[]` with real slices, not generic prose.
 
 - Percentages should reflect the best reviewed current mix.
 - Use `coinId` when a slice is another tracked stablecoin.
-- Use `depType` when the slice relationship should become a dependency.
+- Use `depType` when the slice relationship should become a dependency. A `depType` without `coinId` is invalid.
 - Keep risk tiers aligned with `docs/report-cards.md`.
 - Even with `liveReservesConfig`, keep `reserves[]` up to date because fallback views and dependency logic still use it.
+- For a reviewed stablecoin-looking aggregate or exogenous slice that cannot be linked, add a `reserveReview.nonLinkDispositions` row with one of `untracked-exogenous-asset`, `self-reserve`, `basket-needs-split`, `insufficient-evidence`, or `not-applicable`. Candidate IDs document research leads only and never substitute for evidenced constituent weights.
 
 ### Hero verdict, mechanism archetype, and attestor-tier surfacing
 

@@ -16,5 +16,30 @@
       "pct": 8,
       "risk": "medium"
     }
-  ]
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ethena transparency",
+        "url": "https://app.ethena.fi/dashboards/transparency"
+      }
+    ],
+    "rationale": "Ethena reports liquid stable reserves as an aggregate bucket, so the constituent dependency weights cannot be assigned without fabricating a split.",
+    "compositionBasis": "Curated composition aligned to the protocol transparency categories",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The liquid-stables basket has identified candidate assets but no defensible constituent percentages.",
+    "knownUnknownExposurePct": 76,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Liquid Stables (USDtb / USDC / USDT)",
+        "disposition": "basket-needs-split",
+        "rationale": "USDtb, USDC, and USDT are tracked, but only their combined allocation is reported.",
+        "candidateCoinIds": ["usdtb-ethena", "usdc-circle", "usdt-tether"]
+      }
+    ]
+  }
 }

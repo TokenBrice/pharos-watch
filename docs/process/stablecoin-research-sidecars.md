@@ -4,16 +4,22 @@ Research-heavy metadata can move independently from a coin's scalar identity and
 
 ## Domain Ownership
 
-| Domain | Sidecar path | Owned fields |
-| --- | --- | --- |
-| Reserves | `shared/data/stablecoins/domains/reserves/<id>.json` | `reserves` |
-| Mint authority | `shared/data/stablecoins/domains/mint-authority/<id>.json` | `mintAuthority` |
-| Compliance | `shared/data/stablecoins/domains/compliance/<id>.json` | `mica`, `genius` |
-| Risk review | `shared/data/stablecoins/domains/risk-review/<id>.json` | `canBeBlacklisted`, `blacklistabilityReview`, `oracleRisk`, `bridgeRouteRisk` |
+| Domain         | Sidecar path                                               | Owned fields                                                                  |
+| -------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Reserves       | `shared/data/stablecoins/domains/reserves/<id>.json`       | `reserves`, `reserveReview`                                                   |
+| Mint authority | `shared/data/stablecoins/domains/mint-authority/<id>.json` | `mintAuthority`                                                               |
+| Compliance     | `shared/data/stablecoins/domains/compliance/<id>.json`     | `mica`, `genius`                                                              |
+| Risk review    | `shared/data/stablecoins/domains/risk-review/<id>.json`    | `canBeBlacklisted`, `blacklistabilityReview`, `oracleRisk`, `bridgeRouteRisk` |
 
 Sidecars are selective. Fields such as identity, flags, contracts, links, jurisdiction, classification overrides, notices, launch metadata, and other scalar catalog metadata remain in `coins/<id>.json`.
 
+`reserveReview` records the human review of a reserve composition: review date and reviewer, confidence, sources, composition basis and optional as-of date, reviewed scope, known-unknown exposure, and fingerprinted dispositions for selected unlinked slices. A disposition stores the current reserve index and exact name, so changing or reordering a reviewed slice makes validation fail until the review is revisited. Candidate IDs are research leads only; they do not create dependency edges. The reserves sidecar may contain `reserveReview`, `reserves`, or both, but a merged coin may only carry a review when it also has reserve composition.
+
+`dependencyReview` remains base metadata. It is required only for authored `dependencies` relationships that are not already represented by a linked reserve slice. Its relationship list must exactly match those manual-only edges, including an explicit dependency type. Reserve-derived dependencies use the reserve composition and `reserveReview` provenance instead of duplicating evidence per edge.
+
 Once a coin has a sidecar for a domain, all fields owned by that domain must stay out of its base file. This keeps the evidence and its coupled decision fields together. In particular, an explicit `canBeBlacklisted` value moves with `blacklistabilityReview`.
+
+Research review envelopes remain server/repository evidence and are intentionally omitted from `coins.client.generated.json`. The full generated registry retains them for audits and report-card compilation.
 
 ## Updating Research
 

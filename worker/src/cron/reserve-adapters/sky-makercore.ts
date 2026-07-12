@@ -44,14 +44,14 @@ interface ModuleSpec {
   name: string;
   risk: "very-low" | "low" | "medium" | "high" | "very-high";
   coinId?: string;
-  depType?: "mechanism";
 }
 
 // The Sky PSM group ("stablecoins") aggregates USDC + USDT + USDP without a
 // per-stable breakdown in the Block Analitica groups API response. We emit
 // the PSM slice without a `coinId` attribution (rather than hardcoding one)
 // and surface the composition note in metadata.details.
-const SKY_PSM_COMPOSITION_NOTE = "Sky PSM pool aggregates USDC, USDT, USDP without per-stable breakdown from the module-groups API";
+const SKY_PSM_COMPOSITION_NOTE =
+  "Sky PSM pool aggregates USDC, USDT, USDP without per-stable breakdown from the module-groups API";
 // [audit S-099] These stay module-level constants rather than adapter params on purpose:
 // they are the canonical Sky LitePSM mainnet contracts, and fetchSkyLitePsmUsdcCapacity
 // verifies them on-chain each run via gem()/pocket() (returns null capacity on any mismatch),
@@ -70,13 +70,13 @@ const GEM_SELECTOR = "0x7bd2bea7"; // gem()
 const POCKET_SELECTOR = "0xcccef9e2"; // pocket()
 
 const MODULE_MAP: Record<string, ModuleSpec> = {
-  stablecoins: { name: "Stablecoins (PSM)", risk: "very-low", depType: "mechanism" },
-  spark:       { name: "Spark (lending)", risk: "low" },
-  grove:       { name: "Grove (RWA)", risk: "low" },
-  obex:        { name: "Obex", risk: "medium" },
-  core:        { name: "Core (crypto vaults)", risk: "medium" },
-  staked:      { name: "Staking Engine", risk: "high" },
-  "legacy-rwa":{ name: "Legacy RWA", risk: "low" },
+  stablecoins: { name: "Stablecoins (PSM)", risk: "very-low" },
+  spark: { name: "Spark (lending)", risk: "low" },
+  grove: { name: "Grove (RWA)", risk: "low" },
+  obex: { name: "Obex", risk: "medium" },
+  core: { name: "Core (crypto vaults)", risk: "medium" },
+  staked: { name: "Staking Engine", risk: "high" },
+  "legacy-rwa": { name: "Legacy RWA", risk: "low" },
 };
 
 const KNOWN_GROUPS = new Set(Object.keys(MODULE_MAP));
@@ -95,7 +95,6 @@ export function adaptSkyModules(groups: SkyGroupResult[]): AdapterResult["slices
     name: string;
     risk: "very-low" | "low" | "medium" | "high" | "very-high";
     coinId?: string;
-    depType?: "mechanism";
   }> = [];
 
   let unknownDebtTotal = 0;
@@ -131,9 +130,7 @@ export function listUnknownGroups(groups: SkyGroupResult[]): string[] {
 
 export function resolveSkyTimestampSummary(groups: SkyGroupResult[]) {
   return summarizeSourceTimestamps(
-    groups
-      .filter((group) => parseNumericString(group.debt) > 0)
-      .map((group) => group.datetime),
+    groups.filter((group) => parseNumericString(group.debt) > 0).map((group) => group.datetime),
   );
 }
 
@@ -143,21 +140,27 @@ function decodeAddressResult(raw: string | null): string | null {
   return /^0x0{40}$/.test(address) ? null : address;
 }
 
-async function fetchSkyLitePsmUsdcCapacity(signal: AbortSignal, ctx?: AdapterContext): Promise<{
+async function fetchSkyLitePsmUsdcCapacity(
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<{
   capacityUsd: number;
   capacityRaw: string;
 } | null> {
   try {
-    const onchain = makeOnchainCallers({
-      chain: "ethereum",
-      rpcMode: "public-rpc" as const,
-    }, {
-      signal,
-      ctx,
-      rpcUrl: SKY_LITE_PSM_RPC_URL,
-      fallbackRpcUrl: SKY_LITE_PSM_FALLBACK_RPC_URL,
-      timeoutMs: 12_000,
-    });
+    const onchain = makeOnchainCallers(
+      {
+        chain: "ethereum",
+        rpcMode: "public-rpc" as const,
+      },
+      {
+        signal,
+        ctx,
+        rpcUrl: SKY_LITE_PSM_RPC_URL,
+        fallbackRpcUrl: SKY_LITE_PSM_FALLBACK_RPC_URL,
+        timeoutMs: 12_000,
+      },
+    );
 
     const [gemRaw, pocketRaw] = await Promise.all([
       onchain.raw(SKY_LITE_PSM_ADDRESS, GEM_SELECTOR),
@@ -195,12 +198,7 @@ export async function fetchSkyMakercoreReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "sky-makercore");
-  const payload = await fetchJsonWithRetry<BlockAnaliticaGroupsResponse>(
-    primaryInput.url,
-    signal,
-    15_000,
-    ctx,
-  );
+  const payload = await fetchJsonWithRetry<BlockAnaliticaGroupsResponse>(primaryInput.url, signal, 15_000, ctx);
 
   const groups = payload.results;
   if (!Array.isArray(groups) || groups.length === 0) {
@@ -221,18 +219,19 @@ export async function fetchSkyMakercoreReserves(
   const warnings: LiveReserveWarning[] = unknown.map((group) =>
     reserveDegradedWarning("unknown-asset", `Sky module bucketed into other: ${group}`),
   );
-  if (
-    timestampSummary
-    && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC
-  ) {
-    warnings.push(reserveDegradedWarning(
-      "source-timestamp-spread",
-      `Sky module source timestamps span ${timestampSummary.sourceTimestampSpreadSec}s`,
-    ));
+  if (timestampSummary && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC) {
+    warnings.push(
+      reserveDegradedWarning(
+        "source-timestamp-spread",
+        `Sky module source timestamps span ${timestampSummary.sourceTimestampSpreadSec}s`,
+      ),
+    );
   }
 
   const totalDebt = groups.reduce((sum, g) => sum + parseNumericString(g.debt), 0);
-  const unknownDebt = groups.filter((g) => !KNOWN_GROUPS.has(g.group)).reduce((sum, g) => sum + parseNumericString(g.debt), 0);
+  const unknownDebt = groups
+    .filter((g) => !KNOWN_GROUPS.has(g.group))
+    .reduce((sum, g) => sum + parseNumericString(g.debt), 0);
   const litePsmCapacity = await fetchSkyLitePsmUsdcCapacity(signal, ctx);
   const redemptionMetadata = litePsmCapacity
     ? buildRedemptionSnapshotMetadata({

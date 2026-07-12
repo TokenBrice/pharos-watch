@@ -269,17 +269,13 @@
         "source": "docs",
         "name": "MakerDAO Optimism DAI Bridge",
         "url": "https://github.com/makerdao/optimism-dai-bridge",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
+        "bridgeTypes": ["lockAndMint"]
       },
       {
         "source": "docs",
         "name": "MakerDAO Starknet DAI Bridge",
         "url": "https://github.com/makerdao/starknet-dai-bridge",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
+        "bridgeTypes": ["lockAndMint"]
       }
     ],
     "sources": [
@@ -337,6 +333,31 @@
       "risk": "low"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sky protocol dashboard",
+        "url": "https://info.sky.money/"
+      }
+    ],
+    "rationale": "Sky publishes the PSM contribution as a group total rather than stablecoin-level weights.",
+    "compositionBasis": "Sky collateral group totals",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The PSM aggregate cannot be converted into score-affecting upstream edges until its stablecoin constituents are split.",
+    "knownUnknownExposurePct": 32,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Stablecoins (PSM)",
+        "disposition": "basket-needs-split",
+        "rationale": "The published group combines several PSM assets without per-asset weights.",
+        "candidateCoinIds": ["usdc-circle", "usdt-tether", "usdp-paxos"]
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "sky-makercore",
     "version": 1,

@@ -134,16 +134,7 @@
       "message": "GHS is not yet a first-class Pharos peg-currency enum, so GHSm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
     }
   ],
-  "infrastructures": [
-    "liquity-v2"
-  ],
-  "dependencies": [
-    {
-      "id": "cusd-celo",
-      "type": "collateral",
-      "weight": 1
-    }
-  ],
+  "infrastructures": ["liquity-v2"],
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

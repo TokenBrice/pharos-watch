@@ -28,17 +28,7 @@ export interface ReservoirReservesResponse {
   equity: string;
 }
 
-type ReservoirBucketKey =
-  | "usd1"
-  | "pyusd"
-  | "rlusd"
-  | "ausd"
-  | "gho"
-  | "usdt"
-  | "usdc"
-  | "rusd"
-  | "prime"
-  | "usdat";
+type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "rusd" | "prime" | "usdat";
 
 const RESERVOIR_BROWSER_HEADERS = buildBrowserHeaders(
   "https://app.reservoir.xyz",
@@ -116,9 +106,7 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     ...wrapperAssetMeta("usdc"),
     // USDC standalone only; other stablecoins that contain "USD" (USD1/USDT/etc)
     // match their own rules first.
-    match: (item) =>
-      /\bUSDC\b/.test(item.label)
-      || /\bSteakhouse Prime Instant\b/i.test(item.label),
+    match: (item) => /\bUSDC\b/.test(item.label) || /\bSteakhouse Prime Instant\b/i.test(item.label),
   },
   {
     key: "rusd",
@@ -136,6 +124,10 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     key: "usdat",
     name: "Pendle PT USDat tokenized-treasury principal token",
     risk: "high",
+    // Reservoir's raw row names the Pendle PT and Pendle resolves the market's
+    // underlying asset to the tracked Saturn USDat Ethereum contract.
+    coinId: "usdat-saturn",
+    depType: "collateral",
     match: (item) => /\bUSDAT\b/i.test(item.label),
   },
 ];
@@ -154,7 +146,14 @@ export interface AdaptReservoirResult {
 export function adaptReservoirReserves(payload: ReservoirReservesResponse): AdaptReservoirResult {
   const totalAssets = Number(payload.totalAssets);
   if (!Number.isFinite(totalAssets) || totalAssets <= 0) {
-    return { slices: [], unknownAssets: [], unknownExposurePct: 0, sourceTotalGapPct: 0, immediateRedeemableUsd: 0, supplyUsd: null };
+    return {
+      slices: [],
+      unknownAssets: [],
+      unknownExposurePct: 0,
+      sourceTotalGapPct: 0,
+      immediateRedeemableUsd: 0,
+      supplyUsd: null,
+    };
   }
 
   const disclosedAssetValue = payload.assets.reduce((sum, asset) => {
@@ -163,15 +162,16 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
   }, 0);
   const sourceTotalGapUsd = Math.max(0, totalAssets - disclosedAssetValue);
   const sourceTotalGapPct = (sourceTotalGapUsd / totalAssets) * 100;
-  const assets = sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT
-    ? [
-        ...payload.assets,
-        {
-          label: "Unmapped Reservoir balance-sheet total-assets gap",
-          totalBalanceValue: String(sourceTotalGapUsd),
-        },
-      ]
-    : payload.assets;
+  const assets =
+    sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT
+      ? [
+          ...payload.assets,
+          {
+            label: "Unmapped Reservoir balance-sheet total-assets gap",
+            totalBalanceValue: String(sourceTotalGapUsd),
+          },
+        ]
+      : payload.assets;
 
   const classified = classifyBucketedValues({
     items: assets,
@@ -188,9 +188,7 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
     (sum, key) => sum + (classified.bucketTotals.get(key) ?? 0),
     0,
   );
-  const immediateRedeemableUsd = supplyUsd != null
-    ? Math.min(stableBucketUsd, supplyUsd)
-    : stableBucketUsd;
+  const immediateRedeemableUsd = supplyUsd != null ? Math.min(stableBucketUsd, supplyUsd) : stableBucketUsd;
 
   return {
     slices: classified.slices,
@@ -208,23 +206,15 @@ async function fetchReservoirPayload(
   ctx?: AdapterContext,
 ): Promise<ReservoirReservesResponse> {
   try {
-    return await fetchJsonWithRetry<ReservoirReservesResponse>(
-      url,
-      signal,
-      20_000,
-      ctx,
-      { headers: RESERVOIR_BROWSER_HEADERS },
-    );
+    return await fetchJsonWithRetry<ReservoirReservesResponse>(url, signal, 20_000, ctx, {
+      headers: RESERVOIR_BROWSER_HEADERS,
+    });
   } catch (primaryError) {
     if (signal.aborted) throw primaryError;
     try {
-      return await fetchJsonWithRetry<ReservoirReservesResponse>(
-        url,
-        signal,
-        20_000,
-        ctx,
-        { headers: NEUTRAL_ADAPTER_HEADERS },
-      );
+      return await fetchJsonWithRetry<ReservoirReservesResponse>(url, signal, 20_000, ctx, {
+        headers: NEUTRAL_ADAPTER_HEADERS,
+      });
     } catch (fallbackError) {
       if (signal.aborted) throw fallbackError;
       throw new Error(
@@ -247,26 +237,31 @@ export async function fetchReservoirReserves(
   const totalAssetsUsd = Number(payload.totalAssets);
   const totalLiabilitiesUsd = Number(payload.totalLiabilities);
   const shareholderEquityUsd = Number(payload.equity);
-  const warnings: LiveReserveWarning[] = adapted.unknownAssets.length > 0
-    ? [buildUnknownExposureWarning({
-        code: "unknown-position",
-        message: `Unmapped reserve positions: ${adapted.unknownAssets.join(", ")}`,
-        unknownExposurePct: adapted.unknownExposurePct,
-      })]
-    : [];
+  const warnings: LiveReserveWarning[] =
+    adapted.unknownAssets.length > 0
+      ? [
+          buildUnknownExposureWarning({
+            code: "unknown-position",
+            message: `Unmapped reserve positions: ${adapted.unknownAssets.join(", ")}`,
+            unknownExposurePct: adapted.unknownExposurePct,
+          }),
+        ]
+      : [];
   if (adapted.sourceTotalGapPct > SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT) {
-    warnings.push(buildUnknownExposureWarning({
-      code: "source-total-gap",
-      message: "Reservoir totalAssets exceeds disclosed asset rows",
-      unknownExposurePct: adapted.sourceTotalGapPct,
-      thresholdPct: SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
-    }));
+    warnings.push(
+      buildUnknownExposureWarning({
+        code: "source-total-gap",
+        message: "Reservoir totalAssets exceeds disclosed asset rows",
+        unknownExposurePct: adapted.sourceTotalGapPct,
+        thresholdPct: SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
+      }),
+    );
   }
   if (
-    Number.isFinite(totalAssetsUsd)
-    && Number.isFinite(totalLiabilitiesUsd)
-    && totalAssetsUsd > 0
-    && totalLiabilitiesUsd > totalAssetsUsd
+    Number.isFinite(totalAssetsUsd) &&
+    Number.isFinite(totalLiabilitiesUsd) &&
+    totalAssetsUsd > 0 &&
+    totalLiabilitiesUsd > totalAssetsUsd
   ) {
     warnings.push({
       code: "reservoir-insolvent",
@@ -296,7 +291,10 @@ export async function fetchReservoirReserves(
       ...(Number.isFinite(totalAssetsUsd) && totalAssetsUsd > 0 ? { totalAssetsUsd } : {}),
       ...(Number.isFinite(totalLiabilitiesUsd) && totalLiabilitiesUsd > 0 ? { totalLiabilitiesUsd } : {}),
       ...(Number.isFinite(shareholderEquityUsd) ? { shareholderEquityUsd } : {}),
-      ...(Number.isFinite(totalAssetsUsd) && totalAssetsUsd > 0 && Number.isFinite(totalLiabilitiesUsd) && totalLiabilitiesUsd > 0
+      ...(Number.isFinite(totalAssetsUsd) &&
+      totalAssetsUsd > 0 &&
+      Number.isFinite(totalLiabilitiesUsd) &&
+      totalLiabilitiesUsd > 0
         ? { collateralizationRatio: totalAssetsUsd / totalLiabilitiesUsd }
         : {}),
       ...(adapted.supplyUsd != null

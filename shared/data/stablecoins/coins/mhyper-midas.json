@@ -96,6 +96,25 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [{ "label": "Midas mHYPER", "url": "https://midas.app/mhyper" }],
+    "rationale": "The reserve label describes a managed market-neutral strategy and NAV, not a stablecoin reserve token.",
+    "compositionBasis": "Chainlink NAV-backed single-strategy observation",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "No stablecoin-linked reserve slice remains unresolved.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Hyperithm market-neutral stablecoin strategies",
+        "disposition": "not-applicable",
+        "rationale": "The phrase describes the strategy mandate; it is not the identity of a tracked stablecoin claim."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 1,
@@ -248,10 +267,7 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": [
-          "intent",
-          "liquidity"
-        ]
+        "bridgeTypes": ["intent", "liquidity"]
       }
     ],
     "sources": [

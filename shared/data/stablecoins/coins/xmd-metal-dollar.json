@@ -151,23 +151,6 @@
       "message": "CoinGecko resolves XMD on XPR Network, which is not currently a Pharos-supported chain. Runtime coverage uses CoinGecko price and market cap, while contract-level coverage is intentionally skipped."
     }
   ],
-  "dependencies": [
-    {
-      "id": "usdc-circle",
-      "type": "collateral",
-      "weight": 0.34
-    },
-    {
-      "id": "pyusd-paypal",
-      "type": "collateral",
-      "weight": 0.33
-    },
-    {
-      "id": "usdp-paxos",
-      "type": "collateral",
-      "weight": 0.33
-    }
-  ],
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

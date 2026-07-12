@@ -252,17 +252,13 @@
         "source": "issuer",
         "name": "FraxFerry",
         "url": "https://docs.frax.finance/cross-chain/bridge",
-        "bridgeTypes": [
-          "lockMint"
-        ]
+        "bridgeTypes": ["lockMint"]
       },
       {
         "source": "l2beat",
         "name": "LayerZero",
         "url": "https://l2beat.com/interop/protocols/layerzero",
-        "bridgeTypes": [
-          "oft"
-        ]
+        "bridgeTypes": ["oft"]
       }
     ],
     "sources": [
@@ -318,6 +314,32 @@
       "risk": "medium"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [{ "label": "Frax transparency", "url": "https://frax.com/transparency" }],
+    "rationale": "The static fallback aggregates protocol-owned self and sibling-token liquidity; the live adapter splits mapped assets and suppresses FRAX self-edges.",
+    "compositionBasis": "Curated fallback aligned to the Frax balance sheet",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "Two fallback baskets cannot carry defensible per-asset dependency weights.",
+    "knownUnknownExposurePct": 59,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity",
+        "disposition": "basket-needs-split",
+        "rationale": "The bucket mixes the subject asset with tracked sibling claims; linking the aggregate would create a self-edge or fabricated weights.",
+        "candidateCoinIds": ["frxusd-frax", "sfrxusd-frax"]
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "Other stablecoin, volatile, and strategy assets",
+        "disposition": "basket-needs-split",
+        "rationale": "The residual bucket combines unrelated asset classes and unidentified stablecoins."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "frax-balance-sheet",
     "version": 2,

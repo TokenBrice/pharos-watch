@@ -178,13 +178,6 @@
       "fallbackRpcUrl": "https://eth.llamarpc.com"
     }
   },
-  "dependencies": [
-    {
-      "id": "usdc-circle",
-      "type": "collateral",
-      "weight": 0.8945
-    }
-  ],
   "notices": [
     {
       "type": "warning",

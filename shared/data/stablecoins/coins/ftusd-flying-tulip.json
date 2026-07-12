@@ -160,18 +160,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
-  "dependencies": [
-    {
-      "id": "usdc-circle",
-      "weight": 0.5,
-      "type": "collateral"
-    },
-    {
-      "id": "usdt-tether",
-      "weight": 0.5,
-      "type": "collateral"
-    }
-  ],
   "reserves": [
     {
       "name": "USDC (Aave lending positions)",

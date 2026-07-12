@@ -82,6 +82,25 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [{ "label": "Neutrl Accountable dashboard", "url": "https://accountable.neutrl.finance/" }],
+    "rationale": "The source exposes a generic Stablecoin category rather than constituent identities and weights.",
+    "compositionBasis": "Accountable type_split categories",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The stablecoin reserve category is unresolved at asset level.",
+    "knownUnknownExposurePct": 93.5,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Stablecoin reserves",
+        "disposition": "basket-needs-split",
+        "rationale": "No constituent weights are available for a canonical dependency mapping."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "accountable",
     "version": 1,

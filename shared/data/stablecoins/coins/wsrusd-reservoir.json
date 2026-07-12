@@ -2,7 +2,7 @@
   "id": "wsrusd-reservoir",
   "name": "Wrapped Savings rUSD",
   "symbol": "wsrUSD",
-  "oneLiner": "wsrUSD is a non-rebasing ERC-4626 wrapper of Reservoir's srUSD savings token, accruing yield from T-bill, DeFi lending, and basis strategies behind rUSD.",
+  "oneLiner": "wsrUSD is a non-rebasing ERC-4626 savings wrapper of Reservoir's rUSD stablecoin, accruing yield from T-bill, DeFi lending, and basis strategies behind rUSD.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,7 +12,7 @@
     "navToken": true
   },
   "collateral": "T-bills and government securities (RWA allocation via governance-approved Asset Adapters), overcollateralized DeFi lending in Morpho and Euler vaults (curators include Steakhouse, Re7, MEV Capital, Gauntlet, Objective Labs), and crypto funding-rate / basis strategies; Credit Enforcer smart contracts enforce minimum 105% Liquidity, Solvency, and Capital Ratios before any leverage-increasing action",
-  "pegMechanism": "wsrUSD is a non-rebasing ERC-4626 vault token that accrues yield per block as rUSD is deposited into the srUSD savings vault; token price appreciates continuously from $1.00 as protocol yield accrues; users can unwrap wsrUSD → srUSD → rUSD at any time; rUSD itself is minted 1:1 via a Peg Stability Module (PSM) against USDC, auto-topped every 10 minutes on each chain",
+  "pegMechanism": "wsrUSD is a non-rebasing ERC-4626 vault token that accepts rUSD and accrues yield per block; token price appreciates continuously from $1.00 as protocol yield accrues, and users can redeem wsrUSD for rUSD at any time. rUSD itself is minted and redeemed through Reservoir's Peg Stability Module (PSM) against supported stablecoins, subject to available protocol liquidity.",
   "detailProvider": "coingecko",
   "geckoId": "wrapped-savings-rusd",
   "proofOfReserves": {
@@ -22,6 +22,9 @@
     "attestorTier": "niche",
     "cadence": "real-time"
   },
+  "variantOf": "rusd-reservoir",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "rusd-reservoir",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "Wrapped Savings rUSD is deployed across many chains and the L2BEAT candidate route resolves Across liquidity/intent routing. The reviewed profile treats cross-chain movement as liquidity/intent route exposure rather than issuer-native finality.",
@@ -34,10 +37,7 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": [
-          "liquidity",
-          "intent"
-        ]
+        "bridgeTypes": ["liquidity", "intent"]
       }
     ],
     "sources": [
@@ -166,8 +166,8 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "wsrUSD (Savingcoin ERC-4626, non-upgradeable) is minted only via deposit() of srUSD. DEFAULT_ADMIN = EOA 0xb7570e32.... MANAGER role not granted to any address (setCap/update currently uncallable). No upgrade path. Base mint authority inherited from srUSD/rUSD controls.",
-    "inheritedFrom": "srusd-reservoir",
+    "summary": "wsrUSD (Savingcoin ERC-4626, non-upgradeable) is minted only via deposit() of rUSD. DEFAULT_ADMIN = EOA 0xb7570e32.... MANAGER role not granted to any address (setCap/update currently uncallable). No upgrade path. Base mint authority inherited from rUSD controls.",
+    "inheritedFrom": "rusd-reservoir",
     "controls": [
       {
         "chain": "ethereum",
@@ -181,28 +181,28 @@
         "sources": [
           {
             "label": "Reservoir docs",
-            "url": "https://docs.reservoir.xyz"
+            "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
           },
           {
             "label": "wsrUSD Ethereum contract",
             "url": "https://etherscan.io/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
           }
         ],
-        "evidence": "At Ethereum block 25295219: Blockscout confirms Savingcoin contract (not a proxy, no EIP-1967 slots). asset() = 0x09D4214C03D01F49544C0448DBE3A27f768F2b34 (srUSD). Creation block 22275492 RoleGranted: DEFAULT_ADMIN to EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 (eth_getCode = 0x). hasRole(DEFAULT_ADMIN, 0xb7570e32) = true. MANAGER role (0x16ce8ca6...) getRoleAdmin = DEFAULT_ADMIN, but no RoleGranted event for MANAGER was found across full history scan (setCap/update currently uncallable by any address). Minting is deposit-only via ERC-4626 share accounting."
+        "evidence": "At Ethereum block 25295219: Blockscout confirms Savingcoin contract (not a proxy, no EIP-1967 slots). asset() = 0x09D4214C03D01F49544C0448DBE3A27f768F2b34 (rUSD). Creation block 22275492 RoleGranted: DEFAULT_ADMIN to EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 (eth_getCode = 0x). hasRole(DEFAULT_ADMIN, 0xb7570e32) = true. MANAGER role (0x16ce8ca6...) getRoleAdmin = DEFAULT_ADMIN, but no RoleGranted event for MANAGER was found across full history scan (setCap/update currently uncallable by any address). Minting is deposit-only via ERC-4626 share accounting."
       }
     ],
     "review": {
       "sources": [
         {
           "label": "Reservoir docs",
-          "url": "https://docs.reservoir.xyz"
+          "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
         },
         {
           "label": "wsrUSD Ethereum contract",
           "url": "https://etherscan.io/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
         }
       ],
-      "evidence": "At Ethereum block 25295219: wsrUSD is a non-upgradeable Savingcoin ERC-4626 wrapper. DEFAULT_ADMIN = EOA 0xb7570e32... MANAGER role granted to no one (confirmed via full RoleGranted log scan). No privileged mint surface on the wrapper. srUSD/rUSD controls tracked separately.",
+      "evidence": "At Ethereum block 25295219: wsrUSD is a non-upgradeable Savingcoin ERC-4626 wrapper whose asset() is rUSD. DEFAULT_ADMIN = EOA 0xb7570e32... MANAGER role granted to no one (confirmed via full RoleGranted log scan). No privileged mint surface on the wrapper. rUSD controls are tracked separately.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
     }
@@ -212,40 +212,11 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "Morpho Sentora PRIME",
-      "pct": 37.7,
-      "risk": "high"
-    },
-    {
-      "name": "Pendle PT USDat tokenized-treasury principal token",
-      "pct": 20.9,
-      "risk": "high"
-    },
-    {
-      "name": "GHO Aave lending markets (Plasma and Monad)",
-      "pct": 12.7,
+      "name": "Wrapped Savings rUSD shares backed by rUSD",
+      "pct": 100,
       "risk": "medium",
-      "coinId": "gho-aave",
-      "depType": "collateral"
-    },
-    {
-      "name": "USD1 Morpho Steakhouse High Yield lending markets",
-      "pct": 12.1,
-      "risk": "medium",
-      "coinId": "usd1-world-liberty-financial",
-      "depType": "collateral"
-    },
-    {
-      "name": "Hastra PRIME RWA credit allocation",
-      "pct": 11.3,
-      "risk": "high"
-    },
-    {
-      "name": "USDC Morpho lending and direct liquidity",
-      "pct": 5.3,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
+      "coinId": "rusd-reservoir",
+      "depType": "wrapper"
     }
   ],
   "liveReservesConfig": {
@@ -254,10 +225,7 @@
     "semantics": "protocol-reserve",
     "scoring": {
       "maxSourceAgeSec": 4000000,
-      "allowedDegradedWarningCodes": [
-        "unknown-position",
-        "source-total-gap"
-      ]
+      "allowedDegradedWarningCodes": ["unknown-position", "source-total-gap"]
     },
     "breakerScope": "reservoir",
     "display": {
@@ -272,7 +240,7 @@
     }
   },
   "yieldConfig": {
-    "yieldSource": "Reservoir savings vault (srUSD)",
+    "yieldSource": "Reservoir wsrUSD savings vault",
     "yieldType": "nav-appreciation"
   },
   "launchDate": "2025-04-15"

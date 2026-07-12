@@ -142,13 +142,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "wrapper",
-  "dependencies": [
-    {
-      "id": "usd1-world-liberty-financial",
-      "weight": 1,
-      "type": "wrapper"
-    }
-  ],
   "reserves": [
     {
       "name": "Lorenzo USD1+ strategy shares backed by WLFI USD1 and delta-neutral yield strategies",

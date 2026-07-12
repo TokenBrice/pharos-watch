@@ -36,5 +36,30 @@
       "pct": 1,
       "risk": "low"
     }
-  ]
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sky protocol dashboard",
+        "url": "https://info.sky.money/"
+      }
+    ],
+    "rationale": "Sky publishes the PSM contribution as a group total rather than stablecoin-level weights.",
+    "compositionBasis": "Sky collateral group totals",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The PSM aggregate cannot be converted into score-affecting upstream edges until its stablecoin constituents are split.",
+    "knownUnknownExposurePct": 38,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Stablecoins (PSM)",
+        "disposition": "basket-needs-split",
+        "rationale": "The published group combines several PSM assets without per-asset weights.",
+        "candidateCoinIds": ["usdc-circle", "usdt-tether", "usdp-paxos"]
+      }
+    ]
+  }
 }

@@ -33,7 +33,13 @@ describe("adaptReservoirReserves", () => {
     const { slices, immediateRedeemableUsd, supplyUsd, unknownExposurePct } = adaptReservoirReserves(SAMPLE_RESPONSE);
 
     expect(slices).toEqual([
-      { name: "USD1 lending markets", pct: 30, risk: "medium", coinId: "usd1-world-liberty-financial", depType: "collateral" },
+      {
+        name: "USD1 lending markets",
+        pct: 30,
+        risk: "medium",
+        coinId: "usd1-world-liberty-financial",
+        depType: "collateral",
+      },
       { name: "PYUSD lending markets", pct: 30, risk: "medium", coinId: "pyusd-paypal", depType: "collateral" },
       { name: "RLUSD lending markets", pct: 15, risk: "medium", coinId: "rlusd-ripple", depType: "collateral" },
       { name: "GHO lending markets", pct: 10, risk: "medium", coinId: "gho-aave", depType: "collateral" },
@@ -103,7 +109,13 @@ describe("adaptReservoirReserves", () => {
 
     expect(slices).toEqual([
       { name: "Hastra / Sentora PRIME credit allocations", pct: 75, risk: "high" },
-      { name: "Pendle PT USDat tokenized-treasury principal token", pct: 25, risk: "high" },
+      {
+        name: "Pendle PT USDat tokenized-treasury principal token",
+        pct: 25,
+        risk: "high",
+        coinId: "usdat-saturn",
+        depType: "collateral",
+      },
     ]);
     expect(unknownExposurePct).toBe(0);
   });
@@ -157,9 +169,7 @@ describe("adaptReservoirReserves", () => {
       equity: "5",
     });
 
-    expect(slices).toEqual([
-      { name: "Unmapped reserve positions", pct: 100, risk: "high" },
-    ]);
+    expect(slices).toEqual([{ name: "Unmapped reserve positions", pct: 100, risk: "high" }]);
     expect(unknownAssets).toEqual(["Mystery Strategy Vault"]);
     expect(unknownExposurePct).toBe(100);
     expect(immediateRedeemableUsd).toBe(0);
@@ -173,9 +183,7 @@ describe("adaptReservoirReserves", () => {
 
     expect(unknownAssets).toContain("Unmapped Reservoir balance-sheet total-assets gap");
     expect(sourceTotalGapPct).toBe(20);
-    expect(slices).toEqual(expect.arrayContaining([
-      { name: "Unmapped reserve positions", pct: 20, risk: "high" },
-    ]));
+    expect(slices).toEqual(expect.arrayContaining([{ name: "Unmapped reserve positions", pct: 20, risk: "high" }]));
   });
 
   it("handles non-integer percentages correctly via normalizeSlices", () => {
@@ -208,7 +216,10 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve(SAMPLE_RESPONSE)],
+          [
+            'json-get:https://example.com/reservoir:20000:{"Origin":"https://app.reservoir.xyz","Referer":"https://app.reservoir.xyz/reserves","Accept-Language":"en-US,en;q=0.9"}',
+            Promise.resolve(SAMPLE_RESPONSE),
+          ],
         ]),
       } as never,
     );
@@ -269,23 +280,28 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
-            ...SAMPLE_RESPONSE,
-            assets: [
-              ...SAMPLE_RESPONSE.assets,
-              { label: "Mystery Adapter A", totalBalanceValue: "3" },
-              { label: "Mystery Adapter B", totalBalanceValue: "2" },
-            ],
-            totalAssets: "105",
-          })],
+          [
+            'json-get:https://example.com/reservoir:20000:{"Origin":"https://app.reservoir.xyz","Referer":"https://app.reservoir.xyz/reserves","Accept-Language":"en-US,en;q=0.9"}',
+            Promise.resolve({
+              ...SAMPLE_RESPONSE,
+              assets: [
+                ...SAMPLE_RESPONSE.assets,
+                { label: "Mystery Adapter A", totalBalanceValue: "3" },
+                { label: "Mystery Adapter B", totalBalanceValue: "2" },
+              ],
+              totalAssets: "105",
+            }),
+          ],
         ]),
       } as never,
     );
 
-    expect(result.warnings).toEqual([expect.objectContaining({
-      code: "unknown-position",
-      message: expect.stringContaining("Mystery Adapter A, Mystery Adapter B"),
-    })]);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "unknown-position",
+        message: expect.stringContaining("Mystery Adapter A, Mystery Adapter B"),
+      }),
+    ]);
     expect(result.metadata).toMatchObject({
       unknownAssetCount: 2,
       unknownAssetLabels: ["Mystery Adapter A", "Mystery Adapter B"],
@@ -305,17 +321,20 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
-            ...SAMPLE_RESPONSE,
-            totalAssets: "125",
-          })],
+          [
+            'json-get:https://example.com/reservoir:20000:{"Origin":"https://app.reservoir.xyz","Referer":"https://app.reservoir.xyz/reserves","Accept-Language":"en-US,en;q=0.9"}',
+            Promise.resolve({
+              ...SAMPLE_RESPONSE,
+              totalAssets: "125",
+            }),
+          ],
         ]),
       } as never,
     );
 
-    expect(result.warnings).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: "source-total-gap", effect: "degraded" }),
-    ]));
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "source-total-gap", effect: "degraded" })]),
+    );
     expect(result.metadata).toMatchObject({
       sourceTotalGapPct: 20,
     });
@@ -333,20 +352,27 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
-            ...SAMPLE_RESPONSE,
-            totalAssets: "100",
-            totalLiabilities: "120",
-            equity: "-20",
-          })],
+          [
+            'json-get:https://example.com/reservoir:20000:{"Origin":"https://app.reservoir.xyz","Referer":"https://app.reservoir.xyz/reserves","Accept-Language":"en-US,en;q=0.9"}',
+            Promise.resolve({
+              ...SAMPLE_RESPONSE,
+              totalAssets: "100",
+              totalLiabilities: "120",
+              equity: "-20",
+            }),
+          ],
         ]),
       } as never,
     );
 
-    expect(result.warnings).toEqual(expect.arrayContaining([expect.objectContaining({
-      code: "reservoir-insolvent",
-      effect: "degraded",
-    })]));
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "reservoir-insolvent",
+          effect: "degraded",
+        }),
+      ]),
+    );
   });
 
   it("classifies multi-stable labels via exclusive patterns", () => {

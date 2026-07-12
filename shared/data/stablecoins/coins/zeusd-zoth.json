@@ -29,10 +29,7 @@
         "name": "LayerZero OFT Adapter (Zoth contract deployments)",
         "slug": "layerzero",
         "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments",
-        "bridgeTypes": [
-          "external-lock-mint",
-          "oft-adapter"
-        ],
+        "bridgeTypes": ["external-lock-mint", "oft-adapter"],
         "note": "Zoth docs explicitly list a 'Layer Zero Adapter' on Ethereum (0xBf1060028b212896F799CFbaeA1eD4EEbd060978) and 'ZeUSD OFT' contracts on Manta/Metis/Avalanche; marked as deprecated infrastructure but the documented cross-chain route."
       },
       {
@@ -40,11 +37,7 @@
         "name": "LayerZero OFTAdapter contract (Etherscan)",
         "slug": "layerzero",
         "url": "https://etherscan.io/address/0xBf1060028b212896F799CFbaeA1eD4EEbd060978#code",
-        "bridgeTypes": [
-          "external-lock-mint",
-          "oft-adapter",
-          "lockbox"
-        ],
+        "bridgeTypes": ["external-lock-mint", "oft-adapter", "lockbox"],
         "note": "Inherits OFTAdapter/OFTCore/IOAppCore, references LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, wraps inner ZeUSD via token(); send/quoteSend/lzReceive/setPeer present. Lock-on-Ethereum, mint-on-satellite pattern."
       },
       {
@@ -52,9 +45,7 @@
         "name": "ZeUSD token (plain upgradeable ERC20, not an OFT)",
         "slug": "zeusd-token",
         "url": "https://etherscan.io/address/0x7dc9748da8e762e569f9269f48f69a1a9f8ea761#code",
-        "bridgeTypes": [
-          "erc20-proxy"
-        ],
+        "bridgeTypes": ["erc20-proxy"],
         "note": "ERC1967 proxy over an ERC20Upgradeable/AccessControl/UUPS impl with no LayerZero/OFT messaging functions — confirms the Adapter/lockbox (not native OFT) architecture."
       }
     ],
@@ -247,6 +238,31 @@
       "coinId": "wm-m0"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Zoth ZeUSD documentation",
+        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
+      }
+    ],
+    "rationale": "The tokenized-Treasury bucket names tracked and untracked instruments but does not disclose constituent weights.",
+    "compositionBasis": "Curated product composition",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "USYC and TBILL are plausible tracked upstreams inside an unsplit four-instrument basket.",
+    "knownUnknownExposurePct": 70,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)",
+        "disposition": "basket-needs-split",
+        "rationale": "The named instruments have no published individual percentages.",
+        "candidateCoinIds": ["usyc-hashnote", "tbill-openeden"]
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

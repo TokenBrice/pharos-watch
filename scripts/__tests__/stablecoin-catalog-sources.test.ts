@@ -81,6 +81,20 @@ function makeReserves(): Array<Record<string, unknown>> {
   ];
 }
 
+function makeReserveReview(): Record<string, unknown> {
+  return {
+    reviewedAt: "2026-07-12",
+    reviewer: "test",
+    confidence: "verified",
+    sources: [{ label: "Reserve report", url: "https://example.com/reserves" }],
+    rationale: "The fixture reserve composition was reviewed.",
+    compositionBasis: "issuer disclosure",
+    compositionAsOf: "2026-07-01",
+    scope: "full-composition",
+    knownUnknownExposure: "None identified in the fixture.",
+  };
+}
+
 function makeMintAuthority(): Record<string, unknown> {
   return {
     mintPath: "unknown",
@@ -174,16 +188,19 @@ describe("stablecoin catalog source helpers", () => {
   it("merges reserves sidecars into per-coin source entries", () => {
     const rootDir = makeTempRoot();
     const reserves = makeReserves();
+    const reserveReview = makeReserveReview();
 
     writeJson(rootDir, "shared/data/stablecoins/coins/sidecar-usd.json", makeCoin("sidecar-usd"));
     writeJson(rootDir, "shared/data/stablecoins/domains/reserves/sidecar-usd.json", {
       id: "sidecar-usd",
       reserves,
+      reserveReview,
     });
 
     const entries = loadPerCoinStablecoinEntries(rootDir);
     expect(entries).toHaveLength(1);
     expect(entries[0]?.coin.reserves).toEqual(reserves);
+    expect(entries[0]?.coin.reserveReview).toEqual(reserveReview);
     expect(entries[0]?.sidecarFiles).toEqual(["shared/data/stablecoins/domains/reserves/sidecar-usd.json"]);
   });
 

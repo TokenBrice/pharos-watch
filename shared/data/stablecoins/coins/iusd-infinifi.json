@@ -247,6 +247,41 @@
       "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      { "label": "infiniFi statistics", "url": "https://stats.infinifi.xyz/" },
+      { "label": "infiniFi documentation", "url": "https://docs.infinifi.xyz/" }
+    ],
+    "rationale": "The reviewed labels distinguish external credit strategies from tracked reserve claims and preserve the one mixed stablecoin pool as unresolved.",
+    "compositionBasis": "infiniFi protocol allocation data",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "A 2% Aave Horizon pool combines USDC and RLUSD; named private-credit and AutoUSD strategy labels are not canonical tracked claims.",
+    "knownUnknownExposurePct": 2,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Fasanara Capital (mGLOBAL + Genesis, private credit illiquid)",
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "This is an external private-credit strategy rather than a tracked stablecoin reserve claim."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "AutoUSD (illiquid yield strategy)",
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The adapter label identifies a Tokemak strategy and is not evidence for the separately tracked Auto Finance asset."
+      },
+      {
+        "reserveIndex": 9,
+        "reserveName": "Aave Horizon USDC/RLUSD (institutional pools)",
+        "disposition": "basket-needs-split",
+        "rationale": "USDC and RLUSD are tracked, but the combined pool allocation has no constituent split.",
+        "candidateCoinIds": ["usdc-circle", "rlusd-ripple"]
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "infinifi",
     "version": 1,

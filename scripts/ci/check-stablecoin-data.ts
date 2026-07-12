@@ -7,10 +7,7 @@ import { CanonicalOrderAssetSchema } from "../../shared/lib/stablecoins/schema";
 import { validateVariantRelationships } from "../../shared/lib/stablecoins/validate-variants";
 import { classifyPegClass, normalizePegTypeFromCurrency } from "../../shared/lib/peg-price-bounds";
 import type { DeadStablecoin, StablecoinMeta } from "../../shared/types";
-import {
-  RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
-  validateReserveCompositionTotal,
-} from "../../shared/types/reserves";
+import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, validateReserveCompositionTotal } from "../../shared/types/reserves";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
 import { getTrackedAlgorithmicBackingIssue } from "../lib/stablecoin-data-gate-issues";
 import {
@@ -58,12 +55,10 @@ function readCanonicalOrder(): string[] {
       return result.data;
     }
 
-    const issues = result.error.issues
-      .slice(0, 8)
-      .map((issue) => {
-        const issuePath = issue.path.length > 0 ? `[${issue.path.join(".")}]` : "";
-        return `${path}${issuePath}: ${issue.message}`;
-      });
+    const issues = result.error.issues.slice(0, 8).map((issue) => {
+      const issuePath = issue.path.length > 0 ? `[${issue.path.join(".")}]` : "";
+      return `${path}${issuePath}: ${issue.message}`;
+    });
     for (const issue of issues) {
       reportError(issue);
     }
@@ -111,9 +106,9 @@ function getCommodityOuncesIssue(coin: StablecoinMeta): string | null {
   if (coin.commodityOunces != null && coin.commodityOunces > 0) return null;
 
   return (
-    "GOLD/SILVER-pegged asset must declare commodityOunces (troy ounces per token); "
-    + "without it peg-rates silently treats the price as per-troy-ounce, fabricating peg deviation "
-    + "for non-1oz denominations and contaminating the commodity peer median"
+    "GOLD/SILVER-pegged asset must declare commodityOunces (troy ounces per token); " +
+    "without it peg-rates silently treats the price as per-troy-ounce, fabricating peg deviation " +
+    "for non-1oz denominations and contaminating the commodity peer median"
   );
 }
 
@@ -126,10 +121,10 @@ function getPegRuntimeSupportIssue(coin: StablecoinMeta): string | null {
   if (pegClass !== "unknown") return null;
 
   return (
-    `pegCurrency ${pegCurrency} classifies as "unknown" peg class at runtime: price validation accepts any `
-    + "price under $100k with no peg band, no FX reference, and no depeg coverage. Before activating a coin "
-    + "on this peg, add it to classifyPegClass + FX_RATE_BOUNDS + HARDCODED_PRICE_BOUNDS and wire its FX rate "
-    + "(see the GELT/GEL promotion checklist pattern)"
+    `pegCurrency ${pegCurrency} classifies as "unknown" peg class at runtime: price validation accepts any ` +
+    "price under $100k with no peg band, no FX reference, and no depeg coverage. Before activating a coin " +
+    "on this peg, add it to classifyPegClass + FX_RATE_BOUNDS + HARDCODED_PRICE_BOUNDS and wire its FX rate " +
+    "(see the GELT/GEL promotion checklist pattern)"
   );
 }
 
@@ -141,10 +136,7 @@ function getReserveTotalIssue(coin: StablecoinMeta): string | null {
     return "reserve pct total must be greater than 0";
   }
 
-  if (
-    !RESERVE_TOTAL_ALLOWLIST.has(coin.id)
-    && !validateReserveCompositionTotal(coin.reserves, "full")
-  ) {
+  if (!RESERVE_TOTAL_ALLOWLIST.has(coin.id) && !validateReserveCompositionTotal(coin.reserves, "full")) {
     return `reserve pct total ${total} is outside 100 +/- ${RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT}`;
   }
 
@@ -192,10 +184,7 @@ function getDependencyReserveAlignmentIssues(coin: StablecoinMeta): string[] {
   }
   for (const [key, dependencyWeight] of dependencyWeights) {
     const reserveWeight = reserveWeights.get(key);
-    if (
-      reserveWeight != null &&
-      Math.abs(dependencyWeight - reserveWeight) > DEPENDENCY_RESERVE_WEIGHT_TOLERANCE
-    ) {
+    if (reserveWeight != null && Math.abs(dependencyWeight - reserveWeight) > DEPENDENCY_RESERVE_WEIGHT_TOLERANCE) {
       issues.push(
         `${key} weight mismatch: dependencies=${dependencyWeight}, linked reserves=${Number(reserveWeight.toFixed(6))}`,
       );
@@ -230,6 +219,20 @@ function getReferenceIssues(coin: StablecoinMeta, knownIds: ReadonlySet<string>)
   for (const reserve of coin.reserves ?? []) {
     if (reserve.coinId && !knownIds.has(reserve.coinId)) {
       issues.push(`reserves references unknown stablecoin ID "${reserve.coinId}"`);
+    }
+  }
+
+  for (const relationship of coin.dependencyReview?.relationships ?? []) {
+    if (!knownIds.has(relationship.id)) {
+      issues.push(`dependencyReview references unknown stablecoin ID "${relationship.id}"`);
+    }
+  }
+
+  for (const disposition of coin.reserveReview?.nonLinkDispositions ?? []) {
+    for (const candidateId of disposition.candidateCoinIds ?? []) {
+      if (!knownIds.has(candidateId)) {
+        issues.push(`reserveReview references unknown candidate stablecoin ID "${candidateId}"`);
+      }
     }
   }
 

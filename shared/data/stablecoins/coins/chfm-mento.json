@@ -207,15 +207,6 @@
       }
     }
   },
-  "dependencies": [
-    {
-      "id": "cusd-celo",
-      "type": "collateral",
-      "weight": 1
-    }
-  ],
-  "infrastructures": [
-    "liquity-v2"
-  ],
+  "infrastructures": ["liquity-v2"],
   "launchDate": "2025-06-06"
 }

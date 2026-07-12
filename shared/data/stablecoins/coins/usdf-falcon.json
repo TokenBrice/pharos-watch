@@ -264,6 +264,26 @@
       "coinId": "ustb-superstate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [{ "label": "Falcon transparency dashboard", "url": "https://app.falcon.finance/transparency" }],
+    "rationale": "The static fallback composition combines USDC and USDT; live exact rows may link them individually when the source provides weights.",
+    "compositionBasis": "Curated fallback aligned to Falcon transparency categories",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The fallback stablecoin basket lacks constituent percentages.",
+    "knownUnknownExposurePct": 30,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Stablecoins (USDC/USDT)",
+        "disposition": "basket-needs-split",
+        "rationale": "USDC and USDT are tracked, but the fallback composition provides only their combined weight.",
+        "candidateCoinIds": ["usdc-circle", "usdt-tether"]
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "falcon",
     "version": 1,

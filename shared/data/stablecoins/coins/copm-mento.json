@@ -199,13 +199,6 @@
       "message": "COP is not yet a first-class Pharos peg-currency enum, so COPm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
     }
   ],
-  "dependencies": [
-    {
-      "id": "cusd-celo",
-      "type": "collateral",
-      "weight": 1
-    }
-  ],
   "infrastructures": ["liquity-v2"],
   "launchDate": "2024-10-11"
 }

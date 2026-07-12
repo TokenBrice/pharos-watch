@@ -70,6 +70,17 @@ const blacklistabilityReview = {
   reviewedAt: "2026-07-09",
 };
 
+const reserveReview = {
+  reviewedAt: "2026-07-12",
+  reviewer: "test",
+  confidence: "verified",
+  sources: [{ label: "Reserve report", url: "https://example.com/reserves" }],
+  rationale: "The fixture reserve composition was reviewed.",
+  compositionBasis: "issuer disclosure",
+  scope: "full-composition",
+  knownUnknownExposure: "None identified in the fixture.",
+};
+
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { force: true, recursive: true });
@@ -78,6 +89,14 @@ afterEach(() => {
 
 describe("stablecoin sidecar migration workflow", () => {
   const cases = [
+    {
+      domain: "reserves" as const,
+      fields: {
+        reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
+        reserveReview,
+      },
+      expectedFields: ["reserves", "reserveReview"],
+    },
     {
       domain: "mint-authority" as const,
       fields: { mintAuthority },
@@ -131,8 +150,7 @@ describe("stablecoin sidecar migration workflow", () => {
         `${JSON.stringify({ id, ...migrationCase.fields }, null, 2)}\n`,
       );
       expect(loadPerCoinStablecoinEntries(rootDir)[0]?.coin).toEqual(original);
-      expect(() => migrateStablecoinSidecar({ check: true, domain: migrationCase.domain, id, rootDir }))
-        .not.toThrow();
+      expect(() => migrateStablecoinSidecar({ check: true, domain: migrationCase.domain, id, rootDir })).not.toThrow();
     });
   }
 
@@ -152,10 +170,9 @@ describe("stablecoin sidecar migration workflow", () => {
 
     expect(result.changed).toBe(true);
     expect(readFileSync(join(rootDir, baseFile), "utf8")).toBe(before);
-    expect(() => readFileSync(
-      join(rootDir, `shared/data/stablecoins/domains/mint-authority/${id}.json`),
-      "utf8",
-    )).toThrow();
+    expect(() =>
+      readFileSync(join(rootDir, `shared/data/stablecoins/domains/mint-authority/${id}.json`), "utf8"),
+    ).toThrow();
   });
 
   it("rejects partial migrations and check-mode base fields", () => {
@@ -168,38 +185,40 @@ describe("stablecoin sidecar migration workflow", () => {
     );
     writeJson(rootDir, `shared/data/stablecoins/domains/compliance/${id}.json`, { id, genius });
 
-    expect(() => migrateStablecoinSidecar({ check: true, domain: "compliance", id, rootDir }))
-      .toThrow(/still contains compliance fields/);
-    expect(() => migrateStablecoinSidecar({ domain: "compliance", id, rootDir }))
-      .toThrow(/partial migration/);
+    expect(() => migrateStablecoinSidecar({ check: true, domain: "compliance", id, rootDir })).toThrow(
+      /still contains compliance fields/,
+    );
+    expect(() => migrateStablecoinSidecar({ domain: "compliance", id, rootDir })).toThrow(/partial migration/);
   });
 
   it("checks an existing sidecar ID against the requested filename ID", () => {
     const rootDir = makeTempRoot();
     const id = "expected-usd";
-    writeJson(
-      rootDir,
-      `shared/data/stablecoins/coins/${id}.json`,
-      makeCoin(id, {}),
-    );
+    writeJson(rootDir, `shared/data/stablecoins/coins/${id}.json`, makeCoin(id, {}));
     writeJson(rootDir, `shared/data/stablecoins/domains/compliance/${id}.json`, {
       id: "different-usd",
       genius,
     });
 
-    expect(() => migrateStablecoinSidecar({ check: true, domain: "compliance", id, rootDir }))
-      .toThrow(/contains id "different-usd", expected "expected-usd"/);
+    expect(() => migrateStablecoinSidecar({ check: true, domain: "compliance", id, rootDir })).toThrow(
+      /contains id "different-usd", expected "expected-usd"/,
+    );
   });
 });
 
 describe("stablecoin sidecar migration CLI", () => {
   it("parses repeated IDs and safe modes", () => {
-    expect(parseStablecoinSidecarMigrationArgs([
-      "--domain", "compliance",
-      "--id", "usdc-circle",
-      "--id", "pyusd-paypal",
-      "--dry-run",
-    ])).toEqual({
+    expect(
+      parseStablecoinSidecarMigrationArgs([
+        "--domain",
+        "compliance",
+        "--id",
+        "usdc-circle",
+        "--id",
+        "pyusd-paypal",
+        "--dry-run",
+      ]),
+    ).toEqual({
       check: false,
       domain: "compliance",
       dryRun: true,
@@ -209,12 +228,12 @@ describe("stablecoin sidecar migration CLI", () => {
   });
 
   it("rejects unknown domains, missing IDs, and conflicting modes", () => {
-    expect(() => parseStablecoinSidecarMigrationArgs(["--domain", "ratings", "--id", "usdc-circle"]))
-      .toThrow(/--domain must be one of/);
-    expect(() => parseStablecoinSidecarMigrationArgs(["--domain", "compliance"]))
-      .toThrow(/at least one --id/);
-    expect(() => parseStablecoinSidecarMigrationArgs([
-      "--domain", "compliance", "--id", "usdc-circle", "--check", "--dry-run",
-    ])).toThrow(/cannot be used together/);
+    expect(() => parseStablecoinSidecarMigrationArgs(["--domain", "ratings", "--id", "usdc-circle"])).toThrow(
+      /--domain must be one of/,
+    );
+    expect(() => parseStablecoinSidecarMigrationArgs(["--domain", "compliance"])).toThrow(/at least one --id/);
+    expect(() =>
+      parseStablecoinSidecarMigrationArgs(["--domain", "compliance", "--id", "usdc-circle", "--check", "--dry-run"]),
+    ).toThrow(/cannot be used together/);
   });
 });

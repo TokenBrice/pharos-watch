@@ -6,6 +6,7 @@ import type {
   CoinNotice,
   ContractDeployment,
   DateHistoryEntry,
+  DependencyReview,
   DependencyWeight,
   FeaturedContent,
   GeniusApplicabilityBasis,
@@ -25,6 +26,7 @@ import type {
   OracleRiskProfile,
   MintAuthoritySafeState,
   ProofOfReserves,
+  ReserveReview,
   StablecoinFlags,
   StablecoinLink,
   YieldConfig,
@@ -64,6 +66,9 @@ import {
   MICA_AUTHORIZATION_TYPE_VALUES,
   ORACLE_RISK_CONFIDENCE_VALUES,
   ORACLE_RISK_TIER_VALUES,
+  RESEARCH_REVIEW_CONFIDENCE_VALUES,
+  RESERVE_NON_LINK_DISPOSITION_VALUES,
+  RESERVE_REVIEW_SCOPE_VALUES,
   MICA_STATUS_VALUES,
   MICA_TOKEN_TYPE_VALUES,
   PEG_CURRENCY_VALUES,
@@ -97,11 +102,7 @@ function isValidIsoDate(value: string): boolean {
   const month = Number(match[2]);
   const day = Number(match[3]);
   const date = new Date(Date.UTC(year, month - 1, day));
-  return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
-  );
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
 const StrictIsoDateSchema = z.string().refine(isValidIsoDate, {
@@ -109,15 +110,18 @@ const StrictIsoDateSchema = z.string().refine(isValidIsoDate, {
 });
 const ReviewDateSchema = StrictIsoDateSchema;
 
-export const FuzzyDateSchema = z.string().refine((value) => {
-  if (/^\d{4}$/.test(value)) return true;
-  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return true;
-  if (/^\d{4}-Q[1-4]$/.test(value)) return true;
-  if (/^\d{4}-H[1-2]$/.test(value)) return true;
-  return isValidIsoDate(value);
-}, {
-  message: "Expected YYYY, YYYY-MM, YYYY-MM-DD, YYYY-Q[1-4], or YYYY-H[1-2]",
-});
+export const FuzzyDateSchema = z.string().refine(
+  (value) => {
+    if (/^\d{4}$/.test(value)) return true;
+    if (/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return true;
+    if (/^\d{4}-Q[1-4]$/.test(value)) return true;
+    if (/^\d{4}-H[1-2]$/.test(value)) return true;
+    return isValidIsoDate(value);
+  },
+  {
+    message: "Expected YYYY, YYYY-MM, YYYY-MM-DD, YYYY-Q[1-4], or YYYY-H[1-2]",
+  },
+);
 
 const LocalPathOrHttpUrlSchema = z.union([
   HttpUrlSchema,
@@ -758,6 +762,55 @@ export const DependencyWeightSchema: z.ZodType<DependencyWeight> = z
     id: z.string(),
     weight: DependencyWeightNumberSchema,
     type: z.enum(DEPENDENCY_TYPE_VALUES).optional(),
+  })
+  .strict();
+
+export const ReserveReviewSchema: z.ZodType<ReserveReview> = z
+  .object({
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().min(1),
+    confidence: z.enum(RESEARCH_REVIEW_CONFIDENCE_VALUES),
+    sources: z.array(StablecoinLinkSchema).min(1),
+    rationale: z.string().min(1),
+    compositionBasis: z.string().min(1),
+    compositionAsOf: StrictIsoDateSchema.optional(),
+    scope: z.enum(RESERVE_REVIEW_SCOPE_VALUES),
+    knownUnknownExposure: z.string().min(1),
+    knownUnknownExposurePct: z.number().finite().min(0).max(100).optional(),
+    nonLinkDispositions: z
+      .array(
+        z
+          .object({
+            reserveIndex: z.number().int().nonnegative(),
+            reserveName: z.string().min(1),
+            disposition: z.enum(RESERVE_NON_LINK_DISPOSITION_VALUES),
+            rationale: z.string().min(1),
+            candidateCoinIds: z.array(z.string().min(1)).min(1).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+  })
+  .strict();
+
+export const DependencyReviewSchema: z.ZodType<DependencyReview> = z
+  .object({
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().min(1),
+    confidence: z.enum(RESEARCH_REVIEW_CONFIDENCE_VALUES),
+    sources: z.array(StablecoinLinkSchema).min(1),
+    rationale: z.string().min(1),
+    relationships: z
+      .array(
+        z
+          .object({
+            id: z.string().min(1),
+            type: z.enum(DEPENDENCY_TYPE_VALUES),
+            reason: z.string().min(1),
+          })
+          .strict(),
+      )
+      .min(1),
   })
   .strict();
 

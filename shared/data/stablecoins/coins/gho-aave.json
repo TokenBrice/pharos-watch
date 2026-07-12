@@ -277,10 +277,7 @@
         "name": "Chainlink CCIP",
         "slug": "ccip",
         "url": "https://l2beat.com/interop/protocols/ccip",
-        "bridgeTypes": [
-          "burnAndMint",
-          "lockRelease"
-        ]
+        "bridgeTypes": ["burnAndMint", "lockRelease"]
       }
     ],
     "sources": [
@@ -341,6 +338,52 @@
       "risk": "medium"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      { "label": "Aave GHO documentation", "url": "https://aave.com/docs/ecosystem/gho" },
+      { "label": "Aave GHO analytics", "url": "https://aave.tokenlogic.xyz/gho" }
+    ],
+    "rationale": "GHO facilitator balances include both identified GSM stablecoin mechanisms and direct issuance facilities that are not reserve-token claims.",
+    "compositionBasis": "On-chain facilitator bucket balances",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The residual mainnet GSM bucket is not identified at stablecoin level; direct minters are reviewed as issuance facilities.",
+    "knownUnknownExposurePct": 38.4,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "GhoDirectFacilitator GSMs Mainnet",
+        "disposition": "insufficient-evidence",
+        "rationale": "The residual bucket does not expose a stablecoin identity that can be mapped to one canonical target."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "CoreGhoDirectMinter",
+        "disposition": "not-applicable",
+        "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "LidoGhoDirectMinter",
+        "disposition": "not-applicable",
+        "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "GhoDirectFacilitator Plasma",
+        "disposition": "not-applicable",
+        "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "HorizonGhoDirectMinter",
+        "disposition": "not-applicable",
+        "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "gho",
     "version": 2,

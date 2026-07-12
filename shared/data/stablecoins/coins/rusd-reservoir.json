@@ -306,7 +306,9 @@
     {
       "name": "Pendle PT USDat tokenized-treasury principal token",
       "pct": 20.9,
-      "risk": "high"
+      "risk": "high",
+      "coinId": "usdat-saturn",
+      "depType": "collateral"
     },
     {
       "name": "GHO Aave lending markets (Plasma and Monad)",
@@ -341,10 +343,7 @@
     "semantics": "protocol-reserve",
     "scoring": {
       "maxSourceAgeSec": 4000000,
-      "allowedDegradedWarningCodes": [
-        "unknown-position",
-        "source-total-gap"
-      ]
+      "allowedDegradedWarningCodes": ["unknown-position", "source-total-gap"]
     },
     "breakerScope": "reservoir",
     "display": {

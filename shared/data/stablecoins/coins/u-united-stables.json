@@ -188,6 +188,30 @@
       "risk": "low"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "United Stables proof of reserves",
+        "url": "https://u.tech/"
+      }
+    ],
+    "rationale": "The proof-of-reserves feed establishes aggregate coverage but does not publish the stablecoin portion or constituent weights.",
+    "compositionBasis": "Protocol proof-of-reserves aggregate",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The full variable reserve mix is unresolved at constituent level.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
+        "disposition": "basket-needs-split",
+        "rationale": "Cash, Treasury bills, and unidentified stablecoins are reported as one combined balance."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "united-por",
     "version": 1,
@@ -221,9 +245,7 @@
       {
         "source": "issuer",
         "name": "U issuer-operated multichain issuance",
-        "bridgeTypes": [
-          "issuer-native-mint-redeem"
-        ]
+        "bridgeTypes": ["issuer-native-mint-redeem"]
       }
     ],
     "sources": [

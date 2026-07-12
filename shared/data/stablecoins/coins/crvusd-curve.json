@@ -200,18 +200,14 @@
         "name": "Arbitrum Canonical",
         "slug": "arbitrum",
         "url": "https://l2beat.com/interop/protocols/arbitrum",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
+        "bridgeTypes": ["lockAndMint"]
       },
       {
         "source": "l2beat",
         "name": "ZKsync Era",
         "slug": "zksync-era",
         "url": "https://l2beat.com/interop/protocols/zksync-era",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
+        "bridgeTypes": ["lockAndMint"]
       }
     ],
     "sources": [
@@ -282,6 +278,49 @@
       "type": "mechanism"
     }
   ],
+  "dependencyReview": {
+    "reviewedAt": "2026-07-12",
+    "reviewer": "Codex dependency review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Curve stablecoin design",
+        "url": "https://resources.curve.finance/pdf/curve-stablecoin.pdf"
+      },
+      {
+        "label": "crvUSD balance sheet",
+        "url": "https://dune.com/warshine/crvusd-balance-sheet"
+      }
+    ],
+    "rationale": "PegKeeper pools are a required stabilization path rather than proportional vault collateral. The equal weights model mechanism criticality across the five currently curated paired-stablecoin routes, so the relationships remain manual instead of being mixed into the crypto-collateral reserve composition.",
+    "relationships": [
+      {
+        "id": "usdc-circle",
+        "type": "mechanism",
+        "reason": "USDC is a curated crvUSD PegKeeper pool counterasset."
+      },
+      {
+        "id": "usdt-tether",
+        "type": "mechanism",
+        "reason": "USDT is a curated crvUSD PegKeeper pool counterasset."
+      },
+      {
+        "id": "pyusd-paypal",
+        "type": "mechanism",
+        "reason": "PYUSD is a curated crvUSD PegKeeper pool counterasset."
+      },
+      {
+        "id": "frxusd-frax",
+        "type": "mechanism",
+        "reason": "frxUSD is a curated crvUSD PegKeeper pool counterasset."
+      },
+      {
+        "id": "gho-aave",
+        "type": "mechanism",
+        "reason": "GHO is a curated crvUSD PegKeeper pool counterasset."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "crvusd",
     "version": 3,
