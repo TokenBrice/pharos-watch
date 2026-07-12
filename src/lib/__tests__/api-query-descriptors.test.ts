@@ -2,8 +2,6 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FRONTEND_API_QUERY_DESCRIPTORS, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
 import { FRONTEND_API_QUERY_BASE_REGISTRY } from "../api-query-base-registry";
-import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "../api-query-runtime-registry";
-import { FRONTEND_API_QUERY_REGISTRY } from "../api-query-registry";
 import { toBaseApiQueryDescriptor, type FrontendAnyApiQueryDescriptor } from "../api-query-contract";
 import { resolveSchemaLike } from "../schema-like";
 import {
@@ -86,9 +84,7 @@ describe("frontend API query descriptors", () => {
     );
   });
 
-  it("derives every compatibility registry from the one descriptor table", () => {
-    expect(FRONTEND_API_QUERY_RUNTIME_REGISTRY).toBe(FRONTEND_API_QUERY_DESCRIPTORS);
-    expect(FRONTEND_API_QUERY_REGISTRY).toBe(FRONTEND_API_QUERY_DESCRIPTORS);
+  it("derives the policy-only projection from the one descriptor table", () => {
     expect(Object.keys(FRONTEND_API_QUERY_BASE_REGISTRY)).toEqual(Object.keys(FRONTEND_API_QUERY_DESCRIPTORS));
 
     for (const key of Object.keys(FRONTEND_API_QUERY_DESCRIPTORS)) {

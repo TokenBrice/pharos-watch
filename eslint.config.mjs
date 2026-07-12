@@ -23,11 +23,11 @@ const layoutScriptRestrictedSyntax = [
 const apiPathRestrictedSyntax = [
   {
     selector: "CallExpression[callee.type!='MemberExpression'] > Literal[value=/^\\/api\\//]",
-    message: "Use API_PATHS or FRONTEND_API_QUERY_REGISTRY from shared/lib/api-endpoints instead of a /api/ string literal.",
+    message: "Use API_PATHS or FRONTEND_API_QUERY_DESCRIPTORS instead of a /api/ string literal.",
   },
   {
     selector: "CallExpression[callee.type!='MemberExpression'] > TemplateLiteral > TemplateElement[value.cooked=/^\\/api\\//]",
-    message: "Use API_PATHS or FRONTEND_API_QUERY_REGISTRY from shared/lib/api-endpoints instead of a /api/ template literal.",
+    message: "Use API_PATHS or FRONTEND_API_QUERY_DESCRIPTORS instead of a /api/ template literal.",
   },
 ];
 

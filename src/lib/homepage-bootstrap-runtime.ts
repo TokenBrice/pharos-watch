@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { normalizeApiMeta, type ApiMeta } from "@/lib/api";
-import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 // Shared version/helpers also consumed by homepage-bootstrap.ts. This runtime
 // module deliberately stays Zod-free (no descriptor.schema validation) to keep
 // Zod out of the inline-hydration bundle.
@@ -13,7 +13,7 @@ import {
 
 export const HOMEPAGE_BOOTSTRAP_SCRIPT_ID = "pharos-homepage-bootstrap";
 
-const HOMEPAGE_BOOTSTRAP_DESCRIPTORS = buildHomepageBootstrapDescriptors(FRONTEND_API_QUERY_RUNTIME_REGISTRY);
+const HOMEPAGE_BOOTSTRAP_DESCRIPTORS = buildHomepageBootstrapDescriptors(FRONTEND_API_QUERY_DESCRIPTORS);
 
 export type { HomepageBootstrapQueryId };
 

@@ -1,4 +1,4 @@
-import { API_PATHS } from "../../shared/lib/api-endpoints/paths";
+import { getEndpointDefinitionByKey, type EndpointKey } from "../../shared/lib/api-endpoints/definitions";
 import { BLACKLIST_STABLECOINS } from "../../shared/types/market";
 
 export type QueryParamType = "string" | "integer" | "number" | "boolean";
@@ -179,27 +179,31 @@ export const LIMIT_PARAM = {
   description: "Maximum number of records to return.",
 } as const satisfies PublicApiArtifactParameter;
 
-const STABLECOIN_ID_TOKEN = "__stablecoinId__";
-const stablecoinPathTemplate = (path: string) => path.replace(STABLECOIN_ID_TOKEN, "{stablecoinId}");
-const stablecoinPostmanPath = (path: string, variable = "stablecoinId") =>
-  path.replace(STABLECOIN_ID_TOKEN, `{{${variable}}}`);
+type PublicArtifactInput<Key extends EndpointKey> = Omit<PublicApiArtifactEndpoint, "path" | "security"> & { key: Key };
 
-const SNAPSHOT_DATE_TOKEN = "__snapshotDate__";
-const snapshotPathTemplate = (path: string) =>
-  path.replace(SNAPSHOT_DATE_TOKEN, "{date}").replace(STABLECOIN_ID_TOKEN, "{stablecoinId}");
-const snapshotPostmanPath = (path: string) =>
-  path
-    .replace(SNAPSHOT_DATE_TOKEN, "{{snapshotDate}}")
-    .replace(STABLECOIN_ID_TOKEN, "{{stablecoinId}}");
+function publicArtifact<const T extends PublicArtifactInput<EndpointKey>>(
+  artifact: T,
+): T & Pick<PublicApiArtifactEndpoint, "path" | "security"> {
+  const definition = getEndpointDefinitionByKey(artifact.key);
+  if (!definition || definition.adminRequired || definition.methods.length !== 1 || definition.methods[0] !== "GET") {
+    throw new Error(`Public artifact endpoint "${artifact.key}" must use a non-admin GET definition`);
+  }
+  return {
+    ...artifact,
+    path: definition.path.replace(
+      /:([A-Za-z][A-Za-z0-9]*)/g,
+      (_match, name: string) => `{${name === "id" ? "stablecoinId" : name}}`,
+    ),
+    ...(definition.publicApiAccess === "exempt" ? { security: "none" } : {}),
+  } as T & Pick<PublicApiArtifactEndpoint, "path" | "security">;
+}
 
-export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
+const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "health",
-    path: API_PATHS.health(),
     summary: "Health check",
     description: "No-key health check for the public API host.",
     tags: ["Health"],
-    security: "none",
     postman: {
       folder: "Getting started",
       noAuth: true,
@@ -207,7 +211,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "stablecoins",
-    path: API_PATHS.stablecoins(),
     summary: "List stablecoins",
     description: "Current stablecoin list with supply, price, peg, chain distribution, and freshness headers.",
     tags: ["Stablecoins"],
@@ -218,43 +221,37 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "stablecoin-detail",
-    path: stablecoinPathTemplate(API_PATHS.stablecoinDetail(STABLECOIN_ID_TOKEN)),
     summary: "Stablecoin detail",
     description: "Full per-coin analytics dossier for a canonical Pharos stablecoin ID.",
     tags: ["Stablecoins"],
     parameters: [STABLECOIN_ID_PARAM],
     postman: {
       folder: "Getting started",
-      path: stablecoinPostmanPath(API_PATHS.stablecoinDetail(STABLECOIN_ID_TOKEN)),
     },
   },
   {
     key: "stablecoin-summary",
-    path: stablecoinPathTemplate(API_PATHS.stablecoinSummary(STABLECOIN_ID_TOKEN)),
     summary: "Stablecoin summary",
     description: "Lightweight per-coin price and aggregate supply snapshot.",
     tags: ["Stablecoins"],
     parameters: [STABLECOIN_ID_PARAM],
     postman: {
       folder: "Getting started",
-      path: stablecoinPostmanPath(API_PATHS.stablecoinSummary(STABLECOIN_ID_TOKEN)),
     },
   },
   {
     key: "stablecoin-reserves",
-    path: stablecoinPathTemplate(API_PATHS.stablecoinReserves(STABLECOIN_ID_TOKEN)),
     summary: "Stablecoin reserves",
     description: "Live or fallback reserve composition for live-reserve-enabled assets.",
     tags: ["Stablecoins", "Reserves"],
     parameters: [STABLECOIN_ID_PARAM],
     postman: {
       folder: "Getting started",
-      path: stablecoinPostmanPath(API_PATHS.stablecoinReserves(STABLECOIN_ID_TOKEN), "reserveStablecoinId"),
+      path: "/api/stablecoin-reserves/{{reserveStablecoinId}}",
     },
   },
   {
     key: "stablecoin-charts",
-    path: API_PATHS.stablecoinCharts(),
     summary: "Stablecoin charts",
     description: "Historical total supply chart data.",
     tags: ["Stablecoins", "History"],
@@ -264,7 +261,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "peg-summary",
-    path: API_PATHS.pegSummary(),
     summary: "Peg summary",
     description: "Per-coin peg scores plus aggregate peg-monitoring summary.",
     tags: ["Peg Monitoring"],
@@ -274,7 +270,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "depeg-events",
-    path: API_PATHS.depegEvents(),
     summary: "Depeg events",
     description: "Historical and active depeg events, filterable by stablecoin.",
     tags: ["Peg Monitoring"],
@@ -319,7 +314,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "events",
-    path: API_PATHS.events(),
     summary: "Tape events",
     description:
       "Materialized chronological feed of typed events (depeg, freeze, score) backed by the tape_events table. Supports filtering by type, coin, severity floor, and time window, plus keyset pagination.",
@@ -405,7 +399,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "usds-status",
-    path: API_PATHS.usdsStatus(),
     summary: "USDS freeze status",
     description: "Sky/USDS protocol status, including whether the freeze module is currently active.",
     tags: ["Risk"],
@@ -415,7 +408,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "bluechip-ratings",
-    path: API_PATHS.bluechipRatings(),
     summary: "Bluechip ratings",
     description: "Safety ratings from bluechip.org for covered stablecoins.",
     tags: ["Risk"],
@@ -425,7 +417,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "dex-liquidity",
-    path: API_PATHS.dexLiquidity(),
     summary: "DEX liquidity",
     description: "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata.",
     tags: ["Liquidity"],
@@ -435,7 +426,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "dex-liquidity-history",
-    path: API_PATHS.dexLiquidityHistoryBase(),
     summary: "DEX liquidity history",
     description: "Historical liquidity-score data for a stablecoin.",
     tags: ["Liquidity", "History"],
@@ -448,7 +438,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "report-cards",
-    path: API_PATHS.reportCards(),
     summary: "Report cards",
     description: "Safety report-card snapshot across liquidity, resilience, decentralization, dependency, and peg stability.",
     tags: ["Risk"],
@@ -458,7 +447,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "depeg-resolver",
-    path: API_PATHS.depegResolver(),
     summary: "Depeg Duration Resolver",
     description:
       "Per active confirmed depeg: a mechanistic resolution outlook (terminal vs recoverable) and a stratified empirical duration estimate with per-horizon resolution likelihood.",
@@ -469,7 +457,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "depeg-resolver-review",
-    path: API_PATHS.depegResolverReview(),
     summary: "Depeg Duration Resolver Reviewer",
     description:
       "Review of stored DDR predictions against later depeg-event outcomes, including recovery-likelihood accuracy and observed-minus-predicted recovery duration error.",
@@ -480,7 +467,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "redemption-backstops",
-    path: API_PATHS.redemptionBackstops(),
     summary: "Redemption backstops",
     description: "Modeled issuer/protocol redemption routes and effective-exit scoring for configured assets.",
     tags: ["Risk", "Reserves"],
@@ -490,7 +476,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "stress-signals",
-    path: API_PATHS.stressSignalsBase(),
     summary: "Stress signals",
     description: "DEWS-style stress signals for the stablecoin universe or one selected asset.",
     tags: ["Risk", "Peg Monitoring"],
@@ -502,7 +487,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "stability-index",
-    path: API_PATHS.stabilityIndex(),
     summary: "Pharos Stability Index",
     description: "Latest Pharos Stability Index with optional detail payload and history.",
     tags: ["Risk"],
@@ -523,7 +507,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "blacklist",
-    path: API_PATHS.blacklist(),
     summary: "Blacklist events",
     description: "Freeze and blacklist events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
     tags: ["Blacklist"],
@@ -602,7 +585,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "blacklist-summary",
-    path: API_PATHS.blacklistSummary(),
     summary: "Blacklist summary",
     description: "Blacklist summary statistics, chart data, chain options, manifest-derived coverage metadata, and freeze-ledger data-quality context. Prefer tracked freeze-ledger fields over legacy active-state fields for public frozen exposure.",
     tags: ["Blacklist"],
@@ -612,7 +594,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "mint-burn-flows",
-    path: API_PATHS.mintBurnFlowsBase(),
     summary: "Mint and burn flows",
     description: "Mint/burn flow aggregates for the selected window.",
     tags: ["Flows"],
@@ -624,7 +605,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "mint-burn-events",
-    path: API_PATHS.mintBurnEventsBase(),
     summary: "Mint and burn events",
     description: "Individual mint/burn events for supported stablecoins.",
     tags: ["Flows"],
@@ -702,7 +682,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "yield-rankings",
-    path: API_PATHS.yieldRankings(),
     summary: "Yield rankings",
     description: "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields.",
     tags: ["Yield"],
@@ -722,7 +701,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "yield-adapter-manifest",
-    path: API_PATHS.yieldAdapterManifest(),
     summary: "Yield adapter manifest",
     description:
       "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, exact runtime source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle state, and methodology version.",
@@ -734,7 +712,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "yield-history",
-    path: API_PATHS.yieldHistoryBase(),
     summary: "Yield history",
     description: "Historical yield observations for a stablecoin, with optional publication/source-risk metadata fields.",
     tags: ["Yield", "History"],
@@ -774,7 +751,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "chains",
-    path: API_PATHS.chains(),
     summary: "Chains",
     description: "Chain-level stablecoin aggregates with Chain Health Scores.",
     tags: ["Chains"],
@@ -784,7 +760,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "non-usd-share",
-    path: API_PATHS.nonUsdShareBase(),
     summary: "Non-USD share",
     description: "Historical non-USD peg share series for market-structure views.",
     tags: ["Market Structure", "History"],
@@ -796,7 +771,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "supply-history",
-    path: API_PATHS.supplyHistoryBase(),
     summary: "Supply history",
     description: "Historical supply series for a stablecoin.",
     tags: ["History"],
@@ -809,7 +783,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "safety-score-history",
-    path: API_PATHS.safetyScoreHistoryBase(),
     summary: "Safety score history",
     description: "Long-range safety-score history for a stablecoin.",
     tags: ["Risk", "History"],
@@ -822,7 +795,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "daily-digest",
-    path: API_PATHS.dailyDigest(),
     summary: "Daily digest",
     description: "Latest AI-generated stablecoin market digest.",
     tags: ["Digest"],
@@ -834,7 +806,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "digest-archive",
-    path: API_PATHS.digestArchive(),
     summary: "Digest archive",
     description: "Archive of daily and weekly digests.",
     tags: ["Digest"],
@@ -845,7 +816,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "digest-snapshot",
-    path: API_PATHS.digestSnapshotBase(),
     summary: "Digest snapshot",
     description: "Build-time digest context snapshot for a specific digest date.",
     tags: ["Digest"],
@@ -866,7 +836,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "snapshots-index",
-    path: API_PATHS.snapshotsIndex(),
     summary: "Public snapshot index",
     description: "Listing of available daily public snapshots with content hashes and methodology versions.",
     tags: ["Digest"],
@@ -877,7 +846,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "snapshot-day",
-    path: snapshotPathTemplate(API_PATHS.snapshotDay(SNAPSHOT_DATE_TOKEN)),
     summary: "Public snapshot for a single day",
     description:
       "Full per-day public dataset snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD; served with public, immutable, max-age=1y cache headers.",
@@ -894,12 +862,11 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     postman: {
       folder: "Historical data",
       order: 9,
-      path: snapshotPostmanPath(API_PATHS.snapshotDay(SNAPSHOT_DATE_TOKEN)),
+      path: "/api/snapshots/{{snapshotDate}}.json",
     },
   },
   {
     key: "snapshot-coin",
-    path: snapshotPathTemplate(API_PATHS.snapshotCoin(SNAPSHOT_DATE_TOKEN, STABLECOIN_ID_TOKEN)),
     summary: "Public snapshot projection for a single coin",
     description:
       "Per-coin slice of a daily snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD + stablecoin id; served with public, immutable, max-age=1y cache headers.",
@@ -923,12 +890,11 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     postman: {
       folder: "Historical data",
       order: 10,
-      path: snapshotPostmanPath(API_PATHS.snapshotCoin(SNAPSHOT_DATE_TOKEN, STABLECOIN_ID_TOKEN)),
+      path: "/api/snapshot/{{snapshotDate}}/stablecoin/{{stablecoinId}}",
     },
   },
   {
     key: "public-status-history",
-    path: API_PATHS.publicStatusHistory(),
     summary: "Public status history",
     description: "Public status timeline for the Pharos system.",
     tags: ["Status"],
@@ -948,7 +914,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   },
   {
     key: "telegram-pulse",
-    path: API_PATHS.telegramPulse(),
     summary: "Telegram pulse",
     description: "Lightweight public telemetry for Telegram alert surfaces.",
     tags: ["Status"],
@@ -956,7 +921,9 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
       folder: "Flows, blacklist, yield, and chains",
     },
   },
-] as const satisfies readonly PublicApiArtifactEndpoint[];
+] as const satisfies readonly PublicArtifactInput<EndpointKey>[];
+
+export const PUBLIC_API_ARTIFACT_ENDPOINTS = PUBLIC_API_ARTIFACT_INPUTS.map(publicArtifact);
 
 export const PUBLIC_STATIC_POSTMAN_REQUESTS = [
   {

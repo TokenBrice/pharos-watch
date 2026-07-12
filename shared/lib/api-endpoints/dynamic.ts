@@ -1,11 +1,11 @@
-import type {
-  EndpointDependency,
-  EndpointPublicApiAccess,
-  EndpointSiteDataAccess,
+import {
+  getEndpointDefinitionByKey,
+  type EndpointDependency,
+  type EndpointKey,
+  type EndpointMethod,
+  type EndpointPublicApiAccess,
+  type EndpointSiteDataAccess,
 } from "./definitions";
-
-type EndpointMethod = "GET" | "HEAD" | "POST";
-
 export type DynamicEndpointDescriptorKey =
   | "stablecoin-summary"
   | "stablecoin-reserves"
@@ -29,32 +29,26 @@ export interface DynamicEndpointDescriptor {
   siteDataAccess: EndpointSiteDataAccess;
   adminRequired: boolean;
   routeDependencies: readonly EndpointDependency[];
-  requestAttribution:
-    | {
-        routeKey: string;
-        routePath: string;
-      }
-    | null;
+  requestAttribution: {
+    routeKey: string;
+    routePath: string;
+  } | null;
 }
 
-type AdminDynamicInput<
-  Key extends DynamicEndpointDescriptorKey,
-  Methods extends readonly EndpointMethod[],
-> = {
+type AdminDynamicInput<Key extends DynamicEndpointDescriptorKey, Methods extends readonly EndpointMethod[]> = {
   key: Key;
   pattern: RegExp;
   methods: Methods;
   routeDependencies: readonly EndpointDependency[];
 };
 
-type AdminDynamicDescriptor<
-  T extends AdminDynamicInput<DynamicEndpointDescriptorKey, readonly EndpointMethod[]>,
-> = T & {
-  readonly publicApiAccess: "exempt";
-  readonly siteDataAccess: "denied";
-  readonly adminRequired: true;
-  readonly requestAttribution: null;
-};
+type AdminDynamicDescriptor<T extends AdminDynamicInput<DynamicEndpointDescriptorKey, readonly EndpointMethod[]>> =
+  T & {
+    readonly publicApiAccess: "exempt";
+    readonly siteDataAccess: "denied";
+    readonly adminRequired: true;
+    readonly requestAttribution: null;
+  };
 
 function adminDynamic<const T extends AdminDynamicInput<DynamicEndpointDescriptorKey, readonly EndpointMethod[]>>(
   descriptor: T,
@@ -77,46 +71,28 @@ function adminDynamicPost<
   });
 }
 
+function publicDynamic<Key extends DynamicEndpointDescriptorKey & EndpointKey>(
+  descriptor: Pick<DynamicEndpointDescriptor, "pattern"> & { key: Key },
+): DynamicEndpointDescriptor & { key: Key } {
+  const definition = getEndpointDefinitionByKey(descriptor.key);
+  if (!definition || definition.adminRequired || !definition.path.includes(":")) {
+    throw new Error(`Public dynamic endpoint "${descriptor.key}" must use a non-admin template definition`);
+  }
+  return {
+    ...descriptor,
+    methods: definition.methods,
+    publicApiAccess: definition.publicApiAccess,
+    siteDataAccess: definition.siteDataAccess,
+    adminRequired: definition.adminRequired,
+    routeDependencies: definition.routeDependencies ?? [],
+    requestAttribution: { routeKey: definition.key, routePath: definition.path },
+  };
+}
+
 export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
-  {
-    key: "stablecoin-summary",
-    pattern: /^\/api\/stablecoin-summary\/([^/]+)$/,
-    methods: ["GET"],
-    publicApiAccess: "protected",
-    siteDataAccess: "allowed",
-    adminRequired: false,
-    routeDependencies: [],
-    requestAttribution: {
-      routeKey: "stablecoin-summary",
-      routePath: "/api/stablecoin-summary/:id",
-    },
-  },
-  {
-    key: "stablecoin-reserves",
-    pattern: /^\/api\/stablecoin-reserves\/([^/]+)$/,
-    methods: ["GET"],
-    publicApiAccess: "protected",
-    siteDataAccess: "allowed",
-    adminRequired: false,
-    routeDependencies: [],
-    requestAttribution: {
-      routeKey: "stablecoin-reserves",
-      routePath: "/api/stablecoin-reserves/:id",
-    },
-  },
-  {
-    key: "stablecoin-detail",
-    pattern: /^\/api\/stablecoin\/([^/]+)$/,
-    methods: ["GET"],
-    publicApiAccess: "protected",
-    siteDataAccess: "allowed",
-    adminRequired: false,
-    routeDependencies: ["coingeckoApiKey"],
-    requestAttribution: {
-      routeKey: "stablecoin-detail",
-      routePath: "/api/stablecoin/:id",
-    },
-  },
+  publicDynamic({ key: "stablecoin-summary", pattern: /^\/api\/stablecoin-summary\/([^/]+)$/ }),
+  publicDynamic({ key: "stablecoin-reserves", pattern: /^\/api\/stablecoin-reserves\/([^/]+)$/ }),
+  publicDynamic({ key: "stablecoin-detail", pattern: /^\/api\/stablecoin\/([^/]+)$/ }),
   {
     key: "og-image",
     pattern: /^\/api\/og\//,
@@ -130,32 +106,8 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
       routePath: "/api/og/*",
     },
   },
-  {
-    key: "snapshot-day",
-    pattern: /^\/api\/snapshots\/(\d{4}-\d{2}-\d{2})\.json$/,
-    methods: ["GET"],
-    publicApiAccess: "protected",
-    siteDataAccess: "allowed",
-    adminRequired: false,
-    routeDependencies: [],
-    requestAttribution: {
-      routeKey: "snapshot-day",
-      routePath: "/api/snapshots/:date.json",
-    },
-  },
-  {
-    key: "snapshot-coin",
-    pattern: /^\/api\/snapshot\/(\d{4}-\d{2}-\d{2})\/stablecoin\/([^/]+)$/,
-    methods: ["GET"],
-    publicApiAccess: "protected",
-    siteDataAccess: "allowed",
-    adminRequired: false,
-    routeDependencies: [],
-    requestAttribution: {
-      routeKey: "snapshot-coin",
-      routePath: "/api/snapshot/:date/stablecoin/:id",
-    },
-  },
+  publicDynamic({ key: "snapshot-day", pattern: /^\/api\/snapshots\/(\d{4}-\d{2}-\d{2})\.json$/ }),
+  publicDynamic({ key: "snapshot-coin", pattern: /^\/api\/snapshot\/(\d{4}-\d{2}-\d{2})\/stablecoin\/([^/]+)$/ }),
   adminDynamicPost({
     key: "discovery-candidate-dismiss",
     pattern: /^\/api\/discovery-candidates\/(\d+)\/dismiss$/,
@@ -198,8 +150,6 @@ export function findDynamicEndpointDescriptor(path: string): DynamicEndpointDesc
   return DYNAMIC_ENDPOINT_DESCRIPTORS.find((descriptor) => descriptor.pattern.test(path)) ?? null;
 }
 
-export function getDynamicEndpointDescriptorByKey(
-  key: DynamicEndpointDescriptorKey,
-): DynamicEndpointDescriptor | null {
+export function getDynamicEndpointDescriptorByKey(key: DynamicEndpointDescriptorKey): DynamicEndpointDescriptor | null {
   return DYNAMIC_ENDPOINT_DESCRIPTORS.find((descriptor) => descriptor.key === key) ?? null;
 }

@@ -5,12 +5,12 @@ import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/ch
 import { type ChainsResponse } from "@shared/types/chains";
 import { useRegisteredApiQueryWithMeta } from "./api-hooks";
 import { useStablecoins } from "./use-stablecoins";
-import { FRONTEND_API_QUERY_RUNTIME_REGISTRY } from "@/lib/api-query-runtime-registry";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ApiMeta } from "@/lib/api";
 
 export function useChains() {
-  return useRegisteredApiQueryWithMeta<ChainsResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.chains);
+  return useRegisteredApiQueryWithMeta<ChainsResponse>(FRONTEND_API_QUERY_DESCRIPTORS.chains);
 }
 
 export interface ChainStablecoin {

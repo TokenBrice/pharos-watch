@@ -15,7 +15,7 @@ import {
   resolveGeneratorApiBase,
 } from "../lib/sync-from-api";
 import { ApiMetaSchema, type ApiMeta } from "../../shared/types/api-meta";
-import { FRONTEND_API_QUERY_REGISTRY } from "../../src/lib/api-query-registry";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "../../src/lib/api-query-descriptors";
 import { buildHomepageBootstrapDescriptors } from "../../src/lib/homepage-bootstrap-shared";
 import { resolveSchemaLike, type SchemaLikeSource } from "../../src/lib/schema-like";
 import {
@@ -31,7 +31,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
 const OUTPUT_PATH = join(REPO_ROOT, "src/generated/homepage-bootstrap.json");
 const CHECK_MODE = process.argv.includes("--check");
-const registry = FRONTEND_API_QUERY_REGISTRY;
+const registry = FRONTEND_API_QUERY_DESCRIPTORS;
 // App Router duplicates this server-rendered script into the RSC stream, so
 // inline only tiny seeds. Larger responses fetch after hydration instead of
 // burning the homepage HTML budget in the production Pages release.

@@ -37,15 +37,14 @@ import {
   useApiQueryWithMeta,
 } from "./use-api-query";
 import {
-  FRONTEND_API_QUERY_RUNTIME_REGISTRY,
-  type FrontendApiQueryDescriptor,
-  type FrontendStaticApiQueryDescriptor,
+  FRONTEND_API_QUERY_DESCRIPTORS,
   type NonUsdSharePoint as RegistryNonUsdSharePoint,
-} from "@/lib/api-query-runtime-registry";
+} from "@/lib/api-query-descriptors";
+import type { FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor } from "@/lib/api-query-contract";
 import type { ApiMeta } from "@/lib/api";
 
 export type { StabilityContributor };
-export type { NonUsdSharePoint } from "@/lib/api-query-runtime-registry";
+export type { NonUsdSharePoint } from "@/lib/api-query-descriptors";
 
 export type QueryControlOverrides = PollingQueryControlOptions;
 
@@ -133,15 +132,15 @@ function createRegisteredStaticQueryOptions<T>(
 }
 
 export function useBluechipRatings() {
-  return useRegisteredApiQuery<BluechipRatingsMap | null>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.bluechipRatings);
+  return useRegisteredApiQuery<BluechipRatingsMap | null>(FRONTEND_API_QUERY_DESCRIPTORS.bluechipRatings);
 }
 
 export function useDailyDigest() {
-  return useRegisteredApiQuery<DailyDigestResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.dailyDigest);
+  return useRegisteredApiQuery<DailyDigestResponse>(FRONTEND_API_QUERY_DESCRIPTORS.dailyDigest);
 }
 
 export function useDexLiquidity(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQuery<DexLiquidityMap>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.dexLiquidity, overrides);
+  return useRegisteredApiQuery<DexLiquidityMap>(FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidity, overrides);
 }
 
 export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
@@ -150,18 +149,18 @@ export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
 
 export function dexLiquidityHistoryQueryOptions(stablecoinId: string, days = 90) {
   return createRegisteredApiPollingQueryOptions<DexLiquidityHistoryPoint[]>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.dexLiquidityHistory(stablecoinId, days),
+    FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidityHistory(stablecoinId, days),
   );
 }
 
 export function useDigestArchive() {
-  return useRegisteredApiQuery<DigestArchiveResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.digestArchive);
+  return useRegisteredApiQuery<DigestArchiveResponse>(FRONTEND_API_QUERY_DESCRIPTORS.digestArchive);
 }
 
 // Digest snapshots are immutable by date — static cache, no polling needed
 export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotResponse, Error> {
   return useQuery<DigestSnapshotResponse, Error>(
-    createRegisteredStaticQueryOptions(FRONTEND_API_QUERY_RUNTIME_REGISTRY.digestSnapshot(date), {
+    createRegisteredStaticQueryOptions(FRONTEND_API_QUERY_DESCRIPTORS.digestSnapshot(date), {
       enabled: !!date,
       retry: 1,
     }),
@@ -169,16 +168,16 @@ export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotRe
 }
 
 export function useHealth(overrides?: QueryControlOverrides): UseQueryResult<HealthResponse, Error> {
-  return useRegisteredApiQuery<HealthResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.health, { retry: 1, ...overrides });
+  return useRegisteredApiQuery<HealthResponse>(FRONTEND_API_QUERY_DESCRIPTORS.health, { retry: 1, ...overrides });
 }
 
 export function usePegSummary() {
-  return useRegisteredApiQuery<PegSummaryResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.pegSummary);
+  return useRegisteredApiQuery<PegSummaryResponse>(FRONTEND_API_QUERY_DESCRIPTORS.pegSummary);
 }
 
 export function useReportCards(overrides?: QueryControlOverrides) {
   return useRegisteredApiQuery<ReportCardsResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.reportCards,
+    FRONTEND_API_QUERY_DESCRIPTORS.reportCards,
     // M1: report cards back the safety-grade filters on home + screener.
     // Keep the prior cards visible across background refetches so toggling a
     // grade filter doesn't blank the table. Callers can still override.
@@ -187,48 +186,48 @@ export function useReportCards(overrides?: QueryControlOverrides) {
 }
 
 export function useDepegResolver(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQuery<DdrResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.depegResolver, {
+  return useRegisteredApiQuery<DdrResponse>(FRONTEND_API_QUERY_DESCRIPTORS.depegResolver, {
     keepPreviousData: true,
     ...overrides,
   });
 }
 
 export function useDepegResolverReview(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQuery<DdrrResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.depegResolverReview, {
+  return useRegisteredApiQuery<DdrrResponse>(FRONTEND_API_QUERY_DESCRIPTORS.depegResolverReview, {
     keepPreviousData: true,
     ...overrides,
   });
 }
 
 export function useRedemptionBackstops() {
-  return useRegisteredApiQuery<RedemptionBackstopsResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.redemptionBackstops);
+  return useRegisteredApiQuery<RedemptionBackstopsResponse>(FRONTEND_API_QUERY_DESCRIPTORS.redemptionBackstops);
 }
 
 export function useSafetyScoreHistory(stablecoinId: string, days = 3650) {
   return useRegisteredApiQuery<SafetyScoreHistoryResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.safetyScoreHistory(stablecoinId, days),
+    FRONTEND_API_QUERY_DESCRIPTORS.safetyScoreHistory(stablecoinId, days),
     { enabled: !!stablecoinId },
   );
 }
 
 export function useStablecoinCharts() {
-  return useRegisteredApiQuery<StablecoinChartPoint[]>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.stablecoinCharts);
+  return useRegisteredApiQuery<StablecoinChartPoint[]>(FRONTEND_API_QUERY_DESCRIPTORS.stablecoinCharts);
 }
 
 export function useNonUsdShare() {
-  return useRegisteredApiQuery<RegistryNonUsdSharePoint[]>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.nonUsdShare);
+  return useRegisteredApiQuery<RegistryNonUsdSharePoint[]>(FRONTEND_API_QUERY_DESCRIPTORS.nonUsdShare);
 }
 
 export function useStabilityIndex() {
-  return useRegisteredApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.stabilityIndex);
+  return useRegisteredApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndex);
 }
 
 export function useStabilityIndexDetail() {
-  return useRegisteredApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.stabilityIndexDetail);
+  return useRegisteredApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_DESCRIPTORS.stabilityIndexDetail);
 }
 
 export function useUsdsStatus() {
-  return useRegisteredApiQuery<UsdsStatusResponse | null>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.usdsStatus);
+  return useRegisteredApiQuery<UsdsStatusResponse | null>(FRONTEND_API_QUERY_DESCRIPTORS.usdsStatus);
 }
 
 export function useYieldHistory(
@@ -244,30 +243,30 @@ export function useYieldHistory(
   const mode = options?.sourceKey ? "source" : (options?.mode ?? "best");
   const sourceKey = options?.sourceKey ?? null;
   return useRegisteredApiQuery<YieldHistoryResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.yieldHistory(stablecoinId, days, mode, sourceKey),
+    FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory(stablecoinId, days, mode, sourceKey),
     { enabled: options?.enabled ?? !!stablecoinId },
   );
 }
 
 export function useYieldRankings(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQuery<YieldRankingsResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.yieldRankings, overrides);
+  return useRegisteredApiQuery<YieldRankingsResponse>(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankings, overrides);
 }
 
 export function useYieldRankingsSummary() {
-  return useRegisteredApiQuery<YieldRankingsSummaryResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.yieldRankingsSummary);
+  return useRegisteredApiQuery<YieldRankingsSummaryResponse>(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankingsSummary);
 }
 
 export function useYieldAdapterManifest() {
-  return useRegisteredApiQuery<YieldAdapterManifestResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.yieldAdapterManifest);
+  return useRegisteredApiQuery<YieldAdapterManifestResponse>(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest);
 }
 
 export function useStressSignals(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQuery<StressSignalsAllResponse>(FRONTEND_API_QUERY_RUNTIME_REGISTRY.stressSignals, overrides);
+  return useRegisteredApiQuery<StressSignalsAllResponse>(FRONTEND_API_QUERY_DESCRIPTORS.stressSignals, overrides);
 }
 
 export function useStressSignalDetail(stablecoinId: string, days = 30) {
   return useRegisteredApiQuery<StressSignalDetailResponse>(
-    FRONTEND_API_QUERY_RUNTIME_REGISTRY.stressSignalDetail(stablecoinId, days),
+    FRONTEND_API_QUERY_DESCRIPTORS.stressSignalDetail(stablecoinId, days),
     { enabled: !!stablecoinId },
   );
 }

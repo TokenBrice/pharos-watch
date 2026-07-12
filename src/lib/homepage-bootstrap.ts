@@ -1,5 +1,5 @@
 import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";
-import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { resolveSchemaLike, type SchemaLikeSource } from "@/lib/schema-like";
 // Shared version/helpers also consumed by homepage-bootstrap-runtime.ts; this
 // module adds the Zod-validating layer (ApiMetaSchema, descriptor.schema).
@@ -12,7 +12,7 @@ import {
 
 export { HOMEPAGE_BOOTSTRAP_VERSION, type HomepageBootstrapQueryId };
 
-const HOMEPAGE_BOOTSTRAP_DESCRIPTORS = buildHomepageBootstrapDescriptors(FRONTEND_API_QUERY_REGISTRY);
+const HOMEPAGE_BOOTSTRAP_DESCRIPTORS = buildHomepageBootstrapDescriptors(FRONTEND_API_QUERY_DESCRIPTORS);
 
 export interface HomepageBootstrapQuery {
   id: HomepageBootstrapQueryId;

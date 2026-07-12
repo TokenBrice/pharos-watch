@@ -46,6 +46,10 @@ function normalizePostmanRequests(postman: PublicApiArtifactEndpoint["postman"])
   return [postman as PostmanRequestConfig];
 }
 
+function toPostmanPath(path: string): string {
+  return path.replace(/\{([^}]+)\}/g, "{{$1}}");
+}
+
 const requests: PostmanRequestEntry[] = [
   ...PUBLIC_API_ARTIFACT_ENDPOINTS.flatMap((endpoint: PublicApiArtifactEndpoint) => {
     return normalizePostmanRequests(endpoint.postman).map((postman) => ({
@@ -53,7 +57,7 @@ const requests: PostmanRequestEntry[] = [
       order: postman.order,
       request: {
         name: postman.name ?? endpoint.summary,
-        path: postman.path ?? endpoint.path,
+        path: postman.path ?? toPostmanPath(endpoint.path),
         description: postman.description ?? endpoint.description,
         query: postman.query,
         noAuth: postman.noAuth,
