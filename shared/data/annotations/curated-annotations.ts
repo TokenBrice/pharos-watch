@@ -1274,6 +1274,16 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       label: "Coinbase listing liquidity shock — GYEN upward depeg, trading halted",
       severity: "high",
     },
+    {
+      // 2026-07-07 — Secondary price collapse (~-64%) after GMO Trust's
+      // 2026-05-15 wind-down (purchases disabled, redemption-only through
+      // 2026-11-11). Single pin at the price pivot; GYEN frozen 2026-07-08.
+      ts: Date.UTC(2026, 6, 7),
+      kind: "depeg",
+      label: "GMO wind-down — redemption-only GYEN, secondary price collapse",
+      severity: "high",
+      href: "https://stablecoin.z.com/press/",
+    },
   ],
   "hkdap-anchorpoint": [
     {
