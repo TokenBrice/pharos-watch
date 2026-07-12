@@ -210,7 +210,7 @@ Related extracted loaders:
 - Last run exists within `2 * expectedIntervalSec`
 - Last run status is `ok`, or
 - Last run status is `degraded` (warning-only fallback mode), or
-- Last run status is `skipped_neutral` (expected no-op) **and** the latest non-neutral required run in recent history is a fresh `ok`, or
+- Last run status is `skipped_neutral` (expected no-op) **and** the latest non-neutral required run in recent history is a fresh `ok` or `degraded`, or
 - Last run status is `skipped_locked` **and** there is a fresh `ok` run in the same freshness window
 
 Operational nuance: a fresh recovery attempt should not keep `/status` degraded purely because the most recent completed run failed. When a leased cron is actively running and its heartbeat is fresh, availability treats that lane as live again while still preserving the previous completed run in card history.
