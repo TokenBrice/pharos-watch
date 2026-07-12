@@ -6,6 +6,11 @@ import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-
 import { resetRateLimitStateForTests } from "../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
+import {
+  matchesHttpResponseObservation,
+  observeHttpResponse,
+  type HttpResponseObservation,
+} from "../../../scripts/test-utils/http-response-contract";
 
 const VALID_KEY_PEPPER = "test-pepper";
 const VALID_KEY_PREFIX = "0123456789abcdef";
@@ -77,6 +82,157 @@ describe("worker.fetch", () => {
         put: cachePut,
       },
     });
+  });
+
+  async function fetchStablecoinsWithApiKey(method = "GET", database?: D1Database): Promise<Response> {
+    const { ctx, waits } = makeExecutionContext();
+    const response = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        method,
+        headers: { "X-API-Key": VALID_API_KEY },
+      }),
+      makeEnv({ DB: database ?? mockD1(await validKeyDbTables(), { requireMatch: true }) }) as never,
+      ctx,
+    );
+    await Promise.all(waits);
+    return response;
+  }
+
+  const workerResponseContractCases: Array<{
+    name: string;
+    run: () => Promise<Response>;
+    expected: HttpResponseObservation;
+  }> = [
+    {
+      name: "fresh cacheable read",
+      run: async () => {
+        cacheMatch.mockResolvedValueOnce(Response.json({ z: "last", a: "first" }));
+        return fetchStablecoinsWithApiKey();
+      },
+      expected: {
+        status: 200,
+        headers: { "access-control-allow-origin": "https://pharos.watch", "content-type": "application/json" },
+        bodyKind: "json",
+        canonicalBody: { a: "first", z: "last" },
+      },
+    },
+    {
+      name: "degraded no-store response",
+      run: async () => {
+        cacheMatch.mockResolvedValueOnce(
+          new Response(JSON.stringify({ degraded: true }), {
+            headers: {
+              "Cache-Control": "no-store",
+              "Content-Type": "application/json",
+              Warning: '110 - "Response is stale"',
+            },
+          }),
+        );
+        return fetchStablecoinsWithApiKey();
+      },
+      expected: {
+        status: 200,
+        headers: {
+          "access-control-allow-origin": "https://pharos.watch",
+          "cache-control": "no-store",
+          "content-type": "application/json",
+          warning: '110 - "Response is stale"',
+        },
+        bodyKind: "json",
+        canonicalBody: { degraded: true },
+      },
+    },
+    {
+      name: "malformed dynamic path validation",
+      run: () =>
+        worker.fetch(
+          new Request("https://api.pharos.watch/api/og/stablecoin/%E0%A4%A"),
+          makeEnv() as never,
+          makeExecutionContext().ctx,
+        ),
+      expected: {
+        status: 400,
+        headers: { "access-control-allow-origin": "https://pharos.watch", "content-type": "text/plain" },
+        bodyKind: "text",
+        canonicalBody: "Malformed URI",
+      },
+    },
+    {
+      name: "missing API key authentication",
+      run: () =>
+        worker.fetch(
+          new Request("https://api.pharos.watch/api/stablecoins"),
+          makeEnv() as never,
+          makeExecutionContext().ctx,
+        ),
+      expected: {
+        status: 401,
+        headers: { "access-control-allow-origin": "https://pharos.watch", "content-type": "application/json" },
+        bodyKind: "json",
+        canonicalBody: {
+          error: "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
+        },
+      },
+    },
+    {
+      name: "read-only method enforcement",
+      run: () => fetchStablecoinsWithApiKey("POST"),
+      expected: {
+        status: 405,
+        headers: {
+          "access-control-allow-origin": "https://pharos.watch",
+          allow: "GET",
+          "content-type": "application/json",
+        },
+        bodyKind: "json",
+        canonicalBody: { error: "Method not allowed" },
+      },
+    },
+    {
+      name: "API key dependency outage",
+      run: () =>
+        fetchStablecoinsWithApiKey(
+          "GET",
+          mockD1(
+            [
+              {
+                match: "FROM api_keys",
+                matchBinds: [VALID_KEY_PREFIX],
+                rows: [],
+                throwError: new Error("api key lookup unavailable"),
+              },
+              { match: "INSERT INTO api_request_consumer_stats", rows: [], runMeta: { changes: 1 } },
+              { match: "DELETE FROM api_request_consumer_stats", rows: [], runMeta: { changes: 0 } },
+              { match: "DELETE FROM api_key_request_stats", rows: [], runMeta: { changes: 0 } },
+            ],
+            { requireMatch: true },
+          ),
+        ),
+      expected: {
+        status: 503,
+        headers: {
+          "access-control-allow-origin": "https://pharos.watch",
+          "content-type": "application/json",
+          "retry-after": "60",
+        },
+        bodyKind: "json",
+        canonicalBody: { error: "Public API temporarily unavailable" },
+      },
+    },
+  ];
+
+  it.each(workerResponseContractCases)("keeps the response contract for $name", async ({ run, expected }) => {
+    const observed = await observeHttpResponse(await run(), [
+      "Access-Control-Allow-Origin",
+      "Allow",
+      "Cache-Control",
+      "Content-Type",
+      "Retry-After",
+      "Warning",
+    ]);
+
+    expect(observed).toEqual(expected);
+    expect(matchesHttpResponseObservation(observed, expected)).toBe(true);
   });
 
   it("returns 204 for CORS preflight", async () => {

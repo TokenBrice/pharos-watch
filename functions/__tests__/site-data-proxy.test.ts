@@ -3,6 +3,11 @@ import { makeTestD1Database } from "../../scripts/test-utils/d1";
 import { onRequest } from "../_site-data/[[path]].ts";
 import { resetSiteDataRequestAttributionStateForTests } from "../lib/request-attribution";
 import { MAX_PROXY_RESPONSE_BODY_BYTES } from "../lib/upstream-proxy";
+import {
+  matchesHttpResponseObservation,
+  observeHttpResponse,
+  type HttpResponseObservation,
+} from "../../scripts/test-utils/http-response-contract";
 
 function makeEnv(db = makeTestD1Database(), overrides: Record<string, unknown> = {}) {
   return {
@@ -49,6 +54,44 @@ describe("site-data proxy", () => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("keeps the response contract for site-data pass-through", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ z: "last", a: "first" }), {
+            headers: {
+              "Cache-Control": "public, max-age=60",
+              "Content-Type": "application/json",
+              "X-Data-Age": "12",
+            },
+          }),
+      ),
+    );
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "stablecoins" },
+    });
+    const observed = await observeHttpResponse(response, ["Cache-Control", "Content-Type", "X-Data-Age"]);
+    const expected: HttpResponseObservation = {
+      status: 200,
+      headers: {
+        "cache-control": "public, max-age=60",
+        "content-type": "application/json",
+        "x-data-age": "12",
+      },
+      bodyKind: "json",
+      canonicalBody: { a: "first", z: "last" },
+    };
+
+    expect(observed).toEqual(expected);
+    expect(matchesHttpResponseObservation(observed, expected)).toBe(true);
   });
 
   it("rejects requests without Origin or Referer", async () => {

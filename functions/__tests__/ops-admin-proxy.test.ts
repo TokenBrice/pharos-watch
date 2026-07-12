@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS, getEndpointOpsProxyTimeoutMs } from "@shared/lib/api-endpoints";
 import { onRequest } from "../api/admin/[[path]].ts";
+import {
+  matchesHttpResponseObservation,
+  observeHttpResponse,
+  type HttpResponseObservation,
+} from "../../scripts/test-utils/http-response-contract";
 
 const { verifyAccessJwtUserIdentity } = vi.hoisted(() => ({
   verifyAccessJwtUserIdentity: vi.fn(),
@@ -52,6 +57,48 @@ describe("ops admin proxy", () => {
     vi.unstubAllGlobals();
     verifyAccessJwtUserIdentity.mockReset();
     verifyAccessJwtUserIdentity.mockResolvedValue({ email: "operator@pharos.watch", subject: "operator-subject" });
+  });
+
+  it("keeps the response contract for operator no-store policy", async () => {
+    verifyAccessJwtUserIdentity.mockResolvedValueOnce({
+      email: "operator@pharos.watch",
+      subject: "operator-subject",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ z: "last", a: "first" }), {
+            status: 200,
+            headers: { "Cache-Control": "public, max-age=300", "Content-Type": "application/json" },
+          }),
+      ),
+    );
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
+      env: BASE_ENV,
+      params: { path: "status" },
+    });
+    const observed = await observeHttpResponse(response, [
+      "Cache-Control",
+      "CDN-Cache-Control",
+      "Cloudflare-CDN-Cache-Control",
+      "Content-Type",
+    ]);
+    const expected: HttpResponseObservation = {
+      status: 200,
+      headers: {
+        "cache-control": "private, no-store",
+        "cdn-cache-control": "no-store",
+        "cloudflare-cdn-cache-control": "no-store",
+        "content-type": "application/json",
+      },
+      bodyKind: "json",
+      canonicalBody: { a: "first", z: "last" },
+    };
+
+    expect(observed).toEqual(expected);
+    expect(matchesHttpResponseObservation(observed, expected)).toBe(true);
   });
 
   it("rejects requests from non-ops hosts", async () => {

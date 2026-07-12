@@ -144,6 +144,7 @@ export const CRITICAL_TEST_FILES = [
 export const CRITICAL_CONTRACT_TEST_FILES = [
   "src/lib/__tests__/api-fetch-contracts.test.ts",
   "src/lib/__tests__/api-endpoints.test.ts",
+  "worker/src/__tests__/index.fetch.test.ts",
   "worker/src/api/__tests__/router-contract.test.ts",
   "worker/src/api/__tests__/cache-passthrough.test.ts",
   "worker/src/api/__tests__/peg-summary.test.ts",

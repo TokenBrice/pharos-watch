@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { TAGS, summarizeViolations } from "./axe-shared";
+import { installHydratedApiFixtures } from "./hydrated-api-fixtures";
 
 /**
  * Mythos P1-14 (second half): hydrated-state axe scans.
@@ -29,13 +30,10 @@ test.describe.configure({ timeout: 90_000 });
 // `[data-slot="skeleton"]` cells — the same signal the mobile smoke uses).
 async function waitForHydratedTableRows(page: Page): Promise<void> {
   await expect
-    .poll(
-      () =>
-        page
-          .locator('tbody tr:visible', { hasNot: page.locator('[data-slot="skeleton"]') })
-          .count(),
-      { timeout: HYDRATION_TIMEOUT_MS, message: "hydrated table rows never appeared" },
-    )
+    .poll(() => page.locator("tbody tr:visible", { hasNot: page.locator('[data-slot="skeleton"]') }).count(), {
+      timeout: HYDRATION_TIMEOUT_MS,
+      message: "hydrated table rows never appeared",
+    })
     .toBeGreaterThan(0);
 }
 
@@ -55,11 +53,12 @@ async function waitForHydratedDepegBoardRows(page: Page): Promise<void> {
 const ROUTES: ReadonlyArray<{
   path: string;
   tier: string;
+  fixtureSet?: "depeg" | "yield";
   ready: (page: Page) => Promise<void>;
 }> = [
-  { path: "/depeg", tier: "analytics", ready: waitForHydratedDepegBoardRows },
+  { path: "/depeg", tier: "analytics", fixtureSet: "depeg", ready: waitForHydratedDepegBoardRows },
   { path: "/screener", tier: "power-user", ready: waitForHydratedTableRows },
-  { path: "/yield", tier: "analytics", ready: waitForHydratedTableRows },
+  { path: "/yield", tier: "analytics", fixtureSet: "yield", ready: waitForHydratedTableRows },
   {
     path: "/stablecoin/usdt-tether",
     tier: "detail",
@@ -75,14 +74,14 @@ const ROUTES: ReadonlyArray<{
 
 for (const route of ROUTES) {
   test(`a11y hydrated: ${route.path} (${route.tier})`, async ({ page }) => {
+    if (route.fixtureSet) await installHydratedApiFixtures(page, route.fixtureSet);
     await page.goto(route.path);
     await page.waitForLoadState("domcontentloaded");
     await route.ready(page);
 
     const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
-    expect(
-      summarizeViolations(`${route.path}#hydrated`, results.violations),
-      "axe-core violations (hydrated)",
-    ).toEqual([]);
+    expect(summarizeViolations(`${route.path}#hydrated`, results.violations), "axe-core violations (hydrated)").toEqual(
+      [],
+    );
   });
 }
