@@ -167,14 +167,6 @@
     "reviewAfter": "2026-10-11",
     "nextAction": "Move inventory controls, dialogs, table, and detail editor into focused component modules while keeping the panel-facing props stable."
   },
-  "worker/src/cron/dispatch-telegram-routing.ts": {
-    "disposition": "queued-p4",
-    "notes": "Telegram dispatch routing combines alert grouping, subscriber routing, burst collapse, queue planning, formatting selection, and fresh-send partitioning. Its branch hotspot should be reduced along those established routing phases.",
-    "owner": "telegram-delivery",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Extract burst-collapse and subscriber queue-planning phases from formatting and fresh-send partitioning while preserving routing outputs."
-  },
   "worker/src/cron/yield-sync/evaluation.ts": {
     "disposition": "queued-p4",
     "notes": "Yield evaluation still coordinates source qualification, benchmark policy, arbitration, history, and cooperative progress reporting. The long evaluation function needs a dedicated split that preserves deterministic ranking behavior.",

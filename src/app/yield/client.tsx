@@ -4,12 +4,11 @@ import { useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { useYieldAdapterManifest, useYieldRankingsSummary } from "@/hooks/api-hooks";
+import { QueryErrorNotice } from "@/components/query-error-notice";
+import { useYieldRankingsSummary } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLogos } from "@/hooks/use-logos";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
-import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
 import { YieldRiskBudgetSlider } from "@/components/yield-risk-budget-slider";
@@ -19,6 +18,7 @@ import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
 import { ReferenceRatesStrip } from "@/app/yield/reference-rates-strip";
 import { YieldCoinIndex } from "@/app/yield/coin-index";
+import { YieldDataHealth } from "@/app/yield/yield-data-health";
 import {
   buildYieldViewModel,
   getActiveFilterSummaries,
@@ -38,31 +38,6 @@ import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { YIELD_WORKBENCH_FALLBACK_PARAM, parseYieldWorkbenchFallbackId } from "@shared/lib/yield-workbench-fallback";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
-
-interface YieldFreshnessBannerProps {
-  dataUpdatedAt: number;
-  error: unknown;
-  hasData: boolean;
-  meta: StaleQuery["meta"];
-}
-
-function YieldFreshnessBanner({ dataUpdatedAt, error, hasData, meta }: YieldFreshnessBannerProps) {
-  return <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData, meta }]} />;
-}
-
-function YieldAdapterManifestStatus() {
-  const { data, isLoading, error, refetch } = useYieldAdapterManifest();
-  if (isLoading) return null;
-  return (
-    <QueryErrorNotice
-      error={error}
-      hasData={!!data}
-      onRetry={() => {
-        void refetch();
-      }}
-    />
-  );
-}
 
 interface HeroHighlightRowProps {
   label: string;
@@ -480,8 +455,7 @@ export function YieldClient() {
 
   return (
     <div className="space-y-6">
-      <YieldFreshnessBanner dataUpdatedAt={dataUpdatedAt} error={error} hasData={!!data} meta={meta} />
-      <YieldAdapterManifestStatus />
+      <YieldDataHealth dataUpdatedAt={dataUpdatedAt} error={error} hasData={!!data} meta={meta} />
       <YieldApiWarnings warnings={data.warnings} />
       <SelectorHandoffNotice visible={arrivedFromSelector} />
       <YieldWorkbenchFallbackNotice stablecoinId={workbenchFallbackId} />

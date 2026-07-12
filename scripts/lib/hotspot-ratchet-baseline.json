@@ -205,9 +205,9 @@
     "branchCount": 3
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 634,
-    "maxFunctionLines": 206,
-    "branchCount": 48
+    "fileLines": 642,
+    "maxFunctionLines": 215,
+    "branchCount": 49
   },
   "worker/src/cron/compute-dews.ts": {
     "fileLines": 261,
@@ -253,6 +253,11 @@
     "fileLines": 32,
     "maxFunctionLines": 0,
     "branchCount": 0
+  },
+  "worker/src/cron/yield-sync/vaults-fyi.ts": {
+    "fileLines": 801,
+    "maxFunctionLines": 209,
+    "branchCount": 98
   },
   "worker/src/lib/live-reserves-store.ts": {
     "fileLines": 7,
