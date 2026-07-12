@@ -3,5 +3,5 @@
   "compilerOptions": {
     "incremental": false
   },
-  "include": ["./d1-read-replication-benchmark.ts"]
+  "include": ["./d1-read-replication-benchmark.ts", "./d1-read-replication-benchmark.test.ts"]
 }

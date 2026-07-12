@@ -144,11 +144,20 @@ const d1ReadReplicationBenchmark = {
         },
       });
     } catch (error) {
-      return json({
+      console.error("[d1-read-replication-benchmark] query failed", {
         mode,
         case: benchmarkCase,
-        error: error instanceof Error ? error.message : String(error),
-      }, 500);
+        asOf,
+        error,
+      });
+      return json(
+        {
+          mode,
+          case: benchmarkCase,
+          error: "Benchmark query failed",
+        },
+        500,
+      );
     }
   },
 };
