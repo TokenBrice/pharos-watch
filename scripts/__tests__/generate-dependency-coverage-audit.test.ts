@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "../../shared/types";
+import type { LiveReserveAdapterKey, LiveReservesConfig } from "../../shared/types/live-reserves";
 import {
   buildDependencyCoverageAudit,
   evaluateDependencyCoverageBaseline,
@@ -7,6 +8,15 @@ import {
   renderDependencyCoverageAuditMarkdown,
   runCli,
 } from "../maintenance/generate-dependency-coverage-audit";
+
+function liveConfig(adapter: LiveReserveAdapterKey): LiveReservesConfig {
+  return {
+    adapter,
+    version: 1,
+    semantics: "collateral-mix",
+    inputs: { primary: { kind: "http-json", url: `https://example.test/${adapter}.json` } },
+  };
+}
 
 function coin(input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">): StablecoinMeta {
   return {
@@ -27,6 +37,10 @@ function coin(input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">): Stab
     ...(input.tradedContracts ? { tradedContracts: input.tradedContracts } : {}),
     ...(input.reserves ? { reserves: input.reserves } : {}),
     ...(input.dependencies ? { dependencies: input.dependencies } : {}),
+    ...(input.dependencyReview ? { dependencyReview: input.dependencyReview } : {}),
+    ...(input.reserveReview ? { reserveReview: input.reserveReview } : {}),
+    ...(input.liveReservesConfig ? { liveReservesConfig: input.liveReservesConfig } : {}),
+    ...(input.status ? { status: input.status } : {}),
     ...(input.variantOf ? { variantOf: input.variantOf } : {}),
   };
 }
@@ -43,6 +57,14 @@ const activeCoins: StablecoinMeta[] = [
     id: "manual-usdt",
     symbol: "mUSDT",
     dependencies: [{ id: "usdt-tether", weight: 0.5, type: "mechanism" }],
+    dependencyReview: {
+      reviewedAt: "2026-07-12",
+      reviewer: "fixture reviewer",
+      confidence: "verified",
+      sources: [{ label: "Docs", url: "https://example.test/manual" }],
+      rationale: "Fixture manual dependency review.",
+      relationships: [{ id: "usdt-tether", type: "mechanism", reason: "Fixture mechanism dependency." }],
+    },
   }),
   coin({
     id: "cash-only",
@@ -89,6 +111,12 @@ describe("generate-dependency-coverage-audit", () => {
       manualOnlyDependencyCount: 1,
       reserveSlicesMissingCoinId: 2,
       depTypeWithoutCoinIdWarnings: 1,
+      staticSelfEdgeCount: 0,
+      staticDuplicateEdgeCount: 0,
+      staticStronglyConnectedComponentCount: 0,
+      overweightEffectiveSetCount: 0,
+      unknownTargetEdgeCount: 0,
+      manualDependencyReviewGapCount: 0,
       missingCandidateCount: 2,
       l2beatDeploymentContextCount: 1,
       l2beatLayer3DeploymentContextCount: 0,
@@ -103,6 +131,7 @@ describe("generate-dependency-coverage-audit", () => {
         dependencyId: "usdt-tether",
         dependencyType: "mechanism",
         weight: 0.5,
+        reviewStatus: "reviewed",
       },
     ]);
     expect(audit.depTypeWithoutCoinIdWarnings).toEqual([
@@ -155,6 +184,339 @@ describe("generate-dependency-coverage-audit", () => {
     ]);
   });
 
+  it("finds raw-suppressed self edges, effective duplicates, SCCs, authored repeats, and true overweight sets", () => {
+    const defectCoins = [
+      coin({ id: "self", dependencies: [{ id: "self", weight: 1, type: "collateral" }] }),
+      coin({ id: "cycle-a", dependencies: [{ id: "cycle-b", weight: 1, type: "mechanism" }] }),
+      coin({ id: "cycle-b", dependencies: [{ id: "cycle-a", weight: 1, type: "mechanism" }] }),
+      coin({ id: "dup-target" }),
+      coin({
+        id: "duplicate",
+        dependencies: [
+          { id: "dup-target", weight: 0.25, type: "collateral" },
+          { id: "dup-target", weight: 0.25, type: "collateral" },
+        ],
+      }),
+      coin({ id: "target-a" }),
+      coin({ id: "target-b" }),
+      coin({
+        id: "overweight",
+        dependencies: [
+          { id: "target-a", weight: 0.7, type: "collateral" },
+          { id: "target-b", weight: 0.4, type: "mechanism" },
+        ],
+      }),
+      coin({
+        id: "floating-one",
+        dependencies: [
+          { id: "target-a", weight: 0.1, type: "collateral" },
+          { id: "target-b", weight: 0.2, type: "mechanism" },
+          { id: "dup-target", weight: 0.7, type: "wrapper" },
+        ],
+      }),
+      coin({
+        id: "split-reserve",
+        reserves: [
+          { name: "Route one", pct: 40, risk: "low", coinId: "target-a" },
+          { name: "Route two", pct: 30, risk: "medium", coinId: "target-a" },
+        ],
+      }),
+    ];
+    const audit = buildDependencyCoverageAudit({ activeCoins: defectCoins });
+
+    expect(audit.summary).toMatchObject({
+      staticSelfEdgeCount: 1,
+      staticDuplicateEdgeCount: 1,
+      staticStronglyConnectedComponentCount: 1,
+      rawAuthoredDuplicateCount: 2,
+      overweightEffectiveSetCount: 1,
+    });
+    expect(audit.staticGraphDiagnostics.stronglyConnectedComponents).toEqual([["cycle-a", "cycle-b"]]);
+    expect(audit.rawAuthoredDuplicates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ coinId: "duplicate", source: "dependencies", indices: [0, 1] }),
+      expect.objectContaining({ coinId: "split-reserve", source: "reserves", indices: [0, 1] }),
+    ]));
+    expect(audit.overweightEffectiveSets.map((row) => row.coinId)).toEqual(["overweight"]);
+  });
+
+  it("reports runtime lifecycle, scoreability, P1b provenance, availability, and adapter review", () => {
+    const runtimeCoins = [
+      coin({ id: "scoreable", symbol: "GOOD" }),
+      coin({ id: "active-nr", symbol: "NR" }),
+      coin({ id: "dependent", symbol: "DEP", liveReservesConfig: liveConfig("accountable") }),
+      coin({ id: "legacy", symbol: "LEG" }),
+    ];
+    const trackedCoins = [
+      ...runtimeCoins,
+      coin({ id: "prelaunch", symbol: "PRE", status: "pre-launch" }),
+      coin({ id: "frozen", symbol: "FRZ", status: "frozen" }),
+    ];
+    const reportCards = {
+      cards: [
+        { id: "scoreable", overallScore: 82 },
+        { id: "active-nr", overallScore: null },
+        {
+          id: "dependent",
+          overallScore: 70,
+          rawInputs: {
+            dependencies: [
+              { id: "scoreable", weight: 0.5, type: "collateral" },
+              { id: "active-nr", weight: 0.2, type: "mechanism" },
+            ],
+            dependencySource: "live-reserve",
+            dependencyBaseSource: "live-reserve",
+            dependencyFromLive: true,
+            mappedLiveReserveWeight: 0.7,
+            dependencyFallbackReason: null,
+          },
+          dimensions: {
+            dependencyRisk: {
+              dependencyDiagnostics: {
+                availableWeight: 0.5,
+                unavailableWeight: 0.2,
+                contributions: [
+                  { id: "scoreable", type: "collateral", available: true },
+                  { id: "active-nr", type: "mechanism", available: false },
+                ],
+              },
+            },
+          },
+        },
+        { id: "legacy", overallScore: 60, rawInputs: {}, dimensions: { dependencyRisk: {} } },
+      ],
+      dependencyGraph: {
+        edges: [
+          { from: "scoreable", to: "dependent", weight: 0.5, type: "collateral" },
+          { from: "active-nr", to: "dependent", weight: 0.2, type: "mechanism" },
+          { from: "prelaunch", to: "dependent", weight: 0.1, type: "collateral" },
+          { from: "frozen", to: "dependent", weight: 0.1, type: "collateral" },
+          { from: "missing", to: "dependent", weight: 0.1, type: "collateral" },
+        ],
+      },
+    };
+    const targetDispositions = [
+      {
+        targetId: "active-nr",
+        expectedLifecycle: "active" as const,
+        action: "retain-reviewed-link" as const,
+        reviewer: "reviewer",
+        reviewedAt: "2026-07-12",
+        sources: [{ label: "Docs", url: "https://example.test/nr" }],
+        rationale: "The upstream is active but its current report card is NR.",
+      },
+      {
+        targetId: "prelaunch",
+        expectedLifecycle: "pre-launch" as const,
+        action: "retain-reviewed-link" as const,
+        reviewer: "reviewer",
+        reviewedAt: "2026-07-12",
+        sources: [{ label: "Docs", url: "https://example.test/pre" }],
+        rationale: "The pre-launch upstream relationship is evidenced.",
+      },
+      {
+        targetId: "frozen",
+        expectedLifecycle: "frozen" as const,
+        action: "retain-reviewed-link" as const,
+        reviewer: "reviewer",
+        reviewedAt: "2026-07-12",
+        sources: [{ label: "Docs", url: "https://example.test/frozen" }],
+        rationale: "The frozen upstream relationship remains historically correct.",
+      },
+    ];
+    const adapterMappingReviews = [{
+      adapter: "accountable",
+      reviewer: "reviewer",
+      reviewedAt: "2026-07-12",
+      sourceFiles: ["worker/src/cron/reserve-adapters/accountable.ts"],
+      rationale: "Fixture adapter mapping review.",
+    }];
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: runtimeCoins,
+      trackedCoins,
+      reportCards,
+      targetDispositions,
+      adapterMappingReviews,
+    });
+
+    expect(audit.dependencyEdges.map((row) => [row.from, row.targetLifecycle, row.targetScoreability])).toEqual([
+      ["active-nr", "active", "active-nr"],
+      ["frozen", "frozen", "frozen"],
+      ["missing", "unknown", "unknown-target"],
+      ["prelaunch", "pre-launch", "pre-launch"],
+      ["scoreable", "active", "scoreable"],
+    ]);
+    expect(audit.dependencyProvenance.find((row) => row.coinId === "dependent")).toMatchObject({
+      source: "live-reserve",
+      baseSource: "live-reserve",
+      availableWeight: 0.5,
+      unavailableWeight: 0.2,
+      mappedLiveReserveShare: 0.7,
+      unmappedLiveReserveShare: 0.30000000000000004,
+    });
+    expect(audit.dependencyProvenance.find((row) => row.coinId === "legacy")).toMatchObject({
+      source: null,
+      availableWeight: null,
+      mappedLiveReserveShare: null,
+    });
+    expect(audit.adapterMappingReviewGaps).toEqual([]);
+    expect(audit.summary).toMatchObject({
+      unknownTargetEdgeCount: 1,
+      unavailableTargetEdgeCount: 4,
+      unavailableTargetDispositionGapCount: 1,
+      adapterMappingReviewGapCount: 0,
+    });
+  });
+
+  it("uses delimiter matchers, preserves ambiguous candidates, excludes generic symbols, and validates reserve dispositions", () => {
+    const subject = coin({
+      id: "subject",
+      symbol: "SUB",
+      reserves: [
+        { name: "USDC vault", pct: 20, risk: "low" },
+        { name: "CASH reserve", pct: 20, risk: "very-low" },
+        { name: "MUSDCX strategy", pct: 15, risk: "medium" },
+        { name: "Stablecoin basket", pct: 15, risk: "low" },
+        { name: "External CDP position", pct: 10, risk: "medium" },
+        { name: "Mystery dependency", pct: 10, risk: "high", depType: "mechanism" },
+        { name: "USDC changed slice", pct: 10, risk: "low" },
+      ],
+      reserveReview: {
+        reviewedAt: "2026-07-12",
+        reviewer: "fixture reviewer",
+        confidence: "manual-review",
+        sources: [{ label: "Reserve report", url: "https://example.test/reserves" }],
+        rationale: "Fixture non-link review.",
+        compositionBasis: "Fixture reserve report",
+        scope: "selected-slices",
+        knownUnknownExposure: "The basket is not split.",
+        nonLinkDispositions: [
+          {
+            reserveIndex: 0,
+            reserveName: "USDC vault",
+            disposition: "insufficient-evidence",
+            rationale: "The label alone is not enough to prove the upstream claim.",
+            candidateCoinIds: ["usdc-circle", "usdc-other"],
+          },
+          {
+            reserveIndex: 6,
+            reserveName: "Old USDC slice",
+            disposition: "not-applicable",
+            rationale: "This fingerprint is intentionally stale for the audit fixture.",
+          },
+          {
+            reserveIndex: 0,
+            reserveName: "USDC vault",
+            disposition: "not-applicable",
+            rationale: "This duplicate fingerprint is intentionally stale for the audit fixture.",
+          },
+        ],
+      },
+    });
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: [subject],
+      trackedCoins: [
+        subject,
+        coin({ id: "usdc-circle", symbol: "USDC" }),
+        coin({ id: "usdc-other", symbol: "USDC" }),
+        coin({ id: "cash-generic", symbol: "CASH" }),
+        coin({ id: "cdp-generic", symbol: "CDP" }),
+      ],
+    });
+
+    expect(audit.materialUnlinkedReserveSlices.map((row) => row.reserveIndex)).toEqual([5, 0, 3, 6]);
+    expect(audit.materialUnlinkedReserveSlices.find((row) => row.reserveIndex === 0)).toMatchObject({
+      candidateCoinIds: ["usdc-circle", "usdc-other"],
+      matchedSymbols: ["USDC"],
+      reviewStatus: "unresolved",
+      disposition: "insufficient-evidence",
+    });
+    expect(audit.materialUnlinkedReserveSlices.find((row) => row.reserveIndex === 6)?.reviewStatus).toBe("unreviewed");
+    expect(audit.reserveDispositions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ reserveIndex: 0, reviewStatus: "unresolved" }),
+      expect.objectContaining({ reserveIndex: 0, reviewStatus: "stale" }),
+      expect.objectContaining({ reserveIndex: 6, reviewStatus: "stale", currentReserveName: "USDC changed slice" }),
+    ]));
+    expect(audit.summary).toMatchObject({
+      materialUnlinkedReserveSliceCount: 4,
+      unresolvedMaterialReserveSliceCount: 4,
+      staleReserveDispositionCount: 2,
+    });
+  });
+
+  it("surfaces exact manual dependency review gaps and stale relationships", () => {
+    const missing = coin({
+      id: "missing-review",
+      dependencies: [{ id: "upstream", weight: 1, type: "mechanism" }],
+    });
+    const stale = coin({
+      id: "stale-review",
+      dependencies: [{ id: "upstream", weight: 1, type: "collateral" }],
+      dependencyReview: {
+        reviewedAt: "2026-07-12",
+        reviewer: "fixture reviewer",
+        confidence: "verified",
+        sources: [{ label: "Docs", url: "https://example.test/manual" }],
+        rationale: "Fixture review with an outdated relationship.",
+        relationships: [{ id: "different", type: "collateral", reason: "Stale fixture row." }],
+      },
+    });
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: [coin({ id: "upstream" }), coin({ id: "different" }), missing, stale],
+    });
+
+    expect(audit.manualDependencyReviewGaps).toEqual([
+      expect.objectContaining({ coinId: "missing-review", dependencyId: "upstream", reason: "missing-review" }),
+      expect.objectContaining({ coinId: "stale-review", dependencyId: "different", reason: "stale-relationship" }),
+      expect.objectContaining({ coinId: "stale-review", dependencyId: "upstream", reason: "missing-relationship" }),
+    ]);
+    expect(audit.summary.manualDependencyReviewGapCount).toBe(3);
+  });
+
+  it("validates unavailable-target and dynamic adapter registries against current runtime facts", () => {
+    const mapped = coin({ id: "mapped", liveReservesConfig: liveConfig("accountable") });
+    const upstream = coin({ id: "upstream" });
+    const orphan = coin({ id: "orphan" });
+    const disposition = (targetId: string) => ({
+      targetId,
+      expectedLifecycle: "pre-launch" as const,
+      action: "retain-reviewed-link" as const,
+      reviewer: "reviewer",
+      reviewedAt: "2026-07-12",
+      sources: [{ label: "Docs", url: "https://example.test/target" }],
+      rationale: "Fixture reviewed unavailable target.",
+    });
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: [mapped, upstream, orphan],
+      trackedCoins: [mapped, upstream, orphan],
+      targetDispositions: [disposition("upstream"), disposition("orphan")],
+      adapterMappingReviews: [],
+      reportCards: {
+        cards: [
+          { id: "upstream", overallScore: 80 },
+          {
+            id: "mapped",
+            overallScore: 70,
+            rawInputs: { dependencyBaseSource: "live-reserve" },
+            dimensions: { dependencyRisk: {} },
+          },
+        ],
+        dependencyGraph: {
+          edges: [{ from: "upstream", to: "mapped", weight: 1, type: "collateral" }],
+        },
+      },
+    });
+
+    expect(audit.targetDispositionValidationIssues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ targetId: "upstream", reason: "lifecycle-mismatch" }),
+      expect.objectContaining({ targetId: "upstream", reason: "target-now-scoreable" }),
+      expect.objectContaining({ targetId: "orphan", reason: "lifecycle-mismatch" }),
+      expect.objectContaining({ targetId: "orphan", reason: "no-current-edge" }),
+    ]));
+    expect(audit.adapterMappingReviewGaps).toEqual([
+      expect.objectContaining({ coinId: "mapped", adapter: "accountable", reason: "missing-review" }),
+    ]);
+  });
+
   it("renders the reviewer-facing sections", () => {
     const audit = buildDependencyCoverageAudit({
       activeCoins,
@@ -166,6 +528,11 @@ describe("generate-dependency-coverage-audit", () => {
 
     expect(markdown).toContain("# Dependency Coverage Audit");
     expect(markdown).toContain("- Static dependency edges: 2");
+    expect(markdown).toContain("## Graph Diagnostics");
+    expect(markdown).toContain("## Dependency Edges And Target Status");
+    expect(markdown).toContain("## Dependency Provenance");
+    expect(markdown).toContain("## Material Stablecoin-Looking Unlinked Reserves");
+    expect(markdown).toContain("## Adapter Mapping Review Gaps");
     expect(markdown).toContain("## Highest-Market-Cap Missing Candidates");
     expect(markdown).toContain("LONE (lone-high)");
     expect(markdown).toContain("## depType Without coinId Warnings");
@@ -173,28 +540,39 @@ describe("generate-dependency-coverage-audit", () => {
     expect(markdown).toContain("Base Chain (base)");
   });
 
-  it("evaluates the light ratchet baseline", () => {
-    const audit = buildDependencyCoverageAudit({ activeCoins });
+  it("uses structural invariants and reviewed-gap ratchets without requiring edge-count growth", () => {
+    const withEdge = buildDependencyCoverageAudit({
+      activeCoins: [
+        coin({ id: "upstream", symbol: "UP" }),
+        coin({ id: "dependent", symbol: "DEP", reserves: [{ name: "UP", pct: 100, risk: "low", coinId: "upstream" }] }),
+      ],
+    });
+    const withoutWrongEdge = buildDependencyCoverageAudit({
+      activeCoins: [coin({ id: "upstream", symbol: "UP" }), coin({ id: "dependent", symbol: "DEP" })],
+    });
+    const baseline = {
+      unresolvedMaterialReserveSlices: 0,
+      manualDependencyReviewGaps: 0,
+      staleReserveDispositions: 0,
+      unavailableTargetDispositionGaps: 0,
+      targetDispositionValidationIssues: 0,
+      adapterMappingReviewGaps: 0,
+    };
 
-    expect(evaluateDependencyCoverageBaseline(audit, {
-      staticEdgeCount: 2,
-      participantCount: 4,
-      dependentCount: 2,
-      reserveSlicesMissingCoinId: 2,
-      depTypeWithoutCoinIdWarnings: 1,
-    })).toEqual([]);
-    expect(evaluateDependencyCoverageBaseline(audit, {
-      staticEdgeCount: 3,
-      participantCount: 5,
-      dependentCount: 3,
-      reserveSlicesMissingCoinId: 1,
-      depTypeWithoutCoinIdWarnings: 0,
-    })).toEqual([
-      "static edge count regressed from 3 to 2",
-      "static participant count regressed from 5 to 4",
-      "static dependent count regressed from 3 to 2",
-      "reserve slices missing coinId increased from 1 to 2",
-      "depType without coinId warnings increased from 0 to 1",
+    expect(withEdge.summary.staticEdgeCount).toBe(1);
+    expect(withoutWrongEdge.summary.staticEdgeCount).toBe(0);
+    expect(evaluateDependencyCoverageBaseline(withEdge, baseline)).toEqual([]);
+    expect(evaluateDependencyCoverageBaseline(withoutWrongEdge, baseline)).toEqual([]);
+
+    const linkageFailure = buildDependencyCoverageAudit({
+      activeCoins: [coin({
+        id: "broken",
+        reserves: [{ name: "Stablecoin basket", pct: 100, risk: "low", depType: "mechanism" }],
+      })],
+    });
+    expect(evaluateDependencyCoverageBaseline(linkageFailure, baseline)).toEqual([
+      "depType without coinId invariant failed with 1 finding",
+      "unresolved material reserve slices increased from 0 to 1",
     ]);
   });
 
