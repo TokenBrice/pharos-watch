@@ -9,7 +9,6 @@ import {
   beginScheduledCheckpoint,
   claimNextScheduledCheckpointRecovery,
   loadScheduledCheckpoint,
-  markScheduledCheckpointDomainAttempt,
   markScheduledCheckpointItemStarted,
   inspectScheduledCheckpointRecoveryEligibility,
   prepareEligibleScheduledCheckpointRecoveries,
@@ -132,11 +131,11 @@ describe("scheduled recovery checkpoint", () => {
     });
     await markScheduledCheckpointItemStarted(db, checkpoint, {
       itemKey: "coin-b",
+      domainAttemptId: "domain-attempt-1",
       itemsDone: 147,
       itemsTotal: 276,
       nowSec: 1_010,
     });
-    await markScheduledCheckpointDomainAttempt(db, checkpoint, "coin-b", "domain-attempt-1", 1_011);
     sqlite.prepare(
       `INSERT INTO reserve_sync_state (
          stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_status,
@@ -442,6 +441,7 @@ describe("scheduled recovery checkpoint", () => {
     expect(second).toMatchObject({ attemptNo: 2, state: "recovering" });
     await markScheduledCheckpointItemStarted(db, second!, {
       itemKey: "coin-c",
+      domainAttemptId: "domain-attempt-3",
       itemsDone: 200,
       itemsTotal: 276,
       recoveryLeaseUntil: 2_160,
@@ -462,6 +462,7 @@ describe("scheduled recovery checkpoint", () => {
       sourceAttemptNo: 2,
       state: "recovering",
       nextItemKey: "coin-c",
+      currentDomainAttemptId: "domain-attempt-3",
     });
     expect(sqlite.prepare("SELECT state FROM worker_scheduled_checkpoints WHERE attempt_no = 2").get()).toEqual({
       state: "platform_abandoned",

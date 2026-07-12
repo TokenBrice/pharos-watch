@@ -469,7 +469,28 @@ export function buildReserveSyncRecordDeferredStatement(
          last_error = excluded.last_error,
          metadata = excluded.metadata,
          last_attempt_id = NULL,
-         pending_attempt_id = NULL`,
+         pending_attempt_id = NULL
+       WHERE NOT EXISTS (
+         SELECT 1
+           FROM reserve_composition c
+          WHERE c.stablecoin_id = reserve_sync_state.stablecoin_id
+            AND c.fetched_at = reserve_sync_state.last_success_at
+            AND reserve_sync_state.last_status IN ('ok', 'degraded')
+            AND reserve_sync_state.pending_attempt_id IS NULL
+            AND (
+              (
+                c.attempt_id IS NOT NULL
+                AND reserve_sync_state.last_attempt_id = c.attempt_id
+                AND reserve_sync_state.last_success_attempt_id = c.attempt_id
+              )
+              OR (
+                c.attempt_id IS NULL
+                AND reserve_sync_state.last_attempt_id IS NULL
+                AND reserve_sync_state.last_success_attempt_id IS NULL
+                AND reserve_sync_state.last_attempted_at = reserve_sync_state.last_success_at
+              )
+            )
+       )`,
     )
     .bind(
       record.stablecoinId,

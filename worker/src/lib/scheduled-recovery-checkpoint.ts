@@ -309,10 +309,19 @@ export async function loadScheduledCheckpoint(
   return row ? mapCheckpointRow(row) : null;
 }
 
+// Starting the next item also acknowledges the prior item. Persist its domain
+// attempt in the same write so recovery can fence any crash before domain work.
 export async function markScheduledCheckpointItemStarted(
   db: D1Database,
   identity: ScheduledCheckpointIdentity,
-  input: { itemKey: string; itemsDone: number; itemsTotal: number; nowSec?: number; recoveryLeaseUntil?: number | null },
+  input: {
+    itemKey: string;
+    domainAttemptId?: string | null;
+    itemsDone: number;
+    itemsTotal: number;
+    nowSec?: number;
+    recoveryLeaseUntil?: number | null;
+  },
 ): Promise<void> {
   const timestamp = input.nowSec ?? nowSec();
   await requireChanged(
@@ -320,7 +329,7 @@ export async function markScheduledCheckpointItemStarted(
       db
         .prepare(
           `UPDATE worker_scheduled_checkpoints
-              SET next_item_key = ?, current_item_key = ?, current_domain_attempt_id = NULL,
+              SET next_item_key = ?, current_item_key = ?, current_domain_attempt_id = ?,
                   items_done = ?, items_total = ?, updated_at = ?,
                   recovery_lease_until = COALESCE(?, recovery_lease_until)
             WHERE ${identityWhereSql()}
@@ -329,6 +338,7 @@ export async function markScheduledCheckpointItemStarted(
         .bind(
           input.itemKey,
           input.itemKey,
+          input.domainAttemptId ?? null,
           input.itemsDone,
           input.itemsTotal,
           timestamp,

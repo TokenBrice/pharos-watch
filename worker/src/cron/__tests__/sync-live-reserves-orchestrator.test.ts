@@ -65,6 +65,7 @@ interface RunMetadata {
   childDisposition?: "not_started" | "completed";
   cursorRetiredByRecovery?: boolean;
   cursorPreservedAfterError?: boolean;
+  attemptedCoins?: number;
 }
 
 type RecoveryCursorTestPhase = "producer" | "resume-producer" | "recovery" | "next-producer";
@@ -130,6 +131,8 @@ function checkpointTable(input: {
   state?: "running" | "recovering";
   sourceAttemptNo?: number | null;
   slotStartedAt?: number;
+  currentItemKey?: string | null;
+  currentDomainAttemptId?: string | null;
 }): MockTableConfig {
   const slotStartedAt = input.slotStartedAt ?? 1_000;
   return {
@@ -145,8 +148,8 @@ function checkpointTable(input: {
       queue_hash: LIVE_RESERVE_QUEUE_HASH,
       state: input.state ?? "recovering",
       next_item_key: input.nextItemKey,
-      current_item_key: null,
-      current_domain_attempt_id: null,
+      current_item_key: input.currentItemKey ?? null,
+      current_domain_attempt_id: input.currentDomainAttemptId ?? null,
       items_done: input.itemsDone,
       items_total: CONFIGURED_COIN_COUNT,
       child_dispositions_json: JSON.stringify({ "sync-live-reserves": "not_started" }),
@@ -240,6 +243,124 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       deferredCoins: 1,
       total: 100,
     })).toBe("degraded");
+  });
+
+  it("uses one checkpoint update per attempted coin plus one terminal boundary write", async () => {
+    mockAdapterRegistry(async () => ({
+      slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+    }));
+    const identity = checkpointIdentity(1, "producer-owner");
+    const db = mockD1([checkpointTable({
+      attemptNo: 1,
+      invocationId: identity.invocationId,
+      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id,
+      itemsDone: 0,
+      state: "running",
+      sourceAttemptNo: null,
+    })]);
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+
+    const result = await syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      TIGHT_BUDGET,
+      identity,
+    );
+
+    expect(result.status).toBe("ok");
+    const history = db.getHistory();
+    const checkpointUpdates = history.filter((entry) => (
+      entry.sql.includes("UPDATE worker_scheduled_checkpoints")
+      && entry.sql.includes("items_done = ?")
+    ));
+    const itemStarts = checkpointUpdates.filter((entry) => (
+      entry.sql.includes("current_item_key = ?")
+      && entry.sql.includes("current_domain_attempt_id = ?")
+    ));
+    const boundaryWrites = checkpointUpdates.filter((entry) => (
+      entry.sql.includes("current_item_key = NULL")
+    ));
+    const domainAttemptBegins = history.filter((entry) => (
+      entry.sql.includes("INSERT INTO reserve_sync_state")
+      && entry.sql.includes("pending_attempt_id = excluded.pending_attempt_id")
+    ));
+
+    expect(itemStarts).toHaveLength(CONFIGURED_COIN_COUNT);
+    expect(boundaryWrites).toHaveLength(1);
+    expect(checkpointUpdates).toHaveLength(CONFIGURED_COIN_COUNT + 1);
+    expect(domainAttemptBegins).toHaveLength(CONFIGURED_COIN_COUNT);
+    expect(boundaryWrites[0]?.binds.slice(0, 2)).toEqual([null, CONFIGURED_COIN_COUNT]);
+    for (const begin of domainAttemptBegins) {
+      const checkpointStart = itemStarts.find((entry) => entry.binds[2] === begin.binds[4]);
+      expect(checkpointStart).toBeDefined();
+      expect(history.indexOf(checkpointStart!)).toBe(history.indexOf(begin) - 1);
+    }
+  });
+
+  it("advances an authoritative crash item once, then completes only its remaining suffix", async () => {
+    const visited: string[] = [];
+    mockAdapterRegistry(async (coin) => {
+      visited.push(coin?.id ?? "unknown");
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+    const crashedCoin = SYNC_ORDERED_CONFIGURED_COINS[0]!;
+    const suffixCoin = SYNC_ORDERED_CONFIGURED_COINS[1]!;
+    const identity = checkpointIdentity(2, "recovery-owner");
+    const db = mockD1([
+      checkpointTable({
+        attemptNo: 2,
+        invocationId: identity.invocationId,
+        nextItemKey: crashedCoin.id,
+        currentItemKey: crashedCoin.id,
+        currentDomainAttemptId: "crashed-authoritative-attempt",
+        itemsDone: 0,
+      }),
+      {
+        match: "FROM reserve_composition c",
+        rows: [{ finalized: 1, repaired: 1 }],
+      },
+    ]);
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+
+    const result = await syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      TIGHT_BUDGET,
+      identity,
+    );
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(CONFIGURED_COIN_COUNT - 1);
+    expect(visited[0]).toBe(suffixCoin.id);
+    expect(visited).not.toContain(crashedCoin.id);
+    const history = db.getHistory();
+    const checkpointUpdates = history.filter((entry) => (
+      entry.sql.includes("UPDATE worker_scheduled_checkpoints")
+      && entry.sql.includes("items_done = ?")
+    ));
+    const itemStarts = checkpointUpdates.filter((entry) => entry.sql.includes("current_item_key = ?"));
+    const boundaryWrites = checkpointUpdates.filter((entry) => entry.sql.includes("current_item_key = NULL"));
+    const authoritativeAdvance = boundaryWrites.find((entry) => (
+      entry.binds[0] === suffixCoin.id && entry.binds[1] === 1
+    ));
+    const terminalAdvance = boundaryWrites.find((entry) => (
+      entry.binds[0] === null && entry.binds[1] === CONFIGURED_COIN_COUNT
+    ));
+    const historyRepair = history.find((entry) => (
+      entry.sql.includes("INSERT OR IGNORE INTO reserve_composition_history")
+      && entry.sql.includes("SELECT c.stablecoin_id")
+    ));
+
+    expect(itemStarts).toHaveLength(CONFIGURED_COIN_COUNT - 1);
+    expect(boundaryWrites).toHaveLength(2);
+    expect(checkpointUpdates).toHaveLength(CONFIGURED_COIN_COUNT + 1);
+    expect(authoritativeAdvance).toBeDefined();
+    expect(terminalAdvance).toBeDefined();
+    expect(history.indexOf(historyRepair!)).toBeLessThan(history.indexOf(authoritativeAdvance!));
   });
 
   it("preserves an adopted global cursor when the entire suffix errors", async () => {
@@ -523,6 +644,12 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(typeof suffixId).toBe("string");
     expect(itemsDone).toBeGreaterThan(0);
     expect(itemsDone).toBeLessThan(CONFIGURED_COIN_COUNT);
+    expect(suffixId).toBe(firstMetadata.nextCursorStablecoinId);
+    expect(firstAdvances.filter((entry) => entry.sql.includes("current_item_key = ?")))
+      .toHaveLength(firstMetadata.attemptedCoins!);
+    expect(firstAdvances.filter((entry) => entry.sql.includes("current_item_key = NULL")))
+      .toHaveLength(1);
+    expect(firstAdvances).toHaveLength(firstMetadata.attemptedCoins! + 1);
     expect(getGlobalCursorOperations(firstDb)).toEqual([]);
 
     activeAttempt = 3;
@@ -563,6 +690,11 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       null,
       CONFIGURED_COIN_COUNT,
     ]);
+    expect(secondAdvances.filter((entry) => entry.sql.includes("current_item_key = ?")))
+      .toHaveLength(secondMetadata.attemptedCoins!);
+    expect(secondAdvances.filter((entry) => entry.sql.includes("current_item_key = NULL")))
+      .toHaveLength(1);
+    expect(secondAdvances).toHaveLength(secondMetadata.attemptedCoins! + 1);
     const secondCursorOperations = getGlobalCursorOperations(secondDb);
     expect(secondCursorOperations).toHaveLength(1);
     expect(secondCursorOperations[0]?.sql).toContain("SELECT value, updated_at FROM cache");

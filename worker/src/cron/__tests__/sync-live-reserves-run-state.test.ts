@@ -1,5 +1,9 @@
+import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import type { ConfiguredCoin } from "../sync-live-reserves-shared";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { computeReserveCompositionOverview, resolveReserveResult } from "../../lib/live-reserves-store";
+import { breakerKeyForConfig, type ConfiguredCoin } from "../sync-live-reserves-shared";
 import {
   clearCursorStateIfComplete,
   loadLiveReserveCursorState,
@@ -21,6 +25,61 @@ function makeCoin(id: string): ConfiguredCoin {
       },
     },
   } as unknown as ConfiguredCoin;
+}
+
+function createDeferredStateHarness() {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec(`
+    CREATE TABLE cache (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE reserve_sync_state (
+      stablecoin_id TEXT PRIMARY KEY,
+      adapter_key TEXT NOT NULL,
+      breaker_key TEXT NOT NULL,
+      last_attempted_at INTEGER,
+      last_success_at INTEGER,
+      last_status TEXT NOT NULL,
+      warning_count INTEGER NOT NULL DEFAULT 0,
+      warnings TEXT,
+      last_error TEXT,
+      metadata TEXT NOT NULL DEFAULT '{}',
+      last_attempt_id TEXT,
+      pending_attempt_id TEXT,
+      last_success_attempt_id TEXT
+    );
+    CREATE TABLE reserve_composition (
+      stablecoin_id TEXT PRIMARY KEY,
+      slices TEXT NOT NULL,
+      fetched_at INTEGER NOT NULL,
+      source TEXT NOT NULL,
+      attempt_id TEXT,
+      metadata TEXT,
+      warning_count INTEGER NOT NULL DEFAULT 0,
+      warnings TEXT,
+      adapter_source_model TEXT,
+      adapter_evidence_class TEXT
+    );
+    CREATE TABLE reserve_sync_attempt_history (
+      stablecoin_id TEXT NOT NULL,
+      attempted_at INTEGER NOT NULL,
+      adapter_key TEXT NOT NULL,
+      breaker_key TEXT NOT NULL,
+      attempt_id TEXT,
+      status TEXT NOT NULL,
+      warnings TEXT,
+      warning_count INTEGER NOT NULL,
+      last_error TEXT,
+      metadata TEXT NOT NULL
+    );
+    CREATE TABLE reserve_composition_history (
+      stablecoin_id TEXT NOT NULL,
+      attempt_id TEXT
+    );
+  `);
+  return { sqlite, db: createSqliteD1(sqlite) };
 }
 
 function makeBatchRecordingDb(batchSizes: number[], history: Array<{ sql: string; binds: unknown[] }> = []): D1Database {
@@ -130,6 +189,122 @@ describe("recordDeferredTail", () => {
       tailState: "complete",
     });
     expect(typeof parseCursorWrite(cursorWrites[1])?.tailCompletedAt).toBe("number");
+  });
+
+  it("keeps a recent authoritative snapshot fresh while recording deferral without inventing bootstrap authority", async () => {
+    const { sqlite, db } = createDeferredStateHarness();
+    try {
+      const authoritativeCoin = ACTIVE_STABLECOINS.find((coin) => coin.id === "iusd-infinifi");
+      expect(authoritativeCoin?.liveReservesConfig).toBeDefined();
+      const configuredCoin = authoritativeCoin as ConfiguredCoin;
+      const config = configuredCoin.liveReservesConfig!;
+      const breakerKey = breakerKeyForConfig(config);
+      const successAt = 1_700_000_000;
+      const deferredAt = successAt + 60 * 60;
+      const successAttemptId = "iusd-infinifi:success";
+
+      sqlite.prepare(
+        `INSERT INTO reserve_sync_state (
+           stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
+           last_status, warning_count, metadata, last_attempt_id, pending_attempt_id,
+           last_success_attempt_id
+         ) VALUES (?, ?, ?, ?, ?, 'ok', 0, '{}', ?, NULL, ?)`,
+      ).run(
+        configuredCoin.id,
+        config.adapter,
+        breakerKey,
+        successAt,
+        successAt,
+        successAttemptId,
+        successAttemptId,
+      );
+      sqlite.prepare(
+        `INSERT INTO reserve_composition (
+           stablecoin_id, slices, fetched_at, source, attempt_id, metadata,
+           warning_count, adapter_source_model, adapter_evidence_class
+         ) VALUES (?, ?, ?, ?, ?, ?, 0, 'dynamic-mix', 'independent')`,
+      ).run(
+        configuredCoin.id,
+        JSON.stringify([{ name: "Verified reserves", pct: 100, risk: "low" }]),
+        successAt,
+        config.adapter,
+        successAttemptId,
+        JSON.stringify({ freshnessMode: "not-applicable" }),
+      );
+
+      await recordDeferredTail(
+        db,
+        [configuredCoin, makeCoin("bootstrap-coin")],
+        deferredAt,
+      );
+
+      expect(sqlite.prepare(
+        `SELECT last_attempted_at, last_success_at, last_status, last_attempt_id,
+                pending_attempt_id, last_success_attempt_id
+           FROM reserve_sync_state
+          WHERE stablecoin_id = ?`,
+      ).get(configuredCoin.id)).toEqual({
+        last_attempted_at: successAt,
+        last_success_at: successAt,
+        last_status: "ok",
+        last_attempt_id: successAttemptId,
+        pending_attempt_id: null,
+        last_success_attempt_id: successAttemptId,
+      });
+      expect(sqlite.prepare(
+        `SELECT last_attempted_at, last_success_at, last_status, last_attempt_id,
+                pending_attempt_id, last_success_attempt_id
+           FROM reserve_sync_state
+          WHERE stablecoin_id = 'bootstrap-coin'`,
+      ).get()).toEqual({
+        last_attempted_at: deferredAt,
+        last_success_at: null,
+        last_status: "skipped",
+        last_attempt_id: null,
+        pending_attempt_id: null,
+        last_success_attempt_id: null,
+      });
+      expect(sqlite.prepare(
+        "SELECT stablecoin_id, attempted_at, status, last_error FROM reserve_sync_attempt_history ORDER BY rowid",
+      ).all()).toEqual([
+        {
+          stablecoin_id: configuredCoin.id,
+          attempted_at: deferredAt,
+          status: "skipped",
+          last_error: "run-budget-exhausted",
+        },
+        {
+          stablecoin_id: "bootstrap-coin",
+          attempted_at: deferredAt,
+          status: "skipped",
+          last_error: "run-budget-exhausted",
+        },
+      ]);
+
+      const resolved = await resolveReserveResult(db, configuredCoin.id, deferredAt + 60);
+      expect(resolved).toMatchObject({
+        mode: "live",
+        liveAt: successAt,
+        provenance: { scoringEligible: true },
+        sync: {
+          status: "ok",
+          stale: false,
+          lastAttemptedAt: successAt,
+          lastSuccessAt: successAt,
+        },
+      });
+      const overview = await computeReserveCompositionOverview(db, deferredAt + 60);
+      expect(overview).toMatchObject({
+        freshCoins: 1,
+        independentFreshEligible: 1,
+        deferredCoins: 2,
+        runBudgetTruncated: true,
+        nextCursorStablecoinId: configuredCoin.id,
+        cursorTailState: "complete",
+      });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("retries cursor cache writes on transient D1 overload", async () => {

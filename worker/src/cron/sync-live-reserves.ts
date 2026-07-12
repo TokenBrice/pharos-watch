@@ -35,7 +35,6 @@ import {
 import {
   advanceScheduledCheckpoint,
   loadScheduledCheckpoint,
-  markScheduledCheckpointDomainAttempt,
   markScheduledCheckpointItemStarted,
   type ScheduledCheckpointIdentity,
 } from "../lib/scheduled-recovery-checkpoint";
@@ -295,6 +294,7 @@ async function runReserveCoinQueue(args: {
   let d1PhaseMs = 0;
   let lastProgressAtMs = 0;
   let lastProgressItemsDone = -1;
+  let checkpointBoundaryAdvanced = false;
 
   for (const [index, coin] of args.orderedCoins.entries()) {
     throwIfAborted(args.signal);
@@ -304,6 +304,16 @@ async function runReserveCoinQueue(args: {
       console.warn(
         `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
       );
+      if (args.checkpoint) {
+        await advanceScheduledCheckpoint(args.db, args.checkpoint, {
+          nextItemKey: coin.id,
+          itemsDone: globalIndex,
+          ...(args.checkpoint.attemptNo > 1
+            ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
+            : {}),
+        });
+        checkpointBoundaryAdvanced = true;
+      }
       const deferred = await recordDeferredTail(
         args.db,
         args.orderedCoins.slice(index),
@@ -333,17 +343,6 @@ async function runReserveCoinQueue(args: {
     const config = coin.liveReservesConfig!;
     const breakerKey = breakerKeyForConfig(config);
     breakerKeys.add(breakerKey);
-
-    if (args.checkpoint) {
-      await markScheduledCheckpointItemStarted(args.db, args.checkpoint, {
-        itemKey: coin.id,
-        itemsDone: globalIndex,
-        itemsTotal: args.fullQueue.length,
-        ...(args.checkpoint.attemptNo > 1
-          ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
-          : {}),
-      });
-    }
 
     const shouldReportProgress =
       index === 0
@@ -378,7 +377,15 @@ async function runReserveCoinQueue(args: {
       ...(args.checkpoint
         ? {
             onAttemptStarted: (attemptId: string) =>
-              markScheduledCheckpointDomainAttempt(args.db, args.checkpoint!, coin.id, attemptId),
+              markScheduledCheckpointItemStarted(args.db, args.checkpoint!, {
+                itemKey: coin.id,
+                domainAttemptId: attemptId,
+                itemsDone: globalIndex,
+                itemsTotal: args.fullQueue.length,
+                ...(args.checkpoint!.attemptNo > 1
+                  ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
+                  : {}),
+              }),
             onAttemptPending: () =>
               args.faultInjection?.trigger("after_pending_begin", coin.id) ?? Promise.resolve(),
             onAuthoritativeWrite: () =>
@@ -419,15 +426,16 @@ async function runReserveCoinQueue(args: {
       breakerOutcomes.set(breakerKey, result.breakerOutcome);
     }
 
-    if (args.checkpoint) {
-      await advanceScheduledCheckpoint(args.db, args.checkpoint, {
-        nextItemKey: args.fullQueue[globalIndex + 1]?.id ?? null,
-        itemsDone: globalIndex + 1,
-        ...(args.checkpoint.attemptNo > 1
-          ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
-          : {}),
-      });
-    }
+  }
+
+  if (args.checkpoint && args.orderedCoins.length > 0 && !checkpointBoundaryAdvanced) {
+    await advanceScheduledCheckpoint(args.db, args.checkpoint, {
+      nextItemKey: null,
+      itemsDone: args.startIndex + args.orderedCoins.length,
+      ...(args.checkpoint.attemptNo > 1
+        ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
+        : {}),
+    });
   }
 
   return {

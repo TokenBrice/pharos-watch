@@ -831,7 +831,7 @@ describe("live-reserves-store", () => {
     expect(attemptHistory?.binds).toContain(attemptId);
   });
 
-  it("clears active attempt fencing when recording a deferred tail row", async () => {
+  it("clears non-authoritative attempt fencing but guards an existing canonical success during deferral", async () => {
     const db = mockD1();
 
     await buildReserveSyncRecordDeferredStatement(db, {
@@ -846,6 +846,9 @@ describe("live-reserves-store", () => {
     expect(statement).toBeDefined();
     expect(statement!.sql).toContain("last_attempt_id = NULL");
     expect(statement!.sql).toContain("pending_attempt_id = NULL");
+    expect(statement!.sql).toContain("WHERE NOT EXISTS");
+    expect(statement!.sql).toContain("reserve_sync_state.last_attempt_id = c.attempt_id");
+    expect(statement!.sql).toContain("reserve_sync_state.last_success_attempt_id = c.attempt_id");
   });
 
   it("keeps authoritative success when non-authoritative history writes fail", async () => {
