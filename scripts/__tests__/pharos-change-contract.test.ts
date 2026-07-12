@@ -4,16 +4,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildPermissionRequestHookOutput,
-  buildPostToolUseHookOutput,
   buildPreToolUseHookOutput,
   buildSessionStartContext,
   buildSessionStartHookOutput,
-  buildStopHookOutput,
-  buildUserPromptSubmitHookOutput,
   classifyChangedFiles,
-  classifyUserPrompt,
-  findChangedSinceBaseline,
-  findSessionChangedFiles,
   formatContract,
   formatContractMarkdown,
   normalizeChangedFiles,
@@ -21,12 +15,7 @@ import {
 import { findExistingComment, parseNextLink, upsertPrComment } from "../ci/upsert-github-pr-comment.mjs";
 
 function requireBlockingReason(output: unknown): string {
-  if (
-    typeof output !== "object" ||
-    output === null ||
-    !("reason" in output) ||
-    typeof output.reason !== "string"
-  ) {
+  if (typeof output !== "object" || output === null || !("reason" in output) || typeof output.reason !== "string") {
     throw new Error("Expected a blocking hook output with a reason");
   }
 
@@ -64,90 +53,15 @@ describe("classifyChangedFiles", () => {
   });
 
   it("routes repo-local agent config changes to agent process guidance", () => {
-    const contract = classifyChangedFiles([".codex/config.toml", ".claude/settings.json", "scripts/ci/pharos-change-contract.mjs"]);
+    const contract = classifyChangedFiles([
+      ".codex/config.toml",
+      ".claude/settings.json",
+      "scripts/ci/pharos-change-contract.mjs",
+    ]);
 
     expect(contract.families.map((family: { id: string }) => family.id)).toContain("agent-hooks-process");
     expect(contract.docsToRead).toContain("docs/process/agent-artifacts.md");
     expect(contract.checks).toContain("focused hook/script tests");
-  });
-});
-
-describe("session delta helpers", () => {
-  it("keeps only files that changed after the session baseline", () => {
-    expect(findChangedSinceBaseline({
-      ".codex/config.toml": "same",
-      ".claude/settings.json": "new",
-      "docs/scripts.md": "absent",
-      "scripts/ci/pharos-change-contract.mjs": "after",
-    }, {
-      ".codex/config.toml": "same",
-      "docs/scripts.md": "before",
-      "scripts/ci/pharos-change-contract.mjs": "before",
-    })).toEqual([
-      ".claude/settings.json",
-      "docs/scripts.md",
-      "scripts/ci/pharos-change-contract.mjs",
-    ]);
-  });
-
-  it("keeps unchanged pre-session dirty files out of the active session delta", () => {
-    const fingerprints: Record<string, string> = {
-      "docs/scripts.md": "baseline-dirty",
-      "scripts/ci/pharos-change-contract.mjs": "new-session-change",
-    };
-
-    expect(findSessionChangedFiles([
-      "docs/scripts.md",
-      "scripts/ci/pharos-change-contract.mjs",
-    ], {
-      "docs/scripts.md": "baseline-dirty",
-    }, {
-      buildFingerprints: (files: string[]) => Object.fromEntries(files.map((file) => [file, fingerprints[file]])),
-    })).toEqual(["scripts/ci/pharos-change-contract.mjs"]);
-  });
-
-  it("includes pre-session dirty files when their current dirty fingerprint changes", () => {
-    expect(findSessionChangedFiles(["docs/scripts.md"], {
-      "docs/scripts.md": "baseline-dirty",
-    }, {
-      buildFingerprints: () => ({ "docs/scripts.md": "modified-after-baseline" }),
-    })).toEqual(["docs/scripts.md"]);
-  });
-
-  it("does not report a pre-session dirty file after it is restored clean", () => {
-    expect(findSessionChangedFiles(["scripts/ci/pharos-change-contract.mjs"], {
-      "docs/scripts.md": "baseline-dirty",
-    }, {
-      buildFingerprints: () => ({ "scripts/ci/pharos-change-contract.mjs": "new-session-change" }),
-    })).toEqual(["scripts/ci/pharos-change-contract.mjs"]);
-  });
-});
-
-describe("UserPromptSubmit hook outputs", () => {
-  it("routes stablecoin prompts to stablecoin docs and checks", () => {
-    const route = classifyUserPrompt("add a stablecoin with contracts, reserves, and CoinGecko data");
-
-    expect(route.families.map((family) => family.id)).toContain("stablecoin-registry");
-    expect(route.docsToRead).toContain("docs/stablecoin-data.md");
-    expect(route.checks).toContain("npm run check:stablecoin-data");
-  });
-
-  it("injects advisory context for matched prompts", () => {
-    const output = buildUserPromptSubmitHookOutput({
-      prompt: "Change a D1 migration and update a cron job",
-    });
-
-    expect(output).toMatchObject({
-      hookSpecificOutput: {
-        hookEventName: "UserPromptSubmit",
-      },
-    });
-    expect(output.hookSpecificOutput?.additionalContext).toContain("worker/migrations/MANIFEST.md");
-    expect(output.hookSpecificOutput?.additionalContext).toContain("npm run check:cron-sync");
-  });
-
-  it("stays quiet for unrelated prompts", () => {
-    expect(buildUserPromptSubmitHookOutput({ prompt: "what is the current branch?" })).toEqual({ continue: true });
   });
 });
 
@@ -183,60 +97,6 @@ describe("Codex hook outputs", () => {
         hookEventName: "SessionStart",
       },
     });
-  });
-
-  it("continues normally when Stop has no changed files", () => {
-    expect(buildStopHookOutput(classifyChangedFiles([]))).toEqual({ continue: true });
-  });
-
-  it("continues normally when Stop has already continued once", () => {
-    const contract = classifyChangedFiles(["worker/src/cron/sync-yield-data.ts"]);
-
-    expect(buildStopHookOutput(contract, { stop_hook_active: true })).toEqual({ continue: true });
-  });
-
-  it("blocks finalization once when a changed-file contract needs attention", () => {
-    const contract = classifyChangedFiles(["worker/src/cron/sync-yield-data.ts"]);
-    const output = buildStopHookOutput(contract);
-
-    expect(output).toMatchObject({ decision: "block" });
-    expect(output.reason).toContain("Before finalizing this Pharos turn");
-    expect(output.reason).toContain("npm run check:cron-sync");
-  });
-
-  it("does not block Stop or emit a reminder for low-risk-only changes", () => {
-    const contract = classifyChangedFiles(["docs/scripts.md"]);
-    expect(contract.families.every((family: { risk: string }) => family.risk === "low")).toBe(true);
-
-    expect(buildStopHookOutput(contract)).toEqual({ continue: true });
-    expect(buildPostToolUseHookOutput(contract, {}, { dedupe: false })).toEqual({ continue: true });
-  });
-
-  it("injects PostToolUse reminders without auto-running checks", () => {
-    const contract = classifyChangedFiles(["worker/src/cron/sync-yield-data.ts"]);
-    const output = buildPostToolUseHookOutput(contract, {}, { dedupe: false });
-
-    expect(output).toMatchObject({
-      hookSpecificOutput: {
-        hookEventName: "PostToolUse",
-      },
-    });
-    expect(output.hookSpecificOutput?.additionalContext).toContain("npm run check:cron-sync");
-    expect(output.hookSpecificOutput?.additionalContext).toContain("do not auto-run heavy checks");
-  });
-
-  it("dedupes PostToolBatch against a prior PostToolUse with the same contract", () => {
-    const contract = classifyChangedFiles(["worker/src/cron/sync-yield-data.ts"]);
-    const hookInput = { session_id: `dedupe-cross-event-${Date.now()}-${Math.random()}` };
-
-    const firstUse = buildPostToolUseHookOutput(contract, hookInput, { eventName: "PostToolUse" });
-    expect(firstUse.hookSpecificOutput?.hookEventName).toBe("PostToolUse");
-
-    const followingBatch = buildPostToolUseHookOutput(contract, hookInput, { eventName: "PostToolBatch" });
-    expect(followingBatch).toEqual({ continue: true });
-
-    const repeatUse = buildPostToolUseHookOutput(contract, hookInput, { eventName: "PostToolUse" });
-    expect(repeatUse).toEqual({ continue: true });
   });
 });
 
@@ -324,7 +184,7 @@ describe("hard-block hook outputs", () => {
   it("blocks raw production deploy commands inside shell eval wrappers", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {
-        command: "bash -lc \"cd worker && npx --no-install wrangler pages deploy out\"",
+        command: 'bash -lc "cd worker && npx --no-install wrangler pages deploy out"',
       },
     });
 
@@ -356,7 +216,8 @@ describe("hard-block hook outputs", () => {
   it("allows searches that mention deploy and remote D1 commands", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {
-        command: "rg -n \"wrangler deploy|wrangler pages deploy|wrangler d1 migrations apply stablecoin-db --remote\" docs scripts",
+        command:
+          'rg -n "wrangler deploy|wrangler pages deploy|wrangler d1 migrations apply stablecoin-db --remote" docs scripts',
       },
     });
 
@@ -457,12 +318,7 @@ describe("hard-block hook outputs", () => {
   it("still blocks protected paths when patch payloads arrive as commands", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {
-        command: [
-          "*** Begin Patch",
-          "*** Add File: .env.local",
-          "+TOKEN=value",
-          "*** End Patch",
-        ].join("\n"),
+        command: ["*** Begin Patch", "*** Add File: .env.local", "+TOKEN=value", "*** End Patch"].join("\n"),
       },
     });
 
@@ -626,12 +482,15 @@ describe("upsert GitHub PR comment", () => {
     };
 
     await expect(
-      upsertPrComment({
-        body: "<!-- pharos-change-contract -->\nbody",
-        prNumber: "12",
-        repo: "owner/repo",
-        token: "token",
-      }, { fetchImpl }),
+      upsertPrComment(
+        {
+          body: "<!-- pharos-change-contract -->\nbody",
+          prNumber: "12",
+          repo: "owner/repo",
+          token: "token",
+        },
+        { fetchImpl },
+      ),
     ).resolves.toEqual({ action: "updated", commentId: 77 });
 
     expect(calls).toContain(page2Url);
@@ -663,12 +522,15 @@ describe("upsert GitHub PR comment", () => {
     };
 
     await expect(
-      upsertPrComment({
-        body: "<!-- pharos-change-contract -->\nbody",
-        prNumber: "12",
-        repo: "owner/repo",
-        token: "token",
-      }, { fetchImpl }),
+      upsertPrComment(
+        {
+          body: "<!-- pharos-change-contract -->\nbody",
+          prNumber: "12",
+          repo: "owner/repo",
+          token: "token",
+        },
+        { fetchImpl },
+      ),
     ).resolves.toEqual({ action: "updated", commentId: 44 });
 
     expect(calls.at(-1)).toMatchObject({
@@ -689,12 +551,15 @@ describe("upsert GitHub PR comment", () => {
       );
 
     await expect(
-      upsertPrComment({
-        body: "<!-- pharos-change-contract -->\nbody",
-        prNumber: "12",
-        repo: "owner/repo",
-        token: "token",
-      }, { fetchImpl }),
+      upsertPrComment(
+        {
+          body: "<!-- pharos-change-contract -->\nbody",
+          prNumber: "12",
+          repo: "owner/repo",
+          token: "token",
+        },
+        { fetchImpl },
+      ),
     ).resolves.toEqual({ action: "skipped", reason: "forbidden" });
   });
 });

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,35 +10,19 @@ import {
   hasWorkerDeployImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mjs";
-import {
-  CORE_RULES,
-  DEFAULT_BASE_DOCS,
-  PATH_FAMILIES,
-  PROMPT_ROUTES,
-} from "../lib/doc-ownership-registry.mjs";
+import { CORE_RULES, DEFAULT_BASE_DOCS, PATH_FAMILIES } from "../lib/doc-ownership-registry.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const SESSION_STATE_DIR = resolve(REPO_ROOT, ".cache/pharos-agent-hooks");
-
 const RISK_RANK = new Map([
   ["high", 3],
   ["medium", 2],
   ["low", 1],
 ]);
 
-const HOOK_EVENT_NAMES = new Map([
-  ["permission-request", "PermissionRequest"],
-  ["post-tool-batch", "PostToolBatch"],
-  ["post-tool-use", "PostToolUse"],
-  ["pre-tool-use", "PreToolUse"],
-  ["session-start", "SessionStart"],
-  ["stop", "Stop"],
-  ["user-prompt-submit", "UserPromptSubmit"],
-]);
-
 const MUTATING_SQL_RE = /\b(alter|create|delete|drop|insert|replace|truncate|update)\b/i;
-const UNSAFE_MIGRATION_SQL_RE = /\b(drop\s+table|drop\s+column|alter\s+table[\s\S]{0,160}\bdrop\b|delete\s+from|truncate\b|pragma\s+writable_schema|rename\s+(?:table|column))\b/i;
+const UNSAFE_MIGRATION_SQL_RE =
+  /\b(drop\s+table|drop\s+column|alter\s+table[\s\S]{0,160}\bdrop\b|delete\s+from|truncate\b|pragma\s+writable_schema|rename\s+(?:table|column))\b/i;
 
 const PROTECTED_WRITE_RULES = [
   {
@@ -77,155 +60,6 @@ function normalizeLocalPath(value) {
   return normalized.replace(/^\.\//, "");
 }
 
-function getFamilyById(id) {
-  return PATH_FAMILIES.find((family) => family.id === id) ?? null;
-}
-
-function getFamiliesByIds(ids) {
-  return unique(ids).map(getFamilyById).filter(Boolean).sort(compareFamilyRisk);
-}
-
-function getHookEventName(mode, hookInput = {}) {
-  const raw = hookInput.hook_event_name ?? hookInput.hookEventName ?? hookInput.event ?? "";
-  const normalizedRaw = String(raw).replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
-  return HOOK_EVENT_NAMES.get(normalizedRaw) ?? HOOK_EVENT_NAMES.get(mode) ?? "Unknown";
-}
-
-function getSessionId(hookInput = {}) {
-  const raw = hookInput.session_id
-    ?? hookInput.sessionId
-    ?? hookInput.conversation_id
-    ?? hookInput.conversationId
-    ?? hookInput.thread_id
-    ?? hookInput.threadId
-    ?? process.env.CODEX_SESSION_ID
-    ?? process.env.CODEX_THREAD_ID
-    ?? process.env.CLAUDE_SESSION_ID
-    ?? "default";
-  const sanitized = String(raw).replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 160);
-  return sanitized || "default";
-}
-
-function getSessionStatePath(hookInput = {}) {
-  return resolve(SESSION_STATE_DIR, `${getSessionId(hookInput)}.json`);
-}
-
-function hashValue(value) {
-  return createHash("sha256").update(value).digest("hex");
-}
-
-function hashJson(value) {
-  return hashValue(JSON.stringify(value));
-}
-
-function readGitDiffForFile(file, execFile) {
-  try {
-    return execFile("git", ["diff", "--binary", "HEAD", "--", file], {
-      cwd: REPO_ROOT,
-      encoding: "utf8",
-      maxBuffer: 24 * 1024 * 1024,
-    });
-  } catch {
-    return "";
-  }
-}
-
-function readFileFingerprint(file, execFile) {
-  const normalizedFile = normalizeLocalPath(file);
-  if (!normalizedFile) return "empty";
-
-  const diff = readGitDiffForFile(normalizedFile, execFile);
-  if (diff) {
-    return `diff:${hashValue(diff)}`;
-  }
-
-  const absolutePath = resolve(REPO_ROOT, normalizedFile);
-  if (!absolutePath.startsWith(`${REPO_ROOT}/`) && absolutePath !== REPO_ROOT) {
-    return "outside-repo";
-  }
-
-  if (!existsSync(absolutePath)) {
-    return "absent";
-  }
-
-  try {
-    return `file:${hashValue(readFileSync(absolutePath))}`;
-  } catch {
-    return "unreadable";
-  }
-}
-
-export function buildFileFingerprints(files, { execFile = execFileSync } = {}) {
-  return Object.fromEntries(
-    normalizeChangedFiles(files).map((file) => [file, readFileFingerprint(file, execFile)]),
-  );
-}
-
-export function findChangedSinceBaseline(currentFingerprints, baselineFingerprints = {}) {
-  return Object.keys(currentFingerprints)
-    .filter((file) => currentFingerprints[file] !== baselineFingerprints[file])
-    .sort();
-}
-
-export function findSessionChangedFiles(currentChangedFiles, baselineFingerprints = {}, {
-  buildFingerprints = buildFileFingerprints,
-} = {}) {
-  const normalizedChangedFiles = normalizeChangedFiles(currentChangedFiles);
-  const currentFingerprints = buildFingerprints(normalizedChangedFiles);
-  return findChangedSinceBaseline(currentFingerprints, baselineFingerprints);
-}
-
-function readSessionState(hookInput = {}) {
-  const statePath = getSessionStatePath(hookInput);
-  if (!existsSync(statePath)) return null;
-
-  try {
-    return JSON.parse(readFileSync(statePath, "utf8"));
-  } catch {
-    return null;
-  }
-}
-
-function writeSessionState(hookInput = {}, state) {
-  mkdirSync(SESSION_STATE_DIR, { recursive: true });
-  writeFileSync(getSessionStatePath(hookInput), `${JSON.stringify(state, null, 2)}\n`);
-}
-
-function mergeSessionState(hookInput = {}, patch) {
-  const previous = readSessionState(hookInput) ?? {};
-  const state = {
-    ...previous,
-    ...patch,
-    sessionId: getSessionId(hookInput),
-    updatedAt: new Date().toISOString(),
-  };
-  writeSessionState(hookInput, state);
-  return state;
-}
-
-export function writeSessionBaseline(hookInput = {}, changedFiles = readChangedFiles()) {
-  const normalizedChangedFiles = normalizeChangedFiles(changedFiles);
-  const state = {
-    baselineChangedFiles: normalizedChangedFiles,
-    baselineFingerprints: buildFileFingerprints(normalizedChangedFiles),
-    createdAt: new Date().toISOString(),
-    lastPostToolReminderHash: null,
-    sessionId: getSessionId(hookInput),
-  };
-  writeSessionState(hookInput, state);
-  return state;
-}
-
-export function readChangedFilesSinceSessionStart(hookInput = {}, changedFiles = readChangedFiles()) {
-  const normalizedChangedFiles = normalizeChangedFiles(changedFiles);
-  const state = readSessionState(hookInput);
-  if (!state?.baselineFingerprints) {
-    return normalizedChangedFiles;
-  }
-
-  return findSessionChangedFiles(normalizedChangedFiles, state.baselineFingerprints);
-}
-
 function fileMatchesRule(file, rule) {
   if (rule.exactPaths?.includes(file)) return true;
   if (rule.prefixes?.some((prefix) => file.startsWith(prefix))) return true;
@@ -245,24 +79,17 @@ export function normalizeChangedFiles(files) {
 
 export function classifyChangedFiles(files) {
   const changedFiles = normalizeChangedFiles(files);
-  const matchedFamilies = PATH_FAMILIES
-    .map((family) => ({
-      ...family,
-      matchedFiles: changedFiles.filter((file) => fileMatchesRule(file, family)),
-    }))
+  const matchedFamilies = PATH_FAMILIES.map((family) => ({
+    ...family,
+    matchedFiles: changedFiles.filter((file) => fileMatchesRule(file, family)),
+  }))
     .filter((family) => family.matchedFiles.length > 0)
     .sort(compareFamilyRisk);
 
-  const docsToRead = unique([
-    ...DEFAULT_BASE_DOCS,
-    ...matchedFamilies.flatMap((family) => family.docsToRead),
-  ]);
+  const docsToRead = unique([...DEFAULT_BASE_DOCS, ...matchedFamilies.flatMap((family) => family.docsToRead)]);
   const docsLikelyRequired = unique(matchedFamilies.flatMap((family) => family.docsLikelyRequired));
   const checks = unique(matchedFamilies.flatMap((family) => family.checks));
-  const hardRules = unique([
-    ...CORE_RULES,
-    ...matchedFamilies.flatMap((family) => family.hardRules),
-  ]);
+  const hardRules = unique([...CORE_RULES, ...matchedFamilies.flatMap((family) => family.hardRules)]);
   const warnings = buildWarnings(changedFiles);
 
   return {
@@ -286,36 +113,6 @@ export function classifyChangedFiles(files) {
   };
 }
 
-export function classifyUserPrompt(prompt) {
-  const promptText = String(prompt ?? "");
-  const matched = PROMPT_ROUTES.filter((route) =>
-    route.patterns.some((pattern) => pattern.test(promptText)),
-  );
-  const matchedRoutes = matched.map((route) => route.label);
-  const matchedFamilies = getFamiliesByIds(matched.flatMap((route) => route.familyIds));
-
-  return {
-    checks: unique(matchedFamilies.flatMap((family) => family.checks)),
-    docsLikelyRequired: unique(matchedFamilies.flatMap((family) => family.docsLikelyRequired)),
-    docsToRead: unique([
-      ...DEFAULT_BASE_DOCS,
-      ...matchedFamilies.flatMap((family) => family.docsToRead),
-    ]),
-    families: matchedFamilies.map((family) => ({
-      id: family.id,
-      label: family.label,
-      matchedFiles: [],
-      risk: family.risk,
-    })),
-    hardRules: unique([
-      ...CORE_RULES,
-      ...matchedFamilies.flatMap((family) => family.hardRules),
-    ]),
-    matchedRoutes,
-    promptText,
-  };
-}
-
 function getToolInput(hookInput = {}) {
   return hookInput.tool_input ?? hookInput.toolInput ?? hookInput.input ?? hookInput.arguments ?? {};
 }
@@ -330,18 +127,12 @@ function collectArrayPaths(value) {
   return value.flatMap((item) => {
     if (typeof item === "string") return [item];
     if (!item || typeof item !== "object") return [];
-    return [
-      item.file_path,
-      item.filePath,
-      item.path,
-      item.filename,
-    ].filter(Boolean);
+    return [item.file_path, item.filePath, item.path, item.filename].filter(Boolean);
   });
 }
 
 function extractPatchPaths(patchText) {
-  return [...String(patchText ?? "").matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)]
-    .map((match) => match[1]);
+  return [...String(patchText ?? "").matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)].map((match) => match[1]);
 }
 
 const SHELL_CONTROL_TOKENS = new Set([";", "&&", "||", "|", "\n"]);
@@ -375,7 +166,9 @@ const GIT_GLOBAL_FLAG_OPTIONS = new Set([
 const WRANGLER_GLOBAL_VALUE_OPTIONS = new Set(["-c", "--config", "-e", "--env", "--cwd"]);
 
 function commandIsRawPatchPayload(command) {
-  return String(command ?? "").trimStart().startsWith("*** Begin Patch");
+  return String(command ?? "")
+    .trimStart()
+    .startsWith("*** Begin Patch");
 }
 
 function commandLooksLikePatchPayload(command) {
@@ -448,7 +241,7 @@ function tokenizeShell(command) {
       continue;
     }
 
-    if (char === "'" || char === "\"") {
+    if (char === "'" || char === '"') {
       quote = char;
       continue;
     }
@@ -496,16 +289,17 @@ function tokenizeShell(command) {
 }
 
 function splitShellTokens(command) {
-  return tokenizeShell(getExecutableShellText(command))
-    .filter((token) => !SHELL_CONTROL_TOKENS.has(token));
+  return tokenizeShell(getExecutableShellText(command)).filter((token) => !SHELL_CONTROL_TOKENS.has(token));
 }
 
 function shellCommandName(token) {
-  return String(token ?? "")
-    .replace(/\\/g, "/")
-    .split("/")
-    .pop()
-    ?.replace(/\.(?:cmd|exe)$/i, "") ?? "";
+  return (
+    String(token ?? "")
+      .replace(/\\/g, "/")
+      .split("/")
+      .pop()
+      ?.replace(/\.(?:cmd|exe)$/i, "") ?? ""
+  );
 }
 
 function isShellControlToken(token) {
@@ -585,9 +379,9 @@ function getShellCommandInvocations(command, depth = 0) {
 
     const resolvedIndex = resolveExecutableIndex(tokens, index);
     if (resolvedIndex !== null) {
-      const endIndex = tokens.findIndex((candidate, candidateIndex) => (
-        candidateIndex > resolvedIndex && isShellControlToken(candidate)
-      ));
+      const endIndex = tokens.findIndex(
+        (candidate, candidateIndex) => candidateIndex > resolvedIndex && isShellControlToken(candidate),
+      );
       const invocationTokens = tokens.slice(resolvedIndex, endIndex === -1 ? tokens.length : endIndex);
       invocations.push({
         name: shellCommandName(tokens[resolvedIndex]),
@@ -639,18 +433,22 @@ function extractBashWritePaths(command) {
 function collectToolPaths(hookInput = {}) {
   const toolInput = getToolInput(hookInput);
   const command = getCommandFromHookInput(hookInput);
-  return normalizeChangedFiles([
-    toolInput.file_path,
-    toolInput.filePath,
-    toolInput.path,
-    toolInput.filename,
-    ...collectArrayPaths(toolInput.files),
-    ...collectArrayPaths(toolInput.edits),
-    ...extractPatchPaths(toolInput.patch),
-    ...extractPatchPaths(String(toolInput.input ?? "")),
-    ...extractPatchPaths(command),
-    ...extractBashWritePaths(command),
-  ].filter(Boolean).map(normalizeLocalPath));
+  return normalizeChangedFiles(
+    [
+      toolInput.file_path,
+      toolInput.filePath,
+      toolInput.path,
+      toolInput.filename,
+      ...collectArrayPaths(toolInput.files),
+      ...collectArrayPaths(toolInput.edits),
+      ...extractPatchPaths(toolInput.patch),
+      ...extractPatchPaths(String(toolInput.input ?? "")),
+      ...extractPatchPaths(command),
+      ...extractBashWritePaths(command),
+    ]
+      .filter(Boolean)
+      .map(normalizeLocalPath),
+  );
 }
 
 function collectToolText(hookInput = {}) {
@@ -672,7 +470,9 @@ function collectToolText(hookInput = {}) {
 function extractAddedPatchText(hookInput = {}) {
   const toolInput = getToolInput(hookInput);
   const command = getCommandFromHookInput(hookInput);
-  const patchText = String(toolInput.patch ?? toolInput.input ?? (commandLooksLikePatchPayload(command) ? command : ""));
+  const patchText = String(
+    toolInput.patch ?? toolInput.input ?? (commandLooksLikePatchPayload(command) ? command : ""),
+  );
   if (!patchText) return "";
   return patchText
     .split(/\r?\n/g)
@@ -733,7 +533,8 @@ function* gitSubcommandTokens(command, subcommand) {
 
 function commandInvokesGitCleanForceDelete(command) {
   for (const optionTokens of gitSubcommandTokens(command, "clean")) {
-    const optionText = optionTokens.slice(0, 5)
+    const optionText = optionTokens
+      .slice(0, 5)
       .filter((token) => token.startsWith("-"))
       .join("");
     if (optionText.includes("f") && optionText.includes("d")) {
@@ -799,9 +600,11 @@ function commandInvokesRawProductionDeploy(command) {
     }
 
     const args = stripWranglerGlobalOptions(invocation.tokens.slice(1));
-    return args[0] === "deploy"
-      || (args[0] === "versions" && args[1] === "deploy")
-      || (args[0] === "pages" && args[1] === "deploy");
+    return (
+      args[0] === "deploy" ||
+      (args[0] === "versions" && args[1] === "deploy") ||
+      (args[0] === "pages" && args[1] === "deploy")
+    );
   });
 }
 
@@ -920,10 +723,7 @@ function getRepoChangedFiles({ baseRef, execFile = execFileSync, headRef, staged
     cwd: REPO_ROOT,
     encoding: "utf8",
   });
-  return [
-    ...trackedRaw.split(/\r?\n/g),
-    ...untrackedRaw.split(/\r?\n/g),
-  ];
+  return [...trackedRaw.split(/\r?\n/g), ...untrackedRaw.split(/\r?\n/g)];
 }
 
 export function readChangedFiles(options = {}) {
@@ -951,9 +751,10 @@ function formatFamilies(families) {
 }
 
 export function formatContract(contract, { mode = "full" } = {}) {
-  const changedSummary = contract.changedFiles.length > 0
-    ? formatBullets(contract.changedFiles, { limit: mode === "stop" ? 6 : 12 })
-    : "- No current changed files detected.";
+  const changedSummary =
+    contract.changedFiles.length > 0
+      ? formatBullets(contract.changedFiles, { limit: mode === "stop" ? 6 : 12 })
+      : "- No current changed files detected.";
   const sections = [
     "Pharos change contract:",
     "",
@@ -984,18 +785,10 @@ export function formatContract(contract, { mode = "full" } = {}) {
   }
 
   if (contract.warnings.length > 0) {
-    sections.push(
-      "",
-      "Warnings:",
-      formatBullets(contract.warnings, { limit: 6 }),
-    );
+    sections.push("", "Warnings:", formatBullets(contract.warnings, { limit: 6 }));
   }
 
-  sections.push(
-    "",
-    "Core rules:",
-    formatBullets(contract.hardRules, { limit: mode === "stop" ? 6 : 10 }),
-  );
+  sections.push("", "Core rules:", formatBullets(contract.hardRules, { limit: mode === "stop" ? 6 : 10 }));
 
   if (contract.deploy.deployImpact) {
     sections.push(
@@ -1017,11 +810,14 @@ function formatInlineList(values, { limit = 6 } = {}) {
 }
 
 export function formatContractMarkdown(contract) {
-  const familyRows = contract.families.length > 0
-    ? contract.families
-      .map((family) => `| ${family.label} | ${family.risk} | ${formatInlineList(family.matchedFiles, { limit: 4 })} |`)
-      .join("\n")
-    : "| No specific task family matched | low | No matched files |";
+  const familyRows =
+    contract.families.length > 0
+      ? contract.families
+          .map(
+            (family) => `| ${family.label} | ${family.risk} | ${formatInlineList(family.matchedFiles, { limit: 4 })} |`,
+          )
+          .join("\n")
+      : "| No specific task family matched | low | No matched files |";
   const deploySummary = contract.deploy.deployImpact
     ? `Pages: **${contract.deploy.pagesImpact ? "yes" : "no"}**, Worker: **${contract.deploy.workerImpact ? "yes" : "no"}**`
     : "No deploy-impacting surface detected by the shared deploy classifier.";
@@ -1072,12 +868,7 @@ export function buildSessionStartContext(contract) {
     ? ` — deploy: pages=${contract.deploy.pagesImpact ? "yes" : "no"}, worker=${contract.deploy.workerImpact ? "yes" : "no"}`
     : "";
 
-  const sections = [
-    `Pharos change contract${deploy}`,
-    "",
-    "Matched task families:",
-    formatFamilies(contract.families),
-  ];
+  const sections = [`Pharos change contract${deploy}`, "", "Matched task families:", formatFamilies(contract.families)];
 
   if (contract.docsToRead.length > 0) {
     sections.push("", "Read first:", formatBullets(contract.docsToRead, { limit: 4 }));
@@ -1094,22 +885,6 @@ export function buildSessionStartContext(contract) {
   return sections.join("\n");
 }
 
-export function buildStopContinuationReason(contract) {
-  return [
-    "Before finalizing this Pharos turn, address the current change contract.",
-    "Run the relevant checks/docs updates, or explicitly state why they were not needed or could not be run.",
-    "",
-    formatContract(contract, { mode: "stop" }),
-  ].join("\n");
-}
-
-function hasStopObligations(contract) {
-  if (contract.changedFiles.length === 0) return false;
-  // Only nudge for medium/high-risk families. Low-risk-only changes (e.g.
-  // doc-only edits) don't justify a continuation turn or post-tool reminder.
-  return contract.families.some((family) => family.risk === "medium" || family.risk === "high");
-}
-
 function readHookInput() {
   try {
     const raw = readFileSync(0, "utf8").trim();
@@ -1124,67 +899,6 @@ export function buildSessionStartHookOutput(contract) {
     hookSpecificOutput: {
       additionalContext: buildSessionStartContext(contract),
       hookEventName: "SessionStart",
-    },
-  };
-}
-
-export function buildStopHookOutput(contract, hookInput = {}) {
-  if (hookInput.stop_hook_active || !hasStopObligations(contract)) {
-    return { continue: true };
-  }
-
-  return {
-    decision: "block",
-    reason: buildStopContinuationReason(contract),
-  };
-}
-
-function formatPromptRoutingContext(route) {
-  if (route.families.length === 0) {
-    return "";
-  }
-
-  return [
-    "Pharos prompt routing:",
-    `- Detected: ${route.matchedRoutes.join(", ")}.`,
-    "- Before editing, read the relevant docs and keep the checks in mind.",
-    "",
-    "Task families:",
-    formatBullets(route.families.map((family) => `${family.label} (${family.risk})`), { limit: 6 }),
-    "",
-    "Read first:",
-    formatBullets(route.docsToRead, { limit: 10 }),
-    "",
-    "Checks to consider:",
-    route.checks.length > 0 ? formatBullets(route.checks, { limit: 8 }) : "- None beyond focused validation.",
-    "",
-    "Hard rules:",
-    formatBullets(route.hardRules, { limit: 8 }),
-  ].join("\n");
-}
-
-function getPromptText(hookInput = {}) {
-  return String(
-    hookInput.prompt
-      ?? hookInput.user_prompt
-      ?? hookInput.userPrompt
-      ?? hookInput.message
-      ?? getToolInput(hookInput).prompt
-      ?? "",
-  );
-}
-
-export function buildUserPromptSubmitHookOutput(hookInput = {}) {
-  const route = classifyUserPrompt(getPromptText(hookInput));
-  const additionalContext = formatPromptRoutingContext(route);
-  if (!additionalContext) {
-    return { continue: true };
-  }
-
-  return {
-    hookSpecificOutput: {
-      additionalContext,
-      hookEventName: "UserPromptSubmit",
     },
   };
 }
@@ -1231,61 +945,6 @@ export function buildPermissionRequestHookOutput(hookInput = {}) {
   return buildPermissionRequestDenyOutput(violation.reason);
 }
 
-function formatPostToolReminder(contract) {
-  if (!hasStopObligations(contract)) {
-    return "";
-  }
-
-  const families = contract.families
-    .map((family) => `${family.label} (${family.risk})`)
-    .join(", ");
-
-  return [
-    "Pharos change reminder:",
-    `- Current session delta: ${families || "no specific task family"}.`,
-    "- Keep this light now; do not auto-run heavy checks from the hook.",
-    "",
-    "Docs likely required if behavior changed:",
-    contract.docsLikelyRequired.length > 0 ? formatBullets(contract.docsLikelyRequired, { limit: 5 }) : "- None",
-    "",
-    "Checks to consider before finalizing:",
-    contract.checks.length > 0 ? formatBullets(contract.checks, { limit: 6 }) : "- Focused validation for touched code.",
-    "",
-    "Warnings:",
-    contract.warnings.length > 0 ? formatBullets(contract.warnings, { limit: 4 }) : "- None",
-  ].join("\n");
-}
-
-export function buildPostToolUseHookOutput(contract, hookInput = {}, { eventName = "PostToolUse", dedupe = true } = {}) {
-  const additionalContext = formatPostToolReminder(contract);
-  if (!additionalContext) {
-    return { continue: true };
-  }
-
-  if (dedupe) {
-    // Hash excludes eventName so PostToolUse and PostToolBatch dedupe each other
-    // when they fire on the same contract state.
-    const reminderHash = hashJson({
-      checks: contract.checks,
-      docsLikelyRequired: contract.docsLikelyRequired,
-      families: contract.families.map((family) => family.id),
-      warnings: contract.warnings,
-    });
-    const state = readSessionState(hookInput);
-    if (state?.lastPostToolReminderHash === reminderHash) {
-      return { continue: true };
-    }
-    mergeSessionState(hookInput, { lastPostToolReminderHash: reminderHash });
-  }
-
-  return {
-    hookSpecificOutput: {
-      additionalContext,
-      hookEventName: eventName,
-    },
-  };
-}
-
 function parseArgs(argv) {
   const options = {
     baseRef: process.env.PHAROS_CHANGE_CONTRACT_BASE_REF,
@@ -1330,7 +989,9 @@ function parseArgs(argv) {
 
 function normalizeHookMode(hook) {
   if (!hook) return null;
-  const normalized = String(hook).replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+  const normalized = String(hook)
+    .replace(/([a-z])([A-Z])/g, "$1-$2")
+    .toLowerCase();
   return normalized;
 }
 
@@ -1346,15 +1007,10 @@ Options:
   --base-ref <ref>        Classify git diff base...head
   --head-ref <ref>        Classify git diff base...head
   --file <path>           Classify an explicit file path; repeatable
-  --hook=session-start    Emit Codex SessionStart hook JSON
-  --hook=user-prompt-submit
-                          Emit prompt-routing hook JSON
+  --hook=session-start    Emit compact SessionStart hook JSON
   --hook=pre-tool-use     Emit hard-block hook JSON for unsafe tool calls
   --hook=permission-request
                           Emit production permission-policy hook JSON
-  --hook=post-tool-use    Emit post-edit reminder hook JSON
-  --hook=post-tool-batch  Emit post-batch reminder hook JSON
-  --hook=stop             Emit Codex Stop hook JSON
 `);
 }
 
@@ -1368,11 +1024,6 @@ export function runCli(argv = process.argv.slice(2)) {
   const hookInput = options.hook ? readHookInput() : {};
   const hookMode = normalizeHookMode(options.hook);
 
-  if (hookMode === "user-prompt-submit") {
-    console.log(JSON.stringify(buildUserPromptSubmitHookOutput(hookInput)));
-    return;
-  }
-
   if (hookMode === "pre-tool-use") {
     console.log(JSON.stringify(buildPreToolUseHookOutput(hookInput)));
     return;
@@ -1383,33 +1034,18 @@ export function runCli(argv = process.argv.slice(2)) {
     return;
   }
 
-  const currentChangedFiles = explicitFiles.length > 0
-    ? normalizeChangedFiles(explicitFiles)
-    : readChangedFiles({
-      baseRef: options.baseRef,
-      headRef: options.headRef,
-      staged: options.staged,
-    });
-  const changedFiles = hookMode === "stop" || hookMode === "post-tool-use" || hookMode === "post-tool-batch"
-    ? (explicitFiles.length > 0 ? currentChangedFiles : readChangedFilesSinceSessionStart(hookInput, currentChangedFiles))
-    : currentChangedFiles;
+  const changedFiles =
+    explicitFiles.length > 0
+      ? normalizeChangedFiles(explicitFiles)
+      : readChangedFiles({
+          baseRef: options.baseRef,
+          headRef: options.headRef,
+          staged: options.staged,
+        });
   const contract = classifyChangedFiles(changedFiles);
 
   if (hookMode === "session-start") {
-    writeSessionBaseline(hookInput, currentChangedFiles);
     console.log(JSON.stringify(buildSessionStartHookOutput(contract)));
-    return;
-  }
-
-  if (hookMode === "post-tool-use" || hookMode === "post-tool-batch") {
-    console.log(JSON.stringify(buildPostToolUseHookOutput(contract, hookInput, {
-      eventName: getHookEventName(hookMode, hookInput),
-    })));
-    return;
-  }
-
-  if (hookMode === "stop") {
-    console.log(JSON.stringify(buildStopHookOutput(contract, hookInput)));
     return;
   }
 

@@ -23,17 +23,9 @@ function normalizeMatchers(family) {
   };
 }
 
-function normalizePromptRoute(route) {
-  return {
-    ...route,
-    patterns: (route.patterns ?? []).map((pattern) => compileRegex(pattern)),
-  };
-}
-
 const registry = readDocOwnership();
 
 export const DOC_OWNERSHIP_REGISTRY = registry;
 export const DEFAULT_BASE_DOCS = registry.baseDocs ?? [];
 export const CORE_RULES = registry.coreRules ?? [];
 export const PATH_FAMILIES = (registry.taskFamilies ?? []).map(normalizeMatchers);
-export const PROMPT_ROUTES = (registry.promptRoutes ?? []).map(normalizePromptRoute);
