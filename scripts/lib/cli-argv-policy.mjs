@@ -29,6 +29,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/freeze-stablecoin.ts"),
     strict("scripts/maintenance/generate-yield-outcome-validation.ts"),
     strict("scripts/maintenance/migrate-stablecoin-sidecar.ts"),
+    strict("scripts/maintenance/purge-cloudflare-zone-cache.mjs"),
     strict("scripts/maintenance/register-telegram.ts"),
     strict("scripts/maintenance/rollback-pages-deployment.mjs"),
     strict("scripts/maintenance/sync-depeg-events.ts"),

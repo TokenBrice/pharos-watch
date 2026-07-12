@@ -14,6 +14,7 @@ import {
   parseAiSummaryBackfillArgs,
 } from "../maintenance/backfill-ai-summary-provenance.mjs";
 import { parseFreezeStablecoinArgs } from "../maintenance/freeze-stablecoin";
+import { parseZoneCachePurgeArgs } from "../maintenance/purge-cloudflare-zone-cache.mjs";
 import { parseTelegramRegistrationArgs } from "../maintenance/register-telegram";
 import { parsePagesRollbackArgs } from "../maintenance/rollback-pages-deployment.mjs";
 import { parseDepegSyncArgs } from "../maintenance/sync-depeg-events";
@@ -99,10 +100,18 @@ describe("priority operator CLI parsers", () => {
   });
 
   it("strictly parses rollback and release-deploy guards", () => {
+    expect(parseZoneCachePurgeArgs(["--zone", "PHAROS.WATCH", "--dry-run"])).toEqual({
+      dryRun: true,
+      help: false,
+      zone: "pharos.watch",
+    });
     expect(parsePagesRollbackArgs(["--dry-run"])).toEqual({ dryRun: true, help: false });
     expect(parseWorkerDeploymentArgs(["--version-id", "v1", "--name", "api", "--dry-run"]))
       .toMatchObject({ dryRun: true, name: "api", versionId: "v1" });
     expect(parseWorkerDeployGuardArgs(["--help"])).toEqual({ help: true });
+    expect(() => parseZoneCachePurgeArgs(["--zone", "one", "--zone", "two"])).toThrow(
+      "may only be specified once",
+    );
     expect(() => parsePagesRollbackArgs(["--force"])).toThrow("Unknown option");
     expect(() => parseWorkerDeploymentArgs(["--dry-run=true"])).toThrow("does not take an argument");
     expect(() => parseWorkerDeployGuardArgs(["production"])).toThrow("Unexpected argument");

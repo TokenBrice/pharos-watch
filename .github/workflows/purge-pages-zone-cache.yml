@@ -1,0 +1,41 @@
+name: Purge Pages Zone Cache
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type "purge pharos.watch" to confirm the production-wide cache purge.
+        required: true
+        type: string
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  purge-pages-zone-cache:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require main and explicit production confirmation
+        env:
+          PURGE_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "Production cache purges must run from refs/heads/main; got ${GITHUB_REF}."
+            exit 1
+          fi
+          if [ "${PURGE_CONFIRMATION}" != "purge pharos.watch" ]; then
+            echo 'Confirmation must exactly match: purge pharos.watch'
+            exit 1
+          fi
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Purge pharos.watch zone cache
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/maintenance/purge-cloudflare-zone-cache.mjs --zone pharos.watch
