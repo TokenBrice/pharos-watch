@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { D1Database, D1PreparedStatement, KVNamespace, KVNamespaceGetOptions } from "@cloudflare/workers-types";
+import type {
+  D1Database,
+  D1PreparedStatement,
+  D1Result,
+  KVNamespace,
+  KVNamespaceGetOptions,
+} from "@cloudflare/workers-types";
 import {
   SELECTOR_SNAPSHOT_TTL_SECONDS,
   SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS,
@@ -84,14 +90,26 @@ function makeKV(): TestKVNamespace {
 
 interface TestD1Database extends D1Database {
   __getQuotaRows(): Map<string, number>;
-  __setRunHandler(
-    handler: (() => { meta?: { changes?: number } } | Promise<{ meta?: { changes?: number } }>) | null,
-  ): void;
+  __setRunHandler(handler: (() => void | Promise<void>) | null): void;
 }
 
 function makeD1(): TestD1Database {
   const quotaRows = new Map<string, number>();
-  let runHandler: (() => { meta?: { changes?: number } } | Promise<{ meta?: { changes?: number } }>) | null = null;
+  let runHandler: (() => void | Promise<void>) | null = null;
+
+  const result = <T>(changes: number): D1Result<T> => ({
+    success: true,
+    results: [],
+    meta: {
+      duration: 0,
+      size_after: 0,
+      rows_read: 0,
+      rows_written: changes,
+      last_row_id: 0,
+      changed_db: changes > 0,
+      changes,
+    },
+  });
 
   const db: Partial<TestD1Database> = {
     prepare: ((query: string) => {
@@ -101,15 +119,15 @@ function makeD1(): TestD1Database {
           values = bindValues;
           return statement as D1PreparedStatement;
         },
-        run: async () => {
-          if (runHandler) return runHandler();
-          if (!query.includes("selector_snapshot_daily_quota")) return { meta: { changes: 0 } };
+        run: async <T = Record<string, unknown>>() => {
+          if (runHandler) await runHandler();
+          if (!query.includes("selector_snapshot_daily_quota")) return result<T>(0);
           const [quotaDate, ipHash, , , maxCount] = values as [string, string, number, number, number];
           const key = `${quotaDate}:${ipHash}`;
           const current = quotaRows.get(key) ?? 0;
-          if (current >= maxCount) return { meta: { changes: 0 } };
+          if (current >= maxCount) return result<T>(0);
           quotaRows.set(key, current + 1);
-          return { meta: { changes: 1 } };
+          return result<T>(1);
         },
       };
       return statement as D1PreparedStatement;

@@ -86,8 +86,19 @@ function clampPct(value: number, max: number): number {
 }
 
 export function buildPsiComponentData(
-  history: Array<{ date: number; components?: { severity?: number; breadth?: number; stressBreadth?: number; trend?: number } | null }> | undefined,
-  current: { computedAt: number; components: { severity: number; breadth: number; stressBreadth?: number | null; trend: number } } | null | undefined,
+  history:
+    | Array<{
+        date: number;
+        components?: { severity?: number; breadth?: number; stressBreadth?: number; trend?: number } | null;
+      }>
+    | undefined,
+  current:
+    | {
+        computedAt: number;
+        components: { severity: number; breadth: number; stressBreadth?: number | null; trend: number };
+      }
+    | null
+    | undefined,
 ): PsiComponentPoint[] {
   if (!current || !history) return [];
   const reversed = [...history].filter((point) => point.components).reverse();
@@ -109,9 +120,9 @@ export function buildPsiComponentData(
   ];
 }
 
-export function buildPsiBeamDimmers(
-  componentData: Array<{ severity: number; breadth: number; stressBreadth: number; trend: number }> | undefined,
-): PsiBeamDimmerLane[] {
+export function buildPsiBeamDimmers<
+  T extends { severity: number; breadth: number; stressBreadth: number; trend: number },
+>(componentData: readonly T[] | undefined): PsiBeamDimmerLane[] {
   if (!componentData?.length) return [];
   const current = componentData[componentData.length - 1];
   const previous = componentData.length > 1 ? componentData[componentData.length - 2] : null;
@@ -122,9 +133,7 @@ export function buildPsiBeamDimmers(
     const value = current[key];
     const previousValue = previous?.[key] ?? null;
     const pressureValue = key === "trend" ? Math.max(0, -value) : Math.max(0, value);
-    const role = key === "trend"
-      ? value >= 0 ? "support" : "drag"
-      : "penalty";
+    const role = key === "trend" ? (value >= 0 ? "support" : "drag") : "penalty";
     return {
       key,
       label: config.label,
@@ -164,26 +173,34 @@ export function buildPsiEventTimelineRows(data: PsiChartPoint[]): PsiEventTimeli
       ? (() => {
           const endDate = new Date(event.dateEnd);
           const sameYear = startDate.getFullYear() === endDate.getFullYear();
-          const start = startDate.toLocaleDateString("en-US", sameYear ? { month: "short", day: "numeric" } : formatter);
+          const start = startDate.toLocaleDateString(
+            "en-US",
+            sameYear ? { month: "short", day: "numeric" } : formatter,
+          );
           const end = endDate.toLocaleDateString("en-US", formatter);
           return `${start} – ${end}`;
         })()
       : startDate.toLocaleDateString("en-US", formatter);
     const rangeEnd = event.dateEnd ?? event.date + THREE_DAYS_MS;
-    const nearby = data.filter((point) => point.ts >= event.date - THREE_DAYS_MS && point.ts <= rangeEnd + THREE_DAYS_MS);
-    const worst = nearby.length > 0
-      ? nearby.reduce((lowest, point) => (point.score < lowest.score ? point : lowest))
-      : null;
+    const nearby = data.filter(
+      (point) => point.ts >= event.date - THREE_DAYS_MS && point.ts <= rangeEnd + THREE_DAYS_MS,
+    );
+    const worst =
+      nearby.length > 0 ? nearby.reduce((lowest, point) => (point.score < lowest.score ? point : lowest)) : null;
     const psi = worst ? worst.score : null;
-    const psiBand = psi !== null ? BAND_ZONES.find((zone) => psi >= zone.y1)?.label ?? "" : "";
+    const psiBand = psi !== null ? (BAND_ZONES.find((zone) => psi >= zone.y1)?.label ?? "") : "";
     return {
       label: event.label,
       dateStr,
       links: [...event.links],
       psi,
       psiBand,
-      psiColor: psiBand ? PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "text-muted-foreground" : "text-muted-foreground",
-      dotHex: psiBand ? PSI_HEX_COLORS[psiBand as ConditionBand] ?? "var(--muted-foreground)" : "var(--muted-foreground)",
+      psiColor: psiBand
+        ? (PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "text-muted-foreground")
+        : "text-muted-foreground",
+      dotHex: psiBand
+        ? (PSI_HEX_COLORS[psiBand as ConditionBand] ?? "var(--muted-foreground)")
+        : "var(--muted-foreground)",
     };
   });
 }

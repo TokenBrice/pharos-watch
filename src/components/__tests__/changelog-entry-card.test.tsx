@@ -10,16 +10,14 @@ import { ChangelogEntryCard } from "@/components/changelog-entry-card";
 import type { ChangelogEntry } from "@/data/changelogs/types";
 
 vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
+  default: ({ children, href }: { children: ReactNode; href: string }) => <a href={href}>{children}</a>,
 }));
 
 const MOCK_ENTRY: ChangelogEntry = {
   dateRange: { from: "2026-03-17", to: "2026-03-24" },
   summary: [
-    { label: "New feature", description: "Something cool was added" },
-    { label: "Bug fix", description: "Something broken was fixed" },
+    { label: "New feature", description: "Something cool was added", tag: "feature" },
+    { label: "Bug fix", description: "Something broken was fixed", tag: "infra" },
   ],
   stats: { totalCommits: 42 },
   commits: [

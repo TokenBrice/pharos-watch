@@ -36,14 +36,14 @@ export function parseWorkflowWaitArgs(argv) {
   const jobName = typeof values.job === "string" ? values.job.trim() : "";
   if (!help) assertCliUsage(Boolean(jobName), "--job is required");
   return {
-    attempts: typeof values.attempts === "string"
-      ? parseCliInteger(values.attempts, { name: "--attempts", min: 1 })
-      : 120,
+    attempts:
+      typeof values.attempts === "string" ? parseCliInteger(values.attempts, { name: "--attempts", min: 1 }) : 120,
     help,
     jobName,
-    sleepSec: typeof values["sleep-sec"] === "string"
-      ? parseCliInteger(values["sleep-sec"], { name: "--sleep-sec", min: 0 })
-      : 5,
+    sleepSec:
+      typeof values["sleep-sec"] === "string"
+        ? parseCliInteger(values["sleep-sec"], { name: "--sleep-sec", min: 0 })
+        : 5,
     stopMessage: typeof values["stop-message"] === "string" ? values["stop-message"] : null,
     timeoutMessage: typeof values["timeout-message"] === "string" ? values["timeout-message"] : null,
   };
@@ -102,6 +102,13 @@ export async function fetchWorkflowJobs({
   return jobs;
 }
 
+/**
+ * @param {{
+ *   env?: Readonly<Record<string, string | undefined>>,
+ *   fetchImpl?: (input: string | URL, init?: RequestInit) => Promise<Response>,
+ *   jobName: string,
+ * }} options
+ */
 export async function readJobStatus({ env = process.env, fetchImpl = fetch, jobName }) {
   try {
     const jobs = await fetchWorkflowJobs({
@@ -118,6 +125,18 @@ export async function readJobStatus({ env = process.env, fetchImpl = fetch, jobN
   }
 }
 
+/**
+ * @param {{
+ *   attempts?: number,
+ *   env?: Readonly<Record<string, string | undefined>>,
+ *   fetchImpl?: (input: string | URL, init?: RequestInit) => Promise<Response>,
+ *   jobName: string,
+ *   sleepImpl?: (delay?: number) => Promise<unknown>,
+ *   sleepSec?: number,
+ *   stopMessage?: string,
+ *   timeoutMessage?: string,
+ * }} options
+ */
 export async function waitForWorkflowJob({
   attempts = 120,
   env = process.env,

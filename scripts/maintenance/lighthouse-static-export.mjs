@@ -116,11 +116,18 @@ function normalizeRoute(route) {
 }
 
 function routeSlug(route) {
-  return normalizeRoute(route).replace(/^\/|\/$/g, "").replace(/[^a-zA-Z0-9]+/g, "-") || "home";
+  return (
+    normalizeRoute(route)
+      .replace(/^\/|\/$/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-") || "home"
+  );
 }
 
 function timestampSlug(date = new Date()) {
-  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  return date
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z");
 }
 
 function buildBaseUrl(host, port) {
@@ -140,6 +147,7 @@ async function waitForReady(url) {
   throw new Error(`Static export server did not become ready at ${url}`);
 }
 
+/** @param {Readonly<Record<string, string | undefined>>} [sourceEnv] */
 export function createLighthouseChildEnv(sourceEnv = process.env) {
   const env = {};
   for (const key of LIGHTHOUSE_CHILD_ENV_ALLOWLIST) {
@@ -178,7 +186,9 @@ function buildScreenEmulationArgs(formFactor) {
 
 export function buildLighthouseArgs({ formFactor, reportBase, targetUrl, throttlingMethod }) {
   const deviceArgs =
-    formFactor === "desktop" ? ["--preset=desktop"] : [`--form-factor=${formFactor}`, ...buildScreenEmulationArgs(formFactor)];
+    formFactor === "desktop"
+      ? ["--preset=desktop"]
+      : [`--form-factor=${formFactor}`, ...buildScreenEmulationArgs(formFactor)];
 
   return [
     "--yes",
@@ -260,9 +270,7 @@ async function main() {
   });
 
   try {
-    console.log(
-      `[lighthouse-static] Auditing ${targetUrl} (${options.formFactor}, threshold ${options.threshold})`,
-    );
+    console.log(`[lighthouse-static] Auditing ${targetUrl} (${options.formFactor}, threshold ${options.threshold})`);
     const code = await runCommand("npx", lighthouseArgs);
     if (code !== 0) {
       throw new Error(`Lighthouse exited with code ${code}`);

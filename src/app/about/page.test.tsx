@@ -1,7 +1,8 @@
+// @vitest-environment jsdom
+
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { JSDOM } from "jsdom";
 import AboutPage from "./page";
 
 vi.mock("next/font/local", () => ({
@@ -27,7 +28,9 @@ vi.mock("@/lib/page-metadata", () => ({
 }));
 
 function parseStaticDocument(html: string) {
-  return new JSDOM(html).window.document;
+  const parsed = document.implementation.createHTMLDocument();
+  parsed.documentElement.innerHTML = html;
+  return parsed;
 }
 
 function extractJsonLd(document: Document) {

@@ -26,11 +26,7 @@ describe("parseRouteList", () => {
   });
 
   it("normalizes route input and removes duplicates", () => {
-    expect(parseRouteList(" stablecoins/,/screener/,screener/, / ")).toEqual([
-      "/stablecoins/",
-      "/screener/",
-      "/",
-    ]);
+    expect(parseRouteList(" stablecoins/,/screener/,screener/, / ")).toEqual(["/stablecoins/", "/screener/", "/"]);
   });
 });
 
@@ -108,44 +104,52 @@ describe("getMobileWorkerCount", () => {
 
 describe("console and table scan outcomes", () => {
   it("classifies browser console errors and warnings separately", () => {
-    expect(getConsoleScanOutcome([
-      { type: "warning", text: "chart warning" },
-      { type: "error", text: "runtime error" },
-    ])).toEqual({
+    expect(
+      getConsoleScanOutcome([
+        { type: "warning", text: "chart warning" },
+        { type: "error", text: "runtime error" },
+      ]),
+    ).toEqual({
       errors: [{ type: "error", text: "runtime error" }],
       warnings: [{ type: "warning", text: "chart warning" }],
     });
   });
 
   it("surfaces table geometry issues as route failures", () => {
-    const failures = assertRouteSummary({
-      status: 200,
-      textLength: 100,
-      hasFrameworkOverlay: false,
-      overflowDelta: 0,
-      tableScan: {
-        checked: 1,
-        issues: [{ kind: "header-text-overflow", detail: "Name overlaps Score" }],
+    const failures = assertRouteSummary(
+      {
+        status: 200,
+        textLength: 100,
+        hasFrameworkOverlay: false,
+        overflowDelta: 0,
+        tableScan: {
+          checked: 1,
+          issues: [{ kind: "header-text-overflow", detail: "Name overlaps Score" }],
+        },
+        touchScan: { violations: [] },
       },
-      touchScan: { violations: [] },
-    }, { strictTouchTargets: true });
+      { strictTouchTargets: true },
+    );
 
     expect(getTableScanOutcome({ issues: [{ kind: "header-overlap" }] }).failCount).toBe(1);
     expect(failures.join("\n")).toContain("table geometry failures=1");
   });
 
   it("does not fail route summaries solely because local console messages were observed", () => {
-    const failures = assertRouteSummary({
-      status: 200,
-      textLength: 100,
-      hasFrameworkOverlay: false,
-      overflowDelta: 0,
-      tableScan: { checked: 0, issues: [] },
-      touchScan: { violations: [] },
-    }, {
-      consoleMessages: [{ type: "error", text: "Unhandled exception" }],
-      strictTouchTargets: false,
-    });
+    const failures = assertRouteSummary(
+      {
+        status: 200,
+        textLength: 100,
+        hasFrameworkOverlay: false,
+        overflowDelta: 0,
+        tableScan: { checked: 0, issues: [] },
+        touchScan: { violations: [] },
+        consoleMessages: [{ type: "error", text: "Unhandled exception" }],
+      },
+      {
+        strictTouchTargets: false,
+      },
+    );
 
     expect(failures).toEqual([]);
   });
@@ -182,13 +186,16 @@ describe("isMeasurableTableRow", () => {
     // With at least one real row the scan runs, and geometry failures block
     // the route — there is no upstream-failure-notice waiver anymore.
     expect(
-      assertRouteSummary({
-        ...baseSummary,
-        tableScan: {
-          checked: 1,
-          issues: [{ kind: "too-few-visible-columns", detail: "0/5 header columns visible" }],
+      assertRouteSummary(
+        {
+          ...baseSummary,
+          tableScan: {
+            checked: 1,
+            issues: [{ kind: "too-few-visible-columns", detail: "0/5 header columns visible" }],
+          },
         },
-      }, { strictTouchTargets: true }).join("\n"),
+        { strictTouchTargets: true },
+      ).join("\n"),
     ).toContain("table geometry failures=1");
   });
 });
@@ -229,11 +236,16 @@ describe("getTouchScanOutcome", () => {
   });
 
   it("keeps non-common sub-44px target findings advisory in strict mode", () => {
-    expect(getTouchScanOutcome({
-      violations: [
-        { selector: "a.footer-pill", severity: "target", strictRequired: false, height: 28 },
-        { selector: "tr.row", severity: "target", strictRequired: true, height: 41 },
-      ],
-    }, { strictTouchTargets: true }).failCount).toBe(1);
+    expect(
+      getTouchScanOutcome(
+        {
+          violations: [
+            { selector: "a.footer-pill", severity: "target", strictRequired: false, height: 28 },
+            { selector: "tr.row", severity: "target", strictRequired: true, height: 41 },
+          ],
+        },
+        { strictTouchTargets: true },
+      ).failCount,
+    ).toBe(1);
   });
 });

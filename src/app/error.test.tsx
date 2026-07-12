@@ -9,8 +9,6 @@ vi.mock("next/font/local", () => ({
 
 import ErrorPage from "./error";
 
-const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
-
 beforeEach(() => {
   // The root error boundary probes /api/health on mount. Stub fetch so the
   // tests don't surface a degraded callout (or an unhandled rejection from a
@@ -22,41 +20,33 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+  vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   cleanup();
 });
 
 describe("root app error boundary", () => {
   it("hides raw error.message in production", () => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
 
-    render(
-      <ErrorPage
-        error={new Error("select * from secrets where leaked = 1")}
-        reset={() => {}}
-      />,
-    );
+    render(<ErrorPage error={new Error("select * from secrets where leaked = 1")} reset={() => {}} />);
 
-    expect(screen.getByText("The data didn't reach this page. Try again, or check /status/ if it keeps happening.")).toBeTruthy();
+    expect(
+      screen.getByText("The data didn't reach this page. Try again, or check /status/ if it keeps happening."),
+    ).toBeTruthy();
     expect(screen.queryByText("select * from secrets where leaked = 1")).toBeNull();
   });
 
   it("still shows the raw message in development", () => {
-    process.env.NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
 
-    render(
-      <ErrorPage
-        error={new Error("development-only detail")}
-        reset={() => {}}
-      />,
-    );
+    render(<ErrorPage error={new Error("development-only detail")} reset={() => {}} />);
 
     expect(screen.getByText("development-only detail")).toBeTruthy();
   });
 
   it("calls reset when the retry button is clicked", () => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     let called = 0;
 
     render(

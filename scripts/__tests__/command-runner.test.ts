@@ -23,9 +23,9 @@ describe("command runner", () => {
     const calls: Array<{ cmd: string; env: Record<string, string> }> = [];
 
     const result = await runExecutionUnit(createExecutionUnit(["first", "coverage"]), {
-      getCommandEnv: (cmd) => (cmd === "coverage" ? { COVERAGE_ONLY: "1" } : {}),
+      getCommandEnv: (cmd): Record<string, string> => (cmd === "coverage" ? { COVERAGE_ONLY: "1" } : {}),
       label: "unit",
-      runCommandImpl: (cmd, extraEnv) => {
+      runCommandImpl: (cmd, extraEnv = {}) => {
         calls.push({ cmd, env: extraEnv });
         return 0;
       },
@@ -73,13 +73,7 @@ describe("command runner", () => {
     let exitStatus: number | undefined;
 
     const result = await runCommandBatches(
-      [
-        [
-          createExecutionUnit(["fail", "never"]),
-          createExecutionUnit(["wait-a"]),
-          createExecutionUnit(["wait-b"]),
-        ],
-      ],
+      [[createExecutionUnit(["fail", "never"]), createExecutionUnit(["wait-a"]), createExecutionUnit(["wait-b"])]],
       {
         exit: (status) => {
           exitStatus = status;

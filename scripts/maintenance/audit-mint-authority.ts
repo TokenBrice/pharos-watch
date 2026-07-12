@@ -134,14 +134,16 @@ export function parseArgs(argv: string[], now = new Date()): AuditMintAuthorityO
   return options;
 }
 
-function hasAnyEnv(env: NodeJS.ProcessEnv, names: readonly string[]): string[] {
+type Environment = Readonly<Record<string, string | undefined>>;
+
+function hasAnyEnv(env: Environment, names: readonly string[]): string[] {
   return names.filter((name) => {
     const value = env[name];
     return typeof value === "string" && value.trim().length > 0;
   });
 }
 
-export function buildProviderCapabilities(env: NodeJS.ProcessEnv = process.env): MintAuthorityProviderCapabilities {
+export function buildProviderCapabilities(env: Environment = process.env): MintAuthorityProviderCapabilities {
   const rpcEnv = hasAnyEnv(env, ["ALCHEMY_API_KEY", "DRPC_API_KEY"]);
   const etherscanEnv = hasAnyEnv(env, ["ETHERSCAN_API_KEY"]);
 
@@ -271,7 +273,7 @@ function writeCandidate(outputDir: string, candidate: MintAuthorityCandidate): v
 export async function runCli(
   argv = process.argv.slice(2),
   cwd = process.cwd(),
-  env: NodeJS.ProcessEnv = process.env,
+  env: Environment = process.env,
   stdout: Pick<NodeJS.WriteStream, "write"> = process.stdout,
 ): Promise<number> {
   const options = parseArgs(argv);

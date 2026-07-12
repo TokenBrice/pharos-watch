@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const execFileSyncMock = vi.hoisted(() => vi.fn(() => "[]"));
+const execFileSyncMock = vi.hoisted(() => vi.fn((_file: string, _args: readonly string[]) => "[]"));
 
 vi.mock("node:child_process", () => ({
   execFileSync: execFileSyncMock,

@@ -1,5 +1,10 @@
 import { spawn } from "node:child_process";
 
+/** @typedef {string | { cmd: string }} RunnerCommand */
+/** @typedef {{ status: number, aborted: boolean }} CommandResult */
+/** @typedef {(cmd: string, extraEnv?: Record<string, string>, options?: { signal?: AbortSignal }) => number | CommandResult | Promise<number | CommandResult>} CommandImplementation */
+
+/** @template T @param {T[]} commands @returns {{ commands: T[] }} */
 export function createExecutionUnit(commands) {
   return { commands };
 }
@@ -84,6 +89,16 @@ export function runShellCommand(cmd, extraEnv = {}, { signal } = {}) {
   });
 }
 
+/**
+ * @param {{ commands: RunnerCommand[] }} unit
+ * @param {{
+ *   getCommandEnv?: (command: RunnerCommand) => Record<string, string>,
+ *   getCommandText?: (command: RunnerCommand) => string,
+ *   label?: string,
+ *   runCommandImpl?: CommandImplementation,
+ *   signal?: AbortSignal,
+ * }} [options]
+ */
 export async function runExecutionUnit(
   unit,
   {
@@ -119,6 +134,16 @@ export function reportFailedCommand(result, label) {
   console.error(`[${label}] FAILED: ${result.failedCmd} exited with status ${result.status}`);
 }
 
+/**
+ * @param {Array<Array<{ commands: RunnerCommand[] }>>} batches
+ * @param {{
+ *   exit?: (status: number) => unknown,
+ *   getCommandEnv?: (command: RunnerCommand) => Record<string, string>,
+ *   getCommandText?: (command: RunnerCommand) => string,
+ *   label?: string,
+ *   runCommandImpl?: CommandImplementation,
+ * }} [options]
+ */
 export async function runCommandBatches(
   batches,
   {

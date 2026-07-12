@@ -5,13 +5,9 @@ describe("ChangelogEntry type", () => {
   it("accepts a well-formed entry", () => {
     const entry: ChangelogEntry = {
       dateRange: { from: "2026-03-17", to: "2026-03-24" },
-      summary: [
-        { label: "Broader coverage", description: "DUSD, USSD, USBD added" },
-      ],
+      summary: [{ label: "Broader coverage", description: "DUSD, USSD, USBD added", tag: "coverage" }],
       stats: { totalCommits: 42 },
-      commits: [
-        { hash: "abc1234", message: "feat: add DUSD" },
-      ],
+      commits: [{ hash: "abc1234", message: "feat: add DUSD" }],
     };
 
     expect(entry.dateRange.from).toBe("2026-03-17");

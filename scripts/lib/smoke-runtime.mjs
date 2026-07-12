@@ -57,6 +57,11 @@ export function readCliValue(argv, index, optionName) {
   return value;
 }
 
+/**
+ * @param {string[]} argv
+ * @param {Record<string, (context: { arg: string, argv: string[], index: number, readValue: () => string }) => void | "value" | number>} handlers
+ * @param {{ allowUnknown?: boolean }} [options]
+ */
 export function parseCliOptions(argv, handlers, { allowUnknown = true } = {}) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -126,14 +131,18 @@ export function allocatePort(host, { errorMessage = "Could not allocate local po
   });
 }
 
+/**
+ * @param {string} host
+ * @param {{
+ *   env?: Readonly<Record<string, string | undefined>>,
+ *   preferredPort?: number,
+ *   allocationErrorMessage?: string,
+ *   onFallback?: (event: { host: string, preferredPort: number, fallbackPort: number }) => void,
+ * }} [options]
+ */
 export async function resolveStaticExportPort(
   host,
-  {
-    env = process.env,
-    preferredPort = 4173,
-    allocationErrorMessage,
-    onFallback,
-  } = {},
+  { env = process.env, preferredPort = 4173, allocationErrorMessage, onFallback } = {},
 ) {
   const explicitPort = env.STATIC_EXPORT_PORT?.trim();
   if (explicitPort) return Number.parseInt(explicitPort, 10);

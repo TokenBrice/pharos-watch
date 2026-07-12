@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
-import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
+import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import type { CoverageFeatureKey } from "@/lib/coverage-types";
 import { buildCoverageFeatureSummary, buildCoverageRow, COVERAGE_FEATURES } from "@/lib/coverage";
 import { coverageFeature as blacklistCoverageFeature } from "@/lib/coverage/blacklist";
@@ -15,7 +15,7 @@ import { coverageFeature as safetyCoverageFeature } from "@/lib/coverage/safety"
 import { coverageFeature as yieldCoverageFeature } from "@/lib/coverage/yield";
 import { COVERAGE_BREAKDOWN_VISUAL_CLASSES } from "@/lib/coverage-page-config";
 
-type TestCoin = StablecoinMeta & { mintAuthoritySummary?: MintAuthorityClientSummary };
+type TestCoin = StablecoinMeta & { mintAuthoritySummary?: MintAuthorityCoverageSummary };
 
 function makeCoin(overrides?: Partial<TestCoin>): TestCoin {
   return {
@@ -357,7 +357,6 @@ describe("coverage helpers", () => {
         mintPath: "immutable-user-collateralized",
         authorityPosture: "none-resolved",
         confidence: "verified",
-        summary: "No privileged mint path is resolved.",
       }).kind,
     ).toBe("no-privileged-mint");
     expect(
@@ -365,7 +364,6 @@ describe("coverage helpers", () => {
         mintPath: "bridge-or-oft-synthetic",
         authorityPosture: "partially-bounded-admin",
         confidence: "manual-review",
-        summary: "Minting depends on bridge route configuration.",
       }).kind,
     ).toBe("bridge-mint");
     expect(
@@ -373,11 +371,9 @@ describe("coverage helpers", () => {
         mintPath: "permissioned-minter",
         authorityPosture: "bounded-admin",
         confidence: "verified",
-        summary: "A Safe can authorize a permissioned minter.",
         controls: [
           {
             label: "Minter admin",
-            role: "minter-admin",
             authorityType: "safe",
             directMintAbility: "can-authorize",
           },
@@ -389,7 +385,6 @@ describe("coverage helpers", () => {
         mintPath: "issuer-direct-mint",
         authorityPosture: "bounded-admin",
         confidence: "verified",
-        summary: "Issuer role mints new supply.",
       }).kind,
     ).toBe("issuer-or-backend-mint");
     expect(
@@ -397,11 +392,9 @@ describe("coverage helpers", () => {
         mintPath: "permissioned-minter",
         authorityPosture: "unbounded-or-compromised",
         confidence: "manual-review",
-        summary: "A direct permissioned minter can create new supply.",
         controls: [
           {
             label: "Direct minter",
-            role: "direct-minter",
             authorityType: "unknown",
             directMintAbility: "direct",
           },
@@ -413,7 +406,6 @@ describe("coverage helpers", () => {
         mintPath: "wrapped-or-variant-inherited",
         authorityPosture: "bounded-admin",
         confidence: "probable",
-        summary: "Wrapper authority inherits from the reviewed parent.",
       }).kind,
     ).toBe("inherited-authority");
   });
@@ -423,11 +415,9 @@ describe("coverage helpers", () => {
       mintPath: "permissioned-minter",
       authorityPosture: "bounded-admin",
       confidence: "verified",
-      summary: "A Safe can authorize a permissioned minter.",
       controls: [
         {
           label: "Minter admin",
-          role: "minter-admin",
           authorityType: "safe",
           directMintAbility: "can-authorize",
         },
@@ -437,11 +427,9 @@ describe("coverage helpers", () => {
       mintPath: "permissioned-minter",
       authorityPosture: "concentrated-admin",
       confidence: "verified",
-      summary: "A Safe can authorize a permissioned minter.",
       controls: [
         {
           label: "Minter admin",
-          role: "minter-admin",
           authorityType: "safe",
           directMintAbility: "can-authorize",
         },
@@ -594,7 +582,6 @@ describe("coverage helpers", () => {
             mintPath: "issuer-direct-mint",
             authorityPosture: "concentrated-admin",
             confidence: "verified",
-            summary: "Issuer minter can create new supply.",
           },
         }),
         marketCapUsd: 800,
@@ -1034,7 +1021,6 @@ describe("coverage status-kind runtime exhaustiveness", () => {
       mintPath: "immutable-user-collateralized",
       authorityPosture: "none-resolved",
       confidence: "verified",
-      summary: "No privileged mint path is resolved.",
     }).kind,
   );
   record(
@@ -1043,7 +1029,6 @@ describe("coverage status-kind runtime exhaustiveness", () => {
       mintPath: "user-collateralized-governed",
       authorityPosture: "bounded-admin",
       confidence: "verified",
-      summary: "Governance can affect minting parameters.",
     }).kind,
   );
   record(
@@ -1052,11 +1037,9 @@ describe("coverage status-kind runtime exhaustiveness", () => {
       mintPath: "permissioned-minter",
       authorityPosture: "bounded-admin",
       confidence: "verified",
-      summary: "A Safe can authorize minters.",
       controls: [
         {
           label: "Minter admin",
-          role: "minter-admin",
           authorityType: "safe",
           directMintAbility: "can-authorize",
         },
@@ -1069,7 +1052,6 @@ describe("coverage status-kind runtime exhaustiveness", () => {
       mintPath: "issuer-direct-mint",
       authorityPosture: "bounded-admin",
       confidence: "verified",
-      summary: "Issuer role can mint new supply.",
     }).kind,
   );
   record(
@@ -1078,7 +1060,6 @@ describe("coverage status-kind runtime exhaustiveness", () => {
       mintPath: "bridge-or-oft-synthetic",
       authorityPosture: "partially-bounded-admin",
       confidence: "manual-review",
-      summary: "Bridge route controls destination supply.",
     }).kind,
   );
   record(
@@ -1087,7 +1068,6 @@ describe("coverage status-kind runtime exhaustiveness", () => {
       mintPath: "wrapped-or-variant-inherited",
       authorityPosture: "bounded-admin",
       confidence: "probable",
-      summary: "Wrapper inherits mint authority from its parent.",
     }).kind,
   );
 

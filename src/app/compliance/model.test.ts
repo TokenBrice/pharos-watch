@@ -78,11 +78,15 @@ describe("Compliance model", () => {
     });
 
     const pyusd = watchRows.find((row) => row.id === "pyusd-paypal" && row.regime === "genius");
+    expect(pyusd?.regime).toBe("genius");
+    if (pyusd?.regime !== "genius") throw new Error("Expected PYUSD GENIUS row");
     expect(pyusd?.primaryFederalRegulator).toBe("OCC");
     expect(pyusd?.latestReportDate).toBe("2026-04-30");
     expect(pyusd?.monthlyAttestationPresent).toBe(true);
 
     const cusd = watchRows.find((row) => row.id === "cusd-celo" && row.regime === "genius");
+    expect(cusd?.regime).toBe("genius");
+    if (cusd?.regime !== "genius") throw new Error("Expected cUSD GENIUS row");
     expect(cusd?.foreignExceptionStatus).toBe("unknown");
     expect(cusd?.negativeEvidenceSummary).toContain("Mento Labs");
     expect(cusd?.negativeEvidenceSourcesChecked.length).toBeGreaterThan(0);

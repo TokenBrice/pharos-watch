@@ -560,6 +560,11 @@ function usage() {
   ].join("\n");
 }
 
+/**
+ * @param {string[]} [argv]
+ * @param {{ write(chunk: string): unknown }} [stdout]
+ * @param {{ write(chunk: string): unknown }} [stderr]
+ */
 export async function runCli(argv = process.argv.slice(2), stdout = process.stdout, stderr = process.stderr) {
   const args = [];
   const options = {

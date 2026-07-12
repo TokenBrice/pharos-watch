@@ -1,10 +1,12 @@
+// @vitest-environment jsdom
+
 import { renderToStaticMarkup } from "react-dom/server";
-// @ts-expect-error jsdom lacks bundled TypeScript declarations in this dependency set.
-import { JSDOM } from "jsdom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 function parseStaticDocument(html: string) {
-  return new JSDOM(html).window.document;
+  const parsed = document.implementation.createHTMLDocument();
+  parsed.documentElement.innerHTML = html;
+  return parsed;
 }
 
 function findLinkByText(document: Document, text: string) {

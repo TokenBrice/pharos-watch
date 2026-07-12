@@ -28,6 +28,8 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
+/** @typedef {import("../../shared/types/stablecoin-client-meta").StablecoinClientMeta} StablecoinClientMeta */
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
 const SOURCE_JSON_REL = "shared/data/stablecoins/coins.generated.json";
@@ -61,11 +63,7 @@ function readStringLiteralArrayExport(exportName, sourcePath = CLIENT_META_TS_AB
 
   function unwrapExpression(expression) {
     let current = expression;
-    while (
-      ts.isAsExpression(current)
-      || ts.isSatisfiesExpression(current)
-      || ts.isParenthesizedExpression(current)
-    ) {
+    while (ts.isAsExpression(current) || ts.isSatisfiesExpression(current) || ts.isParenthesizedExpression(current)) {
       current = current.expression;
     }
     return current;
@@ -123,6 +121,7 @@ export function readGeniusComplianceFields(sourcePath = CLIENT_META_TS_ABS) {
 const DEFAULT_GENIUS_CLIENT_FIELDS = readGeniusClientFields();
 const DEFAULT_GENIUS_COMPLIANCE_FIELDS = readGeniusComplianceFields();
 
+/** @returns {Partial<StablecoinClientMeta>} */
 export function projectCoin(coin, clientFields, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
   const slim = {};
   for (const field of clientFields) {
@@ -152,11 +151,7 @@ export function projectLiveReserveAdapter(coin) {
 
 export function projectBlacklistStatus(coin) {
   const reviewedStatus = coin?.blacklistabilityReview?.reviewedStatus;
-  if (
-    typeof reviewedStatus === "boolean"
-    || reviewedStatus === "possible"
-    || reviewedStatus === "inherited"
-  ) {
+  if (typeof reviewedStatus === "boolean" || reviewedStatus === "possible" || reviewedStatus === "inherited") {
     return reviewedStatus;
   }
 
@@ -372,7 +367,13 @@ export function projectMintAuthoritySummary(coin) {
   return summary;
 }
 
-export function validateProjection(slim, sourceCoin, index, clientFields, geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS) {
+export function validateProjection(
+  slim,
+  sourceCoin,
+  index,
+  clientFields,
+  geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS,
+) {
   if (typeof slim.id !== "string" || slim.id.length === 0) {
     throw new Error(`[client-registry] entry ${index}: invalid or missing id`);
   }
@@ -398,20 +399,22 @@ export function validateProjection(slim, sourceCoin, index, clientFields, genius
   // source value. Catches generator bugs that silently mutate values.
   for (const field of clientFields) {
     if (Object.prototype.hasOwnProperty.call(slim, field)) {
-      const sourceValue = field === GENIUS_FIELD
-        ? projectGeniusProfile(sourceCoin[field], geniusClientFields)
-        : sourceCoin[field];
+      const sourceValue =
+        field === GENIUS_FIELD ? projectGeniusProfile(sourceCoin[field], geniusClientFields) : sourceCoin[field];
       const slimValue = slim[field];
       if (JSON.stringify(sourceValue) !== JSON.stringify(slimValue)) {
-        throw new Error(
-          `[client-registry] entry ${index} (${slim.id}): field ${field} diverges from source`,
-        );
+        throw new Error(`[client-registry] entry ${index} (${slim.id}): field ${field} diverges from source`);
       }
     }
   }
 }
 
-export function validateGeniusComplianceProjection(entry, sourceCoin, index, geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_FIELDS) {
+export function validateGeniusComplianceProjection(
+  entry,
+  sourceCoin,
+  index,
+  geniusComplianceFields = DEFAULT_GENIUS_COMPLIANCE_FIELDS,
+) {
   if (typeof entry.id !== "string" || entry.id.length === 0) {
     throw new Error(`[client-registry] compliance entry ${index}: invalid or missing id`);
   }
@@ -423,9 +426,7 @@ export function validateGeniusComplianceProjection(entry, sourceCoin, index, gen
 
   const sourceValue = projectGeniusProfile(sourceCoin.genius, geniusComplianceFields);
   if (JSON.stringify(sourceValue) !== JSON.stringify(entry.genius)) {
-    throw new Error(
-      `[client-registry] compliance entry ${index} (${entry.id}): genius profile diverges from source`,
-    );
+    throw new Error(`[client-registry] compliance entry ${index} (${entry.id}): genius profile diverges from source`);
   }
 }
 
@@ -493,10 +494,10 @@ export function buildTelegramMiniAppCatalogOutput({ sourceJsonPath = SOURCE_JSON
     .filter((coin) => (coin.status ?? "active") !== "frozen")
     .map((coin, index) => {
       if (
-        typeof coin.id !== "string"
-        || typeof coin.symbol !== "string"
-        || typeof coin.name !== "string"
-        || typeof coin.flags?.pegCurrency !== "string"
+        typeof coin.id !== "string" ||
+        typeof coin.symbol !== "string" ||
+        typeof coin.name !== "string" ||
+        typeof coin.flags?.pegCurrency !== "string"
       ) {
         throw new Error(`[client-registry] Mini App catalog entry ${index} has invalid metadata`);
       }
@@ -517,14 +518,8 @@ export function buildTelegramMiniAppCatalogOutput({ sourceJsonPath = SOURCE_JSON
 
 export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
   const { output, slimCoins } = buildClientRegistryOutput();
-  const {
-    output: complianceOutput,
-    geniusEntries,
-  } = buildComplianceRegistryOutput();
-  const {
-    output: telegramMiniAppOutput,
-    searchableCoins,
-  } = buildTelegramMiniAppCatalogOutput();
+  const { output: complianceOutput, geniusEntries } = buildComplianceRegistryOutput();
+  const { output: telegramMiniAppOutput, searchableCoins } = buildTelegramMiniAppCatalogOutput();
 
   if (checkMode) {
     const current = existsSync(OUTPUT_JSON_ABS) ? readFileSync(OUTPUT_JSON_ABS, "utf8") : "";
@@ -535,18 +530,16 @@ export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
       ? readFileSync(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS, "utf8")
       : "";
     if (
-      current !== output
-      || currentCompliance !== complianceOutput
-      || currentTelegramMiniApp !== telegramMiniAppOutput
+      current !== output ||
+      currentCompliance !== complianceOutput ||
+      currentTelegramMiniApp !== telegramMiniAppOutput
     ) {
       console.error(
         `${OUTPUT_JSON_REL}, ${COMPLIANCE_OUTPUT_JSON_REL}, or ${TELEGRAM_MINI_APP_OUTPUT_JSON_REL} is stale. Run: node scripts/build-data/build-client-registry.mjs`,
       );
       process.exit(1);
     }
-    console.log(
-      `${OUTPUT_JSON_REL}: client registry is current (${slimCoins.length} entries, ${output.length} bytes)`,
-    );
+    console.log(`${OUTPUT_JSON_REL}: client registry is current (${slimCoins.length} entries, ${output.length} bytes)`);
     console.log(
       `${COMPLIANCE_OUTPUT_JSON_REL}: compliance registry is current (${geniusEntries.length} GENIUS entries, ${complianceOutput.length} bytes)`,
     );
@@ -560,9 +553,7 @@ export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
     writeFileSync(COMPLIANCE_OUTPUT_JSON_ABS, complianceOutput, "utf8");
     mkdirSync(dirname(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS), { recursive: true });
     writeFileSync(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS, telegramMiniAppOutput, "utf8");
-    console.log(
-      `${OUTPUT_JSON_REL}: wrote client registry (${slimCoins.length} entries, ${output.length} bytes)`,
-    );
+    console.log(`${OUTPUT_JSON_REL}: wrote client registry (${slimCoins.length} entries, ${output.length} bytes)`);
     console.log(
       `${COMPLIANCE_OUTPUT_JSON_REL}: wrote compliance registry (${geniusEntries.length} GENIUS entries, ${complianceOutput.length} bytes)`,
     );

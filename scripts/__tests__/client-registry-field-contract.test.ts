@@ -9,13 +9,22 @@ import {
   readGeniusComplianceFields,
   readGeniusClientFields,
 } from "../build-data/build-client-registry.mjs";
-import { computeMintAuthorityScore, stablecoinToMintAuthorityScoringInput } from "../../shared/lib/mint-authority-scoring";
+import {
+  computeMintAuthorityScore,
+  stablecoinToMintAuthorityScoringInput,
+} from "../../shared/lib/mint-authority-scoring";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import {
   GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
   STABLECOIN_CLIENT_META_FIELDS,
+  type StablecoinClientMeta,
 } from "../../shared/types/stablecoin-client-meta";
+
+function projectedMintAuthorityInput(projected: Partial<StablecoinClientMeta> | undefined) {
+  if (typeof projected?.id !== "string" || !projected.mintAuthoritySummary) return null;
+  return { id: projected.id, ...projected.mintAuthoritySummary };
+}
 
 describe("client registry field contract", () => {
   it("reads the canonical ordered field list from the shared TypeScript contract", () => {
@@ -71,9 +80,7 @@ describe("client registry field contract", () => {
       collateralQuality: "rwa",
     };
 
-    expect(Object.keys(projectCoin(coin, readCanonicalClientFields()))).toEqual([
-      ...STABLECOIN_CLIENT_META_FIELDS,
-    ]);
+    expect(Object.keys(projectCoin(coin, readCanonicalClientFields()))).toEqual([...STABLECOIN_CLIENT_META_FIELDS]);
   });
 
   it("projects only the mint-authority coverage summary and excludes detail evidence", () => {
@@ -113,10 +120,7 @@ describe("client registry field contract", () => {
             capDescription: "Daily cap",
             modulesOrGuardsStatus: "none-detected",
             safe: {
-              owners: [
-                "0x0000000000000000000000000000000000000002",
-                "0x0000000000000000000000000000000000000003",
-              ],
+              owners: ["0x0000000000000000000000000000000000000002", "0x0000000000000000000000000000000000000003"],
               source: "safe-api",
             },
             evidence: "Control-level evidence also stays server-side.",
@@ -298,20 +302,13 @@ describe("client registry field contract", () => {
     const fullResolver = (id: string) => stablecoinToMintAuthorityScoringInput(TRACKED_META_BY_ID.get(id));
     const projectedResolver = (id: string) => {
       const projected = projectedById.get(id);
-      return stablecoinToMintAuthorityScoringInput(
-        projected ? { id: projected.id, mintAuthority: projected.mintAuthoritySummary as never } : null,
-      );
+      return projectedMintAuthorityInput(projected);
     };
 
     for (const coin of TRACKED_STABLECOINS) {
       const full = computeMintAuthorityScore(stablecoinToMintAuthorityScoringInput(coin), fullResolver);
       const projected = projectedById.get(coin.id);
-      const compact = computeMintAuthorityScore(
-        stablecoinToMintAuthorityScoringInput(
-          projected ? { id: projected.id, mintAuthority: projected.mintAuthoritySummary as never } : null,
-        ),
-        projectedResolver,
-      );
+      const compact = computeMintAuthorityScore(projectedMintAuthorityInput(projected), projectedResolver);
 
       expect(compact.score, coin.id).toBe(full.score);
       expect(compact.rawScore, coin.id).toBe(full.rawScore);

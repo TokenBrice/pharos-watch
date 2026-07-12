@@ -75,15 +75,15 @@ describe("smoke-runtime CLI helpers", () => {
     ).toBe(49231);
 
     const server = createServer();
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
       server.listen({ host: "127.0.0.1", port: 0 }, resolve);
     });
     const address = server.address();
-    const preferredPort = typeof address === "object" && address ? address.port : null;
+    const preferredPort = typeof address === "object" && address ? address.port : undefined;
     expect(preferredPort).toBeTypeOf("number");
 
-    const fallbackCalls = [];
+    const fallbackCalls: Array<{ host: string; preferredPort: number; fallbackPort: number }> = [];
     try {
       const fallbackPort = await resolveStaticExportPort("127.0.0.1", {
         env: {},

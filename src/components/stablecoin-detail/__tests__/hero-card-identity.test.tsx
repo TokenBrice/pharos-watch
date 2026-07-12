@@ -3,7 +3,7 @@
 import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
+import type { Infrastructure, StablecoinMeta } from "@shared/types";
 
 const { isHeroVerdictEnabledMock } = vi.hoisted(() => ({
   isHeroVerdictEnabledMock: vi.fn(),
@@ -62,7 +62,7 @@ const UNCATEGORIZED_VERDICT = {
 } as const;
 
 const COMMON_PROPS = {
-  infrastructures: [],
+  infrastructures: [] as Infrastructure[],
   verdict: INSTITUTIONAL_VERDICT,
   variantParent: null,
   variantChipClass: null,
@@ -78,9 +78,7 @@ describe("HeroVerdict standalone (mobile section)", () => {
   it("renders the verdict pill when the flag is on and the archetype is categorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
-    const { container } = render(
-      <HeroVerdict coinId={BASE_COIN.id} verdict={INSTITUTIONAL_VERDICT} />,
-    );
+    const { container } = render(<HeroVerdict coinId={BASE_COIN.id} verdict={INSTITUTIONAL_VERDICT} />);
 
     const verdictEl = container.querySelector(`#hero-verdict-${BASE_COIN.id}`);
     expect(verdictEl).not.toBeNull();
@@ -91,9 +89,7 @@ describe("HeroVerdict standalone (mobile section)", () => {
   it("renders nothing when the archetype is uncategorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
-    const { container } = render(
-      <HeroVerdict coinId={BASE_COIN.id} verdict={UNCATEGORIZED_VERDICT} />,
-    );
+    const { container } = render(<HeroVerdict coinId={BASE_COIN.id} verdict={UNCATEGORIZED_VERDICT} />);
 
     expect(container.firstChild).toBeNull();
   });
@@ -101,9 +97,7 @@ describe("HeroVerdict standalone (mobile section)", () => {
   it("renders nothing when the flag is off", () => {
     isHeroVerdictEnabledMock.mockReturnValue(false);
 
-    const { container } = render(
-      <HeroVerdict coinId={BASE_COIN.id} verdict={INSTITUTIONAL_VERDICT} />,
-    );
+    const { container } = render(<HeroVerdict coinId={BASE_COIN.id} verdict={INSTITUTIONAL_VERDICT} />);
 
     expect(container.firstChild).toBeNull();
   });
@@ -118,9 +112,7 @@ describe("HeroMobileIdentity heading aria-describedby", () => {
   it("wires aria-describedby when the flag is on and the archetype is categorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
-    const { container } = render(
-      <HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} />,
-    );
+    const { container } = render(<HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} />);
 
     const heading = container.querySelector("h2");
     expect(heading?.getAttribute("aria-describedby")).toBe(`hero-verdict-${BASE_COIN.id}`);
@@ -130,11 +122,7 @@ describe("HeroMobileIdentity heading aria-describedby", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
     const { container } = render(
-      <HeroMobileIdentity
-        coin={BASE_COIN}
-        {...COMMON_PROPS}
-        verdict={UNCATEGORIZED_VERDICT}
-      />,
+      <HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} verdict={UNCATEGORIZED_VERDICT} />,
     );
 
     const heading = container.querySelector("h2");
@@ -144,9 +132,7 @@ describe("HeroMobileIdentity heading aria-describedby", () => {
   it("omits aria-describedby when the flag is off", () => {
     isHeroVerdictEnabledMock.mockReturnValue(false);
 
-    const { container } = render(
-      <HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} />,
-    );
+    const { container } = render(<HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} />);
 
     const heading = container.querySelector("h2");
     expect(heading?.hasAttribute("aria-describedby")).toBe(false);
@@ -163,11 +149,7 @@ describe("HeroDesktopIdentity verdict pill", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
     const { container } = render(
-      <HeroDesktopIdentity
-        coin={BASE_COIN}
-        {...COMMON_PROPS}
-        verdict={DISTRESSED_VERDICT}
-      />,
+      <HeroDesktopIdentity coin={BASE_COIN} {...COMMON_PROPS} verdict={DISTRESSED_VERDICT} />,
     );
 
     const verdictId = `hero-verdict-${BASE_COIN.id}`;
@@ -184,11 +166,7 @@ describe("HeroDesktopIdentity verdict pill", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
     const { container } = render(
-      <HeroDesktopIdentity
-        coin={BASE_COIN}
-        {...COMMON_PROPS}
-        verdict={UNCATEGORIZED_VERDICT}
-      />,
+      <HeroDesktopIdentity coin={BASE_COIN} {...COMMON_PROPS} verdict={UNCATEGORIZED_VERDICT} />,
     );
 
     expect(container.querySelector(`#hero-verdict-${BASE_COIN.id}`)).toBeNull();
@@ -199,9 +177,7 @@ describe("HeroDesktopIdentity verdict pill", () => {
   it("hides the pill and omits aria-describedby when the flag is off", () => {
     isHeroVerdictEnabledMock.mockReturnValue(false);
 
-    const { container } = render(
-      <HeroDesktopIdentity coin={BASE_COIN} {...COMMON_PROPS} />,
-    );
+    const { container } = render(<HeroDesktopIdentity coin={BASE_COIN} {...COMMON_PROPS} />);
 
     expect(container.querySelector(`#hero-verdict-${BASE_COIN.id}`)).toBeNull();
     const heading = container.querySelector("h2");

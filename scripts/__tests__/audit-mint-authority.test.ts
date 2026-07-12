@@ -30,7 +30,7 @@ describe("audit-mint-authority", () => {
       },
       {
         generatedAt: "2026-05-24T00:00:00.000Z",
-        providerCapabilities: buildProviderCapabilities({ ETHERSCAN_API_KEY: "set" } as NodeJS.ProcessEnv),
+        providerCapabilities: buildProviderCapabilities({ ETHERSCAN_API_KEY: "set" }),
       },
     );
 
@@ -88,7 +88,7 @@ describe("audit-mint-authority", () => {
         runCli(
           ["--coin", "usdc-circle", "--out-dir", outputDir, "--generated-at", "2026-05-24T00:00:00.000Z"],
           process.cwd(),
-          {} as NodeJS.ProcessEnv,
+          {},
           stdout,
         ),
       ).resolves.toBe(0);

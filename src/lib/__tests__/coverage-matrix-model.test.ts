@@ -133,17 +133,13 @@ describe("buildCoverageMatrixModel", () => {
           },
         ],
         dependencyGraph: {
-          edges: [
-            { from: "usdc-circle", to: "dai-makerdao", weight: 0.5, type: "mechanism" },
-          ],
+          edges: [{ from: "usdc-circle", to: "dai-makerdao", weight: 0.5, type: "mechanism" }],
         },
       } as never),
       activeStablecoins: [usdc!, dai!, usdt!],
     });
 
-    const dependencyKindById = new Map(
-      model.rows.map((row) => [row.id, row.statuses.dependency.kind]),
-    );
+    const dependencyKindById = new Map(model.rows.map((row) => [row.id, row.statuses.dependency.kind]));
     expect(dependencyKindById.get("usdc-circle")).toBe("upstream");
     expect(dependencyKindById.get("dai-makerdao")).toBe("dependent");
     expect(dependencyKindById.get("usdt-tether")).toBe("unmapped-gap");
@@ -177,7 +173,6 @@ describe("buildCoverageMatrixModel", () => {
             mintPath: "issuer-direct-mint",
             authorityPosture: "concentrated-admin",
             confidence: "verified",
-            summary: "Issuer minter can create new supply.",
           },
         },
       ],

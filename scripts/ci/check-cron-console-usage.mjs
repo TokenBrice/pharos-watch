@@ -22,10 +22,7 @@ const BASELINE_PATH = "scripts/lib/cron-console-usage-baseline.json";
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs"]);
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__"]);
 const CONSOLE_CALL_PATTERN = /\bconsole\.(?:log|warn|error|info|debug)\s*\(/g;
-const STRUCTURED_LOGGER_FILES = new Set([
-  "worker/src/lib/structured-log.ts",
-  "worker/src/lib/telegram-log.ts",
-]);
+const STRUCTURED_LOGGER_FILES = new Set(["worker/src/lib/structured-log.ts", "worker/src/lib/telegram-log.ts"]);
 
 function lineNumberAt(source, offset) {
   return source.slice(0, offset).split(/\r?\n/g).length;
@@ -56,7 +53,7 @@ function extractCallArguments(source, openParenOffset) {
       continue;
     }
 
-    if (char === "'" || char === "\"" || char === "`") {
+    if (char === "'" || char === '"' || char === "`") {
       quote = char;
       continue;
     }
@@ -99,9 +96,7 @@ function isStructuredConsoleCall(rel, args) {
     return true;
   }
   return (
-    /^JSON\.stringify\s*\(\s*\{/.test(normalized)
-    && /\bscope\s*:/.test(normalized)
-    && /\bmessage\s*:/.test(normalized)
+    /^JSON\.stringify\s*\(\s*\{/.test(normalized) && /\bscope\s*:/.test(normalized) && /\bmessage\s*:/.test(normalized)
   );
 }
 
@@ -115,9 +110,7 @@ export function collectWorkerConsoleUsage(roots = DEFAULT_ROOTS, cwd = process.c
     })) {
       const rel = relative(cwd, file).replaceAll("\\", "/");
       const source = readFileSync(file, "utf8");
-      const count = collectConsoleCalls(source)
-        .filter((call) => !isStructuredConsoleCall(rel, call.args))
-        .length;
+      const count = collectConsoleCalls(source).filter((call) => !isStructuredConsoleCall(rel, call.args)).length;
       if (count > 0) counts[rel] = count;
     }
   }
@@ -165,6 +158,12 @@ function writeBaseline(path, counts, cwd) {
   writeFileSync(absolute, `${JSON.stringify(counts, null, 2)}\n`);
 }
 
+/**
+ * @param {{
+ *   roots?: string[], baselinePath?: string, cwd?: string, updateBaseline?: boolean,
+ *   stdout?: { write(chunk: string): unknown }, stderr?: { write(chunk: string): unknown },
+ * }} [options]
+ */
 export function checkCronConsoleUsage({
   roots = DEFAULT_ROOTS,
   baselinePath = BASELINE_PATH,
@@ -217,6 +216,4 @@ export function checkCronConsoleUsage({
   return 0;
 }
 
-runAsCli(import.meta.url, () =>
-  checkCronConsoleUsage({ updateBaseline: process.argv.includes("--update-baseline") }),
-);
+runAsCli(import.meta.url, () => checkCronConsoleUsage({ updateBaseline: process.argv.includes("--update-baseline") }));

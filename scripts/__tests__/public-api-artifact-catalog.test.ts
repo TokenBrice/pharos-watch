@@ -11,12 +11,9 @@ import {
   type PublicApiArtifactEndpoint,
 } from "../lib/public-api-artifact-catalog";
 
-const integrationFacingPublicKeys = ENDPOINT_DEFINITIONS
-  .filter((endpoint) => (
-    !endpoint.adminRequired
-    && endpoint.methods.includes("GET")
-    && endpoint.publicApiAccess !== "exempt"
-  ))
+const integrationFacingPublicKeys = ENDPOINT_DEFINITIONS.filter(
+  (endpoint) => !endpoint.adminRequired && endpoint.methods.includes("GET") && endpoint.publicApiAccess !== "exempt",
+)
   .map((endpoint) => endpoint.key)
   .sort();
 
@@ -27,9 +24,15 @@ const FORBIDDEN_ARTIFACT_PATHS = [
   "/api/api-key-requests-admin",
 ];
 
+function isPostmanRequestConfig(
+  postman: PostmanRequestConfig | readonly PostmanRequestConfig[],
+): postman is PostmanRequestConfig {
+  return !Array.isArray(postman);
+}
+
 function postmanRequests(postman: PublicApiArtifactEndpoint["postman"]): readonly PostmanRequestConfig[] {
   if (!postman) return [];
-  return Array.isArray(postman) ? postman : [postman];
+  return isPostmanRequestConfig(postman) ? [postman] : postman;
 }
 
 describe("public API artifact catalog", () => {
@@ -129,9 +132,8 @@ describe("public API artifact catalog", () => {
       expect(Object.keys(operations)).toEqual(["get"]);
     }
 
-    const postmanMethods = postman.item?.flatMap((folder) =>
-      folder.item?.map((item) => item.request?.method) ?? [],
-    ) ?? [];
+    const postmanMethods =
+      postman.item?.flatMap((folder) => folder.item?.map((item) => item.request?.method) ?? []) ?? [];
     expect(new Set(postmanMethods)).toEqual(new Set(["GET"]));
   });
 

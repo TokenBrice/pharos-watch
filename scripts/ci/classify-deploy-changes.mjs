@@ -50,12 +50,15 @@ function hasWorkerPackagePromotionDiff({ baseSha, changedFiles, execFile, headSh
   }
 }
 
-export function classifyDeployChanges({
-  baseSha,
-  eventName,
-  execFile = execFileSync,
-  headSha,
-} = {}) {
+/**
+ * @param {{
+ *   baseSha?: string,
+ *   eventName?: string,
+ *   execFile?: (file: string, args: readonly string[], options: { encoding: "utf8" }) => string,
+ *   headSha?: string,
+ * }} [options]
+ */
+export function classifyDeployChanges({ baseSha, eventName, execFile = execFileSync, headSha } = {}) {
   if (eventName !== "push") {
     return {
       changedFiles: [],
@@ -99,16 +102,18 @@ export function classifyDeployChanges({
   const pagesChanged = hasPagesDeployImpact(changedFiles);
   const pagesUiChanged = pagesChanged && hasPagesUiImpact(changedFiles);
   const workerChanged = hasWorkerDeployImpact(changedFiles);
-  const workerPromotionRequired = hasWorkerPromotionImpact(changedFiles)
-    || hasWorkerPackagePromotionDiff({ baseSha, changedFiles, execFile, headSha });
+  const workerPromotionRequired =
+    hasWorkerPromotionImpact(changedFiles) ||
+    hasWorkerPackagePromotionDiff({ baseSha, changedFiles, execFile, headSha });
   return {
     changedFiles,
     deployRequired: hasDeployImpact(changedFiles),
     pagesChanged,
     pagesUiChanged,
-    reason: changedFiles.length > 0
-      ? `Detected ${changedFiles.length} changed file(s) in push range`
-      : "No changed files detected in push range",
+    reason:
+      changedFiles.length > 0
+        ? `Detected ${changedFiles.length} changed file(s) in push range`
+        : "No changed files detected in push range",
     workerChanged,
     workerPromotionRequired,
   };

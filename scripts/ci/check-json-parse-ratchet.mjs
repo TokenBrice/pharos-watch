@@ -68,6 +68,12 @@ function writeBaseline(path, counts, cwd) {
   writeFileSync(absolute, `${JSON.stringify(counts, null, 2)}\n`);
 }
 
+/**
+ * @param {{
+ *   roots?: string[], baselinePath?: string, cwd?: string, updateBaseline?: boolean,
+ *   stdout?: { write(chunk: string): unknown }, stderr?: { write(chunk: string): unknown },
+ * }} [options]
+ */
 export function checkJsonParseRatchet({
   roots = DEFAULT_JSON_PARSE_ROOTS,
   baselinePath = BASELINE_PATH,

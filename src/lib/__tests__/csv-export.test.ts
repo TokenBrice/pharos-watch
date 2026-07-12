@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { downloadCsv } from "@/lib/exports/csv";
 
 describe("downloadCsv", () => {
-  const createObjectURL = vi.fn(() => "blob:pharos-csv");
+  const createObjectURL = vi.fn<(blob: Blob) => string>(() => "blob:pharos-csv");
   const revokeObjectURL = vi.fn();
   let clickSpy: ReturnType<typeof vi.spyOn>;
 
@@ -38,11 +38,14 @@ describe("downloadCsv", () => {
     );
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
-    const blob = createObjectURL.mock.calls[0]?.[0];
+    const firstCall = createObjectURL.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    if (!firstCall) throw new Error("Expected CSV download to create an object URL");
+    const [blob] = firstCall;
     expect(blob).toBeInstanceOf(Blob);
-    expect((blob as Blob).type).toBe("text/csv;charset=utf-8;");
-    expect(Array.from(new Uint8Array(await (blob as Blob).arrayBuffer()).slice(0, 3))).toEqual([239, 187, 191]);
-    await expect((blob as Blob).text()).resolves.toBe("Name,Note\nUSD Coin,\"quoted, value\"");
+    expect(blob.type).toBe("text/csv;charset=utf-8;");
+    expect(Array.from(new Uint8Array(await blob.arrayBuffer()).slice(0, 3))).toEqual([239, 187, 191]);
+    await expect(blob.text()).resolves.toBe('Name,Note\nUSD Coin,"quoted, value"');
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).not.toHaveBeenCalled();
 

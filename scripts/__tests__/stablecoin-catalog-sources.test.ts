@@ -31,7 +31,7 @@ function writeJson(rootDir: string, relativePath: string, value: unknown): void 
   writeFileSync(absolutePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-function makeCoin(id: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function makeCoin(id: string, overrides: Record<string, unknown> = {}): StablecoinSourceEntry["coin"] {
   return {
     id,
     name: `${id} Coin`,
@@ -45,7 +45,7 @@ function makeCoin(id: string, overrides: Record<string, unknown> = {}): Record<s
       navToken: false,
     },
     ...overrides,
-  };
+  } as StablecoinSourceEntry["coin"];
 }
 
 function makeEntry(
@@ -55,7 +55,7 @@ function makeEntry(
   legacyShard?: StablecoinSourceEntry["legacyShard"],
 ): StablecoinSourceEntry {
   return {
-    coin: makeCoin(id) as StablecoinSourceEntry["coin"],
+    coin: makeCoin(id),
     file,
     id,
     legacyShard,
@@ -125,16 +125,8 @@ afterEach(() => {
 describe("stablecoin catalog source helpers", () => {
   it("detects duplicate IDs across per-coin source files", () => {
     const issues = findDuplicateStablecoinIds([
-      makeEntry(
-        "usdc-circle",
-        "shared/data/stablecoins/coins/usdc-circle.json",
-        "per-coin",
-      ),
-      makeEntry(
-        "usdc-circle",
-        "shared/data/stablecoins/coins/usdc-circle-copy.json",
-        "per-coin",
-      ),
+      makeEntry("usdc-circle", "shared/data/stablecoins/coins/usdc-circle.json", "per-coin"),
+      makeEntry("usdc-circle", "shared/data/stablecoins/coins/usdc-circle-copy.json", "per-coin"),
     ]);
 
     expect(issues).toHaveLength(1);
@@ -149,16 +141,8 @@ describe("stablecoin catalog source helpers", () => {
     const issues = findCanonicalOrderIssues(
       ["alpha-usd", "alpha-usd", "missing-usd"],
       [
-        makeEntry(
-          "alpha-usd",
-          "shared/data/stablecoins/coins/alpha-usd.json",
-          "per-coin",
-        ),
-        makeEntry(
-          "beta-usd",
-          "shared/data/stablecoins/coins/beta-usd.json",
-          "per-coin",
-        ),
+        makeEntry("alpha-usd", "shared/data/stablecoins/coins/alpha-usd.json", "per-coin"),
+        makeEntry("beta-usd", "shared/data/stablecoins/coins/beta-usd.json", "per-coin"),
       ],
     );
 
@@ -183,7 +167,7 @@ describe("stablecoin catalog source helpers", () => {
 
     expect(formatLegacyShardEntriesIssue(issues[0]!)).toContain(
       "Legacy shards are read-only compatibility shells; edit shared/data/stablecoins/coins/<id>.json " +
-      "and regenerate shared/data/stablecoins/coins.generated.json instead.",
+        "and regenerate shared/data/stablecoins/coins.generated.json instead.",
     );
   });
 
@@ -200,9 +184,7 @@ describe("stablecoin catalog source helpers", () => {
     const entries = loadPerCoinStablecoinEntries(rootDir);
     expect(entries).toHaveLength(1);
     expect(entries[0]?.coin.reserves).toEqual(reserves);
-    expect(entries[0]?.sidecarFiles).toEqual([
-      "shared/data/stablecoins/domains/reserves/sidecar-usd.json",
-    ]);
+    expect(entries[0]?.sidecarFiles).toEqual(["shared/data/stablecoins/domains/reserves/sidecar-usd.json"]);
   });
 
   it("merges all research sidecar domains into one stablecoin projection", () => {
@@ -277,19 +259,13 @@ describe("stablecoin catalog source helpers", () => {
 
     writeJson(rootDir, "shared/data/stablecoins/coins/base-usd.json", makeCoin("other-usd"));
 
-    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
-      /coin id "other-usd" must match file id "base-usd"/,
-    );
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/coin id "other-usd" must match file id "base-usd"/);
   });
 
   it("applies full catalog invariants to base coin files without sidecars", () => {
     const rootDir = makeTempRoot();
 
-    writeJson(
-      rootDir,
-      "shared/data/stablecoins/coins/base-usd.json",
-      makeCoin("base-usd", { canBeBlacklisted: true }),
-    );
+    writeJson(rootDir, "shared/data/stablecoins/coins/base-usd.json", makeCoin("base-usd", { canBeBlacklisted: true }));
 
     expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
       /blacklistabilityReview: explicit canBeBlacklisted overrides require blacklistabilityReview/,
@@ -381,9 +357,7 @@ describe("stablecoin catalog source helpers", () => {
       mintAuthority: makeMintAuthority(),
     });
 
-    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
-      /no matching base coin found.*"orphan-usd"/,
-    );
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/no matching base coin found.*"orphan-usd"/);
   });
 
   it("keeps generated aggregate shape equivalent after splitting a sidecar field", () => {
@@ -431,11 +405,7 @@ describe("stablecoin catalog source helpers", () => {
   it("fails check mode when the generated per-coin aggregate is stale", () => {
     const rootDir = makeTempRoot();
     writeLegacyShards(rootDir);
-    writeJson(
-      rootDir,
-      "shared/data/stablecoins/coins/per-coin-usd.json",
-      makeCoin("per-coin-usd"),
-    );
+    writeJson(rootDir, "shared/data/stablecoins/coins/per-coin-usd.json", makeCoin("per-coin-usd"));
     writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", []);
 
     expect(() => syncGeneratedPerCoinAsset({ check: true, rootDir })).toThrow(/stale/);
@@ -496,9 +466,7 @@ describe("stablecoin catalog source helpers", () => {
     );
     writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", []);
 
-    expect(() => syncGeneratedPerCoinAsset({ rootDir })).toThrow(
-      /active variants require mintAuthority review/,
-    );
+    expect(() => syncGeneratedPerCoinAsset({ rootDir })).toThrow(/active variants require mintAuthority review/);
   });
 
   it("rejects copied per-coin files before generating the aggregate", () => {

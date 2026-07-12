@@ -44,6 +44,7 @@ function makePsiResponse(): StabilityIndexResponse {
       currentVersion: "1.0",
       currentVersionLabel: "v1.0",
       changelogPath: "/methodology/stability-index-changelog/",
+      asOf: 1_700_259_200,
       isCurrent: true,
     },
   };

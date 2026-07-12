@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  compareLiquidityRows,
-  type LiquidityRow,
-  type LiquiditySortKey,
-} from "@/components/liquidity-table";
+import { compareLiquidityRows, type LiquidityRow, type LiquiditySortKey } from "@/components/liquidity-table";
 import { sortTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
 import {
   derivePagination,
@@ -79,7 +75,7 @@ describe("liquidity sorting and pagination flow", () => {
     const beforeFilter = derivePagination(pageState, sortedAll.length, PAGE_SIZE, true);
     expect(beforeFilter.effectivePage).toBe(2);
 
-    const filtered = sortedAll.filter((row) => row.liq.liquidityScore !== undefined && row.liq.liquidityScore <= 8);
+    const filtered = sortedAll.filter((row) => row.liq.liquidityScore != null && row.liq.liquidityScore <= 8);
     pageState = reconcilePaginationStateOnTotalChange(pageState, filtered.length, true);
     const afterFilter = derivePagination(pageState, filtered.length, PAGE_SIZE, true);
     expect(afterFilter.effectivePage).toBe(0);

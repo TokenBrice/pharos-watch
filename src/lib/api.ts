@@ -253,6 +253,14 @@ export async function apiFetch<T>(
   contractMode: ApiContractMode | undefined,
   options: ApiFetchOptions & { nullOn404: true },
 ): Promise<T | null>;
+/** Overload: request options without `nullOn404` preserve the non-null return type. */
+export async function apiFetch<T>(
+  path: string,
+  schema: SchemaLike<T> | undefined,
+  init: RequestInit | undefined,
+  contractMode: ApiContractMode | undefined,
+  options: ApiFetchOptions & { nullOn404?: false },
+): Promise<T>;
 export async function apiFetch<T>(
   path: string,
   schema?: SchemaLike<T>,

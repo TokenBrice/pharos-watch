@@ -39,7 +39,7 @@ export interface Args {
   generatedAt: string;
 }
 
-interface RankingWithRisk extends YieldRanking {
+export interface RankingWithRisk extends YieldRanking {
   // Legacy flat fields are accepted for old local calibration artifacts only.
   sourceRiskPenalty?: number | null;
   sourceRiskScore?: number | null;
@@ -173,7 +173,10 @@ export function buildCalibrationReport(rankings: RankingWithRisk[], generatedAt:
     "",
     "| cohort | rows | p50 PYS | p90 PYS | max PYS | capped at 100 |",
     "| --- | ---: | ---: | ---: | ---: | ---: |",
-    ...nonUsd.map((row) => `| ${row.peg} | ${row.count} | ${formatNumber(row.p50)} | ${formatNumber(row.p90)} | ${formatNumber(row.max)} | ${row.capped} |`),
+    ...nonUsd.map(
+      (row) =>
+        `| ${row.peg} | ${row.count} | ${formatNumber(row.p50)} | ${formatNumber(row.p90)} | ${formatNumber(row.max)} | ${row.capped} |`,
+    ),
     "",
     "## Top 20 Before",
     "",
@@ -319,7 +322,8 @@ function derivePenalty(row: RankingWithRisk): number {
   if (typeof rewardShare === "number" && rewardShare > 0.5) penalty += Math.min(0.5, rewardShare - 0.5);
   if (typeof sourceDepthRatio === "number" && sourceDepthRatio < 0.001) penalty += 0.35;
   if (typeof sourceAgeSeconds === "number" && sourceAgeSeconds > 6 * 60 * 60) penalty += 0.25;
-  if (typeof sourceSwitchCount30d === "number" && sourceSwitchCount30d > 0) penalty += Math.min(0.3, sourceSwitchCount30d * 0.1);
+  if (typeof sourceSwitchCount30d === "number" && sourceSwitchCount30d > 0)
+    penalty += Math.min(0.3, sourceSwitchCount30d * 0.1);
   if (typeof observationCount30d === "number" && observationCount30d > 0 && observationCount30d < 7) penalty += 0.2;
   if (venueRiskTier === "high") penalty += 0.35;
   return penalty;
@@ -337,7 +341,10 @@ function classifyDriver(row: RankingWithRisk): string {
     { label: "low-depth", value: typeof sourceDepthRatio === "number" && sourceDepthRatio < 0.001 ? 0.35 : 0 },
     { label: "stale", value: typeof sourceAgeSeconds === "number" && sourceAgeSeconds > 6 * 60 * 60 ? 0.25 : 0 },
     { label: "source-switch", value: row.provenance?.sourceSwitch || (sourceSwitchCount30d ?? 0) > 0 ? 0.2 : 0 },
-    { label: "bootstrap", value: typeof observationCount30d === "number" && observationCount30d > 0 && observationCount30d < 7 ? 0.2 : 0 },
+    {
+      label: "bootstrap",
+      value: typeof observationCount30d === "number" && observationCount30d > 0 && observationCount30d < 7 ? 0.2 : 0,
+    },
     { label: "venue-risk", value: venueRiskTier === "high" ? 0.35 : 0 },
     { label: "missing-safety", value: row.safetyScore == null ? 0.1 : 0 },
     { label: "negative-zero", value: row.apy30d <= 0 ? 0.1 : 0 },
@@ -382,7 +389,9 @@ function percentile(values: number[], p: number): number {
   return sorted[index];
 }
 
-function summarizeNullCoverage(rankings: RankingWithRisk[]): Record<CalibrationField, { present: number; missing: number; nullRate: number }> {
+function summarizeNullCoverage(
+  rankings: RankingWithRisk[],
+): Record<CalibrationField, { present: number; missing: number; nullRate: number }> {
   return Object.fromEntries(
     CALIBRATION_FIELDS.map((field) => {
       const present = rankings.filter((row) => {
@@ -408,21 +417,25 @@ function summarizeNullCoverage(rankings: RankingWithRisk[]): Record<CalibrationF
 
 function summarizeNonUsd(rows: ScoredRow[]) {
   const groups = new Map<string, ScoredRow[]>();
-  rows.filter((row) => row.peg !== "USD").forEach((row) => {
-    groups.set(row.peg, [...(groups.get(row.peg) ?? []), row]);
-  });
+  rows
+    .filter((row) => row.peg !== "USD")
+    .forEach((row) => {
+      groups.set(row.peg, [...(groups.get(row.peg) ?? []), row]);
+    });
   if (groups.size === 0) groups.set("non-USD", []);
-  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([peg, group]) => {
-    const distribution = summarizeDistribution(group.map((row) => row.v8Score));
-    return {
-      peg,
-      count: group.length,
-      p50: distribution.p50,
-      p90: distribution.p90,
-      max: distribution.max,
-      capped: group.filter((row) => row.cappedAfter).length,
-    };
-  });
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([peg, group]) => {
+      const distribution = summarizeDistribution(group.map((row) => row.v8Score));
+      return {
+        peg,
+        count: group.length,
+        p50: distribution.p50,
+        p90: distribution.p90,
+        max: distribution.max,
+        capped: group.filter((row) => row.cappedAfter).length,
+      };
+    });
 }
 
 function renderRankTable(rows: ScoredRow[], mode: "before" | "after"): string {
@@ -431,7 +444,10 @@ function renderRankTable(rows: ScoredRow[], mode: "before" | "after"): string {
   return [
     "| rank | id | symbol | APY 30d | PYS | source | driver |",
     "| ---: | --- | --- | ---: | ---: | --- | --- |",
-    ...rows.map((row) => `| ${row[rankKey]} | ${row.id} | ${row.symbol} | ${formatNumber(row.apy30d)} | ${row[scoreKey]} | ${escapeCell(row.yieldSource)} | ${row.driver} |`),
+    ...rows.map(
+      (row) =>
+        `| ${row[rankKey]} | ${row.id} | ${row.symbol} | ${formatNumber(row.apy30d)} | ${row[scoreKey]} | ${escapeCell(row.yieldSource)} | ${row.driver} |`,
+    ),
   ].join("\n");
 }
 
@@ -439,7 +455,10 @@ function renderMoverTable(rows: ScoredRow[]): string {
   return [
     "| before | after | delta | id | symbol | before PYS | after PYS | driver | source penalty |",
     "| ---: | ---: | ---: | --- | --- | ---: | ---: | --- | ---: |",
-    ...rows.map((row) => `| ${row.beforeRank} | ${row.afterRank} | ${row.rankDelta} | ${row.id} | ${row.symbol} | ${row.v7Score} | ${row.v8Score} | ${row.driver} | ${formatNumber(row.sourceRiskPenalty)} |`),
+    ...rows.map(
+      (row) =>
+        `| ${row.beforeRank} | ${row.afterRank} | ${row.rankDelta} | ${row.id} | ${row.symbol} | ${row.v7Score} | ${row.v8Score} | ${row.driver} | ${formatNumber(row.sourceRiskPenalty)} |`,
+    ),
   ].join("\n");
 }
 
@@ -464,7 +483,9 @@ function escapeCell(value: string): string {
 }
 
 function printUsage(): void {
-  console.log("Usage: tsx scripts/maintenance/yield-pys-v8-calibration.ts --input rankings.json [--out agents/report.md]");
+  console.log(
+    "Usage: tsx scripts/maintenance/yield-pys-v8-calibration.ts --input rankings.json [--out agents/report.md]",
+  );
 }
 
 function main(): void {

@@ -6,6 +6,7 @@ import type { ReportCard } from "@shared/types";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
+import { logosById } from "@/lib/logos";
 
 vi.mock("@/hooks/api-hooks", () => ({
   useReportCards: vi.fn(),
@@ -74,7 +75,7 @@ describe("DependencyMapClient", () => {
         ],
       }) as unknown as ReturnType<typeof useStablecoins>,
     );
-    mockUseLogos.mockReturnValue({ data: {} });
+    mockUseLogos.mockReturnValue({ data: logosById });
   });
 
   it("does not wrap the graph in a mobile-hidden container", () => {

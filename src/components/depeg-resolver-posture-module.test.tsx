@@ -4,7 +4,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { DepegResolverPostureModule } from "@/components/depeg-resolver-posture-module";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
-import type { DdrResolutionTier, DdrResponse, DdrRow } from "@shared/types";
+import {
+  DdrRowSchema,
+  DdrV2ResponseRowSchema,
+  type DdrResolutionTier,
+  type DdrResponse,
+  type DdrRow,
+  type DdrV2ResponseRow,
+} from "@shared/types";
 
 vi.mock("@/lib/feature-flags", () => ({
   isDepegResolverEnabled: () => true,
@@ -19,10 +26,21 @@ afterEach(() => {
 });
 
 const meta: DdrResponse["_meta"] = {
+  schemaVersion: 2,
   dataAsOf: 1,
   modelAsOf: 1,
   computedAt: 1,
   expiresAt: 2,
+  snapshotToken: null,
+  snapshotGeneration: null,
+  publicPredictionIds: [],
+  publicPredictionRowHashes: {},
+  basePayloadHash: null,
+  readOverlay: {
+    degradedLockDeferralIncidentKeys: [],
+    closedPendingReviewIncidentKeys: [],
+    suppressedIncidentKeys: [],
+  },
   degraded: false,
   degradedReason: null,
   publicWarning: "",
@@ -33,9 +51,11 @@ const meta: DdrResponse["_meta"] = {
   lineage: null,
 };
 
-function makeRow(overrides: Partial<DdrRow> & { stablecoinId: string; symbol: string; tier: DdrResolutionTier }): DdrRow {
+function makeRow(
+  overrides: Partial<DdrRow> & { stablecoinId: string; symbol: string; tier: DdrResolutionTier },
+): DdrV2ResponseRow {
   const { tier, ...rest } = overrides;
-  return {
+  const source = DdrRowSchema.parse({
     name: overrides.symbol,
     pegCurrency: "USD",
     governance: "decentralized",
@@ -56,15 +76,90 @@ function makeRow(overrides: Partial<DdrRow> & { stablecoinId: string; symbol: st
       ageStatus: null,
       horizons: [],
     },
-    relatedContext: {},
+    relatedContext: {
+      dewsBand: null,
+      dewsScore: null,
+      liquidityScore: null,
+      safetyGrade: null,
+      safetyScore: null,
+      supplyChange7dPct: null,
+      supplyChange30dPct: null,
+      mintSurge: null,
+    },
     ...rest,
-  } as DdrRow;
+  });
+  return DdrV2ResponseRowSchema.parse({
+    stablecoinId: source.stablecoinId,
+    symbol: source.symbol,
+    name: source.name,
+    pegCurrency: source.pegCurrency,
+    governance: source.governance,
+    status: source.status,
+    eventId: source.eventId,
+    incidentKey: `ddr2:${source.stablecoinId}`,
+    startedAt: source.startedAt,
+    direction: source.direction,
+    kind: "prediction",
+    prediction: {
+      state: "frozen",
+      publicPredictionId: source.eventId,
+      incidentKey: `ddr2:${source.stablecoinId}`,
+      predictionPolicyVersion: "sticky-24h-v1",
+      predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+      predictionMethodologyVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+      resolutionRubricVersion: "resolution-rubric-v1",
+      durationModelVersion: "duration-landmark-v1",
+      incidentGroupingVersion: "incident-group-v1",
+      supportRulesVersion: "support-rules-v1",
+      eligibleAt: 1,
+      policyDelaySec: 86_400,
+      lockedAt: 1,
+      publishedAt: 2,
+      publicationSnapshotToken: `ddrpub:${source.stablecoinId}`,
+      snapshotGeneration: 1,
+      eventAgeAtLockSec: source.ageSec,
+      lockTiming: "on_time",
+      lockTrigger: "scheduled_24h",
+      readiness: null,
+      backstop: null,
+      source: "public_prediction",
+      deferralReason: null,
+      deferralCount: null,
+      rowHash: "a".repeat(64),
+      lineage: null,
+      modelAsOf: 1,
+      latestErratum: null,
+      errataCount: 0,
+      errataHistory: [],
+    },
+    frozen: {
+      resolution: source.resolution,
+      duration: {
+        ...source.duration,
+        remainingAsOf: 1,
+        medianResolveAt: source.duration.medianSec,
+        iqrResolveAt: source.duration.iqrSec,
+      },
+      relatedContext: source.relatedContext,
+      sourceRow: source,
+    },
+    live: {
+      currentEventId: source.eventId,
+      ageSec: source.ageSec,
+      peakDeviationBps: source.peakDeviationBps,
+      currentDeviationBps: source.currentDeviationBps,
+      eventState: "active",
+      updatedAt: source.startedAt + source.ageSec,
+      stale: false,
+      degradedReason: null,
+    },
+  });
 }
 
-function response(rows: DdrRow[]): DdrResponse {
+function response(rows: DdrV2ResponseRow[]): DdrResponse {
   return {
     _meta: meta,
-    rows: rows as DdrResponse["rows"],
+    rows,
     methodology: {
       version: DDR_METHODOLOGY_VERSION,
       versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
@@ -77,7 +172,7 @@ function response(rows: DdrRow[]): DdrResponse {
   };
 }
 
-const THREE_ROWS: DdrRow[] = [
+const THREE_ROWS: DdrV2ResponseRow[] = [
   makeRow({ stablecoinId: "a-coin", symbol: "ACOIN", tier: "recovery_likely" }),
   makeRow({ stablecoinId: "b-coin", symbol: "BCOIN", tier: "at_risk" }),
   makeRow({ stablecoinId: "c-coin", symbol: "CCOIN", tier: "recovery_unlikely" }),
@@ -96,7 +191,9 @@ describe("DepegResolverPostureModule", () => {
 
   it("stays hidden for hard-degraded snapshots", () => {
     const { container } = render(
-      <DepegResolverPostureModule data={{ ...response(THREE_ROWS), _meta: { ...meta, degraded: true, degradedReason: "missing-cache" } }} />,
+      <DepegResolverPostureModule
+        data={{ ...response(THREE_ROWS), _meta: { ...meta, degraded: true, degradedReason: "missing-cache" } }}
+      />,
     );
     expect(container.firstChild).toBeNull();
   });

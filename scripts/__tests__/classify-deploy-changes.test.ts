@@ -313,7 +313,7 @@ describe("classifyDeployChanges", () => {
   });
 
   it("keeps broad validation enabled while skipping Worker promotion for Pages and tooling cleanup diffs", () => {
-    const execFile = (_cmd: string, args: string[]) => {
+    const execFile = (_cmd: string, args: readonly string[]) => {
       if (args.includes("--unified=0")) {
         return `
 diff --git a/package.json b/package.json
@@ -348,7 +348,7 @@ diff --git a/package-lock.json b/package-lock.json
   });
 
   it("promotes the Worker for root package changes that can affect its bundle", () => {
-    const execFile = (_cmd: string, args: string[]) => {
+    const execFile = (_cmd: string, args: readonly string[]) => {
       if (args.includes("--unified=0")) {
         return `
 diff --git a/package.json b/package.json
@@ -411,7 +411,7 @@ diff --git a/package.json b/package.json
 
   it("passes push refs to git diff as arguments", () => {
     const received: unknown[] = [];
-    const execFile = (cmd: string, args: string[]) => {
+    const execFile = (cmd: string, args: readonly string[]) => {
       received.push([cmd, args]);
       return "src/app/page.tsx\n";
     };

@@ -8,6 +8,10 @@ export function resolveSourceRoot(root, cwd = process.cwd()) {
   return isAbsolute(root) ? root : join(cwd, root);
 }
 
+/**
+ * @param {string} rootDir
+ * @param {{ extensions?: Iterable<string>, excludedDirs?: Iterable<string>, skipDotEntries?: boolean }} [options]
+ */
 export function collectSourceFiles(
   rootDir,
   { extensions, excludedDirs = DEFAULT_SOURCE_FILE_EXCLUDED_DIRS, skipDotEntries = false } = {},
@@ -36,6 +40,11 @@ export function collectSourceFiles(
   return files;
 }
 
+/**
+ * @param {string} root
+ * @param {string} cwd
+ * @param {{ extensions?: Iterable<string>, excludedDirs?: Iterable<string>, skipDotEntries?: boolean }} [options]
+ */
 export function collectSourceFilesUnderRoot(root, cwd, { extensions, excludedDirs, skipDotEntries } = {}) {
   const absolute = resolveSourceRoot(root, cwd);
   if (!existsSync(absolute)) return [];

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
 
 const { apiFetchMock, apiFetchWithMetaMock } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(async () => []),
@@ -15,6 +16,13 @@ import { depegEventsInfiniteQueryOptions } from "../use-depeg-events";
 import { supplyHistoryQueryOptions } from "../use-stablecoins";
 import { mintBurnFlowsCoinQueryOptions } from "../use-mint-burn-flows";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
+
+function queryContext<TQueryKey extends readonly unknown[]>(
+  queryKey: TQueryKey,
+  signal = new AbortController().signal,
+) {
+  return { client: new QueryClient(), signal, queryKey, meta: undefined };
+}
 
 describe("query option builders", () => {
   it("keeps low-risk API hook descriptors in the frontend registry", () => {
@@ -40,11 +48,12 @@ describe("query option builders", () => {
     expect(options.refetchInterval).toBe(2 * 24 * 60 * 60 * 1000);
     expect(options.enabled).toBe(true);
 
-    await options.queryFn?.();
+    if (typeof options.queryFn !== "function") throw new Error("Expected a supply-history query function");
+    await options.queryFn(queryContext(options.queryKey));
     expect(apiFetchMock).toHaveBeenCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=1825",
       expect.objectContaining({ safeParse: expect.any(Function) }),
-      undefined,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
       undefined,
     );
   });
@@ -54,11 +63,12 @@ describe("query option builders", () => {
 
     expect(options.queryKey).toEqual(["supply-history", "usdc-circle", 5000]);
 
-    await options.queryFn?.();
+    if (typeof options.queryFn !== "function") throw new Error("Expected a supply-history query function");
+    await options.queryFn(queryContext(options.queryKey));
     expect(apiFetchMock).toHaveBeenCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=5000",
       expect.objectContaining({ safeParse: expect.any(Function) }),
-      undefined,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
       undefined,
     );
   });
@@ -71,11 +81,12 @@ describe("query option builders", () => {
     expect(options.refetchInterval).toBe(60 * 60 * 1000);
     expect(options.enabled).toBe(true);
 
-    await options.queryFn?.();
+    if (typeof options.queryFn !== "function") throw new Error("Expected a mint/burn query function");
+    await options.queryFn(queryContext(options.queryKey));
     expect(apiFetchWithMetaMock).toHaveBeenCalledWith(
       "/api/mint-burn-flows?stablecoin=usdc-circle&hours=168",
       expect.objectContaining({ safeParse: expect.any(Function) }),
-      undefined,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
       3600,
       undefined,
     );
@@ -93,11 +104,8 @@ describe("query option builders", () => {
     const options = supplyHistoryQueryOptions("usdc-circle");
     const controller = new AbortController();
 
-    await options.queryFn?.({
-      signal: controller.signal,
-      queryKey: options.queryKey,
-      meta: undefined,
-    } as never);
+    if (typeof options.queryFn !== "function") throw new Error("Expected a supply-history query function");
+    await options.queryFn(queryContext(options.queryKey, controller.signal));
 
     expect(apiFetchMock).toHaveBeenLastCalledWith(
       "/api/supply-history?stablecoin=usdc-circle&days=1825",
@@ -111,14 +119,12 @@ describe("query option builders", () => {
     const options = depegEventsInfiniteQueryOptions("usdc-circle");
     const controller = new AbortController();
 
-    await options.queryFn?.({
-      signal: controller.signal,
-      queryKey: options.queryKey,
-      meta: undefined,
+    if (typeof options.queryFn !== "function") throw new Error("Expected a depeg-events query function");
+    await options.queryFn({
+      ...queryContext(options.queryKey, controller.signal),
       pageParam: null,
       direction: "forward",
-      client: null,
-    } as never);
+    });
 
     expect(apiFetchWithMetaMock).toHaveBeenLastCalledWith(
       "/api/depeg-events?stablecoin=usdc-circle&limit=100&includeTotal=false",

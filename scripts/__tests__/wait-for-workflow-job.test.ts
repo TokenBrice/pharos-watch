@@ -2,12 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fetchWorkflowJobs, waitForWorkflowJob } from "../../.github/scripts/wait-for-workflow-job.mjs";
 
 function jsonResponse(payload: unknown, status = 200): Response {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => payload,
-    text: async () => JSON.stringify(payload),
-  } as Response;
+  return Response.json(payload, { status });
 }
 
 const env = {
@@ -45,16 +40,13 @@ describe("wait-for-workflow-job", () => {
   });
 
   it("retries transient API or parse failures before succeeding", async () => {
+    const partialResponse = jsonResponse(null);
+    partialResponse.json = async () => {
+      throw new Error("partial response");
+    };
     const fetchImpl = vi
       .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => {
-          throw new Error("partial response");
-        },
-        text: async () => "",
-      } as Response)
+      .mockResolvedValueOnce(partialResponse)
       .mockResolvedValueOnce(jsonResponse({ total_count: 1, jobs: [{ name: "validate", conclusion: "success" }] }));
     const sleepImpl = vi.fn(async () => undefined);
 

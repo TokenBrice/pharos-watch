@@ -5,6 +5,7 @@
 // the schema validation and contractMode paths in apiFetch are exercised for real.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
 // Stub modules that are not relevant to what we're testing here.
@@ -113,9 +114,7 @@ describe("use-api-query", () => {
   // ------------------------------------------------------------------
   describe("createApiQueryFn — schema success", () => {
     it("resolves with parsed data when response matches schema", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        makeJsonResponse({ value: 42 }),
-      );
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ value: 42 }));
 
       const fn = createApiQueryFn<SomeData>("/api/test", SomeSchema);
       const result = await fn();
@@ -123,9 +122,7 @@ describe("use-api-query", () => {
     });
 
     it("resolves without schema when no schema provided", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        makeJsonResponse({ anything: true }),
-      );
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ anything: true }));
 
       const fn = createApiQueryFn<{ anything: boolean }>("/api/test");
       const result = await fn();
@@ -138,9 +135,7 @@ describe("use-api-query", () => {
   // ------------------------------------------------------------------
   describe("createApiQueryFn — schema mismatch in strict mode", () => {
     it("throws SchemaValidationError when required field is missing (default strict)", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        makeJsonResponse({ wrong: "field" }),
-      );
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ wrong: "field" }));
 
       const fn = createApiQueryFn<SomeData>("/api/test", SomeSchema);
       await expect(fn()).rejects.toThrow(/Schema validation failed/);
@@ -152,9 +147,7 @@ describe("use-api-query", () => {
   // ------------------------------------------------------------------
   describe("createApiQueryFn — schema mismatch in warn mode", () => {
     it("resolves with raw data and logs a warning when contractMode=warn", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        makeJsonResponse({ wrong: "field" }),
-      );
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ wrong: "field" }));
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
       const fn = createApiQueryFn<SomeData>("/api/test", SomeSchema, undefined, "warn");
@@ -187,9 +180,7 @@ describe("use-api-query", () => {
   // ------------------------------------------------------------------
   describe("createApiQueryFn — non-OK response", () => {
     it("throws ApiFetchError on 500", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        makeJsonResponse({ error: "Internal Server Error" }, 500),
-      );
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ error: "Internal Server Error" }, 500));
 
       const fn = createApiQueryFn<SomeData>("/api/test", SomeSchema);
       await expect(fn()).rejects.toThrow(/Failed to fetch \/api\/test: 500/);
@@ -236,11 +227,7 @@ describe("use-api-query", () => {
             return response.promise;
           });
 
-          const fn = createApiQueryFn<SomeData>(
-            "/api/test",
-            SomeSchema,
-            { signal: fetchInitController.signal },
-          );
+          const fn = createApiQueryFn<SomeData>("/api/test", SomeSchema, { signal: fetchInitController.signal });
           const promise = fn({ signal: contextController.signal });
           await Promise.resolve();
 
@@ -267,12 +254,7 @@ describe("use-api-query", () => {
   // ------------------------------------------------------------------
   describe("createApiPollingQueryOptions", () => {
     it("produces options with correct key, staleTime, refetchInterval", () => {
-      const opts = createApiPollingQueryOptions<SomeData>(
-        ["test-key"],
-        "/api/test",
-        60_000,
-        { schema: SomeSchema },
-      );
+      const opts = createApiPollingQueryOptions<SomeData>(["test-key"], "/api/test", 60_000, { schema: SomeSchema });
 
       expect(opts.queryKey).toEqual(["test-key"]);
       expect(opts.staleTime).toBe(60_000);
@@ -281,18 +263,19 @@ describe("use-api-query", () => {
     });
 
     it("calls apiFetch with correct path when queryFn is invoked", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        makeJsonResponse({ value: 99 }),
-      );
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(makeJsonResponse({ value: 99 }));
 
-      const opts = createApiPollingQueryOptions<SomeData>(
-        ["test-key"],
-        "/api/test",
-        60_000,
-        { schema: SomeSchema },
-      );
+      const opts = createApiPollingQueryOptions<SomeData>(["test-key"], "/api/test", 60_000, { schema: SomeSchema });
 
-      const result = await opts.queryFn?.();
+      const queryFn = opts.queryFn;
+      expect(queryFn).toBeTypeOf("function");
+      if (typeof queryFn !== "function") throw new Error("Expected an API polling query function");
+      const result = await queryFn({
+        client: new QueryClient(),
+        signal: new AbortController().signal,
+        queryKey: opts.queryKey,
+        meta: undefined,
+      });
       expect(result).toEqual({ value: 99 });
     });
   });

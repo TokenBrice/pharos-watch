@@ -68,7 +68,9 @@ const coin: StablecoinMeta = {
     backing: "rwa-backed",
     governance: "centralized",
     pegCurrency: "USD",
+    yieldBearing: false,
     rwa: true,
+    navToken: false,
   },
 };
 
@@ -85,6 +87,9 @@ const coinData: StablecoinData = {
   consensusSources: ["coingecko"],
   agreeSources: ["coingecko"],
   priceUpdatedAt: 1_700_000_000,
+  priceObservedAt: 1_700_000_000,
+  priceObservedAtMode: "upstream",
+  priceSyncedAt: 1_700_000_000,
   supplySource: "defillama",
   circulating: { peggedUSD: 1_000_000_000 },
   circulatingPrevDay: { peggedUSD: 995_000_000 },
@@ -97,12 +102,21 @@ const coinData: StablecoinData = {
 const pegScoreResult: PegSummaryCoin = {
   id: "usdc-circle",
   symbol: "USDC",
+  name: "USD Coin",
+  pegType: "peggedUSD",
+  pegCurrency: "USD",
+  governance: "centralized",
+  currentDeviationBps: -2,
   pegScore: 95,
   pegPct: 99.4,
+  severityScore: 2,
+  spreadPenalty: 0,
   eventCount: 2,
-  currentBand: "CALM",
+  worstDeviationBps: -20,
   trackingSpanDays: 365,
   activeDepeg: true,
+  lastEventAt: 1_700_000_000,
+  methodologyVersion: "3.2",
 };
 
 const liquidityData: DexLiquidityData = {

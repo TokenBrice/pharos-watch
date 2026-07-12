@@ -108,11 +108,14 @@ describe("applyFilters", () => {
 
   it("keeps zero scores when only a max DEWS threshold is active", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, dewsMax: 40 };
-    const result = applyFilters([
-      makeRow({ id: "zero", dewsScore: 0 }),
-      makeRow({ id: "inside", dewsScore: 20 }),
-      makeRow({ id: "above-max", dewsScore: 41 }),
-    ], filters);
+    const result = applyFilters(
+      [
+        makeRow({ id: "zero", dewsScore: 0 }),
+        makeRow({ id: "inside", dewsScore: 20 }),
+        makeRow({ id: "above-max", dewsScore: 41 }),
+      ],
+      filters,
+    );
 
     expect(result.map((r) => r.id)).toEqual(["zero", "inside"]);
   });
@@ -125,11 +128,14 @@ describe("applyFilters", () => {
 
   it("filters by safety sub-dimension minimum", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, safetyDependencyRiskMin: 90 };
-    const result = applyFilters([
-      makeRow({ id: "low-dependency", safetyDependencyRiskScore: 70 }),
-      makeRow({ id: "high-dependency", safetyDependencyRiskScore: 95 }),
-      makeRow({ id: "unrated-dependency", safetyDependencyRiskScore: null }),
-    ], filters);
+    const result = applyFilters(
+      [
+        makeRow({ id: "low-dependency", safetyDependencyRiskScore: 70 }),
+        makeRow({ id: "high-dependency", safetyDependencyRiskScore: 95 }),
+        makeRow({ id: "unrated-dependency", safetyDependencyRiskScore: null }),
+      ],
+      filters,
+    );
     expect(result.map((r) => r.id)).toEqual(["high-dependency"]);
   });
 
@@ -147,26 +153,32 @@ describe("applyFilters", () => {
 
   it("excludes rows exactly on active DEWS lower thresholds", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, dewsMin: 40, dewsMax: 100 };
-    const result = applyFilters([
-      makeRow({ id: "below-min", dewsScore: 39 }),
-      makeRow({ id: "at-min", dewsScore: 40 }),
-      makeRow({ id: "inside", dewsScore: 75 }),
-      makeRow({ id: "at-default-max", dewsScore: 100 }),
-      makeRow({ id: "unrated", dewsScore: null }),
-    ], filters);
+    const result = applyFilters(
+      [
+        makeRow({ id: "below-min", dewsScore: 39 }),
+        makeRow({ id: "at-min", dewsScore: 40 }),
+        makeRow({ id: "inside", dewsScore: 75 }),
+        makeRow({ id: "at-default-max", dewsScore: 100 }),
+        makeRow({ id: "unrated", dewsScore: null }),
+      ],
+      filters,
+    );
 
     expect(result.map((r) => r.id)).toEqual(["inside", "at-default-max"]);
   });
 
   it("excludes rows exactly on active supply lower thresholds", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, supplyMin: 100, supplyMax: 200 };
-    const result = applyFilters([
-      makeRow({ id: "below-min", supplyUsd: 99 }),
-      makeRow({ id: "at-min", supplyUsd: 100 }),
-      makeRow({ id: "inside", supplyUsd: 150 }),
-      makeRow({ id: "at-max", supplyUsd: 200 }),
-      makeRow({ id: "above-max", supplyUsd: 201 }),
-    ], filters);
+    const result = applyFilters(
+      [
+        makeRow({ id: "below-min", supplyUsd: 99 }),
+        makeRow({ id: "at-min", supplyUsd: 100 }),
+        makeRow({ id: "inside", supplyUsd: 150 }),
+        makeRow({ id: "at-max", supplyUsd: 200 }),
+        makeRow({ id: "above-max", supplyUsd: 201 }),
+      ],
+      filters,
+    );
 
     expect(result.map((r) => r.id)).toEqual(["inside", "at-max"]);
   });
@@ -179,11 +191,14 @@ describe("applyFilters", () => {
 
   it("filters by type (multi-select)", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, types: ["decentralized"] };
-    const result = applyFilters([
-      makeRow({ id: "cefi", type: "centralized" }),
-      makeRow({ id: "cefi-dep", type: "centralized-dependent" }),
-      makeRow({ id: "defi", type: "decentralized" }),
-    ], filters);
+    const result = applyFilters(
+      [
+        makeRow({ id: "cefi", type: "centralized" }),
+        makeRow({ id: "cefi-dep", type: "centralized-dependent" }),
+        makeRow({ id: "defi", type: "decentralized" }),
+      ],
+      filters,
+    );
     expect(result.map((r) => r.id)).toEqual(["defi"]);
   });
 
@@ -193,11 +208,7 @@ describe("applyFilters", () => {
       mechanisms: ["cdp", "fiat-cash"],
     };
     const result = applyFilters(rows, filters);
-    expect(result.map((r) => r.id).sort()).toEqual([
-      "dai-makerdao",
-      "eurs-stasis",
-      "usdc-circle",
-    ]);
+    expect(result.map((r) => r.id).sort()).toEqual(["dai-makerdao", "eurs-stasis", "usdc-circle"]);
     expect(result.find((r) => r.id === "newcoin")).toBeUndefined();
   });
 
@@ -215,21 +226,27 @@ describe("applyFilters", () => {
 
   it("filters by Mint Authority Score minimum", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScoreMin: 80 };
-    const result = applyFilters([
-      makeRow({ id: "low-mint-score", mintAuthorityScore: 40, mintAuthorityScoreBand: "concentrated" }),
-      makeRow({ id: "high-mint-score", mintAuthorityScore: 85, mintAuthorityScoreBand: "hardened" }),
-      makeRow({ id: "unrated-mint-score", mintAuthorityScore: null, mintAuthorityScoreBand: "nr" }),
-    ], filters);
+    const result = applyFilters(
+      [
+        makeRow({ id: "low-mint-score", mintAuthorityScore: 40, mintAuthorityScoreBand: "concentrated" }),
+        makeRow({ id: "high-mint-score", mintAuthorityScore: 85, mintAuthorityScoreBand: "hardened" }),
+        makeRow({ id: "unrated-mint-score", mintAuthorityScore: null, mintAuthorityScoreBand: "nr" }),
+      ],
+      filters,
+    );
     expect(result.map((r) => r.id)).toEqual(["high-mint-score"]);
   });
 
   it("filters by Mint Authority Score band", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScores: ["exposed", "nr"] };
-    const result = applyFilters([
-      makeRow({ id: "governed", mintAuthorityScoreBand: "governed" }),
-      makeRow({ id: "exposed", mintAuthorityScore: 10, mintAuthorityScoreBand: "exposed" }),
-      makeRow({ id: "nr", mintAuthorityScore: null, mintAuthorityScoreBand: "nr" }),
-    ], filters);
+    const result = applyFilters(
+      [
+        makeRow({ id: "governed", mintAuthorityScoreBand: "governed" }),
+        makeRow({ id: "exposed", mintAuthorityScore: 10, mintAuthorityScoreBand: "exposed" }),
+        makeRow({ id: "nr", mintAuthorityScore: null, mintAuthorityScoreBand: "nr" }),
+      ],
+      filters,
+    );
     expect(result.map((r) => r.id).sort()).toEqual(["exposed", "nr"]);
   });
 
@@ -263,16 +280,18 @@ describe("hasActiveFilters", () => {
   });
 
   it("counts active range groups once and selected pills individually", () => {
-    expect(countActiveScreenerFilters({
-      ...SCREENER_FILTER_DEFAULTS,
-      dewsMin: 80,
-      dewsMax: 95,
-      supplyMax: 1_000_000_000,
-      safetyGrades: ["A", "B+"],
-      types: ["centralized", "decentralized"],
-      pegs: ["USD"],
-      mintAuthority: ["multisig-mint"],
-    })).toBe(8);
+    expect(
+      countActiveScreenerFilters({
+        ...SCREENER_FILTER_DEFAULTS,
+        dewsMin: 80,
+        dewsMax: 95,
+        supplyMax: 1_000_000_000,
+        safetyGrades: ["A", "B+"],
+        types: ["centralized", "decentralized"],
+        pegs: ["USD"],
+        mintAuthority: ["multisig-mint"],
+      }),
+    ).toBe(8);
   });
 });
 
@@ -284,11 +303,7 @@ describe("sortScreenerRows", () => {
   ];
 
   it("sorts the same row order used by table rendering and exports", () => {
-    expect(sortScreenerRows(rows, "safetyScore", "desc").map((row) => row.id)).toEqual([
-      "high",
-      "mid",
-      "low",
-    ]);
+    expect(sortScreenerRows(rows, "safetyScore", "desc").map((row) => row.id)).toEqual(["high", "mid", "low"]);
   });
 
   it("sorts by Mint Authority Score with unrated rows last", () => {
@@ -305,16 +320,8 @@ describe("sortScreenerRows", () => {
   });
 
   it("keeps unrated score values at the bottom in either direction", () => {
-    expect(sortScreenerRows(rows, "pegScore", "asc").map((row) => row.id)).toEqual([
-      "mid",
-      "high",
-      "low",
-    ]);
-    expect(sortScreenerRows(rows, "pegScore", "desc").map((row) => row.id)).toEqual([
-      "high",
-      "mid",
-      "low",
-    ]);
+    expect(sortScreenerRows(rows, "pegScore", "asc").map((row) => row.id)).toEqual(["mid", "high", "low"]);
+    expect(sortScreenerRows(rows, "pegScore", "desc").map((row) => row.id)).toEqual(["high", "mid", "low"]);
   });
 });
 
@@ -395,20 +402,14 @@ describe("SCREENER_URL_SCHEMA codec", () => {
   });
 
   it("clamps out-of-range numbers to defaults", () => {
-    const decoded = decodeState(
-      "dewsMax=999&dewsMin=-5&supplyMin=-1",
-      SCREENER_URL_SCHEMA,
-    );
+    const decoded = decodeState("dewsMax=999&dewsMin=-5&supplyMin=-1", SCREENER_URL_SCHEMA);
     expect(decoded.dewsMax).toBe(SCREENER_FILTER_DEFAULTS.dewsMax);
     expect(decoded.dewsMin).toBe(SCREENER_FILTER_DEFAULTS.dewsMin);
     expect(decoded.supplyMin).toBe(SCREENER_FILTER_DEFAULTS.supplyMin);
   });
 
   it("drops unknown enum values from multi-selects", () => {
-    const decoded = decodeState(
-      "mechanisms=cdp,unknown-archetype,fiat-cash",
-      SCREENER_URL_SCHEMA,
-    );
+    const decoded = decodeState("mechanisms=cdp,unknown-archetype,fiat-cash", SCREENER_URL_SCHEMA);
     expect(decoded.mechanisms).toEqual(["cdp", "fiat-cash"]);
   });
 });
@@ -457,9 +458,7 @@ describe("applyFilters — blacklistable", () => {
   });
 
   it("hasActiveFilters returns true when the blacklistable filter is non-empty", () => {
-    expect(
-      hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, blacklistable: ["yes"] }),
-    ).toBe(true);
+    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, blacklistable: ["yes"] })).toBe(true);
   });
 });
 
@@ -505,10 +504,7 @@ describe("SCREENER_URL_SCHEMA — blacklistable round-trip", () => {
   });
 
   it("drops unknown values from a blacklistable URL param", () => {
-    const decoded = decodeState(
-      "blacklistable=yes,bogus,dilutable",
-      SCREENER_URL_SCHEMA,
-    );
+    const decoded = decodeState("blacklistable=yes,bogus,dilutable", SCREENER_URL_SCHEMA);
     expect(decoded.blacklistable).toEqual(["yes"]);
   });
 });
@@ -526,10 +522,7 @@ describe("SCREENER_URL_SCHEMA — mint authority round-trip", () => {
   });
 
   it("drops unknown mint-authority URL values outside the known bucket list", () => {
-    const decoded = decodeState(
-      "mintAuthority=issuer-or-backend-mint,bogus",
-      SCREENER_URL_SCHEMA,
-    );
+    const decoded = decodeState("mintAuthority=issuer-or-backend-mint,bogus", SCREENER_URL_SCHEMA);
     expect(decoded.mintAuthority).toEqual(["issuer-or-backend-mint"]);
   });
 
@@ -551,10 +544,15 @@ describe("projectMintAuthority", () => {
   });
 
   it("maps issuer direct mint summaries to the issuer/backend bucket", () => {
-    expect(projectMintAuthority({
-      mintPath: "issuer-direct-mint",
-      authorityPosture: "concentrated-admin",
-    })).toBe("issuer-or-backend-mint");
+    expect(
+      projectMintAuthority({
+        mintPath: "issuer-direct-mint",
+        authorityPosture: "concentrated-admin",
+        confidence: "verified",
+        inheritedFrom: undefined,
+        mintIncidents: [],
+      }),
+    ).toBe("issuer-or-backend-mint");
   });
 });
 

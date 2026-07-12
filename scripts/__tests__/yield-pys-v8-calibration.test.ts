@@ -5,9 +5,10 @@ import {
   GOLDEN_FIXTURES,
   parseArgs,
   scoreRows,
+  type RankingWithRisk,
 } from "../maintenance/yield-pys-v8-calibration";
 
-function row(overrides: Record<string, unknown>) {
+function row(overrides: Partial<RankingWithRisk>): RankingWithRisk {
   return {
     id: "base-usd",
     symbol: "BASE",
@@ -56,7 +57,9 @@ function row(overrides: Record<string, unknown>) {
 
 describe("yield-pys-v8-calibration", () => {
   it("parses input and output arguments", () => {
-    expect(parseArgs(["--input", "rankings.json", "--out", "agents/report.md"], new Date("2026-05-13T00:00:00Z"))).toEqual({
+    expect(
+      parseArgs(["--input", "rankings.json", "--out", "agents/report.md"], new Date("2026-05-13T00:00:00Z")),
+    ).toEqual({
       inputPath: "rankings.json",
       outputPath: "agents/report.md",
       generatedAt: "2026-05-13T00:00:00.000Z",
@@ -184,10 +187,13 @@ describe("yield-pys-v8-calibration", () => {
   });
 
   it("renders required calibration sections and golden fixtures", () => {
-    const markdown = buildCalibrationReport([
-      row({ id: "eur", symbol: "EUR", benchmarkKey: "EUR", benchmarkRate: 2.5, sourceAgeSeconds: 30_000 }),
-      row({ id: "missing-safety", symbol: "MISS", safetyScore: null }),
-    ], "2026-05-13T00:00:00.000Z");
+    const markdown = buildCalibrationReport(
+      [
+        row({ id: "eur", symbol: "EUR", benchmarkKey: "EUR", benchmarkRate: 2.5, sourceAgeSeconds: 30_000 }),
+        row({ id: "missing-safety", symbol: "MISS", safetyScore: null }),
+      ],
+      "2026-05-13T00:00:00.000Z",
+    );
 
     expect(markdown).toContain("## Distribution");
     expect(markdown).toContain("## Top 20 Before");
@@ -203,22 +209,25 @@ describe("yield-pys-v8-calibration", () => {
   });
 
   it("renders null-rate coverage from nested sourceRisk fields", () => {
-    const markdown = buildCalibrationReport([
-      row({
-        id: "nested-risk",
-        symbol: "NEST",
-        sourceRisk: {
-          sourceRiskPenalty: 1.5,
-          sourceRiskScore: 88,
-          rewardShare: 0.25,
-          sourceDepthRatio: 0.1,
-          sourceAgeSeconds: 60,
-          sourceSwitchCount30d: 0,
-          observationCount30d: 5,
-          venueRiskTier: "medium",
-        },
-      }),
-    ], "2026-05-13T00:00:00.000Z");
+    const markdown = buildCalibrationReport(
+      [
+        row({
+          id: "nested-risk",
+          symbol: "NEST",
+          sourceRisk: {
+            sourceRiskPenalty: 1.5,
+            sourceRiskScore: 88,
+            rewardShare: 0.25,
+            sourceDepthRatio: 0.1,
+            sourceAgeSeconds: 60,
+            sourceSwitchCount30d: 0,
+            observationCount30d: 5,
+            venueRiskTier: "medium",
+          },
+        }),
+      ],
+      "2026-05-13T00:00:00.000Z",
+    );
 
     expect(markdown).toContain("| sourceRiskPenalty | 1 | 0 | 0.0% |");
     expect(markdown).toContain("| sourceRiskScore | 1 | 0 | 0.0% |");

@@ -22,7 +22,7 @@ describe("coinEmblemSize", () => {
   });
 
   it("scales monotonically between $1M and $500M", () => {
-    const sizes = [1_000_000, 10_000_000, 100_000_000, 500_000_000].map(coinEmblemSize);
+    const sizes = [1_000_000, 10_000_000, 100_000_000, 500_000_000].map((marketCapUsd) => coinEmblemSize(marketCapUsd));
     for (let i = 1; i < sizes.length; i++) {
       expect(sizes[i]).toBeGreaterThan(sizes[i - 1]);
     }

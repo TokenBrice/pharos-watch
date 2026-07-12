@@ -89,9 +89,9 @@ describe("validate:prebuild surface filtering", () => {
 
     const result = await runValidatePrebuild({
       argv: ["--dry-run"],
-      env: {
+      env: testEnv({
         [VALIDATE_PREBUILD_SURFACE_ENV]: "worker",
-      },
+      }),
       log: (line) => logs.push(line),
       runExecutionUnits: () => {
         executed = true;
@@ -151,7 +151,7 @@ describe("validate:prebuild surface filtering", () => {
 
     await runValidatePrebuild({
       argv: [],
-      env: {},
+      env: testEnv(),
       log: () => {},
       runExecutionUnits: (units, options) => {
         calls.push({ units, options });

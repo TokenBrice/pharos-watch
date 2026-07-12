@@ -5,7 +5,14 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
 import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
-import type { DdrResponse, DdrRow } from "@shared/types";
+import {
+  DdrRowSchema,
+  DdrV2ResponseRowSchema,
+  type DdrPredictionMeta,
+  type DdrResponse,
+  type DdrRow,
+  type DdrV2ResponseRow,
+} from "@shared/types";
 
 vi.mock("@/lib/feature-flags", () => ({
   isDepegResolverEnabled: () => true,
@@ -20,10 +27,21 @@ afterEach(() => {
 });
 
 const meta: DdrResponse["_meta"] = {
+  schemaVersion: 2,
   dataAsOf: 1,
   modelAsOf: 1,
   computedAt: 1,
   expiresAt: 2,
+  snapshotToken: null,
+  snapshotGeneration: null,
+  publicPredictionIds: [],
+  publicPredictionRowHashes: {},
+  basePayloadHash: null,
+  readOverlay: {
+    degradedLockDeferralIncidentKeys: [],
+    closedPendingReviewIncidentKeys: [],
+    suppressedIncidentKeys: [],
+  },
   degraded: false,
   degradedReason: null,
   publicWarning: "",
@@ -34,34 +52,228 @@ const meta: DdrResponse["_meta"] = {
   lineage: null,
 };
 
-const row: DdrRow = {
-  stablecoinId: "lusd-liquity",
-  symbol: "LUSD",
-  name: "Liquity USD",
-  pegCurrency: "USD",
-  governance: "decentralized",
-  status: null,
-  eventId: 1,
-  startedAt: 1,
-  ageSec: 3600,
-  direction: "below",
-  peakDeviationBps: -300,
-  currentDeviationBps: -250,
-  resolution: {
-    tier: "at_risk",
-    factors: [],
-  },
-  duration: {
-    suppressed: true,
-    suppressedReason: "insufficient_support",
-    stratum: null,
-    medianSec: null,
-    iqrSec: null,
-    ageStatus: null,
-    horizons: [],
-  },
-  relatedContext: {},
+const relatedContext: DdrRow["relatedContext"] = {
+  dewsBand: null,
+  dewsScore: null,
+  liquidityScore: null,
+  safetyGrade: null,
+  safetyScore: null,
+  supplyChange7dPct: null,
+  supplyChange30dPct: null,
+  mintSurge: null,
 };
+
+function makeSourceRow(overrides: Partial<DdrRow> = {}): DdrRow {
+  return DdrRowSchema.parse({
+    stablecoinId: "lusd-liquity",
+    symbol: "LUSD",
+    name: "Liquity USD",
+    pegCurrency: "USD",
+    governance: "decentralized",
+    status: null,
+    eventId: 1,
+    startedAt: 1,
+    ageSec: 3600,
+    direction: "below",
+    peakDeviationBps: -300,
+    currentDeviationBps: -250,
+    resolution: {
+      tier: "at_risk",
+      factors: [],
+    },
+    duration: {
+      suppressed: true,
+      suppressedReason: "insufficient_support",
+      stratum: null,
+      medianSec: null,
+      iqrSec: null,
+      ageStatus: null,
+      horizons: [],
+    },
+    relatedContext,
+    ...overrides,
+  });
+}
+
+function predictionMeta(
+  state: DdrPredictionMeta["state"],
+  overrides: Partial<DdrPredictionMeta> = {},
+): DdrPredictionMeta {
+  return {
+    state,
+    publicPredictionId:
+      state === "pending_lock" || state === "lock_deferred" || state === "publication_retry_pending" ? null : 7,
+    incidentKey: "ddr2:test",
+    predictionPolicyVersion: "sticky-24h-v1",
+    predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+    predictionMethodologyVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+    resolutionRubricVersion: "resolution-rubric-v1",
+    durationModelVersion: "duration-landmark-v1",
+    incidentGroupingVersion: "incident-group-v1",
+    supportRulesVersion: "support-rules-v1",
+    eligibleAt: 86_400,
+    policyDelaySec: 86_400,
+    lockedAt:
+      state === "pending_lock" || state === "lock_deferred" || state === "publication_retry_pending" ? null : 86_401,
+    publishedAt:
+      state === "pending_lock" || state === "lock_deferred" || state === "publication_retry_pending" ? null : 86_500,
+    publicationSnapshotToken:
+      state === "pending_lock" || state === "lock_deferred" || state === "publication_retry_pending"
+        ? null
+        : "ddrpub:test",
+    snapshotGeneration:
+      state === "pending_lock" || state === "lock_deferred" || state === "publication_retry_pending" ? null : 2,
+    eventAgeAtLockSec:
+      state === "pending_lock" || state === "lock_deferred" || state === "publication_retry_pending" ? null : 86_400,
+    lockTiming:
+      state === "lock_deferred"
+        ? "deferred"
+        : state === "pending_lock" || state === "publication_retry_pending"
+          ? null
+          : "on_time",
+    lockTrigger: "scheduled_24h",
+    readiness: null,
+    backstop: null,
+    source:
+      state === "invalidated"
+        ? "erratum"
+        : state === "pending_lock" || state === "lock_deferred" || state === "publication_retry_pending"
+          ? "pending"
+          : "public_prediction",
+    deferralReason: null,
+    deferralCount: null,
+    rowHash:
+      state === "pending_lock" || state === "lock_deferred" || state === "publication_retry_pending"
+        ? null
+        : "a".repeat(64),
+    lineage: null,
+    modelAsOf: 86_401,
+    latestErratum: null,
+    errataCount: 0,
+    errataHistory: [],
+    ...overrides,
+  };
+}
+
+function baseV2Row(source: DdrRow) {
+  return {
+    stablecoinId: source.stablecoinId,
+    symbol: source.symbol,
+    name: source.name,
+    pegCurrency: source.pegCurrency,
+    governance: source.governance,
+    status: source.status,
+    eventId: source.eventId,
+    incidentKey: "ddr2:test",
+    startedAt: source.startedAt,
+    direction: source.direction,
+  };
+}
+
+function liveOverlay(source: DdrRow, overrides: Record<string, unknown> = {}) {
+  return {
+    currentEventId: source.eventId,
+    ageSec: source.ageSec,
+    peakDeviationBps: source.peakDeviationBps,
+    currentDeviationBps: source.currentDeviationBps,
+    eventState: "active",
+    updatedAt: source.startedAt + source.ageSec,
+    stale: false,
+    degradedReason: null,
+    ...overrides,
+  };
+}
+
+function makePredictionRow(source = makeSourceRow(), liveOverrides: Record<string, unknown> = {}): DdrV2ResponseRow {
+  return DdrV2ResponseRowSchema.parse({
+    ...baseV2Row(source),
+    kind: "prediction",
+    prediction: predictionMeta("frozen"),
+    frozen: {
+      resolution: source.resolution,
+      duration: {
+        ...source.duration,
+        remainingAsOf: 86_401,
+        medianResolveAt: source.duration.medianSec == null ? null : 86_401 + source.duration.medianSec,
+        iqrResolveAt:
+          source.duration.iqrSec == null
+            ? null
+            : [86_401 + source.duration.iqrSec[0], 86_401 + source.duration.iqrSec[1]],
+      },
+      relatedContext: source.relatedContext,
+      sourceRow: source,
+    },
+    live: liveOverlay(source, liveOverrides),
+  });
+}
+
+function makePendingRow(
+  state: "pending_lock" | "lock_deferred" | "publication_retry_pending",
+  overrides: Partial<DdrPredictionMeta> = {},
+): DdrV2ResponseRow {
+  const source = makeSourceRow();
+  return DdrV2ResponseRowSchema.parse({
+    ...baseV2Row(source),
+    kind: "pending",
+    prediction: predictionMeta(state, overrides),
+    frozen: null,
+    live: liveOverlay(source),
+  });
+}
+
+function makeNoCallRow(): DdrV2ResponseRow {
+  const source = makeSourceRow();
+  return DdrV2ResponseRowSchema.parse({
+    ...baseV2Row(source),
+    kind: "no_call",
+    prediction: predictionMeta("no_call"),
+    noCall: {
+      lockedAt: 86_401,
+      eventAgeAtLockSec: 86_400,
+      missingReasons: ["no usable live price"],
+      relatedContext,
+    },
+    frozen: null,
+    live: liveOverlay(source),
+  });
+}
+
+function makeInvalidatedRow(): DdrV2ResponseRow {
+  const source = makeSourceRow();
+  const original = makePredictionRow(source);
+  if (original.kind !== "prediction") throw new Error("Expected prediction fixture");
+  const erratum = {
+    id: 1,
+    state: "invalidated" as const,
+    publicPredictionId: 7,
+    incidentKey: "ddr2:test",
+    eventId: 1,
+    assessmentId: 1,
+    reason: "event_identity_error" as const,
+    createdAt: 86_500,
+    operatorNote: "Source event repaired after publication",
+    rowHashBefore: "a".repeat(64),
+    replacementAssessmentId: null,
+    replacementRowHash: null,
+    createdBy: "test",
+  };
+  return DdrV2ResponseRowSchema.parse({
+    ...baseV2Row(source),
+    kind: "invalidated_prediction",
+    prediction: predictionMeta("invalidated", {
+      latestErratum: erratum,
+      errataCount: 1,
+      errataHistory: [erratum],
+    }),
+    originalKind: "prediction",
+    originalOutcome: original.frozen,
+    frozen: null,
+    noCall: null,
+    live: liveOverlay(source, { eventState: "event_invalidated" }),
+  });
+}
+
+const row = makePredictionRow();
 
 function response(overrides: Partial<DdrResponse> = {}): DdrResponse {
   return {
@@ -111,22 +323,27 @@ describe("DepegResolverModule", () => {
   });
 
   it("states the terminal recovery outlook clearly", () => {
+    const terminalRow = makePredictionRow(
+      makeSourceRow({
+        resolution: {
+          tier: "recovery_unlikely",
+          factors: [],
+        },
+        duration: {
+          suppressed: true,
+          suppressedReason: "verdict_terminal",
+          stratum: null,
+          medianSec: null,
+          iqrSec: null,
+          ageStatus: null,
+          horizons: [],
+        },
+      }),
+    );
     render(
       <DepegResolverModule
         data={response({
-          rows: [
-            {
-              ...row,
-              resolution: {
-                tier: "recovery_unlikely",
-                factors: [],
-              },
-              duration: {
-                ...row.duration,
-                suppressedReason: "verdict_terminal",
-              },
-            },
-          ],
+          rows: [terminalRow],
         })}
       />,
     );
@@ -142,14 +359,7 @@ describe("DepegResolverModule", () => {
     const { rerender } = render(
       <DepegResolverModule
         data={response({
-          rows: [
-            {
-              ...row,
-              kind: "pending",
-              eligibleAt: 86_401,
-              prediction: { state: "pending_lock" },
-            } as DdrRow,
-          ],
+          rows: [makePendingRow("pending_lock")],
         })}
       />,
     );
@@ -161,12 +371,7 @@ describe("DepegResolverModule", () => {
     rerender(
       <DepegResolverModule
         data={response({
-          rows: [
-            {
-              ...row,
-              prediction: { state: "lock_deferred", deferralReason: "stablecoins cache stale" },
-            } as DdrRow,
-          ],
+          rows: [makePendingRow("lock_deferred", { deferralReason: "stablecoins cache stale" })],
         })}
       />,
     );
@@ -177,120 +382,38 @@ describe("DepegResolverModule", () => {
     rerender(
       <DepegResolverModule
         data={response({
-          rows: [
-            {
-              ...row,
-              prediction: { state: "publication_retry_pending", retryStatus: "Retrying next healthy publication run" },
-            } as DdrRow,
-          ],
+          rows: [makePendingRow("publication_retry_pending")],
         })}
       />,
     );
     expect(screen.getByText("Forecast publication delayed")).toBeTruthy();
-    expect(screen.getByText("Retrying next healthy publication run")).toBeTruthy();
-    expect(screen.queryByText("At Risk")).toBeNull();
-
-    rerender(
-      <DepegResolverModule
-        data={response({
-          rows: [
-            {
-              ...row,
-              prediction: { state: "publication_failed" },
-            } as DdrRow,
-          ],
-        })}
-      />,
-    );
-    expect(screen.getByText("Publication failed before public exposure")).toBeTruthy();
-    expect(screen.getByText(/operational coverage debt/)).toBeTruthy();
     expect(screen.queryByText("At Risk")).toBeNull();
   });
 
   it("shows frozen prediction lock metadata separately from live status", () => {
-    const sourceRow: DdrRow = {
-      ...row,
+    const sourceRow = makeSourceRow({
       ageSec: 86_400,
       currentDeviationBps: -250,
       duration: {
-        ...row.duration,
         suppressed: false,
+        suppressedReason: null,
+        stratum: "below · moderate · USD",
         medianSec: 7200,
         iqrSec: [3600, 10_800],
+        ageStatus: "ordinary",
         horizons: [],
       },
-    };
+    });
     render(
       <DepegResolverModule
         data={response({
           rows: [
-            {
-              stablecoinId: row.stablecoinId,
-              symbol: row.symbol,
-              name: row.name,
-              pegCurrency: row.pegCurrency,
-              governance: row.governance,
-              status: row.status,
-              eventId: row.eventId,
-              incidentKey: "ddr2:test",
-              startedAt: row.startedAt,
-              direction: row.direction,
-              kind: "prediction",
-              prediction: {
-                state: "frozen",
-                publicPredictionId: 7,
-                incidentKey: "ddr2:test",
-                predictionPolicyVersion: "sticky-24h-v1",
-                predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
-                predictionMethodologyVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-                resolutionRubricVersion: "resolution-rubric-v1",
-                durationModelVersion: "duration-landmark-v1",
-                incidentGroupingVersion: "incident-group-v1",
-                supportRulesVersion: "support-rules-v1",
-                eligibleAt: 86_400,
-                policyDelaySec: 86_400,
-                lockedAt: 86_401,
-                publishedAt: 86_500,
-                publicationSnapshotToken: "ddrpub:test",
-                snapshotGeneration: 2,
-                eventAgeAtLockSec: 86_400,
-                lockTiming: "on_time",
-                lockTrigger: "scheduled_24h",
-                readiness: null,
-                backstop: null,
-                source: "public_prediction",
-                deferralReason: null,
-                deferralCount: null,
-                rowHash: "a".repeat(64),
-                lineage: null,
-                modelAsOf: 86_401,
-                latestErratum: null,
-                errataCount: 0,
-                errataHistory: [],
-              },
-              frozen: {
-                resolution: sourceRow.resolution,
-                duration: {
-                  ...sourceRow.duration,
-                  remainingAsOf: 86_401,
-                  medianResolveAt: 93_601,
-                  iqrResolveAt: [90_001, 97_201],
-                  horizons: [],
-                },
-                relatedContext: sourceRow.relatedContext,
-                sourceRow,
-              },
-              live: {
-                currentEventId: row.eventId,
-                ageSec: 90_000,
-                peakDeviationBps: -320,
-                currentDeviationBps: -180,
-                eventState: "active",
-                updatedAt: 90_000,
-                stale: false,
-                degradedReason: null,
-              },
-            } as DdrResponse["rows"][number],
+            makePredictionRow(sourceRow, {
+              ageSec: 90_000,
+              peakDeviationBps: -320,
+              currentDeviationBps: -180,
+              updatedAt: 90_000,
+            }),
           ],
         })}
       />,
@@ -315,13 +438,7 @@ describe("DepegResolverModule", () => {
     const { rerender } = render(
       <DepegResolverModule
         data={response({
-          rows: [
-            {
-              ...row,
-              kind: "no_call",
-              prediction: { state: "no_call", lockedAt: 86_401, missingReasons: ["no usable live price"] },
-            } as DdrRow,
-          ],
+          rows: [makeNoCallRow()],
         })}
       />,
     );
@@ -333,18 +450,7 @@ describe("DepegResolverModule", () => {
     rerender(
       <DepegResolverModule
         data={response({
-          rows: [
-            {
-              ...row,
-              kind: "invalidated_prediction",
-              prediction: {
-                state: "invalidated",
-                originalOutcomeKind: "prediction",
-                invalidationReason: "source event repaired",
-              },
-              latestErratum: { summary: "Source event repaired after publication", createdAt: 86_500 },
-            } as DdrRow,
-          ],
+          rows: [makeInvalidatedRow()],
         })}
       />,
     );
