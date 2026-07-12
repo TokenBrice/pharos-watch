@@ -51,11 +51,6 @@ const FIXTURES: readonly HtmlFixtureSpec[] = [
     fixture: "mento-reserve-composition.html",
   },
   {
-    name: "Reserve (RE) metrics dashboard",
-    url: "https://app.re.xyz/metrics",
-    fixture: "re-metrics-initial-tvl.html",
-  },
-  {
     name: "Reserve (RE) metrics dashboard series payload",
     url: "https://app.re.xyz/metrics",
     fixture: "re-metrics-series.html",

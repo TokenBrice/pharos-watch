@@ -52,8 +52,6 @@
     "validate:worker-smoke": "node scripts/maintenance/run-worker-smoke.mjs",
     "validate:prebuild": "node scripts/maintenance/run-validate-prebuild.mjs",
     "lighthouse:static": "tsx scripts/maintenance/lighthouse-static-export.mjs",
-    "capture:simplification-baseline": "tsx scripts/maintenance/capture-simplification-baseline.ts",
-    "check:simplification-baseline": "PHAROS_SIMPLIFICATION_BASELINE_CHECK=1 tsx scripts/maintenance/capture-simplification-baseline.ts",
     "check:generated-artifacts": "node scripts/maintenance/run-generated-artifacts.mjs --check",
     "test:watch": "vitest",
     "audit:pricing-providers": "tsx scripts/maintenance/audit-pricing-provider-config.ts",

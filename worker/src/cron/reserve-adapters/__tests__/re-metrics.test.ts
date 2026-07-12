@@ -8,7 +8,7 @@ import { validateAdapterOutput } from "../validate";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "re-metrics-series.html"), "utf8");
-const SAMPLE_HTML_INITIAL_TVL_DATA = readFileSync(join(FIXTURES_DIR, "re-metrics-initial-tvl.html"), "utf8");
+const SAMPLE_HTML_INITIAL_TVL_DATA = SAMPLE_HTML;
 
 describe("adaptReMetrics", () => {
   it("maps the Re metrics payload into live reserve slices", () => {
@@ -16,7 +16,13 @@ describe("adaptReMetrics", () => {
 
     expect(result.slices).toEqual([
       { name: "Off-chain insurance / reinsurance capital", pct: 83.3, risk: "medium" },
-      { name: "sUSDe (delta-neutral ETH basis)", pct: 15.7, risk: "high", coinId: "susde-ethena", depType: "collateral" },
+      {
+        name: "sUSDe (delta-neutral ETH basis)",
+        pct: 15.7,
+        risk: "high",
+        coinId: "susde-ethena",
+        depType: "collateral",
+      },
       { name: "reUSD / sUSDe LP position", pct: 0.7, risk: "high" },
       { name: "USDC reserves", pct: 0.2, risk: "low", coinId: "usdc-circle" },
       { name: "USDe (delta-neutral ETH basis)", pct: 0.1, risk: "high", coinId: "usde-ethena" },
@@ -131,7 +137,6 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
       coinId: "usdc-circle",
     });
   });
-
 
   it("throws when the page no longer exposes the expected metrics payload", () => {
     expect(() => adaptReMetrics("<html></html>")).toThrow("layout-changed");
