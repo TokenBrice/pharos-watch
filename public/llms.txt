@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 359 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 360 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -471,6 +471,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Fathom Dollar (FXD)](https://pharos.watch/stablecoin/fxd-fathom/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Solomon USDv (USDV)](https://pharos.watch/stablecoin/usdv-solomon/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [US Sonic Dollar (USSD)](https://pharos.watch/stablecoin/ussd-sonic-labs/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [US Dollar Payment Token (USDPT)](https://pharos.watch/stablecoin/usdpt-western-union/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Tangent USD (USG)](https://pharos.watch/stablecoin/usg-tangent/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Flying Tulip USD (ftUSD)](https://pharos.watch/stablecoin/ftusd-flying-tulip/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [BRLA Digital (BRLA)](https://pharos.watch/stablecoin/brla-brla-digital/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
