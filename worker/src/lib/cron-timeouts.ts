@@ -1,4 +1,5 @@
 import { TELEGRAM_DISPATCH_TIMEOUT_MS } from "@shared/lib/telegram-delivery-policy";
+import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 
 import { PUBLIC_DATASET_CRON_TIMEOUT_MS } from "./public-dataset-snapshot-budget";
 
@@ -42,23 +43,11 @@ export interface CronTimeoutBudgetMetadata {
   controlledErrorReserveMs?: number;
 }
 
-export const CRON_TIMEOUT_MS: Record<string, number> = {
+const CRON_TIMEOUT_OVERRIDES_MS: Record<string, number> = {
   // Keep app-level timeout below the platform wall-clock limit so we can log
   // a controlled error instead of losing the invocation without a cron_runs row.
   "sync-stablecoins": 8 * 60_000,
-  "sync-stablecoin-charts": DEFAULT_CRON_TIMEOUT_MS,
-  "sync-fx-rates": DEFAULT_CRON_TIMEOUT_MS,
-  "stability-index": DEFAULT_CRON_TIMEOUT_MS,
-  "compute-dews": DEFAULT_CRON_TIMEOUT_MS,
-  "project-tape": DEFAULT_CRON_TIMEOUT_MS,
-  "cron-slot-sweeper": DEFAULT_CRON_TIMEOUT_MS,
   "reserve-recovery": 13 * 60_000,
-  "status-self-check": DEFAULT_CRON_TIMEOUT_MS,
-  "data-invariant-canary": DEFAULT_CRON_TIMEOUT_MS,
-  "cron-staleness-watchdog": DEFAULT_CRON_TIMEOUT_MS,
-  "telegram-degradation-watchdog": DEFAULT_CRON_TIMEOUT_MS,
-  "telegram-disambiguation-cleanup": DEFAULT_CRON_TIMEOUT_MS,
-  "telegram-pulse-snapshot": DEFAULT_CRON_TIMEOUT_MS,
   "sync-live-reserves": 12 * 60_000,
   "sync-dex-liquidity": 13 * 60_000,
   "sync-dex-discovery": 13 * 60_000,
@@ -71,39 +60,24 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   // Keep the app timeout under Cloudflare's scheduled-event ceiling while
   // leaving room for cron_runs logging and sidecar skips.
   "dispatch-telegram-alerts": TELEGRAM_DISPATCH_TIMEOUT_MS,
-  // The planner is DB-only and bounded to one five-minute Telegram lane
-  // invocation; keep its lease budget explicit rather than relying on the
-  // fallback timeout.
-  "telegram-personalized-recap-planner": DEFAULT_CRON_TIMEOUT_MS,
-  "snapshot-supply": DEFAULT_CRON_TIMEOUT_MS,
-  "snapshot-chain-supply": DEFAULT_CRON_TIMEOUT_MS,
-  "publish-report-card-cache": DEFAULT_CRON_TIMEOUT_MS,
-  "compute-depeg-resolver": DEFAULT_CRON_TIMEOUT_MS,
-  "snapshot-safety-grade-history": DEFAULT_CRON_TIMEOUT_MS,
-  "fetch-tbill-rate": DEFAULT_CRON_TIMEOUT_MS,
-  "snapshot-psi": DEFAULT_CRON_TIMEOUT_MS,
   "snapshot-public-dataset": PUBLIC_DATASET_CRON_TIMEOUT_MS,
-  "sync-usds-status": DEFAULT_CRON_TIMEOUT_MS,
-  "sync-redemption-backstops": DEFAULT_CRON_TIMEOUT_MS,
-  "sync-kinesis-supply": DEFAULT_CRON_TIMEOUT_MS,
-  "reserve-post-sync-watchdog": DEFAULT_CRON_TIMEOUT_MS,
-  "sync-bluechip": DEFAULT_CRON_TIMEOUT_MS,
   // Daily digest: Anthropic budget is 12 min, wrapper caps at 14 min to leave
   // ~2 min for D1 persistence, Telegram/Twitter delivery, and cron_runs logging
   // before Cloudflare's 15-min scheduled-event ceiling.
   "daily-digest": 14 * 60_000,
   "weekly-recap": 12 * 60_000,
-  "discovery-scan": DEFAULT_CRON_TIMEOUT_MS,
-  "yield-coverage-audit": DEFAULT_CRON_TIMEOUT_MS,
-  "prune-status-probe-runs": DEFAULT_CRON_TIMEOUT_MS,
-  "prune-cron-history": DEFAULT_CRON_TIMEOUT_MS,
-  "worker-repair-runner": DEFAULT_CRON_TIMEOUT_MS,
-  "prune-detail-cache": DEFAULT_CRON_TIMEOUT_MS,
-  "telegram-inactive-cleanup": DEFAULT_CRON_TIMEOUT_MS,
-  "telegram-retention-cleanup": DEFAULT_CRON_TIMEOUT_MS,
-  "mint-burn-growth-watchdog": DEFAULT_CRON_TIMEOUT_MS,
-  "cron-duration-watchdog": DEFAULT_CRON_TIMEOUT_MS,
 };
+
+const cronJobIds = new Set(CRON_JOB_DEFINITIONS.map((definition) => definition.job));
+for (const job of Object.keys(CRON_TIMEOUT_OVERRIDES_MS)) {
+  if (!cronJobIds.has(job)) {
+    throw new Error(`Cron timeout override references unknown job "${job}"`);
+  }
+}
+
+export const CRON_TIMEOUT_MS: Record<string, number> = Object.fromEntries(
+  CRON_JOB_DEFINITIONS.map(({ job }) => [job, CRON_TIMEOUT_OVERRIDES_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS]),
+);
 
 function positiveFiniteMs(value: number | undefined, fallback: number): number {
   return Number.isFinite(value) && value != null && value > 0 ? value : fallback;
