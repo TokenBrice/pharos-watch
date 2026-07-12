@@ -16,6 +16,14 @@ vi.stubGlobal("fetch", fetchSpy);
 
 stubCryptoForAuth();
 
+const { logWorkerEventMock } = vi.hoisted(() => ({
+  logWorkerEventMock: vi.fn(),
+}));
+
+vi.mock("../../lib/structured-log", () => ({
+  logWorkerEvent: logWorkerEventMock,
+}));
+
 const { handleFeedback } = await import("../feedback");
 const encoder = new TextEncoder();
 const FEEDBACK_IDEMPOTENCY_KEY = "feedback-test-key";
@@ -157,6 +165,7 @@ function makeEnv(overrides: Partial<FeedbackEnv> = {}): FeedbackEnv {
 describe("handleFeedback", () => {
   beforeEach(() => {
     fetchSpy.mockReset();
+    logWorkerEventMock.mockReset();
   });
 
   it("returns 400 for invalid JSON body", async () => {
@@ -572,6 +581,11 @@ describe("handleFeedback", () => {
     expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 0 });
+    expect(logWorkerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "feedback_submission_rejected",
+      level: "warn",
+      provider: "github",
+    }));
   });
 
   it("keeps quota reserved and suppresses retry after an ambiguous GitHub transport failure", async () => {
@@ -587,6 +601,11 @@ describe("handleFeedback", () => {
     expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 1 });
+    expect(logWorkerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "feedback_execution_outcome_unknown",
+      level: "error",
+      provider: "github",
+    }));
   });
 
   it("replays a successful submission without consuming quota or posting twice", async () => {

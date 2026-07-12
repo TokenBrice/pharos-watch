@@ -160,9 +160,17 @@ async function upsertDiscoveryCandidatesDetailed(
   for (const c of candidates) {
     if (!isValidDiscoveryCandidate(c)) {
       invalid += 1;
-      console.warn("[discovery] Skipping invalid discovery candidate before upsert", {
-        geckoId: c.geckoId ?? null,
-        llamaId: c.llamaId ?? null,
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "discovery_candidate_rejected",
+        job: "discovery-scan",
+        source: "discovery_candidates",
+        message: "Invalid discovery candidate was rejected before persistence",
+        metadata: {
+          geckoId: c.geckoId ?? null,
+          llamaId: c.llamaId ?? null,
+        },
       });
       continue;
     }
@@ -207,7 +215,16 @@ async function upsertDiscoveryCandidatesDetailed(
       }
       persisted += chunk.length;
     } catch (err) {
-      console.warn("[discovery] Upsert batch failed; retrying candidates individually:", err);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "discovery_upsert_batch_failed",
+        job: "discovery-scan",
+        source: "discovery_candidates",
+        message: "Discovery upsert batch failed; retrying candidates individually",
+        error: err,
+        metadata: { candidateCount: chunk.length },
+      });
       for (const entry of chunk) {
         try {
           const result = await entry.statement.run();
@@ -215,7 +232,6 @@ async function upsertDiscoveryCandidatesDetailed(
           persisted += 1;
         } catch (candidateErr) {
           failed += 1;
-          console.warn("[discovery] Skipping discovery candidate after upsert failure:", candidateErr);
           logWorkerEvent({
             scope: "lib",
             level: "error",
@@ -289,17 +305,43 @@ export async function runDiscoveryScan(
           await recordOutcome(db, CIRCUIT_SOURCE.CG_DISCOVERY, true);
         } else {
           fetchFailureReason = "invalid-payload";
-          console.warn("[discovery] CG category fetch returned a non-array payload");
+          logWorkerEvent({
+            scope: "lib",
+            level: "warn",
+            event: "discovery_payload_invalid",
+            job: "discovery-scan",
+            provider: "coingecko",
+            source: "coins-markets",
+            message: "Discovery source returned a non-array payload",
+          });
           await recordOutcome(db, CIRCUIT_SOURCE.CG_DISCOVERY, false);
         }
       } else {
         fetchFailureReason = "fetch-failed";
-        console.warn(`[discovery] CG category fetch returned ${result?.response.status ?? "no response"}`);
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "discovery_fetch_failed",
+          job: "discovery-scan",
+          provider: "coingecko",
+          source: "coins-markets",
+          status: result?.response.status ?? null,
+          message: "Discovery source returned an unsuccessful response",
+        });
         await recordOutcome(db, CIRCUIT_SOURCE.CG_DISCOVERY, false);
       }
     } catch (err) {
       fetchFailureReason ??= "fetch-failed";
-      console.warn("[discovery] CG category fetch failed:", err);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "discovery_fetch_failed",
+        job: "discovery-scan",
+        provider: "coingecko",
+        source: "coins-markets",
+        message: "Discovery source request failed",
+        error: err,
+      });
       await recordOutcome(db, CIRCUIT_SOURCE.CG_DISCOVERY, false);
     }
   }

@@ -1,6 +1,7 @@
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
 import { isWellFormedIdempotencyKey, runIdempotentAction } from "../lib/idempotency";
 import { releaseFeedbackRateLimit } from "../lib/rate-limit";
+import { logWorkerEvent } from "../lib/structured-log";
 import { GitHubIssueRejectedError } from "./feedback/github";
 import {
   FEEDBACK_REQUEST_MAX_BYTES,
@@ -49,10 +50,26 @@ export const handleFeedback = withErrorHandler(
             if (!released) {
               throw new Error(`Failed to release rejected feedback rate-limit reservation: ${error.message}`);
             }
-            console.error("[feedback] GitHub API rejected issue creation:", error);
+            logWorkerEvent({
+              scope: "api",
+              level: "warn",
+              event: "feedback_submission_rejected",
+              route: "/api/feedback",
+              provider: "github",
+              message: "GitHub rejected feedback issue creation",
+              error,
+            });
             return errorResponse(500, "Failed to submit feedback. Please try again.");
           }
-          console.error("[feedback] GitHub API execution outcome unknown:", error);
+          logWorkerEvent({
+            scope: "api",
+            level: "error",
+            event: "feedback_execution_outcome_unknown",
+            route: "/api/feedback",
+            provider: "github",
+            message: "GitHub feedback execution outcome is unknown",
+            error,
+          });
           throw error;
         }
       },

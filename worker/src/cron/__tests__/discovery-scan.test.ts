@@ -3,6 +3,10 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { mockCircuitBreaker, mockFetchRetry } from "../../test-helpers/cron";
 
+const { logWorkerEventMock } = vi.hoisted(() => ({
+  logWorkerEventMock: vi.fn(),
+}));
+
 vi.mock("@shared/lib/stablecoins/registry", () => ({
   ACTIVE_STABLECOINS: [
     { id: "usdt-tether", geckoId: "tether" },
@@ -13,6 +17,10 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
+
+vi.mock("../../lib/structured-log", () => ({
+  logWorkerEvent: logWorkerEventMock,
+}));
 
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { filterDiscoveryCandidates, runDiscoveryScan, upsertDiscoveryCandidates } from "../discovery-scan";
@@ -79,7 +87,6 @@ describe("upsertDiscoveryCandidates", () => {
   });
 
   it("rejects malformed candidates before D1 while preserving valid candidates", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const db = mockD1();
 
     vi.useFakeTimers();
@@ -98,13 +105,13 @@ describe("upsertDiscoveryCandidates", () => {
       ]);
 
       expect(upserted).toBe(2);
-      expect(warn).toHaveBeenCalledWith(
-        "[discovery] Skipping invalid discovery candidate before upsert",
-        { geckoId: "bad-stable", llamaId: null },
-      );
+      expect(logWorkerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+        event: "discovery_candidate_rejected",
+        level: "warn",
+        metadata: { geckoId: "bad-stable", llamaId: null },
+      }));
     } finally {
       vi.useRealTimers();
-      warn.mockRestore();
     }
   });
 });
@@ -114,6 +121,7 @@ describe("runDiscoveryScan", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-23T12:00:00Z")); // Monday
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
+    logWorkerEventMock.mockReset();
   });
 
   afterEach(() => {
@@ -180,6 +188,10 @@ describe("runDiscoveryScan", () => {
       cgFetched: false,
       persistenceAttempted: 0,
     });
+    expect(logWorkerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "discovery_payload_invalid",
+      provider: "coingecko",
+    }));
   });
 
   it("persists valid rows but degrades when the upstream array contains malformed rows", async () => {
