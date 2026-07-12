@@ -53,6 +53,13 @@
       "title": "iM Bank and Finger announce first bank-led KRW stablecoin PoC on Kaia",
       "description": "Pilot features quantum-resistant security via BTQ Technologies' post-quantum cryptography stack.",
       "sourceUrl": "https://www.prnewswire.com/news-releases/btq-technologies-qssn-selected-as-core-security-infrastructure-for-south-koreas-first-bank-led-krw-stablecoin-proof-of-concept-302763840.html"
+    },
+    {
+      "date": "2026-05-20",
+      "type": "milestone",
+      "title": "iM Bank and OpenAsset complete technical PoC issuing 'iMKRW' on Kaia",
+      "description": "Controlled-environment proof-of-concept with OpenAsset's OpenMint solution demonstrated the full token lifecycle — issuance, top-up, QR payment, merchant settlement, and burn — across 80+ scenarios. A separate partner track from the Finger/BTQ post-quantum security pilot.",
+      "sourceUrl": "https://zdnet.co.kr/view/?no=20260520163613"
     }
   ]
 }
