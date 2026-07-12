@@ -69,12 +69,14 @@ function cloneStatefulStore(store: {
   transitions: StatusTransitionRow[];
   probes: StatusProbeRow[];
   discrepancy: DiscrepancyStateRow | null;
+  cache: Map<string, { value: string; updated_at: number }>;
 }) {
   return {
     stateRow: store.stateRow ? { ...store.stateRow } : null,
     transitions: store.transitions.map((row) => ({ ...row })),
     probes: store.probes.map((row) => ({ ...row })),
     discrepancy: store.discrepancy ? { ...store.discrepancy } : null,
+    cache: new Map([...store.cache].map(([key, row]) => [key, { ...row }])),
   };
 }
 
@@ -102,11 +104,13 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
     transitions: StatusTransitionRow[];
     probes: StatusProbeRow[];
     discrepancy: DiscrepancyStateRow | null;
+    cache: Map<string, { value: string; updated_at: number }>;
   } = {
     stateRow: options.seed ? seedToStateRow(options.seed) : null,
     transitions: [],
     probes: [],
     discrepancy: null,
+    cache: new Map(),
   };
 
   const createStatement = (sql: string, boundValues: unknown[] = []) => ({
@@ -155,6 +159,10 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
 
       if (sql.includes("FROM status_discrepancy_state")) {
         return store.discrepancy as T | null;
+      }
+
+      if (sql.includes("FROM cache WHERE key = ?")) {
+        return (store.cache.get(String(boundValues[0])) ?? null) as T | null;
       }
 
       return null as T | null;
@@ -274,6 +282,11 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
           last_probe_alert_at: Number(boundValues[0]),
           updated_at: Number(boundValues[1]),
         };
+      } else if (sql.includes("INSERT OR REPLACE INTO cache")) {
+        store.cache.set(String(boundValues[0]), {
+          value: String(boundValues[1]),
+          updated_at: Number(boundValues[2]),
+        });
       }
 
       if (
@@ -313,6 +326,7 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
           store.transitions = snapshot.transitions;
           store.probes = snapshot.probes;
           store.discrepancy = snapshot.discrepancy;
+          store.cache = snapshot.cache;
         }
         throw error;
       }

@@ -17,6 +17,3 @@ export { mockCircuitBreaker, mockCircuitOutcomeRecord } from "./mock-circuit-bre
 export type { MockCircuitBreakerOptions, MockCircuitBreakerExports } from "./mock-circuit-breaker";
 
 export { mockFetchRetry } from "./mock-fetch-retry";
-
-export { buildPendingAlertRow } from "./pending-row-builders";
-export type { PendingAlertRowOverrides } from "./pending-row-builders";

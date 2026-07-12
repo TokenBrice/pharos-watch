@@ -78,6 +78,58 @@ describe("handleTelegramWebhook", () => {
     warn.mockRestore();
   });
 
+  it("executes private quicksub through the webhook with the expected mutations and Telegram transcript", async () => {
+    const db = fixtureMockD1();
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeCallbackRequest("quicksub:usdc-circle"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const history = db.getHistory();
+    const subscriberUpsert = history.find((entry) => entry.sql.includes("INSERT INTO telegram_subscribers"));
+    expect(subscriberUpsert?.binds.slice(0, 6)).toEqual(["123", "requester", 1, 1, 0, 0]);
+    const subscriptionInsert = history.find((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"));
+    expect(subscriptionInsert?.binds.slice(0, 6)).toEqual(["123", "usdc-circle", 1, 1, 0, 0]);
+    expect(
+      fetchSpy.mock.calls.map(([url, init]) => [
+        new URL(String(url)).pathname.split("/").pop(),
+        JSON.parse(String(init?.body)),
+      ]),
+    ).toEqual([
+      [
+        "sendMessage",
+        {
+          chat_id: "123",
+          text: "Subscribed to DEWS + depeg for USDC.",
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "Open in app",
+                  web_app: { url: "https://pharos.watch/pharoswatchbot/app/?startapp=coin_usdc-circle" },
+                },
+              ],
+            ],
+          },
+        },
+      ],
+      [
+        "answerCallbackQuery",
+        {
+          callback_query_id: "cb1",
+          text: "Subscribed to DEWS + depeg for USDC.",
+          show_alert: false,
+        },
+      ],
+    ]);
+  });
+
   it("rejects channel-originated mutating callbacks before callback handlers run", async () => {
     const db = fixtureMockD1();
 

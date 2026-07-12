@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
 import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import type { CoverageFeatureKey } from "@/lib/coverage-types";
-import {
-  buildCoverageFeatureSummary,
-  buildCoverageRow,
-  COVERAGE_FEATURES,
-} from "@/lib/coverage";
+import { buildCoverageFeatureSummary, buildCoverageRow, COVERAGE_FEATURES } from "@/lib/coverage";
 import { coverageFeature as blacklistCoverageFeature } from "@/lib/coverage/blacklist";
 import { coverageFeature as dependencyCoverageFeature } from "@/lib/coverage/dependency";
 import { coverageFeature as dexCoverageFeature } from "@/lib/coverage/dex";
@@ -74,6 +70,29 @@ function makeRedemptionEntry(overrides?: Partial<RedemptionBackstopEntry>): Rede
     updatedAt: 1_700_000_000,
     ...overrides,
   };
+}
+
+type CoverageRowOverrides = Partial<Parameters<typeof buildCoverageRow>[0]>;
+type CoverageRowIdentity = readonly [id: string, symbol: string];
+
+function makeCoverageRow([id, symbol]: CoverageRowIdentity, overrides: CoverageRowOverrides = {}) {
+  const { coin, ...inputOverrides } = overrides;
+  return buildCoverageRow({
+    coin: { ...(coin ?? makeCoin()), id, symbol },
+    marketCapUsd: 100,
+    hasPegCoverage: true,
+    safetyScore: 82,
+    dexCoverageClass: "primary",
+    redemptionEntry: null,
+    hasYieldCoverage: false,
+    flowCoverageStatus: null,
+    hasDependencyCoverage: false,
+    ...inputOverrides,
+  });
+}
+
+function coverageFeature(key: CoverageFeatureKey) {
+  return COVERAGE_FEATURES.find((feature) => feature.key === key)!;
 }
 
 describe("coverage helpers", () => {
@@ -196,7 +215,9 @@ describe("coverage helpers", () => {
 
   it("maps redemption route families into user-facing labels", () => {
     expect(redemptionCoverageFeature.resolve(makeRedemptionEntry()).label).toBe("PSM");
-    expect(redemptionCoverageFeature.resolve(makeRedemptionEntry({ routeFamily: "offchain-issuer" })).label).toBe("Issuer");
+    expect(redemptionCoverageFeature.resolve(makeRedemptionEntry({ routeFamily: "offchain-issuer" })).label).toBe(
+      "Issuer",
+    );
     expect(redemptionCoverageFeature.resolve(makeRedemptionEntry({ routeFamily: "queue-redeem" })).label).toBe("Queue");
     expect(redemptionCoverageFeature.resolve(null).available).toBe(false);
   });
@@ -281,41 +302,51 @@ describe("coverage helpers", () => {
   });
 
   it("emits role-aware dependency coverage states", () => {
-    expect(dependencyCoverageFeature.resolve({
-      kind: "both",
-      upstreamCount: 2,
-      dependentCount: 1,
-      rawDependencyCount: 2,
-      mappedDependencyWeight: 0.9,
-    }).kind).toBe("both");
-    expect(dependencyCoverageFeature.resolve({
-      kind: "dependent",
-      upstreamCount: 1,
-      dependentCount: 0,
-      rawDependencyCount: 1,
-      mappedDependencyWeight: 0.5,
-    }).kind).toBe("dependent");
-    expect(dependencyCoverageFeature.resolve({
-      kind: "upstream",
-      upstreamCount: 0,
-      dependentCount: 2,
-      rawDependencyCount: 0,
-      mappedDependencyWeight: 0,
-    }).kind).toBe("upstream");
-    expect(dependencyCoverageFeature.resolve({
-      kind: "resolved-none",
-      upstreamCount: 0,
-      dependentCount: 0,
-      rawDependencyCount: 0,
-      mappedDependencyWeight: 0,
-    }).available).toBe(true);
-    expect(dependencyCoverageFeature.resolve({
-      kind: "unmapped-gap",
-      upstreamCount: 0,
-      dependentCount: 0,
-      rawDependencyCount: 1,
-      mappedDependencyWeight: 0,
-    }).available).toBe(false);
+    expect(
+      dependencyCoverageFeature.resolve({
+        kind: "both",
+        upstreamCount: 2,
+        dependentCount: 1,
+        rawDependencyCount: 2,
+        mappedDependencyWeight: 0.9,
+      }).kind,
+    ).toBe("both");
+    expect(
+      dependencyCoverageFeature.resolve({
+        kind: "dependent",
+        upstreamCount: 1,
+        dependentCount: 0,
+        rawDependencyCount: 1,
+        mappedDependencyWeight: 0.5,
+      }).kind,
+    ).toBe("dependent");
+    expect(
+      dependencyCoverageFeature.resolve({
+        kind: "upstream",
+        upstreamCount: 0,
+        dependentCount: 2,
+        rawDependencyCount: 0,
+        mappedDependencyWeight: 0,
+      }).kind,
+    ).toBe("upstream");
+    expect(
+      dependencyCoverageFeature.resolve({
+        kind: "resolved-none",
+        upstreamCount: 0,
+        dependentCount: 0,
+        rawDependencyCount: 0,
+        mappedDependencyWeight: 0,
+      }).available,
+    ).toBe(true);
+    expect(
+      dependencyCoverageFeature.resolve({
+        kind: "unmapped-gap",
+        upstreamCount: 0,
+        dependentCount: 0,
+        rawDependencyCount: 1,
+        mappedDependencyWeight: 0,
+      }).available,
+    ).toBe(false);
   });
 
   it("maps mint-authority summaries into descriptive coverage states", () => {
@@ -423,15 +454,7 @@ describe("coverage helpers", () => {
 
   it("keeps dependency gaps and dependency data outages separate in summaries", () => {
     const rows = [
-      buildCoverageRow({
-        coin: makeCoin({ id: "gap", symbol: "GAP" }),
-        marketCapUsd: 100,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
+      makeCoverageRow(["gap", "GAP"], {
         dependencyCoverage: {
           kind: "unmapped-gap",
           upstreamCount: 0,
@@ -440,25 +463,13 @@ describe("coverage helpers", () => {
           mappedDependencyWeight: 0,
         },
       }),
-      buildCoverageRow({
-        coin: makeCoin({ id: "unavailable", symbol: "DNA" }),
-        marketCapUsd: 100,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
+      makeCoverageRow(["unavailable", "DNA"], {
         dependencyCoverage: null,
         dataAvailability: { dependency: false },
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(
-      COVERAGE_FEATURES.find((feature) => feature.key === "dependency")!,
-      rows,
-      200,
-    );
+    const summary = buildCoverageFeatureSummary(coverageFeature("dependency"), rows, 200);
 
     expect(summary.breakdown).toContainEqual({ key: "gaps", label: "gaps", count: 1 });
     expect(summary.breakdown).toContainEqual({ key: "data-unavailable", label: "data n/a", count: 1 });
@@ -509,18 +520,13 @@ describe("coverage helpers", () => {
   });
 
   it("counts only available features when building rows", () => {
-    const row = buildCoverageRow({
+    const row = makeCoverageRow(["test-usd", "TUSDX"], {
       coin: makeCoin({
         reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
       }),
       marketCapUsd: 1_000_000,
-      hasPegCoverage: true,
-      safetyScore: 82,
-      dexCoverageClass: "primary",
       redemptionEntry: makeRedemptionEntry(),
-      hasYieldCoverage: false,
       flowCoverageStatus: "partial-history",
-      hasDependencyCoverage: false,
     });
 
     expect(row.coverageCount).toBe(6);
@@ -534,27 +540,20 @@ describe("coverage helpers", () => {
 
   it("builds per-feature summaries with breakdown text and market-cap share", () => {
     const rows = [
-      buildCoverageRow({
+      makeCoverageRow(["one", "ONE"], {
         coin: makeCoin({
-          id: "one",
-          symbol: "ONE",
           reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
         }),
         marketCapUsd: 800,
-        hasPegCoverage: true,
         consensusSources: ["coingecko", "defillama-list", "pyth"],
         priceConfidence: "high",
-        safetyScore: 82,
-        dexCoverageClass: "primary",
         redemptionEntry: makeRedemptionEntry(),
         hasYieldCoverage: true,
         flowCoverageStatus: "full",
         hasDependencyCoverage: true,
       }),
-      buildCoverageRow({
+      makeCoverageRow(["two", "TWO"], {
         coin: makeCoin({
-          id: "two",
-          symbol: "TWO",
           flags: {
             backing: "rwa-backed",
             governance: "centralized",
@@ -568,20 +567,12 @@ describe("coverage helpers", () => {
         hasPegCoverage: false,
         safetyScore: null,
         dexCoverageClass: "unobserved",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(
-      COVERAGE_FEATURES.find((feature) => feature.key === "price")!,
-      rows,
-      1_000,
-    );
+    const summary = buildCoverageFeatureSummary(coverageFeature("price"), rows, 1_000);
 
-    // headlineFilter requires sourceCount >= 3; only "one" (tracked, 3 sources) passes
+    // headlineFilter requires sourceCount >= 3; only the tracked three-source row passes.
     expect(summary.availableCount).toBe(1);
     expect(summary.totalCount).toBe(2);
     expect(summary.coveragePct).toBe(50);
@@ -597,10 +588,8 @@ describe("coverage helpers", () => {
 
   it("summarizes mint-authority coverage as reviewed authority breadth", () => {
     const rows = [
-      buildCoverageRow({
+      makeCoverageRow(["reviewed", "REV"], {
         coin: makeCoin({
-          id: "reviewed",
-          symbol: "REV",
           mintAuthoritySummary: {
             mintPath: "issuer-direct-mint",
             authorityPosture: "concentrated-admin",
@@ -609,32 +598,17 @@ describe("coverage helpers", () => {
           },
         }),
         marketCapUsd: 800,
-        hasPegCoverage: true,
         safetyScore: null,
         dexCoverageClass: null,
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
-      buildCoverageRow({
-        coin: makeCoin({ id: "unknown", symbol: "UNK" }),
+      makeCoverageRow(["unknown", "UNK"], {
         marketCapUsd: 200,
-        hasPegCoverage: true,
         safetyScore: null,
         dexCoverageClass: null,
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(
-      COVERAGE_FEATURES.find((feature) => feature.key === "mintAuthority")!,
-      rows,
-      1_000,
-    );
+    const summary = buildCoverageFeatureSummary(coverageFeature("mintAuthority"), rows, 1_000);
 
     expect(summary.countLabel).toBe("Reviewed authority");
     expect(summary.availableCount).toBe(1);
@@ -681,33 +655,21 @@ describe("coverage helpers", () => {
 
   it("includes source-depth breakdown when consensusSources are present", () => {
     const rows = [
-      buildCoverageRow({
-        coin: makeCoin({ id: "deep", symbol: "DEEP" }),
+      makeCoverageRow(["deep", "DEEP"], {
         marketCapUsd: 500,
-        hasPegCoverage: true,
         consensusSources: ["coingecko", "defillama", "pyth", "binance", "coinbase"],
         safetyScore: null,
         dexCoverageClass: null,
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
-      buildCoverageRow({
-        coin: makeCoin({ id: "shallow", symbol: "SHAL" }),
+      makeCoverageRow(["shallow", "SHAL"], {
         marketCapUsd: 500,
-        hasPegCoverage: true,
         consensusSources: ["coingecko"],
         safetyScore: null,
         dexCoverageClass: null,
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(COVERAGE_FEATURES.find((f) => f.key === "price")!, rows, 1_000);
+    const summary = buildCoverageFeatureSummary(coverageFeature("price"), rows, 1_000);
 
     expect(summary.breakdown).toContainEqual({ key: "tracked", label: "tracked", count: 2 });
     expect(summary.breakdown).toContainEqual({ key: "sources-5-plus", label: "5+ sources:", count: 1 });
@@ -716,10 +678,8 @@ describe("coverage helpers", () => {
 
   it("uses score-grade live reserves as the headline metric for reserve summaries", () => {
     const rows = [
-      buildCoverageRow({
+      makeCoverageRow(["live", "LIVE"], {
         coin: makeCoin({
-          id: "live",
-          symbol: "LIVE",
           liveReservesConfig: {
             adapter: "infinifi",
             version: 1,
@@ -730,18 +690,9 @@ describe("coverage helpers", () => {
           },
         }),
         marketCapUsd: 700,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
-      buildCoverageRow({
+      makeCoverageRow(["validated", "VAL"], {
         coin: makeCoin({
-          id: "validated",
-          symbol: "VAL",
           liveReservesConfig: {
             adapter: "curated-validated",
             version: 1,
@@ -751,19 +702,9 @@ describe("coverage helpers", () => {
             },
           },
         }),
-        marketCapUsd: 100,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
-      buildCoverageRow({
+      makeCoverageRow(["proof", "PROOF"], {
         coin: makeCoin({
-          id: "proof",
-          symbol: "PROOF",
           liveReservesConfig: {
             adapter: "single-asset",
             version: 1,
@@ -777,37 +718,16 @@ describe("coverage helpers", () => {
             },
           },
         }),
-        marketCapUsd: 100,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
-      buildCoverageRow({
+      makeCoverageRow(["curated", "CUR"], {
         coin: makeCoin({
-          id: "curated",
-          symbol: "CUR",
           reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
         }),
         marketCapUsd: 300,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(
-      COVERAGE_FEATURES.find((feature) => feature.key === "reserves")!,
-      rows,
-      1_000,
-    );
+    const summary = buildCoverageFeatureSummary(coverageFeature("reserves"), rows, 1_000);
 
     expect(summary.countLabel).toBe("Score-grade live");
     expect(summary.availableCount).toBe(1);
@@ -829,63 +749,31 @@ describe("coverage helpers", () => {
 
   it("breaks down redemption coverage by route family", () => {
     const rows = [
-      buildCoverageRow({
-        coin: makeCoin({ id: "issuer", symbol: "ISS" }),
+      makeCoverageRow(["issuer", "ISS"], {
         marketCapUsd: 500,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
         redemptionEntry: makeRedemptionEntry({ routeFamily: "offchain-issuer" }),
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
-      buildCoverageRow({
-        coin: makeCoin({ id: "psm", symbol: "PSM" }),
+      makeCoverageRow(["psm", "PSM"], {
         marketCapUsd: 300,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
         redemptionEntry: makeRedemptionEntry({ routeFamily: "psm-swap" }),
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
-      buildCoverageRow({
-        coin: makeCoin({ id: "heuristic", symbol: "HEUR" }),
+      makeCoverageRow(["heuristic", "HEUR"], {
         marketCapUsd: 150,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
         redemptionEntry: makeRedemptionEntry({
           routeFamily: "stablecoin-redeem",
           modelConfidence: "low",
           capacityConfidence: "heuristic",
         }),
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
-      buildCoverageRow({
-        coin: makeCoin({ id: "eventual", symbol: "EVT" }),
+      makeCoverageRow(["eventual", "EVT"], {
         marketCapUsd: 75,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
         redemptionEntry: makeRedemptionEntry({
           routeFamily: "offchain-issuer",
           capacitySemantics: "eventual-only",
         }),
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
-      buildCoverageRow({
-        coin: makeCoin({ id: "impaired", symbol: "IMP" }),
+      makeCoverageRow(["impaired", "IMP"], {
         marketCapUsd: 25,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
         redemptionEntry: makeRedemptionEntry({
           score: null,
           effectiveExitScore: null,
@@ -893,28 +781,13 @@ describe("coverage helpers", () => {
           routeStatus: "degraded",
           modelConfidence: "low",
         }),
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
-      buildCoverageRow({
-        coin: makeCoin({ id: "none", symbol: "NON" }),
+      makeCoverageRow(["none", "NON"], {
         marketCapUsd: 50,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(
-      COVERAGE_FEATURES.find((feature) => feature.key === "redemption")!,
-      rows,
-      1_000,
-    );
+    const summary = buildCoverageFeatureSummary(coverageFeature("redemption"), rows, 1_000);
 
     expect(summary.countLabel).toBe("Strong coverage");
     expect(summary.availableCount).toBe(2);
@@ -940,61 +813,24 @@ describe("coverage helpers", () => {
 
   it("summarizes freezable status across every coin and surfaces live tracker coverage", () => {
     const rows = [
-      buildCoverageRow({
-        coin: makeCoin({ id: "tracked", symbol: "USDC" }),
+      makeCoverageRow(["tracked", "USDC"], {
         marketCapUsd: 700,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
         blacklistStatus: true,
       }),
-      buildCoverageRow({
-        coin: makeCoin({ id: "untracked", symbol: "YES" }),
+      makeCoverageRow(["untracked", "YES"], {
         marketCapUsd: 200,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
         blacklistStatus: true,
       }),
-      buildCoverageRow({
-        coin: makeCoin({ id: "possible", symbol: "USDT" }),
+      makeCoverageRow(["possible", "USDT"], {
         marketCapUsd: 500,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
         blacklistStatus: "possible",
       }),
-      buildCoverageRow({
-        coin: makeCoin({ id: "not-blacklistable", symbol: "NO" }),
-        marketCapUsd: 100,
-        hasPegCoverage: true,
-        safetyScore: 82,
-        dexCoverageClass: "primary",
-        redemptionEntry: null,
-        hasYieldCoverage: false,
-        flowCoverageStatus: null,
-        hasDependencyCoverage: false,
+      makeCoverageRow(["not-blacklistable", "NO"], {
         blacklistStatus: false,
       }),
     ];
 
-    const summary = buildCoverageFeatureSummary(
-      COVERAGE_FEATURES.find((feature) => feature.key === "blacklist")!,
-      rows,
-      1_500,
-    );
+    const summary = buildCoverageFeatureSummary(coverageFeature("blacklist"), rows, 1_500);
 
     expect(summary.countLabel).toBe("Statuses resolved");
     expect(summary.availableCount).toBe(4);
@@ -1020,58 +856,10 @@ describe("coverage status-kind runtime exhaustiveness", () => {
   // "unavailable" template miss) are not reliably reached by current production
   // data and we want determinism over implicit coverage.
 
-  const baseFlags = {
-    backing: "rwa-backed" as const,
-    governance: "centralized" as const,
-    pegCurrency: "USD" as const,
-    yieldBearing: false,
-    rwa: true,
-    navToken: false,
-  };
-
-  function coin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
-    return { id: "x", name: "X", symbol: "X", flags: baseFlags, ...overrides };
-  }
-
-  function redemption(
-    overrides: Partial<RedemptionBackstopEntry> = {},
-  ): RedemptionBackstopEntry {
-    return {
-      stablecoinId: "x",
-      score: 72,
-      effectiveExitScore: 65,
-      dexLiquidityScore: 58,
-      accessScore: 100,
-      settlementScore: 100,
-      executionCertaintyScore: 100,
-      capacityScore: 60,
-      outputAssetQualityScore: 100,
-      costScore: 40,
-      routeFamily: "psm-swap",
-      accessModel: "permissionless-onchain",
-      settlementModel: "atomic",
-      executionModel: "deterministic-onchain",
-      outputAssetType: "stable-single",
-      provider: "supply-ratio-model",
-      sourceMode: "estimated",
-      resolutionState: "resolved",
-      routeStatus: "open",
-      routeStatusSource: "static-config",
-      holderEligibility: "any-holder",
-      capacityConfidence: "documented-bound",
-      capacitySemantics: "immediate-bounded",
-      feeConfidence: "undisclosed-reviewed",
-      feeModelKind: "undisclosed-reviewed",
-      modelConfidence: "medium",
-      immediateCapacityUsd: 10_000_000,
-      immediateCapacityRatio: 0.15,
-      feeBps: null,
-      queueEnabled: false,
-      methodologyVersion: "1.1",
-      updatedAt: 1_700_000_000,
-      ...overrides,
-    };
-  }
+  const baseFlags = makeCoin().flags;
+  const coin = (overrides: Partial<TestCoin> = {}) => makeCoin({ id: "x", name: "X", symbol: "X", ...overrides });
+  const redemption = (overrides: Partial<RedemptionBackstopEntry> = {}) =>
+    makeRedemptionEntry({ stablecoinId: "x", ...overrides });
 
   const liveCfg = {
     adapter: "infinifi" as const,
@@ -1117,10 +905,7 @@ describe("coverage status-kind runtime exhaustiveness", () => {
   // ── price ────────────────────────────────────────────────────────────────
   record("price", priceCoverageFeature.resolve(coin(), true).kind); // tracked
   record("price", priceCoverageFeature.resolve(coin(), false).kind); // missing
-  record(
-    "price",
-    priceCoverageFeature.resolve(coin({ flags: { ...baseFlags, navToken: true } }), false).kind,
-  ); // price-only
+  record("price", priceCoverageFeature.resolve(coin({ flags: { ...baseFlags, navToken: true } }), false).kind); // price-only
   record("price", priceCoverageFeature.resolve(coin(), true, undefined, undefined, false).kind); // data-unavailable
 
   // ── safety ───────────────────────────────────────────────────────────────
@@ -1139,18 +924,9 @@ describe("coverage status-kind runtime exhaustiveness", () => {
 
   // ── reserves ─────────────────────────────────────────────────────────────
   record("reserves", reserveCoverageFeature.resolve(coin({ liveReservesConfig: liveCfg }), true).kind); // live
-  record(
-    "reserves",
-    reserveCoverageFeature.resolve(coin({ liveReservesConfig: liveCfg }), false).kind,
-  ); // live-configured
-  record(
-    "reserves",
-    reserveCoverageFeature.resolve(coin({ liveReservesConfig: liveCfg }), null).kind,
-  ); // checking
-  record(
-    "reserves",
-    reserveCoverageFeature.resolve(coin({ liveReservesConfig: curatedValidatedCfg })).kind,
-  ); // curated-validated
+  record("reserves", reserveCoverageFeature.resolve(coin({ liveReservesConfig: liveCfg }), false).kind); // live-configured
+  record("reserves", reserveCoverageFeature.resolve(coin({ liveReservesConfig: liveCfg }), null).kind); // checking
+  record("reserves", reserveCoverageFeature.resolve(coin({ liveReservesConfig: curatedValidatedCfg })).kind); // curated-validated
   record("reserves", reserveCoverageFeature.resolve(coin({ liveReservesConfig: proofCfg })).kind); // proof
   record(
     "reserves",
@@ -1172,22 +948,11 @@ describe("coverage status-kind runtime exhaustiveness", () => {
   record("redemption", redemptionCoverageFeature.resolve(undefined, false).kind); // data-unavailable
   record(
     "redemption",
-    redemptionCoverageFeature.resolve(
-      redemption({ resolutionState: "impaired", modelConfidence: "low" }),
-    ).kind,
+    redemptionCoverageFeature.resolve(redemption({ resolutionState: "impaired", modelConfidence: "low" })).kind,
   ); // impaired
-  record(
-    "redemption",
-    redemptionCoverageFeature.resolve(redemption({ resolutionState: "missing-capacity" })).kind,
-  ); // configured-unrated (non-resolved)
-  record(
-    "redemption",
-    redemptionCoverageFeature.resolve(redemption({ modelConfidence: "low" })).kind,
-  ); // modeled-heuristic
-  record(
-    "redemption",
-    redemptionCoverageFeature.resolve(redemption({ capacitySemantics: "eventual-only" })).kind,
-  ); // resolved-unscored
+  record("redemption", redemptionCoverageFeature.resolve(redemption({ resolutionState: "missing-capacity" })).kind); // configured-unrated (non-resolved)
+  record("redemption", redemptionCoverageFeature.resolve(redemption({ modelConfidence: "low" })).kind); // modeled-heuristic
+  record("redemption", redemptionCoverageFeature.resolve(redemption({ capacitySemantics: "eventual-only" })).kind); // resolved-unscored
   for (const family of [
     "offchain-issuer",
     "psm-swap",
@@ -1212,14 +977,7 @@ describe("coverage status-kind runtime exhaustiveness", () => {
   record("yield", yieldCoverageFeature.resolve(true, false).kind); // data-unavailable
 
   // ── flows ────────────────────────────────────────────────────────────────
-  for (const status of [
-    "full",
-    "partial-history",
-    "lagging",
-    "bootstrapping",
-    "unknown",
-    "disabled",
-  ] as const) {
+  for (const status of ["full", "partial-history", "lagging", "bootstrapping", "unknown", "disabled"] as const) {
     record("flows", flowCoverageFeature.resolve(status).kind);
   }
   record("flows", flowCoverageFeature.resolve(null).kind); // none
@@ -1234,77 +992,104 @@ describe("coverage status-kind runtime exhaustiveness", () => {
   record("blacklist", blacklistCoverageFeature.resolve(coin({ symbol: "X" }), null).kind); // data-unavailable
 
   // ── dependency ───────────────────────────────────────────────────────────
-  record("dependency", dependencyCoverageFeature.resolve({
-    kind: "both",
-    upstreamCount: 1,
-    dependentCount: 1,
-    rawDependencyCount: 1,
-    mappedDependencyWeight: 1,
-  }).kind);
+  record(
+    "dependency",
+    dependencyCoverageFeature.resolve({
+      kind: "both",
+      upstreamCount: 1,
+      dependentCount: 1,
+      rawDependencyCount: 1,
+      mappedDependencyWeight: 1,
+    }).kind,
+  );
   record("dependency", dependencyCoverageFeature.resolve(true).kind); // dependent via legacy boolean input
-  record("dependency", dependencyCoverageFeature.resolve({
-    kind: "upstream",
-    upstreamCount: 0,
-    dependentCount: 1,
-    rawDependencyCount: 0,
-    mappedDependencyWeight: 0,
-  }).kind);
-  record("dependency", dependencyCoverageFeature.resolve({
-    kind: "resolved-none",
-    upstreamCount: 0,
-    dependentCount: 0,
-    rawDependencyCount: 0,
-    mappedDependencyWeight: 0,
-  }).kind);
+  record(
+    "dependency",
+    dependencyCoverageFeature.resolve({
+      kind: "upstream",
+      upstreamCount: 0,
+      dependentCount: 1,
+      rawDependencyCount: 0,
+      mappedDependencyWeight: 0,
+    }).kind,
+  );
+  record(
+    "dependency",
+    dependencyCoverageFeature.resolve({
+      kind: "resolved-none",
+      upstreamCount: 0,
+      dependentCount: 0,
+      rawDependencyCount: 0,
+      mappedDependencyWeight: 0,
+    }).kind,
+  );
   record("dependency", dependencyCoverageFeature.resolve(false).kind); // unmapped-gap via legacy boolean input
   record("dependency", dependencyCoverageFeature.resolve(true, false).kind); // data-unavailable
 
   // ── mint authority ──────────────────────────────────────────────────────
   record("mintAuthority", mintAuthorityCoverageFeature.resolve(null).kind); // unknown
-  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
-    mintPath: "immutable-user-collateralized",
-    authorityPosture: "none-resolved",
-    confidence: "verified",
-    summary: "No privileged mint path is resolved.",
-  }).kind);
-  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
-    mintPath: "user-collateralized-governed",
-    authorityPosture: "bounded-admin",
-    confidence: "verified",
-    summary: "Governance can affect minting parameters.",
-  }).kind);
-  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
-    mintPath: "permissioned-minter",
-    authorityPosture: "bounded-admin",
-    confidence: "verified",
-    summary: "A Safe can authorize minters.",
-    controls: [
-      {
-        label: "Minter admin",
-        role: "minter-admin",
-        authorityType: "safe",
-        directMintAbility: "can-authorize",
-      },
-    ],
-  }).kind);
-  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
-    mintPath: "issuer-direct-mint",
-    authorityPosture: "bounded-admin",
-    confidence: "verified",
-    summary: "Issuer role can mint new supply.",
-  }).kind);
-  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
-    mintPath: "bridge-or-oft-synthetic",
-    authorityPosture: "partially-bounded-admin",
-    confidence: "manual-review",
-    summary: "Bridge route controls destination supply.",
-  }).kind);
-  record("mintAuthority", mintAuthorityCoverageFeature.resolve({
-    mintPath: "wrapped-or-variant-inherited",
-    authorityPosture: "bounded-admin",
-    confidence: "probable",
-    summary: "Wrapper inherits mint authority from its parent.",
-  }).kind);
+  record(
+    "mintAuthority",
+    mintAuthorityCoverageFeature.resolve({
+      mintPath: "immutable-user-collateralized",
+      authorityPosture: "none-resolved",
+      confidence: "verified",
+      summary: "No privileged mint path is resolved.",
+    }).kind,
+  );
+  record(
+    "mintAuthority",
+    mintAuthorityCoverageFeature.resolve({
+      mintPath: "user-collateralized-governed",
+      authorityPosture: "bounded-admin",
+      confidence: "verified",
+      summary: "Governance can affect minting parameters.",
+    }).kind,
+  );
+  record(
+    "mintAuthority",
+    mintAuthorityCoverageFeature.resolve({
+      mintPath: "permissioned-minter",
+      authorityPosture: "bounded-admin",
+      confidence: "verified",
+      summary: "A Safe can authorize minters.",
+      controls: [
+        {
+          label: "Minter admin",
+          role: "minter-admin",
+          authorityType: "safe",
+          directMintAbility: "can-authorize",
+        },
+      ],
+    }).kind,
+  );
+  record(
+    "mintAuthority",
+    mintAuthorityCoverageFeature.resolve({
+      mintPath: "issuer-direct-mint",
+      authorityPosture: "bounded-admin",
+      confidence: "verified",
+      summary: "Issuer role can mint new supply.",
+    }).kind,
+  );
+  record(
+    "mintAuthority",
+    mintAuthorityCoverageFeature.resolve({
+      mintPath: "bridge-or-oft-synthetic",
+      authorityPosture: "partially-bounded-admin",
+      confidence: "manual-review",
+      summary: "Bridge route controls destination supply.",
+    }).kind,
+  );
+  record(
+    "mintAuthority",
+    mintAuthorityCoverageFeature.resolve({
+      mintPath: "wrapped-or-variant-inherited",
+      authorityPosture: "bounded-admin",
+      confidence: "probable",
+      summary: "Wrapper inherits mint authority from its parent.",
+    }).kind,
+  );
 
   it.each(COVERAGE_FEATURES.map((f) => [f.key, f] as const))(
     "every observed kind for feature %s appears in its statusKinds array",
@@ -1333,10 +1118,7 @@ describe("coverage status-kind runtime exhaustiveness", () => {
 
 describe("coverage legend invariant", () => {
   it("provides a legend entry (general or per-feature) for every producible status kind", async () => {
-    const {
-      COVERAGE_FEATURE_LEGEND_ITEMS,
-      GENERAL_LEGEND_STATUS_KINDS,
-    } = await import("@/lib/coverage-features");
+    const { COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS } = await import("@/lib/coverage-features");
 
     const generalKinds = new Set(GENERAL_LEGEND_STATUS_KINDS);
 
@@ -1347,9 +1129,7 @@ describe("coverage legend invariant", () => {
           legendKinds.add(kind);
         }
       }
-      const uncovered = feature.statusKinds.filter(
-        (kind) => !legendKinds.has(kind) && !generalKinds.has(kind),
-      );
+      const uncovered = feature.statusKinds.filter((kind) => !legendKinds.has(kind) && !generalKinds.has(kind));
       expect(uncovered, `feature ${feature.key} has uncovered kinds: ${uncovered.join(", ")}`).toEqual([]);
     }
   });

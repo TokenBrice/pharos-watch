@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 const {
   sleepWithSignalMock,
@@ -197,16 +198,26 @@ describe("fetchWithRetry", () => {
   it("jitters generic retry sleeps", async () => {
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
     try {
-      const fetchMock = vi.fn()
-        .mockResolvedValueOnce(new Response("bad gateway", { status: 520 }))
-        .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchSpy = mockFetch([{
+        match: "https://example.com/token",
+        outcomes: [
+          { body: "service unavailable", status: 503 },
+          new TypeError("network reset"),
+          { body: { ok: true } },
+        ],
+      }], { requireMatch: true });
 
-      const res = await fetchWithRetry("https://example.com/token", undefined, 1);
+      const res = await fetchWithRetry("https://example.com/token", undefined, 2);
 
       expect(res?.ok).toBe(true);
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(sleepWithSignalMock).toHaveBeenCalledWith(500, undefined);
+      expect(fetchSpy.getHistory()).toEqual([
+        { url: "https://example.com/token", method: "GET", headers: {}, body: null },
+        { url: "https://example.com/token", method: "GET", headers: {}, body: null },
+        { url: "https://example.com/token", method: "GET", headers: {}, body: null },
+      ]);
+      expect(sleepWithSignalMock).toHaveBeenNthCalledWith(1, 500, undefined);
+      expect(sleepWithSignalMock).toHaveBeenNthCalledWith(2, 1000, undefined);
+      expect(() => fetchSpy.assertAllOutcomesUsed()).not.toThrow();
     } finally {
       randomSpy.mockRestore();
     }

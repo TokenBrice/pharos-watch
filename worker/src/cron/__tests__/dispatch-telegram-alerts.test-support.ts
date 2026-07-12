@@ -1,20 +1,9 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { vi } from "vitest";
-import {
-  mockD1,
-  type MockD1Database,
-  type MockD1Options,
-  type MockTableConfig,
-} from "../../test-helpers/__shared/mock-d1";
-import { buildPendingAlertRow, mockCircuitBreaker, mockDbCache } from "../../test-helpers/cron";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { mockCircuitBreaker } from "../../test-helpers/cron";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { getAlertSafetySourceGeneration } from "../../lib/alert-safety-source-cache";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
-
-const mockGetCache = vi.fn();
-const mockSetCache = vi.fn();
 
 const STABLECOINS_CACHE_WITH_USDC = JSON.stringify({
   peggedAssets: [
@@ -29,16 +18,10 @@ const STABLECOINS_CACHE_WITH_USDC = JSON.stringify({
   ],
 });
 
-vi.mock("../../lib/db-cache", () =>
-  mockDbCache({
-    getCacheFn: mockGetCache,
-    setCacheFn: mockSetCache,
-  }),
-);
-
 const mockShouldAttemptFetch = vi.fn();
 const mockRecordOutcome = vi.fn();
 const mockInspectLegacyOverflowBacklog = vi.fn();
+const fixtureSqliteDatabases: DatabaseSync[] = [];
 
 vi.mock("../../lib/circuit-breaker", () =>
   mockCircuitBreaker({
@@ -57,6 +40,60 @@ vi.mock("../telegram-legacy-overflow-import", async (importOriginal) => {
 
 const mockSendToChat = vi.fn();
 const mockSendBatch = vi.fn();
+
+export interface TelegramDeliveryResult {
+  ok: boolean;
+  blocked: boolean;
+  retryable: boolean;
+  permanentFailure: boolean;
+  statusCode: number;
+  errorClass: string | null;
+  delivery: string;
+  retryAfterSec: number | null;
+  rateLimitScope?: "chat" | "global";
+}
+
+export interface TelegramDeliveryTranscriptEntry {
+  chatId: string;
+  html: string;
+  botToken: string;
+  options: Record<string, unknown>;
+}
+
+const telegramDeliveryTranscript: TelegramDeliveryTranscriptEntry[] = [];
+let scriptedDeliveryResults: TelegramDeliveryResult[] = [];
+const scriptedDeliveryResultsByChat = new Map<string, TelegramDeliveryResult[]>();
+
+const DEFAULT_DELIVERY_RESULT: TelegramDeliveryResult = {
+  ok: true,
+  blocked: false,
+  retryable: false,
+  permanentFailure: false,
+  statusCode: 200,
+  errorClass: null,
+  delivery: "sent",
+  retryAfterSec: null,
+};
+
+function recordDisabledTelegramDelivery(
+  chatId: string,
+  html: string,
+  botToken: string,
+  options: Record<string, unknown>,
+): TelegramDeliveryResult {
+  telegramDeliveryTranscript.push({ chatId, html, botToken, options });
+  const resultsForChat = scriptedDeliveryResultsByChat.get(chatId);
+  if (resultsForChat?.length) return resultsForChat.shift()!;
+  return scriptedDeliveryResults.shift() ?? DEFAULT_DELIVERY_RESULT;
+}
+
+function scriptTelegramDeliveries(...results: TelegramDeliveryResult[]): void {
+  scriptedDeliveryResults = [...results];
+}
+
+function scriptTelegramDeliveriesForChat(chatId: string, ...results: TelegramDeliveryResult[]): void {
+  scriptedDeliveryResultsByChat.set(chatId, [...results]);
+}
 
 vi.mock("../../lib/telegram", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/telegram")>();
@@ -152,22 +189,6 @@ function makeDewsOverflowPlan(now: number, chatId = "chat-overflow") {
   };
 }
 
-function countPendingAlertInsertBatches(db: MockD1Database): () => number {
-  const originalBatch = db.batch.bind(db);
-  let pendingInsertBatchCount = 0;
-  db.batch = (async (statements: D1PreparedStatement[]) => {
-    if (
-      statements.some((statement) =>
-        ((statement as { sql?: string }).sql ?? "").includes("INSERT INTO telegram_pending_alerts"),
-      )
-    ) {
-      pendingInsertBatchCount += 1;
-    }
-    return originalBatch(statements);
-  }) as D1Database["batch"];
-  return () => pendingInsertBatchCount;
-}
-
 function parseLogRecords(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
   return spy.mock.calls.map((call) => JSON.parse(String(call[0])) as Record<string, unknown>);
 }
@@ -175,17 +196,17 @@ function resetDispatchTelegramAlertsTest() {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-04-23T12:00:00Z"));
 
-  mockGetCache.mockReset();
-  mockSetCache.mockReset();
   formatConsolidatedMessageSpy.mockReset();
   mockShouldAttemptFetch.mockReset();
   mockRecordOutcome.mockReset();
   mockInspectLegacyOverflowBacklog.mockReset();
   mockSendToChat.mockReset();
   mockSendBatch.mockReset();
+  telegramDeliveryTranscript.length = 0;
+  scriptedDeliveryResults = [];
+  scriptedDeliveryResultsByChat.clear();
 
   mockShouldAttemptFetch.mockResolvedValue(true);
-  mockSetCache.mockResolvedValue(undefined);
   mockRecordOutcome.mockResolvedValue(undefined);
   mockInspectLegacyOverflowBacklog.mockResolvedValue({
     state: "absent",
@@ -197,23 +218,31 @@ function resetDispatchTelegramAlertsTest() {
     importedTargetCount: 0,
     errorClass: null,
   });
-  mockSendToChat.mockResolvedValue({
-    ok: true,
-    blocked: false,
-    retryable: false,
-    permanentFailure: false,
-    statusCode: 200,
-    errorClass: null,
-    delivery: "sent",
-    retryAfterSec: null,
-  });
+  mockSendToChat.mockImplementation(async (chatId, html, botToken, options) =>
+    recordDisabledTelegramDelivery(chatId, html, botToken, options ?? {}),
+  );
 
   // Default sendBatch: delegate each message to mockSendToChat
   mockSendBatch.mockImplementation(
-    async (messages: Array<{ chatId: string; html: string; disableNotification: boolean }>, _botToken: string) => {
+    async (
+      messages: Array<{
+        chatId: string;
+        html: string;
+        disableNotification: boolean;
+        linkPreviewOptions?: unknown;
+        replyMarkup?: unknown;
+      }>,
+      _botToken: string,
+    ) => {
       const results = [];
       for (const msg of messages) {
-        const result = await mockSendToChat(msg.chatId, msg.html, _botToken, {});
+        const result = await mockSendToChat(msg.chatId, msg.html, _botToken, {
+          ...(msg.linkPreviewOptions
+            ? { linkPreviewOptions: msg.linkPreviewOptions }
+            : { disableWebPagePreview: true }),
+          disableNotification: msg.disableNotification,
+          replyMarkup: msg.replyMarkup,
+        });
         results.push({ chatId: msg.chatId, ...result });
       }
       return results;
@@ -226,480 +255,554 @@ function cleanupDispatchTelegramAlertsTest() {
   while (fixtureSqliteDatabases.length > 0) fixtureSqliteDatabases.pop()?.close();
 }
 
-const SQLITE_DISPATCH_TABLES = [
-  "telegram_alert_source_events",
-  "telegram_alert_source_resolution_pages",
-  "telegram_alert_source_resolution_memberships",
-  "telegram_alert_source_resolution_targets",
-  "telegram_alert_planning_subscribers",
-  "telegram_alert_target_plan_pages",
-  "telegram_alert_target_plans",
-  "telegram_alert_target_plan_items",
-  "telegram_alert_target_expiry_progress",
-  "telegram_alert_jobs",
-  "telegram_alert_job_targets",
-  "telegram_alert_job_target_items",
-  "telegram_pending_alerts",
-  "telegram_alert_dead_letters",
-  "telegram_chat_delivery_diagnostics",
-  "telegram_delivery_pauses",
-  "telegram_transport_circuit",
-  "telegram_transport_failure_observations",
-  "telegram_legacy_overflow_state",
-] as const;
+type AlertFamilySeed = "dews" | "depeg" | "safety" | "launch" | "reserve";
 
-const ALERT_FAMILIES = ["dews", "depeg", "safety", "launch", "reserve"] as const;
-type AlertFamily = (typeof ALERT_FAMILIES)[number];
+type AlertFlags = Partial<Record<AlertFamilySeed, boolean>>;
 
-interface SeedSubscriber {
+export interface DispatchSubscriberSeed {
   chatId: string;
-  createdAt: number;
-  lastActiveAt: number;
-  preferenceGeneration: number;
-  alertSnoozeUntilTs: number | null;
-  quietHoursEnabled: number;
-  quietHoursStartUtc: number | null;
-  quietHoursEndUtc: number | null;
-  timezone: string | null;
-  globalDepegWorseningBpsStep: number | null;
-  global: Record<AlertFamily, number>;
+  createdAt?: number;
+  lastActiveAt?: number;
+  preferenceGeneration?: number;
+  snoozeUntil?: number | null;
+  quietHoursEnabled?: boolean;
+  quietHoursStartUtc?: number | null;
+  quietHoursEndUtc?: number | null;
+  timezone?: string | null;
+  global?: AlertFlags;
+  direct?: AlertFlags;
+  globalDepegWorseningBpsStep?: number | null;
+  consecutiveBlockCount?: number;
+  consecutiveBlockFirstAt?: number | null;
 }
 
-interface HybridPreparedStatement extends D1PreparedStatement {
-  sql: string;
-  boundValues: unknown[];
-  backend: "canned" | "sqlite";
-  inner: D1PreparedStatement;
+export interface DispatchSubscriptionSeed {
+  chatId: string;
+  stablecoinId: string;
+  alerts?: AlertFlags;
+  overrides?: AlertFlags;
+  dewsMinBand?: string | null;
+  safetyMode?: string | null;
+  depegWorseningBpsStep?: number | null;
+  snoozeUntil?: number | null;
 }
 
-const fixtureSqliteDatabases: DatabaseSync[] = [];
-let latestMigrationSql: string | null = null;
-
-function loadLatestMigrationSql(): string {
-  if (latestMigrationSql != null) return latestMigrationSql;
-  const migrationDir = process.cwd().endsWith("/worker")
-    ? join(process.cwd(), "migrations")
-    : join(process.cwd(), "worker/migrations");
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migrations only.
-  latestMigrationSql = readdirSync(migrationDir)
-    .filter((entry) => entry.endsWith(".sql"))
-    .sort()
-    .map((file) => {
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migrations only.
-      return readFileSync(join(migrationDir, file), "utf8");
-    })
-    .join("\n");
-  return latestMigrationSql;
+export interface DispatchPresetSeed {
+  chatId: string;
+  presetId: string;
+  alerts?: Pick<AlertFlags, "dews" | "depeg" | "safety">;
+  depegWorseningBpsStep?: number | null;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
-function latestSchemaSqlite(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(loadLatestMigrationSql());
-  fixtureSqliteDatabases.push(sqlite);
-  return { sqlite, db: createSqliteD1(sqlite) };
+export interface DispatchDewsSeed {
+  stablecoinId: string;
+  score?: number;
+  band?: "CALM" | "WATCH" | "ALERT" | "WARNING" | "DANGER";
+  signals?: Record<string, unknown>;
+  computedAt?: number;
 }
 
-function rowNumber(row: Record<string, unknown>, key: string, fallback: number): number {
-  const value = Number(row[key]);
-  return Number.isFinite(value) ? value : fallback;
+export interface DispatchDepegSeed {
+  stablecoinId: string;
+  symbol?: string;
+  direction?: "above" | "below";
+  peakDeviationBps?: number;
+  startedAt?: number;
+  endedAt?: number | null;
+  startPrice?: number;
+  peakPrice?: number | null;
+  recoveryPrice?: number | null;
+  pegReference?: number;
 }
 
-function rowNullableNumber(row: Record<string, unknown>, key: string): number | null {
-  return row[key] == null ? null : rowNumber(row, key, 0);
+export interface DispatchSafetySeed {
+  stablecoinId: string;
+  grade: string;
+  score?: number | null;
+  prevGrade?: string | null;
+  prevScore?: number | null;
+  methodologyVersion?: string;
+  recordedAt?: number;
 }
 
-function ensureSeedSubscriber(
-  subscribers: Map<string, SeedSubscriber>,
-  row: Record<string, unknown>,
-): SeedSubscriber | null {
-  if (typeof row.chat_id !== "string" || row.chat_id.length === 0) return null;
-  const lastActiveAt = rowNumber(row, "last_active_at", rowNumber(row, "created_at", Math.floor(Date.now() / 1000)));
-  const existing = subscribers.get(row.chat_id);
-  const subscriber: SeedSubscriber = existing ?? {
-    chatId: row.chat_id,
-    createdAt: Math.max(0, lastActiveAt - 1),
-    lastActiveAt,
-    preferenceGeneration: 0,
-    alertSnoozeUntilTs: null,
-    quietHoursEnabled: 0,
-    quietHoursStartUtc: null,
-    quietHoursEndUtc: null,
-    timezone: null,
-    globalDepegWorseningBpsStep: null,
-    global: { dews: 0, depeg: 0, safety: 0, launch: 0, reserve: 0 },
-  };
-  subscriber.createdAt = Math.min(subscriber.createdAt, rowNumber(row, "created_at", Math.max(0, lastActiveAt - 1)));
-  subscriber.lastActiveAt = Math.max(subscriber.lastActiveAt, lastActiveAt);
-  subscriber.preferenceGeneration = Math.max(
-    subscriber.preferenceGeneration,
-    rowNumber(row, "preference_generation", 0),
-  );
-  subscriber.alertSnoozeUntilTs = row.alert_snooze_until_ts == null
-    ? subscriber.alertSnoozeUntilTs
-    : rowNullableNumber(row, "alert_snooze_until_ts");
-  subscriber.quietHoursEnabled = Math.max(
-    subscriber.quietHoursEnabled,
-    rowNumber(row, "quiet_hours_enabled", 0),
-  );
-  subscriber.quietHoursStartUtc ??= rowNullableNumber(row, "quiet_hours_start_utc");
-  subscriber.quietHoursEndUtc ??= rowNullableNumber(row, "quiet_hours_end_utc");
-  subscriber.timezone ??= typeof row.timezone === "string" ? row.timezone : null;
-  subscriber.globalDepegWorseningBpsStep ??= rowNullableNumber(row, "global_depeg_worsening_bps_step");
-  subscribers.set(row.chat_id, subscriber);
-  return subscriber;
+export interface DispatchPendingSeed {
+  id?: number;
+  chatId: string;
+  html: string;
+  createdAt?: number;
+  attempts?: number;
+  notBeforeAt?: number | null;
+  dedupeKey?: string | null;
+  chunkIndex?: number | null;
+  priority?: number;
+  sourceType?: string;
+  alertType?: AlertFamilySeed | null;
+  expiresAt?: number | null;
+  updatedAt?: number;
+  lastErrorClass?: string | null;
+  retryAfterSec?: number | null;
+  deliveryState?: "pending" | "sending" | "execution_unknown" | "sent_cleanup";
+  deliveryOwner?: string | null;
+  deliveryGeneration?: number;
+  deliveryStartedAt?: number | null;
+  deliveryCompletedAt?: number | null;
+  deliveryClaimExpiresAt?: number | null;
+  sourceEventId?: string | null;
+  alertScopeJson?: string | null;
+  preferenceGeneration?: number | null;
+  markupPolicyJson?: string | null;
 }
 
-function seedFixtureRows(sqlite: DatabaseSync, tables: MockTableConfig[]): void {
-  const subscribers = new Map<string, SeedSubscriber>();
-  const subscriptions = new Map<string, Record<string, unknown>>();
-  const presets = new Map<string, Record<string, unknown>>();
-  const pendingRows = new Map<string, Record<string, unknown>>();
-  const sourceRows = new Map<string, Record<string, unknown>>();
+export interface DispatchSourceEventSeed {
+  sourceEventId: string;
+  schemaVersion?: number;
+  status?: "resolving" | "planned" | "baseline_committed" | "complete" | "expired";
+  detectedAt?: number;
+  expiresAt?: number;
+  eventPayload: string;
+  baselinePayload: string;
+  attemptCount?: number;
+  lastAttemptAt?: number | null;
+  lastErrorClass?: string | null;
+  baselineCommittedAt?: number | null;
+  completedAt?: number | null;
+  targetPlanState?:
+    "unstarted" | "capturing" | "planning" | "materializing" | "ready" | "delivery_open" | "degraded" | "expired";
+  targetPlanGeneration?: number;
+}
 
-  for (const table of tables) {
-    const rows = table.first ? [...table.rows, table.first] : table.rows;
-    const directFamily = ALERT_FAMILIES.find((family) => table.match.includes(`sub.alert_${family} = 1`));
-    const globalFamily = ALERT_FAMILIES.find((family) => table.match.includes(`global_alert_${family} = 1`));
-    for (const row of rows) {
-      if (!row) continue;
-      const subscriber = ensureSeedSubscriber(subscribers, row);
-      if (subscriber && globalFamily) subscriber.global[globalFamily] = 1;
-      if (subscriber && directFamily && typeof row.stablecoin_id === "string") {
-        const key = `${subscriber.chatId}\u0000${row.stablecoin_id}`;
-        subscriptions.set(key, { ...subscriptions.get(key), ...row, [`alert_${directFamily}`]: 1 });
-      }
-      if (subscriber && typeof row.stablecoin_id === "string" && row.alert_snooze_until_ts != null) {
-        const key = `${subscriber.chatId}\u0000${row.stablecoin_id}`;
-        subscriptions.set(key, { ...subscriptions.get(key), ...row });
-      }
-      if (
-        subscriber &&
-        typeof row.stablecoin_id === "string" &&
-        table.match === "FROM telegram_subscriptions\n          WHERE stablecoin_id IN"
-      ) {
-        const key = `${subscriber.chatId}\u0000${row.stablecoin_id}`;
-        subscriptions.set(key, {
-          ...subscriptions.get(key),
-          ...row,
-          alert_snooze_until_ts: Math.floor(Date.now() / 1000) + 3_600,
-        });
-      }
-      if (subscriber && typeof row.preset_id === "string") {
-        const key = `${subscriber.chatId}\u0000${row.preset_id}`;
-        presets.set(key, { ...presets.get(key), ...row });
-      }
-      if (typeof row.message_html === "string") {
-        const key = row.id != null ? `id:${String(row.id)}` : `dedupe:${String(row.dedupe_key)}`;
-        pendingRows.set(key, row);
-      } else if (typeof row.dedupe_key === "string" && row.attempts != null) {
-        pendingRows.set(`dedupe:${row.dedupe_key}`, {
-          chat_id: "fixture-dedupe",
-          message_html: "<b>Fixture pending alert</b>",
-          disable_notification: 0,
-          ...row,
-        });
-      } else if (
-        table.match.includes("SELECT chat_id, MAX(not_before_at)") &&
-        subscriber &&
-        row.not_before_at != null
-      ) {
-        pendingRows.set(`backoff:${subscriber.chatId}`, {
-          chat_id: subscriber.chatId,
-          message_html: "<b>Fixture backoff marker</b>",
-          disable_notification: 0,
-          created_at: Math.floor(Date.now() / 1000),
-          not_before_at: row.not_before_at,
-          source_type: "legacy",
-        });
-      }
-      if (
-        typeof row.source_event_id === "string" &&
-        typeof row.event_payload === "string" &&
-        typeof row.baseline_payload === "string"
-      ) {
-        sourceRows.set(row.source_event_id, { ...sourceRows.get(row.source_event_id), ...row });
-      } else if (sourceRows.size === 1 && row.target_plan_state != null) {
-        const [sourceEventId, source] = [...sourceRows.entries()][0];
-        sourceRows.set(sourceEventId, { ...source, ...row });
-      }
-    }
-  }
+export interface DispatchTargetSeed {
+  sourceEventId: string;
+  chatId: string;
+  alertType?: AlertFamilySeed;
+  targetKey?: string;
+  pendingDedupeKey?: string;
+  planGeneration?: number;
+  status?: "planned" | "queued" | "sent" | "failed" | "expired";
+}
 
-  const insertSubscriber = sqlite.prepare(
-    `INSERT INTO telegram_subscribers (
+export interface DispatchSeed {
+  cache?: Record<string, unknown>;
+  dews?: DispatchDewsSeed[];
+  depegs?: DispatchDepegSeed[];
+  safety?: DispatchSafetySeed[];
+  subscribers?: DispatchSubscriberSeed[];
+  subscriptions?: DispatchSubscriptionSeed[];
+  presets?: DispatchPresetSeed[];
+  pending?: DispatchPendingSeed[];
+  sourceEvents?: DispatchSourceEventSeed[];
+  targets?: DispatchTargetSeed[];
+}
+
+export type DispatchOperation = "active-snoozes" | "preset-subscribers" | "resolved-depeg-lookup" | "subscriber-fanout";
+
+export type DispatchFaultOperation = Extract<DispatchOperation, "active-snoozes" | "preset-subscribers">;
+
+export interface DispatchOperationTranscriptEntry {
+  operation: DispatchOperation;
+  binds: unknown[];
+}
+
+export interface DispatchOperationFault {
+  operation: DispatchFaultOperation;
+  error: Error;
+  remaining?: number;
+}
+
+export interface DispatchHarness {
+  sqlite: DatabaseSync;
+  db: D1Database;
+  seed: (input: DispatchSeed) => void;
+  cache: (key: string, value: unknown, updatedAt?: number) => void;
+  operations: DispatchOperationTranscriptEntry[];
+}
+
+function nowSec(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
+function seedCacheRow(sqlite: DatabaseSync, key: string, value: unknown, updatedAt = nowSec()): void {
+  sqlite
+    .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    .run(key, typeof value === "string" ? value : JSON.stringify(value), updatedAt);
+}
+
+function alertFlag(flags: AlertFlags | undefined, family: AlertFamilySeed): number {
+  return flags?.[family] === true ? 1 : 0;
+}
+
+function seedSubscriber(sqlite: DatabaseSync, input: DispatchSubscriberSeed): void {
+  const current = nowSec();
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_subscribers (
        chat_id, created_at, last_active_at, preference_generation,
        alert_snooze_until_ts, quiet_hours_enabled, quiet_hours_start_utc,
        quiet_hours_end_utc, timezone, global_alert_dews, global_alert_depeg,
        global_alert_safety, global_alert_launch, global_alert_reserve,
-       global_depeg_worsening_bps_step
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(chat_id) DO UPDATE SET
-       last_active_at = excluded.last_active_at,
-       preference_generation = excluded.preference_generation`,
-  );
-  for (const subscriber of subscribers.values()) {
-    insertSubscriber.run(
-      subscriber.chatId,
-      subscriber.createdAt,
-      subscriber.lastActiveAt,
-      subscriber.preferenceGeneration,
-      subscriber.alertSnoozeUntilTs,
-      subscriber.quietHoursEnabled,
-      subscriber.quietHoursStartUtc,
-      subscriber.quietHoursEndUtc,
-      subscriber.timezone,
-      subscriber.global.dews,
-      subscriber.global.depeg,
-      subscriber.global.safety,
-      subscriber.global.launch,
-      subscriber.global.reserve,
-      subscriber.globalDepegWorseningBpsStep,
+       global_depeg_worsening_bps_step, consecutive_block_count,
+       consecutive_block_first_at, alert_dews, alert_depeg, alert_safety,
+       alert_launch, alert_reserve
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      input.chatId,
+      input.createdAt ?? current - 1,
+      input.lastActiveAt ?? current,
+      input.preferenceGeneration ?? 0,
+      input.snoozeUntil ?? null,
+      input.quietHoursEnabled === true ? 1 : 0,
+      input.quietHoursStartUtc ?? null,
+      input.quietHoursEndUtc ?? null,
+      input.timezone ?? null,
+      alertFlag(input.global, "dews"),
+      alertFlag(input.global, "depeg"),
+      alertFlag(input.global, "safety"),
+      alertFlag(input.global, "launch"),
+      alertFlag(input.global, "reserve"),
+      input.globalDepegWorseningBpsStep ?? null,
+      input.consecutiveBlockCount ?? 0,
+      input.consecutiveBlockFirstAt ?? null,
+      alertFlag(input.direct, "dews"),
+      alertFlag(input.direct, "depeg"),
+      alertFlag(input.direct, "safety"),
+      alertFlag(input.direct, "launch"),
+      alertFlag(input.direct, "reserve"),
     );
-  }
+}
 
-  const insertSubscription = sqlite.prepare(
-    `INSERT INTO telegram_subscriptions (
+function seedSubscription(sqlite: DatabaseSync, input: DispatchSubscriptionSeed): void {
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_subscriptions (
        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety,
        alert_launch, alert_reserve, dews_min_band, safety_mode,
-       depeg_worsening_bps_step, alert_snooze_until_ts
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-       alert_dews = excluded.alert_dews,
-       alert_depeg = excluded.alert_depeg,
-       alert_safety = excluded.alert_safety,
-       alert_launch = excluded.alert_launch,
-       alert_reserve = excluded.alert_reserve,
-       alert_snooze_until_ts = excluded.alert_snooze_until_ts`,
-  );
-  for (const row of subscriptions.values()) {
-    insertSubscription.run(
-      String(row.chat_id),
-      String(row.stablecoin_id),
-      rowNumber(row, "alert_dews", 0),
-      rowNumber(row, "alert_depeg", 0),
-      rowNumber(row, "alert_safety", 0),
-      rowNumber(row, "alert_launch", 0),
-      rowNumber(row, "alert_reserve", 0),
-      typeof row.dews_min_band === "string" ? row.dews_min_band : null,
-      typeof row.safety_mode === "string" ? row.safety_mode : null,
-      rowNullableNumber(row, "depeg_worsening_bps_step"),
-      rowNullableNumber(row, "alert_snooze_until_ts"),
+       depeg_worsening_bps_step, alert_snooze_until_ts, alert_dews_override,
+       alert_depeg_override, alert_safety_override, alert_launch_override,
+       alert_reserve_override
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      input.chatId,
+      input.stablecoinId,
+      alertFlag(input.alerts, "dews"),
+      alertFlag(input.alerts, "depeg"),
+      alertFlag(input.alerts, "safety"),
+      alertFlag(input.alerts, "launch"),
+      alertFlag(input.alerts, "reserve"),
+      input.dewsMinBand ?? null,
+      input.safetyMode ?? null,
+      input.depegWorseningBpsStep ?? null,
+      input.snoozeUntil ?? null,
+      alertFlag(input.overrides, "dews"),
+      alertFlag(input.overrides, "depeg"),
+      alertFlag(input.overrides, "safety"),
+      alertFlag(input.overrides, "launch"),
+      alertFlag(input.overrides, "reserve"),
     );
-  }
+}
 
-  const insertPreset = sqlite.prepare(
-    `INSERT INTO telegram_preset_subscriptions (
+function seedPreset(sqlite: DatabaseSync, input: DispatchPresetSeed): void {
+  const current = nowSec();
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_preset_subscriptions (
        chat_id, preset_id, alert_dews, alert_depeg, alert_safety,
        depeg_worsening_bps_step, created_at, updated_at
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  );
-  for (const row of presets.values()) {
-    const now = Math.floor(Date.now() / 1000);
-    insertPreset.run(
-      String(row.chat_id),
-      String(row.preset_id),
-      rowNumber(row, "alert_dews", 0),
-      rowNumber(row, "alert_depeg", 0),
-      rowNumber(row, "alert_safety", 0),
-      rowNullableNumber(row, "depeg_worsening_bps_step"),
-      rowNumber(row, "created_at", now),
-      rowNumber(row, "updated_at", now),
+    )
+    .run(
+      input.chatId,
+      input.presetId,
+      input.alerts?.dews === true ? 1 : 0,
+      input.alerts?.depeg === true ? 1 : 0,
+      input.alerts?.safety === true ? 1 : 0,
+      input.depegWorseningBpsStep ?? null,
+      input.createdAt ?? current,
+      input.updatedAt ?? current,
     );
-  }
+}
 
-  const insertPending = sqlite.prepare(
-    `INSERT OR IGNORE INTO telegram_pending_alerts (
+function seedDews(sqlite: DatabaseSync, input: DispatchDewsSeed): void {
+  sqlite
+    .prepare(
+      "INSERT INTO stress_signals (stablecoin_id, computed_at, score, band, signals_json) VALUES (?, ?, ?, ?, ?)",
+    )
+    .run(
+      input.stablecoinId,
+      input.computedAt ?? nowSec(),
+      input.score ?? 42,
+      input.band ?? "ALERT",
+      JSON.stringify(input.signals ?? {}),
+    );
+}
+
+function seedDepeg(sqlite: DatabaseSync, input: DispatchDepegSeed): void {
+  sqlite
+    .prepare(
+      `INSERT INTO depeg_events (
+       stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+       started_at, ended_at, start_price, peak_price, recovery_price, peg_reference
+     ) VALUES (?, ?, 'peggedUSD', ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      input.stablecoinId,
+      input.symbol ?? input.stablecoinId.toUpperCase(),
+      input.direction ?? "below",
+      input.peakDeviationBps ?? 125,
+      input.startedAt ?? nowSec() - 300,
+      input.endedAt ?? null,
+      input.startPrice ?? 0.9875,
+      input.peakPrice ?? null,
+      input.recoveryPrice ?? null,
+      input.pegReference ?? 1,
+    );
+}
+
+function seedSafety(sqlite: DatabaseSync, input: DispatchSafetySeed): void {
+  sqlite
+    .prepare(
+      `INSERT INTO safety_grade_history (
+       stablecoin_id, recorded_at, grade, score, prev_grade, prev_score, methodology_version
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      input.stablecoinId,
+      input.recordedAt ?? nowSec(),
+      input.grade,
+      input.score ?? null,
+      input.prevGrade ?? null,
+      input.prevScore ?? null,
+      input.methodologyVersion ?? "7.10",
+    );
+}
+
+function seedPending(sqlite: DatabaseSync, input: DispatchPendingSeed): void {
+  const current = nowSec();
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_pending_alerts (
        id, chat_id, message_html, disable_notification, created_at, attempts,
        not_before_at, dedupe_key, chunk_index, priority, source_type, alert_type,
-       expires_at, updated_at, last_error_class, retry_after_sec,
-       processing_owner, processing_started_at, processing_expires_at,
-       delivery_state, delivery_started_at, delivery_completed_at,
-       source_event_id, alert_scope_json, preference_generation,
-       markup_policy_json, delivery_owner, delivery_generation,
-       delivery_claim_expires_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  );
-  let syntheticPendingId = 1_000_000;
-  for (const row of pendingRows.values()) {
-    insertPending.run(
-      row.id == null ? syntheticPendingId++ : Number(row.id),
-      String(row.chat_id),
-      String(row.message_html),
-      rowNumber(row, "disable_notification", 0),
-      rowNumber(row, "created_at", Math.floor(Date.now() / 1000)),
-      rowNumber(row, "attempts", 0),
-      rowNullableNumber(row, "not_before_at"),
-      typeof row.dedupe_key === "string" ? row.dedupe_key : null,
-      rowNullableNumber(row, "chunk_index"),
-      rowNumber(row, "priority", 50),
-      typeof row.source_type === "string" ? row.source_type : "legacy",
-      typeof row.alert_type === "string" ? row.alert_type : null,
-      rowNullableNumber(row, "expires_at"),
-      rowNumber(row, "updated_at", rowNumber(row, "created_at", Math.floor(Date.now() / 1000))),
-      typeof row.last_error_class === "string" ? row.last_error_class : null,
-      rowNullableNumber(row, "retry_after_sec"),
-      typeof row.processing_owner === "string" ? row.processing_owner : null,
-      rowNullableNumber(row, "processing_started_at"),
-      rowNullableNumber(row, "processing_expires_at"),
-      typeof row.delivery_state === "string" ? row.delivery_state : "pending",
-      rowNullableNumber(row, "delivery_started_at"),
-      rowNullableNumber(row, "delivery_completed_at"),
-      typeof row.source_event_id === "string" ? row.source_event_id : null,
-      typeof row.alert_scope_json === "string" ? row.alert_scope_json : null,
-      rowNullableNumber(row, "preference_generation"),
-      typeof row.markup_policy_json === "string" ? row.markup_policy_json : null,
-      typeof row.delivery_owner === "string" ? row.delivery_owner : null,
-      rowNumber(row, "delivery_generation", 0),
-      rowNullableNumber(row, "delivery_claim_expires_at"),
+       expires_at, updated_at, last_error_class, retry_after_sec, delivery_state,
+       delivery_owner, delivery_generation, delivery_started_at, delivery_completed_at,
+       delivery_claim_expires_at, source_event_id, alert_scope_json,
+       preference_generation, markup_policy_json
+     ) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      input.id ?? null,
+      input.chatId,
+      input.html,
+      input.createdAt ?? current,
+      input.attempts ?? 0,
+      input.notBeforeAt ?? null,
+      input.dedupeKey ?? null,
+      input.chunkIndex ?? null,
+      input.priority ?? 50,
+      input.sourceType ?? "risk_alert",
+      input.alertType ?? null,
+      input.expiresAt ?? null,
+      input.updatedAt ?? input.createdAt ?? current,
+      input.lastErrorClass ?? null,
+      input.retryAfterSec ?? null,
+      input.deliveryState ?? "pending",
+      input.deliveryOwner ?? null,
+      input.deliveryGeneration ?? 0,
+      input.deliveryStartedAt ?? null,
+      input.deliveryCompletedAt ?? null,
+      input.deliveryClaimExpiresAt ?? null,
+      input.sourceEventId ?? null,
+      input.alertScopeJson ?? null,
+      input.preferenceGeneration ?? null,
+      input.markupPolicyJson ?? null,
     );
-  }
+}
 
-  const insertSource = sqlite.prepare(
-    `INSERT OR REPLACE INTO telegram_alert_source_events (
+function seedSourceEvent(sqlite: DatabaseSync, input: DispatchSourceEventSeed): void {
+  const current = nowSec();
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_alert_source_events (
        source_event_id, schema_version, status, detected_at, expires_at,
        event_payload, baseline_payload, attempt_count, last_attempt_at,
-       last_error_class, baseline_committed_at, completed_at,
-       target_plan_state, target_plan_generation
+       last_error_class, baseline_committed_at, completed_at, target_plan_state,
+       target_plan_generation
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  );
-  for (const row of sourceRows.values()) {
-    insertSource.run(
-      String(row.source_event_id),
-      rowNumber(row, "schema_version", 1),
-      typeof row.status === "string" ? row.status : "planned",
-      rowNumber(row, "detected_at", Math.floor(Date.now() / 1000)),
-      rowNumber(row, "expires_at", Math.floor(Date.now() / 1000) + 3_600),
-      typeof row.event_payload === "string" ? row.event_payload : "{}",
-      typeof row.baseline_payload === "string" ? row.baseline_payload : "{}",
-      rowNumber(row, "attempt_count", 0),
-      rowNullableNumber(row, "last_attempt_at"),
-      typeof row.last_error_class === "string" ? row.last_error_class : null,
-      rowNullableNumber(row, "baseline_committed_at"),
-      rowNullableNumber(row, "completed_at"),
-      typeof row.target_plan_state === "string" ? row.target_plan_state : "unstarted",
-      rowNumber(row, "target_plan_generation", 0),
-    );
-  }
-}
-
-function shouldUseSqlite(sql: string): boolean {
-  if (SQLITE_DISPATCH_TABLES.some((table) => sql.includes(table))) return true;
-  if (
-    sql.includes("FROM telegram_subscriptions sub") &&
-    sql.includes("sub.chat_id IN")
-  ) return true;
-  if (
-    sql.includes("FROM telegram_subscribers") &&
-    sql.includes("global_alert_") &&
-    sql.includes("chat_id IN")
-  ) return true;
-  if (
-    sql.includes("FROM telegram_subscriptions") &&
-    sql.includes("chat_id IN")
-  ) return true;
-  if (
-    sql.includes("FROM telegram_subscribers") &&
-    (
-      sql.includes("created_at <=") ||
-      sql.includes("SELECT chat_id, preference_generation") ||
-      sql.includes("global_alert_reserve") && sql.includes("WHERE chat_id IN")
     )
-  ) return true;
-  if (
-    sql.includes("FROM telegram_subscriptions") &&
-    sql.includes("alert_dews_override")
-  ) return true;
-  if (
-    sql.includes("FROM telegram_preset_subscriptions") &&
-    sql.includes("SELECT chat_id, preset_id, alert_dews")
-  ) return true;
-  return false;
+    .run(
+      input.sourceEventId,
+      input.schemaVersion ?? 1,
+      input.status ?? "planned",
+      input.detectedAt ?? current,
+      input.expiresAt ?? current + 3_600,
+      input.eventPayload,
+      input.baselinePayload,
+      input.attemptCount ?? 0,
+      input.lastAttemptAt ?? null,
+      input.lastErrorClass ?? null,
+      input.baselineCommittedAt ?? null,
+      input.completedAt ?? null,
+      input.targetPlanState ?? "unstarted",
+      input.targetPlanGeneration ?? 0,
+    );
 }
 
-function filterAuthoritativeSubscriberPage<T>(
-  sql: string,
-  boundValues: readonly unknown[],
-  result: T,
-): T {
-  if (
-    typeof result !== "object" ||
-    result === null ||
-    !("results" in result) ||
-    !/\b(?:sub\.|p\.)?chat_id IN \(/.test(sql)
-  ) return result;
-  const rows = (result as { results?: Array<Record<string, unknown>> }).results;
-  if (!rows) return result;
-  const boundStrings = new Set(boundValues.filter((value): value is string => typeof value === "string"));
-  return {
-    ...result,
-    results: rows.filter((row) => typeof row.chat_id !== "string" || boundStrings.has(row.chat_id)),
-  } as T;
+function seedTarget(sqlite: DatabaseSync, input: DispatchTargetSeed): void {
+  const current = nowSec();
+  const alertType = input.alertType ?? "dews";
+  const jobId = `job:${input.sourceEventId}:${alertType}`;
+  const targetKey = input.targetKey ?? `${input.chatId}:${alertType}:0`;
+  sqlite
+    .prepare(
+      `INSERT OR IGNORE INTO telegram_alert_jobs (
+       job_id, alert_type, source_event_id, severity, created_at, expires_at
+     ) VALUES (?, ?, ?, 'normal', ?, ?)`,
+    )
+    .run(jobId, alertType, input.sourceEventId, current, current + 3_600);
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_alert_job_targets (
+       job_id, target_key, chat_id, chunk_index, alert_type, status,
+       pending_dedupe_key, created_at, source_event_id, plan_generation
+     ) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      jobId,
+      targetKey,
+      input.chatId,
+      alertType,
+      input.status ?? "planned",
+      input.pendingDedupeKey ?? `pending:${targetKey}`,
+      current,
+      input.sourceEventId,
+      input.planGeneration ?? 0,
+    );
 }
 
-function fixtureMockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): MockD1Database {
-  const canned = mockD1(tables, options);
-  const { sqlite, db: sqliteDb } = latestSchemaSqlite();
-  seedFixtureRows(sqlite, tables);
-  const history: Array<{ sql: string; binds: unknown[] }> = [];
-
-  function statement(
-    sql: string,
-    boundValues: unknown[] = [],
-    backend: "canned" | "sqlite" = shouldUseSqlite(sql) ? "sqlite" : "canned",
-  ): HybridPreparedStatement {
-    const source = backend === "sqlite" ? sqliteDb : canned;
-    const inner = source.prepare(sql).bind(...boundValues);
-    const execute = async <T>(method: "all" | "first" | "run"): Promise<T> => {
-      history.push({ sql, binds: [...boundValues] });
-      const result = await inner[method]() as T;
-      return backend === "canned" && method === "all"
-        ? filterAuthoritativeSubscriberPage(sql, boundValues, result)
-        : result;
-    };
-    return {
-      sql,
-      boundValues: [...boundValues],
-      backend,
-      inner,
-      bind: (...args: unknown[]) => statement(sql, args, backend),
-      all: <T>() => execute<D1Result<T>>("all"),
-      first: <T>() => execute<T | null>("first"),
-      run: <T>() => execute<D1Result<T>>("run"),
-    } as unknown as HybridPreparedStatement;
+function dispatchOperationForSql(sql: string): DispatchOperation | null {
+  if (sql.includes("pharos:telegram-dispatch:active-snoozes")) return "active-snoozes";
+  if (
+    sql.includes("pharos:telegram-dispatch:preset-subscribers") ||
+    sql.includes("FROM telegram_preset_subscriptions p")
+  ) {
+    return "preset-subscribers";
   }
-
-  const db = {
-    prepare: (sql: string) => statement(sql),
-    batch: async <T = unknown>(statements: D1PreparedStatement[]) => {
-      const hybrid = statements as HybridPreparedStatement[];
-      for (const item of hybrid) history.push({ sql: item.sql, binds: [...item.boundValues] });
-      if (hybrid.every((item) => item.backend === "sqlite")) {
-        return sqliteDb.batch<T>(hybrid.map((item) => item.inner));
-      }
-      const results: D1Result<T>[] = [];
-      for (const item of hybrid) {
-        results.push(await item.inner.run<T>());
-      }
-      return results;
-    },
-    exec: (query: string) => sqliteDb.exec(query),
-    dump: () => sqliteDb.dump(),
-    getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
-    assertAllMatchesUsed: () => canned.assertAllMatchesUsed(),
-  } as unknown as MockD1Database;
-  return db;
+  if (sql.includes("FROM depeg_events event")) return "resolved-depeg-lookup";
+  if (sql.includes("sub.alert_") || sql.includes("global_alert_")) return "subscriber-fanout";
+  return null;
 }
-const fixtureBuildPendingAlertRow = buildPendingAlertRow;
+
+function withDispatchOperationFaults(
+  db: D1Database,
+  faults: DispatchOperationFault[],
+  operations: DispatchOperationTranscriptEntry[],
+): D1Database {
+  const prepare = db.prepare.bind(db);
+  const wrappedPrepare = (sql: string): D1PreparedStatement => {
+    const statement = prepare(sql);
+    const operation = dispatchOperationForSql(sql);
+    if (!operation) return statement;
+    const wrap = (bound: D1PreparedStatement, binds: unknown[] = []): D1PreparedStatement =>
+      ({
+        ...bound,
+        bind: (...args: unknown[]) => wrap(bound.bind(...args), args),
+        all: async <T>() => {
+          operations.push({ operation, binds: [...binds] });
+          const fault = faults.find((entry) => entry.operation === operation && (entry.remaining ?? 1) > 0);
+          if (fault) {
+            fault.remaining = (fault.remaining ?? 1) - 1;
+            throw fault.error;
+          }
+          return bound.all<T>();
+        },
+        first: async <T>() => {
+          operations.push({ operation, binds: [...binds] });
+          const fault = faults.find((entry) => entry.operation === operation && (entry.remaining ?? 1) > 0);
+          if (fault) {
+            fault.remaining = (fault.remaining ?? 1) - 1;
+            throw fault.error;
+          }
+          return bound.first<T>();
+        },
+      }) as D1PreparedStatement;
+    return wrap(statement);
+  };
+  return { ...db, prepare: wrappedPrepare } as D1Database;
+}
+
+function seedDispatchFixture(sqlite: DatabaseSync, input: DispatchSeed): void {
+  for (const [key, value] of Object.entries(input.cache ?? {})) seedCacheRow(sqlite, key, value);
+  for (const row of input.subscribers ?? []) seedSubscriber(sqlite, row);
+  for (const row of input.subscriptions ?? []) seedSubscription(sqlite, row);
+  for (const row of input.presets ?? []) seedPreset(sqlite, row);
+  for (const row of input.dews ?? []) seedDews(sqlite, row);
+  for (const row of input.depegs ?? []) seedDepeg(sqlite, row);
+  for (const row of input.safety ?? []) seedSafety(sqlite, row);
+  for (const row of input.pending ?? []) seedPending(sqlite, row);
+  for (const row of input.sourceEvents ?? []) seedSourceEvent(sqlite, row);
+  for (const row of input.targets ?? []) seedTarget(sqlite, row);
+}
+
+function createDispatchHarness(faults: DispatchOperationFault[] = []): DispatchHarness {
+  const { sqlite, db: sqliteDb } = createLatestSchemaSqlite();
+  fixtureSqliteDatabases.push(sqlite);
+  const operations: DispatchOperationTranscriptEntry[] = [];
+  return {
+    sqlite,
+    db: withDispatchOperationFaults(sqliteDb, faults, operations),
+    seed: (input) => seedDispatchFixture(sqlite, input),
+    cache: (key, value, updatedAt) => seedCacheRow(sqlite, key, value, updatedAt),
+    operations,
+  };
+}
+
+function readCacheValue(sqlite: DatabaseSync, key: string): string | null {
+  const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key) as { value: string } | undefined;
+  return row?.value ?? null;
+}
+
+function recordPendingEnqueueAttempts(sqlite: DatabaseSync): void {
+  sqlite.exec(`
+    CREATE TABLE telegram_pending_enqueue_transcript (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dedupe_key TEXT NOT NULL,
+      attempts INTEGER NOT NULL,
+      not_before_at INTEGER,
+      expires_at INTEGER
+    );
+    CREATE TRIGGER record_telegram_pending_enqueue_attempt
+    BEFORE INSERT ON telegram_pending_alerts
+    BEGIN
+      INSERT INTO telegram_pending_enqueue_transcript (dedupe_key, attempts, not_before_at, expires_at)
+      VALUES (NEW.dedupe_key, NEW.attempts, NEW.not_before_at, NEW.expires_at);
+    END;
+  `);
+}
+
+function defaultDispatchCaches(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const now = nowSec();
+  return {
+    "alert:dews-snapshot": {},
+    "alert:depeg-snapshot": {},
+    "alert:safety-snapshot": makeSafetySnapshotCache({}, getAlertSafetySourceGeneration()).value,
+    "alert:safety-source-cache": makeSafetySourceCache({}, now - 60).value,
+    ...overrides,
+  };
+}
 
 export {
-  mockGetCache,
-  mockSetCache,
   STABLECOINS_CACHE_WITH_USDC,
   mockShouldAttemptFetch,
   mockRecordOutcome,
   mockInspectLegacyOverflowBacklog,
   mockSendToChat,
   mockSendBatch,
+  telegramDeliveryTranscript,
+  scriptTelegramDeliveries,
+  scriptTelegramDeliveriesForChat,
   formatConsolidatedMessageSpy,
   dispatchTelegramAlerts,
   deliverTelegramSubscriberQueue,
@@ -712,12 +815,12 @@ export {
   makeSafetySourceCache,
   makeSafetySnapshotCache,
   makeDewsOverflowPlan,
-  countPendingAlertInsertBatches,
   parseLogRecords,
   resetDispatchTelegramAlertsTest,
   cleanupDispatchTelegramAlertsTest,
-  type MockD1Database,
+  createDispatchHarness,
+  defaultDispatchCaches,
+  readCacheValue,
+  recordPendingEnqueueAttempts,
   type CronProgressUpdate,
-  fixtureMockD1,
-  fixtureBuildPendingAlertRow,
 };

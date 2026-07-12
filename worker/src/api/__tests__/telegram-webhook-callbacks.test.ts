@@ -1094,41 +1094,6 @@ describe("handleCallbackQuery", () => {
       expect(coverageButtons.some((button) => button.web_app)).toBe(false);
     });
 
-    it("quicksub:<id> in private chat enables DEWS+depeg for one coin", async () => {
-      const db = mockD1([]);
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-qs",
-        data: "quicksub:usdc-circle",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      });
-
-      const history = db.getHistory();
-      const subscriberUpsert = history.find((h) => /INSERT INTO telegram_subscribers/.test(h.sql));
-      expect(subscriberUpsert).toBeDefined();
-      // Per-coin alert bumps for dews + depeg are set to 1.
-      expect(subscriberUpsert!.binds[2]).toBe(1); // alert_dews
-      expect(subscriberUpsert!.binds[3]).toBe(1); // alert_depeg
-      expect(subscriberUpsert!.binds[4]).toBe(0); // alert_safety
-      expect(subscriberUpsert!.binds[5]).toBe(0); // alert_launch
-
-      const subscriptionInsert = history.find((h) => /INSERT INTO telegram_subscriptions/.test(h.sql));
-      expect(subscriptionInsert).toBeDefined();
-      expect(subscriptionInsert!.binds[1]).toBe("usdc-circle");
-      expect(subscriptionInsert!.binds[2]).toBe(1); // alert_dews
-      expect(subscriptionInsert!.binds[3]).toBe(1); // alert_depeg
-
-      expect(firstAckBody().text).toMatch(/Subscribed/i);
-      const confirmation = lastSentMessageBody();
-      expect(confirmation.text).toContain("Subscribed to DEWS + depeg for USDC");
-      const buttons = (confirmation.reply_markup?.inline_keyboard ?? []).flat();
-      expect(
-        buttons.some(
-          (button) => button.text === "Open in app" && button.web_app?.url.includes("startapp=coin_usdc-circle"),
-        ),
-      ).toBe(true);
-    });
-
     it("quicksub:<id> in a group refuses non-admin without writing to D1", async () => {
       const db = mockD1([
         {
@@ -1225,59 +1190,22 @@ describe("handleCallbackQuery", () => {
       expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
     });
 
-    it("status:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async () => {
+    it.each([
+      ["status", "Status sent."],
+      ["why", "Why sent."],
+      ["coverage", "Coverage sent."],
+      ["quicksub", "Subscribed to DEWS + depeg for USDC."],
+    ])("%s:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async (action, acknowledgement) => {
       const db = mockD1([]);
       vi.mocked(sendAuditedTelegramReply).mockRejectedValueOnce(new Error("api fail"));
       await handleCallbackQuery(db, "fake-token", {
-        id: "cb-status-fail",
-        data: "status:usdc-circle",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      }).catch(() => {
-        // P1.16 fix wraps the reply in try/finally; the rethrown error is
-        // expected — what matters is that the ack still fired below.
-      });
-
-      expect(lastAckBody().text).toBe("Status sent.");
-    });
-
-    it("why:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async () => {
-      const db = mockD1([]);
-      vi.mocked(sendAuditedTelegramReply).mockRejectedValueOnce(new Error("api fail"));
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-why-fail",
-        data: "why:usdc-circle",
+        id: `cb-${action}-fail`,
+        data: `${action}:usdc-circle`,
         from: { id: 999, username: "alice" },
         message: { chat: { id: 42, type: "private" }, message_id: 1 },
       }).catch(() => undefined);
 
-      expect(firstAckBody().text).toBe("Why sent.");
-    });
-
-    it("coverage:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async () => {
-      const db = mockD1([]);
-      vi.mocked(sendAuditedTelegramReply).mockRejectedValueOnce(new Error("api fail"));
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-cov-fail",
-        data: "coverage:usdc-circle",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      }).catch(() => undefined);
-
-      expect(firstAckBody().text).toBe("Coverage sent.");
-    });
-
-    it("quicksub:<id> private-chat branch still acks when sendAuditedTelegramReply throws (P1.16)", async () => {
-      const db = mockD1([]);
-      vi.mocked(sendAuditedTelegramReply).mockRejectedValueOnce(new Error("api fail"));
-      await handleCallbackQuery(db, "fake-token", {
-        id: "cb-qs-fail",
-        data: "quicksub:usdc-circle",
-        from: { id: 999, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 1 },
-      }).catch(() => undefined);
-
-      expect(firstAckBody().text).toMatch(/Subscribed/);
+      expect(firstAckBody().text).toBe(acknowledgement);
     });
   });
 
