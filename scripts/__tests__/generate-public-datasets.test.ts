@@ -74,7 +74,7 @@ function makeEvent(pendingReason: string | null) {
   };
 }
 
-function makeBoundaryEvent(snapshotDate: string) {
+function makeCoverageSentinel(snapshotDate: string) {
   return {
     ...makeEvent(null),
     id: 43,
@@ -118,7 +118,7 @@ describe("generate-public-datasets", () => {
         return jsonResponse(makeEnvelope("2026-05-15"));
       }
       if (href.endsWith("/api/depeg-events?limit=1000")) {
-        return jsonResponse({ events: [makeEvent("large-cap"), makeBoundaryEvent("2026-05-15")] });
+        return jsonResponse({ events: [makeEvent("large-cap"), makeCoverageSentinel("2026-05-15")] });
       }
       return jsonResponse({ error: "unexpected" }, { status: 500 });
     });
@@ -167,7 +167,7 @@ describe("generate-public-datasets", () => {
         return jsonResponse({ "usdc-circle": { liquidityScore: 95, coverageClass: "deep" } });
       }
       if (href.endsWith("/api/depeg-events?limit=1000")) {
-        return jsonResponse({ events: [makeEvent("low-confidence"), makeBoundaryEvent("2026-05-16")] });
+        return jsonResponse({ events: [makeEvent("low-confidence"), makeCoverageSentinel("2026-05-16")] });
       }
       return jsonResponse({ error: "unexpected" }, { status: 500 });
     });
@@ -201,7 +201,7 @@ describe("generate-public-datasets", () => {
     expect(scoreRows[0]?.safetyGrade).toBe("B");
   });
 
-  it("paginates depeg events until the 90-day export window is covered", async () => {
+  it("paginates depeg events to exhaustion before projecting the rolling window", async () => {
     const oldEvent = {
       ...makeEvent(null),
       id: 2,
@@ -218,6 +218,41 @@ describe("generate-public-datasets", () => {
       if (href.endsWith("/api/depeg-events?limit=1000&cursor=page-2")) {
         return jsonResponse({ events: [oldEvent], nextCursor: "page-3" });
       }
+      if (href.endsWith("/api/depeg-events?limit=1000&cursor=page-3")) {
+        return jsonResponse({ events: [] });
+      }
+      return jsonResponse({ error: "unexpected" }, { status: 500 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
+    const rows = testExports.projectDepegHistory(inputs.depegEvents, inputs.effectiveSnapshotDate);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/api/depeg-events?limit=1000&cursor=page-2",
+      expect.anything(),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/api/depeg-events?limit=1000&cursor=page-3",
+      expect.anything(),
+    );
+    expect(inputs.depegEvents).toHaveLength(2);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe(42);
+  });
+
+  it("does not treat an old projected timestamp as the raw-order pagination boundary", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.endsWith("/api/snapshots/2026-05-16.json")) {
+        return jsonResponse(makeEnvelope("2026-05-16"));
+      }
+      if (href.endsWith("/api/depeg-events?limit=1000")) {
+        return jsonResponse({ events: [makeCoverageSentinel("2026-05-16")], nextCursor: "page-2" });
+      }
+      if (href.endsWith("/api/depeg-events?limit=1000&cursor=page-2")) {
+        return jsonResponse({ events: [makeEvent(null)] });
+      }
       return jsonResponse({ error: "unexpected" }, { status: 500 });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -230,8 +265,7 @@ describe("generate-public-datasets", () => {
       expect.anything(),
     );
     expect(inputs.depegEvents).toHaveLength(2);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.id).toBe(42);
+    expect(rows.map((row) => row.id)).toEqual([42]);
   });
 
   it("fails live generation when a required source fetch fails", async () => {
@@ -295,10 +329,21 @@ describe("generate-public-datasets", () => {
     expect(() => testExports.validateTopicRowFloor("depeg-history", [makeEvent(null)])).not.toThrow();
     expect(() =>
       testExports.validateDepegHistoryCoverage(
-        [makeEvent(null), makeBoundaryEvent("2026-05-16")],
+        [makeEvent(null), makeCoverageSentinel("2026-05-16")],
         "2026-05-16",
       ),
     ).not.toThrow();
+  });
+
+  it("accepts source coverage exactly at the rolling cutoff", () => {
+    const snapshotDate = "2026-05-16";
+    const eventAtCutoff = {
+      ...makeEvent(null),
+      startedAt: testExports.cutoffSecForSnapshotDate(snapshotDate),
+    };
+
+    expect(() => testExports.validateDepegHistoryCoverage([eventAtCutoff], snapshotDate)).not.toThrow();
+    expect(testExports.projectDepegHistory([eventAtCutoff], snapshotDate)).toHaveLength(1);
   });
 
   it("rejects empty live-backed dataset rows and checked artifacts", async () => {

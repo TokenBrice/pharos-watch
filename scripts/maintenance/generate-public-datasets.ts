@@ -158,8 +158,9 @@ async function fetchSnapshot(apiBase: string, date: string): Promise<SnapshotEnv
   return safeFetchJson<SnapshotEnvelope>(`${apiBase}/api/snapshots/${date}.json`);
 }
 
-async function fetchDepegEvents(apiBase: string, cutoffSec?: number): Promise<DepegEvent[] | null> {
+async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[] | null> {
   const events: DepegEvent[] = [];
+  const seenCursors = new Set<string>();
   let nextCursor: string | undefined;
 
   for (let page = 0; page < 100; page += 1) {
@@ -174,19 +175,18 @@ async function fetchDepegEvents(apiBase: string, cutoffSec?: number): Promise<De
     const batch = payload.events ?? [];
     events.push(...batch);
 
-    const lastStartedAt = batch.at(-1)?.startedAt;
-    if (
-      batch.length === 0 ||
-      !payload.nextCursor ||
-      (cutoffSec != null && lastStartedAt != null && lastStartedAt < cutoffSec)
-    ) {
-      return events;
+    if (!payload.nextCursor) return events;
+    if (batch.length === 0) {
+      throw new Error("Depeg event pagination returned an empty page with a continuation cursor.");
     }
+    if (seenCursors.has(payload.nextCursor)) {
+      throw new Error(`Depeg event pagination repeated cursor "${payload.nextCursor}".`);
+    }
+    seenCursors.add(payload.nextCursor);
     nextCursor = payload.nextCursor;
   }
 
-  console.warn("[generate-public-datasets] depeg-events pagination hit the 100-page safety cap.");
-  return events;
+  throw new Error("Depeg event pagination hit the 100-page safety cap before exhaustion.");
 }
 
 async function fetchLiveEndpointEnvelope(apiBase: string, snapshotDate: string): Promise<SnapshotEnvelope | null> {
@@ -677,7 +677,7 @@ function validateDepegHistoryCoverage(events: readonly DepegEvent[], snapshotDat
     (oldest, event) => Math.min(oldest, event.startedAt),
     Number.POSITIVE_INFINITY,
   );
-  if (oldestStartedAt >= cutoffSec) {
+  if (oldestStartedAt > cutoffSec) {
     throw new Error(
       `Depeg event source does not cover the ${RETENTION_DAYS}-day export window for ${snapshotDate}; ` +
         "refusing a potentially truncated public dataset.",
@@ -728,7 +728,7 @@ export async function loadPublicDatasetLiveInputs(
   effectiveSnapshotDate = envelope.snapshotDate || effectiveSnapshotDate;
   const asOfISO = asOfIsoFromEnvelope(envelope, effectiveSnapshotDate);
 
-  const depegEvents = await fetchDepegEvents(apiBase, cutoffSecForSnapshotDate(effectiveSnapshotDate));
+  const depegEvents = await fetchDepegEvents(apiBase);
   if (!depegEvents) {
     throw new Error("Unable to fetch depeg events for public dataset generation.");
   }
