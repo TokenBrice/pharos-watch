@@ -25,6 +25,7 @@ import {
   hasTelegramLoadGuardImpact,
   TELEGRAM_LOAD_ADVISORY_COMMAND,
 } from "../lib/telegram-load-guard.mjs";
+import { writeMergeGateReceipt } from "../lib/merge-gate-receipt.mjs";
 
 const ZERO_SHA = /^0+$/;
 const LOCAL_PAGES_CANARY_ROUTES =
@@ -474,6 +475,7 @@ export async function runMergeGate({
   env = process.env,
   runCommandImpl = runShellCommand,
   execFile = execFileSync,
+  writeReceiptImpl = null,
 } = {}) {
   const args = new Set(argv);
   const stagedMode = args.has("--staged");
@@ -564,11 +566,31 @@ export async function runMergeGate({
   });
 
   printMergeGateTimingSummary(commandTimings, Date.now() - gateStartedAt, env);
+  if (!stagedMode && writeReceiptImpl) {
+    try {
+      const receiptResult = writeReceiptImpl({
+        baseRef,
+        env,
+        execFile,
+        fullDeploy: forceFullDeploy,
+        headRef,
+      });
+      console.log(
+        receiptResult.written
+          ? "[merge-gate] Reusable clean-state receipt written."
+          : `[merge-gate] Receipt not written: ${receiptResult.reason}.`,
+      );
+    } catch (error) {
+      console.warn(
+        `[merge-gate] Warning: could not write validation receipt: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
   console.log("[merge-gate] All checks passed.");
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  runMergeGate().catch((error) => {
+  runMergeGate({ writeReceiptImpl: writeMergeGateReceipt }).catch((error) => {
     console.error(`[merge-gate] FAILED: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   });
