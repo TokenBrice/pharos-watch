@@ -6,12 +6,12 @@ The stablecoin registry currently contains 410 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.14`
+- **Current methodology version:** `v8.15`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v8.14)
+## Overall Grade (v8.15)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v8.14 makes Dependency Risk derivation self-link-free and treats every tracked variant as one serial wrapper claim on its parent. Reserve views may still expose the parent's backing composition, but those reserve slices are not counted again as parallel dependency weight. Static metadata, live reserve writes/reads, the canonical resolver, and graph emission enforce the same target-validity boundary. Raw inputs now expose dependency source and snapshot provenance. The v8.13 all-unmapped fallback, v8.12 bridge-route blend, v8.11 oracle provenance and branch handling, v8.0 Mint Authority blend, v7.29 liquidity/redemption rules, and v7.291 degraded-input history guard carry forward unchanged.
+Current-version note: v8.15 makes dependency scoring deterministic under malformed or cyclic graphs and uses one scoring path for fully and partially unavailable upstreams. Static SCCs block scoring pending review. A live-created SCC falls its affected assets back to their curated/manual dependency sets and reruns diagnostics; if the fallback graph is still invalid, the snapshot is rejected before cache or grade-history publication. Every unavailable weight is scored at 70 inside the normal blend and remains subject to the weak-upstream penalty and wrapper/mechanism ceilings. v8.14 self-link-free serial variant derivation and typed dependency provenance carry forward unchanged.
 
 ## Yield Source-Risk Boundary
 
@@ -40,12 +40,12 @@ As of Safety Score v8.0 the Mint Authority Score feeds the **Decentralization** 
 
 ### Base dimensions (weighted sum)
 
-| Dimension            | Weight | Source                                                                        | Scoring                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| -------------------- | ------ | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore`                                  | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                                                                                                                                                                                                                                                   |
-| **Resilience**       | 20%    | Token metadata (2 sub-factors)                                                | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                                                                                                                                                                                                                                                |
+| Dimension            | Weight | Source                                                                                            | Scoring                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------- | ------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore`                                                      | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                                                                                                                                                                                                                                                                                                   |
+| **Resilience**       | 20%    | Token metadata (2 sub-factors)                                                                    | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                                                                                                                                                                                                                                                                                                |
 | **Decentralization** | 15%    | Governance quality + chain infrastructure + CDP oracle setup + bridge-route risk + mint authority | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20. Resolvable wrappers inherit the wrapped asset score with a wrapper-kind haircut; unresolved wrappers fall back to 10. Threshold-based chain infrastructure penalty, then the branch-aware penalty-only CDP oracle blend (v8.11), the reviewed bridge-route blend (v8.12), and finally the penalty-only Mint Authority blend (v8.0) |
-| **Dependency Risk**  | 25%    | Upstream stablecoin scores                                                    | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings                                                                                                                                                                                                                |
+| **Dependency Risk**  | 25%    | Upstream stablecoin scores                                                                        | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings                                                                                                                                                                                                                                                                |
 
 ### Peg Stability (multiplier)
 
@@ -357,7 +357,7 @@ Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `i
 - **No dependencies**: `SELF_BACKED_SCORE_BY_GOVERNANCE[governance]` — varies by tier: `decentralized` = 90, `centralized-dependent` = 75, `centralized` = 95
 - **With dependencies**: `score = sum((weight_i / normalizer) × upstream_score_i) + (1 − min(1, rawTotalWeight)) × SELF_BACKED_SCORE`, where `normalizer = rawTotalWeight` only when raw dependency weight exceeds 1 and is otherwise 1
 - −10 penalty if any dependency scores below 75 (B-)
-- Falls back to 70 if all dependency scores are unavailable; if only some upstream scores are unavailable, those missing weights are scored at 70 and still count as weak dependencies for the below-75 penalty
+- Every unavailable upstream weight is scored at 70 inside the same blend used for available weights, including when all upstreams are unavailable; unavailable weights count as weak dependencies for the below-75 penalty and remain subject to wrapper/mechanism ceilings
 
 **Self-backed score by governance type:**
 
@@ -370,6 +370,10 @@ Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `i
 #### Dependency Type Ceilings
 
 Each dependency relationship can be classified as `wrapper`, `mechanism`, or `collateral` (default). After the blended score is computed, a ceiling is applied based on the most critical upstream dependency.
+
+**Graph policy:** The Worker builds every effective dependency set before scoring and diagnoses self-edges, duplicate `(from,to,type)` edges, and strongly connected components. Invalid static graphs and unreviewed static SCCs reject report-card generation. When a score-grade live reserve snapshot creates an SCC, each live-derived cycle member falls back to its current curated/manual dependency set and the graph is diagnosed again. A remaining invalid edge or SCC rejects the snapshot, so neither the cache generation nor its grade-history rows are published. This preserves evidenced relationships without allowing traversal order to choose a score.
+
+Each Dependency Risk dimension also carries optional structured `dependencyDiagnostics`: raw and normalized contributions, self-backed fraction, available/unavailable weight and IDs, weak penalty, and binding wrapper/mechanism ceiling. Older cached payloads remain readable. Contagion stress recomputation produces fresh diagnostics for the stressed scores rather than retaining snapshot-time derived values.
 
 | Type         | Meaning                                              | Ceiling                                                                                                                                                                               |
 | ------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -500,7 +504,7 @@ State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.
 | `src/components/stablecoin-detail/safety-score-history-section.tsx` | Stablecoin detail grade-history timeline UI                                                                                                           |
 | `src/components/report-card-mini.tsx`                               | Compact grid tile with simulation mode support                                                                                                        |
 | `src/components/radar-chart.tsx`                                    | Recharts radar visualization                                                                                                                          |
-| `src/app/safety-scores/client.tsx`                                  | Full page with filtering, sorting, headline safety stats, and simulation mode                                                                          |
+| `src/app/safety-scores/client.tsx`                                  | Full page with filtering, sorting, headline safety stats, and simulation mode                                                                         |
 | `src/hooks/api-hooks.ts`                                            | TanStack Query hook exports for `useReportCards()` and `useSafetyScoreHistory()`                                                                      |
 | `src/hooks/use-portfolio.ts`                                        | Portfolio holdings state + browser persistence; delegates codec and exposure math to `src/lib/portfolio-codec.ts` and `src/lib/portfolio-analysis.ts` |
 | `src/hooks/use-stress-test.ts`                                      | Stress test state, `computeStressedGrades` invocation, impact calculation                                                                             |

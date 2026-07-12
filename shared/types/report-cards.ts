@@ -39,6 +39,34 @@ export type SafetyScoreHistoryPoint = z.infer<typeof SafetyScoreHistoryPointSche
 export const SafetyScoreHistoryResponseSchema = z.array(SafetyScoreHistoryPointSchema);
 export type SafetyScoreHistoryResponse = z.infer<typeof SafetyScoreHistoryResponseSchema>;
 
+const DependencyDimensionDiagnosticsSchema = z.object({
+  rawTotalWeight: z.number().finite().nonnegative(),
+  normalizedTotalWeight: z.number().finite().min(0).max(1),
+  selfBackedFraction: z.number().finite().min(0).max(1),
+  availableWeight: z.number().finite().nonnegative(),
+  unavailableWeight: z.number().finite().nonnegative(),
+  availableIds: z.array(z.string()),
+  unavailableIds: z.array(z.string()),
+  contributions: z.array(
+    z.object({
+      id: z.string(),
+      type: DependencyTypeSchema,
+      rawWeight: z.number().finite().positive(),
+      normalizedWeight: z.number().finite().positive(),
+      score: z.number().finite(),
+      available: z.boolean(),
+    }),
+  ),
+  weakPenalty: z.number().finite().nonpositive(),
+  bindingCeiling: z
+    .object({
+      id: z.string(),
+      type: z.enum(["wrapper", "mechanism"]),
+      score: z.number().finite(),
+    })
+    .nullable(),
+});
+
 const ReportCardDimensionSchema = z.object({
   grade: ReportCardGradeSchema,
   score: z.number().nullable(),
@@ -52,6 +80,7 @@ const ReportCardDimensionSchema = z.object({
       }),
     )
     .optional(),
+  dependencyDiagnostics: DependencyDimensionDiagnosticsSchema.optional(),
 });
 export type ReportCardDimension = z.infer<typeof ReportCardDimensionSchema>;
 export type ReportCardDetailItem = NonNullable<ReportCardDimension["detailItems"]>[number];

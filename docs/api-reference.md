@@ -2403,7 +2403,7 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 | `baseScore`            | `number \| null`                       | Pre-peg-multiplier/no-liquidity/active-depeg-cap score after base dimension blending |
 | `overallCapped`        | `boolean`                              | `true` when the card is capped at a tracked parent stablecoin's overall score        |
 | `uncappedOverallScore` | `number \| null`                       | Post-dimension/post-peg score before the tracked-parent overall cap, when applicable |
-| `dimensions`           | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, and detail text                                          |
+| `dimensions`           | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, detail text, and optional structured dependency diagnostics |
 | `ratedDimensions`      | `number`                               | Number of dimensions with data (max 5)                                               |
 | `rawInputs`            | `RawDimensionInputs`                   | Raw scoring inputs for client-side grade recomputation (stress testing)              |
 | `oracleRisk`           | `ReportCardOracleRisk \| null`         | Optional reviewed or inherited CDP oracle setup display payload                      |
@@ -2415,6 +2415,8 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 **`ReportCardBridgeRouteRisk`**: `{ tier, score, label, summary, reviewedAt?, reviewer?, confidence?, protocols?, sources? }`. `protocols[]` include `{ name, slug?, source?, bridgeTypes? }`. This object is for display and audit context; scoring inputs remain `rawInputs.bridgeRouteRiskTier` and `rawInputs.bridgeRouteRiskScore`.
 
 **`DependencyWeight`**: `{ id: string, weight: number, type?: DependencyType }` — upstream stablecoin ID + fraction of collateral from that source (0–1), with optional dependency category. When total dependency weight is ≤ 1.0, the remainder represents non-stablecoin collateral; when declared dependency weight exceeds 1.0, dependency scoring normalizes by raw total and uses no self-backed remainder.
+
+**`DimensionScore.dependencyDiagnostics`** (Dependency Risk only, optional for rolling compatibility): `{ rawTotalWeight, normalizedTotalWeight, selfBackedFraction, availableWeight, unavailableWeight, availableIds, unavailableIds, contributions, weakPenalty, bindingCeiling }`. Each contribution contains `{ id, type, rawWeight, normalizedWeight, score, available }`; `bindingCeiling` is `null` or `{ id, type: "wrapper" | "mechanism", score }`. Stress-test recomputation regenerates this derived object.
 
 **`RawDimensionInputs`**
 
@@ -2468,7 +2470,7 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 
 `rawInputs.collateralFromLive` is true when score-grade live reserve data drove collateral scoring for the card.
 
-`rawInputs.dependencySource` and `dependencyBaseSource` identify the effective resolver path; `mappedLiveReserveWeight` records the mapped share before any fallback; `dependencyFallbackReason` explains a typed fallback; and `dependencySnapshotSource` / `dependencySnapshotUpdatedAt` identify the score-grade live snapshot considered by the resolver. These v8.14 fields are optional so pre-v8.14 cached payloads remain parseable.
+`rawInputs.dependencySource` and `dependencyBaseSource` identify the effective resolver path; `mappedLiveReserveWeight` records the mapped share before any fallback; `dependencyFallbackReason` explains a typed fallback, including `live-cycle-to-curated`; and `dependencySnapshotSource` / `dependencySnapshotUpdatedAt` identify the score-grade live snapshot considered by the resolver. These fields are optional so older cached payloads remain parseable.
 
 **Dimensions:** `pegStability`, `liquidity`, `resilience`, `decentralization`, `dependencyRisk`
 

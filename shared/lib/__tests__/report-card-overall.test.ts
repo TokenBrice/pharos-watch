@@ -262,6 +262,9 @@ describe("computeStressedGrades", () => {
 
     const result = computeStressedGrades([upstream, a, b, c], new Map([["usdc", 30]]));
     const byId = new Map(result.map((card) => [card.id, card]));
+    const permutedById = new Map(
+      computeStressedGrades([c, b, a, upstream], new Map([["usdc", 30]])).map((card) => [card.id, card]),
+    );
 
     // a depends directly on stressed usdc → must drop.
     expect(byId.get("a")!.dimensions.dependencyRisk.score).toBeLessThan(90);
@@ -269,6 +272,10 @@ describe("computeStressedGrades", () => {
     expect(byId.get("b")!.dimensions.dependencyRisk.score).toBeLessThan(90);
     // c depends transitively through the cycle → must also be recomputed.
     expect(byId.get("c")!.dimensions.dependencyRisk.score).toBeLessThan(90);
+    expect([...byId].map(([id, card]) => [id, card.dimensions.dependencyRisk.score]).sort()).toEqual(
+      [...permutedById].map(([id, card]) => [id, card.dimensions.dependencyRisk.score]).sort(),
+    );
+    expect(byId.get("a")!.dimensions.dependencyRisk.dependencyDiagnostics).toBeDefined();
   });
 
   it("caps tracked variants at the parent overall score in live and stressed paths", () => {

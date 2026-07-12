@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { topologicalOrder } from "../report-cards-snapshot";
+import { DependencyGraphPolicyError, resolveDependencySetsForScoring } from "../report-cards-snapshot-card";
 import { resolveBlacklistStatuses } from "@shared/lib/report-cards";
 import type { StablecoinMeta, GovernanceType } from "@shared/types/core";
 
@@ -60,17 +61,93 @@ describe("topologicalOrder", () => {
     expect(ids.indexOf("c")).toBeLessThan(ids.indexOf("d"));
   });
 
-  it("does not hang on circular dependencies and warns when a cycle is detected", () => {
+  it("rejects an unreviewed static dependency cycle", () => {
     const metas = [
       makeMeta("x", [{ coinId: "y", pct: 50, name: "Y", risk: "low" }]),
       makeMeta("y", [{ coinId: "x", pct: 50, name: "X", risk: "low" }]),
     ];
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    // Should not hang — visiting set breaks the back-edge and emits a warning
-    const sorted = topologicalOrder(metas);
-    expect(sorted).toHaveLength(2);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("dependency cycle detected"));
-    warnSpy.mockRestore();
+    expect(() => topologicalOrder(metas)).toThrow(DependencyGraphPolicyError);
+    expect(() => topologicalOrder(metas)).toThrow("static-scc-unreviewed");
+  });
+
+  it("falls live cycle members back to their acyclic curated dependency sets", () => {
+    const metas = [
+      makeMeta("a", [{ coinId: "c", pct: 50, name: "C", risk: "low" }]),
+      makeMeta("b", [{ coinId: "c", pct: 25, name: "C", risk: "low" }]),
+      makeMeta("c"),
+    ];
+    const sets = resolveDependencySetsForScoring(
+      metas,
+      new Map([
+        ["a", [{ coinId: "b", pct: 100, name: "B", risk: "low" }]],
+        ["b", [{ coinId: "a", pct: 100, name: "A", risk: "low" }]],
+      ]),
+    );
+
+    expect(sets.get("a")).toMatchObject({
+      dependencies: [{ id: "c", weight: 0.5, type: "collateral" }],
+      dependencyFromLive: false,
+      fallbackReason: "live-cycle-to-curated",
+    });
+    expect(sets.get("b")).toMatchObject({
+      dependencies: [{ id: "c", weight: 0.25, type: "collateral" }],
+      dependencyFromLive: false,
+      fallbackReason: "live-cycle-to-curated",
+    });
+  });
+
+  it("rejects a live cycle when cycle members have no evidenced fallback", () => {
+    const metas = [makeMeta("a"), makeMeta("b")];
+
+    expect(() =>
+      resolveDependencySetsForScoring(
+        metas,
+        new Map([
+          ["a", [{ coinId: "b", pct: 100, name: "B", risk: "low" }]],
+          ["b", [{ coinId: "a", pct: 100, name: "A", risk: "low" }]],
+        ]),
+      ),
+    ).toThrow("live-scc-unresolved");
+  });
+
+  it("marks only the live-derived member when a live edge cycles with a static edge", () => {
+    const metas = [
+      makeMeta("a", [{ coinId: "c", pct: 50, name: "C", risk: "low" }]),
+      makeMeta("b", [{ coinId: "a", pct: 100, name: "A", risk: "low" }]),
+      makeMeta("c"),
+    ];
+    const sets = resolveDependencySetsForScoring(
+      metas,
+      new Map([["a", [{ coinId: "b", pct: 100, name: "B", risk: "low" }]]]),
+    );
+
+    expect(sets.get("a")).toMatchObject({
+      dependencies: [{ id: "c", weight: 0.5, type: "collateral" }],
+      dependencyFromLive: false,
+      fallbackReason: "live-cycle-to-curated",
+    });
+    expect(sets.get("b")).toMatchObject({
+      dependencies: [{ id: "a", weight: 1, type: "collateral" }],
+      dependencyFromLive: false,
+      fallbackReason: null,
+    });
+  });
+
+  it("rejects duplicate dependency keys before traversal", () => {
+    const metas = [makeMeta("upstream"), makeMeta("dependent")];
+    expect(() =>
+      topologicalOrder(metas, {
+        dependenciesById: new Map([
+          [
+            "dependent",
+            [
+              { id: "upstream", weight: 0.4, type: "collateral" },
+              { id: "upstream", weight: 0.3, type: "collateral" },
+            ],
+          ],
+        ]),
+      }),
+    ).toThrow("live-graph-invalid");
   });
 
   it("places a tracked variant after its parent even when reserves would imply a different edge type", () => {
@@ -185,18 +262,26 @@ describe("transitive blacklist inheritance", () => {
 
   it("resolves cyclic dependencies to a fixed point instead of order-dependent false negatives", () => {
     const metas = [
-      makeMeta("a", [
-        { name: "USDC", pct: 60, risk: "low" },
-        { coinId: "b", pct: 40, name: "B", risk: "low" },
-      ], {
-        governance: "decentralized",
-      }),
-      makeMeta("b", [
-        { coinId: "a", pct: 80, name: "A", risk: "low" },
-        { name: "ETH", pct: 20, risk: "low" },
-      ], {
-        governance: "decentralized",
-      }),
+      makeMeta(
+        "a",
+        [
+          { name: "USDC", pct: 60, risk: "low" },
+          { coinId: "b", pct: 40, name: "B", risk: "low" },
+        ],
+        {
+          governance: "decentralized",
+        },
+      ),
+      makeMeta(
+        "b",
+        [
+          { coinId: "a", pct: 80, name: "A", risk: "low" },
+          { name: "ETH", pct: 20, risk: "low" },
+        ],
+        {
+          governance: "decentralized",
+        },
+      ),
     ];
 
     const resolved = resolveBlacklistStatuses(metas);

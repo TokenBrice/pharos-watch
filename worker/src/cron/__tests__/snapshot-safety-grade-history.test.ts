@@ -125,6 +125,20 @@ describe("snapshotSafetyGradeHistory", () => {
     vi.restoreAllMocks();
   });
 
+  it("does not write grade history when dependency graph policy rejects the snapshot", async () => {
+    vi.mocked(buildReportCardsSnapshot).mockRejectedValue(
+      new Error("Dependency graph rejected (live-scc-unresolved): a <-> b"),
+    );
+    const db = mockD1([]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result).toMatchObject({ status: "error", itemCount: 0 });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "snapshot-build-failed" });
+    expect(batchExecute).not.toHaveBeenCalled();
+    expect(db.getHistory()).toEqual([]);
+  });
+
   it("seeds rows for live coins without overwriting the publisher-owned report-card cache", async () => {
     mockSnapshot([
       makeCard("usdt-tether", "B", 72),

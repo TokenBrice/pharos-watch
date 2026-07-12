@@ -171,9 +171,9 @@ export function SafetyScoresDimensionDetails() {
             centralized&nbsp;95). A &minus;10 penalty applies if any upstream dependency scores below 75
           </li>
           <li>
-            <span className="text-foreground">Unavailable upstream scores</span> &mdash; falls back to 70 when all
-            dependency scores are unavailable; partially unavailable upstream weights are scored at 70 instead of being
-            treated as self-backed
+            <span className="text-foreground">Unavailable upstream scores</span> &mdash; every unavailable weight is
+            scored at 70 inside the same blend, including when every upstream is unavailable. It still triggers the weak
+            dependency penalty and remains subject to wrapper or mechanism ceilings
           </li>
           <li>
             <span className="text-foreground">Variants and self-holdings</span> &mdash; a tracked variant has one serial
@@ -181,6 +181,12 @@ export function SafetyScoresDimensionDetails() {
             treasury-held token remains reserve evidence without becoming a self-dependency
           </li>
         </ul>
+        <p>
+          The Worker diagnoses the complete effective graph before traversal. Static cycles require explicit review;
+          live-created cycle members fall back to curated dependency sets, and a graph that remains cyclic is rejected
+          before snapshot and grade-history publication. The dimension payload records raw and normalized contributions,
+          availability, self-backed share, the weak penalty, and any binding ceiling.
+        </p>
         <p className="mt-2">
           <span className="text-foreground font-medium">Dependency type ceilings</span> &mdash; each dependency is
           classified as <em>wrapper</em>, <em>mechanism</em>, or <em>collateral</em> (default). Legacy wrappers (e.g.,

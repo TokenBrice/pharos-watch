@@ -54,6 +54,111 @@ describe("scoreDependencyRisk", () => {
     // the unavailable dependency is treated as weak (<75), applying -10.
     expect(result.score).toBe(75);
     expect(result.detail).toContain("Unavailable upstream scores: 1 dep");
+    expect(result.dependencyDiagnostics).toMatchObject({
+      availableWeight: 0.5,
+      unavailableWeight: 0.3,
+      availableIds: ["available"],
+      unavailableIds: ["missing"],
+      weakPenalty: -10,
+    });
+    expect(result.dependencyDiagnostics?.selfBackedFraction).toBeCloseTo(0.2);
+  });
+
+  it("uses the same blend and weak penalty when every upstream is unavailable", () => {
+    const full = scoreDependencyRisk(
+      {
+        governance: "centralized",
+        dependencies: [{ id: "pre-launch", weight: 1, type: "collateral" }],
+      },
+      new Map(),
+    );
+    const peripheral = scoreDependencyRisk(
+      {
+        governance: "centralized",
+        dependencies: [{ id: "active-nr", weight: 0.01, type: "collateral" }],
+      },
+      new Map(),
+    );
+
+    expect(full.score).toBe(60);
+    expect(full.dependencyDiagnostics).toMatchObject({
+      rawTotalWeight: 1,
+      normalizedTotalWeight: 1,
+      selfBackedFraction: 0,
+      availableWeight: 0,
+      unavailableWeight: 1,
+      unavailableIds: ["pre-launch"],
+      weakPenalty: -10,
+    });
+    expect(peripheral.score).toBe(85);
+    expect(peripheral.dependencyDiagnostics).toMatchObject({
+      selfBackedFraction: 0.99,
+      unavailableWeight: 0.01,
+      unavailableIds: ["active-nr"],
+      weakPenalty: -10,
+    });
+  });
+
+  it.each([
+    ["wrapper", "frozen"],
+    ["mechanism", "pre-launch"],
+  ] as const)("evaluates %s ceilings after the weak penalty for unavailable %s upstreams", (type, id) => {
+    const result = scoreDependencyRisk(
+      {
+        governance: "centralized-dependent",
+        dependencies: [{ id, weight: 1, type }],
+      },
+      new Map(),
+    );
+
+    expect(result.score).toBe(60);
+    expect(result.dependencyDiagnostics?.bindingCeiling).toBeNull();
+  });
+
+  it.each([
+    ["wrapper", 67],
+    ["mechanism", 70],
+  ] as const)("reports a partially unavailable %s ceiling only when it binds", (type, expectedScore) => {
+    const result = scoreDependencyRisk(
+      {
+        governance: "centralized",
+        dependencies: [{ id: "unavailable", weight: 0.01, type }],
+      },
+      new Map(),
+    );
+
+    expect(result.score).toBe(expectedScore);
+    expect(result.dependencyDiagnostics?.bindingCeiling).toEqual({
+      id: "unavailable",
+      type,
+      score: type === "wrapper" ? 67 : 70,
+    });
+  });
+
+  it("normalizes overweight contributions without hiding their raw weights", () => {
+    const result = scoreDependencyRisk(
+      {
+        governance: "centralized",
+        dependencies: [
+          { id: "a", weight: 0.8, type: "collateral" },
+          { id: "b", weight: 0.7, type: "collateral" },
+        ],
+      },
+      new Map([
+        ["a", 90],
+        ["b", 80],
+      ]),
+    );
+
+    expect(result.dependencyDiagnostics).toMatchObject({
+      rawTotalWeight: 1.5,
+      normalizedTotalWeight: 1,
+      selfBackedFraction: 0,
+    });
+    expect(result.dependencyDiagnostics?.contributions.map((entry) => entry.rawWeight)).toEqual([0.8, 0.7]);
+    expect(
+      result.dependencyDiagnostics?.contributions.reduce((sum, entry) => sum + entry.normalizedWeight, 0),
+    ).toBeCloseTo(1);
   });
 
   it("uses the wider risk-absorption wrapper ceiling for tracked variants", () => {
@@ -118,6 +223,28 @@ describe("scoreDependencyRisk", () => {
 
     expect(result.detail).toContain("mechanism-critical dependency ceiling (50)");
     expect(result.detail).not.toContain("wrapper dependency ceiling");
+    expect(result.dependencyDiagnostics?.bindingCeiling).toEqual({
+      id: "mech",
+      type: "mechanism",
+      score: 50,
+    });
+  });
+
+  it("selects an equal ceiling deterministically across dependency order", () => {
+    const dependencies = [
+      { id: "z-parent", weight: 0.5, type: "wrapper" as const },
+      { id: "a-parent", weight: 0.5, type: "wrapper" as const },
+    ];
+    const scores = new Map([
+      ["z-parent", 80],
+      ["a-parent", 80],
+    ]);
+
+    const forward = scoreDependencyRisk({ governance: "centralized", dependencies }, scores);
+    const reverse = scoreDependencyRisk({ governance: "centralized", dependencies: [...dependencies].reverse() }, scores);
+
+    expect(forward).toEqual(reverse);
+    expect(forward.dependencyDiagnostics?.bindingCeiling?.id).toBe("a-parent");
   });
 
   it("applies live-derived mechanism dependency ceilings", () => {

@@ -1,6 +1,32 @@
 import type { ReactNode } from "react";
 
 export const scoringChangelogV8Details: Record<string, ReactNode> = {
+  "8.15": (
+    <>
+      <p>
+        Dependency Risk now uses one scoring path for available and unavailable upstreams, and report-card publication
+        no longer permits a dependency cycle to make results depend on traversal order.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Fully unavailable weights use the same explicit blend, 70-point fallback, weak-upstream penalty, and
+          wrapper/mechanism ceilings as partially unavailable weights.
+        </li>
+        <li>
+          Live-created cycle members fall back to curated dependency sets; an invalid fallback graph rejects the
+          snapshot before cache or grade-history publication.
+        </li>
+        <li>
+          Dependency dimensions now include structured contribution, availability, normalization, penalty, and ceiling
+          diagnostics, including after contagion stress recomputation.
+        </li>
+        <li>
+          The fixed-input all-card replay found two score changes, one expected grade crossing, 38 corrected nonbinding
+          ceiling labels with no score effect, and no NR changes.
+        </li>
+      </ul>
+    </>
+  ),
   "8.14": (
     <>
       <p>
@@ -8,7 +34,9 @@ export const scoringChangelogV8Details: Record<string, ReactNode> = {
         its parent, so displaying a parent&apos;s reserve book does not count that backing a second time.
       </p>
       <ul className="list-disc list-inside space-y-1">
-        <li>Frax self-holdings remain visible in reserve composition but no longer create a FRAX-to-FRAX graph edge.</li>
+        <li>
+          Frax self-holdings remain visible in reserve composition but no longer create a FRAX-to-FRAX graph edge.
+        </li>
         <li>
           Static metadata, adapter output, stored live snapshots, the canonical resolver, and graph emission all enforce
           the same self-link and target-validity invariants.

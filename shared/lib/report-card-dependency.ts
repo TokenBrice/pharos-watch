@@ -48,6 +48,18 @@ export function scoreDependencyRisk(
       score: selfScore,
       detail: `Self-backed: ${GOVERNANCE_DETAIL_LABEL[governance]} (${selfScore})`,
       detailItems: [{ label: "Self-backed", value: GOVERNANCE_DETAIL_LABEL[governance], detail: `${selfScore}` }],
+      dependencyDiagnostics: {
+        rawTotalWeight: 0,
+        normalizedTotalWeight: 0,
+        selfBackedFraction: 1,
+        availableWeight: 0,
+        unavailableWeight: 0,
+        availableIds: [],
+        unavailableIds: [],
+        contributions: [],
+        weakPenalty: 0,
+        bindingCeiling: null,
+      },
     };
   }
 
@@ -70,15 +82,6 @@ export function scoreDependencyRisk(
         type: dependency.type ?? "collateral",
       });
     }
-  }
-
-  if (resolved.length === 0) {
-    return {
-      grade: scoreToGrade(UNAVAILABLE_DEPENDENCY_SCORE),
-      score: UNAVAILABLE_DEPENDENCY_SCORE,
-      detail: "Upstream dependency scores unavailable",
-      detailItems: [{ label: "Upstream", value: "Dependency scores unavailable" }],
-    };
   }
 
   for (const dependency of missingDependencies) {
@@ -112,6 +115,18 @@ export function scoreDependencyRisk(
 
   let ceiling = Infinity;
   let ceilingDepType: "wrapper" | "mechanism" | null = null;
+  let ceilingDependencyId: string | null = null;
+  function considerCeiling(candidate: number, type: "wrapper" | "mechanism", id: string): void {
+    const candidateKey = `${type}:${id}`;
+    const currentKey = ceilingDepType != null && ceilingDependencyId != null
+      ? `${ceilingDepType}:${ceilingDependencyId}`
+      : null;
+    if (candidate < ceiling || (candidate === ceiling && (currentKey == null || candidateKey < currentKey))) {
+      ceiling = candidate;
+      ceilingDepType = type;
+      ceilingDependencyId = id;
+    }
+  }
   for (const dependency of resolved) {
     if (dependency.type === "wrapper") {
       const wrapperPenalty =
@@ -119,18 +134,13 @@ export function scoreDependencyRisk(
           ? wrapperPenaltyForVariant(args.variantKind)
           : wrapperPenaltyForVariant();
       const candidate = dependency.score - wrapperPenalty;
-      if (candidate < ceiling) {
-        ceiling = candidate;
-        ceilingDepType = "wrapper";
-      }
+      considerCeiling(candidate, "wrapper", dependency.id);
     } else if (dependency.type === "mechanism") {
-      if (dependency.score < ceiling) {
-        ceiling = dependency.score;
-        ceilingDepType = "mechanism";
-      }
+      considerCeiling(dependency.score, "mechanism", dependency.id);
     }
   }
-  if (ceiling < Infinity) {
+  const ceilingBinds = ceiling < score;
+  if (ceilingBinds) {
     score = Math.min(score, ceiling);
   }
 
@@ -161,10 +171,42 @@ export function scoreDependencyRisk(
   if (weakDependencies.length > 0) {
     detailItems.push(labeledDetailItem("Penalty", `${plural(weakDependencies.length, "weak dep")} below 75 (-10)`));
   }
-  if (ceiling < Infinity) {
+  if (ceilingBinds) {
     const ceilingType = ceilingDepType === "wrapper" ? "wrapper" : "mechanism-critical";
     detailItems.push(labeledDetailItem("Ceiling", `${ceilingType} dependency ceiling (${Math.round(ceiling)})`));
   }
 
-  return { grade: scoreToGrade(score), score, detail: joinReportCardDetail(detailItems), detailItems };
+  return {
+    grade: scoreToGrade(score),
+    score,
+    detail: joinReportCardDetail(detailItems),
+    detailItems,
+    dependencyDiagnostics: {
+      rawTotalWeight: rawTotal,
+      normalizedTotalWeight: totalWeight,
+      selfBackedFraction,
+      availableWeight: resolvedWeight,
+      unavailableWeight: missingWeight,
+      availableIds: resolved
+        .filter((dependency) => dependency.available)
+        .map((dependency) => dependency.id)
+        .sort(),
+      unavailableIds: missingDependencies.map((dependency) => dependency.id).sort(),
+      contributions: resolved
+        .map((dependency) => ({
+          id: dependency.id,
+          type: dependency.type,
+          rawWeight: dependency.weight,
+          normalizedWeight: dependency.weight / normalizer,
+          score: dependency.score,
+          available: dependency.available,
+        }))
+        .sort((left, right) => left.id.localeCompare(right.id) || left.type.localeCompare(right.type)),
+      weakPenalty: weakDependencies.length > 0 ? -10 : 0,
+      bindingCeiling:
+        ceilingBinds && ceilingDepType != null && ceilingDependencyId != null
+          ? { id: ceilingDependencyId, type: ceilingDepType, score: ceiling }
+          : null,
+    },
+  };
 }

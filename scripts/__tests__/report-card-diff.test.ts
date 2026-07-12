@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
-import type { ReportCardGrade } from "@shared/types/report-cards";
+import type { ReportCard, ReportCardGrade } from "@shared/types/report-cards";
 import { compareReportCardPayloads, serializeReportCardDiff } from "../lib/report-card-diff";
 import cohort from "./fixtures/report-card-diff/cohort.json";
 
-function card(id: string, score: number | null, grade: ReportCardGrade) {
+function card(id: string, score: number | null, grade: ReportCardGrade): ReportCard {
   const dimension = { grade, score, detail: "fixture" };
   return {
     id,
@@ -84,6 +84,28 @@ describe("report-card deterministic diff", () => {
     expect(() => compareReportCardPayloads(before, after, options)).toThrow("Methodology mismatch");
     const report = compareReportCardPayloads(before, after, { ...options, allowMethodologyMismatch: true });
     expect(report.assetChanges[0].classification).toBe("mixed");
+  });
+
+  it("classifies a derived binding-ceiling change with identical inputs as methodology-only", () => {
+    const before = payload();
+    const changedCard = card("anchor", 80, "A");
+    changedCard.dimensions.dependencyRisk = {
+      grade: "A",
+      score: 80,
+      detail: "Ceiling: wrapper dependency ceiling (80)",
+      detailItems: [{ label: "Ceiling", value: "wrapper dependency ceiling (80)" }],
+    };
+    const after = payload([changedCard], "8.15");
+
+    const report = compareReportCardPayloads(before, after, {
+      ...options,
+      allowMethodologyMismatch: true,
+    });
+
+    expect(report.assetChanges[0]).toMatchObject({
+      classification: "methodology",
+      bindingSignalChanges: { dependencyCeiling: { before: null, after: "wrapper dependency ceiling (80)" } },
+    });
   });
 
   it("rejects duplicate IDs and malformed or non-finite cards", () => {

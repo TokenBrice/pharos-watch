@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.15",
+    title: "Dependency scoring is deterministic across cycles and unavailable upstreams",
+    date: "2026-07-12",
+    effectiveAt: 1783897755,
+    summary:
+      "Dependency Risk now rejects unresolved graph cycles before publication, falls live-created cycles back to curated dependency sets, and scores fully unavailable upstreams through the same blend, weak-dependency penalty, and wrapper/mechanism ceilings used for partially unavailable exposure.",
+    impact: [
+      "Static self-links, duplicate edges, and unreviewed multi-asset cycles block report-card generation instead of relying on traversal order",
+      "Live-created cycle members fall back to their current curated/manual dependency sets and are diagnosed again; an invalid fallback graph rejects snapshot publication and therefore prevents a grade-history write from that run",
+      "Every unavailable upstream weight is scored at 70 inside the normal dependency blend, draws the existing 10-point weak-dependency penalty, and remains subject to wrapper or mechanism ceilings",
+      "Dependency dimensions expose structured raw and normalized contributions, self-backed share, available/unavailable weights and IDs, the weak penalty, and the binding ceiling; contagion recomputation regenerates those diagnostics",
+      "Fixed-input calibration changed two all-unavailable wrappers: Savings rUSD moved 39 to 36 without crossing a grade, and Zephyr Yield Share moved 51/C- to 47/D; 38 stale nonbinding ceiling labels were removed with no score effect, and no NR or dependency-edge changes occurred",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.14",
     title: "Dependency derivation rejects self-links and duplicate variant backing",
     date: "2026-07-12",

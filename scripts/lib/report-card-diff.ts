@@ -164,7 +164,10 @@ function diffExistingCard(
     Object.keys(bindingSignalChanges).length > 0;
   if (!changed) return null;
 
-  const inputsChanged = Object.keys(rawInputChanges).length > 0 || Object.keys(bindingSignalChanges).length > 0;
+  // Binding signals include derived outputs such as the ceiling that won after
+  // scoring. Report them for review, but do not misclassify them as source
+  // input changes when the raw inputs are byte-identical.
+  const inputsChanged = Object.keys(rawInputChanges).length > 0;
   const classification = inputsChanged ? (methodologyChanged ? "mixed" : "input") : "methodology";
   const absoluteScoreChange =
     before.overallScore == null || after.overallScore == null

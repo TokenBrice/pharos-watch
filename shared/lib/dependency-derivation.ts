@@ -20,7 +20,8 @@ export interface DerivedDependencySet {
 
 export type DependencyFallbackReason =
   | "live-unmapped-to-curated-reserve"
-  | "live-unmapped-to-manual";
+  | "live-unmapped-to-manual"
+  | "live-cycle-to-curated";
 
 function aggregateReserveDependencies(
   reserves: readonly ReserveSlice[],

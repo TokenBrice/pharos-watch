@@ -4,7 +4,12 @@ import {
   deriveEffectiveDependencySet,
   type DerivedDependencySet,
 } from "@shared/lib/dependency-derivation";
-import { buildDependencyGraphEdgesFromDependencies, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
+import {
+  buildDependencyGraphEdgesFromDependencies,
+  diagnoseDependencyGraph,
+  type DependencyGraphDiagnostics,
+  type DependencyGraphEdge,
+} from "@shared/lib/dependency-graph";
 import {
   scorePegStability,
   scoreLiquidity,
@@ -79,6 +84,25 @@ export interface BuildLiveReportCardsResult {
   cards: ReportCard[];
   dependencyGraphEdges: DependencyGraphEdge[];
   dependenciesById: Map<string, DependencyWeight[]>;
+}
+
+export type DependencyGraphPolicyFailureReason =
+  "static-graph-invalid" | "static-scc-unreviewed" | "live-graph-invalid" | "live-scc-unresolved";
+
+export class DependencyGraphPolicyError extends Error {
+  constructor(
+    readonly reason: DependencyGraphPolicyFailureReason,
+    readonly diagnostics: DependencyGraphDiagnostics,
+  ) {
+    const components = diagnostics.stronglyConnectedComponents.map((component) => component.join(" <-> ")).join(", ");
+    super(
+      `Dependency graph rejected (${reason})` +
+        (components ? `: ${components}` : "") +
+        (diagnostics.selfEdges.length > 0 ? `; selfEdges=${diagnostics.selfEdges.length}` : "") +
+        (diagnostics.duplicateEdges.length > 0 ? `; duplicateEdges=${diagnostics.duplicateEdges.length}` : ""),
+    );
+    this.name = "DependencyGraphPolicyError";
+  }
 }
 
 function resolvePegInput(
@@ -408,18 +432,57 @@ function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMint
   };
 }
 
-function buildEffectiveDependencySetsById(
+export function resolveDependencySetsForScoring(
   metas: readonly StablecoinMeta[],
   liveReserveMap: ReadonlyMap<string, ReserveSlice[]>,
 ): Map<string, DerivedDependencySet> {
+  const staticSetsById = new Map<string, DerivedDependencySet>();
   const dependencySetsById = new Map<string, DerivedDependencySet>();
 
   for (const meta of metas) {
+    staticSetsById.set(meta.id, deriveEffectiveDependencySet(meta));
     const liveReserveSlices = liveReserveMap.get(meta.id);
     dependencySetsById.set(
       meta.id,
       deriveEffectiveDependencySet(meta, liveReserveSlices != null ? { liveReserveSlices } : undefined),
     );
+  }
+
+  const staticDiagnostics = diagnoseDependenciesById(metas, collectDependenciesById(staticSetsById));
+  if (staticDiagnostics.selfEdges.length > 0 || staticDiagnostics.duplicateEdges.length > 0) {
+    throw new DependencyGraphPolicyError("static-graph-invalid", staticDiagnostics);
+  }
+  if (staticDiagnostics.stronglyConnectedComponents.length > 0) {
+    throw new DependencyGraphPolicyError("static-scc-unreviewed", staticDiagnostics);
+  }
+
+  const liveDiagnostics = diagnoseDependenciesById(metas, collectDependenciesById(dependencySetsById));
+  if (liveDiagnostics.selfEdges.length > 0 || liveDiagnostics.duplicateEdges.length > 0) {
+    throw new DependencyGraphPolicyError("live-graph-invalid", liveDiagnostics);
+  }
+  if (liveDiagnostics.stronglyConnectedComponents.length === 0) {
+    return dependencySetsById;
+  }
+
+  const liveCycleIds = new Set(liveDiagnostics.stronglyConnectedComponents.flat());
+  for (const id of liveCycleIds) {
+    const liveSet = dependencySetsById.get(id);
+    const fallbackSet = staticSetsById.get(id);
+    if (!liveSet?.dependencyFromLive || !fallbackSet || fallbackSet.dependencies.length === 0) continue;
+    dependencySetsById.set(id, {
+      ...fallbackSet,
+      mappedLiveReserveWeight: liveSet.mappedLiveReserveWeight,
+      fallbackReason: "live-cycle-to-curated",
+    });
+  }
+
+  const fallbackDiagnostics = diagnoseDependenciesById(metas, collectDependenciesById(dependencySetsById));
+  if (
+    fallbackDiagnostics.selfEdges.length > 0 ||
+    fallbackDiagnostics.duplicateEdges.length > 0 ||
+    fallbackDiagnostics.stronglyConnectedComponents.length > 0
+  ) {
+    throw new DependencyGraphPolicyError("live-scc-unresolved", fallbackDiagnostics);
   }
 
   return dependencySetsById;
@@ -431,8 +494,24 @@ function collectDependenciesById(
   return new Map([...dependencySetsById.entries()].map(([id, set]) => [id, set.dependencies]));
 }
 
+function diagnoseDependenciesById(
+  metas: readonly Pick<StablecoinMeta, "id">[],
+  dependenciesById: ReadonlyMap<string, readonly DependencyWeight[]>,
+): DependencyGraphDiagnostics {
+  return diagnoseDependencyGraph(
+    metas.flatMap((meta) =>
+      (dependenciesById.get(meta.id) ?? []).map((dependency) => ({
+        from: dependency.id,
+        to: meta.id,
+        weight: dependency.weight,
+        type: dependency.type ?? "collateral",
+      })),
+    ),
+  );
+}
+
 export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiveReportCardsResult {
-  const dependencySetsById = buildEffectiveDependencySetsById(
+  const dependencySetsById = resolveDependencySetsForScoring(
     ACTIVE_STABLECOINS as StablecoinMeta[],
     input.liveReserveMap,
   );
@@ -495,29 +574,35 @@ export function topologicalOrder(
   const dependenciesById =
     options?.dependenciesById ??
     (options?.liveReserveMap != null
-      ? collectDependenciesById(buildEffectiveDependencySetsById(metas, options.liveReserveMap))
+      ? collectDependenciesById(resolveDependencySetsForScoring(metas, options.liveReserveMap))
       : null);
+  const resolvedDependenciesById =
+    dependenciesById ?? new Map(metas.map((meta) => [meta.id, deriveEffectiveDependencies(meta)]));
+  const diagnostics = diagnoseDependenciesById(metas, resolvedDependenciesById);
+  const usesRuntimeDependencies = options?.dependenciesById != null || options?.liveReserveMap != null;
+  if (diagnostics.selfEdges.length > 0 || diagnostics.duplicateEdges.length > 0) {
+    throw new DependencyGraphPolicyError(
+      usesRuntimeDependencies ? "live-graph-invalid" : "static-graph-invalid",
+      diagnostics,
+    );
+  }
+  if (diagnostics.stronglyConnectedComponents.length > 0) {
+    throw new DependencyGraphPolicyError(
+      usesRuntimeDependencies ? "live-scc-unresolved" : "static-scc-unreviewed",
+      diagnostics,
+    );
+  }
   const visited = new Set<string>();
-  const visiting = new Set<string>();
   const result: StablecoinMeta[] = [];
 
   function visit(id: string) {
     if (visited.has(id)) return;
-    if (visiting.has(id)) {
-      console.warn(`[report-cards] dependency cycle detected at "${id}"; breaking edge to avoid wrong ordering`);
-      return;
-    }
-    visiting.add(id);
     const meta = metaMap.get(id);
-    if (!meta) {
-      visiting.delete(id);
-      return;
-    }
-    const dependencies = dependenciesById?.get(meta.id) ?? deriveEffectiveDependencies(meta);
+    if (!meta) return;
+    const dependencies = resolvedDependenciesById.get(meta.id) ?? [];
     for (const dep of dependencies) {
       if (metaMap.has(dep.id)) visit(dep.id);
     }
-    visiting.delete(id);
     visited.add(id);
     result.push(meta);
   }

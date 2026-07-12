@@ -1,8 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.14 (2026-02-25 → 2026-07-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.15 (2026-02-25 → 2026-07-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score.ts` for canonical machine ordering.
 
 > Older entries are archived in [report-cards-timeline-archive.md](./report-cards-timeline-archive.md); this file keeps the most recent entries.
+
+## v8.15 — Deterministic cycles and unavailable-upstream scoring (2026-07-12)
+
+Report-card generation now diagnoses complete effective dependency graphs before scoring. Static self-links, duplicate edges, and unreviewed SCCs are blocking. Live-created SCC members fall back to curated/manual dependency sets and are diagnosed again; an invalid fallback graph rejects the snapshot before cache and grade-history publication. Fully unavailable upstreams now use the same 70-point fallback contribution, weak-dependency penalty, and wrapper/mechanism ceiling path as partial unavailability. Dependency dimensions expose structured contribution and binding diagnostics, including fresh values after contagion recomputation. Fixed-input calibration changed Savings rUSD `39 -> 36` without a grade crossing and Zephyr Yield Share `51/C- -> 47/D`; 38 stale nonbinding ceiling labels were removed with no score effect, and no NR or graph-edge changes occurred.
 
 ## v8.14 — Self-link-free serial dependency derivation (2026-07-12)
 

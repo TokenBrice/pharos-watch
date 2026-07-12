@@ -118,10 +118,10 @@ export function computeStressedGrades(
   }
 
   const affectedIds = new Set<string>();
-  const queue = [...overriddenIds];
+  const queue = [...overriddenIds].sort();
   for (let index = 0; index < queue.length; index += 1) {
     const upstreamId = queue[index];
-    for (const dependentId of dependentsByUpstream.get(upstreamId) ?? []) {
+    for (const dependentId of [...(dependentsByUpstream.get(upstreamId) ?? [])].sort()) {
       if (overriddenIds.has(dependentId) || affectedIds.has(dependentId)) continue;
       affectedIds.add(dependentId);
       queue.push(dependentId);
@@ -141,7 +141,9 @@ export function computeStressedGrades(
     visiting.add(id);
     const card = cardById.get(id);
     if (card) {
-      for (const dependency of card.rawInputs.dependencies) {
+      for (const dependency of [...card.rawInputs.dependencies].sort((left, right) =>
+        left.id.localeCompare(right.id),
+      )) {
         visitAffected(dependency.id);
       }
     }
@@ -150,7 +152,7 @@ export function computeStressedGrades(
     recomputeOrder.push(id);
   }
 
-  for (const id of affectedIds) {
+  for (const id of [...affectedIds].sort()) {
     visitAffected(id);
   }
 
