@@ -126,6 +126,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/cron/depeg-resolver/__tests__/incident-state.test.ts",
   "worker/src/cron/dews/__tests__/source-state-legacy.test.ts",
   "worker/src/cron/__tests__/sync-live-reserves.test.ts",
+  "worker/src/cron/__tests__/sync-live-reserves-orchestrator.test.ts",
   "worker/src/cron/__tests__/sync-live-reserves-run-state.test.ts",
   "worker/src/cron/reserve-adapters/__tests__/cap-vault.test.ts",
   "worker/src/cron/__tests__/sync-yield-data-publication-cache.test.ts",
