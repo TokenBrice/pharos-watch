@@ -113,6 +113,17 @@ const RawDimensionInputsSchema = z.object({
   navToken: z.boolean(),
   collateralFromLive: z.boolean().optional().default(false),
   dependencyFromLive: z.boolean().optional().default(false),
+  dependencySource: z
+    .enum(["live-reserve", "live-unmapped", "curated-reserve", "manual", "none", "variant"])
+    .optional(),
+  dependencyBaseSource: z.enum(["live-reserve", "live-unmapped", "curated-reserve", "manual", "none"]).optional(),
+  mappedLiveReserveWeight: z.number().finite().nonnegative().nullable().optional(),
+  dependencyFallbackReason: z
+    .enum(["live-unmapped-to-curated-reserve", "live-unmapped-to-manual", "live-cycle-to-curated"])
+    .nullable()
+    .optional(),
+  dependencySnapshotSource: z.string().nullable().optional(),
+  dependencySnapshotUpdatedAt: z.number().finite().nonnegative().nullable().optional(),
 });
 
 export type RawDimensionInputs = z.infer<typeof RawDimensionInputsSchema>;

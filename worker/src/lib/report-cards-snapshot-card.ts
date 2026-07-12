@@ -43,6 +43,7 @@ import type {
   ReportCardOracleRisk,
 } from "@shared/types/report-cards";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { LiveReserveSnapshotProvenance } from "./live-reserves-store";
 
 export interface ComputeCardInput {
   meta: (typeof ACTIVE_STABLECOINS)[number];
@@ -59,7 +60,8 @@ export interface ComputeCardInput {
   blacklistStatus: BlacklistStatus;
   liveReserveMap: Map<string, ReserveSlice[]>;
   dependencies: DependencyWeight[];
-  dependencyFromLive: boolean;
+  dependencySet: DerivedDependencySet;
+  dependencySnapshotProvenance?: LiveReserveSnapshotProvenance;
 }
 
 export interface BuildLiveReportCardsInput {
@@ -70,6 +72,7 @@ export interface BuildLiveReportCardsInput {
   bluechipMap: Record<string, BluechipRating>;
   resolvedBlacklistStatuses: Map<string, BlacklistStatus>;
   liveReserveMap: Map<string, ReserveSlice[]>;
+  liveReserveProvenanceMap?: ReadonlyMap<string, LiveReserveSnapshotProvenance>;
 }
 
 export interface BuildLiveReportCardsResult {
@@ -265,7 +268,8 @@ function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMint
     blacklistStatus,
     liveReserveMap,
     dependencies,
-    dependencyFromLive,
+    dependencySet,
+    dependencySnapshotProvenance,
   } = input;
   const resolvedPeg = resolvePegInput(meta, pegDataById);
   const peg = resolvedPeg.peg;
@@ -374,7 +378,13 @@ function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMint
     variantKind: meta.variantKind ?? null,
     navToken,
     collateralFromLive: !!liveSlices,
-    dependencyFromLive,
+    dependencyFromLive: dependencySet.dependencyFromLive,
+    dependencySource: dependencySet.source,
+    dependencyBaseSource: dependencySet.baseSource,
+    mappedLiveReserveWeight: dependencySet.mappedLiveReserveWeight,
+    dependencyFallbackReason: dependencySet.fallbackReason,
+    dependencySnapshotSource: dependencySnapshotProvenance?.source ?? null,
+    dependencySnapshotUpdatedAt: dependencySnapshotProvenance?.fetchedAt ?? null,
   };
 
   return {
@@ -447,7 +457,8 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
       blacklistStatus: input.resolvedBlacklistStatuses.get(meta.id) ?? false,
       liveReserveMap: input.liveReserveMap,
       dependencies: dependenciesById.get(meta.id) ?? [],
-      dependencyFromLive: dependencySetsById.get(meta.id)?.dependencyFromLive ?? false,
+      dependencySet: dependencySetsById.get(meta.id)!,
+      dependencySnapshotProvenance: input.liveReserveProvenanceMap?.get(meta.id),
     });
     liveCards.push(card);
     if (card.overallScore !== null) {

@@ -12,7 +12,7 @@ import type {
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
 import { RedemptionHolderEligibilitySchema } from "@shared/types/redemption";
-import type { ReserveSlice } from "@shared/types/core";
+import { ReserveSliceSchema, type ReserveSlice } from "@shared/types/reserves";
 import { decodeJsonString } from "./cache-json";
 import { shouldUseLegacySnapshotFallback } from "./live-reserves-store-snapshot-state";
 import type {
@@ -22,7 +22,6 @@ import type {
   SnapshotIntegrityIssue,
 } from "./live-reserves-store-shared";
 
-const VALID_RISKS = new Set(["very-low", "low", "medium", "high", "very-high"]);
 const VALID_SOURCE_MODELS = new Set<LiveReserveSourceModel>(["dynamic-mix", "validated-static", "single-bucket"]);
 const VALID_EVIDENCE_CLASSES = new Set<LiveReserveEvidenceClass>([
   "independent",
@@ -278,21 +277,21 @@ export function parseWarnings(value: string | null): LiveReserveWarning[] {
   return decoded.payload ?? [];
 }
 
-function isValidSlice(item: unknown): item is ReserveSlice {
-  if (!item || typeof item !== "object") return false;
-  const slice = item as Partial<ReserveSlice>;
-  return (
-    typeof slice.name === "string" &&
-    slice.name.length > 0 &&
-    typeof slice.pct === "number" &&
-    Number.isFinite(slice.pct) &&
-    slice.pct > 0 &&
-    typeof slice.risk === "string" &&
-    VALID_RISKS.has(slice.risk)
-  );
+function isValidSlice(item: unknown, subjectId: string): item is ReserveSlice {
+  const parsed = ReserveSliceSchema.safeParse(item);
+  if (!parsed.success) return false;
+  const slice = parsed.data;
+  if (slice.name.trim().length === 0) return false;
+  if (slice.depType != null && !slice.coinId) return false;
+  if (slice.coinId === subjectId) return false;
+  if (slice.coinId != null && !TRACKED_META_BY_ID.has(slice.coinId)) return false;
+  return true;
 }
 
-function parseSlicesStrict(value: string): { slices: ReserveSlice[] } | { issue: SnapshotIntegrityIssue } {
+function parseSlicesStrict(
+  value: string,
+  subjectId: string,
+): { slices: ReserveSlice[] } | { issue: SnapshotIntegrityIssue } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(value);
@@ -325,7 +324,7 @@ function parseSlicesStrict(value: string): { slices: ReserveSlice[] } | { issue:
 
   const slices: ReserveSlice[] = [];
   for (const item of parsed) {
-    if (!isValidSlice(item)) {
+    if (!isValidSlice(item, subjectId)) {
       return {
         issue: {
           code: "invalid-slice",
@@ -376,7 +375,7 @@ export function parseReserveCompositionRow(
   row: ReserveCompositionRow,
   syncState: ReserveSyncStateRecord | null,
 ): { record: ReserveCompositionRecord | null; issue: SnapshotIntegrityIssue | null } {
-  const parsedSlices = parseSlicesStrict(row.slices);
+  const parsedSlices = parseSlicesStrict(row.slices, row.stablecoin_id);
   if ("issue" in parsedSlices) {
     return { record: null, issue: parsedSlices.issue };
   }

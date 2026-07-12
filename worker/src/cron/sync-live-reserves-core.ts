@@ -1,4 +1,5 @@
 import { raceWithTimeout } from "@shared/lib/timeout-signal";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
@@ -23,6 +24,8 @@ import {
   type ReserveSyncStateRecord,
 } from "../lib/live-reserves-store";
 import { isReserveRecoveryFaultInjectionTermination } from "../lib/reserve-recovery-fault-injection";
+
+const TRACKED_STABLECOIN_IDS = new Set(TRACKED_META_BY_ID.keys());
 
 export type ReserveCoinSyncStatus = "synced" | "failed" | "skipped";
 
@@ -162,6 +165,8 @@ export async function syncReserveCoin(args: {
       adapter,
       now: attemptStartedAt,
       maxSourceAgeSec: getEffectiveScoringMaxSourceAgeSec(config, adapter),
+      subjectId: coin.id,
+      knownStablecoinIds: TRACKED_STABLECOIN_IDS,
     });
     if (!validation.valid) {
       const message = validation.warnings.map((warning) => warning.message).join("; ");

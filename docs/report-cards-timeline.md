@@ -1,8 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.13 (2026-02-25 → 2026-06-19). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.14 (2026-02-25 → 2026-07-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score.ts` for canonical machine ordering.
 
 > Older entries are archived in [report-cards-timeline-archive.md](./report-cards-timeline-archive.md); this file keeps the most recent entries.
+
+## v8.14 — Self-link-free serial dependency derivation (2026-07-12)
+
+Frax balance-sheet mappings are now subject-aware, so treasury-held FRAX remains reserve evidence without creating a `frax-frax -> frax-frax` dependency edge. Static metadata, live adapter output, D1 readback, canonical derivation, and graph emission reject or suppress self-referential and invalid dependency targets. Tracked variants emit one serial weight-1 wrapper edge to their parent; mirrored parent reserve composition no longer becomes additional parallel dependency weight. Report-card raw inputs expose dependency source/base source, mapped live weight, typed fallback reason, and live snapshot source/time while older cached cards remain readable. Fixed-input calibration across all 465 cards moved FRAX `58 -> 59` and sUSDai `59 -> 57`, removed two graph edges, and produced no grade crossing or NR transition.
 
 ## v8.13 — All-unmapped live reserve dependencies fall back to curated links (2026-06-19)
 

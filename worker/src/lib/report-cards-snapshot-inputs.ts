@@ -12,6 +12,7 @@ import { loadStablecoinsCache, type StablecoinsCacheLoadOk, type StablecoinsCach
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { ReserveSlice } from "@shared/types/core";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import type { LiveReserveSnapshotProvenance } from "./live-reserves-store";
 
 export class ReportCardsSnapshotUnavailableError extends Error {
   constructor(message: string) {
@@ -26,6 +27,7 @@ export interface ReportCardsSnapshotInputs {
   dexLiquiditySnapshot: DexLiquidityLoadResult;
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
   liveReserveMap: Map<string, ReserveSlice[]>;
+  liveReserveProvenanceMap: ReadonlyMap<string, LiveReserveSnapshotProvenance>;
   liquidityStale: boolean;
   redemptionStale: boolean;
   inputFreshness: ReportCardsInputFreshness;
@@ -142,6 +144,10 @@ export async function loadReportCardsSnapshotInputs(
         console.warn("[report-cards] Live reserve snapshot unavailable; falling back to curated reserves:", liveReserveMapResult.reason);
         return new Map<string, ReserveSlice[]>();
       })();
+  const liveReserveProvenanceMap =
+    liveReserveMapResult.status === "fulfilled" && "provenanceById" in liveReserveMapResult.value
+      ? liveReserveMapResult.value.provenanceById
+      : new Map<string, LiveReserveSnapshotProvenance>();
 
   const redemptionFreshness = buildFreshnessEntry(
     redemptionBackstopSnapshot.latestUpdatedAt,
@@ -164,6 +170,7 @@ export async function loadReportCardsSnapshotInputs(
     dexLiquiditySnapshot,
     redemptionBackstopMap,
     liveReserveMap,
+    liveReserveProvenanceMap,
     liquidityStale,
     redemptionStale,
     inputFreshness: {

@@ -1,6 +1,25 @@
 import type { ReactNode } from "react";
 
 export const scoringChangelogV8Details: Record<string, ReactNode> = {
+  "8.14": (
+    <>
+      <p>
+        Dependency derivation now rejects self-links and represents each tracked variant as one serial wrapper claim on
+        its parent, so displaying a parent&apos;s reserve book does not count that backing a second time.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>Frax self-holdings remain visible in reserve composition but no longer create a FRAX-to-FRAX graph edge.</li>
+        <li>
+          Static metadata, adapter output, stored live snapshots, the canonical resolver, and graph emission all enforce
+          the same self-link and target-validity invariants.
+        </li>
+        <li>
+          Raw inputs now include dependency source, fallback reason, mapped live weight, and live snapshot provenance.
+        </li>
+        <li>The fixed-input all-card replay found two score changes and no grade or NR transitions.</li>
+      </ul>
+    </>
+  ),
   "8.13": (
     <>
       <p>

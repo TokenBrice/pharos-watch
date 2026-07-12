@@ -175,6 +175,11 @@ export function SafetyScoresDimensionDetails() {
             dependency scores are unavailable; partially unavailable upstream weights are scored at 70 instead of being
             treated as self-backed
           </li>
+          <li>
+            <span className="text-foreground">Variants and self-holdings</span> &mdash; a tracked variant has one serial
+            wrapper dependency on its parent. Mirrored parent reserves do not add parallel weight, and a coin&apos;s own
+            treasury-held token remains reserve evidence without becoming a self-dependency
+          </li>
         </ul>
         <p className="mt-2">
           <span className="text-foreground font-medium">Dependency type ceilings</span> &mdash; each dependency is

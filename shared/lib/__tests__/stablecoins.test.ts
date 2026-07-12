@@ -388,6 +388,17 @@ describe("tracked stablecoin metadata", () => {
     }
   });
 
+  it("rejects static dependency and reserve self-links", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeStablecoinAsset({ dependencies: [{ id: "schema-test-usd", weight: 1 }] }),
+    ], "self-dependency.json")).toThrowError(/cannot reference the stablecoin itself/);
+    expect(() => parseStablecoinMetaAssets([
+      makeStablecoinAsset({
+        reserves: [{ name: "Self", pct: 100, risk: "low", coinId: "schema-test-usd" }],
+      }),
+    ], "self-reserve.json")).toThrowError(/cannot reference the stablecoin itself/);
+  });
+
   it("enforces reserve percentages as finite positive percentages", () => {
     for (const pct of [0, -1, 100.1, Infinity]) {
       expect(() => parseStablecoinMetaAssets([

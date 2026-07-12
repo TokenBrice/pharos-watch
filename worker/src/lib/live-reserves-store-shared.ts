@@ -70,12 +70,7 @@ export interface ReserveSyncStateRow {
 
 export interface SnapshotIntegrityIssue {
   code:
-    | "invalid-json"
-    | "invalid-payload"
-    | "empty-slices"
-    | "invalid-slice"
-    | "invalid-sum"
-    | "unknown-adapter-source";
+    "invalid-json" | "invalid-payload" | "empty-slices" | "invalid-slice" | "invalid-sum" | "unknown-adapter-source";
   message: string;
 }
 
@@ -176,6 +171,15 @@ export interface AuthoritativeReserveSnapshot {
   warnings: LiveReserveWarning[];
   sourceModel: LiveReserveSourceModel;
   evidenceClass: LiveReserveEvidenceClass;
+}
+
+export interface LiveReserveSnapshotProvenance {
+  source: string;
+  fetchedAt: number;
+}
+
+export interface LiveReserveScoringMap extends Map<string, ReserveSlice[]> {
+  readonly provenanceById: ReadonlyMap<string, LiveReserveSnapshotProvenance>;
 }
 
 export interface ReserveSnapshotMetadataRecord {

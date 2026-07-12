@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildDependencyGraphEdges, filterDependencyGraphEdgesToLive } from "../dependency-graph";
+import {
+  buildDependencyGraphEdges,
+  diagnoseDependencyGraph,
+  filterDependencyGraphEdgesToLive,
+} from "../dependency-graph";
 import { deriveEffectiveDependencies, deriveEffectiveDependencySet } from "../dependency-derivation";
 import type { StablecoinMeta } from "../../types/core";
 
@@ -155,6 +159,7 @@ describe("dependency-graph", () => {
       baseSource: "manual",
       dependencyFromLive: false,
       mappedLiveReserveWeight: 0,
+      fallbackReason: "live-unmapped-to-manual",
     });
   });
 
@@ -225,5 +230,57 @@ describe("dependency-graph", () => {
     );
 
     expect(edges).toEqual([{ from: "parent", to: "child", weight: 1, type: "wrapper" }]);
+  });
+
+  it("does not double-count a variant parent's reserve book as parallel exposure", () => {
+    const result = deriveEffectiveDependencySet(
+      makeMeta({
+        id: "child",
+        variantOf: "parent",
+        variantKind: "strategy-vault",
+        reserves: [{ name: "Parent reserve sleeve", pct: 82.35, risk: "low", coinId: "upstream" }],
+      }),
+    );
+
+    expect(result.dependencies).toEqual([{ id: "parent", weight: 1, type: "wrapper" }]);
+  });
+
+  it("suppresses self-links in derivation and graph emission", () => {
+    const meta = makeMeta({
+      id: "subject",
+      reserves: [
+        { name: "Treasury-held subject", pct: 25, risk: "low", coinId: "subject" },
+        { name: "External upstream", pct: 75, risk: "low", coinId: "upstream" },
+      ],
+    });
+
+    expect(deriveEffectiveDependencies(meta)).toEqual([{ id: "upstream", weight: 0.75, type: "collateral" }]);
+    expect(buildDependencyGraphEdges([meta])).toEqual([
+      { from: "upstream", to: "subject", weight: 0.75, type: "collateral" },
+    ]);
+  });
+
+  it("diagnoses self-links, duplicate keys, and multi-node SCCs deterministically", () => {
+    const edges = [
+      { from: "b", to: "a", weight: 0.4, type: "collateral" as const },
+      { from: "a", to: "b", weight: 0.3, type: "mechanism" as const },
+      { from: "a", to: "b", weight: 0.2, type: "mechanism" as const },
+      { from: "self", to: "self", weight: 1, type: "wrapper" as const },
+    ];
+
+    const diagnostics = diagnoseDependencyGraph(edges);
+    expect(diagnostics.selfEdges).toEqual([{ from: "self", to: "self", weight: 1, type: "wrapper" }]);
+    expect(diagnostics.duplicateEdges).toEqual([
+      {
+        key: "a->b:mechanism",
+        count: 2,
+        edges: [
+          { from: "a", to: "b", weight: 0.2, type: "mechanism" },
+          { from: "a", to: "b", weight: 0.3, type: "mechanism" },
+        ],
+      },
+    ]);
+    expect(diagnostics.stronglyConnectedComponents).toEqual([["a", "b"]]);
+    expect(diagnoseDependencyGraph([...edges].reverse())).toEqual(diagnostics);
   });
 });

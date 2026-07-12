@@ -59,6 +59,23 @@ describe("adaptFraxBalanceSheet", () => {
     expect(usdb!.coinId).toBe("usdb-bridge");
   });
 
+  it("keeps subject reserves visible without emitting a self dependency", () => {
+    const result = adaptFraxBalanceSheet(
+      {
+        totalAssets: 100,
+        assets: [
+          { tokenSymbol: "FRAX", totalValueUsd: 40, category: "asset:owned:usd" },
+          { tokenSymbol: "USDC", totalValueUsd: 60, category: "asset:owned:usd" },
+        ],
+      },
+      "frax-frax",
+    );
+
+    expect(result.slices.find((slice) => slice.name === "FRAX")).toMatchObject({ pct: 40 });
+    expect(result.slices.find((slice) => slice.name === "FRAX")?.coinId).toBeUndefined();
+    expect(result.slices.find((slice) => slice.name.startsWith("USDC"))?.coinId).toBe("usdc-circle");
+  });
+
   it("includes verified freshness when asOfTimestamp is present", () => {
     const result = adaptFraxBalanceSheet(BALANCE_SHEET_SAMPLE);
     expect(result.metadata?.freshnessMode).toBe("verified");
@@ -262,9 +279,7 @@ describe("adaptFraxFpiCollateral", () => {
       expect.not.arrayContaining([expect.objectContaining({ code: "unknown-token" })]),
     );
     expect(result.slices).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: "Fraxswap V2 FRAX/FPIS", risk: "high" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ name: "Fraxswap V2 FRAX/FPIS", risk: "high" })]),
     );
   });
 

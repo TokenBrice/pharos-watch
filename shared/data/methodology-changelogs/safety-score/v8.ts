@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.14",
+    title: "Dependency derivation rejects self-links and duplicate variant backing",
+    date: "2026-07-12",
+    effectiveAt: 1783896306,
+    summary:
+      "Dependency Risk now suppresses self-referential reserve links at the adapter and canonical resolver boundaries, treats tracked variants as one serial wrapper claim on their parent instead of counting the parent's backing twice, and publishes typed dependency-source and fallback provenance.",
+    impact: [
+      "Frax balance-sheet mappings are subject-aware, so a coin's treasury-held own token remains visible as backing without creating an upstream self-edge",
+      "The canonical resolver and graph builders defensively suppress self-links, while static metadata and live reserve write/read validation reject malformed, unknown, or self-referential dependency targets",
+      "Tracked variants emit one weight-1 wrapper edge to the parent; reserve views can still show the parent's backing composition, but those slices no longer become parallel dependency weight",
+      "Raw inputs expose dependency source, base source, mapped live weight, typed fallback reason, and score-grade live snapshot source/time while remaining backward-compatible with older cached cards",
+      "Fixed-input all-card calibration moved FRAX from 58 to 59 and sUSDai from 59 to 57, removed two graph edges, and produced no grade crossing or NR change",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.13",
     title: "All-unmapped live reserve dependencies fall back to curated links",
     date: "2026-06-19",

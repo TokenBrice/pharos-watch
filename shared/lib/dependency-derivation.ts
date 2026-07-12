@@ -15,14 +15,23 @@ export interface DerivedDependencySet {
   baseSource: DependencyDerivationBaseSource;
   dependencyFromLive: boolean;
   mappedLiveReserveWeight: number | null;
+  fallbackReason: DependencyFallbackReason | null;
 }
 
-function aggregateReserveDependencies(reserves: readonly ReserveSlice[]): DependencyWeight[] {
+export type DependencyFallbackReason =
+  | "live-unmapped-to-curated-reserve"
+  | "live-unmapped-to-manual";
+
+function aggregateReserveDependencies(
+  reserves: readonly ReserveSlice[],
+  subjectId?: string,
+): DependencyWeight[] {
   const linked = reserves.filter((reserve): reserve is ReserveSlice & { coinId: string } => !!reserve.coinId);
   if (linked.length === 0) return [];
 
   const aggregated = new Map<string, { id: string; weight: number; type: DependencyType }>();
   for (const reserve of linked) {
+    if (reserve.coinId === subjectId) continue;
     const type: DependencyType = reserve.depType ?? "collateral";
     const key = `${reserve.coinId}::${type}`;
     const existing = aggregated.get(key);
@@ -46,10 +55,9 @@ function injectVariantParent(
 ): DependencyWeight[] {
   if (!variantOf) return [...dependencies];
 
-  return [
-    ...dependencies.filter((dependency) => dependency.id !== variantOf),
-    { id: variantOf, weight: 1, type: "wrapper" },
-  ];
+  // A variant is a serial claim on its parent. Its reserve view may expose the
+  // parent's backing, but those slices are not an additional parallel path.
+  return [{ id: variantOf, weight: 1, type: "wrapper" }];
 }
 
 function resolveSource(
@@ -74,22 +82,24 @@ function resolveSource(
  * hand-curated `meta.dependencies` remain the fallback when reserves do not
  * provide linked upstream assets.
  */
-export function deriveDependencies(meta: Pick<StablecoinMeta, "reserves" | "dependencies">): DependencyWeight[] {
+export function deriveDependencies(
+  meta: Pick<StablecoinMeta, "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
+): DependencyWeight[] {
   const reserves = meta.reserves;
   if (!reserves?.length) return meta.dependencies ?? [];
 
-  const reserveDependencies = aggregateReserveDependencies(reserves);
+  const reserveDependencies = aggregateReserveDependencies(reserves, meta.id);
   if (reserveDependencies.length === 0) return meta.dependencies ?? [];
 
   return reserveDependencies;
 }
 
 function deriveCuratedDependencySet(
-  meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies">,
+  meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
   mappedLiveReserveWeight: number | null = null,
 ): DerivedDependencySet {
   const reserveDependencies = meta.reserves?.length
-    ? aggregateReserveDependencies(meta.reserves)
+    ? aggregateReserveDependencies(meta.reserves, meta.id)
     : [];
   const manualDependencies = meta.dependencies ?? [];
   const baseDependencies = reserveDependencies.length > 0 ? reserveDependencies : manualDependencies;
@@ -106,15 +116,22 @@ function deriveCuratedDependencySet(
     baseSource,
     dependencyFromLive: false,
     mappedLiveReserveWeight,
+    fallbackReason: mappedLiveReserveWeight == null
+      ? null
+      : baseSource === "curated-reserve"
+        ? "live-unmapped-to-curated-reserve"
+        : baseSource === "manual"
+          ? "live-unmapped-to-manual"
+          : null,
   };
 }
 
 export function deriveEffectiveDependencySet(
-  meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies">,
+  meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
   options?: { liveReserveSlices?: readonly ReserveSlice[] },
 ): DerivedDependencySet {
   if (Array.isArray(options?.liveReserveSlices)) {
-    const liveDependencies = aggregateReserveDependencies(options.liveReserveSlices);
+    const liveDependencies = aggregateReserveDependencies(options.liveReserveSlices, meta.id);
     const mappedLiveReserveWeight = sumDependencyWeight(liveDependencies);
 
     if (liveDependencies.length === 0) {
@@ -127,6 +144,7 @@ export function deriveEffectiveDependencySet(
         baseSource: "live-unmapped",
         dependencyFromLive: true,
         mappedLiveReserveWeight,
+        fallbackReason: null,
       };
     }
 
@@ -139,6 +157,7 @@ export function deriveEffectiveDependencySet(
       baseSource,
       dependencyFromLive: true,
       mappedLiveReserveWeight,
+      fallbackReason: null,
     };
   }
 
@@ -146,7 +165,7 @@ export function deriveEffectiveDependencySet(
 }
 
 export function deriveEffectiveDependencies(
-  meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies">,
+  meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies"> & Partial<Pick<StablecoinMeta, "id">>,
   options?: { liveReserveSlices?: readonly ReserveSlice[] },
 ): DependencyWeight[] {
   return deriveEffectiveDependencySet(meta, options).dependencies;

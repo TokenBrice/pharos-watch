@@ -6,12 +6,12 @@ The stablecoin registry currently contains 410 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.13`
+- **Current methodology version:** `v8.14`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v8.13)
+## Overall Grade (v8.14)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v8.13 tightens Dependency Risk live-reserve derivation: when a score-grade live reserve snapshot has no mapped tracked-asset links at all, Dependency Risk falls back to curated reserve links or manual dependencies before treating the asset as live-unmapped/self-backed. Partial live mappings remain authoritative, so unmapped remainder inside a mapped live snapshot still counts as self-backed / non-stablecoin reserve share. The v8.12 bridge-route blend, v8.11 oracle provenance and branch handling, v8.0 Mint Authority blend, v7.29 liquidity/redemption rules, and v7.291 degraded-input history guard carry forward unchanged.
+Current-version note: v8.14 makes Dependency Risk derivation self-link-free and treats every tracked variant as one serial wrapper claim on its parent. Reserve views may still expose the parent's backing composition, but those reserve slices are not counted again as parallel dependency weight. Static metadata, live reserve writes/reads, the canonical resolver, and graph emission enforce the same target-validity boundary. Raw inputs now expose dependency source and snapshot provenance. The v8.13 all-unmapped fallback, v8.12 bridge-route blend, v8.11 oracle provenance and branch handling, v8.0 Mint Authority blend, v7.29 liquidity/redemption rules, and v7.291 degraded-input history guard carry forward unchanged.
 
 ## Yield Source-Risk Boundary
 
@@ -155,6 +155,14 @@ self-backed / non-stablecoin reserve share instead of reviving older curated
 stablecoin-link percentages. If a score-grade live snapshot contains no mapped
 `coinId` links at all, Dependency Risk falls back to curated reserve links or
 manual dependencies before preserving an empty `live-unmapped` dependency set.
+
+Since v8.14, `dependencySource`, `dependencyBaseSource`,
+`mappedLiveReserveWeight`, `dependencyFallbackReason`,
+`dependencySnapshotSource`, and `dependencySnapshotUpdatedAt` make that resolver
+choice auditable. The fields are optional on read for rolling compatibility with
+older cached cards. Self-referential reserve links are excluded defensively, and
+tracked variants use one serial weight-1 `wrapper` edge to their parent even when
+their reserve view mirrors the parent's backing book.
 
 A delta alert fires when the independent live-derived score diverges from curated by >15 points,
 signaling that curated metadata (and potentially the governance classification) may
@@ -342,7 +350,7 @@ Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `i
 
 **Universal scoring (v5.1):** All coins with upstream stablecoin dependencies get blended scores, regardless of governance type. Topological sort ensures every coin is scored after all its upstreams.
 
-**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveEffectiveDependencies()` in `shared/lib/dependency-derivation.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). When score-grade live reserve slices contain mapped tracked links, they are the dependency source for that snapshot; otherwise the resolver falls back to curated `StablecoinMeta.reserves`, then to the manual `dependencies` array when curated reserves have no tracked links. If a score-grade live snapshot exists but contains no mapped tracked links, that curated/manual fallback is used before the resolver keeps an empty `live-unmapped` dependency set. Weights come directly from reserve percentages when total dependency weight is <= 1, so non-stablecoin or unmapped live reserve slices inside a partially mapped live snapshot contribute to the "self-backed" component of the score. If declared dependency weight exceeds 1, dependency weights are normalized by raw total and the self-backed fraction is zero.
+**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveEffectiveDependencies()` in `shared/lib/dependency-derivation.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Self-links are discarded at this canonical boundary. A tracked variant is represented by one serial weight-1 `wrapper` edge to its parent; a reserve view that mirrors the parent's backing does not create additional parallel edges. For non-variants, score-grade live reserve slices with mapped tracked links are the dependency source for that snapshot; otherwise the resolver falls back to curated `StablecoinMeta.reserves`, then to the manual `dependencies` array when curated reserves have no tracked links. If a score-grade live snapshot exists but contains no mapped tracked links, that curated/manual fallback is used before the resolver keeps an empty `live-unmapped` dependency set. Weights come directly from reserve percentages when total dependency weight is <= 1, so non-stablecoin or unmapped live reserve slices inside a partially mapped live snapshot contribute to the "self-backed" component of the score. If declared dependency weight exceeds 1, dependency weights are normalized by raw total and the self-backed fraction is zero.
 
 **Scoring:**
 

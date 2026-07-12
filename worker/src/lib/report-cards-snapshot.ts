@@ -80,6 +80,7 @@ export async function buildReportCardsSnapshot(
     dexLiquiditySnapshot,
     redemptionBackstopMap,
     liveReserveMap,
+    liveReserveProvenanceMap,
     liquidityStale,
     redemptionStale,
     inputFreshness,
@@ -159,6 +160,7 @@ export async function buildReportCardsSnapshot(
     bluechipMap,
     resolvedBlacklistStatuses,
     liveReserveMap,
+    liveReserveProvenanceMap,
   });
 
   const {

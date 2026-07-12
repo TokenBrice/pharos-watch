@@ -35,6 +35,12 @@ export function createReportCardRawInputs(overrides: Partial<RawDimensionInputs>
     navToken: false,
     collateralFromLive: false,
     dependencyFromLive: false,
+    dependencySource: "none",
+    dependencyBaseSource: "none",
+    mappedLiveReserveWeight: null,
+    dependencyFallbackReason: null,
+    dependencySnapshotSource: null,
+    dependencySnapshotUpdatedAt: null,
     ...overrides,
   };
   return inputs;

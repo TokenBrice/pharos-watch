@@ -297,6 +297,23 @@ const ORACLE_RISK_PROVENANCE_FIELDS = ["reviewedAt", "reviewer", "confidence"] a
 
 export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMetaAssetRawSchema.superRefine(
   (meta, ctx) => {
+    for (let index = 0; index < (meta.dependencies ?? []).length; index += 1) {
+      if (meta.dependencies?.[index]?.id !== meta.id) continue;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "stablecoin dependencies cannot reference the stablecoin itself",
+        path: ["dependencies", index, "id"],
+      });
+    }
+    for (let index = 0; index < (meta.reserves ?? []).length; index += 1) {
+      if (meta.reserves?.[index]?.coinId !== meta.id) continue;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "reserve dependencies cannot reference the stablecoin itself",
+        path: ["reserves", index, "coinId"],
+      });
+    }
+
     if (meta.canBeBlacklisted !== undefined && meta.blacklistabilityReview == null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

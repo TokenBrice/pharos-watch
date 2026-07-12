@@ -35,6 +35,42 @@ describe("validateAdapterOutput", () => {
     expect(result.valid).toBe(false);
   });
 
+  it("rejects malformed, self-linked, and unknown dependency targets", () => {
+    const knownIds = new Set(["subject", "known-upstream"]);
+    for (const [slice, code] of [
+      [{ name: "", pct: 100, risk: "low" }, "invalid-name"],
+      [{ name: "Missing target", pct: 100, risk: "low", depType: "mechanism" }, "dependency-type-without-target"],
+      [{ name: "Self", pct: 100, risk: "low", coinId: "subject" }, "self-dependency"],
+      [{ name: "Unknown", pct: 100, risk: "low", coinId: "unknown" }, "unknown-dependency-target"],
+    ] as const) {
+      const result = validateAdapterOutput(
+        { slices: [slice] as never },
+        { subjectId: "subject", knownStablecoinIds: knownIds },
+      );
+      expect(result.valid).toBe(false);
+      expect(result.warnings[0].code).toBe(code);
+    }
+  });
+
+  it("accepts a known external dependency target", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [
+          {
+            name: "Known upstream",
+            pct: 100,
+            risk: "low",
+            coinId: "known-upstream",
+            depType: "mechanism",
+          },
+        ],
+      },
+      { subjectId: "subject", knownStablecoinIds: new Set(["subject", "known-upstream"]) },
+    );
+
+    expect(result.valid).toBe(true);
+  });
+
   it("rejects slices with non-positive pct", () => {
     const result = validateAdapterOutput({
       slices: [

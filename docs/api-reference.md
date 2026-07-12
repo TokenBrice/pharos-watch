@@ -2452,6 +2452,13 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 | `variantKind`                      | `"savings-passthrough" \| "strategy-vault" \| "risk-absorption" \| "bond-maturity" \| null` |
 | `navToken`                         | `boolean`                                                                                   |
 | `collateralFromLive`               | `boolean`                                                                                   |
+| `dependencyFromLive`               | `boolean`                                                                                   |
+| `dependencySource`                 | `"live-reserve" \| "live-unmapped" \| "curated-reserve" \| "manual" \| "none" \| "variant" \| undefined` |
+| `dependencyBaseSource`             | `"live-reserve" \| "live-unmapped" \| "curated-reserve" \| "manual" \| "none" \| undefined` |
+| `mappedLiveReserveWeight`          | `number \| null \| undefined`                                                             |
+| `dependencyFallbackReason`         | `"live-unmapped-to-curated-reserve" \| "live-unmapped-to-manual" \| "live-cycle-to-curated" \| null \| undefined` |
+| `dependencySnapshotSource`         | `string \| null \| undefined`                                                             |
+| `dependencySnapshotUpdatedAt`      | `number \| null \| undefined`                                                             |
 
 `rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values. Product labels map the wire values to the four-status model: `true` -> `Yes`, `"inherited"` -> `Upstream`, `"possible"` -> `Possible`, and `false` -> `No`. Admin mint authority is reviewed separately in Mint Authority and is not a FreezeWatch status. `"inherited"` / Upstream can be produced by any reserve, backing, custody, parent-asset, or CEX/custody-rail exposure; it does not require a majority reserve weight.
 
@@ -2460,6 +2467,8 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 `rawInputs.bridgeRouteRiskTier` is one of `"single-chain-or-native"`, `"issuer-native-burn-mint"`, `"canonical-rollup-bridge"`, `"issuer-native-lock-mint"`, `"external-validated-network"`, `"liquidity-or-intent-route"`, `"external-lock-mint"`, `"opaque-or-unknown"`, or `null`.
 
 `rawInputs.collateralFromLive` is true when score-grade live reserve data drove collateral scoring for the card.
+
+`rawInputs.dependencySource` and `dependencyBaseSource` identify the effective resolver path; `mappedLiveReserveWeight` records the mapped share before any fallback; `dependencyFallbackReason` explains a typed fallback; and `dependencySnapshotSource` / `dependencySnapshotUpdatedAt` identify the score-grade live snapshot considered by the resolver. These v8.14 fields are optional so pre-v8.14 cached payloads remain parseable.
 
 **Dimensions:** `pegStability`, `liquidity`, `resilience`, `decentralization`, `dependencyRisk`
 

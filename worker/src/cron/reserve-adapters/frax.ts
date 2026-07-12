@@ -81,7 +81,7 @@ const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
   RAM: { label: "RAM", risk: "very-high" },
   SDT: { label: "SDT", risk: "very-high" },
   THE: { label: "THE", risk: "very-high" },
-  USDB: { label: "USDB (DBS tokenized deposits)", risk: "low", coinId: "usdb-bridge" },
+  USDB: { label: "USDB (Bridge)", risk: "low", coinId: "usdb-bridge" },
   USDC: { label: "USDC (Circle)", risk: "low", coinId: "usdc-circle" },
   USCC: { label: "USCC (Superstate crypto arbitrage)", risk: "medium" },
   USDS: { label: "USDS", risk: getCanonicalReserveAssetRisk("USDS") ?? "low", coinId: "usds-sky" },
@@ -125,7 +125,7 @@ const FPI_UNKNOWN_EXPOSURE_THRESHOLD_PCT = 5;
 
 /* ---------- v2 balance-sheet adapter ---------- */
 
-export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): AdapterResult {
+export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subjectId?: string): AdapterResult {
   const assets = payload.assets;
   if (!assets?.length || !payload.totalAssets || payload.totalAssets <= 0) {
     throw new Error("Frax balance-sheet response missing or empty assets array");
@@ -169,7 +169,7 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse): Adapte
         name: config.label,
         pct: (usd / total) * 100,
         risk: config.risk,
-        ...(config.coinId ? { coinId: config.coinId } : {}),
+        ...(config.coinId && config.coinId !== subjectId ? { coinId: config.coinId } : {}),
       });
     }
   }
@@ -400,7 +400,7 @@ function isFpiCollateralResponse(payload: unknown): payload is FraxFpiCollateral
  * balance-sheet API with independent evidence class (e.g. frxUSD).
  */
 export async function fetchFraxBalanceSheetReserves(
-  _coin: StablecoinMeta,
+  coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -411,7 +411,7 @@ export async function fetchFraxBalanceSheetReserves(
   if (!isBalanceSheetResponse(payload)) {
     throw new Error("frax-balance-sheet adapter requires a v2 balance-sheet API response");
   }
-  return adaptFraxBalanceSheet(payload);
+  return adaptFraxBalanceSheet(payload, coin.id);
 }
 
 /**

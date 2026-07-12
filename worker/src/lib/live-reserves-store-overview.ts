@@ -10,6 +10,7 @@ import {
   SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
   emptyReserveCompositionOverview,
   type AuthoritativeReserveSnapshot,
+  type LiveReserveScoringMap,
   type ReserveCompositionRow,
   type ReserveSyncStateRecord,
 } from "./live-reserves-store-shared";
@@ -428,17 +429,27 @@ export async function loadFreshIndependentLiveReserveMap(
   now = Math.floor(Date.now() / 1000),
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
   minSlices = 1,
-): Promise<Map<string, ReserveCompositionRecord["slices"]>> {
+): Promise<LiveReserveScoringMap> {
   const snapshots = await loadFreshAuthoritativeReserveSnapshots(db, now, freshnessSec, {
     minSlices,
     evidenceClasses: SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
     requireOkStatus: true,
   });
-  return new Map(
-    Array.from(snapshots.entries())
-      .filter(([, snapshot]) => hasScoringEligibleLiveReserveFreshness(snapshot.metadata))
-      .map(([coinId, snapshot]) => [coinId, snapshot.slices]),
-  );
+  const eligibleSnapshots = Array.from(snapshots.entries())
+    .filter(([, snapshot]) => hasScoringEligibleLiveReserveFreshness(snapshot.metadata));
+  const map = new Map(
+    eligibleSnapshots.map(([coinId, snapshot]) => [coinId, snapshot.slices]),
+  ) as LiveReserveScoringMap;
+  Object.defineProperty(map, "provenanceById", {
+    value: new Map(
+      eligibleSnapshots.map(([coinId, snapshot]) => [
+        coinId,
+        { source: snapshot.source, fetchedAt: snapshot.fetchedAt },
+      ]),
+    ),
+    enumerable: false,
+  });
+  return map;
 }
 
 function buildReserveSnapshotMetadataRecord(

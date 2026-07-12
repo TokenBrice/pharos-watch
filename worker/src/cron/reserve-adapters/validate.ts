@@ -1,4 +1,5 @@
 import type { ReserveSlice } from "@shared/types/core";
+import { DEPENDENCY_TYPE_VALUES } from "@shared/types/dependency-types";
 import {
   LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES,
   LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES,
@@ -25,6 +26,8 @@ interface ValidationOptions {
   adapter?: ReserveAdapterDefinition;
   now?: number;
   maxSourceAgeSec?: number;
+  subjectId?: string;
+  knownStablecoinIds?: ReadonlySet<string>;
 }
 
 const PCT_SUM_WARNING_TOLERANCE = 0.5;
@@ -173,11 +176,16 @@ function validateRedemptionTelemetry(
   const adapterFee = adapter?.redemptionTelemetry?.fee ?? "none";
 
   if (hasInvalidNumber(capacityUsdFields) || hasNegativeNumber(capacityUsdValues)) {
-    warnings.push(reserveFatalWarning("invalid-redemption-capacity-usd", `Redemption capacity is invalid${adapterLabel}`));
+    warnings.push(
+      reserveFatalWarning("invalid-redemption-capacity-usd", `Redemption capacity is invalid${adapterLabel}`),
+    );
   }
   if (hasInvalidNumber(capacityRatioFields) || hasOutOfRangeRatio(capacityRatioValues)) {
     warnings.push(
-      reserveFatalWarning("invalid-redemption-capacity-ratio", `Redemption capacity ratio is outside 0-1${adapterLabel}`),
+      reserveFatalWarning(
+        "invalid-redemption-capacity-ratio",
+        `Redemption capacity ratio is outside 0-1${adapterLabel}`,
+      ),
     );
   }
   if (hasInvalidNumber(feeBpsFields) || hasOutOfRangeFeeBps(feeBpsValues)) {
@@ -291,14 +299,13 @@ function validateRedemptionTelemetry(
   const routeStatus = redemption?.routeStatus;
   const hasKnownRouteStatus = isKnownValue(LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES, routeStatus);
   if (routeStatus != null && !hasKnownRouteStatus) {
-    warnings.push(reserveFatalWarning("invalid-redemption-route-status", `Redemption route status is invalid${adapterLabel}`));
+    warnings.push(
+      reserveFatalWarning("invalid-redemption-route-status", `Redemption route status is invalid${adapterLabel}`),
+    );
   }
 
   const routeStatusSource = redemption?.routeStatusSource;
-  const hasKnownRouteStatusSource = isKnownValue(
-    LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES,
-    routeStatusSource,
-  );
+  const hasKnownRouteStatusSource = isKnownValue(LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES, routeStatusSource);
   if (routeStatusSource != null && !hasKnownRouteStatusSource) {
     warnings.push(
       reserveFatalWarning(
@@ -336,7 +343,10 @@ function validateRedemptionTelemetry(
   const holderEligibility = redemption?.holderEligibility;
   if (holderEligibility != null && !isKnownValue(RedemptionHolderEligibilitySchema.options, holderEligibility)) {
     warnings.push(
-      reserveFatalWarning("invalid-redemption-holder-eligibility", `Redemption holder eligibility is invalid${adapterLabel}`),
+      reserveFatalWarning(
+        "invalid-redemption-holder-eligibility",
+        `Redemption holder eligibility is invalid${adapterLabel}`,
+      ),
     );
   }
 
@@ -388,6 +398,12 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
   warnings.push(...redemptionWarnings);
 
   for (const slice of input.slices) {
+    if (typeof slice.name !== "string" || slice.name.trim().length === 0) {
+      return {
+        valid: false,
+        warnings: [reserveFatalWarning("invalid-name", "Reserve slice has an empty name")],
+      };
+    }
     if (!Number.isFinite(slice.pct) || slice.pct <= 0) {
       return {
         valid: false,
@@ -404,6 +420,43 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
       return {
         valid: false,
         warnings: [reserveFatalWarning("invalid-risk", `Slice "${slice.name}" has invalid risk: ${slice.risk}`)],
+      };
+    }
+    if (slice.depType != null && !DEPENDENCY_TYPE_VALUES.includes(slice.depType)) {
+      return {
+        valid: false,
+        warnings: [reserveFatalWarning("invalid-dependency-type", `Slice "${slice.name}" has invalid depType`)],
+      };
+    }
+    if (slice.depType != null && !slice.coinId) {
+      return {
+        valid: false,
+        warnings: [
+          reserveFatalWarning("dependency-type-without-target", `Slice "${slice.name}" has depType without coinId`),
+        ],
+      };
+    }
+    if (slice.coinId != null && (typeof slice.coinId !== "string" || slice.coinId.trim().length === 0)) {
+      return {
+        valid: false,
+        warnings: [reserveFatalWarning("invalid-dependency-target", `Slice "${slice.name}" has invalid coinId`)],
+      };
+    }
+    if (slice.coinId != null && slice.coinId === options?.subjectId) {
+      return {
+        valid: false,
+        warnings: [reserveFatalWarning("self-dependency", `Slice "${slice.name}" links ${slice.coinId} to itself`)],
+      };
+    }
+    if (slice.coinId != null && options?.knownStablecoinIds && !options.knownStablecoinIds.has(slice.coinId)) {
+      return {
+        valid: false,
+        warnings: [
+          reserveFatalWarning(
+            "unknown-dependency-target",
+            `Slice "${slice.name}" links unknown stablecoin ${slice.coinId}`,
+          ),
+        ],
       };
     }
   }
