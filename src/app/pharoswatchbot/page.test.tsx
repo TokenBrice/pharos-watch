@@ -112,7 +112,7 @@ describe("PharosWatchBotPage", () => {
     expect(metadata.description).toBe(TELEGRAM_PAGE_DESCRIPTION);
     // Metadata and registration copy derive from the canonical family manifest.
     expect(TELEGRAM_BOT_DESCRIPTION).toContain(TELEGRAM_ALERT_FAMILY_PHRASE_LIST);
-    expect(TELEGRAM_PAGE_DESCRIPTION).not.toContain("daily recap");
+    expect(TELEGRAM_PAGE_DESCRIPTION).toContain("daily recaps");
     expect(TELEGRAM_PAGE_DESCRIPTION.length).toBeLessThanOrEqual(180);
     expect(TELEGRAM_BOT_SHORT_DESCRIPTION).not.toMatch(/\d/);
   });
@@ -136,7 +136,7 @@ describe("PharosWatchBotPage", () => {
         group.commands.map((entry) => entry.command.match(/^\/([a-z]+)/)?.[1]).filter(Boolean),
       ),
     );
-    expect([...publicCommands].sort()).toEqual(getTelegramPrivateBotCommands(false).map((entry) => entry.command).sort());
+    expect([...publicCommands].sort()).toEqual(getTelegramPrivateBotCommands(true).map((entry) => entry.command).sort());
   });
 
   it("builds the recommended setup deep link from a registry-valid start payload", () => {
@@ -197,6 +197,9 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getAllByText("/export").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/import <token>").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/pause [off|1h|4h|24h]").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/recap [on|off]").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/recap time <hour>").length).toBeGreaterThan(0);
+    expect(screen.getByText(/separate from the market-wide Daily Digest channel/i)).toBeTruthy();
     expect(screen.getByLabelText("Mini App screenshots")).toBeTruthy();
     // The reliability contract derives its TTLs from the shared delivery policy.
     const riskTtlClaim = `Risk alerts expire after ${PENDING_TTL_SEC / 3600} hours`;
@@ -227,7 +230,7 @@ describe("PharosWatchBotPage", () => {
     const howTo = findJsonLdNode(jsonLd, "HowTo");
     const application = findJsonLdNode(jsonLd, "SoftwareApplication");
 
-    expect(faq.mainEntity).toHaveLength(10);
+    expect(faq.mainEntity).toHaveLength(11);
     expect(faq.mainEntity).toHaveLength(TELEGRAM_FAQ.length);
     expect(application).toMatchObject({
       "@context": "https://schema.org",

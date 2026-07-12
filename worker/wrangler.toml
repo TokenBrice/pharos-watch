@@ -101,9 +101,9 @@ WORKER_JOB_LEDGER_MODE = "shadow"
 WORKER_JOB_LEDGER_ALLOWLIST = "sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-dex-liquidity,sync-stablecoins,sync-yield-data"
 WORKER_CANARY_MODE = "shadow"
 WORKER_RESERVE_RECOVERY_MODE = "shadow"
-# Personalized recap is disabled until an operator selects a rollout mode.
-# Set canary chat IDs separately with `wrangler secret put TELEGRAM_RECAP_ROLLOUT_CHAT_IDS`.
-TELEGRAM_RECAP_ROLLOUT_MODE = "off"
+# Personalized recap is public. Set this to `off` for the kill switch or `canary`
+# with chat IDs from `wrangler secret put TELEGRAM_RECAP_ROLLOUT_CHAT_IDS`.
+TELEGRAM_RECAP_ROLLOUT_MODE = "public"
 VAULTS_FYI_ENABLED = "true"
 VAULTS_FYI_MAX_PAGES_PER_RUN = "1"
 VAULTS_FYI_MAX_CREDITS_PER_RUN = "13"
