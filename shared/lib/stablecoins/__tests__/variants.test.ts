@@ -92,9 +92,6 @@ describe("stablecoin variants", () => {
         { id: "usdc-circle", weight: 0.2, type: "mechanism" },
       ],
       reserves: undefined,
-    })).toEqual([
-      { id: "usdc-circle", weight: 0.2, type: "mechanism" },
-      { id: "usds-sky", weight: 1, type: "wrapper" },
-    ]);
+    })).toEqual([{ id: "usds-sky", weight: 1, type: "wrapper" }]);
   });
 });

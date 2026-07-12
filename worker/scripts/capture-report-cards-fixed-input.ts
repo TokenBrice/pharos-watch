@@ -164,7 +164,9 @@ async function main(): Promise<void> {
     registryRevision: values["registry-revision"],
     concurrency,
   });
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
   writeFileSync(values.output, `${JSON.stringify(fixedInput, null, 2)}\n`, "utf8");
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
   writeFileSync(values["baseline-output"], `${JSON.stringify(baseline, null, 2)}\n`, "utf8");
 }
 

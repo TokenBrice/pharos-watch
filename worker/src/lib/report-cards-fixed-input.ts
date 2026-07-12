@@ -20,7 +20,7 @@ const FreshnessEntrySchema = z.object({
 
 const BlacklistStatusSchema = z.union([z.boolean(), z.literal("possible"), z.literal("inherited")]);
 
-export const ReportCardsFixedInputSchema = z
+const ReportCardsFixedInputSchema = z
   .object({
     schemaVersion: z.literal(1),
     capturedAt: z.string().datetime(),
@@ -93,7 +93,7 @@ function normalizeCard(card: ReportCard): ReportCard {
   };
 }
 
-export function parseReportCardsFixedInput(value: unknown): ReportCardsFixedInput {
+function parseReportCardsFixedInput(value: unknown): ReportCardsFixedInput {
   const parsed = ReportCardsFixedInputSchema.safeParse(value);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -139,7 +139,7 @@ export function buildReportCardsSnapshotFromFixedInput(
 }
 
 /** Removes only publication-envelope ordering so replay output is byte-comparable. */
-export function normalizeReportCardsReplaySnapshot(value: unknown): ReportCardsResponse {
+function normalizeReportCardsReplaySnapshot(value: unknown): ReportCardsResponse {
   const snapshot = ReportCardsResponseSchema.parse(value);
   return {
     cards: [...snapshot.cards].map(normalizeCard).sort((left, right) => left.id.localeCompare(right.id)),

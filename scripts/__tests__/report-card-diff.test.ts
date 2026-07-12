@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
-import type { ReportCard, ReportCardGrade } from "@shared/types/report-cards";
+import type { ReportCard, ReportCardGrade, ReportCardsResponse } from "@shared/types/report-cards";
 import { compareReportCardPayloads, serializeReportCardDiff } from "../lib/report-card-diff";
 import cohort from "./fixtures/report-card-diff/cohort.json";
 
@@ -26,7 +26,7 @@ function card(id: string, score: number | null, grade: ReportCardGrade): ReportC
   };
 }
 
-function payload(cards = [card("anchor", 85, "A")], version = "8.13") {
+function payload(cards = [card("anchor", 85, "A")], version = "8.13"): ReportCardsResponse {
   return {
     cards,
     methodology: {

@@ -26,6 +26,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict(".github/scripts/wait-for-workflow-job.mjs"),
     strict("scripts/ci/guard-worker-deploy.mjs"),
     strict("scripts/maintenance/backfill-ai-summary-provenance.mjs"),
+    strict("scripts/maintenance/compare-report-card-snapshots.ts"),
     strict("scripts/maintenance/freeze-stablecoin.ts"),
     strict("scripts/maintenance/generate-yield-outcome-validation.ts"),
     strict("scripts/maintenance/migrate-stablecoin-sidecar.ts"),
@@ -35,6 +36,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/sync-depeg-events.ts"),
     strict("scripts/maintenance/sync-digests.ts"),
     strict("scripts/maintenance/wait-pages-release-marker.mjs"),
+    strict("worker/scripts/capture-report-cards-fixed-input.ts"),
     strict("worker/scripts/rebuild-blacklist-current-balances.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
     strict(
       "worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts",
@@ -45,6 +47,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
       "worker/scripts/lib/destructive-operation-guard.ts",
     ),
     strict("worker/scripts/reconcile-night-watch-blacklist.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
+    strict("worker/scripts/replay-report-cards-fixed-input.ts"),
     strict("worker/scripts/yield-history-cleanup.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
   ]),
   exemptions: Object.freeze([
