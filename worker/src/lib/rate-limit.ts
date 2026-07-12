@@ -128,13 +128,3 @@ export async function releaseFeedbackRateLimit(
     .run();
   return (result.meta?.changes ?? 0) === 1;
 }
-
-export async function checkFeedbackRateLimit(
-  db: RateLimitDb,
-  ip: string,
-  salt: string,
-  windowSec: number,
-  maxSubmissions: number,
-): Promise<boolean> {
-  return (await reserveFeedbackRateLimit(db, ip, salt, windowSec, maxSubmissions)) != null;
-}

@@ -351,30 +351,6 @@ export async function markScheduledCheckpointItemStarted(
   );
 }
 
-export async function markScheduledCheckpointDomainAttempt(
-  db: D1Database,
-  identity: ScheduledCheckpointIdentity,
-  itemKey: string,
-  domainAttemptId: string,
-  timestamp = nowSec(),
-): Promise<void> {
-  await requireChanged(
-    runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `UPDATE worker_scheduled_checkpoints
-              SET current_domain_attempt_id = ?, updated_at = ?
-            WHERE ${identityWhereSql()}
-              AND state IN ('running', 'recovering')
-              AND current_item_key = ?`,
-        )
-        .bind(domainAttemptId, timestamp, ...identityBinds(identity), itemKey)
-        .run(),
-    ),
-    identity,
-  );
-}
-
 function buildScheduledCheckpointAdvanceStatement(
   db: D1Database,
   identity: ScheduledCheckpointIdentity,

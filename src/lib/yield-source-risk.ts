@@ -412,7 +412,7 @@ export function classifyYieldSourceAgeContext(
   };
 }
 
-export function resolveYieldSourceFreshnessStatus(
+function resolveYieldSourceFreshnessStatus(
   sourceFreshness: YieldSourcePublishedFreshness | null | undefined,
   warningSignals: readonly string[] | null | undefined,
 ): YieldSourcePublishedFreshness {

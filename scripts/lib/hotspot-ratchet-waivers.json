@@ -127,13 +127,13 @@
     "reviewAfter": "2026-10-11",
     "nextAction": "Split version-specific encode/decode codecs from catalog validation and collision mapping behind the existing watchlist-token API and golden-vector tests."
   },
-  "worker/src/lib/scheduled-recovery-checkpoint.ts": {
+  "worker/src/cron/fetch-tbill-rate.ts": {
     "disposition": "queued-p4",
-    "notes": "The scheduled recovery checkpoint store owns queue-hash fencing, checkpoint claims, reconciliation, suffix progress, and sidecar completion. Keep this authority intact through the reserve recovery rollout, then split row mapping and lifecycle operations behind its current contract.",
-    "owner": "worker-infrastructure",
+    "notes": "The risk-free-rate cron coordinates multi-currency provider resolution, retained GBP fallback monitoring and alerting, benchmark degradation diagnostics, and cache publication. It surfaced in the top file-size set after checkpoint cleanup and should be decomposed without changing benchmark fallback semantics.",
+    "owner": "yield-intelligence",
     "createdAt": "2026-07-12",
     "reviewAfter": "2026-10-12",
-    "nextAction": "Separate checkpoint row mapping, reconciliation, claim lifecycle, and completion helpers after reconcile/recover production soak proves the existing contract."
+    "nextAction": "Extract retained-fallback monitoring and benchmark publication from provider resolution behind the existing fetchTbillRate contract and provider tests."
   },
   "src/lib/status-dashboard-model.ts": {
     "disposition": "queued-p4",

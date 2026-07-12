@@ -1155,9 +1155,9 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 | Hook                      | File                     | Endpoint                      | Stale Time            |
 | ------------------------- | ------------------------ | ----------------------------- | --------------------- |
-| `useYieldRankings`        | `src/hooks/api-hooks.ts` | `/api/yield-rankings`         | `CRON_YIELD` (1 hour) |
-| `useYieldHistory`         | `src/hooks/api-hooks.ts` | `/api/yield-history`          | `CRON_YIELD` (1 hour) |
-| `useYieldAdapterManifest` | `src/hooks/api-hooks.ts` | `/api/yield-adapter-manifest` | `CRON_YIELD` (1 hour) |
+| `useYieldRankings`        | `src/hooks/api-hooks.ts` | `/api/yield-rankings`         | `sync-yield-data` descriptor interval (1 hour) |
+| `useYieldHistory`         | `src/hooks/api-hooks.ts` | `/api/yield-history`          | `sync-yield-data` descriptor interval (1 hour) |
+| `useYieldAdapterManifest` | `src/hooks/api-hooks.ts` | `/api/yield-adapter-manifest` | Static manifest; query retries once without polling |
 
 ---
 

@@ -18,4 +18,3 @@ export const CRON_BLACKLIST = CRON_INTERVALS["sync-blacklist"] * 1000;
 export const CRON_MINT_BURN = CRON_INTERVALS["sync-mint-burn"] * 1000;
 export const CRON_RESERVE_SYNC = CRON_INTERVALS["sync-live-reserves"] * 1000;
 export const CRON_TELEGRAM_PULSE = CRON_INTERVALS["telegram-pulse-snapshot"] * 1000;
-export const CRON_YIELD = CRON_INTERVALS["sync-yield-data"] * 1000;

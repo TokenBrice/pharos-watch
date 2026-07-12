@@ -104,7 +104,7 @@ function packHorizonDots(count: number): HorizonPackedDots {
   return { pts, fieldR: lastR + dot / 2 + pad };
 }
 
-export function layoutHorizonPhase(count: number): HorizonPhaseLayout {
+function layoutHorizonPhase(count: number): HorizonPhaseLayout {
   const { dot, dotSpacing, maxDots, overflowRing, pad } = HORIZON_CONSTELLATION_LAYOUT;
   if (count <= maxDots) {
     const { pts, fieldR } = packHorizonDots(count);

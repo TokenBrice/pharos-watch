@@ -254,7 +254,7 @@ The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns u
 | **Compare**           | Prices, Peg Data, Liquidity, Report Cards, Bluechip | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_24H` |
 | **Safety scores**     | Grades, Prices                                      | `CRON_15MIN`, `CRON_15MIN`                                         |
 | **Liquidity**         | Liquidity                                           | `CRON_30MIN`                                                       |
-| **Yield**             | Yield Rankings                                      | `CRON_YIELD`                                                       |
+| **Yield**             | Yield Rankings                                      | `sync-yield-data` descriptor interval (1 hour)                     |
 | **Flows**             | Mint/Burn Flows                                     | `CRON_MINT_BURN`                                                   |
 | **Blacklist**         | Blacklist                                           | `CRON_BLACKLIST`                                                   |
 | **Coverage**          | Coverage matrix inputs                             | route model stale-query set                                        |
@@ -266,7 +266,7 @@ The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns u
 
 Homepage KPI cards also consume PSI, mint/burn, and DEWS data, while Compare can fetch supply-history and per-coin mint/burn detail queries. Those additional queries are not part of the current page-level stale banner contract.
 
-Constants defined in `src/lib/cron-intervals.ts`: `CRON_1MIN` (1 min), `CRON_15MIN` (15 min, stablecoins list), `CRON_30MIN` (30 min, DEX liquidity), `CRON_MINT_BURN` (30 min, mint/burn), `CRON_YIELD` (1 hour, yield rankings), `CRON_1H` (1 hour, generic budget), `CRON_RESERVE_SYNC` (4 hours, live reserves + redemption backstops), `CRON_BLACKLIST` (6 hours), `CRON_24H` (24 hours).
+Constants defined in `src/lib/cron-intervals.ts`: `CRON_1MIN` (1 min), `CRON_15MIN` (15 min, stablecoins list), `CRON_30MIN` (30 min, DEX liquidity), `CRON_MINT_BURN` (30 min, mint/burn), `CRON_1H` (1 hour, generic budget), `CRON_RESERVE_SYNC` (4 hours, live reserves + redemption backstops), `CRON_BLACKLIST` (6 hours), `CRON_24H` (24 hours). Yield queries use the canonical `sync-yield-data` interval from `FRONTEND_API_QUERY_DESCRIPTORS`.
 
 The `staleTime` value for each query matches the cron interval of the backend job that produces the data. TanStack Query's `refetchInterval` is always 2x the `staleTime`. Local browser age becomes degraded after `8x staleTime` and stale after `12x staleTime`, while hook-level freshness metadata can mark data degraded/stale sooner when the worker explicitly reports old cache age or stale-table warnings.
 

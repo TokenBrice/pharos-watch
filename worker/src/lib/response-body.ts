@@ -45,7 +45,7 @@ function cancelResponseBodyForAbort(response: Response): void {
   });
 }
 
-export class ResponseBodyTooLargeError extends Error {
+class ResponseBodyTooLargeError extends Error {
   readonly maxBytes: number;
   readonly observedBytes: number;
 
