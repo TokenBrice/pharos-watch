@@ -148,6 +148,46 @@ describe("runCoingeckoLowVolumePass", () => {
     });
   });
 
+  it("recovers the audited July production cohort with fresh peg-valid rows", async () => {
+    const observedAt = Math.floor(Date.now() / 1000) - 3600;
+    const quotes = {
+      "bitcoin-usd-btcfi": 0.9727,
+      "sovryn-dollar": 1.0002,
+      "ebusd-stablecoin": 0.9863,
+      "celo-british-pound": 1.34,
+      "celo-australian-dollar": 0.695,
+      ccop: 0.00029996,
+      cchf: 1.24,
+    } as const;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (!url.includes("coingecko.com")) return new Response("Not found", { status: 404 });
+      return new Response(JSON.stringify(Object.fromEntries(
+        Object.entries(quotes).map(([id, usd]) => [id, { usd, last_updated_at: observedAt }]),
+      )), { status: 200 });
+    }));
+
+    const assets = [
+      asset({ id: "btcusd-btcfi", symbol: "BtcUSD", price: null, pegType: "peggedUSD" }),
+      asset({ id: "dllr-sovryn", symbol: "DLLR", price: null, pegType: "peggedUSD" }),
+      asset({ id: "ebusd-ebisu", symbol: "ebUSD", price: null, pegType: "peggedUSD" }),
+      asset({ id: "gbpm-mento", symbol: "GBPm", price: null, pegType: "peggedGBP" }),
+      asset({ id: "audm-mento", symbol: "AUDm", price: null, pegType: "peggedAUD" }),
+      asset({ id: "copm-mento", symbol: "COPm", price: null, pegType: "peggedCOP" }),
+      asset({ id: "chfm-mento", symbol: "CHFm", price: null, pegType: "peggedCHF" }),
+    ];
+
+    const result = await runCoingeckoLowVolumePass(assets, null, {
+      peggedGBP: quotes["celo-british-pound"],
+      peggedAUD: quotes["celo-australian-dollar"],
+      peggedCOP: quotes.ccop,
+      peggedCHF: quotes.cchf,
+    });
+
+    expect(result).toEqual({ resolved: 7, failures: [] });
+    expect(assets.map(({ price }) => price)).toEqual(Object.values(quotes));
+    expect(assets.every(({ priceSource }) => priceSource === "coingecko-low-volume")).toBe(true);
+  });
+
   it("does not overwrite prices that are already present", async () => {
     vi.stubGlobal("fetch", vi.fn(async () =>
       new Response(JSON.stringify({

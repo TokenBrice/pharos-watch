@@ -1,7 +1,7 @@
 {
   "id": "audm-mento",
   "llamaId": "361",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "name": "Mento Australian Dollar",
   "symbol": "AUDm",
   "oneLiner": "AUDm is Mento's crypto-backed Australian dollar on Celo, minted by depositing USDm as Liquity-v2-style CDP collateral against the Mento reserve mix.",

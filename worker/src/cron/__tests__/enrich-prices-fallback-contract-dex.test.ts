@@ -229,6 +229,73 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].priceSource).toBe("defillama-contract");
   });
 
+  it("escapes slash-bearing DefiLlama IDs without breaking the rest of the batch", async () => {
+    const mAddress = "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b";
+    const usdxIbcId = "osmosis:ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE";
+    const fetchSpy = fixtureMockFetch([
+      {
+        match: `coins.llama.fi/prices/current/ethereum:${mAddress},osmosis:ibc%2FC78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE`,
+        body: {
+          coins: {
+            [`ethereum:${mAddress}`]: dlQuote(0.9998, "M"),
+            [usdxIbcId]: dlQuote(0.658, "USDX"),
+          },
+        },
+      },
+    ], { requireMatch: true });
+    const assets: PeggedAsset[] = [
+      {
+        id: "m-m0",
+        name: "M by M0",
+        symbol: "M",
+        price: 0,
+        address: `ethereum:${mAddress}`,
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+      {
+        id: "usdx-kava",
+        name: "Kava USDX",
+        symbol: "USDX",
+        price: 0,
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const result = await fixtureRunDlContractPasses(assets, undefined);
+
+    expect(result).toMatchObject({ pass1: 2, failures: [] });
+    expect(assets.map((asset) => asset.price)).toEqual([0.9998, 0.658]);
+    expect(fetchSpy.getHistory()[0]?.url).toContain("osmosis:ibc%2FC78F65");
+  });
+
+  it("reports a non-OK DefiLlama contract batch as a failed pass", async () => {
+    fixtureMockFetch([
+      {
+        match: "coins.llama.fi/prices/current/ethereum:0xfailed",
+        status: 404,
+        body: { error: "not found" },
+      },
+    ]);
+    const assets: PeggedAsset[] = [
+      {
+        id: "failed-contract",
+        name: "Failed Contract",
+        symbol: "FAIL",
+        price: 0,
+        address: "ethereum:0xfailed",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const result = await fixtureRunDlContractPasses(assets, undefined);
+
+    expect(result.failures).toEqual(["dl-contracts"]);
+    expect(result.resolved).toBe(0);
+  });
+
   it("rejects unreasonable DefiLlama contract prices and allows later fallback passes to resolve", async () => {
     const assets: PeggedAsset[] = [
       {

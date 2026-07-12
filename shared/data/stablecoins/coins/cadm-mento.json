@@ -1,7 +1,7 @@
 {
   "id": "cadm-mento",
   "llamaId": "360",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "name": "Mento Canadian Dollar",
   "symbol": "CADm",
   "oneLiner": "CADm is Mento's Canadian dollar stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",

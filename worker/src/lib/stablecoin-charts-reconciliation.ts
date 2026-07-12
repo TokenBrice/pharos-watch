@@ -13,6 +13,8 @@ interface SupplyHistoryChartRow {
   circulating_usd: number;
 }
 
+const DEFILLAMA_CHART_ABSENT_LEGACY_IDS = new Set(["brz-transfero"]);
+
 
 function pegTypeFromCurrency(pegCurrency: string): string | null {
   // VAR/OTHER have no canonical peg-type key; the shared helper returns
@@ -26,7 +28,11 @@ function pegTypeFromCurrency(pegCurrency: string): string | null {
 
 export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartConfig[] =
   ACTIVE_STABLECOINS
-    .filter((meta) => meta.detailProvider && meta.detailProvider !== "defillama")
+    .filter((meta) =>
+      meta.detailProvider
+      && meta.detailProvider !== "defillama"
+      && (!meta.llamaId || DEFILLAMA_CHART_ABSENT_LEGACY_IDS.has(meta.id))
+    )
     .flatMap((meta) => {
       const pegType = pegTypeFromCurrency(meta.flags.pegCurrency);
       if (!pegType) {

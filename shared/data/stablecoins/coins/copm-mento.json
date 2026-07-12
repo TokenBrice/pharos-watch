@@ -1,7 +1,7 @@
 {
   "id": "copm-mento",
   "llamaId": "362",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "name": "Mento Colombian Peso",
   "symbol": "COPm",
   "oneLiner": "COPm is Mento's Colombian peso stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",

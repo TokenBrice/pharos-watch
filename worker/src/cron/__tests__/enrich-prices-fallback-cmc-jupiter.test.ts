@@ -111,6 +111,101 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(0);
   });
 
+  it("falls back to the next bounded Solana RPC when the primary slot endpoint returns 403", async () => {
+    const currentSlot = 418_913_760;
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos",
+        name: "USDG",
+        symbol: "USDG",
+        price: 0,
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const fetchSpy = fixtureMockFetch([
+      { match: "api.mainnet-beta.solana.com", status: 403, body: "blocked" },
+      { match: "api.mainnet.solana.com", body: solanaSlotResponse(currentSlot) },
+      {
+        match: "api.jup.ag/price/v3",
+        body: {
+          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+            usdPrice: 1.0002,
+            decimals: 6,
+            blockId: currentSlot - 20,
+          },
+        },
+      },
+    ]);
+
+    const result = await fixtureRunJupiterPass(assets, undefined, undefined);
+
+    expect(result.resolved).toBe(1);
+    expect(assets[0].price).toBe(1.0002);
+    expect(
+      fetchSpy
+        .getHistory()
+        .filter((entry) => entry.body?.includes('"method":"getSlot"'))
+        .map((entry) => entry.url),
+    ).toEqual(["https://api.mainnet-beta.solana.com/", "https://api.mainnet.solana.com/"]);
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          endpoint: "api.mainnet-beta.solana.com/",
+          status: 403,
+          success: false,
+          errorClass: "upstream-error",
+        }),
+      ]),
+    );
+  });
+
+  it("fails Jupiter freshness closed after every bounded Solana slot RPC fails", async () => {
+    const currentSlot = 418_913_760;
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos",
+        name: "USDG",
+        symbol: "USDG",
+        price: 0,
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const fetchSpy = fixtureMockFetch([
+      { match: "api.mainnet-beta.solana.com", status: 403, body: "blocked" },
+      { match: "api.mainnet.solana.com", status: 503, body: "unavailable" },
+      { match: "solana-rpc.publicnode.com", status: 429, body: "rate limited" },
+      {
+        match: "api.jup.ag/price/v3",
+        body: {
+          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+            usdPrice: 1.0002,
+            decimals: 6,
+            blockId: currentSlot - 20,
+          },
+        },
+      },
+    ]);
+
+    const result = await fixtureRunJupiterPass(assets, undefined, undefined);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+    expect(
+      fetchSpy
+        .getHistory()
+        .filter((entry) => entry.body?.includes('"method":"getSlot"'))
+        .map((entry) => entry.url),
+    ).toEqual([
+      "https://api.mainnet-beta.solana.com/",
+      "https://api.mainnet.solana.com/",
+      "https://solana-rpc.publicnode.com/",
+    ]);
+  });
+
   it("sends the configured Jupiter API key on V3 price requests", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
@@ -1234,6 +1329,7 @@ describe("enrichMissingPrices", () => {
     const result = await fixtureRunDlContractPasses(assets, undefined, undefined, db);
 
     expect(result.resolved).toBe(0);
+    expect(result.failures).toEqual(["dl-contracts"]);
     const circuitWrite = db
       .getHistory()
       .find(

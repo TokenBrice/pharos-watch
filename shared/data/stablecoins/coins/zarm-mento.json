@@ -1,7 +1,7 @@
 {
   "id": "zarm-mento",
   "llamaId": "368",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "name": "Mento South African Rand",
   "symbol": "ZARm",
   "oneLiner": "ZARm is Mento's South African rand stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",

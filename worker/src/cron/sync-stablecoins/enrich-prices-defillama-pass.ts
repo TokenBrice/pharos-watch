@@ -95,8 +95,11 @@ async function fetchPriceMapByIds(
     return new Map();
   }
 
+  // DefiLlama IDs are one URL path segment. Preserve the documented chain:id
+  // separator while escaping embedded slashes such as Osmosis IBC denoms.
+  const encodedIds = ids.map((id) => encodeURIComponent(id).replaceAll("%3A", ":"));
   const result = await fetchJsonWithRetry<unknown>(
-    `${DEFILLAMA_COINS}/prices/current/${ids.join(",")}`,
+    `${DEFILLAMA_COINS}/prices/current/${encodedIds.join(",")}`,
     signal ? { signal } : undefined,
   );
   if (!result?.response.ok) {
@@ -117,7 +120,7 @@ async function fetchPriceMapByIds(
     if (db) {
       await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
     }
-    return new Map();
+    return null;
   }
 }
 
@@ -250,6 +253,8 @@ export async function runDlContractPasses(
       );
       if (pass1Prices) {
         pass1Count += applyDefiLlamaContractPrices(assets, withAddress, pass1Prices, fxRates);
+      } else {
+        failures.push("dl-contracts");
       }
     }
 
@@ -275,13 +280,15 @@ export async function runDlContractPasses(
         );
         if (pass1bPrices) {
           pass1bCount += applyDefiLlamaContractPrices(assets, altLookups, pass1bPrices, fxRates);
+        } else if (!failures.includes("dl-contracts")) {
+          failures.push("dl-contracts");
         }
       }
     }
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
     console.warn("[enrich-prices] Pass 1/1b (DefiLlama contracts) failed — continuing with CMC/DexScreener:", error);
-    failures.push("dl-contracts");
+    if (!failures.includes("dl-contracts")) failures.push("dl-contracts");
   }
 
   return {

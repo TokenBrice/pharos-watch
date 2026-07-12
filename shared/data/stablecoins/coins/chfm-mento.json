@@ -15,7 +15,7 @@
   "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint CHFm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
   "mechanismArchetype": "cdp",
   "llamaId": "370",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "geckoId": "cchf",
   "proofOfReserves": {
     "type": "real-time",

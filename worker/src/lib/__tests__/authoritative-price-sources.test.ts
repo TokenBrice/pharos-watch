@@ -1763,6 +1763,15 @@ describe("authoritative-price-sources", () => {
         expectedRatio: 1.089794,
       },
       {
+        id: "eearn-ember",
+        parentId: "usdc-circle",
+        parentSymbol: "USDC",
+        vault: "0x9be9294722f8aad37b11a9792be2c782182cafa2",
+        chain: "ethereum",
+        outputRaw: 1_026_816n,
+        expectedRatio: 1.026816,
+      },
+      {
         id: "syusd-aegis",
         parentId: "yusd-aegis",
         parentSymbol: "YUSD",

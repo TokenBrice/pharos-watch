@@ -17,9 +17,29 @@ import {
 
 const BIRDEYE_ADDRESS_MAX_REQUESTS = 10;
 const BIRDEYE_REQUEST_SPACING_MS = 1_000;
+const BIRDEYE_QUOTA_SUBJECT_PATTERN = /(?:compute[\s_-]*units?|quota|credits?)/i;
+const BIRDEYE_QUOTA_EXHAUSTION_PATTERN =
+  /(?:exhaust|exceed|limit|fully[\s_-]*consum|insufficient|not[\s_-]*enough|no[\s_-]*remaining|deplet|used[\s_-]*up)/i;
 
 function isBirdeyePricePayload(json: unknown): json is { data: Record<string, unknown> | null } {
   return isRecord(json) && json.success === true && "data" in json && (json.data == null || isRecord(json.data));
+}
+
+function readBirdeyeErrorMessage(json: unknown): string | null {
+  if (!isRecord(json)) return null;
+  const value = json.message ?? json.error;
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function isBirdeyeProviderQuotaExhausted(
+  json: unknown,
+  diagnostic: AddressPriceProviderRunResult["diagnostics"][number],
+): boolean {
+  if (diagnostic.status === 429) return true;
+  const detail = [readBirdeyeErrorMessage(json), diagnostic.snippet]
+    .filter((value): value is string => value != null)
+    .join(" ");
+  return BIRDEYE_QUOTA_SUBJECT_PATTERN.test(detail) && BIRDEYE_QUOTA_EXHAUSTION_PATTERN.test(detail);
 }
 
 export async function runBirdeyeAddressProvider(
@@ -33,7 +53,7 @@ export async function runBirdeyeAddressProvider(
   const state = createProviderRunState();
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
-  const cappedTargets = Math.max(0, targets.length - BIRDEYE_ADDRESS_MAX_REQUESTS);
+  let processedTargets = 0;
 
   // targets are pre-filtered to solana-only by buildAddressPriceTargetsByProvider (index.ts).
   for (const target of targets.slice(0, BIRDEYE_ADDRESS_MAX_REQUESTS)) {
@@ -101,9 +121,21 @@ export async function runBirdeyeAddressProvider(
     } else if (json != null) {
       diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Birdeye price data object");
     }
+    const quotaExhausted = isBirdeyeProviderQuotaExhausted(json, diagnostic);
+    if (quotaExhausted) {
+      diagnostic = {
+        ...diagnostic,
+        success: false,
+        errorClass: "quota-exhausted",
+        errorMessage: "Birdeye quota or compute-unit budget exhausted",
+      };
+    }
+    processedTargets += 1;
     diagnostics.push(diagnostic);
+    if (quotaExhausted) break;
   }
 
+  const cappedTargets = Math.max(0, targets.length - processedTargets);
   if (cappedTargets > 0) {
     diagnostics.push(buildCapSkipDiagnostic({ source: "birdeye-address", label: "Birdeye" }, cappedTargets));
   }

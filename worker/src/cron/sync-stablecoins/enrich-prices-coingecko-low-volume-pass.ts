@@ -15,8 +15,8 @@ import {
 
 const COINGECKO_LOW_VOLUME_SOURCE = "coingecko-low-volume";
 
-// Explicitly scoped to DL-listed assets identified by the May 2026 missing-price
-// audit. This avoids turning every stale CoinGecko row into a fallback price.
+// Explicitly scoped to DL-listed assets identified by reviewed missing-price
+// audits. This avoids turning every stale CoinGecko row into a fallback price.
 // Membership is guarded by enrich-prices-coingecko-low-volume-pass.test.ts, which
 // fails if any ID here is no longer present in the active registry (ACTIVE_META_BY_ID).
 export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
@@ -26,6 +26,13 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   "cadm-mento",
   "usp-pareto-credit",
   "tryb-bilira",
+  "btcusd-btcfi",
+  "dllr-sovryn",
+  "ebusd-ebisu",
+  "gbpm-mento",
+  "audm-mento",
+  "copm-mento",
+  "chfm-mento",
 ]);
 
 export async function runCoingeckoLowVolumePass(

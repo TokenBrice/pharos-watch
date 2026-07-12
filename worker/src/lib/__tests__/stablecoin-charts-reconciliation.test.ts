@@ -1,11 +1,30 @@
 import { describe, expect, it } from "vitest";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   appendOrReplaceCurrentStablecoinChartsPoint,
   buildCurrentStablecoinChartsPoint,
   mergeStructuralSupplementalHistoryIntoCharts,
+  STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
 } from "../stablecoin-charts-reconciliation";
 
 describe("stablecoin-charts reconciliation", () => {
+  it("excludes llama-backed charts while preserving the audited empty BRZ legacy chart", () => {
+    const llamaBacked = STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.filter(
+      ({ id }) => ACTIVE_META_BY_ID.get(id)?.llamaId != null,
+    );
+    expect(llamaBacked).toEqual([{ id: "brz-transfero", pegType: "peggedREAL" }]);
+    expect(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.map(({ id }) => id)).not.toEqual(
+      expect.arrayContaining([
+        "audm-mento",
+        "cadm-mento",
+        "chfm-mento",
+        "copm-mento",
+        "gbpm-mento",
+        "zarm-mento",
+      ]),
+    );
+  });
+
   it("merges structural supplemental history into the base chart series", () => {
     const merged = mergeStructuralSupplementalHistoryIntoCharts(
       [

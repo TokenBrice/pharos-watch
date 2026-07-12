@@ -44,7 +44,11 @@ const JUPITER_PRIMARY_AUGMENTATION_MAX_DIVERGENCE_BPS = 100;
 const JUPITER_MAX_SLOT_LAG = 2_250;
 const JUPITER_MAX_SLOT_LEAD = 250;
 const JUPITER_PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 500, 502, 503, 504];
-const SOLANA_SLOT_RPC_URL = "https://api.mainnet-beta.solana.com";
+const SOLANA_SLOT_RPC_URLS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://api.mainnet.solana.com",
+  "https://solana-rpc.publicnode.com",
+] as const;
 const SOLANA_SLOT_REQUEST_TIMEOUT_MS = 3_000;
 
 interface JupiterPriceEntry {
@@ -119,9 +123,7 @@ export async function runJupiterPass(
     if (currentSolanaSlot !== undefined) return currentSolanaSlot;
     const result = await fetchSolanaCurrentSlot(signal);
     currentSolanaSlot = result.slot;
-    if (result.diagnostic) {
-      diagnostics.push(result.diagnostic);
-    }
+    diagnostics.push(...result.diagnostics);
     return currentSolanaSlot;
   };
 
@@ -324,77 +326,79 @@ function isFreshJupiterBlock(blockId: number, currentSlot: number): boolean {
 
 async function fetchSolanaCurrentSlot(signal?: AbortSignal): Promise<{
   slot: number | null;
-  diagnostic?: PricingProviderAttemptDiagnostic;
+  diagnostics: PricingProviderAttemptDiagnostic[];
 }> {
-  const endpoint = endpointLabel(SOLANA_SLOT_RPC_URL);
-  const baseDiagnostic = {
-    source: "jupiter" as const,
-    stage: "fallback" as const,
-    endpoint,
-    candidateCount: 1,
-  };
+  const diagnostics: PricingProviderAttemptDiagnostic[] = [];
 
-  const result = await fetchTextWithRetry(
-    SOLANA_SLOT_RPC_URL,
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "User-Agent": USER_AGENT,
+  for (const rpcUrl of SOLANA_SLOT_RPC_URLS) {
+    throwIfAborted(signal);
+    const baseDiagnostic = {
+      source: "jupiter" as const,
+      stage: "fallback" as const,
+      endpoint: endpointLabel(rpcUrl),
+      candidateCount: 1,
+    };
+    const result = await fetchTextWithRetry(
+      rpcUrl,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "User-Agent": USER_AGENT,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getSlot",
+        }),
+        signal,
       },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "getSlot",
-      }),
-      signal,
-    },
-    0,
-    {
-      timeoutMs: SOLANA_SLOT_REQUEST_TIMEOUT_MS,
-      passthroughStatuses: JUPITER_PASSTHROUGH_STATUSES,
-      returnFinalResponse: true,
-    },
-  );
+      0,
+      {
+        timeoutMs: SOLANA_SLOT_REQUEST_TIMEOUT_MS,
+        passthroughStatuses: JUPITER_PASSTHROUGH_STATUSES,
+        returnFinalResponse: true,
+      },
+    );
 
-  if (!result) {
-    return {
-      slot: null,
-      diagnostic: buildPricingProviderDiagnostic(baseDiagnostic, {
+    if (!result) {
+      diagnostics.push(buildPricingProviderDiagnostic(baseDiagnostic, {
         errorClass: "no-response",
         errorMessage: "Solana slot reference returned no response",
-      }),
-    };
-  }
+      }));
+      continue;
+    }
 
-  const diagnostic: PricingProviderAttemptDiagnostic = buildPricingProviderDiagnostic(baseDiagnostic, {
-    status: result.response.status,
-    ok: result.response.ok,
-  });
+    const diagnostic: PricingProviderAttemptDiagnostic = buildPricingProviderDiagnostic(baseDiagnostic, {
+      status: result.response.status,
+      ok: result.response.ok,
+    });
 
-  if (!result.response.ok) {
-    const nonOkDiagnostic = await applyNonOkProviderDiagnostic(diagnostic, responseFromBufferedBody(result));
-    return {
-      slot: null,
-      diagnostic: {
+    if (!result.response.ok) {
+      const nonOkDiagnostic = await applyNonOkProviderDiagnostic(diagnostic, responseFromBufferedBody(result));
+      diagnostics.push({
         ...nonOkDiagnostic,
         errorClass: "upstream-error",
         errorMessage: "Solana slot reference returned non-OK",
-      },
-    };
+      });
+      continue;
+    }
+
+    try {
+      const parsed = SolanaSlotResponseSchema.safeParse(JSON.parse(result.body));
+      if (!parsed.success) {
+        diagnostic.errorClass = "invalid-shape";
+        diagnostic.errorMessage = "Expected Solana getSlot JSON-RPC result";
+        diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
+        diagnostics.push(diagnostic);
+        continue;
+      }
+      return { slot: parsed.data.result, diagnostics };
+    } catch (err) {
+      diagnostics.push(applyJsonParseFailureDiagnostic(diagnostic, err));
+    }
   }
 
-  try {
-    const parsed = SolanaSlotResponseSchema.safeParse(JSON.parse(result.body));
-    if (!parsed.success) {
-      diagnostic.errorClass = "invalid-shape";
-      diagnostic.errorMessage = "Expected Solana getSlot JSON-RPC result";
-      diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
-      return { slot: null, diagnostic };
-    }
-    return { slot: parsed.data.result };
-  } catch (err) {
-    return { slot: null, diagnostic: applyJsonParseFailureDiagnostic(diagnostic, err) };
-  }
+  return { slot: null, diagnostics };
 }

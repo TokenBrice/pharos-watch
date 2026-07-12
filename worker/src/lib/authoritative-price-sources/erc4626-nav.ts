@@ -107,6 +107,14 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     assetDecimals: 6,
   },
   {
+    id: "eearn-ember",
+    parentId: USDC_CIRCLE_ID,
+    chain: ETHEREUM_CHAIN,
+    vault: "0x9be9294722f8aad37b11a9792be2c782182cafa2",
+    vaultDecimals: 6,
+    assetDecimals: 6,
+  },
+  {
     id: "savusd-avant",
     parentId: AVUSD_AVANT_ID,
     chain: "avalanche",

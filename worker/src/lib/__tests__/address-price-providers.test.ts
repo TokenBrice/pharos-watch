@@ -340,6 +340,78 @@ describe("address price providers", () => {
     ]);
   });
 
+  it("stops Birdeye requests after provider-wide compute-unit exhaustion", async () => {
+    const targets = [0, 1, 2].map((index) => makeDexScreenerTarget(index, {
+      chain: "solana",
+      providerChainId: "solana",
+      address: `So1111111111111111111111111111111111111111${index}`,
+    }));
+    const fetchMock = vi.fn(async () =>
+      new Response("Compute units usage limit exceeded", { status: 400 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runBirdeyeAddressProvider(
+      targets,
+      { birdeyeApiKey: "test-key" },
+      undefined,
+      Date.now() + 60_000,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.attemptedRequests).toBe(1);
+    expect(result.successfulRequests).toBe(0);
+    expect(result.quotes).toEqual([]);
+    expect(result.diagnostics[0]).toMatchObject({
+      source: "birdeye-address",
+      status: 400,
+      success: false,
+      errorClass: "quota-exhausted",
+      snippet: "Compute units usage limit exceeded",
+    });
+    expect(result.diagnostics[1]).toMatchObject({
+      endpoint: "birdeye-address:request-cap",
+      errorClass: "cap",
+      candidateCount: 2,
+    });
+  });
+
+  it("stops Birdeye requests after the first HTTP 429", async () => {
+    const targets = [0, 1].map((index) => makeDexScreenerTarget(index, {
+      chain: "solana",
+      providerChainId: "solana",
+      address: `So1111111111111111111111111111111111111111${index}`,
+    }));
+    const fetchMock = vi.fn(async () =>
+      new Response("Too many requests", {
+        status: 429,
+        headers: { "Retry-After": "60" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runBirdeyeAddressProvider(
+      targets,
+      { birdeyeApiKey: "test-key" },
+      undefined,
+      Date.now() + 60_000,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.attemptedRequests).toBe(1);
+    expect(result.successfulRequests).toBe(0);
+    expect(result.diagnostics[0]).toMatchObject({
+      status: 429,
+      success: false,
+      errorClass: "quota-exhausted",
+      retryAfterSec: 60,
+    });
+    expect(result.diagnostics[1]).toMatchObject({
+      endpoint: "birdeye-address:request-cap",
+      candidateCount: 1,
+    });
+  });
+
   it("reports Birdeye targets skipped by the request cap", async () => {
     vi.useFakeTimers();
     try {

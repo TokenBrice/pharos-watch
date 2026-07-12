@@ -15,7 +15,7 @@
   "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint GBPm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
   "mechanismArchetype": "cdp",
   "llamaId": "358",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "geckoId": "celo-british-pound",
   "proofOfReserves": {
     "type": "real-time",

@@ -69,6 +69,14 @@ export interface SupplyGapReconciliationResult {
 
 type SupplyGapCandidate = MissingChainSupplyGapCandidate | ZeroSupplyCollapseCandidate;
 
+export function prioritizeSupplyGapCandidateOrder<
+  T extends { kind: SupplyGapCandidate["kind"] },
+>(candidates: readonly T[]): T[] {
+  return [...candidates].sort((left, right) =>
+    Number(left.kind !== "zero-supply-collapse") - Number(right.kind !== "zero-supply-collapse")
+  );
+}
+
 function createEmptyReasonCounts(): Record<SupplyGapReconciliationReason, number> {
   return {
     "defillama-history-gap-fill": 0,
@@ -477,7 +485,7 @@ export async function reconcileTrackedSupplyGaps(
       },
     });
   }
-  const candidates = allCandidates.slice(0, MAX_SUPPLY_GAP_CANDIDATES);
+  const candidates = prioritizeSupplyGapCandidateOrder(allCandidates).slice(0, MAX_SUPPLY_GAP_CANDIDATES);
   if (candidates.length === 0) {
     return {
       reconciledIds: [],
