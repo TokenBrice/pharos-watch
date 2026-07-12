@@ -72,7 +72,6 @@ const HOTSPOT_SCAN_ROOTS = ["src", "shared", "worker/src", "functions"];
 const HOTSPOT_SCAN_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts"]);
 const HOTSPOT_SCAN_EXCLUDED_DIRS = new Set();
 const HOTSPOT_METRIC_KEYS = ["fileLines", "maxFunctionLines", "branchCount"];
-const HOTSPOT_DISPOSITIONS = new Set(["stabilized", "queued-p4", "deferred"]);
 const HOTSPOT_WAIVER_DISPOSITIONS = new Set(["queued-p4", "deferred"]);
 const HOTSPOT_CANDIDATE_TOP_N = 12;
 const HOTSPOT_FILELINE_MIN_FUNCTION_LINES = 40;
@@ -209,11 +208,8 @@ export function findHotspotCandidatesMissingCoverage(candidateFiles, waivers) {
 }
 
 export function writeHotspotBaseline(metrics) {
-  const existingBaseline = loadHotspotBaseline();
-  const mergedBaseline = Object.fromEntries(
-    TARGET_FILES.map((file) => [file, { ...existingBaseline[file], ...metrics[file] }]),
-  );
-  writeFileSync(BASELINE_PATH, `${JSON.stringify(mergedBaseline, null, 2)}\n`);
+  const baseline = Object.fromEntries(TARGET_FILES.map((file) => [file, metrics[file]]));
+  writeFileSync(BASELINE_PATH, `${JSON.stringify(baseline, null, 2)}\n`);
 }
 
 export function compareHotspotMetrics(current, baseline) {
@@ -258,24 +254,8 @@ export function validateHotspotBaselineMetadata(baseline) {
       }
     }
 
-    if (!HOTSPOT_DISPOSITIONS.has(entry.disposition)) {
-      errors.push(`${file}: invalid disposition "${entry.disposition ?? "missing"}"`);
-    }
-
-    if (!entry.targetBudget || typeof entry.targetBudget !== "object") {
-      errors.push(`${file}: missing targetBudget`);
-      continue;
-    }
-
-    for (const metric of HOTSPOT_METRIC_KEYS) {
-      const targetValue = entry.targetBudget[metric];
-      if (typeof targetValue !== "number" || !Number.isFinite(targetValue)) {
-        errors.push(`${file}: missing numeric targetBudget.${metric}`);
-      }
-    }
-
-    if (typeof entry.notes !== "string" || entry.notes.trim().length === 0) {
-      errors.push(`${file}: missing notes`);
+    for (const key of Object.keys(entry)) {
+      if (!HOTSPOT_METRIC_KEYS.includes(key)) errors.push(`${file}: unexpected baseline field ${key}`);
     }
   }
 
