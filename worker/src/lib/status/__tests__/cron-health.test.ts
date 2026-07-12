@@ -143,14 +143,14 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     expect(snapshot.cronErrorCount).toBe(1);
   });
 
-  it("does not let a neutral weekly skip suppress a fresh degraded required run", async () => {
+  it("keeps a neutral weekly skip available after a fresh degraded required run", async () => {
     const rows = seedWithOverrides(NOW, [
       { job: "discovery-scan", status: "skipped_neutral", ageSec: 30 },
       { job: "discovery-scan", status: "degraded", ageSec: 86_400 },
     ]);
     const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
-    expect(snapshot.crons["discovery-scan"]?.healthy).toBe(false);
-    expect(snapshot.watchUnhealthyCrons).toBe(1);
+    expect(snapshot.crons["discovery-scan"]?.healthy).toBe(true);
+    expect(snapshot.watchUnhealthyCrons).toBe(0);
     expect(snapshot.degradedCronRuns).toBe(1);
   });
 

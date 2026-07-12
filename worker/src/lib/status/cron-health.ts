@@ -549,13 +549,15 @@ export async function loadCronHealth(
     const latestRequiredRun = requiredRuns[0] ?? null;
     const latestRequiredRunFresh = isFreshCronRun(latestRequiredRun, now, interval);
     const hasFreshOk = runs.some((run) => run.status === "ok" && now - run.startedAt <= interval * 2);
-    const hasFreshRequiredOk = latestRequiredRunFresh && latestRequiredRun.status === "ok";
+    const hasFreshRequiredAvailability =
+      latestRequiredRunFresh
+      && (latestRequiredRun.status === "ok" || latestRequiredRun.status === "degraded");
     const availabilityHealthyFromLastRun =
       isFresh &&
       lastRun != null &&
       (lastRun.status === "ok" ||
         lastRun.status === "degraded" ||
-        (lastRun.status === "skipped_neutral" && hasFreshRequiredOk) ||
+        (lastRun.status === "skipped_neutral" && hasFreshRequiredAvailability) ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const statusImpact = getCronStatusImpact(job);
     const latestAttempt = jobAttemptHealth.latestByJob.get(job);
