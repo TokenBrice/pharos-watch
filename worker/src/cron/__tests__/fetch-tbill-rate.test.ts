@@ -209,6 +209,7 @@ function okExtendedBenchmarkMocks(): Record<string, Response> {
 /** Banxico requires a token; pass via env. */
 const BANXICO_TEST_ENV = { BANXICO_TOKEN: "test-token" } as const;
 const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
+const GBP_RETAINED_FALLBACK_DIRECT_ALERT_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-alert:direct:v1";
 
 describe("fetchTbillRate", () => {
   const db = {} as D1Database;
@@ -575,6 +576,7 @@ describe("fetchTbillRate", () => {
   it("alerts and logs a warning when the retained GBP SONIA fallback repeats", async () => {
     const alertFetch = vi.fn(async () => new Response("ok", { status: 200 }));
     vi.stubGlobal("fetch", alertFetch);
+    const legacyLastAlertedAt = Math.floor(Date.now() / 1000) - 3600;
     mockByUrl({
       "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
       "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
@@ -593,6 +595,7 @@ describe("fetchTbillRate", () => {
             consecutiveRetainedRuns: 1,
             firstRetainedAt: 1774479600,
             lastRetainedAt: 1774479600,
+            lastAlertedAt: legacyLastAlertedAt,
             lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
             lastMarketSource: "fred-sonia-compounded-index",
             lastMarketRecordDate: "2026-03-25",
@@ -623,9 +626,12 @@ describe("fetchTbillRate", () => {
     expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
       consecutiveRetainedRuns: 2,
       firstRetainedAt: 1774479600,
-      lastAlertedAt: expect.any(Number),
+      lastAlertedAt: legacyLastAlertedAt,
       lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
       lastMarketSource: "fred-sonia-compounded-index",
+    });
+    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_DIRECT_ALERT_CACHE_KEY)).toMatchObject({
+      lastAlertedAt: expect.any(Number),
     });
     expect(logCronEvent).toHaveBeenCalledWith(
       db,
@@ -701,6 +707,9 @@ describe("fetchTbillRate", () => {
       lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
       lastMarketSource: "fred-sonia-compounded-index",
     });
+    expect(
+      vi.mocked(setCache).mock.calls.some((entry) => entry[1] === GBP_RETAINED_FALLBACK_DIRECT_ALERT_CACHE_KEY),
+    ).toBe(false);
     expect(logCronEvent).toHaveBeenCalledWith(
       db,
       expect.objectContaining({
@@ -743,6 +752,12 @@ describe("fetchTbillRate", () => {
             lastMarketRecordDate: "2026-03-25",
             lastMarketFetchedAt: 1774479600,
           }),
+          updatedAt: lastAlertedAt,
+        } as never;
+      }
+      if (key === GBP_RETAINED_FALLBACK_DIRECT_ALERT_CACHE_KEY) {
+        return {
+          value: JSON.stringify({ lastAlertedAt }),
           updatedAt: lastAlertedAt,
         } as never;
       }

@@ -540,7 +540,7 @@ describe("loadCronHealth — worker job attempt telemetry", () => {
       },
     ]);
 
-    const snapshot = await loadCronHealth(db, NOW);
+    const snapshot = await loadCronHealth(db, NOW, "shadow");
 
     expect(snapshot.activeJobAttempts).toBe(2);
     expect(snapshot.staleJobAttempts).toBe(1);
@@ -596,7 +596,7 @@ describe("loadCronHealth — worker job attempt telemetry", () => {
       },
     ]);
 
-    const snapshot = await loadCronHealth(db, NOW);
+    const snapshot = await loadCronHealth(db, NOW, "shadow");
 
     expect(snapshot.crons["sync-stablecoins"]?.lastRun?.status).toBe("ok");
     expect(snapshot.crons["sync-stablecoins"]?.latestAttempt?.stale).toBe(true);
@@ -647,7 +647,7 @@ describe("loadCronHealth — worker job attempt telemetry", () => {
       },
     ]);
 
-    const snapshot = await loadCronHealth(db, NOW);
+    const snapshot = await loadCronHealth(db, NOW, "shadow");
 
     expect(snapshot.crons["sync-yield-data"]?.lastRun?.status).toBe("ok");
     expect(snapshot.crons["sync-yield-data"]?.latestAttempt?.stale).toBe(true);
@@ -697,7 +697,7 @@ describe("loadCronHealth — worker job attempt telemetry", () => {
       },
     ]);
 
-    const snapshot = await loadCronHealth(db, NOW);
+    const snapshot = await loadCronHealth(db, NOW, "shadow");
 
     expect(snapshot.cronHistoryQueryFailed).toBe(true);
     expect(snapshot.crons["sync-stablecoins"]?.telemetryUnknown).toBe(true);

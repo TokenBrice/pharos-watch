@@ -49,6 +49,7 @@ import { logWorkerEvent } from "../lib/structured-log";
 import { loadPublicationHealth } from "../lib/publication-contract";
 import { loadProviderCircuitHealth } from "../lib/provider-circuit-health";
 import { loadCanaryStatus } from "../lib/canary-checks";
+import type { WorkerCanaryMode } from "../lib/canary-checks";
 
 const SECTION_ERROR_MESSAGES: Record<string, string> = {
   discovery_candidates_query_failed: "Discovery candidates unavailable.",
@@ -258,6 +259,7 @@ export async function loadStatusSupplements(
   crons: StatusResponse["crons"],
   coingeckoApiKey?: string | null,
   cloudflareD1StatusBindings?: CloudflareD1StatusBindings,
+  workerCanaryMode: WorkerCanaryMode = "off",
 ): Promise<StatusSupplements> {
   const sectionErrors: StatusSectionErrors = {};
 
@@ -381,7 +383,7 @@ export async function loadStatusSupplements(
 
   let canaries: CanaryStatus | null = null;
   try {
-    canaries = await loadCanaryStatus(db, now);
+    canaries = await loadCanaryStatus(db, now, workerCanaryMode);
   } catch (err) {
     logStatusSupplementWarning(
       "canary_status_query_failed",

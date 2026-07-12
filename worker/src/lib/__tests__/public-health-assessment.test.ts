@@ -141,6 +141,29 @@ function makeMintBurnAssessmentDb(
 }
 
 describe("assessPublicHealth upstream provider enrichment", () => {
+  it("keeps the alert-broker status surface inert without querying broker tables", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "SELECT 1", rows: [], first: { value: 1 } },
+      { match: "cache WHERE key IN", rows: [{ key: "stablecoins", updated_at: nowSec - 60 }] },
+    ]);
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.alertBroker).toEqual({
+      activeCount: 0,
+      pendingCount: 0,
+      criticalActiveCount: 0,
+      failedDeliveryCount: 0,
+      missingTargetCount: 0,
+      oldestActiveAt: null,
+      activeConditionKeys: [],
+      queryFailed: false,
+    });
+    expect(result.alertBrokerImpactStatus).toBe("healthy");
+    expect(db.getHistory().some((entry) => /alert_broker_/i.test(entry.sql))).toBe(false);
+  });
+
   it("tags the stablecoins cache with upstreamProvider = 'DefiLlama'", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeMinimalDb(nowSec);

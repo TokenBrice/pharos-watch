@@ -3,11 +3,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 type HealthProbeStatus = "healthy" | "degraded" | "stale";
 
-function buildProbeResponse(
-  input: unknown,
-  healthStatus: HealthProbeStatus = "healthy",
-  init?: RequestInit,
-): Response {
+function buildProbeResponse(input: unknown, healthStatus: HealthProbeStatus = "healthy", init?: RequestInit): Response {
   let rawUrl = "https://api.pharos.watch";
   if (typeof input === "string") {
     rawUrl = input;
@@ -23,9 +19,7 @@ function buildProbeResponse(
   }
 
   const url = rawUrl.startsWith("http") ? new URL(rawUrl) : new URL(rawUrl, "https://api.pharos.watch");
-  const headers = new Headers(
-    init?.headers ?? (input instanceof Request ? input.headers : undefined),
-  );
+  const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
   if (url.hostname === "site-api.pharos.watch" && !headers.has("X-Pharos-Site-Proxy-Secret")) {
     return new Response("Unauthorized", { status: 401 });
   }
@@ -55,8 +49,11 @@ const updateDiscrepancyObservationMock = vi.fn(async () => ({
 }));
 const markDiscrepancyAlertSentMock = vi.fn(async () => true);
 const markProbeFailureAlertSentMock = vi.fn(async () => true);
-const evaluateStatusAndPersistMock = vi.fn(async () => ({
-  raw: { rawOverallStatus: "healthy", freshnessDiagnostics: [] as Array<Record<string, unknown>> },
+function buildRawStatus(rawOverallStatus = "healthy", freshnessDiagnostics: Array<Record<string, unknown>> = []) {
+  return { rawOverallStatus, confidence: 1, causes: { overall: [] }, freshnessDiagnostics };
+}
+const computeRawStatusMock = vi.fn(async () => buildRawStatus());
+const reconcileStatusStateMock = vi.fn(async () => ({
   effectiveStatus: "stale",
   persistenceSucceeded: true,
 }));
@@ -72,7 +69,7 @@ const buildDiscrepancyMock = vi.fn((_status: unknown, _probe: unknown, _now: num
 
 vi.mock("../../lib/alerts", () => ({ sendAlert: sendAlertMock }));
 vi.mock("../../lib/status-evaluation", () => ({
-  evaluateStatusAndPersist: evaluateStatusAndPersistMock,
+  computeRawStatus: computeRawStatusMock,
 }));
 vi.mock("../../lib/status/raw-snapshot", () => ({
   writeStatusRawSnapshot: writeStatusRawSnapshotMock,
@@ -86,6 +83,7 @@ vi.mock("../../lib/status-reliability", () => ({
   markProbeFailureAlertSent: markProbeFailureAlertSentMock,
   STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC: 1800,
   STATUS_DISCREPANCY_ALERT_STREAK: 2,
+  reconcileStatusState: reconcileStatusStateMock,
   updateDiscrepancyObservation: updateDiscrepancyObservationMock,
   writeStatusProbeRun: writeStatusProbeRunMock,
 }));
@@ -114,7 +112,9 @@ describe("runStatusSelfCheck", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", fetchMock);
-    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => buildProbeResponse(input, "healthy", init));
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
+      buildProbeResponse(input, "healthy", init),
+    );
     routeMock.mockImplementation(async ({ url }: { url: URL }) => buildProbeResponse(url));
     buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
       hasDivergence: true,
@@ -125,8 +125,8 @@ describe("runStatusSelfCheck", () => {
       probeAgeSeconds: 0,
       consecutiveDivergent: streak,
     }));
-    evaluateStatusAndPersistMock.mockResolvedValue({
-      raw: { rawOverallStatus: "healthy", freshnessDiagnostics: [] as Array<Record<string, unknown>> },
+    computeRawStatusMock.mockResolvedValue(buildRawStatus());
+    reconcileStatusStateMock.mockResolvedValue({
       effectiveStatus: "stale",
       persistenceSucceeded: true,
     });
@@ -213,7 +213,11 @@ describe("runStatusSelfCheck", () => {
   });
 
   it("persists a raw status snapshot after status evaluation", async () => {
-    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
+    const result = await runStatusSelfCheck({} as D1Database, {
+      selfUrl: "secret",
+      workerJobLedgerMode: "write",
+      workerJobLedgerAllowlist: ["sync-stablecoins"],
+    });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       rawSnapshotPersistenceSucceeded?: boolean;
     };
@@ -227,6 +231,11 @@ describe("runStatusSelfCheck", () => {
     expect(firstSnapshotWrite[2]).toMatchObject({
       rawOverallStatus: "healthy",
     });
+    expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), expect.any(Number), {
+      workerJobLedgerMode: "write",
+      workerJobLedgerAllowlist: ["sync-stablecoins"],
+    });
+    expect(firstSnapshotWrite.slice(3)).toEqual(["write", ["sync-stablecoins"]]);
     expect(metadata.rawSnapshotPersistenceSucceeded).toBe(true);
   });
 
@@ -257,7 +266,9 @@ describe("runStatusSelfCheck", () => {
   });
 
   it("downgrades the probe aggregate when /api/health reports degraded in a 200 response", async () => {
-    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => buildProbeResponse(input, "degraded", init));
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
+      buildProbeResponse(input, "degraded", init),
+    );
     buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({
       hasDivergence: false,
       severityDelta: 0,
@@ -267,8 +278,8 @@ describe("runStatusSelfCheck", () => {
       probeAgeSeconds: 0,
       consecutiveDivergent: streak,
     }));
-    evaluateStatusAndPersistMock.mockResolvedValueOnce({
-      raw: { rawOverallStatus: "degraded", freshnessDiagnostics: [] as Array<Record<string, unknown>> },
+    computeRawStatusMock.mockResolvedValueOnce(buildRawStatus("degraded"));
+    reconcileStatusStateMock.mockResolvedValueOnce({
       effectiveStatus: "degraded",
       persistenceSucceeded: true,
     });
@@ -283,8 +294,7 @@ describe("runStatusSelfCheck", () => {
     const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "https://staging.api.pharos.watch" });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
-      | unknown[]
-      | undefined;
+      unknown[] | undefined;
     const latestProbeWrite = latestProbeWriteCall?.[2] as {
       status?: string;
       failCount?: number;
@@ -302,18 +312,17 @@ describe("runStatusSelfCheck", () => {
   });
 
   it("includes freshness diagnostics in cron metadata when status evaluation provides them", async () => {
-    evaluateStatusAndPersistMock.mockResolvedValueOnce({
-      raw: {
-        rawOverallStatus: "healthy",
-        freshnessDiagnostics: [
-          {
-            key: "yield-data",
-            freshnessSource: "cron-fallback",
-            warning: "yield-data: freshness table query failed; using cron fallback",
-            failureSource: "table-freshness",
-          },
-        ],
-      },
+    computeRawStatusMock.mockResolvedValueOnce(
+      buildRawStatus("healthy", [
+        {
+          key: "yield-data",
+          freshnessSource: "cron-fallback",
+          warning: "yield-data: freshness table query failed; using cron fallback",
+          failureSource: "table-freshness",
+        },
+      ]),
+    );
+    reconcileStatusStateMock.mockResolvedValueOnce({
       effectiveStatus: "healthy",
       persistenceSucceeded: true,
     });
@@ -449,13 +458,17 @@ describe("runStatusSelfCheck", () => {
       passThroughOnException: vi.fn(),
     } as unknown as ExecutionContext;
     fetchMock.mockImplementation(async (input: unknown, _init?: RequestInit) => {
-      const rawUrl = typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.toString()
-          : input && typeof input === "object" && "url" in input && typeof (input as { url: unknown }).url === "string"
-            ? (input as { url: string }).url
-            : "https://api.pharos.watch";
+      const rawUrl =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input &&
+                typeof input === "object" &&
+                "url" in input &&
+                typeof (input as { url: unknown }).url === "string"
+              ? (input as { url: string }).url
+              : "https://api.pharos.watch";
       const url = new URL(rawUrl);
       if (url.hostname === "site-api.pharos.watch") {
         return new Response("Unauthorized", { status: 401 });
@@ -539,8 +552,7 @@ describe("runStatusSelfCheck", () => {
       probeFailureAlertAttempted?: boolean;
     };
     const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
-      | unknown[]
-      | undefined;
+      unknown[] | undefined;
     const latestProbeWrite = latestProbeWriteCall?.[2] as {
       details?: {
         internalExternalDiscrepancy?: { reason?: string; hasDivergence?: boolean };
@@ -583,8 +595,8 @@ describe("health probe semantic classification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", fetchMock);
-    evaluateStatusAndPersistMock.mockResolvedValue({
-      raw: { rawOverallStatus: "healthy", freshnessDiagnostics: [] as Array<Record<string, unknown>> },
+    computeRawStatusMock.mockResolvedValue(buildRawStatus());
+    reconcileStatusStateMock.mockResolvedValue({
       effectiveStatus: "healthy",
       persistenceSucceeded: true,
     });
@@ -629,9 +641,7 @@ describe("health probe semantic classification", () => {
         rawUrl = (input as { url: string }).url;
       }
       const url = rawUrl.startsWith("http") ? new URL(rawUrl) : new URL(rawUrl, "https://api.pharos.watch");
-      const headers = new Headers(
-        init?.headers ?? (input instanceof Request ? input.headers : undefined),
-      );
+      const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
       if (url.hostname === "site-api.pharos.watch" && !headers.has("X-Pharos-Site-Proxy-Secret")) {
         return new Response("Unauthorized", { status: 401 });
       }
@@ -651,8 +661,7 @@ describe("health probe semantic classification", () => {
     await runStatusSelfCheck({} as D1Database, { selfUrl: "https://staging.api.pharos.watch" });
 
     const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
-      | unknown[]
-      | undefined;
+      unknown[] | undefined;
     const latestProbeWrite = latestProbeWriteCall?.[2] as { status?: string };
     expect(latestProbeWrite.status).toBe("stale");
   });
@@ -663,8 +672,7 @@ describe("health probe semantic classification", () => {
     await runStatusSelfCheck({} as D1Database, { selfUrl: "https://staging.api.pharos.watch" });
 
     const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
-      | unknown[]
-      | undefined;
+      unknown[] | undefined;
     const latestProbeWrite = latestProbeWriteCall?.[2] as { status?: string };
     expect(latestProbeWrite.status).toBe("stale");
   });

@@ -2,19 +2,13 @@ import type { RepairDebtSummary } from "@shared/types/status";
 import { createCronResult, type StructuredCronResult } from "./cron-result";
 import { buildInClause, isMissingTableError } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";
-import { toErrorMessage } from "./error-utils";
-
-export type WorkerRepairRunnerMode = "off" | "shadow" | "enabled";
 
 export type RepairTaskState = "open" | "claimed" | "deferred" | "closed" | "failed" | "cancelled";
 
 const ACTIVE_REPAIR_TASK_STATES: RepairTaskState[] = ["open", "claimed", "deferred", "failed"];
 const TERMINAL_REPAIR_TASK_STATES: RepairTaskState[] = ["closed", "cancelled"];
 const DDR_REPAIR_TASK_KIND = "ddr-repair-required-event";
-const REPAIR_RUNNER_BATCH_LIMIT = 5;
-const REPAIR_RUNNER_LOCK_TTL_SEC = 15 * 60;
-const REPAIR_RUNNER_DEFER_SEC = 24 * 60 * 60;
-const REPAIR_RUNNER_MAX_ERROR_CHARS = 500;
+const LEGACY_REPAIR_RUNNER_BATCH_LIMIT = 5;
 
 export interface RepairTaskInput {
   kind: string;
@@ -36,54 +30,27 @@ interface RepairDebtSummaryRow {
   next_attempt_at: number | null;
 }
 
-interface RepairTaskRow {
-  task_id: string;
-  kind: string;
-  subject_id: string;
-  priority: number | null;
-  state: RepairTaskState;
-  attempt_count: number | null;
-  next_attempt_at: number | null;
-  locked_until: number | null;
-  payload_json: string | null;
-  created_at: number;
-  updated_at: number;
-}
-
 interface RepairRunnerInspectRow {
   due_count: number | null;
   stale_claim_count: number | null;
 }
 
-type RepairTaskProcessOutcome =
-  | { action: "closed"; reason: string }
-  | { action: "deferred"; reason: string; nextAttemptAt: number };
-
 export interface RepairRunnerOptions {
-  mode?: string;
   nowSec?: number;
-  batchLimit?: number;
   signal?: AbortSignal;
 }
 
 type RepairRunnerMetadata = {
-  mode: WorkerRepairRunnerMode;
-  batchLimit: number;
-  claimed: number;
-  closed: number;
-  deferred: number;
-  failed: number;
-  skipped?: string;
+  mode: "shadow";
+  batchLimit: typeof LEGACY_REPAIR_RUNNER_BATCH_LIMIT;
+  claimed: 0;
+  closed: 0;
+  deferred: 0;
+  failed: 0;
+  skipped: "shadow-mode";
   dueCount?: number;
   staleClaimCount?: number;
   tableMissing?: boolean;
-  outcomes?: Array<{
-    taskId: string;
-    kind: string;
-    subjectId: string;
-    action: "closed" | "deferred" | "failed";
-    reason: string;
-  }>;
 };
 
 function activeStateSql(): string {
@@ -106,34 +73,12 @@ function staleClaimWhereSql(): string {
   return "state = 'claimed' AND (locked_until IS NULL OR locked_until <= ?)";
 }
 
-function normalizeBatchLimit(value: number | null | undefined): number {
-  if (!Number.isFinite(value)) return REPAIR_RUNNER_BATCH_LIMIT;
-  return Math.max(1, Math.min(REPAIR_RUNNER_BATCH_LIMIT, Math.floor(Number(value))));
-}
-
 function nowSec(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-function truncateError(value: unknown): string {
-  return toErrorMessage(value).slice(0, REPAIR_RUNNER_MAX_ERROR_CHARS);
-}
-
 function throwIfAborted(signal: AbortSignal | undefined): void {
-  if (signal?.aborted) throw signal.reason ?? new Error("repair task runner aborted");
-}
-
-function normalizeWorkerRepairRunnerMode(value: string | undefined): WorkerRepairRunnerMode {
-  const normalized = value?.trim().toLowerCase();
-  if (normalized === "shadow" || normalized === "enabled") return normalized;
-  return "off";
-}
-
-function buildRepairRunnerOwner(timestamp: number): string {
-  const randomId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-    ? crypto.randomUUID()
-    : String(timestamp);
-  return `repair-runner:${timestamp}:${randomId}`;
+  if (signal?.aborted) throw signal.reason ?? new Error("repair debt monitor aborted");
 }
 
 export function buildRepairTaskId(kind: string, subjectId: string): string {
@@ -393,244 +338,12 @@ async function inspectRepairRunnerBacklog(
   }
 }
 
-async function loadClaimableRepairTasks(
-  db: D1Database,
-  input: { nowSec: number; limit: number; signal?: AbortSignal },
-): Promise<{ rows: RepairTaskRow[]; tableMissing: boolean }> {
-  throwIfAborted(input.signal);
-  try {
-    const selectColumns = `
-           task_id,
-           kind,
-           subject_id,
-           priority,
-           state,
-           attempt_count,
-           next_attempt_at,
-           locked_until,
-           payload_json,
-           created_at,
-           updated_at`;
-    const [dueRows, staleClaimRows] = await Promise.all([
-      db
-        .prepare(
-          `SELECT
-           ${selectColumns}
-         FROM worker_repair_tasks
-         WHERE ${dueOpenOrDeferredWhereSql()}
-         ORDER BY next_attempt_at ASC, priority ASC, updated_at ASC
-         LIMIT ?`,
-        )
-        .bind("open", "deferred", input.nowSec, input.limit)
-        .all<RepairTaskRow>(),
-      db
-        .prepare(
-          `SELECT
-           ${selectColumns}
-         FROM worker_repair_tasks
-         WHERE ${staleClaimWhereSql()}
-         ORDER BY locked_until ASC, updated_at ASC
-         LIMIT ?`,
-        )
-        .bind(input.nowSec, input.limit)
-        .all<RepairTaskRow>(),
-    ]);
-    const rowsByTaskId = new Map<string, RepairTaskRow>();
-    for (const row of [...(dueRows.results ?? []), ...(staleClaimRows.results ?? [])]) {
-      rowsByTaskId.set(row.task_id, row);
-    }
-    const rows = [...rowsByTaskId.values()]
-      .sort((a, b) =>
-        (a.priority ?? 100) - (b.priority ?? 100) ||
-        (a.next_attempt_at ?? a.created_at) - (b.next_attempt_at ?? b.created_at) ||
-        a.updated_at - b.updated_at ||
-        a.task_id.localeCompare(b.task_id)
-      )
-      .slice(0, input.limit);
-    return { rows, tableMissing: false };
-  } catch (err) {
-    if (isMissingTableError(err)) return { rows: [], tableMissing: true };
-    throw err;
-  }
-}
-
-async function claimRepairTask(
-  db: D1Database,
-  input: {
-    taskId: string;
-    owner: string;
-    nowSec: number;
-    lockedUntil: number;
-    signal?: AbortSignal;
-  },
-): Promise<boolean> {
-  throwIfAborted(input.signal);
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `UPDATE worker_repair_tasks
-         SET state = 'claimed',
-             locked_by = ?,
-             locked_until = ?,
-             attempt_count = attempt_count + 1,
-             last_attempt_at = ?,
-             updated_at = ?
-         WHERE task_id = ?
-           AND (${dueOpenOrDeferredWhereSql()} OR ${staleClaimWhereSql()})`,
-      )
-      .bind(
-        input.owner,
-        input.lockedUntil,
-        input.nowSec,
-        input.nowSec,
-        input.taskId,
-        "open",
-        "deferred",
-        input.nowSec,
-        input.nowSec,
-      )
-      .run(),
-    3,
-    input.signal,
-  );
-  return (result.meta.changes ?? 0) > 0;
-}
-
-async function closeRepairTask(
-  db: D1Database,
-  input: { taskId: string; owner: string; nowSec: number; signal?: AbortSignal },
-): Promise<void> {
-  throwIfAborted(input.signal);
-  await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `UPDATE worker_repair_tasks
-         SET state = 'closed',
-             locked_by = NULL,
-             locked_until = NULL,
-             last_error = NULL,
-             updated_at = ?,
-             closed_at = ?
-         WHERE task_id = ?
-           AND state = 'claimed'
-           AND locked_by = ?`,
-      )
-      .bind(input.nowSec, input.nowSec, input.taskId, input.owner)
-      .run(),
-    3,
-    input.signal,
-  );
-}
-
-async function deferRepairTask(
-  db: D1Database,
-  input: {
-    taskId: string;
-    owner: string;
-    nowSec: number;
-    nextAttemptAt: number;
-    reason: string;
-    signal?: AbortSignal;
-  },
-): Promise<void> {
-  throwIfAborted(input.signal);
-  await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `UPDATE worker_repair_tasks
-         SET state = 'deferred',
-             locked_by = NULL,
-             locked_until = NULL,
-             next_attempt_at = ?,
-             last_error = ?,
-             updated_at = ?
-         WHERE task_id = ?
-           AND state = 'claimed'
-           AND locked_by = ?`,
-      )
-      .bind(input.nextAttemptAt, input.reason.slice(0, REPAIR_RUNNER_MAX_ERROR_CHARS), input.nowSec, input.taskId, input.owner)
-      .run(),
-    3,
-    input.signal,
-  );
-}
-
-async function hasDdrEventLink(db: D1Database, eventId: number, signal?: AbortSignal): Promise<boolean> {
-  throwIfAborted(signal);
-  const row = await db
-    .prepare("SELECT 1 AS ok FROM depeg_resolver_incident_event_links WHERE event_id = ? LIMIT 1")
-    .bind(eventId)
-    .first<{ ok: number }>();
-  return row != null;
-}
-
-async function hasDepegEvent(db: D1Database, eventId: number, signal?: AbortSignal): Promise<boolean> {
-  throwIfAborted(signal);
-  const row = await db
-    .prepare("SELECT 1 AS ok FROM depeg_events WHERE id = ? LIMIT 1")
-    .bind(eventId)
-    .first<{ ok: number }>();
-  return row != null;
-}
-
-function parseDdrRepairEventId(row: RepairTaskRow): number | null {
-  const subjectId = Number(row.subject_id);
-  if (Number.isInteger(subjectId) && subjectId > 0) return subjectId;
-  if (!row.payload_json) return null;
-  try {
-    const parsed = JSON.parse(row.payload_json) as { eventId?: unknown };
-    const eventId = Number(parsed.eventId);
-    return Number.isInteger(eventId) && eventId > 0 ? eventId : null;
-  } catch {
-    return null;
-  }
-}
-
-async function processDdrRepairTask(
-  db: D1Database,
-  row: RepairTaskRow,
-  input: { nowSec: number; signal?: AbortSignal },
-): Promise<RepairTaskProcessOutcome> {
-  const eventId = parseDdrRepairEventId(row);
-  if (eventId == null) {
-    return { action: "closed", reason: "malformed-ddr-event-id" };
-  }
-
-  if (await hasDdrEventLink(db, eventId, input.signal)) {
-    return { action: "closed", reason: "ddr-event-linked" };
-  }
-  if (!(await hasDepegEvent(db, eventId, input.signal))) {
-    return { action: "closed", reason: "depeg-event-missing" };
-  }
-
-  return {
-    action: "deferred",
-    reason: "manual-ddr-repair-required",
-    nextAttemptAt: input.nowSec + REPAIR_RUNNER_DEFER_SEC,
-  };
-}
-
-async function processRepairTask(
-  db: D1Database,
-  row: RepairTaskRow,
-  input: { nowSec: number; signal?: AbortSignal },
-): Promise<RepairTaskProcessOutcome> {
-  if (row.kind === DDR_REPAIR_TASK_KIND) {
-    return processDdrRepairTask(db, row, input);
-  }
-  return {
-    action: "deferred",
-    reason: `unsupported-repair-kind:${row.kind}`,
-    nextAttemptAt: input.nowSec + REPAIR_RUNNER_DEFER_SEC,
-  };
-}
-
 function buildRepairRunnerResult(
   metadata: RepairRunnerMetadata,
 ): StructuredCronResult<RepairRunnerMetadata> {
   return {
-    status: metadata.failed > 0 || metadata.tableMissing ? "degraded" : "ok",
-    itemCount: metadata.claimed,
+    status: metadata.tableMissing ? "degraded" : "ok",
+    itemCount: 0,
     metadata,
   };
 }
@@ -639,109 +352,18 @@ export async function runWorkerRepairTaskRunner(
   db: D1Database,
   options: RepairRunnerOptions = {},
 ): Promise<ReturnType<typeof createCronResult>> {
-  const mode = normalizeWorkerRepairRunnerMode(options.mode);
   const timestamp = options.nowSec ?? nowSec();
-  const batchLimit = normalizeBatchLimit(options.batchLimit);
-  const baseMetadata: RepairRunnerMetadata = {
-    mode,
-    batchLimit,
+  const backlog = await inspectRepairRunnerBacklog(db, { nowSec: timestamp, signal: options.signal });
+  return createCronResult(buildRepairRunnerResult({
+    mode: "shadow",
+    batchLimit: LEGACY_REPAIR_RUNNER_BATCH_LIMIT,
     claimed: 0,
     closed: 0,
     deferred: 0,
     failed: 0,
-  };
-
-  if (mode === "off") {
-    return createCronResult(buildRepairRunnerResult({
-      ...baseMetadata,
-      skipped: "mode-off",
-    }));
-  }
-
-  const backlog = await inspectRepairRunnerBacklog(db, { nowSec: timestamp, signal: options.signal });
-  if (mode === "shadow" || backlog.tableMissing) {
-    return createCronResult(buildRepairRunnerResult({
-      ...baseMetadata,
-      dueCount: backlog.dueCount,
-      staleClaimCount: backlog.staleClaimCount,
-      ...(mode === "shadow" ? { skipped: "shadow-mode" } : {}),
-      ...(backlog.tableMissing ? { tableMissing: true } : {}),
-    }));
-  }
-
-  const owner = buildRepairRunnerOwner(timestamp);
-  const loaded = await loadClaimableRepairTasks(db, {
-    nowSec: timestamp,
-    limit: batchLimit,
-    signal: options.signal,
-  });
-  const metadata: RepairRunnerMetadata = {
-    ...baseMetadata,
+    skipped: "shadow-mode",
     dueCount: backlog.dueCount,
     staleClaimCount: backlog.staleClaimCount,
-    ...(loaded.tableMissing ? { tableMissing: true } : {}),
-    outcomes: [],
-  };
-
-  if (loaded.tableMissing) {
-    return createCronResult(buildRepairRunnerResult(metadata));
-  }
-
-  for (const row of loaded.rows) {
-    throwIfAborted(options.signal);
-    const claimed = await claimRepairTask(db, {
-      taskId: row.task_id,
-      owner,
-      nowSec: timestamp,
-      lockedUntil: timestamp + REPAIR_RUNNER_LOCK_TTL_SEC,
-      signal: options.signal,
-    });
-    if (!claimed) continue;
-
-    metadata.claimed += 1;
-    try {
-      const outcome = await processRepairTask(db, row, { nowSec: timestamp, signal: options.signal });
-      if (outcome.action === "closed") {
-        await closeRepairTask(db, { taskId: row.task_id, owner, nowSec: timestamp, signal: options.signal });
-        metadata.closed += 1;
-      } else {
-        await deferRepairTask(db, {
-          taskId: row.task_id,
-          owner,
-          nowSec: timestamp,
-          nextAttemptAt: outcome.nextAttemptAt,
-          reason: outcome.reason,
-          signal: options.signal,
-        });
-        metadata.deferred += 1;
-      }
-      metadata.outcomes?.push({
-        taskId: row.task_id,
-        kind: row.kind,
-        subjectId: row.subject_id,
-        action: outcome.action,
-        reason: outcome.reason,
-      });
-    } catch (err) {
-      const reason = truncateError(err);
-      await deferRepairTask(db, {
-        taskId: row.task_id,
-        owner,
-        nowSec: timestamp,
-        nextAttemptAt: timestamp + REPAIR_RUNNER_DEFER_SEC,
-        reason,
-        signal: options.signal,
-      });
-      metadata.failed += 1;
-      metadata.outcomes?.push({
-        taskId: row.task_id,
-        kind: row.kind,
-        subjectId: row.subject_id,
-        action: "failed",
-        reason,
-      });
-    }
-  }
-
-  return createCronResult(buildRepairRunnerResult(metadata));
+    ...(backlog.tableMissing ? { tableMissing: true } : {}),
+  }));
 }

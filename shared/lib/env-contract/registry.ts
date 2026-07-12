@@ -648,15 +648,6 @@ export const ENV_BINDINGS = [
     },
   },
   {
-    key: "WORKER_REPAIR_RUNNER_MODE",
-    valueType: "string",
-    description: "Worker repair-task runner mode. Unset or `off` disables repair processing; `shadow` records due/stale backlog telemetry without claiming rows; `enabled` lets the daily DB-only runner claim, close, or defer a small batch.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { order: 47, status: "optional" },
-    },
-  },
-  {
     key: "WORKER_RESERVE_RECOVERY_MODE",
     valueType: "string",
     description: "Reserve interruption recovery mode. Unset or `off` skips recovery scans; `shadow` reads eligibility only; `reconcile` seals abandoned attempts and prepares replay without claiming; `recover` also claims and replays prepared attempts.",
@@ -666,21 +657,21 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "WORKER_RESERVE_FAULT_INJECTION_ENABLED",
+    valueType: "string",
+    description: "Explicit preview-only arming gate for reserve recovery fault injection. Only a normalized literal `true` enables the test harness; unset or any other value disables it.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 49.1, status: "optional" },
+    },
+  },
+  {
     key: "WORKER_CANARY_MODE",
     valueType: "string",
     description: "Data-invariant mode: `off` skips, `shadow` records only, `status` degrades on findings, and `alert` turns critical findings into terminal errors.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 48, status: "optional" },
-    },
-  },
-  {
-    key: "ALERT_BROKER_MODE",
-    valueType: "string",
-    description: "Durable alert broker mode. `off` bypasses persistence, `shadow` records transitions only, `status` also affects health, and `alert` additionally claims and retries webhook delivery.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { order: 50, status: "optional" },
     },
   },
   {

@@ -1,10 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { D1CapacityAssessment } from "@shared/types/status";
-import { buildD1CapacityAlertPolicy } from "../d1-capacity-monitor";
+import { refreshD1CapacityMonitoring } from "../d1-capacity-monitor";
 
-function assessment(
-  overrides: Partial<D1CapacityAssessment> = {},
-): D1CapacityAssessment {
+vi.mock("../d1-usage", () => ({
+  getD1CapacityAssessmentFromCloudflare: vi.fn(),
+}));
+
+import { getD1CapacityAssessmentFromCloudflare } from "../d1-usage";
+
+function assessment(overrides: Partial<D1CapacityAssessment> = {}): D1CapacityAssessment {
   return {
     observedAt: 1_783_661_028,
     databaseSizeBytes: 4_000_000_000,
@@ -25,31 +29,27 @@ function assessment(
   };
 }
 
-describe("buildD1CapacityAlertPolicy", () => {
-  it("keeps normal utilization inactive", () => {
-    expect(buildD1CapacityAlertPolicy(assessment())).toMatchObject({
-      active: false,
-      severity: "warning",
-      fingerprint: { thresholdState: "normal" },
+describe("refreshD1CapacityMonitoring", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("keeps capacity telemetry available without an alert side effect", async () => {
+    const expected = assessment();
+    vi.mocked(getD1CapacityAssessmentFromCloudflare).mockResolvedValue(expected);
+
+    await expect(refreshD1CapacityMonitoring({} as D1Database, {} as never, 1_783_661_028)).resolves.toEqual({
+      assessment: expected,
+      error: null,
     });
   });
 
-  it("raises a distinct critical incident at the 90% threshold", () => {
-    const policy = buildD1CapacityAlertPolicy(assessment({
-      databaseSizeBytes: 9_000_000_000,
-      utilizationRatio: 0.9,
-      utilizationPercent: 90,
-      thresholdState: "critical",
-      crossedThresholdPercent: 90,
-      nextThresholdPercent: 100,
-      daysUntilExhaustion: 10,
-    }));
+  it("returns capacity-observation failure telemetry without alert reporting", async () => {
+    vi.mocked(getD1CapacityAssessmentFromCloudflare).mockRejectedValue(new Error("control plane unavailable"));
 
-    expect(policy).toMatchObject({
-      active: true,
-      severity: "critical",
-      fingerprint: { thresholdState: "critical" },
+    await expect(refreshD1CapacityMonitoring({} as D1Database, {} as never, 1_783_661_028)).resolves.toEqual({
+      assessment: null,
+      error: "control plane unavailable",
     });
-    expect(policy.message).toContain("Forecast exhaustion in 10 days");
   });
 });

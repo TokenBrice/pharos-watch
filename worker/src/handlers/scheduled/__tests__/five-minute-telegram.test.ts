@@ -14,15 +14,11 @@ vi.mock("../../../lib/telegram-webhook-registration", () => ({
   reconcileTelegramWebhookRegistration: vi.fn(),
 }));
 vi.mock("../../../lib/budget-surface-telemetry", () => ({ recordBudgetSurfaceTelemetry: vi.fn(async () => {}) }));
-vi.mock("../../../lib/alert-broker", () => ({
-  dispatchPendingAlertBrokerDeliveries: vi.fn(async () => ({ due: 0, delivered: 0, failed: 0, missingTarget: 0 })),
-}));
 vi.mock("../preflight-skip", () => ({ logSkippedCronRun: vi.fn(async () => undefined) }));
 
 import { runFiveMinuteTelegramSlot } from "../five-minute-telegram";
 import { logSkippedCronRun } from "../preflight-skip";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
-import { dispatchPendingAlertBrokerDeliveries } from "../../../lib/alert-broker";
 import { dispatchTelegramAlerts } from "../../../cron/dispatch-telegram-alerts";
 import { planTelegramPersonalizedRecaps } from "../../../cron/telegram-recap-planner";
 import { cancelQueuedTelegramRecapsForRollout } from "../../../cron/telegram-recap-store";
@@ -82,7 +78,7 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("runFiveMinuteTelegramSlot", () => {
-  it("runs token-independent D1 sidecars and broker drain when the bot token is absent", async () => {
+  it("runs token-independent D1 sidecars when the bot token is absent", async () => {
     const runtime = buildRuntime();
     const summary = await runFiveMinuteTelegramSlot(runtime);
 
@@ -91,7 +87,6 @@ describe("runFiveMinuteTelegramSlot", () => {
     expect(runTelegramDegradationWatchdog).toHaveBeenCalledOnce();
     expect(cleanExpiredDisambiguations).toHaveBeenCalledOnce();
     expect(publishTelegramPulseSnapshotWithOutcome).toHaveBeenCalledOnce();
-    expect(dispatchPendingAlertBrokerDeliveries).toHaveBeenCalledOnce();
     expect(vi.mocked(runtime.runLeasedCron).mock.calls.map(([job]) => job)).toEqual([
       "telegram-degradation-watchdog",
       "telegram-disambiguation-cleanup",
@@ -102,6 +97,7 @@ describe("runFiveMinuteTelegramSlot", () => {
       "telegram-personalized-recap-planner",
     ]);
     expect(summary.jobs.map((job) => job.job)).toContain("dispatch-telegram-alerts");
+    expect(summary.budgetOnlyJobs).toBe(1);
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       surface: "telegram-registration-reconciliation",
       dueCount: 4,
@@ -169,14 +165,10 @@ describe("runFiveMinuteTelegramSlot", () => {
       order.push("webhook");
       return { attempted: true, skipped: false, expectedUrl: "https://api.pharos.watch" };
     });
-    vi.mocked(dispatchPendingAlertBrokerDeliveries).mockImplementation(async () => {
-      order.push("broker");
-      return { due: 0, delivered: 0, failed: 0, missingTarget: 0 };
-    });
+    const summary = await runFiveMinuteTelegramSlot(buildRuntime("token"));
 
-    await runFiveMinuteTelegramSlot(buildRuntime("token"));
-
-    expect(order).toEqual(["dispatch", "recap", "watchdog", "cleanup", "pulse", "commands", "profile", "menu", "webhook", "broker"]);
+    expect(summary.budgetOnlyJobs).toBe(1);
+    expect(order).toEqual(["dispatch", "recap", "watchdog", "cleanup", "pulse", "commands", "profile", "menu", "webhook"]);
     expect(reconcileTelegramCommandRegistration).toHaveBeenCalledOnce();
     expect(reconcileTelegramProfileRegistration).toHaveBeenCalledOnce();
     expect(reconcileTelegramMenuButton).toHaveBeenCalledOnce();
@@ -244,10 +236,9 @@ describe("runFiveMinuteTelegramSlot", () => {
     expect(summary.jobsErrored).toBeGreaterThanOrEqual(1);
   });
 
-  it("records a failed registration unit without blocking the remaining units or broker drain", async () => {
+  it("records a failed registration unit without blocking the remaining units", async () => {
     vi.mocked(reconcileTelegramCommandRegistration).mockRejectedValue(new Error("registration failed"));
     await runFiveMinuteTelegramSlot(buildRuntime("token"));
-    expect(dispatchPendingAlertBrokerDeliveries).toHaveBeenCalledOnce();
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       surface: "telegram-registration-reconciliation",
       processedCount: 3,

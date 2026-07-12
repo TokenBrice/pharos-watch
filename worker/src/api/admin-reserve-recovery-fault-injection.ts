@@ -23,11 +23,15 @@ export async function handleArmReserveRecoveryFaultInjection(
   request: Request,
   trustedAdmin: boolean,
   currentWorkerVersion: string | null,
+  faultInjectionEnabled: boolean,
 ): Promise<Response> {
   const authError = await requireAdmin(request, trustedAdmin);
   if (authError) return authError;
   if (!isWorkerPreviewRequest(request)) {
     return adminErrorResponse(403, "Reserve recovery fault injection is available only on workers.dev preview hosts.");
+  }
+  if (!faultInjectionEnabled) {
+    return adminErrorResponse(403, "Reserve recovery fault injection is disabled for this Worker environment.");
   }
   if (!currentWorkerVersion) {
     return adminErrorResponse(503, "Worker version metadata is unavailable.");

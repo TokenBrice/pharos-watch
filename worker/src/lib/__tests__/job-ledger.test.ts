@@ -7,6 +7,7 @@ import {
   normalizeWorkerJobLedgerMode,
   recordWorkerJobAttemptLease,
   shouldRecordWorkerJobAttempt,
+  workerJobLedgerReadScopeFingerprint,
 } from "../job-ledger";
 
 describe("worker job attempt ledger", () => {
@@ -18,9 +19,30 @@ describe("worker job attempt ledger", () => {
 
     expect(shouldRecordWorkerJobAttempt({ mode: "off", allowlist: [], job: "sync-yield-data" })).toBe(false);
     expect(shouldRecordWorkerJobAttempt({ mode: "shadow", allowlist: [], job: "sync-yield-data" })).toBe(true);
-    expect(shouldRecordWorkerJobAttempt({ mode: "shadow", allowlist: ["sync-yield-data"], job: "sync-yield-data" })).toBe(true);
-    expect(shouldRecordWorkerJobAttempt({ mode: "shadow", allowlist: ["sync-stablecoins"], job: "sync-yield-data" })).toBe(false);
+    expect(
+      shouldRecordWorkerJobAttempt({ mode: "shadow", allowlist: ["sync-yield-data"], job: "sync-yield-data" }),
+    ).toBe(true);
+    expect(
+      shouldRecordWorkerJobAttempt({ mode: "shadow", allowlist: ["sync-stablecoins"], job: "sync-yield-data" }),
+    ).toBe(false);
     expect(shouldRecordWorkerJobAttempt({ mode: "shadow", allowlist: ["*"], job: "sync-yield-data" })).toBe(true);
+    expect(workerJobLedgerReadScopeFingerprint("off", ["sync-yield-data"])).toBe("off");
+    expect(workerJobLedgerReadScopeFingerprint("shadow", [])).toBe("shadow:*");
+    expect(workerJobLedgerReadScopeFingerprint("write", ["b", "a", "b"])).toBe("write:a,b");
+  });
+
+  it("does not query retained attempt rows while the ledger is off", async () => {
+    const db = mockD1([], { requireMatch: true });
+
+    const health = await loadWorkerJobAttemptHealth(db, ["sync-yield-data"], 1_775_890_100);
+
+    expect(health).toEqual({
+      latestByJob: new Map(),
+      activeAttempts: 0,
+      staleAttempts: 0,
+      queryFailed: false,
+    });
+    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("creates deterministic idempotency keys for scheduled slots", async () => {
@@ -99,31 +121,33 @@ describe("worker job attempt ledger", () => {
     const db = mockD1([
       {
         match: "ROW_NUMBER() OVER",
-        rows: [{
-          attempt_id: "attempt-a",
-          idempotency_key: "scheduled-slot|hourlyYieldSync|1775890000|sync-yield-data|1",
-          schedule_key: "hourlyYieldSync",
-          job: "sync-yield-data",
-          slot_started_at: 1_775_890_000,
-          producer_path: "hourlyYieldSync",
-          producer_kind: "scheduled-slot",
-          invocation_id: "invocation-a",
-          worker_version: "version-a",
-          state: "running",
-          status_class: null,
-          attempt_no: 1,
-          owner: "owner-a",
-          queued_at: 1_775_890_000,
-          claimed_at: 1_775_890_001,
-          started_at: 1_775_890_001,
-          last_heartbeat_at: 1_775_890_050,
-          finished_at: null,
-          updated_at: 1_775_890_050,
-          duration_ms: null,
-          item_count: 12,
-          result_metadata_json: JSON.stringify({ progress: { stage: "evaluation" } }),
-          error: null,
-        }],
+        rows: [
+          {
+            attempt_id: "attempt-a",
+            idempotency_key: "scheduled-slot|hourlyYieldSync|1775890000|sync-yield-data|1",
+            schedule_key: "hourlyYieldSync",
+            job: "sync-yield-data",
+            slot_started_at: 1_775_890_000,
+            producer_path: "hourlyYieldSync",
+            producer_kind: "scheduled-slot",
+            invocation_id: "invocation-a",
+            worker_version: "version-a",
+            state: "running",
+            status_class: null,
+            attempt_no: 1,
+            owner: "owner-a",
+            queued_at: 1_775_890_000,
+            claimed_at: 1_775_890_001,
+            started_at: 1_775_890_001,
+            last_heartbeat_at: 1_775_890_050,
+            finished_at: null,
+            updated_at: 1_775_890_050,
+            duration_ms: null,
+            item_count: 12,
+            result_metadata_json: JSON.stringify({ progress: { stage: "evaluation" } }),
+            error: null,
+          },
+        ],
       },
       {
         match: "COUNT(*) AS active_count",
@@ -132,7 +156,7 @@ describe("worker job attempt ledger", () => {
       },
     ]);
 
-    const health = await loadWorkerJobAttemptHealth(db, ["sync-yield-data"], 1_775_890_100);
+    const health = await loadWorkerJobAttemptHealth(db, ["sync-yield-data"], 1_775_890_100, "shadow");
 
     expect(health.queryFailed).toBe(false);
     expect(health.activeAttempts).toBe(2);
@@ -144,5 +168,8 @@ describe("worker job attempt ledger", () => {
       itemCount: 12,
       metadata: { progress: { stage: "evaluation" } },
     });
+    const summaryQuery = db.getHistory().find((entry) => entry.sql.includes("COUNT(*) AS active_count"));
+    expect(summaryQuery?.sql).toContain("job IN (?)");
+    expect(summaryQuery?.binds[summaryQuery.binds.length - 1]).toBe("sync-yield-data");
   });
 });

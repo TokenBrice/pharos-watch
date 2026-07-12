@@ -552,7 +552,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
-    maxConnections: 0, // DB-only bounded repair-task claim/defer/close loop
+    maxConnections: 0, // DB-only due/stale repair-debt telemetry
   },
   {
     job: "prune-detail-cache",
@@ -617,16 +617,6 @@ const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefi
     statusTracked: false,
     notes:
       "Best-effort command, profile, and webhook reconciliation runs serially before dispatch when 15-minute cache markers expire.",
-  },
-  {
-    job: "alert-broker-delivery-drain",
-    label: "Alert broker delivery drain",
-    scheduleKey: "fiveMinuteTelegramAlerts",
-    maxConnections: 1,
-    connectionGroup: "five-minute-telegram-chain",
-    statusTracked: false,
-    notes:
-      "Retries due durable webhook deliveries serially after the status-tracked Telegram chain, independent of Telegram bot configuration.",
   },
   {
     job: "telegram-digest-outbox-drain",

@@ -7,6 +7,10 @@ import {
   type StatusLevel,
 } from "../status-reliability-shared";
 import { logWorkerEvent } from "../structured-log";
+import {
+  workerJobLedgerReadScopeFingerprint,
+  type WorkerJobLedgerMode,
+} from "../job-ledger";
 
 export const STATUS_RAW_SNAPSHOT_CACHE_KEY = "status:raw-snapshot:v1";
 export const STATUS_RAW_SNAPSHOT_MAX_AGE_SEC = STATUS_SYSTEM_FRESHNESS_SEC;
@@ -20,6 +24,7 @@ const SNAPSHOT_STRING_LIMIT = 2_000;
 interface StatusRawSnapshotPayload {
   version: 1;
   producedAt: number;
+  workerJobLedgerScope: string | null;
   raw: RawStatusComputation;
 }
 
@@ -32,7 +37,7 @@ interface FreshStatusRawSnapshot {
 }
 
 interface UnavailableStatusRawSnapshot {
-  kind: "missing" | "stale" | "unreadable" | "read-error";
+  kind: "missing" | "stale" | "unreadable" | "read-error" | "mode-mismatch";
   updatedAt: number | null;
   ageSec: number | null;
   maxAgeSec: number;
@@ -151,6 +156,9 @@ function parseStatusRawSnapshotPayload(value: string): StatusRawSnapshotPayload 
     return {
       version: 1,
       producedAt: parsed.producedAt,
+      workerJobLedgerScope: typeof parsed.workerJobLedgerScope === "string"
+        ? parsed.workerJobLedgerScope
+        : null,
       raw: {
         ...parsed.raw,
         budgetOnlySurfaces: Array.isArray(parsed.raw.budgetOnlySurfaces)
@@ -166,6 +174,8 @@ function parseStatusRawSnapshotPayload(value: string): StatusRawSnapshotPayload 
 export async function loadStatusRawSnapshot(
   db: D1Database,
   now: number,
+  workerJobLedgerMode: WorkerJobLedgerMode = "off",
+  workerJobLedgerAllowlist: readonly string[] = [],
   maxAgeSec = STATUS_RAW_SNAPSHOT_MAX_AGE_SEC,
 ): Promise<StatusRawSnapshotLoadResult> {
   try {
@@ -200,6 +210,19 @@ export async function loadStatusRawSnapshot(
       };
     }
 
+    const expectedLedgerScope = workerJobLedgerReadScopeFingerprint(
+      workerJobLedgerMode,
+      workerJobLedgerAllowlist,
+    );
+    if (payload.workerJobLedgerScope !== expectedLedgerScope) {
+      return {
+        kind: "mode-mismatch",
+        updatedAt: cached.updatedAt,
+        ageSec,
+        maxAgeSec,
+      };
+    }
+
     return {
       kind: "fresh",
       raw: payload.raw,
@@ -222,10 +245,16 @@ export async function writeStatusRawSnapshot(
   db: D1Database,
   now: number,
   raw: RawStatusComputation,
+  workerJobLedgerMode: WorkerJobLedgerMode = "off",
+  workerJobLedgerAllowlist: readonly string[] = [],
 ): Promise<boolean> {
   const payload: StatusRawSnapshotPayload = {
     version: 1,
     producedAt: now,
+    workerJobLedgerScope: workerJobLedgerReadScopeFingerprint(
+      workerJobLedgerMode,
+      workerJobLedgerAllowlist,
+    ),
     raw: compactRawStatusForSnapshot(raw),
   };
 

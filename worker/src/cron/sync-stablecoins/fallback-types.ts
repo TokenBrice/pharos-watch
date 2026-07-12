@@ -113,7 +113,6 @@ export interface FallbackCachePublicationInput extends FallbackPhaseContext, Fal
   priceCacheEntries: PriceCacheWriteEntry[];
   fxFallbackRates?: Record<string, number>;
   alertWebhookUrl?: string | null;
-  alertBrokerMode?: string;
 }
 
 export interface FallbackCachePublicationOutput {

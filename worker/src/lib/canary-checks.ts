@@ -783,7 +783,28 @@ function mapCanaryStatusRow(row: WorkerCanaryRunRow): CanaryStatus["checks"][str
   };
 }
 
-export async function loadCanaryStatus(db: D1Database, now = nowSec()): Promise<CanaryStatus> {
+function emptyCanaryStatus(now: number): CanaryStatus {
+  return {
+    checkedAt: now,
+    status: "unknown",
+    latestRunAt: null,
+    maxAgeSec: CANARY_STATUS_MAX_AGE_SEC,
+    totalChecks: 0,
+    okCount: 0,
+    degradedCount: 0,
+    errorCount: 0,
+    skippedCount: 0,
+    staleCount: 0,
+    checks: {},
+  };
+}
+
+export async function loadCanaryStatus(
+  db: D1Database,
+  now = nowSec(),
+  mode: WorkerCanaryMode = "off",
+): Promise<CanaryStatus> {
+  if (mode === "off" || mode === "shadow") return emptyCanaryStatus(now);
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -792,14 +813,15 @@ export async function loadCanaryStatus(db: D1Database, now = nowSec()): Promise<
            INNER JOIN (
              SELECT check_id, MAX(observed_at) AS observed_at
                FROM worker_canary_runs
-              WHERE mode IN ('status', 'alert')
+              WHERE mode = ?
               GROUP BY check_id
            ) latest
              ON latest.check_id = r.check_id
             AND latest.observed_at = r.observed_at
-          WHERE r.mode IN ('status', 'alert')
+          WHERE r.mode = ?
           ORDER BY r.check_id ASC`,
       )
+      .bind(mode, mode)
       .all<WorkerCanaryRunRow>(),
   );
 

@@ -356,6 +356,33 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(meta.pendingBacklog.alertSent).toBe(false);
   });
 
+  it("ignores the legacy pending-alerted flag during direct-delivery cutover", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    store.values.set(WATCHDOG_KEYS.pendingSince, {
+      value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
+      updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
+    });
+    store.values.set("telegram:degradation:pending-alerted", { value: "1", updatedAt: nowSec - 60 });
+
+    const result = await runTelegramDegradationWatchdog(
+      makeDb({ pendingCount: PENDING_BACKLOG_THRESHOLD + 50 }),
+      "https://hooks.example/x",
+    );
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(mockSendAlert).toHaveBeenCalledWith(
+      "https://hooks.example/x",
+      "Telegram pending delivery risk",
+      expect.any(String),
+    );
+    expect(meta.pendingBacklog.alertSent).toBe(true);
+    expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
+    expect(store.values.has(WATCHDOG_KEYS.pendingAlerted)).toBe(true);
+    expect(store.values.has("telegram:degradation:pending-alerted")).toBe(true);
+  });
+
   it("alerts on old pending age even when queue size is below the count threshold", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);

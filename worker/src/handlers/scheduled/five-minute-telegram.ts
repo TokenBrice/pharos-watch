@@ -2,7 +2,7 @@ import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram-l
 /**
  * Five-minute Telegram trigger (2,7,12,... * * * *):
  *   serial: dispatch (when token configured) -> watchdog -> cleanup -> pulse
- *   budget-only, after critical lane: one rotating registration unit, then alert-broker drain
+ *   budget-only, after critical lane: one rotating registration unit
  *
  * Subscriber alerts use a dedicated isolated Telegram lane.
  * Connection budget: 4/6 peak
@@ -16,7 +16,6 @@ import { publishTelegramPulseSnapshotWithOutcome } from "../../api/telegram-puls
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambiguation";
 import { recordBudgetSurfaceTelemetry } from "../../lib/budget-surface-telemetry";
-import { dispatchPendingAlertBrokerDeliveries } from "../../lib/alert-broker";
 import { parseJsonObject } from "../../lib/json-parse";
 import {
   reconcileTelegramCommandRegistration,
@@ -41,57 +40,12 @@ import {
   summarizeSkippedScheduledJob,
 } from "./slot-summary";
 
-const ALERT_BROKER_DELIVERY_DRAIN_SURFACE = "alert-broker-delivery-drain";
 const TELEGRAM_REGISTRATION_ACTIONS = [
   "reconcile-commands",
   "reconcile-profile",
   "reconcile-menu",
   "reconcile-webhook",
 ] as const;
-
-async function runAlertBrokerDeliveryDrain(runtime: ScheduledRuntimeContext): Promise<void> {
-  const startedMs = Date.now();
-  try {
-    const delivery = await runRuntimeBudgetOnlyTask(
-      runtime,
-      ALERT_BROKER_DELIVERY_DRAIN_SURFACE,
-      () => dispatchPendingAlertBrokerDeliveries(runtime.db, {
-        webhookUrl: runtime.alertWebhookUrl,
-        limit: 25,
-      }),
-    );
-    const unresolved = delivery.failed + delivery.missingTarget;
-    await recordBudgetSurfaceTelemetry(runtime.db, {
-      surface: ALERT_BROKER_DELIVERY_DRAIN_SURFACE,
-      durationMs: Date.now() - startedMs,
-      dueCount: delivery.due,
-      processedCount: delivery.delivered,
-      outcome: unresolved > 0 ? "degraded" : "ok",
-      error: unresolved > 0
-        ? `${delivery.failed} failed and ${delivery.missingTarget} missing-target deliveries remain retryable`
-        : null,
-      metadata: delivery,
-      producer: getRuntimeProducerIdentity(runtime, ALERT_BROKER_DELIVERY_DRAIN_SURFACE),
-    });
-  } catch (err) {
-    const error = classifyTelegramLogError(err);
-    logTelegramEvent({
-      message: "durable alert broker delivery drain failed",
-      action: ALERT_BROKER_DELIVERY_DRAIN_SURFACE,
-      module: "five-minute-telegram",
-      errorClass: error,
-    });
-    await recordBudgetSurfaceTelemetry(runtime.db, {
-      surface: ALERT_BROKER_DELIVERY_DRAIN_SURFACE,
-      durationMs: Date.now() - startedMs,
-      dueCount: 0,
-      processedCount: 0,
-      outcome: "error",
-      error,
-      producer: getRuntimeProducerIdentity(runtime, ALERT_BROKER_DELIVERY_DRAIN_SURFACE),
-    });
-  }
-}
 
 function logReconciliationSuccess(action: string): void {
   logTelegramEvent({
@@ -222,7 +176,6 @@ function buildTelegramSlotGroups(
         runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal, {
           pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
           safetySourceAssessment: sharedTelegramState.safetySourceAssessment,
-          alertBrokerMode: runtime.env.ALERT_BROKER_MODE,
         }),
     },
     {
@@ -324,11 +277,10 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
       "five-minute telegram token-independent sidecars",
       buildTelegramSlotGroups(runtime, null),
     );
-    await runAlertBrokerDeliveryDrain(runtime);
     return mergeScheduledSlotSummaries([
       sidecarSummary,
       buildScheduledSlotSummary(skippedJobs),
-    ], { budgetOnlyJobs: 2 });
+    ], { budgetOnlyJobs: 1 });
   }
 
   const summary = await runScheduledSlotGroups(
@@ -406,6 +358,5 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     producer: getRuntimeProducerIdentity(runtime, "telegram-registration-reconciliation"),
   });
 
-  await runAlertBrokerDeliveryDrain(runtime);
-  return mergeScheduledSlotSummaries([summary], { budgetOnlyJobs: 2 });
+  return mergeScheduledSlotSummaries([summary], { budgetOnlyJobs: 1 });
 }

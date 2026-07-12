@@ -41,7 +41,7 @@ describe("reserve recovery fault injection admin endpoint", () => {
   it("fails closed without upstream admin authentication", async () => {
     const { sqlite, db } = harness();
     databases.push(sqlite);
-    const response = await handleArmReserveRecoveryFaultInjection(db, request(), false, "preview-v1");
+    const response = await handleArmReserveRecoveryFaultInjection(db, request(), false, "preview-v1", true);
     expect(response.status).toBe(401);
   });
 
@@ -53,23 +53,35 @@ describe("reserve recovery fault injection admin endpoint", () => {
       request("ops-api.pharos.watch"),
       true,
       "preview-v1",
+      true,
     );
     expect(response.status).toBe(403);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 0 });
+  });
+
+  it("fails closed on a preview host when fault injection is not explicitly enabled", async () => {
+    const { sqlite, db } = harness();
+    databases.push(sqlite);
+    const response = await handleArmReserveRecoveryFaultInjection(db, request(), true, "preview-v1", false);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({
+      error: "Reserve recovery fault injection is disabled for this Worker environment.",
+    });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 0 });
   });
 
   it("requires the exact executing Worker version", async () => {
     const { sqlite, db } = harness();
     databases.push(sqlite);
-    const response = await handleArmReserveRecoveryFaultInjection(db, request(), true, "preview-v2");
+    const response = await handleArmReserveRecoveryFaultInjection(db, request(), true, "preview-v2", true);
     expect(response.status).toBe(409);
   });
 
-  it("arms one bounded fault and rejects a duplicate exact attempt", async () => {
+  it("arms one bounded fault on an enabled preview and rejects a duplicate exact attempt", async () => {
     const { sqlite, db } = harness();
     databases.push(sqlite);
-    const first = await handleArmReserveRecoveryFaultInjection(db, request(), true, "preview-v1");
-    const second = await handleArmReserveRecoveryFaultInjection(db, request(), true, "preview-v1");
+    const first = await handleArmReserveRecoveryFaultInjection(db, request(), true, "preview-v1", true);
+    const second = await handleArmReserveRecoveryFaultInjection(db, request(), true, "preview-v1", true);
 
     expect(first.status).toBe(201);
     expect(await first.json()).toMatchObject({

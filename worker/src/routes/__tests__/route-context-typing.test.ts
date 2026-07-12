@@ -21,6 +21,9 @@ describe("route context typing", () => {
       expectTypeOf(routeCtx).toEqualTypeOf<RouteContextFor<EndpointDependenciesForKey<"status">>>();
       expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null>();
       expectTypeOf(routeCtx.cloudflareD1StatusBindings).toEqualTypeOf<CloudflareD1StatusBindings>();
+      expectTypeOf(routeCtx.workerJobLedgerMode).toEqualTypeOf<"off" | "shadow" | "write">();
+      expectTypeOf(routeCtx.workerJobLedgerAllowlist).toEqualTypeOf<string[]>();
+      expectTypeOf(routeCtx.workerCanaryMode).toEqualTypeOf<"off" | "shadow" | "status" | "alert">();
       expectTypeOf(routeCtx.apiKeyHashPepper).toEqualTypeOf<string | undefined>();
       return new Response("ok");
     });
@@ -46,6 +49,12 @@ describe("route context typing", () => {
     defineStaticRoute("api-key-request-verify", async (routeCtx) => {
       expectTypeOf(routeCtx.apiKeySelfServeEnv).toEqualTypeOf<ApiKeySelfServeEnv>();
       expectTypeOf(routeCtx.apiKeyHashPepper).toEqualTypeOf<string | undefined>();
+      return new Response("ok");
+    });
+
+    defineStaticRoute("reserve-recovery-fault-injection", async (routeCtx) => {
+      expectTypeOf(routeCtx.workerVersion).toEqualTypeOf<string | null>();
+      expectTypeOf(routeCtx.reserveRecoveryFaultInjectionEnabled).toEqualTypeOf<boolean>();
       return new Response("ok");
     });
   });
@@ -74,6 +83,15 @@ describe("route context typing", () => {
       CLOUDFLARE_ACCOUNT_ID: "account",
       CLOUDFLARE_D1_STATUS_API_TOKEN: "token",
       CLOUDFLARE_D1_DATABASE_ID: "database",
+      WORKER_JOB_LEDGER_MODE: "write",
+      WORKER_JOB_LEDGER_ALLOWLIST: "sync-stablecoins,sync-yield-data",
+      WORKER_CANARY_MODE: "shadow",
+      WORKER_RESERVE_FAULT_INJECTION_ENABLED: " TRUE ",
+      CF_VERSION_METADATA: {
+        id: "preview-id",
+        tag: "preview-v1",
+        timestamp: "2026-07-12T00:00:00Z",
+      },
       API_KEY_SELF_SERVE_IP_SALT: "self-serve-ip",
       API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER: "self-serve-email",
       API_KEY_SELF_SERVE_REQUEST_PEPPER: "self-serve-request",
@@ -93,7 +111,7 @@ describe("route context typing", () => {
       env,
       execCtx,
       trustedAdmin: true,
-      routeDependencies: ["coingeckoApiKey", "cloudflareD1StatusConfig"] as const,
+      routeDependencies: ["coingeckoApiKey", "cloudflareD1StatusConfig", "workerStatusConfig"] as const,
     });
     expect(statusCtx.coingeckoApiKey).toBe("cg-demo");
     expect(statusCtx.cloudflareD1StatusBindings).toEqual({
@@ -101,7 +119,21 @@ describe("route context typing", () => {
       CLOUDFLARE_D1_STATUS_API_TOKEN: "token",
       CLOUDFLARE_D1_DATABASE_ID: "database",
     });
+    expect(statusCtx.workerJobLedgerMode).toBe("write");
+    expect(statusCtx.workerJobLedgerAllowlist).toEqual(["sync-stablecoins", "sync-yield-data"]);
+    expect(statusCtx.workerCanaryMode).toBe("shadow");
     expect(statusCtx.feedbackEnv).toBeUndefined();
+
+    const previewFaultCtx = buildRouteContext({
+      request,
+      url,
+      env,
+      execCtx,
+      trustedAdmin: true,
+      routeDependencies: ["workerVersion"] as const,
+    });
+    expect(previewFaultCtx.workerVersion).toBe("preview-v1");
+    expect(previewFaultCtx.reserveRecoveryFaultInjectionEnabled).toBe(true);
 
     const feedbackCtx = buildRouteContext({
       request,

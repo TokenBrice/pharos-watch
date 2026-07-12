@@ -15,6 +15,7 @@ export type EndpointDependency =
   | "mintBurnFreshnessConfig"
   | "coingeckoApiKey"
   | "apiKeySelfServeEnv"
+  | "workerStatusConfig"
   | "workerVersion"
   | "telegram"
   | "telegramRecapRollout";
@@ -561,7 +562,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
   adminGet({
     key: "status",
     path: API_PATHS.status(),
-    routeDependencies: ["coingeckoApiKey", "cloudflareD1StatusConfig"],
+    routeDependencies: ["coingeckoApiKey", "cloudflareD1StatusConfig", "workerStatusConfig"],
     probeGroup: "admin",
     opsProxyTimeoutMs: 20_000,
     probeSemanticKind: "status",

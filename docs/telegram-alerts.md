@@ -856,6 +856,10 @@ Additional Telegram bot status metrics now include:
 - `alert:safety-source-cache` reports `state != "ok"` for more than two `publish-report-card-cache` intervals (cache key `telegram:degradation:safety-source-since`).
 - The most recent `dispatch-telegram-alerts` cron run reported `eventsDetected > 0`, `freshCandidateChats > 0`, and `messagesSent == 0` for three consecutive distinct runs (cache key `telegram:degradation:zero-send-streak`). The cached JSON stores both the streak and the last evaluated `cron_runs.id`, so repeated watchdog evaluation of one row cannot advance the streak; legacy integer values remain readable during rollout.
 
+Each condition's successful incident delivery is recorded separately under an
+`*-alerted:direct:v1` key. Recovery is sent only when that direct marker exists;
+legacy broker-shadow flags cannot suppress an incident or create a recovery.
+
 `GET /api/health.telegramSummary` uses the same lifecycle vocabulary and returns `pendingDeliveries: null` with `pendingDeliveryLifecycleStatus: "unknown"` if the capacity query fails. `/api/status.telegramBot.pendingDeliveries` counts only active claimable plus deferred rows rather than expired or in-flight cleanup states.
 
 The watchdog is wired through `runBestEffortScheduledJob` so its own failures never block the dispatch lane, and its metadata captures `triggered`, `recovered`, and `alertSent` flags per condition for admin inspection via `cron_runs`.
@@ -940,7 +944,7 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 - The cron connection-budget check includes the four serial command/profile/menu/webhook reconciliation checks as one budget-only surface on the same chained five-minute Telegram group. It is not a separate status-tracked `cron_runs` job. `/api/status.budgetOnlySurfaces` records each unit as skipped, succeeded, or failed, including stable skip reasons; the serial Bot API call budget remains visible to `npm run check:cron-connections`.
 - `npx tsx scripts/maintenance/register-telegram.ts --action webhook`, `npx tsx scripts/maintenance/register-telegram.ts --action commands`, and `npx tsx scripts/maintenance/register-telegram.ts --action profile` remain manual recovery tools when an operator needs to force Bot API state outside the Worker reconciliation loop. Command, profile, and allowed-update payloads are shared with Worker reconciliation through `shared/lib/telegram-bot-registration.ts`.
 - The webhook intentionally returns `200` on most malformed or unauthorized cases so Telegram does not keep retrying noisy payloads.
-- The dedicated 5-minute Telegram trigger runs subscriber dispatch (when a bot token exists), watchdog, disambiguation cleanup, and pulse publication first; it then runs all four registration checks and the alert-broker drain. Without the bot token, dispatch is recorded as skipped and registration/transport as an error while watchdog, cleanup, pulse, and broker delivery continue.
+- The dedicated 5-minute Telegram trigger runs subscriber dispatch (when a bot token exists), watchdog, disambiguation cleanup, and pulse publication first; it then runs all four registration checks. Without the bot token, dispatch is recorded as skipped and registration as an error while the token-independent watchdog, cleanup, and pulse work continue.
 - The dispatcher consumes Bot API response bodies before returning, which matters under the Workers per-trigger connection cap.
 
 ## Runbooks

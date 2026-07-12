@@ -25,7 +25,7 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
         },
         {
           job: "worker-repair-runner",
-          run: (signal) => runRepairTaskRunner(runtime.db, runtime.env.WORKER_REPAIR_RUNNER_MODE, signal),
+          run: (signal) => runRepairTaskRunner(runtime.db, signal),
         },
         {
           job: "prune-detail-cache",
@@ -45,7 +45,6 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
             runtime.db,
             runtime.alertWebhookUrl,
             signal,
-            runtime.env.ALERT_BROKER_MODE,
           ),
         },
         {
@@ -54,7 +53,6 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
             runtime.db,
             runtime.alertWebhookUrl,
             signal,
-            runtime.env.ALERT_BROKER_MODE,
           ),
         },
       ],

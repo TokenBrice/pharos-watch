@@ -24,13 +24,11 @@ maintainer reviews the captured evidence before a production mode change. Put
 the evidence bundle under `agents/` with the deployed Worker version, UTC
 window, status snapshots, relevant `cron_runs` metadata, and the rollback value.
 
-| Control | Checked-in mode | Promotion evidence | Immediate rollback |
-| --- | --- | --- | --- |
-| `WORKER_JOB_LEDGER_MODE` | `shadow` | Two clean producer cycles with no ledger bootstrap, lease-state, progress-heartbeat, terminal-write, status-loader, or prune failures | `shadow`, then `off` if writes themselves are unsafe |
-| `WORKER_CANARY_MODE` | `shadow` | Two clean status-self-check cycles at each stage; all findings explained; alert stage additionally requires broker acceptance | Previous stage, or `off` |
-| `ALERT_BROKER_MODE` | `shadow` | Synthetic incident/recovery contract passes, failed delivery is visible and retryable, and two five-minute drains settle without missing-target rows | `status`, `shadow`, or `off`; retain broker rows |
-| `WORKER_REPAIR_RUNNER_MODE` | `shadow` | Due/stale debt is visible, the allowlist and five-row cap match the intended task kinds, and one bounded staged run closes or defers every claim deterministically | `shadow`, then `off`; retain queued tasks |
-| `WORKER_RESERVE_RECOVERY_MODE` | `shadow` | Eligibility has no unexplained blockers, two preview cancellations reconcile exactly, and a preview recovery completes the suffix and all sidecars without duplicate authoritative writes | `reconcile`, `shadow`, or `off`; retain checkpoints |
+| Control                        | Checked-in mode | Promotion evidence                                                                                                                                                                        | Immediate rollback                                   |
+| ------------------------------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `WORKER_JOB_LEDGER_MODE`       | `shadow`        | Two clean producer cycles with no ledger bootstrap, lease-state, progress-heartbeat, terminal-write, status-loader, or prune failures                                                     | `shadow`, then `off` if writes themselves are unsafe |
+| `WORKER_CANARY_MODE`           | `shadow`        | Two clean status-self-check cycles at each stage and all findings explained; promotion currently stops at `status`                                                                        | Previous stage, or `off`                             |
+| `WORKER_RESERVE_RECOVERY_MODE` | `shadow`        | Eligibility has no unexplained blockers, two preview cancellations reconcile exactly, and a preview recovery completes the suffix and all sidecars without duplicate authoritative writes | `reconcile`, `shadow`, or `off`; retain checkpoints  |
 
 ## Job Attempt Ledger
 
@@ -71,33 +69,23 @@ increments `availabilityImpactingUnhealthyCrons` and one watch-tier fixture
 increments only `watchUnhealthyCrons`; a previous successful `cron_runs` row
 must not mask either condition.
 
-## Alert Broker Acceptance
+## Direct Alert Acceptance
 
-The durable broker retry drain is the budget-only
-`alert-broker-delivery-drain` surface on the five-minute Telegram trigger. It
-runs after the status-tracked chain and must still run when
-`TELEGRAM_BOT_TOKEN` is absent. Inspect `/api/status.budgetOnlySurfaces` for a
-fresh row; `failed` or `missingTarget` delivery counts produce degraded
-telemetry while the underlying rows remain retryable.
+Scheduled operational alerts use `sendAlert()` directly. Producer-owned cache
+markers and cooldowns remain the incident/repeat authority; delivery is
+one-shot and a failed webhook attempt returns `false` so the producer can keep
+its retry marker eligible. Direct delivery evidence uses `:direct:v1` cache
+keys, so legacy markers written by broker shadow mode cannot suppress the first
+direct incident or manufacture a recovery. Observation/onset/streak state stays
+on its existing keys. Migration `0175_durable_alert_broker.sql`, legacy marker
+fields, and existing rows remain inert for forensic inspection.
 
-Use the Access-gated canary in this order:
-
-1. `POST /api/alert-broker-canary` with `X-Pharos-Admin: 1` to preview. Confirm
-   `targetConfigured=true`; preview writes only the admin audit row.
-2. Send the same route with
-   `?execute=true&confirm=emit-incident-and-recovery`, a new
-   `Idempotency-Key`, and the admin header. The endpoint accepts only the
-   configured `ALERT_WEBHOOK_URL` and fixed synthetic copy.
-3. Require `transitionContractSatisfied=true`, exactly one persisted incident
-   and recovery, and `deliverySucceeded=true`. A deliberate transport failure
-   must return `failedDeliveryVisible=true` and two retryable failed rows.
-4. Observe the next five-minute lane and confirm
-   `alert-broker-delivery-drain` attempts due rows even if Telegram bot
-   configuration is removed in preview/staging.
-
-Keep `ALERT_BROKER_MODE=shadow` or `status` until this acceptance passes.
-Rollback is an immediate mode change to `shadow` or `off`; do not delete broker
-evidence.
+The Access-gated compatibility canary remains at
+`POST /api/alert-broker-canary`. Preview with `X-Pharos-Admin: 1`, then execute
+with `?execute=true&confirm=emit-incident-and-recovery` and a fresh
+`Idempotency-Key`. The route accepts only the configured `ALERT_WEBHOOK_URL`
+and fixed synthetic copy, sends one incident and one recovery directly, and
+returns `502` if either transport attempt fails.
 
 ## Data-Invariant Canaries
 
@@ -116,12 +104,15 @@ Activation sequence:
 
 1. Deploy migrations with `WORKER_CANARY_MODE=off`.
 2. Set `WORKER_CANARY_MODE=shadow` for one status-self-check cycle and inspect
-   `/api/status.canaries`, `sectionErrors.canaries`, and the latest
-   `data-invariant-canary` cron metadata.
-3. Promote to `status` only after persistence succeeds for at least one cycle
-   and any degraded/error checks are understood.
-4. Roll back by setting `WORKER_CANARY_MODE=off`; schema and retained telemetry
-   are additive and can remain in D1.
+   `worker_canary_runs` through the read-only D1/Night Watch path and the latest
+   `data-invariant-canary` cron metadata. Shadow rows are intentionally excluded
+   from `/api/status.canaries`.
+3. Promote to `status` only after persistence succeeds for two consecutive
+   cycles and every degraded/error check is resolved or explicitly accepted.
+   The status API then reads only current `status` rows.
+4. Roll back to `shadow` or `off`; the status API returns its empty/unknown
+   compatibility shape without reading retained authoritative rows. Schema and
+   telemetry remain additive in D1.
 
 `prune-cron-history` owns canary retention and deletes rows older than 90 days.
 The checked-in Worker config is currently at step 2 (`shadow`) so the next
@@ -129,20 +120,15 @@ action is observation, not promotion.
 
 ## Repair Task Ledger
 
-Migration `0166_worker_repair_tasks.sql` creates `worker_repair_tasks`.
-Initial producers should enqueue only shadow/diagnostic repair debt. Runner
-promotion requires:
-
-- an allowlisted task kind,
-- bounded claim batch size,
-- visible `/api/status.dataQuality.repairDebt` counts,
-- rollback by disabling the producer or runner without deleting queued rows.
+Migration `0166_worker_repair_tasks.sql` creates `worker_repair_tasks`. DDR
+repair-required events are dual-written as diagnostic debt. The daily
+`worker-repair-runner` compatibility job permanently reads due/stale counts and
+does not claim or mutate tasks. Producer reconciliation closes DDR tasks that
+are no longer current, `/api/status.dataQuality.repairDebt` exposes the debt,
+and retention removes old terminal rows.
 
 If repair writes fail, the existing cache-backed repair-debt/status paths must
 remain readable.
-
-The checked-in Worker config sets `WORKER_REPAIR_RUNNER_MODE=shadow` so the
-daily runner reports due/stale backlog telemetry without claiming tasks.
 
 ## Reserve Interruption Recovery
 
@@ -163,8 +149,14 @@ Promotion drill:
 1. Deploy with the checked-in `shadow` value and observe at least one complete
    four-hour reserve cycle. Active child or recovery leases may appear while a
    producer is live; any other blocker must be explained before promotion.
-2. On an uploaded `workers.dev` preview version, obtain a valid Access JWT for
-   `CF_ACCESS_OPS_API_AUD` and arm
+2. Provision a named Cloudflare Worker environment called
+   `reserve-recovery-preview` with its own isolated D1 database bound as `DB`.
+   Set `WORKER_RESERVE_FAULT_INJECTION_ENABLED=true` only in that environment;
+   keep it unset or false in production. The flag gates both arming and scheduled
+   execution, so disabling it also neutralizes any retained fault row. This
+   repository change does not create or deploy the environment, and a
+   placeholder/fake D1 UUID does not satisfy this prerequisite. On its uploaded `workers.dev` version, obtain a valid
+   Access JWT for `CF_ACCESS_OPS_API_AUD` and arm
    `POST /api/admin/reserve-recovery-fault-injection` for an exact version,
    schedule, slot, and attempt. Run two cancellations at different boundaries,
    including one per-asset boundary and one sidecar boundary.

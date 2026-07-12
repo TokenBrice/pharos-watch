@@ -1,4 +1,4 @@
-import { deliverOperationalAlert } from "../lib/operational-alert";
+import { sendAlert } from "../lib/alerts";
 import { readAlertMarker } from "../lib/alert-marker";
 import type { CronResult } from "../lib/cron-logger";
 import { getCache, setCache } from "../lib/db-cache";
@@ -16,7 +16,7 @@ import { throwIfAborted } from "../lib/abort";
  */
 export const MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD = 2_300_000;
 const ALERT_COOLDOWN_SEC = 7 * 86400;
-const ALERT_MARKER_KEY = "mint-burn-growth-watchdog:alert";
+const ALERT_MARKER_KEY = "mint-burn-growth-watchdog:alert:direct:v1";
 
 interface AlertMarker {
   lastAlertedAt: number;
@@ -26,8 +26,7 @@ interface AlertMarker {
 function readMarker(value: string | null | undefined): AlertMarker | null {
   return readAlertMarker<AlertMarker>(
     value,
-    (p): p is AlertMarker =>
-      typeof p.lastAlertedAt === "number" && typeof p.rowCount === "number",
+    (p): p is AlertMarker => typeof p.lastAlertedAt === "number" && typeof p.rowCount === "number",
   );
 }
 
@@ -35,30 +34,13 @@ export async function runMintBurnGrowthWatchdog(
   db: D1Database,
   alertWebhookUrl: string | null,
   signal?: AbortSignal,
-  alertBrokerMode?: string,
 ): Promise<CronResult> {
   throwIfAborted(signal);
-  const row = await db
-    .prepare("SELECT COUNT(*) AS row_count FROM mint_burn_events")
-    .first<{ row_count: number }>();
+  const row = await db.prepare("SELECT COUNT(*) AS row_count FROM mint_burn_events").first<{ row_count: number }>();
   throwIfAborted(signal);
   const rowCount = row?.row_count ?? 0;
 
   if (rowCount < MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD) {
-    if (alertBrokerMode != null) {
-      await deliverOperationalAlert({
-        db,
-        conditionKey: "capacity:mint-burn-events-growth",
-        active: false,
-        severity: "warning",
-        title: "mint_burn_events growth budget exceeded",
-        message: `Row count ${rowCount} is below the configured growth threshold.`,
-        recoveryTitle: "mint_burn_events growth budget recovered",
-        recoveryMessage: "The append-only mint/burn event table is below its review threshold.",
-        webhookUrl: alertWebhookUrl,
-        brokerMode: alertBrokerMode,
-      });
-    }
     return {
       itemCount: rowCount,
       metadata: JSON.stringify({ rowCount, thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD }),
@@ -70,28 +52,17 @@ export async function runMintBurnGrowthWatchdog(
   throwIfAborted(signal);
 
   let alerted = false;
-  const dueForAlert = alertBrokerMode != null
-    || nowSec - (marker?.lastAlertedAt ?? 0) >= ALERT_COOLDOWN_SEC;
+  const dueForAlert = nowSec - (marker?.lastAlertedAt ?? 0) >= ALERT_COOLDOWN_SEC;
   if (dueForAlert) {
-    alerted = await deliverOperationalAlert({
-      db,
-      conditionKey: "capacity:mint-burn-events-growth",
-      active: true,
-      severity: "warning",
-      title: "mint_burn_events growth budget exceeded",
-      message: [
+    alerted = await sendAlert(
+      alertWebhookUrl,
+      "mint_burn_events growth budget exceeded",
+      [
         `mint_burn_events has ${rowCount.toLocaleString("en-US")} rows (threshold ${MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD.toLocaleString("en-US")}, ~5 GB D1 revisit point).`,
         "The table is append-only by product decision (docs/mint-burn-flows.md § Retention).",
         "Revisit retention: document a raised budget, or archive older rows into the dated snapshot export.",
       ].join("\n"),
-      recoveryTitle: "mint_burn_events growth budget recovered",
-      recoveryMessage: "The append-only mint/burn event table is below its review threshold.",
-      fingerprint: { capacity: "mint-burn-events-growth" },
-      metadata: { rowCount, thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD },
-      webhookUrl: alertWebhookUrl,
-      brokerMode: alertBrokerMode,
-      cooldownSec: ALERT_COOLDOWN_SEC,
-    });
+    );
     if (alerted) {
       await setCache(db, ALERT_MARKER_KEY, JSON.stringify({ lastAlertedAt: nowSec, rowCount } satisfies AlertMarker));
     }

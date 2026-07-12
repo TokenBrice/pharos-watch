@@ -1,5 +1,5 @@
 import type { CronResult } from "../lib/cron-logger";
-import { deliverOperationalAlert } from "../lib/operational-alert";
+import { sendAlert } from "../lib/alerts";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { toErrorMessage } from "../lib/error-utils";
 import { API_ORIGIN, OPS_API_ORIGIN, SITE_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
@@ -9,11 +9,12 @@ import { cancelResponseBodyQuietly } from "../lib/response-body";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import type { StatusProbeComparison, StatusProbePlaneSummary, StatusProbeSummary } from "@shared/types/status";
-import { evaluateStatusAndPersist } from "../lib/status-evaluation";
+import { computeRawStatus } from "../lib/status-evaluation";
 import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
 import { route } from "../router";
 import {
   buildDiscrepancy,
+  reconcileStatusState,
   markProbeFailureAlertSent,
   markDiscrepancyAlertSent,
   STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC,
@@ -26,6 +27,7 @@ import { hasDivergence } from "../lib/status-discrepancy-view";
 import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import type { CloudflareD1StatusConfig } from "../lib/env";
 import { refreshD1CapacityMonitoring } from "../lib/status/d1-capacity-monitor";
+import { normalizeWorkerJobLedgerMode } from "../lib/job-ledger";
 
 interface ProbeResult {
   path: string;
@@ -83,9 +85,10 @@ export interface StatusSelfCheckOptions {
   ctx?: ExecutionContext;
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
   alertWebhookUrl?: string | null;
-  alertBrokerMode?: string;
   siteApiSharedSecret?: string | null;
   d1StatusConfig?: CloudflareD1StatusConfig;
+  workerJobLedgerMode?: string;
+  workerJobLedgerAllowlist?: readonly string[];
 }
 
 interface CollectedStatusSelfCheckProbes {
@@ -667,16 +670,10 @@ function shouldSendAlert(
   );
 }
 
-export async function runStatusSelfCheck(
-  db: D1Database,
-  options: StatusSelfCheckOptions = {},
-): Promise<CronResult> {
+export async function runStatusSelfCheck(db: D1Database, options: StatusSelfCheckOptions = {}): Promise<CronResult> {
   const now = Math.floor(Date.now() / 1000);
   const d1CapacityMonitoring = options.d1StatusConfig
-    ? await refreshD1CapacityMonitoring(db, options.d1StatusConfig, now, {
-        brokerMode: options.alertBrokerMode,
-        webhookUrl: options.alertWebhookUrl,
-      })
+    ? await refreshD1CapacityMonitoring(db, options.d1StatusConfig, now)
     : null;
   const {
     probeBaseUrl,
@@ -740,20 +737,27 @@ export async function runStatusSelfCheck(
     },
   });
 
-  const {
+  const workerJobLedgerMode = normalizeWorkerJobLedgerMode(options.workerJobLedgerMode);
+  const workerJobLedgerAllowlist = options.workerJobLedgerAllowlist ?? [];
+  const raw = await computeRawStatus(db, now, {
+    workerJobLedgerMode,
+    workerJobLedgerAllowlist,
+  });
+  const persistedStatus = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall);
+  const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;
+  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(
+    db,
+    now,
     raw,
-    effectiveStatus,
-    persistenceSucceeded: statusPersistenceSucceeded,
-  } = await evaluateStatusAndPersist(db, now);
-  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw);
+    workerJobLedgerMode,
+    workerJobLedgerAllowlist,
+  );
   const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, now);
 
   const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObserved, hasProbeFailure);
   const discrepancy = buildDiscrepancy(effectiveStatus, probeSummary, now, discrepancyState.consecutiveDivergent);
 
-  const discrepancyThresholdActive = discrepancy.hasDivergence
-    && discrepancyState.consecutiveDivergent >= STATUS_DISCREPANCY_ALERT_STREAK;
-  const shouldDiscrepancyAlert = options.alertBrokerMode != null ? discrepancyThresholdActive : shouldSendAlert(
+  const shouldDiscrepancyAlert = shouldSendAlert(
     {
       persistenceSucceeded: discrepancyState.persistenceSucceeded,
       triggered: discrepancy.hasDivergence,
@@ -763,9 +767,7 @@ export async function runStatusSelfCheck(
     now,
     STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC,
   );
-  const probeFailureThresholdActive = hasProbeFailure
-    && discrepancyState.consecutiveProbeFailures >= PROBE_FAILURE_ALERT_THRESHOLD;
-  const shouldProbeFailureAlert = options.alertBrokerMode != null ? probeFailureThresholdActive : shouldSendAlert(
+  const shouldProbeFailureAlert = shouldSendAlert(
     {
       persistenceSucceeded: discrepancyState.persistenceSucceeded,
       triggered: hasProbeFailure,
@@ -781,73 +783,29 @@ export async function runStatusSelfCheck(
 
   let discrepancyAlertSent = false;
   if (shouldDiscrepancyAlert) {
-    discrepancyAlertSent = await deliverOperationalAlert({
-      db,
-      conditionKey: "status:internal-external-divergence",
-      active: true,
-      severity: "critical",
-      title: "Status divergence detected",
-      message: `effective=${effectiveStatus}, raw=${raw.rawOverallStatus}, probe=${probeStatus}, ` +
+    discrepancyAlertSent = await sendAlert(
+      options.alertWebhookUrl ?? null,
+      "Status divergence detected",
+      `effective=${effectiveStatus}, raw=${raw.rawOverallStatus}, probe=${probeStatus}, ` +
         `delta=${discrepancy.severityDelta}, streak=${discrepancyState.consecutiveDivergent}, ` +
         probeComparisonAlertSegment,
-      recoveryTitle: "Status divergence recovered",
-      recoveryMessage: "Internal, external, and persisted status classifications agree again.",
-      fingerprint: { condition: "status-divergence" },
-      webhookUrl: options.alertWebhookUrl ?? null,
-      brokerMode: options.alertBrokerMode,
-      cooldownSec: STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC,
-    });
+    );
     if (discrepancyAlertSent) {
       await markDiscrepancyAlertSent(db, now);
     }
-  } else if (options.alertBrokerMode != null) {
-    discrepancyAlertSent = await deliverOperationalAlert({
-      db,
-      conditionKey: "status:internal-external-divergence",
-      active: false,
-      severity: "critical",
-      title: "Status divergence detected",
-      message: "Status classifications agree.",
-      recoveryTitle: "Status divergence recovered",
-      recoveryMessage: "Internal, external, and persisted status classifications agree again.",
-      webhookUrl: options.alertWebhookUrl ?? null,
-      brokerMode: options.alertBrokerMode,
-    });
   }
 
   let probeFailureAlertSent = false;
   if (shouldProbeFailureAlert) {
-    probeFailureAlertSent = await deliverOperationalAlert({
-      db,
-      conditionKey: "status:probe-failures",
-      active: true,
-      severity: "critical",
-      title: "Status probe failures detected",
-      message: `probe=${probeStatus}, failures=${failCount}/${sampleCount}, ` +
+    probeFailureAlertSent = await sendAlert(
+      options.alertWebhookUrl ?? null,
+      "Status probe failures detected",
+      `probe=${probeStatus}, failures=${failCount}/${sampleCount}, ` +
         `streak=${discrepancyState.consecutiveProbeFailures}, ${probeComparisonAlertSegment}`,
-      recoveryTitle: "Status probes recovered",
-      recoveryMessage: "Internal and external status probes are passing again.",
-      fingerprint: { condition: "status-probe-failures" },
-      webhookUrl: options.alertWebhookUrl ?? null,
-      brokerMode: options.alertBrokerMode,
-      cooldownSec: STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC,
-    });
+    );
     if (probeFailureAlertSent) {
       await markProbeFailureAlertSent(db, now);
     }
-  } else if (options.alertBrokerMode != null) {
-    probeFailureAlertSent = await deliverOperationalAlert({
-      db,
-      conditionKey: "status:probe-failures",
-      active: false,
-      severity: "critical",
-      title: "Status probe failures detected",
-      message: "Status probes are passing.",
-      recoveryTitle: "Status probes recovered",
-      recoveryMessage: "Internal and external status probes are passing again.",
-      webhookUrl: options.alertWebhookUrl ?? null,
-      brokerMode: options.alertBrokerMode,
-    });
   }
 
   return {

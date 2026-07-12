@@ -1,6 +1,33 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
-import { STATUS_RAW_SNAPSHOT_CACHE_KEY, writeStatusRawSnapshot } from "../raw-snapshot";
+import {
+  loadStatusRawSnapshot,
+  STATUS_RAW_SNAPSHOT_CACHE_KEY,
+  writeStatusRawSnapshot,
+} from "../raw-snapshot";
+
+const NOW = 1_777_000_000;
+
+function minimalRawStatus() {
+  return {
+    dbHealthy: true,
+    availabilityStatus: "healthy",
+    dataQualityStatus: "healthy",
+    rawOverallStatus: "healthy",
+    confidence: 1,
+    causes: {},
+    caches: {},
+    crons: {},
+    budgetOnlySurfaces: [],
+    dataQuality: {},
+    telegramBot: null,
+    sectionErrors: {},
+    datasetFreshness: {},
+    summary: {},
+    reserveComposition: {},
+    freshnessDiagnostics: [],
+  };
+}
 
 describe("writeStatusRawSnapshot", () => {
   it("does not overwrite newer cache rows", async () => {
@@ -13,14 +40,34 @@ describe("writeStatusRawSnapshot", () => {
     ], { requireMatch: true });
     const raw = { rawOverallStatus: "healthy" } as Parameters<typeof writeStatusRawSnapshot>[2];
 
-    const written = await writeStatusRawSnapshot(db, 1_777_000_000, raw);
+    const written = await writeStatusRawSnapshot(db, NOW, raw);
 
     expect(written).toBe(false);
     const write = db.getHistory()[0];
     expect(write.sql).toContain("ON CONFLICT(key) DO UPDATE");
     expect(write.sql).toContain("WHERE cache.updated_at <= excluded.updated_at");
     expect(write.binds[0]).toBe(STATUS_RAW_SNAPSHOT_CACHE_KEY);
-    expect(write.binds[2]).toBe(1_777_000_000);
+    expect(write.binds[2]).toBe(NOW);
+    expect(JSON.parse(String(write.binds[1])).workerJobLedgerScope).toBe("off");
+  });
+
+  it("bypasses legacy snapshots that do not identify their ledger read scope", async () => {
+    const db = mockD1([{
+      match: "SELECT value, updated_at FROM cache",
+      rows: [],
+      first: {
+        value: JSON.stringify({ version: 1, producedAt: NOW, raw: minimalRawStatus() }),
+        updated_at: NOW,
+      },
+    }], { requireMatch: true });
+
+    const snapshot = await loadStatusRawSnapshot(db, NOW + 30, "off", []);
+
+    expect(snapshot).toMatchObject({
+      kind: "mode-mismatch",
+      updatedAt: NOW,
+      ageSec: 30,
+    });
   });
 
   it("compacts cron run metadata before writing the raw snapshot", async () => {
@@ -60,7 +107,7 @@ describe("writeStatusRawSnapshot", () => {
       },
     } as unknown as Parameters<typeof writeStatusRawSnapshot>[2];
 
-    const written = await writeStatusRawSnapshot(db, 1_777_000_000, raw);
+    const written = await writeStatusRawSnapshot(db, NOW, raw);
 
     expect(written).toBe(true);
     const payload = JSON.parse(String(db.getHistory()[0].binds[1])) as {

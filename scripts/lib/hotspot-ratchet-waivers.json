@@ -111,14 +111,6 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Split publication row mapping, payload validation, and projection helpers behind the existing store API."
   },
-  "worker/src/cron/fetch-tbill-rate.ts": {
-    "disposition": "queued-p4",
-    "notes": "The Treasury-rate producer combines multiple source adapters, validation, fallback selection, and publication metadata. It entered the file-size candidate set during the Night Watch release and needs a source-adapter split rather than a rushed gate refactor.",
-    "owner": "worker-infrastructure",
-    "createdAt": "2026-07-10",
-    "reviewAfter": "2026-10-10",
-    "nextAction": "Extract provider fetch/parse adapters from Treasury-rate selection and publication orchestration."
-  },
   "worker/src/cron/telegram-pending/drain.ts": {
     "disposition": "queued-p4",
     "notes": "Pending Telegram delivery currently combines stale-send reconciliation, claim lifecycle handling, retry policy, and queue draining. The module is operationally sensitive, so its newly surfaced file, function, and branch hotspots should be reduced in a dedicated behavior-preserving pass.",
@@ -134,6 +126,14 @@
     "createdAt": "2026-07-11",
     "reviewAfter": "2026-10-11",
     "nextAction": "Split version-specific encode/decode codecs from catalog validation and collision mapping behind the existing watchlist-token API and golden-vector tests."
+  },
+  "worker/src/lib/scheduled-recovery-checkpoint.ts": {
+    "disposition": "queued-p4",
+    "notes": "The scheduled recovery checkpoint store owns queue-hash fencing, checkpoint claims, reconciliation, suffix progress, and sidecar completion. Keep this authority intact through the reserve recovery rollout, then split row mapping and lifecycle operations behind its current contract.",
+    "owner": "worker-infrastructure",
+    "createdAt": "2026-07-12",
+    "reviewAfter": "2026-10-12",
+    "nextAction": "Separate checkpoint row mapping, reconciliation, claim lifecycle, and completion helpers after reconcile/recover production soak proves the existing contract."
   },
   "src/lib/status-dashboard-model.ts": {
     "disposition": "queued-p4",

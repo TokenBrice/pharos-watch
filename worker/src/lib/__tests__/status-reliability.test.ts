@@ -16,6 +16,10 @@ import {
   writeStatusProbeRun,
 } from "../status-reliability";
 import { STATUS_DEGRADED_TO_STALE_THRESHOLD } from "../status-reliability-shared";
+import {
+  STATUS_DISCREPANCY_DIRECT_ALERT_CACHE_KEY,
+  STATUS_PROBE_FAILURE_DIRECT_ALERT_CACHE_KEY,
+} from "../status-discrepancy-store";
 import { decideNextStatus } from "../status-reliability-decision";
 import { makeStatefulDb } from "./_helpers/stateful-d1";
 
@@ -427,7 +431,7 @@ describe("status-reliability", () => {
   });
 
   it("tracks discrepancy streaks and alert timestamps", async () => {
-    const { db } = makeStatefulDb();
+    const { db, store } = makeStatefulDb();
 
     const first = await updateDiscrepancyObservation(db, 100, true, true);
     expect(first).toEqual({
@@ -450,7 +454,36 @@ describe("status-reliability", () => {
       persistenceSucceeded: true,
     });
 
+    expect(JSON.parse(store.cache.get(STATUS_DISCREPANCY_DIRECT_ALERT_CACHE_KEY)?.value ?? "{}"))
+      .toEqual({ lastAlertedAt: 200 });
+    expect(JSON.parse(store.cache.get(STATUS_PROBE_FAILURE_DIRECT_ALERT_CACHE_KEY)?.value ?? "{}"))
+      .toEqual({ lastAlertedAt: 300 });
+    expect(store.discrepancy).toMatchObject({ last_alert_at: null, last_probe_alert_at: null });
+
     expect(await getDiscrepancyStreak(db)).toBe(0);
+  });
+
+  it("ignores legacy status-row alert timestamps for direct-alert cooldowns", async () => {
+    const { db, store } = makeStatefulDb();
+    store.discrepancy = {
+      scope: "global",
+      consecutive_divergent: 3,
+      last_divergent_at: 90,
+      last_alert_at: 80,
+      consecutive_probe_failures: 4,
+      last_probe_failure_at: 70,
+      last_probe_alert_at: 60,
+      updated_at: 90,
+    };
+
+    const result = await updateDiscrepancyObservation(db, 100, true, true);
+
+    expect(result).toMatchObject({
+      lastAlertAt: null,
+      lastProbeAlertAt: null,
+      persistenceSucceeded: true,
+    });
+    expect(store.discrepancy).toMatchObject({ last_alert_at: 80, last_probe_alert_at: 60 });
   });
 
   it("falls back to durable discrepancy counters when the write fails", async () => {
@@ -473,9 +506,9 @@ describe("status-reliability", () => {
 
     expect(result).toEqual({
       consecutiveDivergent: 4,
-      lastAlertAt: 80,
+      lastAlertAt: null,
       consecutiveProbeFailures: 2,
-      lastProbeAlertAt: 60,
+      lastProbeAlertAt: null,
       persistenceSucceeded: false,
     });
   });

@@ -49,7 +49,13 @@ describe("runMintBurnGrowthWatchdog", () => {
     expect(result.status).toBe("degraded");
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(JSON.parse(String(result.metadata))).toMatchObject({ alerted: true });
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(true);
+    expect(
+      db.getHistory().some(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === "mint-burn-growth-watchdog:alert:direct:v1",
+      ),
+    ).toBe(true);
   });
 
   it("suppresses re-alerts inside the weekly cooldown", async () => {
@@ -62,10 +68,10 @@ describe("runMintBurnGrowthWatchdog", () => {
       },
       {
         match: "cache",
-        matchBinds: ["mint-burn-growth-watchdog:alert"],
+        matchBinds: ["mint-burn-growth-watchdog:alert:direct:v1"],
         rows: [],
         first: {
-          key: "mint-burn-growth-watchdog:alert",
+          key: "mint-burn-growth-watchdog:alert:direct:v1",
           value: JSON.stringify({ lastAlertedAt: nowSec - 3600, rowCount: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD }),
           updated_at: nowSec - 3600,
         },
@@ -77,6 +83,53 @@ describe("runMintBurnGrowthWatchdog", () => {
     expect(result.status).toBe("degraded");
     expect(fetch).not.toHaveBeenCalled();
     expect(JSON.parse(String(result.metadata))).toMatchObject({ alerted: false, suppressedByCooldown: true });
+  });
+
+  it("ignores the legacy marker and writes only the direct-delivery marker", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "mint_burn_events",
+        rows: [],
+        first: { row_count: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD + 1 },
+      },
+      {
+        match: "cache",
+        rows: [],
+        first: {
+          key: "mint-burn-growth-watchdog:alert",
+          value: JSON.stringify({ lastAlertedAt: nowSec - 3600, rowCount: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD }),
+          updated_at: nowSec - 3600,
+        },
+      },
+    ]);
+
+    const result = await runMintBurnGrowthWatchdog(db, WEBHOOK_URL);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({ alerted: true, suppressedByCooldown: false });
+  });
+
+  it("does not advance the direct marker when webhook delivery fails", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("failed", { status: 500 })));
+    const db = mockD1([
+      {
+        match: "mint_burn_events",
+        rows: [],
+        first: { row_count: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD + 1 },
+      },
+    ]);
+
+    const result = await runMintBurnGrowthWatchdog(db, WEBHOOK_URL);
+
+    expect(JSON.parse(String(result.metadata))).toMatchObject({ alerted: false, suppressedByCooldown: false });
+    expect(
+      db.getHistory().some(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === "mint-burn-growth-watchdog:alert:direct:v1",
+      ),
+    ).toBe(false);
   });
 
   it("throws before D1 work when the cron signal is already aborted", async () => {

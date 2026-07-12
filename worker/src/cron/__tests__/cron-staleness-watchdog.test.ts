@@ -38,7 +38,9 @@ vi.mock("../../lib/db-cache", () => ({
 import { evaluateCronStaleness, loadDetailWriteFailures, runCronStalenessWatchdog } from "../cron-staleness-watchdog";
 
 const ALERT_KEY = "cron-staleness-watchdog:alert:stablecoins";
+const DIRECT_ALERT_KEY = `${ALERT_KEY}:direct:v1`;
 const DETAIL_ALERT_KEY = "cron-staleness-watchdog:alert:detail-write-failures";
+const DETAIL_DIRECT_ALERT_KEY = `${DETAIL_ALERT_KEY}:direct:v1`;
 
 interface FakeFailureRow {
   key: string;
@@ -206,6 +208,26 @@ describe("cron staleness watchdog", () => {
     expect(metadata.alerted).toEqual([]);
     expect(metadata.failedAlerts).toEqual(["stablecoins"]);
     expect(marker.lastAlertedAt).toBe(0);
+    expect(cacheStore.has(DIRECT_ALERT_KEY)).toBe(false);
+  });
+
+  it("ignores legacy delivery timestamps while preserving the stale observation", async () => {
+    cacheStore.set(ALERT_KEY, JSON.stringify({ firstStaleAt: 100, lastObservedAt: 100, lastAlertedAt: 100 }));
+    mockCacheStatus({ stablecoins: 1_801 });
+
+    const result = await runCronStalenessWatchdog(fakeDb(), "https://alerts.example/webhook");
+    const metadata = JSON.parse(result.metadata ?? "{}") as { alerted: string[] };
+
+    expect(metadata.alerted).toEqual(["stablecoins"]);
+    expect(sendAlertMock).toHaveBeenCalledWith(
+      "https://alerts.example/webhook",
+      "Cron freshness stale",
+      expect.any(String),
+    );
+    expect(cacheStore.has(ALERT_KEY)).toBe(true);
+    expect(JSON.parse(cacheStore.get(DIRECT_ALERT_KEY) ?? "{}")).toMatchObject({
+      lastAlertedAt: expect.any(Number),
+    });
   });
 
   it("reports DEX-to-DEWS dependency recovery state", async () => {
@@ -230,6 +252,7 @@ describe("cron staleness watchdog", () => {
 
   it("keeps recovered alert markers when the recovery webhook send fails", async () => {
     cacheStore.set(ALERT_KEY, JSON.stringify({ firstStaleAt: 100, lastObservedAt: 100, lastAlertedAt: 100 }));
+    cacheStore.set(DIRECT_ALERT_KEY, JSON.stringify({ lastAlertedAt: 100 }));
     sendAlertMock.mockResolvedValueOnce(false);
     mockCacheStatus({ stablecoins: 0 });
 
@@ -242,10 +265,12 @@ describe("cron staleness watchdog", () => {
     expect(metadata.recovered).toEqual(["stablecoins"]);
     expect(metadata.failedRecoveryAlerts).toEqual(["stablecoins"]);
     expect(cacheStore.has(ALERT_KEY)).toBe(true);
+    expect(cacheStore.has(DIRECT_ALERT_KEY)).toBe(true);
   });
 
   it("clears recovered alert markers after the recovery webhook is delivered", async () => {
     cacheStore.set(ALERT_KEY, JSON.stringify({ firstStaleAt: 100, lastObservedAt: 100, lastAlertedAt: 100 }));
+    cacheStore.set(DIRECT_ALERT_KEY, JSON.stringify({ lastAlertedAt: 100 }));
     mockCacheStatus({ stablecoins: 0 });
 
     const result = await runCronStalenessWatchdog(fakeDb(), "https://alerts.example/webhook");
@@ -255,6 +280,7 @@ describe("cron staleness watchdog", () => {
 
     expect(metadata.deliveredRecoveryAlerts).toEqual(["stablecoins"]);
     expect(cacheStore.has(ALERT_KEY)).toBe(false);
+    expect(cacheStore.has(DIRECT_ALERT_KEY)).toBe(false);
   });
 
   it("parses fresh detail write-failure markers and prunes expired ones", async () => {
@@ -307,6 +333,9 @@ describe("cron staleness watchdog", () => {
     );
     const marker = JSON.parse(cacheStore.get(DETAIL_ALERT_KEY) ?? "{}") as { lastAlertedAt?: number };
     expect(marker.lastAlertedAt).toBeGreaterThan(0);
+    expect(JSON.parse(cacheStore.get(DETAIL_DIRECT_ALERT_KEY) ?? "{}")).toMatchObject({
+      lastAlertedAt: expect.any(Number),
+    });
   });
 
   it("treats a marker as recovered when the detail row was rewritten after it", async () => {
@@ -358,8 +387,8 @@ describe("cron staleness watchdog", () => {
     mockCacheStatus({ stablecoins: 0 });
     const nowSec = Math.floor(Date.now() / 1000);
     cacheStore.set(
-      DETAIL_ALERT_KEY,
-      JSON.stringify({ firstStaleAt: nowSec - 120, lastObservedAt: nowSec - 120, lastAlertedAt: nowSec - 120 }),
+      DETAIL_DIRECT_ALERT_KEY,
+      JSON.stringify({ lastAlertedAt: nowSec - 120 }),
     );
     const rows: FakeFailureRow[] = [
       {

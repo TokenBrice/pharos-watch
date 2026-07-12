@@ -15,7 +15,7 @@ Cloudflare's paid-plan limit is 10 GB per D1 database and cannot be raised. Phar
 
 `d1_capacity_observations` retains at most one observation per UTC hour. The calculation uses linear regression over the latest 30 days only after at least three samples span 24 hours. Until then, or when the measured slope is flat/negative, `exhaustionAt` remains null. A D1 `DELETE` reducing reported file size is evidence for that run only, not a general compaction guarantee.
 
-The scheduled `status-self-check` lane refreshes the Cloudflare control-plane size observation and routes threshold transitions through the durable alert broker. A 60% crossing opens a warning watch, 75% makes public/admin health degraded, and 90% makes capacity health stale and the broker incident critical. Three consecutive control-plane failures open the separate `d1:capacity-observation-unavailable` warning. `/api/health.d1Capacity` and `/api/status.d1Usage.capacity` expose the latest assessment; old Workers and an uninitialized observation cache remain compatible because both fields are additive/optional.
+The scheduled `status-self-check` lane refreshes the Cloudflare control-plane size observation. A 60% crossing opens a warning watch, 75% makes public/admin health degraded, and 90% makes capacity health stale. A control-plane failure is logged and returned as a monitoring error without replacing the last cached assessment. `/api/health.d1Capacity` and `/api/status.d1Usage.capacity` expose the latest assessment; old Workers and an uninitialized observation cache remain compatible because both fields are additive/optional.
 
 ## Hot-Query Rollout
 

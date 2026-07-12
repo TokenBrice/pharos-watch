@@ -1,8 +1,4 @@
-import type {
-  WorkerJobAttemptState,
-  WorkerJobAttemptStatus,
-  WorkerJobAttemptStatusClass,
-} from "@shared/types/status";
+import type { WorkerJobAttemptState, WorkerJobAttemptStatus, WorkerJobAttemptStatusClass } from "@shared/types/status";
 import { CronJobAbandonedError } from "./cron-lease-primitives";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
@@ -148,6 +144,12 @@ export function shouldRecordWorkerJobAttempt(input: {
   return input.allowlist.includes("*") || input.allowlist.includes(input.job);
 }
 
+export function workerJobLedgerReadScopeFingerprint(mode: WorkerJobLedgerMode, allowlist: readonly string[]): string {
+  if (mode === "off") return "off";
+  const jobs = [...new Set(allowlist.map((job) => job.trim()).filter(Boolean))].sort();
+  return `${mode}:${jobs.length === 0 || jobs.includes("*") ? "*" : jobs.join(",")}`;
+}
+
 function nowSec(): number {
   return Math.floor(Date.now() / 1000);
 }
@@ -218,16 +220,19 @@ function classifyCronResult(result: WorkerJobAttemptCronResult | void): {
 }
 
 function progressMetadata(update: WorkerJobAttemptProgressUpdate): string | null {
-  return boundedJson({
-    progress: {
-      ...(update.stage !== undefined ? { stage: update.stage } : {}),
-      ...(update.itemsDone !== undefined ? { itemsDone: update.itemsDone } : {}),
-      ...(update.itemsTotal !== undefined ? { itemsTotal: update.itemsTotal } : {}),
-      ...(update.message !== undefined ? { message: update.message } : {}),
-      ...(update.leaseOwner !== undefined ? { leaseOwner: update.leaseOwner } : {}),
-      ...(update.metadata !== undefined ? { metadata: update.metadata } : {}),
+  return boundedJson(
+    {
+      progress: {
+        ...(update.stage !== undefined ? { stage: update.stage } : {}),
+        ...(update.itemsDone !== undefined ? { itemsDone: update.itemsDone } : {}),
+        ...(update.itemsTotal !== undefined ? { itemsTotal: update.itemsTotal } : {}),
+        ...(update.message !== undefined ? { message: update.message } : {}),
+        ...(update.leaseOwner !== undefined ? { leaseOwner: update.leaseOwner } : {}),
+        ...(update.metadata !== undefined ? { metadata: update.metadata } : {}),
+      },
     },
-  }, MAX_ATTEMPT_METADATA_JSON_CHARS);
+    MAX_ATTEMPT_METADATA_JSON_CHARS,
+  );
 }
 
 function terminalStateSql(): string {
@@ -387,10 +392,7 @@ export async function heartbeatWorkerJobAttempt(
   );
 }
 
-export async function finishWorkerJobAttempt(
-  db: D1Database,
-  input: FinishWorkerJobAttemptInput,
-): Promise<void> {
+export async function finishWorkerJobAttempt(db: D1Database, input: FinishWorkerJobAttemptInput): Promise<void> {
   const timestamp = input.nowSec ?? nowSec();
   const durationMs = Math.max(0, Date.now() - input.startedAtMs);
   const classification = input.error
@@ -398,12 +400,11 @@ export async function finishWorkerJobAttempt(
       ? { state: "abandoned" as const, statusClass: "abandoned" as const }
       : { state: "failed" as const, statusClass: "thrown_error" as const }
     : classifyCronResult(input.result);
-  const resultMetadataJson = input.error instanceof CronJobAbandonedError
-    ? boundedJson(input.error.metadata, MAX_ATTEMPT_METADATA_JSON_CHARS)
-    : normalizeResultMetadata(input.result);
-  const error = input.error
-    ? toErrorMessage(input.error)
-    : input.result?.error ?? null;
+  const resultMetadataJson =
+    input.error instanceof CronJobAbandonedError
+      ? boundedJson(input.error.metadata, MAX_ATTEMPT_METADATA_JSON_CHARS)
+      : normalizeResultMetadata(input.result);
+  const error = input.error ? toErrorMessage(input.error) : (input.result?.error ?? null);
   await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -479,21 +480,18 @@ export async function markWorkerJobAttemptsAbandonedForSlot(
   return result.meta.changes ?? 0;
 }
 
-export async function pruneWorkerJobAttempts(
-  db: D1Database,
-  cutoffSec: number,
-  signal?: AbortSignal,
-): Promise<number> {
+export async function pruneWorkerJobAttempts(db: D1Database, cutoffSec: number, signal?: AbortSignal): Promise<number> {
   try {
-    const result = await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `DELETE FROM worker_job_attempts
+    const result = await runWithOverloadRetry(
+      () =>
+        db
+          .prepare(
+            `DELETE FROM worker_job_attempts
             WHERE updated_at < ?
               AND state IN (${terminalStateSql()})`,
-        )
-        .bind(cutoffSec, ...TERMINAL_ATTEMPT_STATES)
-        .run(),
+          )
+          .bind(cutoffSec, ...TERMINAL_ATTEMPT_STATES)
+          .run(),
       3,
       signal,
     );
@@ -508,8 +506,9 @@ export async function loadWorkerJobAttemptHealth(
   db: D1Database,
   jobs: readonly string[],
   now: number,
+  mode: WorkerJobLedgerMode = "off",
 ): Promise<WorkerJobAttemptHealth> {
-  if (jobs.length === 0) {
+  if (mode === "off" || jobs.length === 0) {
     return { latestByJob: new Map(), activeAttempts: 0, staleAttempts: 0, queryFailed: false };
   }
   const jobInClause = buildAttemptInClause(jobs);
@@ -539,9 +538,10 @@ export async function loadWorkerJobAttemptHealth(
                  OR COALESCE(last_heartbeat_at, started_at, claimed_at, queued_at) < ?
                THEN 1 ELSE 0 END) AS stale_count
              FROM worker_job_attempts
-            WHERE state IN (${activeStateSql()})`,
+            WHERE state IN (${activeStateSql()})
+              AND job IN (${jobInClause.sql})`,
         )
-        .bind(now, now - WORKER_JOB_ATTEMPT_STALE_SEC, ...ACTIVE_ATTEMPT_STATES)
+        .bind(now, now - WORKER_JOB_ATTEMPT_STALE_SEC, ...ACTIVE_ATTEMPT_STATES, ...jobInClause.binds)
         .first<WorkerJobAttemptSummaryRow>(),
     ]);
 

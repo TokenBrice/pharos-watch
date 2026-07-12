@@ -24,7 +24,6 @@ import { createBinanceFetchSession } from "../lib/cex-tickers";
 export interface SyncStablecoinsOptions {
   cmcApiKey?: string;
   alertWebhookUrl?: string | null;
-  alertBrokerMode?: string;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
   reportProgress?: CronProgressReporter;
@@ -40,7 +39,6 @@ export async function syncStablecoins(
   const {
     cmcApiKey,
     alertWebhookUrl,
-    alertBrokerMode,
     coingeckoApiKey,
     chainRpcs,
     reportProgress,
@@ -58,7 +56,6 @@ export async function syncStablecoins(
     jupiterApiKey,
     signal,
     alertWebhookUrl,
-    alertBrokerMode,
     coingeckoApiKey,
     chainRpcs,
     reportProgress,
@@ -138,7 +135,7 @@ export async function syncStablecoins(
     }),
   });
   if (stalenessCheck.blockedResult) {
-    await recordStablecoinsStalenessBlockOutcome(db, stalenessCheck, alertWebhookUrl, alertBrokerMode);
+    await recordStablecoinsStalenessBlockOutcome(db, stalenessCheck, alertWebhookUrl);
     return stalenessCheck.blockedResult;
   }
   const {
@@ -154,7 +151,6 @@ export async function syncStablecoins(
     syncStartSec,
     signal,
     alertWebhookUrl,
-    alertBrokerMode,
     coingeckoApiKey,
     rawAssetCount,
     droppedMalformedAssets,

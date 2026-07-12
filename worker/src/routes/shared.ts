@@ -14,6 +14,8 @@ import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { FeedbackEnv } from "../api/feedback";
 import type { ApiKeySelfServeEnv } from "../api/api-key-requests/types";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
+import type { WorkerJobLedgerMode } from "../lib/job-ledger";
+import type { WorkerCanaryMode } from "../lib/canary-checks";
 
 /** Core context available to every route handler. */
 export interface RouteContext {
@@ -80,6 +82,13 @@ export interface CloudflareD1StatusRouteFields {
 
 export interface WorkerVersionRouteFields {
   workerVersion: string | null;
+  reserveRecoveryFaultInjectionEnabled: boolean;
+}
+
+export interface WorkerStatusConfigRouteFields {
+  workerJobLedgerMode: WorkerJobLedgerMode;
+  workerJobLedgerAllowlist: string[];
+  workerCanaryMode: WorkerCanaryMode;
 }
 
 export interface RouteDependencyFieldMap {
@@ -93,6 +102,7 @@ export interface RouteDependencyFieldMap {
   apiKeySelfServeEnv: ApiKeySelfServeRouteFields;
   feedbackEnv: FeedbackRouteFields;
   mintBurnFreshnessConfig: MintBurnFreshnessRouteFields;
+  workerStatusConfig: WorkerStatusConfigRouteFields;
   workerVersion: WorkerVersionRouteFields;
   telegram: TelegramRouteFields;
   telegramRecapRollout: TelegramRecapRolloutRouteFields;

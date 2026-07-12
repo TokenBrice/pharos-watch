@@ -1,4 +1,4 @@
-import { deliverOperationalAlert } from "../lib/operational-alert";
+import { sendAlert } from "../lib/alerts";
 import type { CronResult } from "../lib/cron-logger";
 import { CRON_TIMEOUT_MS, runWithOverloadRetry } from "../lib/cron-lease";
 import { getCache, setCache } from "../lib/db-cache";
@@ -29,7 +29,7 @@ const LOOKBACK_SEC = 7 * 86400;
 const MIN_RUNS_FOR_TREND = 20;
 const MIN_SLOTS_FOR_ABANDONMENT_TREND = 20;
 const ALERT_COOLDOWN_SEC = 7 * 86400;
-const ALERT_MARKER_KEY = "cron-duration-watchdog:alert";
+const ALERT_MARKER_KEY = "cron-duration-watchdog:alert:direct:v1";
 const STALE_SLOT_CHILD_ERROR = "scheduled slot heartbeat stale; child job progress abandoned";
 const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
 const STALE_SLOT_METADATA_REASON = "stale-slot-reconciled";
@@ -138,17 +138,13 @@ function isRecent(timestampSec: number | null, nowSec: number, windowSec: number
 }
 
 function isRuntimeBreaching(stats: JobDurationStats, nowSec: number): boolean {
-  const hasRecentCapHits = stats.capHits >= DURATION_ALERT_CAP_HITS
-    && isRecent(stats.latestCapHitAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
-  const hasRecentBudgetTruncations = stats.budgetTruncations >= DURATION_ALERT_BUDGET_TRUNCATIONS
-    && isRecent(stats.latestBudgetTruncationAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
-  const hasAverageTrend = stats.runs >= MIN_RUNS_FOR_TREND
-    && stats.avgRatio >= DURATION_ALERT_AVG_RATIO;
-  return (
-    hasAverageTrend ||
-    hasRecentCapHits ||
-    hasRecentBudgetTruncations
-  );
+  const hasRecentCapHits =
+    stats.capHits >= DURATION_ALERT_CAP_HITS && isRecent(stats.latestCapHitAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
+  const hasRecentBudgetTruncations =
+    stats.budgetTruncations >= DURATION_ALERT_BUDGET_TRUNCATIONS &&
+    isRecent(stats.latestBudgetTruncationAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
+  const hasAverageTrend = stats.runs >= MIN_RUNS_FOR_TREND && stats.avgRatio >= DURATION_ALERT_AVG_RATIO;
+  return hasAverageTrend || hasRecentCapHits || hasRecentBudgetTruncations;
 }
 
 function isSlotAbandonmentBreaching(stats: SlotAbandonmentStats, nowSec: number): boolean {
@@ -156,10 +152,7 @@ function isSlotAbandonmentBreaching(stats: SlotAbandonmentStats, nowSec: number)
   if (stats.latestAbandonedAt == null || stats.latestAbandonedAt < nowSec - SLOT_ABANDONMENT_RECENT_WINDOW_SEC) {
     return false;
   }
-  return (
-    stats.abandonedSlots >= SLOT_ABANDONMENT_ALERT_COUNT &&
-    stats.abandonmentRatio >= SLOT_ABANDONMENT_ALERT_RATIO
-  );
+  return stats.abandonedSlots >= SLOT_ABANDONMENT_ALERT_COUNT && stats.abandonmentRatio >= SLOT_ABANDONMENT_ALERT_RATIO;
 }
 
 function readLastAlertedAt(value: string | null | undefined): number {
@@ -198,10 +191,11 @@ async function loadDurationDiagnostics(
   const diagnostics: DurationDiagnostic[] = [];
   for (const stats of breachingStats) {
     throwIfAborted(signal);
-    const stageRows = await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `SELECT
+    const stageRows = await runWithOverloadRetry(
+      () =>
+        db
+          .prepare(
+            `SELECT
              CASE
                WHEN json_valid(metadata) AND json_extract(metadata, '$.stage') IS NOT NULL
                  THEN CAST(json_extract(metadata, '$.stage') AS TEXT)
@@ -243,24 +237,25 @@ async function loadDurationDiagnostics(
            GROUP BY stage_label
            ORDER BY cap_hits DESC, budget_truncations DESC, max_ms DESC
            LIMIT 8`,
-        )
-        .bind(
-          stats.timeoutMs,
-          stats.job,
-          sinceSec,
-          STALE_SLOT_CHILD_ERROR,
-          STALE_SLOT_METADATA_REASON,
-          stats.timeoutMs,
-        )
-        .all<DurationStageBreakdownRow>(),
+          )
+          .bind(
+            stats.timeoutMs,
+            stats.job,
+            sinceSec,
+            STALE_SLOT_CHILD_ERROR,
+            STALE_SLOT_METADATA_REASON,
+            stats.timeoutMs,
+          )
+          .all<DurationStageBreakdownRow>(),
       3,
       signal,
     );
     throwIfAborted(signal);
-    const sampleRows = await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `SELECT started_at, duration_ms, status, error, metadata
+    const sampleRows = await runWithOverloadRetry(
+      () =>
+        db
+          .prepare(
+            `SELECT started_at, duration_ms, status, error, metadata
              FROM cron_runs
             WHERE job = ?
               AND started_at > ?
@@ -281,9 +276,9 @@ async function loadDurationDiagnostics(
               )
             ORDER BY started_at DESC
             LIMIT 5`,
-        )
-        .bind(stats.job, sinceSec, STALE_SLOT_CHILD_ERROR, STALE_SLOT_METADATA_REASON, stats.timeoutMs)
-        .all<DurationSampleRow>(),
+          )
+          .bind(stats.job, sinceSec, STALE_SLOT_CHILD_ERROR, STALE_SLOT_METADATA_REASON, stats.timeoutMs)
+          .all<DurationSampleRow>(),
       3,
       signal,
     );
@@ -314,7 +309,6 @@ export async function runCronDurationWatchdog(
   db: D1Database,
   alertWebhookUrl: string | null,
   signal?: AbortSignal,
-  alertBrokerMode?: string,
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
@@ -425,20 +419,6 @@ export async function runCronDurationWatchdog(
   const durationDiagnostics = await loadDurationDiagnostics(db, runtimeBreaching, sinceSec, signal);
 
   if (runtimeBreaching.length === 0 && slotAbandonmentBreaching.length === 0) {
-    if (alertBrokerMode != null) {
-      await deliverOperationalAlert({
-        db,
-        conditionKey: "watchdog:cron-runtime-or-slot-abandonment",
-        active: false,
-        severity: "critical",
-        title: "Cron runtime budget or slot abandonment breach",
-        message: "No cron runtime or slot-abandonment threshold is breached.",
-        recoveryTitle: "Cron runtime and slot abandonment recovered",
-        recoveryMessage: "All watched runtime and scheduled-slot abandonment thresholds are within budget.",
-        webhookUrl: alertWebhookUrl,
-        brokerMode: alertBrokerMode,
-      });
-    }
     return {
       itemCount: stats.length + slotStats.length,
       metadata: JSON.stringify({
@@ -456,55 +436,38 @@ export async function runCronDurationWatchdog(
 
   const marker = await getCache(db, ALERT_MARKER_KEY);
   throwIfAborted(signal);
-  const dueForAlert = alertBrokerMode != null
-    || nowSec - readLastAlertedAt(marker?.value) >= ALERT_COOLDOWN_SEC;
+  const dueForAlert = nowSec - readLastAlertedAt(marker?.value) >= ALERT_COOLDOWN_SEC;
   let alerted = false;
   if (dueForAlert) {
     const diagnosticsByJob = new Map(durationDiagnostics.map((entry) => [entry.job, entry]));
-    const runtimeLines = runtimeBreaching.map((entry) =>
-      `- ${entry.job}: 7d avg ${Math.round(entry.avgMs / 1000)}s of ${Math.round(entry.timeoutMs / 1000)}s ceiling ` +
-      `(${Math.round(entry.avgRatio * 100)}%), ${entry.capHits} run(s) at cap, ` +
-      `${entry.budgetTruncations} budget truncation(s), ${entry.runs} runs` +
-      (() => {
-        const stages = diagnosticsByJob.get(entry.job)?.stageBreakdown ?? [];
-        if (stages.length === 0) return "";
-        return `; cap/trunc stages: ${stages.map((stage) =>
-          `${stage.stage} (${stage.capHits} cap, ${stage.budgetTruncations} trunc)`
-        ).join(", ")}`;
-      })(),
+    const runtimeLines = runtimeBreaching.map(
+      (entry) =>
+        `- ${entry.job}: 7d avg ${Math.round(entry.avgMs / 1000)}s of ${Math.round(entry.timeoutMs / 1000)}s ceiling ` +
+        `(${Math.round(entry.avgRatio * 100)}%), ${entry.capHits} run(s) at cap, ` +
+        `${entry.budgetTruncations} budget truncation(s), ${entry.runs} runs` +
+        (() => {
+          const stages = diagnosticsByJob.get(entry.job)?.stageBreakdown ?? [];
+          if (stages.length === 0) return "";
+          return `; cap/trunc stages: ${stages
+            .map((stage) => `${stage.stage} (${stage.capHits} cap, ${stage.budgetTruncations} trunc)`)
+            .join(", ")}`;
+        })(),
     );
-    const slotLines = slotAbandonmentBreaching.map((entry) =>
-      `- ${entry.scheduleKey}: ${entry.abandonedSlots}/${entry.slots} slot(s) abandoned ` +
-      `(${Math.round(entry.abandonmentRatio * 100)}%), ${entry.errorSlots} total error slot(s)`,
+    const slotLines = slotAbandonmentBreaching.map(
+      (entry) =>
+        `- ${entry.scheduleKey}: ${entry.abandonedSlots}/${entry.slots} slot(s) abandoned ` +
+        `(${Math.round(entry.abandonmentRatio * 100)}%), ${entry.errorSlots} total error slot(s)`,
     );
-    const message = [
+    alerted = await sendAlert(
+      alertWebhookUrl,
+      "Cron runtime budget or slot abandonment breach",
+      [
         "Cron runtime pressure and scheduled-slot abandonment are reported separately.",
-        ...(runtimeLines.length > 0
-          ? ["Runtime budget pressure:", ...runtimeLines]
-          : []),
-        ...(slotLines.length > 0
-          ? ["Scheduled slot abandonment:", ...slotLines]
-          : []),
+        ...(runtimeLines.length > 0 ? ["Runtime budget pressure:", ...runtimeLines] : []),
+        ...(slotLines.length > 0 ? ["Scheduled slot abandonment:", ...slotLines] : []),
         "Treat runtime budget pressure as capacity work; treat slot abandonment as worker infrastructure/platform interruption.",
-      ].join("\n");
-    alerted = await deliverOperationalAlert({
-      db,
-      conditionKey: "watchdog:cron-runtime-or-slot-abandonment",
-      active: true,
-      severity: "critical",
-      title: "Cron runtime budget or slot abandonment breach",
-      message,
-      recoveryTitle: "Cron runtime and slot abandonment recovered",
-      recoveryMessage: "All watched runtime and scheduled-slot abandonment thresholds are within budget.",
-      fingerprint: { watchdog: "cron-runtime-or-slot-abandonment" },
-      metadata: {
-        runtimeBreaching: runtimeBreaching.map((entry) => entry.job),
-        slotAbandonmentBreaching: slotAbandonmentBreaching.map((entry) => entry.scheduleKey),
-      },
-      webhookUrl: alertWebhookUrl,
-      brokerMode: alertBrokerMode,
-      cooldownSec: ALERT_COOLDOWN_SEC,
-    });
+      ].join("\n"),
+    );
     if (alerted) {
       await setCache(db, ALERT_MARKER_KEY, JSON.stringify({ lastAlertedAt: nowSec }));
     }

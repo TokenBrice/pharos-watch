@@ -3,8 +3,7 @@ import { runWorkerRepairTaskRunner } from "../lib/repair-tasks";
 
 export function runRepairTaskRunner(
   db: D1Database,
-  mode: string | undefined,
   signal?: AbortSignal,
 ): Promise<CronResult> {
-  return runWorkerRepairTaskRunner(db, { mode, signal });
+  return runWorkerRepairTaskRunner(db, { signal });
 }

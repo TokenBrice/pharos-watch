@@ -27,7 +27,6 @@ export interface MainPublicationInput {
   syncStartSec: number;
   signal?: AbortSignal;
   alertWebhookUrl?: string | null;
-  alertBrokerMode?: string;
   coingeckoApiKey?: string | null;
   rawAssetCount: number;
   droppedMalformedAssets: number;
@@ -61,7 +60,6 @@ export async function publishMainStablecoinsAndRunFollowThrough(
     syncStartSec: input.syncStartSec,
     signal: input.signal,
     alertWebhookUrl: input.alertWebhookUrl,
-    alertBrokerMode: input.alertBrokerMode,
     validationContext: "main",
     returnIfAborted: input.returnIfAborted,
     abortResult: input.abortResult,
@@ -81,7 +79,6 @@ export async function publishMainStablecoinsAndRunFollowThrough(
       CIRCUIT_SOURCE.DL_STABLECOINS,
       true,
       input.alertWebhookUrl,
-      input.alertBrokerMode,
     );
     return buildStablecoinsUnwrittenCacheResult({
       cacheResult,
@@ -105,7 +102,6 @@ export async function publishMainStablecoinsAndRunFollowThrough(
     CIRCUIT_SOURCE.DL_STABLECOINS,
     true,
     input.alertWebhookUrl,
-    input.alertBrokerMode,
   );
   await queueTrackedAdditionsNotice(input.db, input.previousAssetsById.keys(), input.assets);
   await reportStablecoinsStage(input.reportProgress, "depeg-pipeline", "Running depeg pipeline", {

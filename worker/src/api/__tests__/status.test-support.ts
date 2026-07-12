@@ -168,6 +168,7 @@ function makeRawStatusSnapshotRow(now: number, ageSec: number, overrides: Record
     value: JSON.stringify({
       version: 1,
       producedAt: updatedAt,
+      workerJobLedgerScope: "off",
       raw: makeRawStatusForSnapshot(updatedAt, overrides),
     }),
   };

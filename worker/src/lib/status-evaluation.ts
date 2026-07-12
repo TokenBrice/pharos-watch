@@ -1,9 +1,6 @@
 import type { StatusCause, StatusResponse } from "@shared/types/status";
 import { assessPublicHealth } from "./public-health-assessment";
-import {
-  emptyDatasetFreshness,
-  emptyReserveComposition,
-} from "./status/derived-data";
+import { emptyDatasetFreshness, emptyReserveComposition } from "./status/derived-data";
 import { emptyDataQuality, getDataQuality } from "./status/data-quality";
 import {
   applyCronHealthSectionErrors,
@@ -11,10 +8,7 @@ import {
   deriveStatusAssessmentInputs,
   loadSupplementalStatusSections,
 } from "./status/evaluation-context";
-import {
-  reconcileStatusState,
-  type StatusLevel,
-} from "./status-reliability";
+import type { StatusLevel } from "./status-reliability";
 import {
   deriveAvailabilityStatus,
   deriveDataQualityStatus,
@@ -32,6 +26,16 @@ import { loadCronHealth } from "./status/cron-health";
 import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
 import { loadBudgetOnlySurfaceStatuses } from "./budget-surface-telemetry";
 import type { CacheFreshnessDiagnostic } from "./api-utils";
+import { normalizeWorkerJobLedgerMode, type WorkerJobLedgerMode } from "./job-ledger";
+
+export interface StatusEvaluationOptions {
+  workerJobLedgerMode?: string | WorkerJobLedgerMode;
+  workerJobLedgerAllowlist?: readonly string[];
+}
+
+function resolveWorkerJobLedgerMode(options: StatusEvaluationOptions): WorkerJobLedgerMode {
+  return normalizeWorkerJobLedgerMode(options.workerJobLedgerMode);
+}
 
 export interface RawStatusComputation {
   dbHealthy: boolean;
@@ -47,24 +51,29 @@ export interface RawStatusComputation {
   telegramBot: StatusResponse["telegramBot"];
   sectionErrors: StatusResponse["sectionErrors"];
   datasetFreshness: StatusResponse["datasetFreshness"];
-  summary: StatusResponse["summary"]; reserveComposition: StatusResponse["reserveComposition"];
+  summary: StatusResponse["summary"];
+  reserveComposition: StatusResponse["reserveComposition"];
   freshnessDiagnostics: CacheFreshnessDiagnostic[];
   alertBroker: StatusResponse["alertBroker"];
 }
 
 function buildDbUnavailableRawStatus(): RawStatusComputation {
-  const availabilityCauses: StatusCause[] = [withRunbook({
-    code: "db_unhealthy",
-    layer: "availability",
-    severity: "critical",
-    message: "Primary database connectivity check failed; status is serving a degraded fallback snapshot.",
-  })];
-  const dataQualityCauses: StatusCause[] = [withRunbook({
-    code: "data_quality_skipped_db_unhealthy",
-    layer: "data-quality",
-    severity: "warning",
-    message: "Data-quality loaders were skipped because the primary database connectivity check failed.",
-  })];
+  const availabilityCauses: StatusCause[] = [
+    withRunbook({
+      code: "db_unhealthy",
+      layer: "availability",
+      severity: "critical",
+      message: "Primary database connectivity check failed; status is serving a degraded fallback snapshot.",
+    }),
+  ];
+  const dataQualityCauses: StatusCause[] = [
+    withRunbook({
+      code: "data_quality_skipped_db_unhealthy",
+      layer: "data-quality",
+      severity: "warning",
+      message: "Data-quality loaders were skipped because the primary database connectivity check failed.",
+    }),
+  ];
 
   return {
     dbHealthy: false,
@@ -91,20 +100,6 @@ function buildDbUnavailableRawStatus(): RawStatusComputation {
   };
 }
 
-export async function evaluateStatusAndPersist(db: D1Database, now: number): Promise<{
-  raw: RawStatusComputation;
-  effectiveStatus: StatusLevel;
-  persistenceSucceeded: boolean;
-}> {
-  const raw = await computeRawStatus(db, now);
-  const persisted = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall);
-  return {
-    raw,
-    effectiveStatus: persisted.effectiveStatus,
-    persistenceSucceeded: persisted.persistenceSucceeded,
-  };
-}
-
 /**
  * Count `status_transitions` rows inserted in the last 24 hours. Used only
  * as an observability signal added during 2026-04-13 status-stability hardening.
@@ -115,9 +110,7 @@ export async function evaluateStatusAndPersist(db: D1Database, now: number): Pro
 async function countRecentStatusTransitions(db: D1Database, now: number): Promise<number> {
   try {
     const row = await db
-      .prepare(
-        `SELECT COUNT(*) AS cnt FROM status_transitions WHERE scope = ? AND created_at >= ?`,
-      )
+      .prepare(`SELECT COUNT(*) AS cnt FROM status_transitions WHERE scope = ? AND created_at >= ?`)
       .bind("global", now - 86400)
       .first<{ cnt: number | null }>();
     return row?.cnt ?? 0;
@@ -127,7 +120,7 @@ async function countRecentStatusTransitions(db: D1Database, now: number): Promis
   }
 }
 
-export async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusComputation> {
+export async function computeRawStatus(db: D1Database, now: number, options: StatusEvaluationOptions = {}) {
   const publicHealth = await assessPublicHealth(db, now, { logPrefix: "status" });
   if (!publicHealth.dbHealthy) {
     return buildDbUnavailableRawStatus();
@@ -137,8 +130,9 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   // effectively unconstrained up to the Worker CPU budget; the 6-connection
   // ctx.waitUntil pool documented in CLAUDE.md does not apply here because
   // none of these calls are scheduled via waitUntil.
+  const workerJobLedgerMode = resolveWorkerJobLedgerMode(options);
   const [cronHealth, budgetOnlySurfaceResult, dataQuality, supplements, transitionsLast24h] = await Promise.all([
-    loadCronHealth(db, now),
+    loadCronHealth(db, now, workerJobLedgerMode, options.workerJobLedgerAllowlist),
     loadBudgetOnlySurfaceStatuses(db, now),
     getDataQuality(db, now, { blacklistMetrics: publicHealth.blacklistMetrics }),
     loadSupplementalStatusSections(db, now),
@@ -159,13 +153,8 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     cronProgressQueryFailed,
     cronLeaseQueryFailed,
   } = cronHealth;
-  const {
-    sectionErrors,
-    telegramBot,
-    datasetFreshness,
-    reserveComposition,
-    reserveCompositionQueryFailed,
-  } = supplements;
+  const { sectionErrors, telegramBot, datasetFreshness, reserveComposition, reserveCompositionQueryFailed } =
+    supplements;
   const {
     missingPriceRatio,
     blacklistMissingRatio,

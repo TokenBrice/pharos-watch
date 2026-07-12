@@ -78,7 +78,6 @@
   },
   "conditionalJobPaths": ["digestTriggerPoll:daily-digest"],
   "budgetOnlySurfaces": [
-    "alert-broker-delivery-drain",
     "digest-trigger-poll",
     "telegram-digest-outbox-drain",
     "telegram-registration-reconciliation"

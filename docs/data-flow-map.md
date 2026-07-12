@@ -54,9 +54,9 @@ Cron schedules are declared in `worker/wrangler.toml`, mirrored in `shared/lib/c
 - `25 */4 * * *`: supplemental yield-source refresh
 - `11 */4 * * *`: live reserve sync, then redemption backstop sync, then Kinesis supply sync, then named reserve-post-sync-watchdog drift/cache/stale-source checks and alerts (every 4h)
 - `1,6,11,16,21,26,31,36,41,46,51,56 * * * *`: isolated reserve checkpoint reconciliation and unfinished-suffix/sidecar recovery after an interrupted four-hour reserve slot
-- `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram command/profile/menu/webhook reconciliation, subscriber alerts (DEWS, depeg, safety, launch promotions, reserve, and opt-in freeze Tape events), DB-only personalized recap planning, degradation watchdog, expired disambiguation cleanup, Telegram pulse snapshot publication, then the independent durable alert-broker delivery drain
+- `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram command/profile/menu/webhook reconciliation, subscriber alerts (DEWS, depeg, safety, launch promotions, reserve, and opt-in freeze Tape events), DB-only personalized recap planning, degradation watchdog, expired disambiguation cleanup, and Telegram pulse snapshot publication
 - `*/5 * * * *`: exact-payload Telegram digest outbox drain, then manual digest trigger poll (`POST /api/trigger-digest` flag consumer)
-- `0 3 * * *`: status-probe TTL prune + cron-history TTL prune + DB-only worker repair-task runner + detail-cache prune + Telegram inactive cleanup + Telegram retention cleanup + mint/burn growth watchdog + cron-duration watchdog (daily housekeeping)
+- `0 3 * * *`: status-probe TTL prune + cron-history TTL prune + read-only repair-debt monitor + detail-cache prune + Telegram inactive cleanup + Telegram retention cleanup + mint/burn growth watchdog + cron-duration watchdog (daily housekeeping)
 - `0 8 * * *`: snapshot-supply fallback plus safety-grade snapshot, PSI daily snapshot, and snapshot-public-dataset; the write-once supply/public dataset artifacts require a stablecoins cache written at or after the 08:00 slot start, and the public dataset waits/reloads boundedly for that cache before also freshness-gating report-card and PSI inputs; plus T-bill rate then USDS status
 - `5 8 * * *`: bluechip sync and daily digest
 - `10 8 * * *`: discovery scan and independently budgeted weekly recap (both Monday-only)

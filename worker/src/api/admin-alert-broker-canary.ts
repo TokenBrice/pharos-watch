@@ -1,9 +1,7 @@
-import {
-  loadAlertBrokerEpisodeDeliveries,
-  reportAlertCondition,
-} from "../lib/alert-broker";
 import { logAdminAction } from "../lib/admin-action-audit";
-import { sha256Hex } from "../lib/hash";
+import { sendAlert } from "../lib/alerts";
+import { toErrorMessage } from "../lib/error-utils";
+import { fnv1aHash, sha256Hex } from "../lib/hash";
 import {
   adminErrorResponse,
   adminJsonResponse,
@@ -13,12 +11,49 @@ import {
 const CONFIRM_VALUE = "emit-incident-and-recovery";
 const CONDITION_PREFIX = "operator:alert-broker-canary";
 
+type CanaryTransition = "incident" | "recovery";
+
+interface CanaryDelivery {
+  transition: CanaryTransition;
+  state: "delivered" | "failed";
+  attempts: 1;
+  lastError: string | null;
+}
+
 interface AlertBrokerCanaryContext extends AdminUrlRouteContext {
   alertWebhookUrl: string | null;
 }
 
 function executeRequested(url: URL): boolean {
   return url.searchParams.get("execute") === "true";
+}
+
+function buildFingerprint(conditionKey: string, canaryId: string): string {
+  return fnv1aHash(`${conditionKey}:{"canaryId":${JSON.stringify(canaryId)},"kind":"synthetic-operator-canary"}`);
+}
+
+async function deliverCanaryTransition(
+  webhookUrl: string,
+  transition: CanaryTransition,
+  title: string,
+  message: string,
+): Promise<CanaryDelivery> {
+  try {
+    const delivered = await sendAlert(webhookUrl, title, message);
+    return {
+      transition,
+      state: delivered ? "delivered" : "failed",
+      attempts: 1,
+      lastError: delivered ? null : "webhook transport returned false",
+    };
+  } catch (err) {
+    return {
+      transition,
+      state: "failed",
+      attempts: 1,
+      lastError: toErrorMessage(err),
+    };
+  }
 }
 
 export async function handleAlertBrokerCanary(
@@ -64,41 +99,42 @@ export async function handleAlertBrokerCanary(
 
   const canaryId = (await sha256Hex(idempotencyKey)).slice(0, 24);
   const conditionKey = `${CONDITION_PREFIX}:${canaryId}`;
-  const nowSec = Math.floor(Date.now() / 1000);
-  const common = {
-    conditionKey,
-    fingerprint: { canaryId, kind: "synthetic-operator-canary" },
-    severity: "warning" as const,
-    title: "Pharos alert broker canary incident",
-    message: "Synthetic operator canary. No production data condition is active.",
-    recoveryTitle: "Pharos alert broker canary recovery",
-    recoveryMessage: "Synthetic operator canary recovery. No operator action is required.",
-    metadata: { canaryId, synthetic: true, owner: "operator" },
-    minStreak: 1,
-    cooldownSec: 0,
-    mode: "alert" as const,
-    webhookUrl: context.alertWebhookUrl,
-  };
-  const incident = await reportAlertCondition(context.db, {
-    ...common,
-    active: true,
-    nowSec,
-  });
-  const recovery = await reportAlertCondition(context.db, {
-    ...common,
-    active: false,
-    nowSec: nowSec + 1,
-  });
-  const deliveries = await loadAlertBrokerEpisodeDeliveries(context.db, conditionKey, 1);
-  const incidentRows = deliveries.filter((row) => row.transition === "incident");
-  const recoveryRows = deliveries.filter((row) => row.transition === "recovery");
-  const transitionContractSatisfied = incidentRows.length === 1 && recoveryRows.length === 1;
-  const deliverySucceeded = transitionContractSatisfied
-    && deliveries.every((row) => row.state === "delivered");
-  const failedDeliveryVisible = deliveries.some((row) =>
-    row.state === "failed" || row.state === "missing_target"
+  const fingerprint = buildFingerprint(conditionKey, canaryId);
+  const incidentDelivery = await deliverCanaryTransition(
+    context.alertWebhookUrl,
+    "incident",
+    "Pharos alert broker canary incident",
+    "Synthetic operator canary. No production data condition is active.",
   );
+  const recoveryDelivery = await deliverCanaryTransition(
+    context.alertWebhookUrl,
+    "recovery",
+    "Pharos alert broker canary recovery",
+    "Synthetic operator canary recovery. No operator action is required.",
+  );
+  const deliveries = [incidentDelivery, recoveryDelivery];
+  const transitionContractSatisfied = true;
+  const deliverySucceeded = deliveries.every((delivery) => delivery.state === "delivered");
+  const failedDeliveryVisible = deliveries.some((delivery) => delivery.state === "failed");
   const status = deliverySucceeded ? 200 : 502;
+  const incident = {
+    mode: "alert" as const,
+    conditionKey,
+    fingerprint,
+    state: "active" as const,
+    streak: 1,
+    transition: "incident" as const,
+    deliveryState: incidentDelivery.state,
+  };
+  const recovery = {
+    mode: "alert" as const,
+    conditionKey,
+    fingerprint,
+    state: "recovered" as const,
+    streak: 0,
+    transition: "recovery" as const,
+    deliveryState: recoveryDelivery.state,
+  };
 
   await logAdminAction(context.db, {
     action: "alert-broker-canary",

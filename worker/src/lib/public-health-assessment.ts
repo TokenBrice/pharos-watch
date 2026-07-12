@@ -9,6 +9,7 @@ import {
 } from "@shared/lib/public-health";
 import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
 import type {
+  AlertBrokerHealthSummary,
   CacheStatus,
   D1CapacityAssessment,
   HealthResponse,
@@ -29,7 +30,6 @@ import {
 import { CIRCUIT_SOURCE } from "./constants";
 import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
-import { loadAlertBrokerSummary, type AlertBrokerSummary } from "./alert-broker";
 import { loadCachedD1CapacityAssessment } from "./status/d1-capacity-store";
 import {
   loadStablecoinPublicationHealth,
@@ -73,7 +73,7 @@ const EMPTY_MINT_BURN_HEALTH: HealthResponse["mintBurn"] = {
   },
 };
 
-const EMPTY_ALERT_BROKER_SUMMARY: AlertBrokerSummary = {
+const EMPTY_ALERT_BROKER_SUMMARY: AlertBrokerHealthSummary = {
   activeCount: 0,
   pendingCount: 0,
   criticalActiveCount: 0,
@@ -109,7 +109,7 @@ export interface PublicHealthAssessment {
   d1Capacity: D1CapacityAssessment | null;
   d1CapacityImpactStatus: HealthResponse["status"];
   d1CapacityQueryError: string | null;
-  alertBroker: AlertBrokerSummary;
+  alertBroker: AlertBrokerHealthSummary;
   alertBrokerImpactStatus: HealthResponse["status"];
   stablecoinPublication: StablecoinPublicationHealth;
   stablecoinPublicationImpactStatus: HealthResponse["status"];
@@ -373,7 +373,6 @@ export async function assessPublicHealth(
     mintBurnResult,
     circuitResult,
     d1CapacityResult,
-    alertBroker,
     stablecoinPublication,
   ] = await Promise.all([
     buildCacheStatuses(db, now),
@@ -424,7 +423,6 @@ export async function assessPublicHealth(
         });
         return { assessment: null, error: "D1 capacity assessment unavailable." };
       }),
-    loadAlertBrokerSummary(db),
     loadStablecoinPublicationHealth(db),
   ]);
 
@@ -482,21 +480,8 @@ export async function assessPublicHealth(
     );
   }
 
-  const alertBrokerImpactStatus = alertBroker.queryFailed || alertBroker.criticalActiveCount > 0
-    ? "degraded"
-    : alertBroker.activeCount > 0 || alertBroker.failedDeliveryCount > 0 || alertBroker.missingTargetCount > 0
-      ? "degraded"
-      : "healthy";
-  if (alertBroker.queryFailed) warnings.push("alert-broker-query-failed");
-  if (alertBroker.activeConditionKeys.length > 0) {
-    warnings.push(`active-alert-conditions:${alertBroker.activeConditionKeys.join(",")}`);
-  }
-  if (alertBroker.failedDeliveryCount > 0) {
-    warnings.push(`alert-delivery-failed:${alertBroker.failedDeliveryCount}`);
-  }
-  if (alertBroker.missingTargetCount > 0) {
-    warnings.push(`alert-delivery-missing-target:${alertBroker.missingTargetCount}`);
-  }
+  const alertBroker = { ...EMPTY_ALERT_BROKER_SUMMARY };
+  const alertBrokerImpactStatus: HealthResponse["status"] = "healthy";
 
   const stablecoinPublicationImpactStatus = stablecoinPublication.status === "complete"
     ? "healthy"

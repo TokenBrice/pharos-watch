@@ -484,6 +484,7 @@ describe("worker data invariant canaries", () => {
         },
       ]),
       NOW + 60,
+      "status",
     );
 
     expect(status).toMatchObject({
@@ -524,12 +525,48 @@ describe("worker data invariant canaries", () => {
         },
       ]),
       NOW + 60,
+      "status",
     );
     expect(degradedStatus).toMatchObject({
       status: "degraded",
       errorCount: 1,
       staleCount: 0,
     });
+  });
+
+  it.each(["off", "shadow"] as const)(
+    "returns the empty compatibility shape without querying retained rows in %s mode",
+    async (mode) => {
+      const db = mockD1([], { requireMatch: true });
+
+      const status = await loadCanaryStatus(db, NOW + 60, mode);
+
+      expect(status).toEqual({
+        checkedAt: NOW + 60,
+        status: "unknown",
+        latestRunAt: null,
+        maxAgeSec: 7_200,
+        totalChecks: 0,
+        okCount: 0,
+        degradedCount: 0,
+        errorCount: 0,
+        skippedCount: 0,
+        staleCount: 0,
+        checks: {},
+      });
+      expect(db.getHistory()).toHaveLength(0);
+    },
+  );
+
+  it("queries only the current authoritative canary mode", async () => {
+    const db = mockD1([{
+      match: "FROM worker_canary_runs",
+      rows: [],
+    }], { requireMatch: true });
+
+    await loadCanaryStatus(db, NOW + 60, "alert");
+
+    expect(db.getHistory()[0]?.binds).toEqual(["alert", "alert"]);
   });
 
   it("prunes canary run rows older than the retention cutoff", async () => {

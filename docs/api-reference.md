@@ -4253,9 +4253,9 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own.
 
-`availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, 3+ public-impact open circuit groups, and durable alert-broker query/active/delivery failures can degrade availability even when cron freshness alone is still green. Dynamic per-coin `live-reserves:*` breakers remain visible in `circuits`, but they do not change `availabilityStatus` on their own.
+`availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, and 3+ public-impact open circuit groups can degrade availability even when cron freshness alone is still green. Dynamic per-coin `live-reserves:*` breakers remain visible in `circuits`, but they do not change `availabilityStatus` on their own.
 
-`alertBroker` reports active, pending, and critical condition counts; failed and missing-target delivery counts; oldest active timestamp; bounded active condition keys; and query health. `/api/health.alertBroker` exposes the same shared facts, so public and admin classification cannot disagree about broker incidents.
+`alertBroker` is a retained compatibility block. The direct-alert runtime reports zero active/pending/critical conditions, zero failed/missing-target deliveries, no oldest timestamp or active keys, and `queryFailed=false`; historical broker tables are not queried.
 
 `producerHeads` contains every canonical schedule/job/path/kind identity, including shared producer paths and budget-only surfaces. `observed=false` explicitly represents an identity that has not run since the history schema deployed. Observed rows separate `lastInvokedAt`/`lastCompletedAt` from `lastProductiveAt` and `lastPublicationAt`, and include invocation ID, Worker version, outcome/error, and invocation/productive counters.
 
@@ -4300,7 +4300,7 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 
 `coingeckoPriceDiff` is an admin-only live comparison block. It reads the cached tracked assets with `geckoId`, fetches current CoinGecko spot prices through one or more batched `simple/price` calls, and reports the rows where `abs(pharosPrice - coinGeckoPrice) / coinGeckoPrice > 0.05`. The field is `null` when the comparison is unavailable in the current environment or when the loader fails; failures are surfaced through `sectionErrors.coingeckoPriceDiff`.
 
-`d1Usage` is an admin-only live D1 telemetry block. It uses Cloudflare's D1 database info endpoint plus a trailing-24h `d1AnalyticsAdaptiveGroups` GraphQL query to surface current storage size, table count, replication mode, and recent query/row volume. Its additive `capacity` member carries the latest hourly 60/75/90% threshold classification and a 30-day linear forecast when at least three observations span 24 hours. The same assessment is evaluated by the scheduled status lane through the durable alert broker, but exact D1 capacity telemetry is not exposed by the no-key public health endpoint. The field is `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker; loader/config failures are surfaced through `sectionErrors.d1Usage`.
+`d1Usage` is an admin-only live D1 telemetry block. It uses Cloudflare's D1 database info endpoint plus a trailing-24h `d1AnalyticsAdaptiveGroups` GraphQL query to surface current storage size, table count, replication mode, and recent query/row volume. Its additive `capacity` member carries the latest hourly 60/75/90% threshold classification and a 30-day linear forecast when at least three observations span 24 hours. The scheduled status lane records the same bounded assessment, but exact D1 capacity telemetry is not exposed by the no-key public health endpoint. The field is `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker; loader/config failures are surfaced through `sectionErrors.d1Usage`.
 
 `liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
 
@@ -4312,7 +4312,7 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 
 `providerCircuitHealth` is a read-only admin supplement over active provider circuit-breaker rows. Breaker decisions use the individual `cache["circuit:<source>"]` rows; `/api/status` reads those same authoritative rows through a bounded active-source allowlist so lost or stale aggregate-index writes cannot hide open providers. Successful/failing breaker writes still maintain `cache["provider:circuit:index"]` as best-effort telemetry. Loader failures return `providerCircuitHealth: null` and `sectionErrors.providerCircuitHealth`; public `/api/health.circuits` remains the raw per-circuit surface.
 
-`canaries` is a read-only admin supplement over `worker_canary_runs`, populated by the DB/cache-only `data-invariant-canary` cron when `WORKER_CANARY_MODE` is `shadow`, `status`, or `alert`. It reports the latest row per structural check, including DEX publication/current-row invariants, stablecoins-cache active coverage, PSI and DEWS latest samples, and report-card cache generation/methodology freshness. Loader failures return `canaries: null` and `sectionErrors.canaries`; canary findings are operator diagnostics and do not directly change availability.
+`canaries` is a read-only admin supplement over `worker_canary_runs`. In `status` or `alert` mode it reports the latest row from the current authoritative mode per structural check, including DEX publication/current-row invariants, stablecoins-cache active coverage, PSI and DEWS latest samples, report-card cache generation/methodology freshness, and the GBP benchmark-current check. In `off` or `shadow` mode it returns the empty/unknown compatibility shape without reading retained authoritative rows; shadow evidence is inspected through D1 and cron metadata. Loader failures return `canaries: null` and `sectionErrors.canaries`; canary findings are operator diagnostics and do not directly change availability.
 
 `discoveryCandidates` exposes the current untracked-coverage backlog from `discovery_candidates`, ordered by market cap for the `/status` operator workflow.
 
@@ -5198,9 +5198,9 @@ Clears rows from `telegram_pending_alerts`. Safe by default: refuses unfiltered 
 
 ### `POST /api/alert-broker-canary`
 
-Runs the authenticated durable-alert acceptance canary against the configured `ALERT_WEBHOOK_URL`. The request is dry-run by default and never accepts a caller-supplied target, title, or message. The preview reports whether a target is configured and the guards required for live execution without writing broker condition or delivery rows.
+Runs the authenticated direct-alert acceptance canary against the configured `ALERT_WEBHOOK_URL`. The request is dry-run by default and never accepts a caller-supplied target, title, or message. The preview reports whether a target is configured and the guards required for live execution without sending a webhook.
 
-Live execution requires `?execute=true&confirm=emit-incident-and-recovery` plus an `Idempotency-Key` header between 8 and 128 characters. It writes one uniquely keyed synthetic incident followed by one recovery, waits for both delivery attempts, reads the exact persisted episode rows back, and returns whether the one-incident/one-recovery contract and delivery contract passed. Failed webhook delivery returns `502`; both failed rows remain retryable and are included in `deliveries`, so operators can verify durable failure visibility before relying on the five-minute retry drain.
+Live execution requires `?execute=true&confirm=emit-incident-and-recovery` plus an `Idempotency-Key` header between 8 and 128 characters. It sends one fixed synthetic incident followed by one recovery and returns whether both direct delivery attempts passed. Failed webhook delivery returns `502`; the response includes both attempt outcomes, and no broker condition or delivery row is written.
 
 **Authentication:** Cloudflare Access admin plus `X-Pharos-Admin: 1`. Live execution additionally requires `Idempotency-Key`.
 
@@ -5217,9 +5217,9 @@ Live execution requires `?execute=true&confirm=emit-incident-and-recovery` plus 
 }
 ```
 
-**Live response:** includes `conditionKey`, the incident and recovery broker results, exactly two persisted `deliveries`, `transitionContractSatisfied`, `deliverySucceeded`, and `failedDeliveryVisible`.
+**Live response:** preserves the compatibility keys `conditionKey`, `incident`, `recovery`, exactly two `deliveries`, `transitionContractSatisfied`, `deliverySucceeded`, and `failedDeliveryVisible`.
 
-**Error responses:** `400` when confirmation or the idempotency key is missing/invalid; `409` when `ALERT_WEBHOOK_URL` is not configured; `502` when transitions persisted but either webhook delivery failed.
+**Error responses:** `400` when confirmation or the idempotency key is missing/invalid; `409` when `ALERT_WEBHOOK_URL` is not configured; `502` when either webhook delivery failed.
 
 ### `POST /api/reset-cron-lease`
 
@@ -5266,8 +5266,15 @@ Force-terminates a stale in-flight cron run. Deletes both the `cron_leases` row 
 Arms one preview-only abrupt-interruption drill for the exact uploaded Worker
 version and reserve schedule attempt. The request must target a `workers.dev`
 hostname and carry a valid `Cf-Access-Jwt-Assertion` whose audience matches
-`CF_ACCESS_OPS_API_AUD`. Production hosts return `403` even for an authenticated
-operator.
+`CF_ACCESS_OPS_API_AUD`. Its Worker environment must also set
+`WORKER_RESERVE_FAULT_INJECTION_ENABLED=true`; unset, false, and malformed
+values fail closed. Production hosts return `403` even for an authenticated
+operator, and the production Wrangler configuration intentionally leaves the
+arming flag unset.
+
+Live drills require a named `reserve-recovery-preview` Worker environment with
+an isolated D1 database bound as `DB`. The repository does not create or deploy
+that environment; a placeholder/fake database UUID is not a substitute.
 
 **Request body**
 
@@ -5322,9 +5329,9 @@ the `reconcile`/`recover` drill.
 ```
 
 **Error responses:** `400` for malformed identity, schedule, point, or asset;
-`401` without admin authentication; `403` on a non-preview host; `409` for a
-version mismatch or an already armed exact attempt; `503` when Worker version
-metadata is unavailable.
+`401` without admin authentication; `403` on a non-preview host or when fault
+injection is not explicitly enabled; `409` for a version mismatch or an already
+armed exact attempt; `503` when Worker version metadata is unavailable.
 
 ### `GET /api/status-probe-history`
 

@@ -4,7 +4,7 @@ import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { staleSlotEventCacheKey } from "../cron-lease";
 import { buildInClause } from "../db";
-import { loadWorkerJobAttemptHealth } from "../job-ledger";
+import { loadWorkerJobAttemptHealth, type WorkerJobLedgerMode } from "../job-ledger";
 import { logWorkerEvent } from "../structured-log";
 
 export interface CronHealthSnapshot {
@@ -371,8 +371,13 @@ function summarizeRunningCronSlots(
 export async function loadCronHealth(
   db: D1Database,
   now: number,
+  workerJobLedgerMode: WorkerJobLedgerMode = "off",
+  workerJobLedgerAllowlist: readonly string[] = [],
 ): Promise<CronHealthSnapshot> {
   const cronJobs = Object.keys(CRON_INTERVALS);
+  const ledgerJobs = workerJobLedgerAllowlist.length === 0 || workerJobLedgerAllowlist.includes("*")
+    ? cronJobs
+    : cronJobs.filter((job) => workerJobLedgerAllowlist.includes(job));
   const cronJobInClause = buildInClause(cronJobs);
   const scheduleKeys = Object.keys(SCHEDULED_SLOT_PLANS) as Array<keyof typeof SCHEDULED_SLOT_PLANS>;
   const eventKeys = scheduleKeys.map(staleSlotEventCacheKey);
@@ -389,7 +394,7 @@ export async function loadCronHealth(
     fetchCronProgressRows(db, cronJobInClause),
     fetchCronSlotEventRows(db, eventKeyInClause),
     fetchRunningCronSlotRows(db),
-    loadWorkerJobAttemptHealth(db, cronJobs, now),
+    loadWorkerJobAttemptHealth(db, ledgerJobs, now, workerJobLedgerMode),
   ]);
   const scheduledSlotEventMarkerQueryFailed = slotEventResult.failed;
   const scheduledSlots = summarizeRunningCronSlots(runningSlotResult.rows, now, runningSlotResult.failed);

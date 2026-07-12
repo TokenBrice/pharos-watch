@@ -12,8 +12,25 @@ import { makeAdminRoute } from "../lib/route-wrappers";
 import { defineStaticRoute, type StaticRouteDefinition } from "./shared";
 
 export const OPS_STATIC_ROUTES = [
-  defineStaticRoute("status", ({ db, trustedAdmin, request, coingeckoApiKey, cloudflareD1StatusBindings }) =>
-    handleStatus(db, trustedAdmin, request, coingeckoApiKey, cloudflareD1StatusBindings)),
+  defineStaticRoute("status", ({
+    db,
+    trustedAdmin,
+    request,
+    coingeckoApiKey,
+    cloudflareD1StatusBindings,
+    workerJobLedgerMode,
+    workerJobLedgerAllowlist,
+    workerCanaryMode,
+  }) => handleStatus(
+    db,
+    trustedAdmin,
+    request,
+    coingeckoApiKey,
+    cloudflareD1StatusBindings,
+    workerJobLedgerMode,
+    workerJobLedgerAllowlist,
+    workerCanaryMode,
+  )),
   defineStaticRoute("status-history", handleStatusHistoryRoute),
   defineStaticRoute("request-source-stats", ({ db, trustedAdmin, request }) =>
     handleRequestSourceStats(db, trustedAdmin, request)),

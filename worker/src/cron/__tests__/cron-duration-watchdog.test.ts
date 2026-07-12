@@ -134,6 +134,13 @@ describe("runCronDurationWatchdog", () => {
       breaching: ["sync-stablecoins"],
       alerted: true,
     });
+    expect(
+      db.getHistory().some(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === "cron-duration-watchdog:alert:direct:v1",
+      ),
+    ).toBe(true);
   });
 
   it("alerts on repeated at-cap runs even with a healthy average", async () => {
@@ -319,10 +326,10 @@ describe("runCronDurationWatchdog", () => {
       statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.85), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
       {
         match: "cache",
-        matchBinds: ["cron-duration-watchdog:alert"],
+        matchBinds: ["cron-duration-watchdog:alert:direct:v1"],
         rows: [],
         first: {
-          key: "cron-duration-watchdog:alert",
+          key: "cron-duration-watchdog:alert:direct:v1",
           value: JSON.stringify({ lastAlertedAt: NOW_SEC - 3600 }),
           updated_at: NOW_SEC - 3600,
         },
@@ -334,6 +341,44 @@ describe("runCronDurationWatchdog", () => {
     expect(result.status).toBe("degraded");
     expect(fetch).not.toHaveBeenCalled();
     expect(JSON.parse(String(result.metadata))).toMatchObject({ alerted: false, suppressedByCooldown: true });
+  });
+
+  it("ignores the legacy alert marker during the direct-delivery cutover", async () => {
+    const db = mockD1([
+      statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.85), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
+      {
+        match: "cache",
+        rows: [],
+        first: {
+          key: "cron-duration-watchdog:alert",
+          value: JSON.stringify({ lastAlertedAt: NOW_SEC - 3600 }),
+          updated_at: NOW_SEC - 3600,
+        },
+      },
+    ]);
+
+    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(result.metadata))).toMatchObject({ alerted: true, suppressedByCooldown: false });
+  });
+
+  it("does not advance the direct marker when webhook delivery fails", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("failed", { status: 500 })));
+    const db = mockD1([
+      statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.85), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
+    ]);
+
+    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+
+    expect(JSON.parse(String(result.metadata))).toMatchObject({ alerted: false, suppressedByCooldown: false });
+    expect(
+      db.getHistory().some(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === "cron-duration-watchdog:alert:direct:v1",
+      ),
+    ).toBe(false);
   });
 
   it("excludes stale-slot reconciled child rows from runtime averages", async () => {

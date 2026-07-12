@@ -5,11 +5,8 @@
  */
 
 import { getCache, setCache } from "./db-cache";
-import { deliverOperationalAlert } from "./operational-alert";
-import {
-  CIRCUIT_OPEN_THRESHOLD,
-  CIRCUIT_PROBE_INTERVAL_SEC,
-} from "./circuit-config";
+import { sendAlert } from "./alerts";
+import { CIRCUIT_OPEN_THRESHOLD, CIRCUIT_PROBE_INTERVAL_SEC } from "./circuit-config";
 import { CIRCUIT_SOURCE } from "./constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { CircuitRecord as SharedCircuitRecord } from "@shared/types/status";
@@ -209,7 +206,6 @@ export async function recordOutcome(
   source: string,
   success: boolean,
   webhookUrl?: string | null,
-  alertBrokerMode?: string,
 ): Promise<CircuitOutcomeRecord> {
   const record = await getCircuitRecord(db, source);
   const before = { ...record };
@@ -227,19 +223,11 @@ export async function recordOutcome(
       // Awaited (not fire-and-forget) so the webhook fetch is tied to the
       // caller's awaited recordOutcome promise and completes before isolate
       // teardown. sendAlert never throws — it returns false on any failure.
-      await deliverOperationalAlert({
-        db,
-        conditionKey: `circuit:${source}:open`,
-        active: false,
-        severity: "warning",
-        title: `Circuit OPEN: ${source}`,
-        message: `Source "${source}" is healthy.`,
-        recoveryTitle: `Circuit closed: ${source}`,
-        recoveryMessage: `Source "${source}" has recovered after being open.`,
-        fingerprint: { source, condition: "circuit-open" },
-        webhookUrl: webhookUrl ?? null,
-        brokerMode: alertBrokerMode,
-      });
+      await sendAlert(
+        webhookUrl ?? null,
+        `Circuit closed: ${source}`,
+        `Source "${source}" has recovered after being open.`,
+      );
     }
     return { before, after: { ...record } };
   }
@@ -252,7 +240,9 @@ export async function recordOutcome(
     // Probe failed — reopen
     record.state = "open";
     record.openedAt = now;
-    console.log(`[circuit-breaker] ${source}: half-open -> open (probe failed, ${record.consecutiveFailures} consecutive failures)`);
+    console.log(
+      `[circuit-breaker] ${source}: half-open -> open (probe failed, ${record.consecutiveFailures} consecutive failures)`,
+    );
   } else if (record.consecutiveFailures >= CIRCUIT_OPEN_THRESHOLD && record.state === "closed") {
     record.state = "open";
     record.openedAt = now;
@@ -261,20 +251,11 @@ export async function recordOutcome(
     // Awaited (not fire-and-forget) so the webhook fetch is tied to the caller's
     // awaited recordOutcome promise and completes before isolate teardown.
     // sendAlert never throws — it returns false on any failure.
-    await deliverOperationalAlert({
-      db,
-      conditionKey: `circuit:${source}:open`,
-      active: true,
-      severity: "warning",
-      title: `Circuit OPEN: ${source}`,
-      message: `Source "${source}" has failed ${record.consecutiveFailures} consecutive times. Circuit opened — requests will be blocked for ${CIRCUIT_PROBE_INTERVAL_SEC / 60} min.`,
-      recoveryTitle: `Circuit closed: ${source}`,
-      recoveryMessage: `Source "${source}" has recovered after being open.`,
-      fingerprint: { source, condition: "circuit-open" },
-      metadata: { source, consecutiveFailures: record.consecutiveFailures },
-      webhookUrl: webhookUrl ?? null,
-      brokerMode: alertBrokerMode,
-    });
+    await sendAlert(
+      webhookUrl ?? null,
+      `Circuit OPEN: ${source}`,
+      `Source "${source}" has failed ${record.consecutiveFailures} consecutive times. Circuit opened — requests will be blocked for ${CIRCUIT_PROBE_INTERVAL_SEC / 60} min.`,
+    );
     return { before, after: { ...record } };
   }
 
@@ -310,7 +291,11 @@ export async function recordOutcomeDecision(
  * read. Prevents sources whose candidate set temporarily empties from
  * staying open indefinitely.
  */
-export async function recoverBreakerOnNoCandidate(db: D1Database, source: string, webhookUrl?: string | null): Promise<void> {
+export async function recoverBreakerOnNoCandidate(
+  db: D1Database,
+  source: string,
+  webhookUrl?: string | null,
+): Promise<void> {
   const record = await getCircuitRecord(db, source);
   if (record.state !== "closed") {
     await recordOutcome(db, source, true, webhookUrl);
@@ -354,9 +339,10 @@ export async function getCircuitStates(db: D1Database): Promise<Record<string, C
 
 function getConfiguredLiveReserveCircuitSources(): Set<string> {
   return new Set(
-    ACTIVE_STABLECOINS
-      .map((coin) => coin.liveReservesConfig)
-      .filter((config): config is NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]> => Boolean(config))
+    ACTIVE_STABLECOINS.map((coin) => coin.liveReservesConfig)
+      .filter((config): config is NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]> =>
+        Boolean(config),
+      )
       .map((config) => `live-reserves:${config.breakerScope ?? config.adapter}`),
   );
 }
@@ -366,10 +352,7 @@ function getConfiguredLiveReserveCircuitSources(): Set<string> {
 let _activeCircuitSources: Set<string> | undefined;
 function getActiveCircuitSources(): Set<string> {
   if (!_activeCircuitSources) {
-    _activeCircuitSources = new Set([
-      ...Object.values(CIRCUIT_SOURCE),
-      ...getConfiguredLiveReserveCircuitSources(),
-    ]);
+    _activeCircuitSources = new Set([...Object.values(CIRCUIT_SOURCE), ...getConfiguredLiveReserveCircuitSources()]);
   }
   return _activeCircuitSources;
 }
@@ -387,17 +370,13 @@ export function filterStaleLiveReserveCircuitStates(
 ): Record<string, CircuitRecord> {
   const configuredLiveReserveSources = getConfiguredLiveReserveCircuitSources();
   return Object.fromEntries(
-    Object.entries(circuits).filter(([source]) => (
-      !source.startsWith("live-reserves:") || configuredLiveReserveSources.has(source)
-    )),
+    Object.entries(circuits).filter(
+      ([source]) => !source.startsWith("live-reserves:") || configuredLiveReserveSources.has(source),
+    ),
   );
 }
 
-export function filterInactiveCircuitStates(
-  circuits: Record<string, CircuitRecord>,
-): Record<string, CircuitRecord> {
+export function filterInactiveCircuitStates(circuits: Record<string, CircuitRecord>): Record<string, CircuitRecord> {
   const activeCircuitSources = getActiveCircuitSources();
-  return Object.fromEntries(
-    Object.entries(circuits).filter(([source]) => activeCircuitSources.has(source)),
-  );
+  return Object.fromEntries(Object.entries(circuits).filter(([source]) => activeCircuitSources.has(source)));
 }

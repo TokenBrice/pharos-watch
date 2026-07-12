@@ -398,7 +398,11 @@ describe("api endpoint registry", () => {
     expect(ENDPOINT_DEPENDENCY_HYDRATION_POLICIES).toHaveLength(
       STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES.length + DYNAMIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES.length,
     );
-    expect(getStaticEndpointDependenciesByKey("status")).toEqual(["coingeckoApiKey", "cloudflareD1StatusConfig"]);
+    expect(getStaticEndpointDependenciesByKey("status")).toEqual([
+      "coingeckoApiKey",
+      "cloudflareD1StatusConfig",
+      "workerStatusConfig",
+    ]);
     expect(getStaticEndpointDependenciesByKey("stablecoin-detail")).toBeUndefined();
   });
 

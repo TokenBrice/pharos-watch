@@ -88,8 +88,16 @@ export const ADMIN_STATIC_ROUTES = [
   defineStaticRoute("kill-cron-in-flight", handleKillCronInFlight),
   defineStaticRoute(
     "reserve-recovery-fault-injection",
-    makeAdminRoute("reserve-recovery-fault-injection", ({ db, request, trustedAdmin, workerVersion }) =>
-      handleArmReserveRecoveryFaultInjection(db, request, trustedAdmin, workerVersion),
+    makeAdminRoute(
+      "reserve-recovery-fault-injection",
+      ({ db, request, trustedAdmin, workerVersion, reserveRecoveryFaultInjectionEnabled }) =>
+        handleArmReserveRecoveryFaultInjection(
+          db,
+          request,
+          trustedAdmin,
+          workerVersion,
+          reserveRecoveryFaultInjectionEnabled,
+        ),
     ),
   ),
   defineStaticRoute("bulk-dismiss-discovery-candidates", handleBulkDismissDiscoveryCandidates),

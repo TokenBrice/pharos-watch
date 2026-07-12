@@ -20,7 +20,7 @@ Still true:
 - Cloudflare Access remains the intended human-entry gate for the operator UI and operator API
 - the UI treats Access as one operator gate and does not infer or display read-only/mutating roles from unverified browser-visible identity claims
 - scripts and automation should use `ops-api.pharos.watch` plus Access service-token headers
-- the reserve-recovery fault injector is the sole preview-host admin exception: a `workers.dev` request must carry a valid `Cf-Access-Jwt-Assertion` for `CF_ACCESS_OPS_API_AUD`, and the handler still refuses every production hostname
+- the reserve-recovery fault injector is the sole preview-host admin exception: a `workers.dev` request must carry a valid `Cf-Access-Jwt-Assertion` for `CF_ACCESS_OPS_API_AUD`, run in the named `reserve-recovery-preview` environment with an isolated D1 binding, and have `WORKER_RESERVE_FAULT_INJECTION_ENABLED=true`; the handler still refuses every production hostname
 - same-origin `/api/admin/*` smoke on `ops.pharos.watch` may require a bootstrapped `CF_Authorization` session cookie even when the same CI token can reach the UI shell; a token-backed HTML response alone does not guarantee that Pages Functions receives `Cf-Access-Jwt-Assertion`
 
 ---

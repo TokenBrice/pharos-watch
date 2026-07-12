@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { StatusResponseSchema } from "@shared/types/status";
 import {
   handleStatus,
   STATUS_RAW_SNAPSHOT_CACHE_KEY,
@@ -89,6 +90,78 @@ describe("handleStatus", () => {
     expect(sql).not.toContain("blacklist_events");
   });
 
+  it("preserves healthy, public-impact degraded, and publication-query-unavailable status tuples", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const publicImpactCause = {
+      code: "cache_ratio_degraded",
+      layer: "availability",
+      severity: "warning",
+      message: "Public cache freshness exceeded the degraded threshold.",
+    };
+    const scenarios = [
+      {
+        name: "healthy",
+        raw: {},
+        tables: [],
+        expected: { overallStatus: "healthy", causeCodes: [], sectionErrorCode: null },
+      },
+      {
+        name: "degraded public impact",
+        raw: {
+          rawOverallStatus: "degraded",
+          availabilityStatus: "degraded",
+          causes: {
+            availability: [publicImpactCause],
+            dataQuality: [],
+            overall: [publicImpactCause],
+          },
+        },
+        tables: [],
+        expected: { overallStatus: "degraded", causeCodes: ["cache_ratio_degraded"], sectionErrorCode: null },
+      },
+      {
+        name: "supplement query unavailable",
+        raw: {},
+        tables: [{
+          match: "FROM yield_publication_generations",
+          rows: [],
+          throwError: new Error("D1_ERROR: yield publication ledger unavailable"),
+        }],
+        expected: {
+          overallStatus: "healthy",
+          causeCodes: [],
+          sectionErrorCode: "publication_health_partial_failure",
+        },
+      },
+    ];
+
+    for (const scenario of scenarios) {
+      const db = fixtureMockD1([
+        {
+          match: "FROM cache WHERE key = ?",
+          matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+          rows: [makeRawStatusSnapshotRow(now, 60, scenario.raw)],
+        },
+        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+        ...scenario.tables,
+      ]);
+      const response = await handleStatus(db, true, fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }));
+      const payload = await response.json();
+      const parsed = StatusResponseSchema.parse(payload);
+
+      expect({
+        overallStatus: parsed.overallStatus,
+        causeCodes: parsed.causes.overall.map((cause) => cause.code),
+        sectionErrorCode: parsed.sectionErrors.publicationHealth?.code ?? null,
+      }).toEqual(scenario.expected);
+      if (scenario.name === "healthy") {
+        const malformedPayload = structuredClone(payload) as Record<string, unknown>;
+        delete malformedPayload.reserveComposition;
+        expect(StatusResponseSchema.safeParse(malformedPayload).success).toBe(false);
+      }
+    }
+  });
+
   it("adds canary counts to the live status summary", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = fixtureMockD1([
@@ -133,7 +206,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus(db, true, request, undefined, undefined, "off", [], "status");
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -203,7 +276,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus(db, true, request, undefined, undefined, "off", [], "status");
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {

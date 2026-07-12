@@ -80,7 +80,7 @@ describe("handleAlertBrokerCanary", () => {
     sqlite.close();
   });
 
-  it("emits and verifies exactly one incident and one recovery", async () => {
+  it("emits and verifies exactly one direct incident and recovery without broker writes", async () => {
     const { db, sqlite } = openDb();
     const url = "https://ops-api.pharos.watch/api/alert-broker-canary?execute=true&confirm=emit-incident-and-recovery";
 
@@ -101,11 +101,28 @@ describe("handleAlertBrokerCanary", () => {
       ],
     });
     expect(sendAlert).toHaveBeenCalledTimes(2);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM alert_broker_deliveries").get()).toEqual({ count: 2 });
+    expect(sendAlert).toHaveBeenNthCalledWith(
+      1,
+      "https://hooks.slack.com/services/canary",
+      "Pharos alert broker canary incident",
+      "Synthetic operator canary. No production data condition is active.",
+    );
+    expect(sendAlert).toHaveBeenNthCalledWith(
+      2,
+      "https://hooks.slack.com/services/canary",
+      "Pharos alert broker canary recovery",
+      "Synthetic operator canary recovery. No operator action is required.",
+    );
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM alert_broker_conditions").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM alert_broker_deliveries").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT result, http_status FROM admin_action_audit").get()).toEqual({
+      result: "ok",
+      http_status: 200,
+    });
     sqlite.close();
   });
 
-  it("returns failed delivery evidence without losing either transition", async () => {
+  it("returns failed direct-delivery evidence without writing broker rows", async () => {
     const { db, sqlite } = openDb();
     vi.mocked(sendAlert).mockResolvedValue(false);
     const url = "https://ops-api.pharos.watch/api/alert-broker-canary?execute=true&confirm=emit-incident-and-recovery";
@@ -125,8 +142,8 @@ describe("handleAlertBrokerCanary", () => {
         expect.objectContaining({ transition: "recovery", state: "failed", attempts: 1 }),
       ],
     });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM alert_broker_deliveries WHERE state = 'failed'").get())
-      .toEqual({ count: 2 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM alert_broker_conditions").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM alert_broker_deliveries").get()).toEqual({ count: 0 });
     sqlite.close();
   });
 

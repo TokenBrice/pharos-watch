@@ -1409,7 +1409,6 @@ describe("syncStablecoins", () => {
       "defillama-stablecoins",
       true,
       undefined,
-      undefined,
     );
     const cacheKeys = cacheWrites.map((write) => write.key);
     expect(cacheKeys).toContain("stablecoins:invalid-last");
@@ -1524,7 +1523,6 @@ describe("syncStablecoins", () => {
       expect.anything(),
       "defillama-stablecoins",
       true,
-      undefined,
       undefined,
     );
   });
@@ -1672,7 +1670,6 @@ describe("syncStablecoins", () => {
       expect.anything(),
       CIRCUIT_SOURCE.DL_STABLECOINS,
       false,
-      undefined,
       undefined,
     );
   });

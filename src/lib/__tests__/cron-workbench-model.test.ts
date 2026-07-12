@@ -219,40 +219,33 @@ describe("cron workbench model", () => {
 
   it("projects budget-only surfaces by real schedule key with severity and registry-order ties", () => {
     const groups = buildBudgetOnlySurfaceGroups([
+      makeBudgetSurface({ telemetryStatus: "stale", outcome: "degraded" }),
       makeBudgetSurface({
-        job: "alert-broker-delivery-drain",
-        label: "Alert broker delivery drain",
+        job: "telegram-digest-outbox-drain",
+        label: "Telegram digest outbox drain",
+        scheduleKey: "digestTriggerPoll",
+        schedule: "*/5 * * * *",
         telemetryStatus: "stale",
         outcome: "degraded",
       }),
-      makeBudgetSurface({ telemetryStatus: "stale", outcome: "degraded" }),
       makeBudgetSurface({
         job: "digest-trigger-poll",
         label: "Manual digest trigger poll",
         scheduleKey: "digestTriggerPoll",
         schedule: "*/5 * * * *",
-        telemetryStatus: "missing",
-        telemetryUnknown: true,
-        checkedAt: null,
-        ageSeconds: null,
-        durationMs: null,
-        dueCount: null,
-        processedCount: null,
-        outcome: "unknown",
+        telemetryStatus: "stale",
+        outcome: "degraded",
       }),
     ]);
 
     expect(groups.map((group) => group.scheduleKey)).toEqual(["fiveMinuteTelegramAlerts", "digestTriggerPoll"]);
-    expect(groups[0]?.rows.map((row) => row.job)).toEqual([
-      "telegram-registration-reconciliation",
-      "alert-broker-delivery-drain",
+    expect(groups[0]?.rows.map((row) => row.job)).toEqual(["telegram-registration-reconciliation"]);
+    expect(groups[0]?.summary).toMatchObject({ total: 1, stale: 1, errors: 0 });
+    expect(groups[1]?.rows.map((row) => row.job)).toEqual([
+      "telegram-digest-outbox-drain",
+      "digest-trigger-poll",
     ]);
-    expect(groups[0]?.summary).toMatchObject({ total: 2, stale: 2, errors: 0 });
-    expect(groups[1]?.rows[0]).toMatchObject({
-      telemetryLabel: "Missing",
-      outcomeLabel: "Unknown",
-      duration: null,
-    });
+    expect(groups[1]?.summary).toMatchObject({ total: 2, stale: 2, errors: 0 });
   });
 
   it("returns explicit empty models for missing cron and budget telemetry", () => {
