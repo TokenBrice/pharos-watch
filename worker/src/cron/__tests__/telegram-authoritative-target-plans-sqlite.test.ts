@@ -25,7 +25,11 @@ import {
   reconcileTelegramJobTargetFinalDeliveryFromPending,
   recordTelegramJobTargetFinalDelivery,
 } from "../telegram-alert-job-target-outcomes";
-import { expireTelegramAlertSourceEvent, loadTelegramAlertSourceEvent } from "../telegram-alert-source-events";
+import {
+  expireTelegramAlertSourceEvent,
+  loadTelegramAlertSourceEvent,
+  resolveTelegramAlertSourcePresetPages,
+} from "../telegram-alert-source-events";
 import { PENDING_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { resolveTelegramTargetExpiresAt } from "../telegram-alert-target-plans/materialization";
 
@@ -170,6 +174,30 @@ async function captureClaim(
   return captured;
 }
 
+async function openDeliveryForRoutes(
+  db: D1Database,
+  sourceEventId: string,
+  routes: ReadonlyMap<string, readonly RoutedSubscriberAlert[]>,
+): Promise<void> {
+  const eligibility = new Map([...routes].map(([chatId, alerts]) => [chatId, alerts.length > 0]));
+  const claim = await captureClaim(db, sourceEventId, eligibility);
+  const subscribers = await loadTelegramPlanningSubscriberPage(db, claim);
+  await materializeTelegramTargetPlanPage(
+    db,
+    claim,
+    0,
+    subscribers.map((subscriber) => ({
+      subscriber,
+      currentPreferenceGeneration: subscriber.preferenceGeneration,
+      currentEligible: (routes.get(subscriber.chatId)?.length ?? 0) > 0,
+      routed: routes.get(subscriber.chatId) ?? [],
+    })),
+    NOW,
+  );
+  await finalizeTelegramTargetPlanning(db, claim, NOW);
+  await openTelegramTargetPlanDelivery(db, claim, NOW);
+}
+
 describe("authoritative Telegram target plans on latest SQLite schema", () => {
   it("uses the strictest family TTL for a mixed consolidated target", () => {
     expect(
@@ -246,6 +274,264 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
       enqueued: 0,
       remaining: 0,
     });
+  });
+
+  it.each([
+    ["sent", "duplicate_prior_delivery"],
+    ["execution_unknown", "duplicate_prior_execution_unknown"],
+  ] as const)(
+    "suppresses a prior-source %s dedupe collision and continues the handoff page",
+    async (deliveryState, cancellationReason) => {
+      const { sqlite, db } = setupLatestSchema();
+      const priorSourceEventId = `telegram-source:test:v1:prior-${deliveryState}`;
+      const currentSourceEventId = `telegram-source:test:v1:current-${deliveryState}`;
+      insertSubscriber(sqlite, "42");
+      insertSubscriber(sqlite, "43");
+
+      insertSource(sqlite, priorSourceEventId);
+      await openDeliveryForRoutes(
+        db,
+        priorSourceEventId,
+        new Map([
+          ["42", [routed("42", priorSourceEventId, 1)]],
+          ["43", []],
+        ]),
+      );
+      await enqueueTelegramAuthoritativeTargets(db, priorSourceEventId, 1, NOW);
+      sqlite
+        .prepare(
+          `UPDATE telegram_pending_alerts
+              SET delivery_state = ?, delivery_completed_at = ?, last_error_class = ?
+            WHERE source_event_id = ?`,
+        )
+        .run(
+          deliveryState,
+          NOW + 1,
+          deliveryState === "execution_unknown" ? "timeout" : null,
+          priorSourceEventId,
+        );
+      await reconcileTelegramJobTargetFinalDeliveryFromPending(db, NOW + 1);
+
+      insertSource(sqlite, currentSourceEventId);
+      await openDeliveryForRoutes(
+        db,
+        currentSourceEventId,
+        new Map([
+          ["42", [routed("42", currentSourceEventId, 1)]],
+          ["43", [routed("43", currentSourceEventId, 1, "-unique")]],
+        ]),
+      );
+      const handoff = await enqueueTelegramAuthoritativeTargets(db, currentSourceEventId, 1, NOW + 2);
+
+      expect(handoff).toMatchObject({ enqueued: 1, processed: 2, remaining: 0 });
+      expect(
+        sqlite
+          .prepare(
+            `SELECT chat_id, status, final_delivery_state, cancellation_reason
+               FROM telegram_alert_job_targets
+              WHERE source_event_id = ? ORDER BY chat_id`,
+          )
+          .all(currentSourceEventId),
+      ).toEqual([
+        {
+          chat_id: "42",
+          status: "expired",
+          final_delivery_state: "cancelled",
+          cancellation_reason: cancellationReason,
+        },
+        {
+          chat_id: "43",
+          status: "queued",
+          final_delivery_state: null,
+          cancellation_reason: null,
+        },
+      ]);
+      expect(
+        sqlite
+          .prepare(
+            `SELECT source_event_id, delivery_state
+               FROM telegram_pending_alerts
+              WHERE chat_id = '42'`,
+          )
+          .all(),
+      ).toEqual([{ source_event_id: priorSourceEventId, delivery_state: deliveryState }]);
+      expect(
+        sqlite
+          .prepare("SELECT target_plan_state, last_error_class FROM telegram_alert_source_events WHERE source_event_id = ?")
+          .get(currentSourceEventId),
+      ).toEqual({ target_plan_state: "delivery_open", last_error_class: null });
+    },
+  );
+
+  it("does not suppress a different payload that only collides on the persisted dedupe hash", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const priorSourceEventId = "telegram-source:test:v1:prior-hash-collision";
+    const currentSourceEventId = "telegram-source:test:v1:current-hash-collision";
+    insertSubscriber(sqlite, "42");
+
+    insertSource(sqlite, priorSourceEventId);
+    await openDeliveryForRoutes(
+      db,
+      priorSourceEventId,
+      new Map([["42", [routed("42", priorSourceEventId, 1)]]]),
+    );
+    await enqueueTelegramAuthoritativeTargets(db, priorSourceEventId, 1, NOW);
+    sqlite
+      .prepare(
+        `UPDATE telegram_pending_alerts
+            SET delivery_state = 'sent', delivery_completed_at = ?
+          WHERE source_event_id = ?`,
+      )
+      .run(NOW + 1, priorSourceEventId);
+
+    insertSource(sqlite, currentSourceEventId);
+    await openDeliveryForRoutes(
+      db,
+      currentSourceEventId,
+      new Map([["42", [routed("42", currentSourceEventId, 1, "-different")]]]),
+    );
+    const prior = sqlite
+      .prepare("SELECT dedupe_key FROM telegram_pending_alerts WHERE source_event_id = ?")
+      .get(priorSourceEventId) as { dedupe_key: string };
+    sqlite
+      .prepare(
+        `UPDATE telegram_alert_job_targets
+            SET pending_dedupe_key = ?
+          WHERE source_event_id = ?`,
+      )
+      .run(prior.dedupe_key, currentSourceEventId);
+
+    await expect(
+      enqueueTelegramAuthoritativeTargets(db, currentSourceEventId, 1, NOW + 2),
+    ).rejects.toThrow("pending handoff was not confirmed");
+    expect(
+      sqlite
+        .prepare(
+          `SELECT target_plan_state, last_error_class
+             FROM telegram_alert_source_events WHERE source_event_id = ?`,
+        )
+        .get(currentSourceEventId),
+    ).toEqual({ target_plan_state: "degraded", last_error_class: "pending_identity_collision" });
+    expect(
+      sqlite
+        .prepare(
+          `SELECT status, final_delivery_state, cancellation_reason
+             FROM telegram_alert_job_targets WHERE source_event_id = ?`,
+        )
+        .get(currentSourceEventId),
+    ).toEqual({ status: "planned", final_delivery_state: null, cancellation_reason: null });
+  });
+
+  it("re-enters handoff for an already-degraded terminal identity collision", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const priorSourceEventId = "telegram-source:test:v1:prior-degraded-recovery";
+    const currentSourceEventId = "telegram-source:test:v1:current-degraded-recovery";
+    insertSubscriber(sqlite, "42");
+    insertSubscriber(sqlite, "43");
+
+    insertSource(sqlite, priorSourceEventId);
+    await openDeliveryForRoutes(
+      db,
+      priorSourceEventId,
+      new Map([
+        ["42", [routed("42", priorSourceEventId, 1)]],
+        ["43", []],
+      ]),
+    );
+    await enqueueTelegramAuthoritativeTargets(db, priorSourceEventId, 1, NOW);
+    sqlite
+      .prepare(
+        `UPDATE telegram_pending_alerts
+            SET delivery_state = 'sent', delivery_completed_at = ?
+          WHERE source_event_id = ?`,
+      )
+      .run(NOW + 1, priorSourceEventId);
+    await reconcileTelegramJobTargetFinalDeliveryFromPending(db, NOW + 1);
+
+    insertSource(sqlite, currentSourceEventId);
+    await openDeliveryForRoutes(
+      db,
+      currentSourceEventId,
+      new Map([
+        ["42", [routed("42", currentSourceEventId, 1)]],
+        ["43", [routed("43", currentSourceEventId, 1, "-unique")]],
+      ]),
+    );
+    sqlite
+      .prepare(
+        `UPDATE telegram_alert_source_events
+            SET target_plan_state = 'degraded', last_error_class = 'pending_identity_collision'
+          WHERE source_event_id = ?`,
+      )
+      .run(currentSourceEventId);
+
+    const result = await runTelegramTargetPlanCoordinator({
+      db,
+      sourceEventId: currentSourceEventId,
+      nowSec: NOW + 2,
+      maxSteps: 2,
+      deliveryHandoffLimit: 2,
+      callbacks: {
+        resolveInitialEligibility: async () => {
+          throw new Error("degraded delivery recovery must not recapture subscribers");
+        },
+        planSubscribers: async () => {
+          throw new Error("degraded delivery recovery must not rematerialize targets");
+        },
+      },
+    });
+
+    expect(result).toMatchObject({
+      state: "delivery_open",
+      steps: 2,
+      enqueued: 1,
+      remainingTargets: 0,
+    });
+    expect(
+      sqlite
+        .prepare(
+          `SELECT chat_id, status, final_delivery_state, cancellation_reason
+             FROM telegram_alert_job_targets
+            WHERE source_event_id = ? ORDER BY chat_id`,
+        )
+        .all(currentSourceEventId),
+    ).toEqual([
+      {
+        chat_id: "42",
+        status: "expired",
+        final_delivery_state: "cancelled",
+        cancellation_reason: "duplicate_prior_delivery",
+      },
+      {
+        chat_id: "43",
+        status: "queued",
+        final_delivery_state: null,
+        cancellation_reason: null,
+      },
+    ]);
+  });
+
+  it("preserves target-plan degradation evidence across preset resolution", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:preserve-target-plan-error";
+    insertSource(sqlite, sourceEventId, { state: "degraded", generation: 1 });
+    sqlite
+      .prepare(
+        `UPDATE telegram_alert_source_events
+            SET last_error_class = 'payload_digest_mismatch'
+          WHERE source_event_id = ?`,
+      )
+      .run(sourceEventId);
+    const source = await loadTelegramAlertSourceEvent(db, sourceEventId);
+    if (!source) throw new Error("source missing");
+
+    await resolveTelegramAlertSourcePresetPages(db, source, NOW + 1, { includeSubscriberMaps: false });
+
+    expect(
+      sqlite
+        .prepare("SELECT last_error_class FROM telegram_alert_source_events WHERE source_event_id = ?")
+        .get(sourceEventId),
+    ).toEqual({ last_error_class: "payload_digest_mismatch" });
   });
 
   it("does not persist eligibility observed at a different generation", async () => {

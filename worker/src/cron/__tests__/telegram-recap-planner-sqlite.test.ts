@@ -149,6 +149,27 @@ describe("telegram personalized recap planner", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets").get()).toEqual({ count: 0 });
   });
 
+  it("plans through the observed public-launch Tape volume without permanently deferring due work", async () => {
+    const { sqlite, db } = setup();
+    insertSubscriber(sqlite, "global", { globalDepeg: true });
+    markTapeFresh(sqlite);
+    for (let index = 0; index < 600; index += 1) {
+      insertTape(sqlite, `recap-volume-${index}`, NOW - 1_000 + index);
+    }
+
+    const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
+
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata)).toMatchObject({
+      factsLoaded: 600,
+      factsAdmitted: 600,
+      truncatedDeferred: 0,
+      queued: 1,
+    });
+    expect(sqlite.prepare("SELECT next_due_at > ? AS advanced FROM telegram_recap_preferences WHERE chat_id = 'global'")
+      .get(NOW)).toEqual({ advanced: 1 });
+  });
+
   it("does not treat snooze-only or explicit-off rows as watchlist membership", async () => {
     const { sqlite, db } = setup();
     for (const chatId of ["snooze-only", "explicit-off"]) insertSubscriber(sqlite, chatId);

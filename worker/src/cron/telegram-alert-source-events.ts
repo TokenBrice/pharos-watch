@@ -891,7 +891,11 @@ export async function resolveTelegramAlertSourcePresetPages(
       `UPDATE telegram_alert_source_events
           SET attempt_count = attempt_count + 1,
               last_attempt_at = ?,
-              last_error_class = ?
+              last_error_class = CASE
+                WHEN target_plan_state = 'degraded' AND last_error_class IS NOT NULL
+                THEN last_error_class
+                ELSE ?
+              END
         WHERE source_event_id = ? AND status IN ('resolving', 'planned', 'baseline_committed')`,
     )
     .bind(nowSec, lastErrorClass, source.sourceEventId)

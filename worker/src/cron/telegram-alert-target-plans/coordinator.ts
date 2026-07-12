@@ -5,7 +5,11 @@ import {
   materializeTelegramTargetPlanPage,
   reconcileIncompleteTelegramTargetPlanPage,
 } from "./materialization";
-import { claimTelegramTargetPlanning, releaseTelegramTargetPlanningClaim } from "./source-state";
+import {
+  claimTelegramTargetPlanning,
+  releaseTelegramTargetPlanningClaim,
+  reopenTelegramTargetPlanDeliveryAfterIdentityCollision,
+} from "./source-state";
 import {
   estimateTelegramTargetPlanCoordinatorBound,
   TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE,
@@ -111,7 +115,20 @@ export async function runTelegramTargetPlanCoordinator(args: {
   while (steps < maxSteps) {
     throwIfAborted(args.signal);
     steps += 1;
-    if (claim.state === "degraded") break;
+    if (claim.state === "degraded") {
+      if (!await reopenTelegramTargetPlanDeliveryAfterIdentityCollision(args.db, claim, args.nowSec)) break;
+      const refreshed = await claimTelegramTargetPlanning(
+        args.db,
+        claim.sourceEventId,
+        args.nowSec,
+        claim.owner,
+      );
+      if (!refreshed || refreshed.state !== "delivery_open") {
+        throw new Error("Telegram target-plan collision recovery was not confirmed");
+      }
+      claim = refreshed;
+      continue;
+    }
     if (claim.state === "capturing") {
       await captureTelegramPlanningSubscriberPage(
         args.db,
@@ -172,7 +189,7 @@ export async function runTelegramTargetPlanCoordinator(args: {
         Math.min(TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE, remainingHandoffBudget),
       );
       enqueued += result.enqueued;
-      remainingHandoffBudget -= result.enqueued;
+      remainingHandoffBudget -= result.processed;
       remainingTargets = result.remaining;
       if (result.remaining === 0 || remainingHandoffBudget <= 0) break;
     }

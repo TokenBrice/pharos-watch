@@ -16,7 +16,7 @@ export const TELEGRAM_RECAP_MAX_RECIPIENTS_PER_RUN =
 /** Stop DB-only planning before it can crowd the shared five-minute cron slot. */
 export const TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS = 3 * 60 * 1_000;
 /** Shared Tape rows loaded per due page; planner reads one extra row to detect truncation. */
-export const TELEGRAM_RECAP_TAPE_PAGE_LIMIT = 500;
+export const TELEGRAM_RECAP_TAPE_PAGE_LIMIT = 1_500;
 export const TELEGRAM_RECAP_MAX_COINS = 8;
 export const TELEGRAM_RECAP_MAX_FACT_LINES = 12;
 export const TELEGRAM_RECAP_TARGET_BODY_CHARACTERS = 3_500;

@@ -348,6 +348,34 @@ export async function markTelegramTargetPlanDegraded(
     .run();
 }
 
+/** Re-enter handoff only for the terminal-dedupe collision repaired by delivery.ts. */
+export async function reopenTelegramTargetPlanDeliveryAfterIdentityCollision(
+  db: D1Database,
+  claim: Pick<TelegramTargetPlanningClaim, "sourceEventId" | "generation" | "owner">,
+  nowSec: number,
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `UPDATE telegram_alert_source_events
+          SET target_plan_state = 'delivery_open', last_attempt_at = ?
+        WHERE source_event_id = ?
+          AND target_plan_generation = ?
+          AND target_plan_owner = ?
+          AND target_plan_state = 'degraded'
+          AND last_error_class = 'pending_identity_collision'
+          AND target_delivery_opened_at IS NOT NULL
+          AND EXISTS (
+            SELECT 1 FROM telegram_alert_job_targets target
+             WHERE target.source_event_id = telegram_alert_source_events.source_event_id
+               AND target.plan_generation = telegram_alert_source_events.target_plan_generation
+               AND target.status = 'planned'
+          )`,
+    )
+    .bind(nowSec, claim.sourceEventId, claim.generation, claim.owner)
+    .run();
+  return Number(result.meta?.changes ?? 0) === 1;
+}
+
 /** Release only this generation's live owner after a bounded, successful handoff. */
 export async function releaseTelegramTargetPlanningClaim(
   db: D1Database,
