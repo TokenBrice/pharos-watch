@@ -16,6 +16,7 @@ export const entry: ChangelogEntry = {
     {
       label: "Live reserve coverage",
       tag: "coverage",
+      href: "/methodology/#safety-scores-methodology",
       description:
         "Live reserve adapters land for USDT and XAUt (~$186B), Spiko, USDtb, United's U, and PUSD, and redemption methodology v4.17 adds live-direct capacity telemetry for USTB and the 13-coin Mento family.",
     },
@@ -58,8 +59,9 @@ export const entry: ChangelogEntry = {
         "A worker-wide remediation adds durable operations schemas, effect fencing, and exact publication generations so partial data cannot publish as complete, and a sweep resolves 33 numbered issue reports across the stack.",
     },
   ],
-  stats: { totalCommits: 571 },
+  stats: { totalCommits: 572 },
   commits: [
+    { hash: "5efd1900", message: "fix(telegram): launch personalized recap publicly" },
     { hash: "a6d7d0d5", message: "fix(datasets): prove rolling depeg source coverage" },
     { hash: "1bb9c543", message: "fix(worker): hide benchmark query failures" },
     { hash: "eafb672e", message: "fix(ci): validate rolling depeg dataset coverage" },
