@@ -2,16 +2,8 @@
   "version": 1,
   "status": "advisory",
   "purpose": "Map source areas to documentation that agents should consider when behavior changes. This manifest is a navigation aid; existing CI checks and human review remain authoritative.",
-  "baseDocs": [
-    "docs/agent-task-router.md"
-  ],
-  "coreRules": [
-    "Prefer the smallest root-cause fix; avoid unrelated refactors.",
-    "Update matching docs for behavior, API, pipeline, methodology, or data-source changes.",
-    "Do not add manual/on-chain/CMC/DEX supply overrides; primary supply remains DefiLlama with the existing fallback path.",
-    "Keep Tailwind classes as static strings.",
-    "Do not edit shadcn primitives in src/components/ui/ unless explicitly required."
-  ],
+  "baseDocs": ["docs/agent-task-router.md"],
+  "coreRules": ["Prefer the smallest root-cause fix; avoid unrelated refactors.", "Update matching docs for behavior, API, pipeline, methodology, or data-source changes.", "Do not add manual/on-chain/CMC/DEX supply overrides; primary supply remains DefiLlama with the existing fallback path.", "Keep Tailwind classes as static strings.", "Do not edit shadcn primitives in src/components/ui/ unless explicitly required."],
   "taskFamilies": [
     {
       "id": "stablecoin-registry",
@@ -157,7 +149,7 @@
       "name": "mechanism-explainers",
       "sources": ["src/app/learn/mechanisms/**", "shared/lib/classification/mechanism-archetypes.ts", "src/components/stablecoin-detail/mechanism-diagrams/**"],
       "docs": ["docs/learn-mechanisms-page.md", "docs/classification.md"],
-      "notes": ["Slug source of truth is MECHANISM_ARCHETYPE_VALUES in shared/types/core.ts. The check:archetype-explainer-coverage CI guard enforces label, one-liner, content module, route file, and sitemap entry for every archetype."]
+      "notes": ["Slug source of truth is MECHANISM_ARCHETYPE_VALUES in shared/types/core.ts. Ordinary content, exact static-param, and sitemap tests enforce explainer completeness; generated artifacts own OG images."]
     },
     {
       "name": "pricing-pipeline",
@@ -233,38 +225,14 @@
     },
     {
       "name": "telegram-bot",
-      "sources": [
-        "worker/src/api/telegram-webhook*.ts",
-        "worker/src/api/webhook-commands/**",
-        "worker/src/cron/dispatch-telegram-*.ts",
-        "worker/src/cron/telegram-alert-*.ts",
-        "src/app/pharoswatchbot/**"
-      ],
-      "docs": [
-        "docs/telegram-alerts.md",
-        "docs/telegram-mini-app.md",
-        "docs/runbooks/telegram-webhook-ingress.md",
-        "docs/runbooks/telegram-no-delivery.md",
-        "docs/runbooks/telegram-rate-limit-storm.md"
-      ],
+      "sources": ["worker/src/api/telegram-webhook*.ts", "worker/src/api/webhook-commands/**", "worker/src/cron/dispatch-telegram-*.ts", "worker/src/cron/telegram-alert-*.ts", "src/app/pharoswatchbot/**"],
+      "docs": ["docs/telegram-alerts.md", "docs/telegram-mini-app.md", "docs/runbooks/telegram-webhook-ingress.md", "docs/runbooks/telegram-no-delivery.md", "docs/runbooks/telegram-rate-limit-storm.md"],
       "notes": ["Webhook auth, dispatcher rate-limit handling, secret/token rotation, and the public PharosWatchBot landing share semantics across alerts, runbooks, and incident-response playbooks."]
     },
     {
       "name": "security-surface",
-      "sources": [
-        "src/app/layout.tsx",
-        "src/app/api/**",
-        "functions/_site-data/**",
-        "functions/admin/**",
-        "functions/admin-api/**",
-        "functions/lib/*-env.ts",
-        "shared/lib/runtime-origins.ts"
-      ],
-      "docs": [
-        "docs/security-governance.md",
-        "docs/incident-response/safe-browsing-flag.md",
-        "docs/operator-origin-access.md"
-      ],
+      "sources": ["src/app/layout.tsx", "src/app/api/**", "functions/_site-data/**", "functions/admin/**", "functions/admin-api/**", "functions/lib/*-env.ts", "shared/lib/runtime-origins.ts"],
+      "docs": ["docs/security-governance.md", "docs/incident-response/safe-browsing-flag.md", "docs/operator-origin-access.md"],
       "notes": ["Inline script signatures, token-in-URL discipline, host gating, and origin allowlists govern Safe Browsing classifier risk and operator-origin access; update playbooks when touching these surfaces."]
     }
   ]

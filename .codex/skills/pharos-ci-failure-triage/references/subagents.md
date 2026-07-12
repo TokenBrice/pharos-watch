@@ -53,7 +53,7 @@ Read:
 - docs/deployment-process.md
 - docs/scripts.md
 - package.json scripts
-- scripts/lib/validate-contract.mjs if validate/prebuild failed
+- scripts/lib/validation-lanes.mjs if validate/prebuild failed
 - scripts/lib/automation-registry.mjs if generated artifacts failed
 
 Return:

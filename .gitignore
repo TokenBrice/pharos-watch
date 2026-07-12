@@ -21,14 +21,28 @@
 /worker/.next/
 /out/
 
-# generated build artifacts (keep .d.ts declarations for typecheck)
+# generated build artifacts
 /src/generated/*
-!/src/generated/*.d.ts
-!/src/generated/depeg-event-related-data.json
-!/src/generated/depeg-event-search-data.json
 !/src/generated/docs-metadata.json
+!/src/generated/docs-metadata.json.d.ts
 !/src/generated/homepage-bootstrap.json
+!/src/generated/homepage-bootstrap.json.d.ts
 !/src/generated/sitemap-dates.json
+!/src/generated/sitemap-dates.json.d.ts
+
+# deterministic source-tree projections materialized by `npm run bootstrap:generated`
+/docs/agent-code-map.md
+/public/maps/world-countries.svg
+/public/openapi.json
+/public/postman/pharos-api.postman_collection.json
+/public/postman/pharos-api.postman_environment.json
+/shared/data/stablecoins/coins.client.generated.json
+/shared/data/stablecoins/coins.compliance.generated.json
+/shared/data/stablecoins/coins.generated.json
+/shared/data/stablecoins/coins.prevalidated.generated.ts
+/shared/data/stablecoins/coins.telegram-mini-app.generated.json
+/shared/data/stablecoins/legacy-llama-redirects.generated.json
+/src/app/learn/case-studies/content/client-index.ts
 
 # production
 /build

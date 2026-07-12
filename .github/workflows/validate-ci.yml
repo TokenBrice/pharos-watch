@@ -86,14 +86,7 @@ jobs:
           tooling-cache-save: "true"
           install-playwright-chromium: "true"
           install-playwright-firefox: "true"
-      - run: npm run build
-      - run: npm run test:a11y
-      - run: npm run check:feature-flag-inlining
-      - run: npm run seo:check
-      - run: npm run check:phishing-signatures
-      - run: npm run check:classifier-sensitive-copy
-      - run: npm run check:build-size
-      - run: npm run check:build-attribution
+      - run: npm run validate:pages
 
   test-noncritical:
     name: Noncritical Vitest (${{ matrix.shard }}/2)
@@ -153,8 +146,7 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           tooling-cache: "true"
-      - run: npm run typecheck:worker
-      - run: npm run validate:worker-scheduled-smoke
+      - run: npm run validate:worker
 
   validate:
     needs:

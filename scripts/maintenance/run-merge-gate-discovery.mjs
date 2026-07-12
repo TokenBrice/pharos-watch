@@ -16,7 +16,7 @@ import {
   VALIDATE_PREBUILD_SURFACE_ENV,
   WORKER_SMOKE_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
-} from "../lib/validate-contract.mjs";
+} from "../lib/validation-lanes.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import {
   buildCommandPlan,

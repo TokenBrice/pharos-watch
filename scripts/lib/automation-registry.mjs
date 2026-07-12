@@ -1,21 +1,12 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY } from "./validation-command-registry.mjs";
-
-export { VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY };
+import { VALIDATION_IMPACT_PATHS } from "./validation-lanes.mjs";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 function getValidationCommandDeployImpactPaths(...impacts) {
-  const impactSet = new Set(impacts);
-  return [
-    ...new Set(
-      VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY.filter((entry) => impactSet.has(entry.deployImpact)).flatMap(
-        (entry) => entry.paths,
-      ),
-    ),
-  ].sort();
+  return [...new Set(impacts.flatMap((impact) => VALIDATION_IMPACT_PATHS[impact] ?? []))].sort();
 }
 
 function uniqueSorted(values) {
@@ -172,22 +163,30 @@ export function findDuplicateDeployImpactExactPaths(registry = DEPLOY_IMPACT_REG
 
 export const GENERATED_ARTIFACT_REGISTRY = [
   {
-    id: "agent-code-map",
-    checkCommand: "node scripts/maintenance/generate-agent-code-map.mjs --check",
-    command: "node scripts/maintenance/generate-agent-code-map.mjs",
-    script: "scripts/maintenance/generate-agent-code-map.mjs",
+    id: "stablecoin-catalog",
+    checkCommand: "tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts --check",
+    command: "tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts",
+    bootstrap: true,
+    phase: 0,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/generate-stablecoin-per-coin-asset.ts",
   },
   {
     id: "sitemap-dates",
     checkCommand: "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
     command: "tsx scripts/maintenance/generate-sitemap-dates.ts",
     noncriticalTestPrerequisite: true,
+    phase: 0,
+    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-sitemap-dates.ts",
   },
   {
     id: "case-study-client-index",
     checkCommand: "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
     command: "tsx scripts/maintenance/generate-case-study-client-index.ts",
+    bootstrap: true,
+    phase: 0,
+    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-case-study-client-index.ts",
   },
   {
@@ -195,102 +194,186 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkCommand: "tsx scripts/maintenance/generate-docs-metadata.ts --check",
     command: "tsx scripts/maintenance/generate-docs-metadata.ts",
     noncriticalTestPrerequisite: true,
+    phase: 0,
+    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-docs-metadata.ts",
   },
   {
     id: "depeg-event-search-data",
     checkCommand: "tsx scripts/maintenance/generate-depeg-event-search-data.ts --check",
     command: "tsx scripts/maintenance/generate-depeg-event-search-data.ts",
+    bootstrap: true,
+    phase: 0,
+    reproducibility: "pinned-input",
     script: "scripts/maintenance/generate-depeg-event-search-data.ts",
-  },
-  {
-    id: "cemetery-dataset",
-    checkCommand: "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
-    command: "tsx scripts/maintenance/generate-cemetery-dataset.ts",
-    script: "scripts/maintenance/generate-cemetery-dataset.ts",
-  },
-  {
-    id: "public-datasets",
-    checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
-    command: "tsx scripts/maintenance/generate-public-datasets.ts",
-    script: "scripts/maintenance/generate-public-datasets.ts",
   },
   {
     id: "homepage-bootstrap",
     checkCommand: "tsx scripts/maintenance/generate-homepage-bootstrap.ts --check",
     command: "tsx scripts/maintenance/generate-homepage-bootstrap.ts",
+    phase: 0,
+    reproducibility: "network-derived",
     script: "scripts/maintenance/generate-homepage-bootstrap.ts",
   },
   {
     id: "postman",
     checkCommand: "tsx scripts/maintenance/generate-postman-collection.ts --check",
     command: "tsx scripts/maintenance/generate-postman-collection.ts",
+    bootstrap: true,
+    phase: 0,
+    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-postman-collection.ts",
   },
   {
     id: "openapi",
     checkCommand: "tsx scripts/maintenance/generate-openapi-spec.ts --check",
     command: "tsx scripts/maintenance/generate-openapi-spec.ts",
+    bootstrap: true,
+    phase: 0,
+    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-openapi-spec.ts",
   },
   {
-    id: "llms-txt",
-    checkCommand: "tsx scripts/maintenance/generate-llms-txt.ts --check",
-    command: "tsx scripts/maintenance/generate-llms-txt.ts",
-    script: "scripts/maintenance/generate-llms-txt.ts",
+    id: "world-map",
+    checkCommand: "tsx scripts/maintenance/build-world-map-svg.ts --check",
+    command: "tsx scripts/maintenance/build-world-map-svg.ts",
+    bootstrap: true,
+    phase: 0,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/build-world-map-svg.ts",
   },
   {
     id: "stablecoin-prevalidated-registry",
     checkCommand: "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs --check",
     command: "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs",
+    bootstrap: true,
+    dependsOn: ["stablecoin-catalog"],
+    phase: 1,
+    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs",
   },
   {
     id: "legacy-stablecoin-redirects",
     checkCommand: "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs --check",
     command: "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs",
+    bootstrap: true,
+    dependsOn: ["stablecoin-catalog"],
+    phase: 1,
+    reproducibility: "deterministic",
     script: "scripts/maintenance/generate-legacy-stablecoin-redirects.mjs",
   },
   {
     id: "stablecoin-client-registry",
     checkCommand: "node scripts/build-data/build-client-registry.mjs --check",
     command: "node scripts/build-data/build-client-registry.mjs",
+    bootstrap: true,
+    dependsOn: ["stablecoin-catalog"],
+    phase: 1,
+    reproducibility: "deterministic",
     script: "scripts/build-data/build-client-registry.mjs",
+  },
+  {
+    id: "agent-code-map",
+    checkCommand: "node scripts/maintenance/generate-agent-code-map.mjs --check",
+    command: "node scripts/maintenance/generate-agent-code-map.mjs",
+    bootstrap: true,
+    dependsOn: ["stablecoin-prevalidated-registry", "legacy-stablecoin-redirects", "stablecoin-client-registry"],
+    phase: 2,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/generate-agent-code-map.mjs",
+  },
+  {
+    id: "cemetery-dataset",
+    checkCommand: "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
+    command: "tsx scripts/maintenance/generate-cemetery-dataset.ts",
+    dependsOn: ["stablecoin-prevalidated-registry"],
+    phase: 2,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/generate-cemetery-dataset.ts",
+  },
+  {
+    id: "public-datasets",
+    checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
+    command: "tsx scripts/maintenance/generate-public-datasets.ts",
+    dependsOn: ["stablecoin-prevalidated-registry"],
+    phase: 2,
+    reproducibility: "network-derived",
+    script: "scripts/maintenance/generate-public-datasets.ts",
+  },
+  {
+    id: "llms-txt",
+    checkCommand: "tsx scripts/maintenance/generate-llms-txt.ts --check",
+    command: "tsx scripts/maintenance/generate-llms-txt.ts",
+    dependsOn: ["stablecoin-prevalidated-registry"],
+    phase: 2,
+    reproducibility: "network-derived",
+    script: "scripts/maintenance/generate-llms-txt.ts",
   },
   {
     id: "api-reference",
     checkCommand: "node scripts/maintenance/generate-api-reference.mjs --check",
     command: "node scripts/maintenance/generate-api-reference.mjs",
+    dependsOn: ["openapi"],
+    phase: 2,
+    reproducibility: "mixed",
     script: "scripts/maintenance/generate-api-reference.mjs",
   },
   {
     id: "og-editorial",
     checkCommand: "node scripts/maintenance/build-og-editorial.mjs --check",
     command: "node scripts/maintenance/build-og-editorial.mjs",
+    phase: 3,
+    reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-editorial.mjs",
   },
   {
     id: "og-learn",
     checkCommand: "tsx scripts/maintenance/build-og-learn-images.ts --check",
     command: "tsx scripts/maintenance/build-og-learn-images.ts",
+    phase: 3,
+    reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-learn-images.ts",
   },
   {
     id: "og-case-studies",
     checkCommand: "tsx scripts/maintenance/build-og-case-studies.ts --check",
     command: "tsx scripts/maintenance/build-og-case-studies.ts",
+    dependsOn: ["cemetery-dataset"],
+    phase: 3,
+    reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-case-studies.ts",
   },
 ];
 
-export function buildGeneratedArtifactCommands({ check = false, skip = [] } = {}) {
+/** @param {{ bootstrap?: boolean, check?: boolean, skip?: string[] }} [options] */
+export function buildGeneratedArtifactCommands({ bootstrap = false, check = false, skip = [] } = {}) {
   const skipIds = new Set(skip);
-  return GENERATED_ARTIFACT_REGISTRY.filter((artifact) => !skipIds.has(artifact.id)).map((artifact) => {
+  return GENERATED_ARTIFACT_REGISTRY.filter(
+    (artifact) => !skipIds.has(artifact.id) && (!bootstrap || artifact.bootstrap === true),
+  ).map((artifact) => {
     if (check && artifact.checkCommand) {
       return artifact.checkCommand;
     }
     return artifact.command;
   });
+}
+
+/** @param {{ bootstrap?: boolean, check?: boolean, skip?: string[] }} [options] */
+export function buildGeneratedArtifactPhases({ bootstrap = false, check = false, skip = [] } = {}) {
+  const skipIds = new Set(skip);
+  const phases = new Map();
+
+  for (const artifact of GENERATED_ARTIFACT_REGISTRY) {
+    if (skipIds.has(artifact.id) || (bootstrap && artifact.bootstrap !== true)) continue;
+    const command = check && artifact.checkCommand ? artifact.checkCommand : artifact.command;
+    const phase = phases.get(artifact.phase) ?? [];
+    phase.push({ ...artifact, command });
+    phases.set(artifact.phase, phase);
+  }
+
+  return [...phases.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([phase, artifacts]) => ({ phase, artifacts }));
 }
 
 export function getNoncriticalTestGeneratedPrerequisites() {

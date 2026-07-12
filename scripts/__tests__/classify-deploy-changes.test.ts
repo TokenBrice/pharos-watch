@@ -81,7 +81,7 @@ describe("hasPagesUiImpact", () => {
       hasPagesUiImpact([
         ".github/workflows/pages-release.yml",
         "scripts/maintenance/generate-markdown-exports.ts",
-        "scripts/lib/validate-contract.mjs",
+        "scripts/lib/validation-lanes.mjs",
       ]),
     ).toBe(false);
   });
@@ -106,7 +106,7 @@ describe("hasWorkerPromotionImpact", () => {
 
   it("returns false for validation, root package, tests, and known Pages-only shared changes", () => {
     expect(hasWorkerPromotionImpact(["package.json", "package-lock.json"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["scripts/lib/validate-contract.mjs"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["scripts/lib/validation-lanes.mjs"])).toBe(false);
     expect(hasWorkerPromotionImpact(["scripts/maintenance/smoke-ui.mjs"])).toBe(false);
     expect(hasWorkerPromotionImpact(["worker/migrations/MANIFEST.md"])).toBe(false);
     expect(hasWorkerPromotionImpact(["worker/src/api/__tests__/health.test.ts"])).toBe(false);
@@ -179,7 +179,7 @@ describe("hasDeployImpact", () => {
   it("treats deploy support infrastructure as deploy-impacting", () => {
     const deploySupportFiles = [
       "scripts/lib/deploy-impact.mjs",
-      "scripts/lib/validate-contract.mjs",
+      "scripts/lib/validation-lanes.mjs",
       ".github/scripts/wait-for-workflow-job.mjs",
       ".github/actions/setup-workspace/action.yml",
       "scripts/ci/check-cron-abort-contract.mjs",
@@ -192,6 +192,7 @@ describe("hasDeployImpact", () => {
       "scripts/maintenance/run-generated-artifacts.mjs",
       "scripts/maintenance/run-noncritical-tests.mjs",
       "scripts/maintenance/run-validate-prebuild.mjs",
+      "scripts/maintenance/run-validation-phase.mjs",
       "scripts/maintenance/test-merge-gate.mjs",
     ];
 
@@ -325,7 +326,7 @@ diff --git a/package-lock.json b/package-lock.json
         "package.json",
         "package-lock.json",
         "public/_redirects",
-        "scripts/lib/validate-contract.mjs",
+        "scripts/lib/validation-lanes.mjs",
         "scripts/maintenance/smoke-ui.mjs",
         "shared/lib/public-docs.ts",
         "src/app/pharosville/page.tsx",

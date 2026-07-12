@@ -5,10 +5,7 @@ import { describe, it, expect } from "vitest";
 import { adaptCircleTransparency } from "../circle-transparency";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
-const USDC_HTML = readFileSync(join(FIXTURES_DIR, "circle-usdc.html"), "utf8");
-const USDC_AMOUNT_HTML = readFileSync(join(FIXTURES_DIR, "circle-usdc-absolute.html"), "utf8");
-const EURC_HTML = readFileSync(join(FIXTURES_DIR, "circle-eurc.html"), "utf8");
-const EURC_AMOUNT_HTML = readFileSync(join(FIXTURES_DIR, "circle-eurc-absolute.html"), "utf8");
+const CIRCLE_HTML = readFileSync(join(FIXTURES_DIR, "circle-usdc.html"), "utf8");
 
 const AMBIGUOUS_NEAR_PERCENT_HTML = `
 <span data-coin="usdc" data-point="100.8" id="usdc-in-circulation"></span>
@@ -22,7 +19,7 @@ const AMBIGUOUS_NEAR_PERCENT_HTML = `
 
 describe("adaptCircleTransparency", () => {
   it("extracts USDC reserve slices from HTML", () => {
-    const result = adaptCircleTransparency(USDC_HTML, "usdc");
+    const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
     expect(result.slices.length).toBe(4);
     const total = result.slices.reduce((sum, s) => sum + s.pct, 0);
     expect(total).toBeCloseTo(100, 10);
@@ -33,7 +30,7 @@ describe("adaptCircleTransparency", () => {
   });
 
   it("uses Circle's reserve disclosure date when the page exposes one", () => {
-    const result = adaptCircleTransparency(`${USDC_HTML}<div>As of Jun 25, 2026</div>`, "usdc");
+    const result = adaptCircleTransparency(`${CIRCLE_HTML}<div>As of Jun 25, 2026</div>`, "usdc");
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
@@ -49,21 +46,21 @@ describe("adaptCircleTransparency", () => {
   });
 
   it("maps USDC slices to very-low risk", () => {
-    const result = adaptCircleTransparency(USDC_HTML, "usdc");
+    const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
     for (const slice of result.slices) {
       expect(slice.risk).toBe("very-low");
     }
   });
 
   it("extracts EURC reserve slices from HTML", () => {
-    const result = adaptCircleTransparency(EURC_HTML, "eurc");
+    const result = adaptCircleTransparency(CIRCLE_HTML, "eurc");
     expect(result.slices.length).toBe(2);
     const total = result.slices.reduce((sum, s) => sum + s.pct, 0);
     expect(total).toBe(100);
   });
 
   it("normalizes current absolute-value USDC disclosures into percentages", () => {
-    const result = adaptCircleTransparency(USDC_AMOUNT_HTML, "usdc");
+    const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
     expect(result.metadata?.valueMode).toBe("absolute");
     expect(result.slices).toEqual([
       { name: "<3-Month U.S. Treasuries", pct: 70.7, risk: "very-low" },
@@ -74,7 +71,7 @@ describe("adaptCircleTransparency", () => {
   });
 
   it("normalizes current absolute-value EURC disclosures into percentages", () => {
-    const result = adaptCircleTransparency(EURC_AMOUNT_HTML, "eurc");
+    const result = adaptCircleTransparency(CIRCLE_HTML, "eurc");
     expect(result.metadata?.valueMode).toBe("absolute");
     expect(result.slices).toEqual([
       { name: "Other Bank Deposits", pct: 98.7, risk: "very-low" },
@@ -95,7 +92,7 @@ describe("adaptCircleTransparency", () => {
     const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
     const stalePageBanner = `<div>As of Jan 01, 2020</div>${farPadding}`;
     const futureBanner = `${farPadding}<div>As of Feb 02, 2022</div>`;
-    const adversarial = `${stalePageBanner}${USDC_AMOUNT_HTML}<div>As of Jun 25, 2026</div>${futureBanner}`;
+    const adversarial = `${stalePageBanner}${CIRCLE_HTML}<div>As of Jun 25, 2026</div>${futureBanner}`;
     const result = adaptCircleTransparency(adversarial, "usdc");
 
     expect(result.metadata).toMatchObject({
@@ -104,12 +101,9 @@ describe("adaptCircleTransparency", () => {
   });
 
   it("uses a unique global reserve disclosure date when the coin tab has no local date", () => {
-    const htmlWithoutLocalDate = EURC_AMOUNT_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
+    const htmlWithoutLocalDate = CIRCLE_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
     const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
-    const result = adaptCircleTransparency(
-      `<p>As of May 07, 2026</p>${farPadding}${htmlWithoutLocalDate}`,
-      "eurc",
-    );
+    const result = adaptCircleTransparency(`<p>As of May 07, 2026</p>${farPadding}${htmlWithoutLocalDate}`, "eurc");
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
@@ -118,7 +112,7 @@ describe("adaptCircleTransparency", () => {
   });
 
   it("does not use an ambiguous global reserve disclosure date", () => {
-    const htmlWithoutLocalDate = EURC_AMOUNT_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
+    const htmlWithoutLocalDate = CIRCLE_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
     const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
     const result = adaptCircleTransparency(
       `<p>As of May 07, 2026</p>${farPadding}${htmlWithoutLocalDate}${farPadding}<p>As of Apr 01, 2026</p>`,
@@ -134,7 +128,7 @@ describe("adaptCircleTransparency", () => {
   });
 
   it("emits a circle-disclosure-timestamp-ambiguous warning when multiple unique 'As of' dates appear outside the disclosure window", () => {
-    const htmlWithoutLocalDate = EURC_AMOUNT_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
+    const htmlWithoutLocalDate = CIRCLE_HTML.replace(/\bAs of\s+[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}\b/gi, "");
     const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
     const result = adaptCircleTransparency(
       `<p>As of May 07, 2026</p>${farPadding}${htmlWithoutLocalDate}${farPadding}<p>As of Apr 01, 2026</p>`,
@@ -142,9 +136,7 @@ describe("adaptCircleTransparency", () => {
     );
 
     expect(result.warnings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: "circle-disclosure-timestamp-ambiguous" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ code: "circle-disclosure-timestamp-ambiguous" })]),
     );
     expect(result.slices.length).toBeGreaterThan(0);
     expect(result.metadata).toMatchObject({ freshnessMode: "unverified" });

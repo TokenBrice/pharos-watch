@@ -26,6 +26,17 @@ const PROFILE_DEFAULTS = {
   MERGE_GATE_WORKER_SMOKE: "0",
 };
 
+/**
+ * @typedef {object} MergeGateIdentityOptions
+ * @property {string} [baseRef]
+ * @property {Record<string, string | undefined>} [env]
+ * @property {typeof execFileSync} [execFile]
+ * @property {boolean} [fullDeploy]
+ * @property {string} [headRef]
+ * @property {string} [nodeVersion]
+ * @property {string} [repoRoot]
+ */
+
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -78,6 +89,7 @@ export function getMergeGateProfileHash(env = process.env) {
   return sha256(JSON.stringify(profile));
 }
 
+/** @param {MergeGateIdentityOptions} [options] */
 export function buildMergeGateReceiptIdentity({
   baseRef = "origin/main",
   env = process.env,
@@ -100,6 +112,7 @@ export function buildMergeGateReceiptIdentity({
   };
 }
 
+/** @param {MergeGateIdentityOptions & { now?: number, receiptPath?: string }} [options] */
 export function writeMergeGateReceipt({ now = Date.now(), receiptPath = RECEIPT_PATH, ...identityOptions } = {}) {
   const gitOptions = {
     execFile: identityOptions.execFile ?? execFileSync,
@@ -120,6 +133,7 @@ export function writeMergeGateReceipt({ now = Date.now(), receiptPath = RECEIPT_
   return { written: true, receipt };
 }
 
+/** @param {MergeGateIdentityOptions & { maxAgeMs?: number, now?: number, receiptPath?: string }} [options] */
 export function checkMergeGateReceipt({
   maxAgeMs = DEFAULT_MAX_AGE_MS,
   now = Date.now(),

@@ -13,22 +13,6 @@ import {
 } from "../types";
 import { getTemplate, renderWatchText, TEMPLATES } from "../what-to-watch-templates";
 
-const BANNED_PHRASES: ReadonlyArray<RegExp> = [
-  /pharos recommends/i,
-  /top pick/i,
-  /best yield-bearing/i,
-  /trusted by/i,
-  /battle-tested/i,
-  /probably/i,
-  /\blikely\b/i,
-  /reliably/i,
-  /we recommend you/i,
-  /strongest current reading/i,
-  /deprecated rail/i,
-  /cannot tolerate/i,
-  /surfaced opportunities/i,
-];
-
 function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
   return {
     id: "watch-row",
@@ -116,21 +100,6 @@ describe("template coverage", () => {
       }
     }
     expect(count).toBe(33);
-  });
-
-  it("no template contains a banned phrase", () => {
-    const offenders: string[] = [];
-    for (const profile of SELECTOR_PROFILES) {
-      for (const key of LOWEST_SUB_DIMENSION_KEYS) {
-        const template = TEMPLATES[profile][key];
-        for (const banned of BANNED_PHRASES) {
-          if (banned.test(template.oneLineExplanation)) {
-            offenders.push(`${profile}/${key}: matched ${banned.source}`);
-          }
-        }
-      }
-    }
-    expect(offenders).toEqual([]);
   });
 
   it("oneLineExplanation prose stays under 100 chars (design §2.7 + buffer)", () => {

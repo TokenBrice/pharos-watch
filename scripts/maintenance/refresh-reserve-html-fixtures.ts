@@ -25,10 +25,7 @@ interface HtmlFixtureSpec {
 }
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const FIXTURES_DIR = join(
-  ROOT,
-  "worker/src/cron/reserve-adapters/__tests__/fixtures",
-);
+const FIXTURES_DIR = join(ROOT, "worker/src/cron/reserve-adapters/__tests__/fixtures");
 
 // Canonical upstream URLs per HTML source. Keep in sync with
 // shared/data/stablecoins/coins/*.json and the adapter modules.
@@ -37,21 +34,6 @@ const FIXTURES: readonly HtmlFixtureSpec[] = [
     name: "Circle transparency (USDC/EURC)",
     url: "https://www.circle.com/transparency",
     fixture: "circle-usdc.html",
-  },
-  {
-    name: "Circle transparency absolute amount fixture (USDC)",
-    url: "https://www.circle.com/transparency",
-    fixture: "circle-usdc-absolute.html",
-  },
-  {
-    name: "Circle transparency (EURC alias)",
-    url: "https://www.circle.com/transparency",
-    fixture: "circle-eurc.html",
-  },
-  {
-    name: "Circle transparency absolute amount fixture (EURC)",
-    url: "https://www.circle.com/transparency",
-    fixture: "circle-eurc-absolute.html",
   },
   {
     name: "Buck transparency",
@@ -118,9 +100,7 @@ function writeFixture(spec: HtmlFixtureSpec, body: string): void {
   const capturedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const header = `<!-- captured-at: ${capturedAt} -->\n<!-- source: ${spec.url} -->\n`;
   const path = join(FIXTURES_DIR, spec.fixture);
-  const normalizedBody = body
-    .replace(/^[ \t]+/gm, (indent) => indent.replace(/\t/g, "  "))
-    .replace(/[ \t]+$/gm, "");
+  const normalizedBody = body.replace(/^[ \t]+/gm, (indent) => indent.replace(/\t/g, "  ")).replace(/[ \t]+$/gm, "");
   writeFileSync(path, header + normalizedBody, "utf8");
 }
 
@@ -147,9 +127,7 @@ async function main(): Promise<void> {
     // Keep the previous fixture untouched when the upstream body is suspiciously
     // empty, to avoid a silent breakage committed via a dry refresh.
     if (body.trim().length < 200) {
-      console.warn(
-        `[refresh] ${representative.name}: upstream returned <200 bytes of content; skipping write`,
-      );
+      console.warn(`[refresh] ${representative.name}: upstream returned <200 bytes of content; skipping write`);
       failed += specs.length;
       continue;
     }

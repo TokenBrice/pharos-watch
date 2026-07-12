@@ -6,7 +6,7 @@
  * §2.7); contextKey-refined templates are deferred to Phase 2.
  *
  * Editorial owner: tokenbrice. The strings here are first-draft templates
- * meant to clear the banned-phrase lint (design §4.5). Substitute `{dimensionLabel}`
+ * meant to clear the selector editorial policy (design §4.5). Substitute `{dimensionLabel}`
  * with the rendered dimension name and `{scoreOrGrade}` with the score.
  *
  * Binding: see `docs/screener-picker-page.md` for the maintained editorial

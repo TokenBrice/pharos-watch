@@ -19,12 +19,9 @@ import {
   VALIDATE_PREBUILD_SURFACE_ENV,
   WORKER_SMOKE_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
-} from "../lib/validate-contract.mjs";
+} from "../lib/validation-lanes.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import {
-  hasTelegramLoadGuardImpact,
-  TELEGRAM_LOAD_ADVISORY_COMMAND,
-} from "../lib/telegram-load-guard.mjs";
+import { hasTelegramLoadGuardImpact, TELEGRAM_LOAD_ADVISORY_COMMAND } from "../lib/telegram-load-guard.mjs";
 import { writeMergeGateReceipt } from "../lib/merge-gate-receipt.mjs";
 
 const ZERO_SHA = /^0+$/;
@@ -136,7 +133,11 @@ export function buildFullCommandPlan(
     addCommand(plan, cmd, reason);
   }
 
-  addCommand(plan, TELEGRAM_LOAD_ADVISORY_COMMAND, "Full deploy fallback requested; include Telegram advisory load/query-plan guard");
+  addCommand(
+    plan,
+    TELEGRAM_LOAD_ADVISORY_COMMAND,
+    "Full deploy fallback requested; include Telegram advisory load/query-plan guard",
+  );
 
   if (pagesSmoke) {
     for (const cmd of PAGES_SMOKE_VALIDATE_COMMANDS) {
@@ -270,9 +271,7 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
     return {
       ...baseEnv,
       [VALIDATE_PREBUILD_SURFACE_ENV]: getValidatePrebuildSurface(changedFiles),
-      ...(skippedCommands.length > 0
-        ? { [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: skippedCommands.join(",") }
-        : {}),
+      ...(skippedCommands.length > 0 ? { [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: skippedCommands.join(",") } : {}),
     };
   }
 
@@ -438,7 +437,12 @@ export async function runExecutionBatches(
   });
 }
 
-export function printMergeGateTimingSummary(commandTimings, totalMs, env = process.env, { log = console.log, warn = console.warn } = {}) {
+export function printMergeGateTimingSummary(
+  commandTimings,
+  totalMs,
+  env = process.env,
+  { log = console.log, warn = console.warn } = {},
+) {
   if (commandTimings.length === 0) {
     return;
   }

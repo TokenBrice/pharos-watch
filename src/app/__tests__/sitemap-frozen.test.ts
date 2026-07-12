@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import docsMetadata from "@/generated/docs-metadata.json";
 import { changelogs } from "@/data/changelogs";
@@ -96,16 +97,19 @@ describe("sitemap", () => {
     const entriesByUrl = new Map(entries.map((entry) => [entry.url, entry]));
     const lastEdited = sitemapDates as Record<string, string>;
 
-    expect(entriesByUrl.get(`${SITE_ORIGIN}/learn/`)?.lastModified).toEqual(
-      new Date(lastEdited["/learn/"]),
-    );
+    expect(entriesByUrl.get(`${SITE_ORIGIN}/learn/`)?.lastModified).toEqual(new Date(lastEdited["/learn/"]));
 
     for (const study of CASE_STUDY_LIST) {
       const path = `/learn/case-studies/${study.slug}/`;
       expect(lastEdited[path], `missing generated date for ${path}`).toBeDefined();
-      expect(entriesByUrl.get(`${SITE_ORIGIN}${path}`)?.lastModified).toEqual(
-        new Date(lastEdited[path]),
-      );
+      expect(entriesByUrl.get(`${SITE_ORIGIN}${path}`)?.lastModified).toEqual(new Date(lastEdited[path]));
+    }
+  });
+
+  it("includes every mechanism explainer route", () => {
+    const urls = new Set(sitemap().map((entry) => entry.url));
+    for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
+      expect(urls.has(`${SITE_ORIGIN}/learn/mechanisms/${archetype}/`)).toBe(true);
     }
   });
 

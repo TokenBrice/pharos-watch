@@ -128,16 +128,16 @@ jobs:
           rm -rf .next
           npm run build
         env:
-          # Every id here is committed and byte-verified fresh by
-          # check:generated-artifacts in the validate-prebuild gate that blocks
-          # this deploy (via the pre-publish validation wait), so regenerating
-          # them inside the build is no-op work on the deploy critical path.
+          # Every id here is materialized by workspace bootstrap or retained in
+          # Git, then verified by check:generated-artifacts in the blocking
+          # validate-prebuild gate. Regenerating them during this build is no-op
+          # work on the deploy critical path.
           # depeg-event-search-data and llms-txt are deliberately NOT skipped:
           # they consume the freshly synced data/depeg-events.json + digests,
           # so their in-build regen intentionally ships fresher-than-committed
           # output. public-datasets self-preserves its API-backed mirrors in
           # offline mode, so skipping it only removes a validation no-op.
-          GENERATED_ARTIFACTS_SKIP: agent-code-map,sitemap-dates,case-study-client-index,docs-metadata,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,stablecoin-prevalidated-registry,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
+          GENERATED_ARTIFACTS_SKIP: stablecoin-catalog,world-map,agent-code-map,sitemap-dates,case-study-client-index,docs-metadata,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,stablecoin-prevalidated-registry,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
           PUBLIC_DATASETS_API_URL: ""
           PUBLIC_DATASETS_API_KEY: ""
           PUBLIC_DATASETS_REQUIRE_API: ""

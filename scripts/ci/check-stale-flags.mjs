@@ -10,7 +10,7 @@
  *
  * Retirement guidance lives in `docs/process/feature-flags.md`.
  *
- * Wired into VALIDATE_PREBUILD_COMMANDS in scripts/lib/validate-contract.mjs.
+ * Wired into VALIDATE_PREBUILD_COMMANDS from scripts/lib/validation-lanes.mjs.
  */
 
 import { readFileSync } from "node:fs";

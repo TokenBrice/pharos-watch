@@ -2,31 +2,19 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  buildCiValidateStepPlan,
   buildNoncriticalTestShardCommands,
-  PAGES_VALIDATE_COMMANDS,
   NONCRITICAL_TEST_SHARD_COUNT,
   VALIDATE_PREBUILD_MAX_PARALLEL,
-  VALIDATE_PREBUILD_COMMANDS,
-  VALIDATE_PREBUILD_TIER_ENV,
-  VALIDATION_COMMAND_TIER_REGISTRY,
-  WORKER_VALIDATE_COMMANDS,
-  validateValidationCommandImpactRegistry,
-  validateValidationCommandTierRegistry,
-} from "../lib/validate-contract.mjs";
+} from "../lib/validation-lanes.mjs";
 import {
   GENERATED_ARTIFACT_REGISTRY,
   buildGeneratedArtifactCommands,
+  buildGeneratedArtifactPhases,
   deriveWorkerRuntimePackageClosure,
   findDuplicateDeployImpactExactPaths,
   getNoncriticalTestGeneratedPrerequisites,
   DEPLOY_IMPACT_REGISTRY,
 } from "../lib/automation-registry.mjs";
-import {
-  VALIDATE_PREBUILD_COMMAND_DESCRIPTORS,
-  VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY,
-  VALIDATION_COMMAND_DESCRIPTORS,
-} from "../lib/validation-command-registry.mjs";
 import {
   buildCriticalCoverageArgs,
   buildNoncriticalTestArgs,
@@ -36,59 +24,12 @@ import {
 } from "../lib/critical-test-files.mjs";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import {
+  buildGeneratedArtifactExecutionPhases,
   buildGeneratedArtifactExecutionUnits,
   GENERATED_ARTIFACTS_MAX_PARALLEL,
+  parseGeneratedArtifactsSkip,
+  resolveGeneratedArtifactsSkip,
 } from "../maintenance/run-generated-artifacts.mjs";
-
-function extractRunSteps(yaml) {
-  const lines = yaml.split(/\r?\n/g);
-  const steps = [];
-  let current = null;
-
-  function flushCurrent() {
-    if (current?.cmd && current.cmd !== "|") {
-      steps.push(current);
-    }
-    current = null;
-  }
-
-  for (const line of lines) {
-    if (/^\s*-\s+(uses|run|if):/.test(line)) {
-      flushCurrent();
-      current = { cmd: null, condition: null };
-    }
-
-    if (!current) {
-      continue;
-    }
-
-    const ifMatch = line.match(/^\s*if:\s+\$\{\{\s+inputs\.([a-z_]+)\s+\}\}\s*$/);
-    if (ifMatch) {
-      current.condition = ifMatch[1];
-      continue;
-    }
-
-    const inlineIfMatch = line.match(/^\s*-\s+if:\s+\$\{\{\s+inputs\.([a-z_]+)\s+\}\}\s*$/);
-    if (inlineIfMatch) {
-      current.condition = inlineIfMatch[1];
-      continue;
-    }
-
-    const trimmed = line.trim();
-    const runPrefix = trimmed.startsWith("- ") ? "- run:" : "run:";
-    if (trimmed.startsWith(runPrefix)) {
-      current.cmd = trimmed.slice(runPrefix.length).trim();
-      continue;
-    }
-
-    if (/^\s*-\s+uses:/.test(line)) {
-      flushCurrent();
-    }
-  }
-
-  flushCurrent();
-  return steps;
-}
 
 function extractJobBlock(yaml: string, jobName: string, nextJobName?: string): string {
   const startMarker = `  ${jobName}:`;
@@ -118,7 +59,7 @@ function extractFeatureFlagEnvReads(source: string): string[] {
 }
 
 describe("validate-ci parity", () => {
-  it("keeps the shared CI validate workflow aligned with the merge-gate command contract", () => {
+  it("keeps the shared CI validate workflow on the fixed validation phase entrypoints", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
     const setupWorkspaceAction = readFileSync(
       resolve(process.cwd(), ".github/actions/setup-workspace/action.yml"),
@@ -129,26 +70,17 @@ describe("validate-ci parity", () => {
     const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "coverage-critical");
     const coverageCriticalJob = extractJobBlock(workflow, "coverage-critical", "typecheck-worker");
     const typecheckWorkerJob = extractJobBlock(workflow, "typecheck-worker", "validate");
-    const setupWorkspaceRunSteps = extractRunSteps(setupWorkspaceAction).filter((step) => step.cmd === "npm ci");
-
-    expect([...setupWorkspaceRunSteps, ...extractRunSteps(validatePrebuildJob)]).toEqual([
-      { cmd: "npm ci", condition: null },
-      { cmd: "npm run validate:prebuild", condition: null },
-    ]);
+    expect(setupWorkspaceAction).toContain("run: npm ci");
+    expect(validatePrebuildJob).toContain("- run: npm run validate:prebuild");
     expect(validatePrebuildJob).toContain(
       "VALIDATE_PREBUILD_SURFACE: ${{ inputs.pages_changed && inputs.worker_changed && 'full' || inputs.pages_changed && 'pages' || inputs.worker_changed && 'worker' || 'full' }}",
     );
-    expect(extractRunSteps(pagesBuildJob)).toEqual(PAGES_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: null })));
-    expect(extractRunSteps(testNoncriticalJob)).toEqual([
-      { cmd: "npm run test:noncritical -- --shard=${{ matrix.shard }}/2", condition: null },
-    ]);
-    expect(extractRunSteps(coverageCriticalJob)).toEqual([{ cmd: "npm run coverage:critical", condition: null }]);
-    expect(extractRunSteps(typecheckWorkerJob)).toEqual(
-      WORKER_VALIDATE_COMMANDS.map((cmd) => ({
-        cmd,
-        condition: null,
-      })),
-    );
+    expect(pagesBuildJob).toContain("- run: npm run validate:pages");
+    expect(pagesBuildJob.match(/^\s+- run:/gm)).toHaveLength(1);
+    expect(testNoncriticalJob).toContain("- run: npm run test:noncritical -- --shard=${{ matrix.shard }}/2");
+    expect(coverageCriticalJob).toContain("- run: npm run coverage:critical");
+    expect(typecheckWorkerJob).toContain("- run: npm run validate:worker");
+    expect(typecheckWorkerJob.match(/^\s+- run:/gm)).toHaveLength(1);
   });
 
   it("does not keep a duplicate LTS validate lane after Node 24 became the baseline", () => {
@@ -199,139 +131,128 @@ describe("validate-ci parity", () => {
     }
   });
 
-  it("keeps validate:prebuild delegated to the shared registry", () => {
+  it("keeps validation entrypoints delegated to the shared runners", () => {
     const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
 
     expect(packageJson.scripts["validate:prebuild"]).toBe("node scripts/maintenance/run-validate-prebuild.mjs");
+    expect(packageJson.scripts["validate:pages"]).toBe("node scripts/maintenance/run-validation-phase.mjs pages");
+    expect(packageJson.scripts["validate:worker"]).toBe("node scripts/maintenance/run-validation-phase.mjs worker");
+    expect(packageJson.scripts["bootstrap:generated"]).toBe(
+      "node scripts/maintenance/run-generated-artifacts.mjs --bootstrap",
+    );
     expect(packageJson.scripts.prebuild).toBe("node scripts/maintenance/run-generated-artifacts.mjs");
     expect(packageJson.scripts["check:generated-artifacts"]).toBe(
       "node scripts/maintenance/run-generated-artifacts.mjs --check",
     );
     expect(packageJson.scripts["test:noncritical"]).toBe("node scripts/maintenance/run-noncritical-tests.mjs");
     expect(packageJson.scripts["coverage:critical"]).toBe("node scripts/maintenance/run-critical-coverage.mjs");
+    expect(packageJson.scripts.prepare).toBe("npm run bootstrap:generated && git config core.hooksPath .githooks");
     expect(packageJson.scripts["validate:worker-scheduled-smoke"]).toBe(
       "vitest run worker/src/__tests__/index.scheduled.test.ts",
     );
-    expect(VALIDATE_PREBUILD_COMMANDS).toEqual([
-      "npm run audit:deps",
-      "npm run audit:pricing-providers",
-      "npm run check:provider-resilience",
-      "npm run check:fetch-body-timeouts",
-      "npm run lint",
-      "npm run lint:typed",
-      "npm run typecheck",
-      "npm run typecheck:tests",
-      "npm run check:agent-doc-sync",
-      "npm run check:agent-skill-symlinks",
-      "npm run check:attestor-tier-coverage",
-      "npm run check:client-registry-imports",
-      "npm run check:cli-args-policy",
-      "npm run check:cron-abort-contract",
-      "npm run check:cron-console-usage",
-      "npm run check:json-parse-ratchet",
-      "npm run check:cron-connections",
-      "npm run check:cron-sync",
-      "npm run check:worker-config",
-      "npm run check:dependency-coverage",
-      "npm run check:doc-counts",
-      "npm run check:doc-source-paths",
-      "npm run check:doc-sync",
-      "npm run check:duplicate-exports",
-      "npm run check:env-contract",
-      "npm run check:frozen-invariants",
-      "npm run check:generated-artifacts",
-      "npm run check:glossary-coverage",
-      "npm run check:one-liner-coverage",
-      "npm run check:mechanism-archetype-coverage",
-      "npm run check:archetype-explainer-coverage",
-      "npm run check:hook-polling-window",
-      "npm run check:hotspot-ratchet",
-      "npm run check:migrations",
-      "npm run check:price-bounds-parity",
-      "npm run check:redemption-backstops",
-      "npm run check:redemption-coverage-audit",
-      "npm run check:reserve-fixture-freshness",
-      "npm run check:selector-banned-phrases",
-      "npm run check:site-csp-sync",
-      "npm run check:script-entrypoints",
-      "npm run check:shared-cycles",
-      "npm run check:shared-types-imports",
-      "npm run check:sql-safety",
-      "npm run check:stale-flags",
-      "npm run check:stablecoin-data",
-      "npm run check:oracle-risk-coverage:enforce",
-      "npm run check:supply-helper-usage",
-      "npm run check:unused-code",
-      "npm run check:verified-doc-links",
-      "npm run check:world-map",
-      "npm run check:worker-boundary",
-    ]);
   });
 
-  it("preserves generated artifact order through the shared prebuild registry and runner", () => {
+  it("keeps generated artifacts dependency-aware, reproducible, and bootstrap-scoped", () => {
+    const expectedArtifacts = [
+      ["stablecoin-catalog", 0, "deterministic", true, []],
+      ["sitemap-dates", 0, "deterministic", false, []],
+      ["case-study-client-index", 0, "deterministic", true, []],
+      ["docs-metadata", 0, "deterministic", false, []],
+      ["depeg-event-search-data", 0, "pinned-input", true, []],
+      ["homepage-bootstrap", 0, "network-derived", false, []],
+      ["postman", 0, "deterministic", true, []],
+      ["openapi", 0, "deterministic", true, []],
+      ["world-map", 0, "deterministic", true, []],
+      ["stablecoin-prevalidated-registry", 1, "deterministic", true, ["stablecoin-catalog"]],
+      ["legacy-stablecoin-redirects", 1, "deterministic", true, ["stablecoin-catalog"]],
+      ["stablecoin-client-registry", 1, "deterministic", true, ["stablecoin-catalog"]],
+      [
+        "agent-code-map",
+        2,
+        "deterministic",
+        true,
+        ["stablecoin-prevalidated-registry", "legacy-stablecoin-redirects", "stablecoin-client-registry"],
+      ],
+      ["cemetery-dataset", 2, "deterministic", false, ["stablecoin-prevalidated-registry"]],
+      ["public-datasets", 2, "network-derived", false, ["stablecoin-prevalidated-registry"]],
+      ["llms-txt", 2, "network-derived", false, ["stablecoin-prevalidated-registry"]],
+      ["api-reference", 2, "mixed", false, ["openapi"]],
+      ["og-editorial", 3, "deterministic", false, []],
+      ["og-learn", 3, "deterministic", false, []],
+      ["og-case-studies", 3, "deterministic", false, ["cemetery-dataset"]],
+    ];
     const expectedCommands = [
-      "node scripts/maintenance/generate-agent-code-map.mjs",
+      "tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts",
       "tsx scripts/maintenance/generate-sitemap-dates.ts",
       "tsx scripts/maintenance/generate-case-study-client-index.ts",
       "tsx scripts/maintenance/generate-docs-metadata.ts",
       "tsx scripts/maintenance/generate-depeg-event-search-data.ts",
-      "tsx scripts/maintenance/generate-cemetery-dataset.ts",
-      "tsx scripts/maintenance/generate-public-datasets.ts",
       "tsx scripts/maintenance/generate-homepage-bootstrap.ts",
       "tsx scripts/maintenance/generate-postman-collection.ts",
       "tsx scripts/maintenance/generate-openapi-spec.ts",
-      "tsx scripts/maintenance/generate-llms-txt.ts",
+      "tsx scripts/maintenance/build-world-map-svg.ts",
       "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs",
       "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs",
       "node scripts/build-data/build-client-registry.mjs",
+      "node scripts/maintenance/generate-agent-code-map.mjs",
+      "tsx scripts/maintenance/generate-cemetery-dataset.ts",
+      "tsx scripts/maintenance/generate-public-datasets.ts",
+      "tsx scripts/maintenance/generate-llms-txt.ts",
       "node scripts/maintenance/generate-api-reference.mjs",
       "node scripts/maintenance/build-og-editorial.mjs",
       "tsx scripts/maintenance/build-og-learn-images.ts",
       "tsx scripts/maintenance/build-og-case-studies.ts",
     ];
     const expectedCheckCommands = [
-      "node scripts/maintenance/generate-agent-code-map.mjs --check",
+      "tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts --check",
       "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
       "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
       "tsx scripts/maintenance/generate-docs-metadata.ts --check",
       "tsx scripts/maintenance/generate-depeg-event-search-data.ts --check",
-      "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
-      "tsx scripts/maintenance/generate-public-datasets.ts --check",
       "tsx scripts/maintenance/generate-homepage-bootstrap.ts --check",
       "tsx scripts/maintenance/generate-postman-collection.ts --check",
       "tsx scripts/maintenance/generate-openapi-spec.ts --check",
-      "tsx scripts/maintenance/generate-llms-txt.ts --check",
+      "tsx scripts/maintenance/build-world-map-svg.ts --check",
       "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs --check",
       "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs --check",
       "node scripts/build-data/build-client-registry.mjs --check",
+      "node scripts/maintenance/generate-agent-code-map.mjs --check",
+      "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
+      "tsx scripts/maintenance/generate-public-datasets.ts --check",
+      "tsx scripts/maintenance/generate-llms-txt.ts --check",
       "node scripts/maintenance/generate-api-reference.mjs --check",
       "node scripts/maintenance/build-og-editorial.mjs --check",
       "tsx scripts/maintenance/build-og-learn-images.ts --check",
       "tsx scripts/maintenance/build-og-case-studies.ts --check",
     ];
 
-    expect(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)).toEqual([
-      "agent-code-map",
-      "sitemap-dates",
-      "case-study-client-index",
-      "docs-metadata",
-      "depeg-event-search-data",
-      "cemetery-dataset",
-      "public-datasets",
-      "homepage-bootstrap",
-      "postman",
-      "openapi",
-      "llms-txt",
-      "stablecoin-prevalidated-registry",
-      "legacy-stablecoin-redirects",
-      "stablecoin-client-registry",
-      "api-reference",
-      "og-editorial",
-      "og-learn",
-      "og-case-studies",
-    ]);
+    expect(
+      GENERATED_ARTIFACT_REGISTRY.map((artifact) => [
+        artifact.id,
+        artifact.phase,
+        artifact.reproducibility,
+        artifact.bootstrap === true,
+        artifact.dependsOn ?? [],
+      ]),
+    ).toEqual(expectedArtifacts);
+    expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.checkCommand)).toBe(true);
+    expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.phase >= 0 && artifact.phase <= 3)).toBe(true);
+    expect(GENERATED_ARTIFACT_REGISTRY.filter((artifact) => artifact.bootstrap).map((artifact) => artifact.id)).toEqual(
+      [
+        "stablecoin-catalog",
+        "case-study-client-index",
+        "depeg-event-search-data",
+        "postman",
+        "openapi",
+        "world-map",
+        "stablecoin-prevalidated-registry",
+        "legacy-stablecoin-redirects",
+        "stablecoin-client-registry",
+        "agent-code-map",
+      ],
+    );
     expect(buildGeneratedArtifactCommands()).toEqual(expectedCommands);
     expect(buildGeneratedArtifactCommands({ check: true })).toEqual(expectedCheckCommands);
     expect(getNoncriticalTestGeneratedPrerequisites()).toEqual([
@@ -344,7 +265,58 @@ describe("validate-ci parity", () => {
     expect(buildGeneratedArtifactExecutionUnits({ check: true }).map((unit) => unit.commands)).toEqual(
       expectedCheckCommands.map((cmd) => [cmd]),
     );
-    expect(GENERATED_ARTIFACTS_MAX_PARALLEL).toBeGreaterThan(1);
+    expect(buildGeneratedArtifactPhases().map(({ phase }) => phase)).toEqual([0, 1, 2, 3]);
+    expect(
+      buildGeneratedArtifactPhases().map(({ artifacts }) => artifacts.map((artifact: { id: string }) => artifact.id)),
+    ).toEqual([
+      expectedArtifacts.slice(0, 9).map(([id]) => id),
+      expectedArtifacts.slice(9, 12).map(([id]) => id),
+      expectedArtifacts.slice(12, 17).map(([id]) => id),
+      expectedArtifacts.slice(17).map(([id]) => id),
+    ]);
+    expect(buildGeneratedArtifactExecutionPhases().map(({ phase }) => phase)).toEqual([0, 1, 2, 3]);
+    expect(
+      buildGeneratedArtifactExecutionPhases().map(({ units }) =>
+        units.map((unit: { commands: string[] }) => unit.commands[0]),
+      ),
+    ).toEqual([
+      expectedCommands.slice(0, 9),
+      expectedCommands.slice(9, 12),
+      expectedCommands.slice(12, 17),
+      expectedCommands.slice(17),
+    ]);
+    expect(GENERATED_ARTIFACTS_MAX_PARALLEL).toBe(4);
+  });
+
+  it("keeps generated-artifact phase barriers and skip behavior intact", () => {
+    const phaseById = new Map(GENERATED_ARTIFACT_REGISTRY.map((artifact) => [artifact.id, artifact.phase]));
+    for (const artifact of GENERATED_ARTIFACT_REGISTRY) {
+      for (const dependency of artifact.dependsOn ?? []) {
+        expect(phaseById.get(dependency), `${artifact.id} depends on ${dependency}`).toBeLessThan(artifact.phase);
+      }
+    }
+
+    const env = { ...process.env, GENERATED_ARTIFACTS_SKIP: "world-map, stablecoin-catalog, world-map" };
+    expect(parseGeneratedArtifactsSkip(env)).toEqual(["world-map", "stablecoin-catalog", "world-map"]);
+    expect(resolveGeneratedArtifactsSkip({ env })).toEqual(["world-map", "stablecoin-catalog", "world-map"]);
+    expect(resolveGeneratedArtifactsSkip({ check: true, env })).toEqual([]);
+    expect(
+      buildGeneratedArtifactExecutionPhases({ skip: ["world-map"] }).flatMap(({ units }) =>
+        units.map((unit: { commands: string[] }) => unit.commands[0]),
+      ),
+    ).not.toContain("tsx scripts/maintenance/build-world-map-svg.ts");
+    expect(buildGeneratedArtifactCommands({ bootstrap: true })).toEqual(
+      GENERATED_ARTIFACT_REGISTRY.filter((artifact) => artifact.bootstrap).map((artifact) => artifact.command),
+    );
+    expect(
+      buildGeneratedArtifactPhases({ bootstrap: true }).map(({ artifacts }) =>
+        artifacts.map((artifact: { id: string }) => artifact.id),
+      ),
+    ).toEqual([
+      ["stablecoin-catalog", "case-study-client-index", "depeg-event-search-data", "postman", "openapi", "world-map"],
+      ["stablecoin-prevalidated-registry", "legacy-stablecoin-redirects", "stablecoin-client-registry"],
+      ["agent-code-map"],
+    ]);
   });
 
   it("keeps the prebuild runner bounded while preserving the shared command set", () => {
@@ -357,12 +329,10 @@ describe("validate-ci parity", () => {
     expect(runner).toContain("runParallelExecutionUnits");
     expect(runner).toContain("buildValidatePrebuildCommands");
     expect(runner).toContain("VALIDATE_PREBUILD_SURFACE_ENV");
-    expect(runner).toContain("resolveValidatePrebuildTier");
-    expect(runner).toContain("VALIDATE_PREBUILD_TIER_ENV");
     expect(runner).toContain("VALIDATE_PREBUILD_MAX_PARALLEL");
+    expect(runner).not.toContain("VALIDATE_PREBUILD_TIER");
     expect(runner).not.toContain("run-p");
     expect(VALIDATE_PREBUILD_MAX_PARALLEL).toBe(8);
-    expect(VALIDATE_PREBUILD_TIER_ENV).toBe("VALIDATE_PREBUILD_TIER");
   });
 
   it("keeps critical and non-critical test runners derived from one critical test list", () => {
@@ -391,16 +361,6 @@ describe("validate-ci parity", () => {
     expect(vitestConfig).toContain("criticalTestExcludes");
   });
 
-  it("keeps the expanded validate contract model available for local planning", () => {
-    expect(buildCiValidateStepPlan()).toEqual([
-      { cmd: "npm run validate:prebuild", condition: null },
-      ...PAGES_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: "pages_changed && run_pages_build_and_seo" })),
-      ...buildNoncriticalTestShardCommands().map((cmd) => ({ cmd, condition: null })),
-      { cmd: "npm run coverage:critical", condition: null },
-      ...WORKER_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: "worker_changed" })),
-    ]);
-  });
-
   it("documents test:critical-contracts as a targeted runner instead of a separate CI lane", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
     const scriptsDoc = readFileSync(resolve(process.cwd(), "docs/scripts.md"), "utf8");
@@ -411,60 +371,12 @@ describe("validate-ci parity", () => {
     );
 
     expect(workflow).not.toContain("npm run test:critical-contracts");
-    expect(buildCiValidateStepPlan().map((entry) => entry.cmd)).not.toContain("npm run test:critical-contracts");
     expect(ciCriticalSection).not.toContain("run-critical-contracts.mjs");
     expect(testingDoc).toContain("`npm run test:critical-contracts` is a targeted local runner");
   });
 
   it("keeps deploy-impact exact path registries duplicate-free", () => {
     expect(findDuplicateDeployImpactExactPaths()).toEqual([]);
-  });
-
-  it("classifies every validation command in the deploy-impact registry", () => {
-    expect(() => validateValidationCommandImpactRegistry()).not.toThrow();
-  });
-
-  it("classifies every validate:prebuild command in the tier registry", () => {
-    expect(() => validateValidationCommandTierRegistry()).not.toThrow();
-    expect(() =>
-      validateValidationCommandTierRegistry([...VALIDATE_PREBUILD_COMMANDS, "npm run check:future-guardrail"]),
-    ).toThrow("Missing validation tier classification for: npm run check:future-guardrail");
-
-    expect(
-      VALIDATION_COMMAND_TIER_REGISTRY.filter((entry) => entry.tier === "blocking").map((entry) => entry.command),
-    ).toEqual([
-      "npm run lint",
-      "npm run lint:typed",
-      "npm run typecheck",
-      "npm run typecheck:tests",
-      "npm run check:client-registry-imports",
-      "npm run check:cli-args-policy",
-      "npm run check:cron-connections",
-      "npm run check:cron-sync",
-      "npm run check:worker-config",
-      "npm run check:env-contract",
-      "npm run check:generated-artifacts",
-      "npm run check:migrations",
-      "npm run check:site-csp-sync",
-      "npm run check:sql-safety",
-      "npm run check:stablecoin-data",
-      "npm run check:supply-helper-usage",
-      "npm run check:worker-boundary",
-    ]);
-  });
-
-  it("derives validation command registries from the canonical descriptor list", () => {
-    expect(VALIDATE_PREBUILD_COMMANDS).toEqual(VALIDATE_PREBUILD_COMMAND_DESCRIPTORS.map((entry) => entry.command));
-    expect(VALIDATION_COMMAND_TIER_REGISTRY).toEqual(
-      VALIDATE_PREBUILD_COMMAND_DESCRIPTORS.map(({ command, tier }) => ({ command, tier })),
-    );
-    expect(VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY).toEqual(
-      VALIDATION_COMMAND_DESCRIPTORS.map(({ command, deployImpact, paths }) => ({
-        command,
-        deployImpact,
-        paths,
-      })),
-    );
   });
 
   it("derives the Worker root runtime package set from the lockfile", () => {

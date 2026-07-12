@@ -10,8 +10,21 @@ const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(TEST_DIR, "../../../../..");
 const FIXTURES_DIR = resolve(TEST_DIR, "fixtures");
 const REFRESH_SCRIPT = resolve(ROOT_DIR, "scripts/maintenance/refresh-reserve-html-fixtures.ts");
-// eslint-disable-next-line security/detect-unsafe-regex -- anchored finite fixture metadata header, run only on checked-in fixture files.
-const CAPTURED_AT_RE = /<!--\s*captured-at:\s*\d{4}-\d{2}-\d{2}T[\d:]+Z(?:\s+from\s+https?:\/\/[^>]+)?\s*-->/;
+const CAPTURED_AT_RE = /<!--\s*captured-at:\s*(\d{4}-\d{2}-\d{2}T[\d:]+Z)\s*-->/;
+const MAX_FIXTURE_AGE_DAYS = 90;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function inspectFixtureFreshness(file: string, content: string, now = new Date()) {
+  const match = content.match(CAPTURED_AT_RE);
+  if (!match) return { file, error: `${file}: missing captured-at header` };
+  const capturedAt = new Date(match[1]);
+  if (Number.isNaN(capturedAt.getTime())) return { file, error: `${file}: invalid captured-at timestamp ${match[1]}` };
+  const ageDays = Math.floor((now.getTime() - capturedAt.getTime()) / DAY_MS);
+  if (ageDays > MAX_FIXTURE_AGE_DAYS) {
+    return { file, ageDays, error: `${file}: captured-at ${match[1]} is ${ageDays} days old` };
+  }
+  return { file, ageDays };
+}
 
 // Adapters that intentionally don't carry an HTML fixture file. Each entry
 // must come with a reason — gated PDFs cannot be checked in, and small
@@ -36,8 +49,9 @@ function fixturePrefixCandidates(key: string): string[] {
 
 function findFixturesFor(key: string, fixtureNames: readonly string[]): string[] {
   const prefixes = fixturePrefixCandidates(key);
-  return fixtureNames.filter((name) =>
-    name.endsWith(".html") && prefixes.some((prefix) => name === `${prefix}.html` || name.startsWith(`${prefix}-`)),
+  return fixtureNames.filter(
+    (name) =>
+      name.endsWith(".html") && prefixes.some((prefix) => name === `${prefix}.html` || name.startsWith(`${prefix}-`)),
   );
 }
 
@@ -49,22 +63,21 @@ describe("http-html adapter fixture coverage", () => {
     return inputKinds.includes("http-html");
   });
 
-  it.each(httpHtmlAdapters)(
-    "%s has an HTML fixture file or an explicit FIXTURE_EXEMPT_ADAPTERS reason",
-    (key) => {
-      const fixtures = findFixturesFor(key, fixtureNames);
-      const exemptReason = FIXTURE_EXEMPT_ADAPTERS[key];
-      if (exemptReason) {
-        expect(exemptReason.trim().length, `Exemption reason for ${key} must be non-empty`).toBeGreaterThan(0);
-        return;
-      }
-      expect(
-        fixtures.length,
-        `http-html adapter "${key}" has no fixture in __tests__/fixtures/ — add one matching ` +
-          `${fixturePrefixCandidates(key).map((p) => `${p}.html`).join(" or ")}, or list it in FIXTURE_EXEMPT_ADAPTERS with a reason.`,
-      ).toBeGreaterThan(0);
-    },
-  );
+  it.each(httpHtmlAdapters)("%s has an HTML fixture file or an explicit FIXTURE_EXEMPT_ADAPTERS reason", (key) => {
+    const fixtures = findFixturesFor(key, fixtureNames);
+    const exemptReason = FIXTURE_EXEMPT_ADAPTERS[key];
+    if (exemptReason) {
+      expect(exemptReason.trim().length, `Exemption reason for ${key} must be non-empty`).toBeGreaterThan(0);
+      return;
+    }
+    expect(
+      fixtures.length,
+      `http-html adapter "${key}" has no fixture in __tests__/fixtures/ — add one matching ` +
+        `${fixturePrefixCandidates(key)
+          .map((p) => `${p}.html`)
+          .join(" or ")}, or list it in FIXTURE_EXEMPT_ADAPTERS with a reason.`,
+    ).toBeGreaterThan(0);
+  });
 
   it("FIXTURE_EXEMPT_ADAPTERS keys all map to real http-html adapter keys", () => {
     const httpHtmlSet = new Set(httpHtmlAdapters);
@@ -76,19 +89,40 @@ describe("http-html adapter fixture coverage", () => {
     }
   });
 
-  it.each(htmlFixtureNames)(
-    "%s carries a captured-at metadata header for the freshness checker",
-    (fixtureName) => {
-      const content = readFileSync(resolve(FIXTURES_DIR, fixtureName), "utf8");
-      expect(content).toMatch(CAPTURED_AT_RE);
-    },
-  );
+  it.each(htmlFixtureNames)("%s carries a valid captured-at header no older than 90 whole days", (fixtureName) => {
+    const content = readFileSync(resolve(FIXTURES_DIR, fixtureName), "utf8");
+    const result = inspectFixtureFreshness(fixtureName, content);
+    expect(result.error, result.error).toBeUndefined();
+  });
+
+  it("keeps the 90-day boundary, invalid/missing headers, and future timestamps explicit", () => {
+    const now = new Date("2026-04-01T12:00:00Z");
+    expect(inspectFixtureFreshness("exact.html", "<!-- captured-at: 2026-01-01T00:00:00Z -->", now)).toEqual({
+      file: "exact.html",
+      ageDays: 90,
+    });
+    expect(inspectFixtureFreshness("stale.html", "<!-- captured-at: 2025-12-31T12:00:00Z -->", now)).toMatchObject({
+      file: "stale.html",
+      ageDays: 91,
+      error: expect.stringContaining("stale.html"),
+    });
+    expect(inspectFixtureFreshness("invalid.html", "<!-- captured-at: 2026-99-99T99:99:99Z -->", now)).toEqual({
+      file: "invalid.html",
+      error: "invalid.html: invalid captured-at timestamp 2026-99-99T99:99:99Z",
+    });
+    expect(inspectFixtureFreshness("missing.html", "<html />", now)).toEqual({
+      file: "missing.html",
+      error: "missing.html: missing captured-at header",
+    });
+    expect(inspectFixtureFreshness("future.html", "<!-- captured-at: 2026-04-02T12:00:00Z -->", now)).toEqual({
+      file: "future.html",
+      ageDays: -1,
+    });
+  });
 
   it("refresh script can refresh every checked-in HTML fixture", () => {
     const script = readFileSync(REFRESH_SCRIPT, "utf8");
-    const refreshFixtures = new Set(
-      Array.from(script.matchAll(/fixture:\s*"([^"]+\.html)"/g), (match) => match[1]),
-    );
+    const refreshFixtures = new Set(Array.from(script.matchAll(/fixture:\s*"([^"]+\.html)"/g), (match) => match[1]));
     const missing = htmlFixtureNames.filter((fixtureName) => !refreshFixtures.has(fixtureName));
 
     expect(missing).toEqual([]);

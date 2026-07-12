@@ -5,24 +5,21 @@ import {
   buildValidatePrebuildCommands,
   normalizeValidatePrebuildSurface,
   parseValidatePrebuildSkipCommands,
-  resolveValidatePrebuildTier,
   VALIDATE_PREBUILD_MAX_PARALLEL,
   VALIDATE_PREBUILD_SKIP_COMMANDS_ENV,
   VALIDATE_PREBUILD_SURFACE_ENV,
-  VALIDATE_PREBUILD_TIER_ENV,
-} from "../lib/validate-contract.mjs";
+} from "../lib/validation-lanes.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const GENERATED_ARTIFACTS_CHECK_COMMAND = "npm run check:generated-artifacts";
 
-export function buildValidatePrebuildExecutionUnits(surface, tier = "full") {
-  return buildValidatePrebuildCommands({ surface, tier }).map((cmd) => createExecutionUnit([cmd]));
+export function buildValidatePrebuildExecutionUnits(surface) {
+  return buildValidatePrebuildCommands({ surface }).map((cmd) => createExecutionUnit([cmd]));
 }
 
-export function buildValidatePrebuildExecutionUnitsForEnv(surface, tier = "full", env = process.env) {
+export function buildValidatePrebuildExecutionUnitsForEnv(surface, env = process.env) {
   return buildValidatePrebuildCommands({
     surface,
-    tier,
     skipCommands: parseValidatePrebuildSkipCommands(env[VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]),
   }).map((cmd) => createExecutionUnit([cmd]));
 }
@@ -57,17 +54,6 @@ export function printValidatePrebuildCommandPlan(units, { log = console.log } = 
   }
 }
 
-export function formatValidatePrebuildTier(tierState) {
-  if (tierState.ciOverride) {
-    return `${tierState.effectiveTier} (requested ${tierState.requestedTier} ignored because CI=true)`;
-  }
-  return tierState.effectiveTier;
-}
-
-function readEnvValue(env, key) {
-  return Object.prototype.hasOwnProperty.call(env, key) ? env[key] : undefined;
-}
-
 export async function runValidatePrebuild({
   argv = process.argv.slice(2),
   env = process.env,
@@ -75,18 +61,12 @@ export async function runValidatePrebuild({
   runExecutionUnits = runParallelExecutionUnits,
 } = {}) {
   const surface = normalizeValidatePrebuildSurface(env[VALIDATE_PREBUILD_SURFACE_ENV]);
-  const tierState = resolveValidatePrebuildTier(env[VALIDATE_PREBUILD_TIER_ENV], {
-    ci: readEnvValue(env, "CI") ?? "",
-  });
   const skippedCommands = parseValidatePrebuildSkipCommands(env[VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]);
-  const units = buildValidatePrebuildExecutionUnitsForEnv(surface, tierState.effectiveTier, env);
-  const tierLabel = formatValidatePrebuildTier(tierState);
+  const units = buildValidatePrebuildExecutionUnitsForEnv(surface, env);
   const dryRun = isValidatePrebuildDryRun(argv);
 
   if (dryRun) {
-    log(
-      `[validate:prebuild] Surface hint: ${surface}; tier: ${tierLabel}; dry-run plan has ${units.length} prebuild command(s).`,
-    );
+    log(`[validate:prebuild] Surface hint: ${surface}; dry-run plan has ${units.length} prebuild command(s).`);
     if (skippedCommands.length > 0) {
       log(`[validate:prebuild] Skipped by caller: ${skippedCommands.join(", ")}`);
     }
@@ -95,7 +75,7 @@ export async function runValidatePrebuild({
     return { status: 0, failedCmd: null, aborted: false };
   }
 
-  log(`[validate:prebuild] Surface hint: ${surface}; tier: ${tierLabel}; running ${units.length} prebuild command(s).`);
+  log(`[validate:prebuild] Surface hint: ${surface}; running ${units.length} prebuild command(s).`);
   if (skippedCommands.length > 0) {
     log(`[validate:prebuild] Skipped by caller: ${skippedCommands.join(", ")}`);
   }

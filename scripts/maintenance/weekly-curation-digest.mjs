@@ -13,22 +13,20 @@
  * `agents/curation-digest-<date>.md`.
  *
  * Standalone command (`npm run digest:curation`). NOT part of
- * `validate:prebuild` — the CI gates already enforce the floor; the
- * digest is the human rollup the maintainer reads on a calendar cadence.
+ * `validate:prebuild` — ordinary noncritical tests enforce the editorial
+ * floors; the digest is the human rollup read on a calendar cadence.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = process.cwd();
 const COINS_FILE = resolve(ROOT, "shared/data/stablecoins/coins.generated.json");
 const SUMMARIES_FILE = resolve(ROOT, "data/ai-summaries.json");
 const BASELINE_FILE = resolve(ROOT, "scripts/lib/curation-baseline-caps.json");
 const CANDIDATES_FILE = resolve(ROOT, "agents/annotation-candidates.md");
-const CURATED_ANNOTATIONS_FILE = resolve(
-  ROOT,
-  "shared/data/annotations/curated-annotations.ts",
-);
+const CURATED_ANNOTATIONS_FILE = resolve(ROOT, "shared/data/annotations/curated-annotations.ts");
 
 const AI_SUMMARY_STALENESS_DAYS = 180;
 const QUEUE_WARN_ROW_THRESHOLD = 30;
@@ -62,7 +60,7 @@ function isVariant(coin) {
   return typeof coin.variantOf === "string" && coin.variantOf.length > 0;
 }
 
-function analyzeOneLiner(coins) {
+export function analyzeOneLiner(coins) {
   const inScope = coins.filter(isActiveOrPreLaunch);
   const missing = inScope
     .filter((c) => !c.oneLiner || String(c.oneLiner).trim() === "")
@@ -71,7 +69,7 @@ function analyzeOneLiner(coins) {
   return { total: inScope.length, missing };
 }
 
-function analyzeArchetype(coins, baseline) {
+export function analyzeArchetype(coins, baseline) {
   const byId = new Map(coins.map((c) => [c.id, c]));
   const tracked = [];
   let variants = 0;
@@ -108,10 +106,8 @@ function analyzeArchetype(coins, baseline) {
   };
 }
 
-function analyzeAttestorTier(coins) {
-  const auditCoins = coins.filter(
-    (c) => c.proofOfReserves && c.proofOfReserves.type === "independent-audit",
-  );
+export function analyzeAttestorTier(coins) {
+  const auditCoins = coins.filter((c) => c.proofOfReserves && c.proofOfReserves.type === "independent-audit");
   const missing = auditCoins
     .filter((c) => !c.proofOfReserves || !c.proofOfReserves.attestorTier)
     .map((c) => c.id)
@@ -158,11 +154,7 @@ function analyzeSummaryStaleness(coins, summaries) {
       });
     }
   }
-  stale.sort(
-    (a, b) =>
-      (b.ageDays ?? Number.POSITIVE_INFINITY) -
-      (a.ageDays ?? Number.POSITIVE_INFINITY),
-  );
+  stale.sort((a, b) => (b.ageDays ?? Number.POSITIVE_INFINITY) - (a.ageDays ?? Number.POSITIVE_INFINITY));
   missing.sort();
   return { stale, missing };
 }
@@ -199,22 +191,17 @@ function analyzeAnnotationQueue(queueText, curatedText) {
     }
   }
 
-  const lastSweptMatch = /<!--\s*last_swept_at:\s*(\d{4}-\d{2}-\d{2})\s*-->/.exec(
-    queueText,
-  );
+  const lastSweptMatch = /<!--\s*last_swept_at:\s*(\d{4}-\d{2}-\d{2})\s*-->/.exec(queueText);
   const lastSweptAt = lastSweptMatch ? lastSweptMatch[1] : null;
 
   const ts = parseAnnotationsTs(curatedText);
-  const cutoffMs =
-    Date.now() - ANNOTATION_STALE_YEARS * 365.25 * 24 * 60 * 60 * 1000;
+  const cutoffMs = Date.now() - ANNOTATION_STALE_YEARS * 365.25 * 24 * 60 * 60 * 1000;
   let staleCount = 0;
   for (const value of ts) if (value < cutoffMs) staleCount += 1;
 
   const warnings = [];
   if (rowCount > QUEUE_WARN_ROW_THRESHOLD) {
-    warnings.push(
-      `queue length ${rowCount} exceeds ${QUEUE_WARN_ROW_THRESHOLD}-row threshold`,
-    );
+    warnings.push(`queue length ${rowCount} exceeds ${QUEUE_WARN_ROW_THRESHOLD}-row threshold`);
   }
   if (oldestDate) {
     const age = daysBetween(oldestDate, todayIso());
@@ -280,7 +267,9 @@ function renderArchetype(report) {
     lines.push(`Missing: ${joinList(report.missing)}`);
   }
   if (report.unknown.length > 0) {
-    lines.push(`Baseline drift: ${report.unknown.length} baseline IDs missing from registry (${joinList(report.unknown)}). Refresh \`scripts/lib/curation-baseline-caps.json\`.`);
+    lines.push(
+      `Baseline drift: ${report.unknown.length} baseline IDs missing from registry (${joinList(report.unknown)}). Refresh \`scripts/lib/curation-baseline-caps.json\`.`,
+    );
   }
   lines.push("");
   return lines.join("\n");
@@ -290,9 +279,7 @@ function renderAttestor(report) {
   const lines = [`## proofOfReserves.attestorTier coverage`, ""];
   const have = report.total - report.missing.length;
   const pct = report.total === 0 ? "0.0" : ((have / report.total) * 100).toFixed(1);
-  lines.push(
-    `Independent-audit coins with attestorTier: ${have}/${report.total} (${pct}%).`,
-  );
+  lines.push(`Independent-audit coins with attestorTier: ${have}/${report.total} (${pct}%).`);
   if (report.missing.length > 0) {
     lines.push(`Missing: ${joinList(report.missing)}`);
   }
@@ -395,4 +382,6 @@ function main() {
   }
 }
 
-main();
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  main();
+}

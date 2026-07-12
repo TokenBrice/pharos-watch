@@ -76,15 +76,13 @@ The hub at `/learn/mechanisms/` renders the same shell with a different headline
 
 ## Coverage Invariant
 
-`npm run check:archetype-explainer-coverage` (`scripts/ci/check-archetype-explainer-coverage.ts`, registered in `scripts/lib/validation-command-registry.mjs` immediately after `check:mechanism-archetype-coverage`) asserts, for every `MECHANISM_ARCHETYPE_VALUES`:
+Ordinary noncritical domain tests split the invariant for every `MECHANISM_ARCHETYPE_VALUES` entry:
 
-- non-empty label + one-liner in `mechanism-archetypes.ts`
-- a non-stub content module exists in the registry
-- every `representativeCoins[*].coinId` resolves via `TRACKED_META_BY_ID`
-- the dynamic route `[archetype]/page.tsx` file exists and `generateStaticParams` round-trips the slug
-- `src/app/sitemap.ts` enumerates `/learn/mechanisms/<slug>/`
+- `src/app/learn/mechanisms/__tests__/content.test.ts` requires a trimmed label and one-liner, non-stub headline and subtitle, at least one representative coin, and `TRACKED_META_BY_ID` resolution for every representative `coinId`.
+- The existing `src/app/learn/mechanisms/[archetype]/__tests__/page.test.tsx` exact static-param test imports the route module and round-trips every slug.
+- `src/app/__tests__/sitemap-frozen.test.ts` requires `/learn/mechanisms/<slug>/` membership for every archetype.
 
-The guard runs in `validate:prebuild` and so blocks deploy even on non-Pages-impacting changes such as a 6th archetype value being added to `MECHANISM_ARCHETYPE_VALUES`.
+These suites run in the ordinary noncritical lane. Per-archetype OG PNGs remain owned by `check:generated-artifacts` through `scripts/maintenance/build-og-learn-images.ts --check`.
 
 ---
 
@@ -110,7 +108,7 @@ No footer entry. The hub is the only deep-link from `Mechanisms`-related surface
 5. Add a `TITLE_BY_ARCHETYPE` and `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
 6. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does).
 7. Run `tsx scripts/maintenance/build-og-learn-images.ts` and the `svg-to-png` skill on the new staged SVG.
-8. Run `npm run check:archetype-explainer-coverage` until it passes; this is the gate.
+8. Run the mechanism content, exact static-param, and sitemap suites listed in Coverage Invariant; regenerate the OG asset before running `npm run check:generated-artifacts`.
 
 ---
 

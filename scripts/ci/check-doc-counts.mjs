@@ -121,10 +121,7 @@ const ACTIVE_STABLECOINS = getModuleExport(stablecoinsModule, "ACTIVE_STABLECOIN
 const PRE_LAUNCH_STABLECOINS = getModuleExport(stablecoinsModule, "PRE_LAUNCH_STABLECOINS");
 const PSI_ELIGIBLE_STABLECOINS = getModuleExport(psiEligibleModule, "PSI_ELIGIBLE_STABLECOINS");
 const SHADOW_STABLECOINS = getModuleExport(shadowStablecoinsModule, "SHADOW_STABLECOINS");
-const LIVE_RESERVE_ADAPTER_DEFINITIONS = getModuleExport(
-  reserveAdaptersModule,
-  "LIVE_RESERVE_ADAPTER_DEFINITIONS",
-);
+const LIVE_RESERVE_ADAPTER_DEFINITIONS = getModuleExport(reserveAdaptersModule, "LIVE_RESERVE_ADAPTER_DEFINITIONS");
 const BLUECHIP_SLUG_MAP = getModuleExport(bluechipSlugsModule, "BLUECHIP_SLUG_MAP");
 const DEAD_STABLECOINS = getModuleExport(deadStablecoinsModule, "DEAD_STABLECOINS");
 const FROZEN_STABLECOINS = getModuleExport(stablecoinsModule, "FROZEN_STABLECOINS");
@@ -149,12 +146,10 @@ const adapterCount = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).length;
 const bluechipCount = Object.keys(BLUECHIP_SLUG_MAP).length;
 
 // 5. Live-enabled stablecoins
-const trackedLiveReserveConfigCount = TRACKED_STABLECOINS.filter(
-  (coin) => Object.hasOwn(coin, "liveReservesConfig"),
+const trackedLiveReserveConfigCount = TRACKED_STABLECOINS.filter((coin) =>
+  Object.hasOwn(coin, "liveReservesConfig"),
 ).length;
-const activeLiveEnabledCount = ACTIVE_STABLECOINS.filter(
-  (coin) => Object.hasOwn(coin, "liveReservesConfig"),
-).length;
+const activeLiveEnabledCount = ACTIVE_STABLECOINS.filter((coin) => Object.hasOwn(coin, "liveReservesConfig")).length;
 
 // 6. Cemetery / dead-stablecoins.json count (used in report-cards.md)
 const cemeteryCount = DEAD_STABLECOINS.length;
@@ -169,18 +164,6 @@ const authoritativeCounts = `Authoritative counts: ${trackedCount} tracked (${ac
 // --- Check primary docs for stale counts ---
 
 const CHECKS = [
-  {
-    file: "CLAUDE.md",
-    pattern: /tracking (\d+) stablecoins/,
-    expected: trackedCount,
-    label: "tracked",
-  },
-  {
-    file: "AGENTS.md",
-    pattern: /tracking (\d+) stablecoins/,
-    expected: trackedCount,
-    label: "tracked",
-  },
   {
     file: "README.md",
     pattern: /tracking (\d+) stablecoins/,
@@ -345,9 +328,7 @@ for (const { file, pattern, expected, label } of CHECKS) {
   }
   const found = Number(match[1]);
   if (found !== expected) {
-    console.error(
-      `  FAIL  ${file}: found ${found} ${label}, expected ${expected}`,
-    );
+    console.error(`  FAIL  ${file}: found ${found} ${label}, expected ${expected}`);
     failures++;
   }
 }
@@ -356,8 +337,8 @@ if (failures > 0) {
   console.error(authoritativeCounts);
   console.error(
     `\n${failures} check(s) failed. Update docs to match source:` +
-    `\n  CANONICAL_ORDER=${trackedCount}, SHADOW=${shadowCount}, PSI=${psiCount}` +
-    `\n  ADAPTERS=${adapterCount}, BLUECHIP_SLUG_MAP=${bluechipCount}, BLACKLIST_CONFIGS=${blacklistContractCounts.configCount}, BLACKLIST_CHAINS=${blacklistContractCounts.chainCount}, BLACKLIST_SYMBOLS=${blacklistContractCounts.stablecoinCount}, ACTIVE_LIVE_ENABLED=${activeLiveEnabledCount}, TRACKED_LIVE_RESERVE_CONFIGS=${trackedLiveReserveConfigCount}`,
+      `\n  CANONICAL_ORDER=${trackedCount}, SHADOW=${shadowCount}, PSI=${psiCount}` +
+      `\n  ADAPTERS=${adapterCount}, BLUECHIP_SLUG_MAP=${bluechipCount}, BLACKLIST_CONFIGS=${blacklistContractCounts.configCount}, BLACKLIST_CHAINS=${blacklistContractCounts.chainCount}, BLACKLIST_SYMBOLS=${blacklistContractCounts.stablecoinCount}, ACTIVE_LIVE_ENABLED=${activeLiveEnabledCount}, TRACKED_LIVE_RESERVE_CONFIGS=${trackedLiveReserveConfigCount}`,
   );
   process.exit(1);
 }

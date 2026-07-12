@@ -3,26 +3,6 @@
   "command": "npx tsc --noEmit -p tsconfig.test-typecheck.json --pretty false",
   "diagnostics": [
     {
-      "file": "functions/__tests__/ops-admin-proxy.test.ts",
-      "code": "TS2339",
-      "message": "Property 'headers' does not exist on type 'never'.",
-      "count": 2,
-      "examples": [
-        "261:27",
-        "288:27"
-      ]
-    },
-    {
-      "file": "functions/__tests__/ops-admin-proxy.test.ts",
-      "code": "TS2493",
-      "message": "Tuple type '[]' of length '0' has no element at index '1'.",
-      "count": 2,
-      "examples": [
-        "260:14",
-        "287:14"
-      ]
-    },
-    {
       "file": "functions/__tests__/selector-snapshot.test.ts",
       "code": "TS2322",
       "message": "Type '() => Promise<{ meta?: { changes?: number; }; }>' is not assignable to type '<T = Record<string, unknown>>() => Promise<D1Result<T>>'.",
@@ -100,7 +80,7 @@
       "message": "Type '(_cmd: string, args: string[]) => \"\\ndiff --git a/package.json b/package.json\\n- \\\"zod\\\": \\\"^4.3.5\\\",\\n+ \\\"zod\\\": \\\"^4.3.6\\\",\\n\" | \"package.json\\npackage-lock.json\\n\"' is not assignable to type '{ (file: string): NonSharedBuffer; (file: string, options: ExecFileSyncOptionsWithStringEncoding): string; (file: string, options: ExecFileSyncOptionsWithBufferEncoding): NonSharedBuffer; (file: string, options?: ExecFileSyncOptions | undefined): string | NonSharedBuffer; (file: string, args: readonly string[]): Non...'.",
       "count": 1,
       "examples": [
-        "363:7"
+        "365:7"
       ]
     },
     {
@@ -109,7 +89,7 @@
       "message": "Type '(_cmd: string, args: string[]) => string' is not assignable to type '{ (file: string): NonSharedBuffer; (file: string, options: ExecFileSyncOptionsWithStringEncoding): string; (file: string, options: ExecFileSyncOptionsWithBufferEncoding): NonSharedBuffer; (file: string, options?: ExecFileSyncOptions | undefined): string | NonSharedBuffer; (file: string, args: readonly string[]): Non...'.",
       "count": 1,
       "examples": [
-        "337:7"
+        "339:7"
       ]
     },
     {
@@ -118,9 +98,9 @@
       "message": "Type '() => string' is not assignable to type '{ (file: string): NonSharedBuffer; (file: string, options: ExecFileSyncOptionsWithStringEncoding): string; (file: string, options: ExecFileSyncOptionsWithBufferEncoding): NonSharedBuffer; (file: string, options?: ExecFileSyncOptions | undefined): string | NonSharedBuffer; (file: string, args: readonly string[]): Non...'.",
       "count": 5,
       "examples": [
-        "265:7",
-        "283:7",
-        "301:7"
+        "267:7",
+        "285:7",
+        "303:7"
       ]
     },
     {
@@ -129,7 +109,7 @@
       "message": "Type '(cmd: string, args: string[]) => string' is not assignable to type '{ (file: string): NonSharedBuffer; (file: string, options: ExecFileSyncOptionsWithStringEncoding): string; (file: string, options: ExecFileSyncOptionsWithBufferEncoding): NonSharedBuffer; (file: string, options?: ExecFileSyncOptions | undefined): string | NonSharedBuffer; (file: string, args: readonly string[]): Non...'.",
       "count": 1,
       "examples": [
-        "420:7"
+        "422:7"
       ]
     },
     {
@@ -138,7 +118,7 @@
       "message": "Object literal may only specify known properties, and 'baseSha' does not exist in type '{ execFile?: { (file: string): NonSharedBuffer; (file: string, options: ExecFileSyncOptionsWithStringEncoding): string; (file: string, options: ExecFileSyncOptionsWithBufferEncoding): NonSharedBuffer; (file: string, options?: ExecFileSyncOptions | undefined): string | NonSharedBuffer; (file: string, args: readonly s...'.",
       "count": 1,
       "examples": [
-        "248:7"
+        "250:7"
       ]
     },
     {
@@ -147,7 +127,7 @@
       "message": "Object literal may only specify known properties, and 'eventName' does not exist in type '{ execFile?: { (file: string): NonSharedBuffer; (file: string, options: ExecFileSyncOptionsWithStringEncoding): string; (file: string, options: ExecFileSyncOptionsWithBufferEncoding): NonSharedBuffer; (file: string, options?: ExecFileSyncOptions | undefined): string | NonSharedBuffer; (file: string, args: readonly s...'.",
       "count": 1,
       "examples": [
-        "238:44"
+        "240:44"
       ]
     },
     {
@@ -296,7 +276,7 @@
       "message": "Object literal may only specify known properties, and 'consoleMessages' does not exist in type '{ strictTouchTargets: any; }'.",
       "count": 1,
       "examples": [
-        "145:7"
+        "146:7"
       ]
     },
     {
@@ -391,84 +371,12 @@
       ]
     },
     {
-      "file": "scripts/__tests__/validate-ci-parity.test.ts",
-      "code": "TS7005",
-      "message": "Variable 'current' implicitly has an 'any' type.",
-      "count": 1,
-      "examples": [
-        "49:9"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/validate-ci-parity.test.ts",
-      "code": "TS7005",
-      "message": "Variable 'steps' implicitly has an 'any[]' type.",
-      "count": 1,
-      "examples": [
-        "90:10"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/validate-ci-parity.test.ts",
-      "code": "TS7006",
-      "message": "Parameter 'yaml' implicitly has an 'any' type.",
-      "count": 1,
-      "examples": [
-        "43:26"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/validate-ci-parity.test.ts",
-      "code": "TS7034",
-      "message": "Variable 'current' implicitly has type 'any' in some locations where its type cannot be determined.",
-      "count": 1,
-      "examples": [
-        "46:7"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/validate-ci-parity.test.ts",
-      "code": "TS7034",
-      "message": "Variable 'steps' implicitly has type 'any[]' in some locations where its type cannot be determined.",
-      "count": 1,
-      "examples": [
-        "45:9"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/validate-prebuild-surface.test.ts",
-      "code": "TS2741",
-      "message": "Property 'NODE_ENV' is missing in type '{ CI: string; VALIDATE_PREBUILD_SURFACE: string; VALIDATE_PREBUILD_TIER: string; }' but required in type 'ProcessEnv'.",
-      "count": 1,
-      "examples": [
-        "242:7"
-      ]
-    },
-    {
       "file": "scripts/__tests__/validate-prebuild-surface.test.ts",
       "code": "TS2741",
       "message": "Property 'NODE_ENV' is missing in type '{ VALIDATE_PREBUILD_SURFACE: string; }' but required in type 'ProcessEnv'.",
       "count": 1,
       "examples": [
-        "181:7"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/validate-prebuild-surface.test.ts",
-      "code": "TS2741",
-      "message": "Property 'NODE_ENV' is missing in type '{ VALIDATE_PREBUILD_SURFACE: string; VALIDATE_PREBUILD_TIER: string; VALIDATE_PREBUILD_CONTINUE_ON_ERROR: string; }' but required in type 'ProcessEnv'.",
-      "count": 1,
-      "examples": [
-        "303:7"
-      ]
-    },
-    {
-      "file": "scripts/__tests__/validate-prebuild-surface.test.ts",
-      "code": "TS2741",
-      "message": "Property 'NODE_ENV' is missing in type '{ VALIDATE_PREBUILD_TIER: string; VALIDATE_PREBUILD_SKIP_COMMANDS: string; }' but required in type 'ProcessEnv'.",
-      "count": 1,
-      "examples": [
-        "210:7"
+        "92:7"
       ]
     },
     {
@@ -477,7 +385,7 @@
       "message": "Property 'NODE_ENV' is missing in type '{}' but required in type 'ProcessEnv'.",
       "count": 1,
       "examples": [
-        "270:7"
+        "154:7"
       ]
     },
     {
@@ -559,51 +467,6 @@
       ]
     },
     {
-      "file": "src/app/admin/__tests__/client.test.tsx",
-      "code": "TS2322",
-      "message": "Type 'null' is not assignable to type 'string | undefined'.",
-      "count": 1,
-      "examples": [
-        "198:9"
-      ]
-    },
-    {
-      "file": "src/app/admin/__tests__/client.test.tsx",
-      "code": "TS2322",
-      "message": "Type 'string' is not assignable to type 'StatusSectionError'.",
-      "count": 1,
-      "examples": [
-        "213:5"
-      ]
-    },
-    {
-      "file": "src/app/admin/__tests__/client.test.tsx",
-      "code": "TS2322",
-      "message": "Type 'unknown' is not assignable to type 'ReactNode'.",
-      "count": 1,
-      "examples": [
-        "25:7"
-      ]
-    },
-    {
-      "file": "src/app/admin/__tests__/client.test.tsx",
-      "code": "TS2353",
-      "message": "Object literal may only specify known properties, and 'failureBacklog' does not exist in type 'TelegramBotStats'.",
-      "count": 1,
-      "examples": [
-        "208:5"
-      ]
-    },
-    {
-      "file": "src/app/admin/__tests__/client.test.tsx",
-      "code": "TS2741",
-      "message": "Property 'transitionsLast24h' is missing in type '{ unhealthyCrons: number; availabilityImpactingUnhealthyCrons: number; watchUnhealthyCrons: number; degradedCrons: number; cronErrors: number; availabilityImpactingCronErrors: number; availabilityImpactingConsecutiveCronErrors: number; diagnosticIssueCount: number; worstCacheRatio: number; }' but required in type '{ unhealthyCrons: number; availabilityImpactingUnhealthyCrons: number; watchUnhealthyCrons: number; degradedCrons: number; cronErrors: number; availabilityImpactingCronErrors: number; ... 22 more ...; transitionsLast24h: number; }'.",
-      "count": 1,
-      "examples": [
-        "227:3"
-      ]
-    },
-    {
       "file": "src/app/compliance/model.test.ts",
       "code": "TS2339",
       "message": "Property 'foreignExceptionStatus' does not exist on type 'ComplianceRow'.",
@@ -618,7 +481,7 @@
       "message": "Property 'latestReportDate' does not exist on type 'ComplianceRow'.",
       "count": 1,
       "examples": [
-        "82:18"
+        "82:19"
       ]
     },
     {
@@ -627,7 +490,7 @@
       "message": "Property 'monthlyAttestationPresent' does not exist on type 'ComplianceRow'.",
       "count": 1,
       "examples": [
-        "83:18"
+        "83:19"
       ]
     },
     {
@@ -654,7 +517,7 @@
       "message": "Property 'primaryFederalRegulator' does not exist on type 'ComplianceRow'.",
       "count": 1,
       "examples": [
-        "81:18"
+        "81:19"
       ]
     },
     {
@@ -678,21 +541,12 @@
       ]
     },
     {
-      "file": "src/app/pharoswatchbot/app/page.test.tsx",
-      "code": "TS2349",
-      "message": "This expression is not callable.",
-      "count": 1,
-      "examples": [
-        "1106:5"
-      ]
-    },
-    {
       "file": "src/app/screener/picker/selector-data-adapter.test.ts",
       "code": "TS2352",
       "message": "Conversion of type '{ coins: { \"usdc-usd-coin\": { stablecoinId: string; score: number; effectiveExitScore: number; methodologyVersion: string; updatedAt: number; }; }; methodology: { version: string; }; updatedAt: number; }' to type '{ coins: Record<string, { stablecoinId: string; score: number | null; effectiveExitScore: number | null; dexLiquidityScore: number | null; accessScore: number | null; settlementScore: number | null; ... 46 more ...; capsApplied?: string[] | undefined; }>; methodology: { ...; }; updatedAt: number; snapshotSource?: \"r...' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
       "count": 1,
       "examples": [
-        "562:23"
+        "577:23"
       ]
     },
     {
@@ -701,35 +555,7 @@
       "message": "Conversion of type '{ id: string; name: string; symbol: string; pegType: string; pegMechanism: string; price: number; priceSource: string; circulating: { peggedEUR: number; }; circulatingPrevDay: {}; circulatingPrevWeek: {}; circulatingPrevMonth: {}; chainCirculating: {}; chains: string[]; }[]' to type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: ContractDeployment[] | undefined; circulating: Record<string, number>; circulatingPrevDay: Record<...>; ... 22 more ...; agreeSources: string[]; }[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
       "count": 1,
       "examples": [
-        "205:40"
-      ]
-    },
-    {
-      "file": "src/app/screener/picker/selector-data-adapter.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ rankings: { id: string; symbol: string; name: string; currentApy: number; apy7d: number; apy30d: number; apyBase: number; apyReward: null; yieldSource: string; yieldType: \"structured-tranche\"; dataSource: string; ... 14 more ...; sourceRisk: { ...; }; }[]; ... 4 more ...; methodology: { ...; }; }' to type '{ rankings: { id: string; symbol: string; name: string; currentApy: number; apy7d: number; apy30d: number; apyBase: number | null; apyReward: number | null; yieldSource: string; yieldType: \"lending-vault\" | ... 7 more ... | \"structured-tranche\"; ... 32 more ...; decisionLedger?: { ...; } | ... 1 more ... | undefined...' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "482:18"
-      ]
-    },
-    {
-      "file": "src/app/screener/picker/selector-data-adapter.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ rankings: { id: string; symbol: string; name: string; currentApy: number; apy7d: number; apy30d: number; apyBase: number; apyReward: number; yieldSource: string; yieldType: \"lending-vault\"; dataSource: string; ... 14 more ...; sourceRisk: { ...; }; }[]; ... 4 more ...; methodology: { ...; }; }' to type '{ rankings: { id: string; symbol: string; name: string; currentApy: number; apy7d: number; apy30d: number; apyBase: number | null; apyReward: number | null; yieldSource: string; yieldType: \"lending-vault\" | ... 7 more ... | \"structured-tranche\"; ... 32 more ...; decisionLedger?: { ...; } | ... 1 more ... | undefined...' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 2,
-      "examples": [
-        "282:18",
-        "376:18"
-      ]
-    },
-    {
-      "file": "src/app/screener/picker/selector-data-adapter.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ signals: { \"usdc-usd-coin\": { score: number; band: string; signals: {}; computedAt: number; methodologyVersion: string; }; }; updatedAt: number; methodology: { version: string; }; }' to type '{ signals: Record<string, { score: number; band: string; signals: Record<string, { [x: string]: unknown; value: number; available: boolean; }>; computedAt: number; methodologyVersion: string; amplifiers?: { ...; } | undefined; ageClassification?: \"stale\" | ... 3 more ... | undefined; }>; ... 9 more ...; coverageReas...' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "584:19"
+        "217:40"
       ]
     },
     {
@@ -790,35 +616,6 @@
       ]
     },
     {
-      "file": "src/components/__tests__/data-quality-cards.test.tsx",
-      "code": "TS2322",
-      "message": "Type '{ nowSeconds: number; stablecoinsCacheStatus: \"ok\"; stablecoinsCacheReason: null; blacklistGapStatus: \"failed\"; activeDepegStatus: \"ok\"; onchainSupplyQueryStatus: \"ok\"; sourceFailures: { ...; }[]; ... 14 more ...; onchainStaleRatio: number; }' is not assignable to type 'TimedDataQuality'.",
-      "count": 1,
-      "examples": [
-        "146:9"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/data-quality-cards.test.tsx",
-      "code": "TS2322",
-      "message": "Type '{ nowSeconds: number; stablecoinsCacheStatus: \"ok\"; stablecoinsCacheReason: null; blacklistGapStatus: \"ok\"; activeDepegStatus: \"ok\"; onchainSupplyQueryStatus: \"ok\"; sourceFailures: never[]; ... 14 more ...; onchainStaleRatio: number; }' is not assignable to type 'TimedDataQuality'.",
-      "count": 4,
-      "examples": [
-        "9:9",
-        "43:9",
-        "76:9"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/dex-liquidity-card.test.tsx",
-      "code": "TS2719",
-      "message": "Type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: Record<string, number>; chainTvl: Record<...>; ... 27 more ...; methodologyVersion: string; }' is not assignable to type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: Record<string, number>; chainTvl: Record<...>; ... 27 more ...; methodologyVersion: string; }'. Two different types with this name exist, but they are unrelated.",
-      "count": 1,
-      "examples": [
-        "36:3"
-      ]
-    },
-    {
       "file": "src/components/__tests__/home-alt-psi-band-card.test.tsx",
       "code": "TS2741",
       "message": "Property 'asOf' is missing in type '{ version: string; versionLabel: string; currentVersion: string; currentVersionLabel: string; changelogPath: string; isCurrent: true; }' but required in type '{ version: string; versionLabel: string; currentVersion: string; currentVersionLabel: string; changelogPath: string; asOf: number; isCurrent: boolean; }'.",
@@ -828,75 +625,12 @@
       ]
     },
     {
-      "file": "src/components/__tests__/liquidity-stats.node.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ totalTvlUsd: number; totalVolume24hUsd: number; protocolTvl: { curve: number; fluid: number; }; chainTvl: { ethereum: number; base: number; }; poolCount: number; concentrationHhi: null; weightedBalanceRatio: null; organicFraction: null; }' to type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: Record<string, number>; chainTvl: Record<...>; ... 27 more ...; methodologyVersion: string; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "134:27"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/liquidity-stats.node.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ totalTvlUsd: number; totalVolume24hUsd: number; protocolTvl: { curve: number; fluid: number; }; chainTvl: { ethereum: number; base: number; }; poolCount: number; concentrationHhi: number; weightedBalanceRatio: number; organicFraction: number; }' to type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: Record<string, number>; chainTvl: Record<...>; ... 27 more ...; methodologyVersion: string; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "240:25"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/liquidity-stats.node.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ totalTvlUsd: number; totalVolume24hUsd: number; protocolTvl: { curve: number; fluid: number; balancer: number; }; chainTvl: { ethereum: number; arbitrum: number; base: number; }; poolCount: number; concentrationHhi: number; weightedBalanceRatio: number; organicFraction: number; }' to type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: Record<string, number>; chainTvl: Record<...>; ... 27 more ...; methodologyVersion: string; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "84:25"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/liquidity-stats.node.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ totalTvlUsd: number; totalVolume24hUsd: number; protocolTvl: { curve: number; fluid: number; balancer: number; orca: number; raydium: number; aerodrome: number; quickswap: number; }; chainTvl: { ...; }; poolCount: number; }' to type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: Record<string, number>; chainTvl: Record<...>; ... 27 more ...; methodologyVersion: string; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "164:25"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/liquidity-stats.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ totalTvlUsd: number; totalVolume24hUsd: number; protocolTvl: { curve: number; fluid: number; }; chainTvl: { ethereum: number; base: number; }; poolCount: number; concentrationHhi: number; weightedBalanceRatio: number; organicFraction: number; }' to type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: Record<string, number>; chainTvl: Record<...>; ... 27 more ...; methodologyVersion: string; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "91:29"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/liquidity-stats.test.ts",
-      "code": "TS2352",
-      "message": "Conversion of type '{ totalTvlUsd: number; totalVolume24hUsd: number; protocolTvl: { curve: number; fluid: number; balancer: number; orca: number; raydium: number; aerodrome: number; quickswap: number; }; chainTvl: { ...; }; poolCount: number; concentrationHhi: number; }' to type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: Record<string, number>; chainTvl: Record<...>; ... 27 more ...; methodologyVersion: string; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
-      "count": 1,
-      "examples": [
-        "32:29"
-      ]
-    },
-    {
       "file": "src/components/__tests__/liquidity-table.test.ts",
       "code": "TS18047",
       "message": "'row.liq.liquidityScore' is possibly 'null'.",
       "count": 1,
       "examples": [
         "82:88"
-      ]
-    },
-    {
-      "file": "src/components/__tests__/stablecoin-table-logic.test.ts",
-      "code": "TS2719",
-      "message": "Type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: import(\"<repo>/shared/types/core\").ContractDeployment[] | undefined; ... 24 more ...; agreeSources: string[]; }' is not assignable to type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: import(\"<repo>/shared/types/core\").ContractDeployment[] | undefined; ... 24 more ...; agreeSources: string[]; }'. Two different types with this name exist, but they are unrelated.",
-      "count": 1,
-      "examples": [
-        "26:3"
       ]
     },
     {
@@ -996,24 +730,6 @@
     },
     {
       "file": "src/components/stablecoin-detail/__tests__/hero-card.test.tsx",
-      "code": "TS2322",
-      "message": "Type '\"mixed\"' is not assignable to type '\"native\" | \"rwa\" | \"eth-lst\" | \"alt-lst-bridged-or-mixed\" | \"exotic\"'.",
-      "count": 1,
-      "examples": [
-        "184:5"
-      ]
-    },
-    {
-      "file": "src/components/stablecoin-detail/__tests__/hero-card.test.tsx",
-      "code": "TS2322",
-      "message": "Type '\"multi-chain\"' is not assignable to type '\"single-chain\" | \"canonical-bridge\" | \"third-party-bridge\" | \"native-multichain\"'.",
-      "count": 1,
-      "examples": [
-        "183:5"
-      ]
-    },
-    {
-      "file": "src/components/stablecoin-detail/__tests__/hero-card.test.tsx",
       "code": "TS2353",
       "message": "Object literal may only specify known properties, and 'currentBand' does not exist in type '{ id: string; symbol: string; name: string; pegType: string; pegCurrency: string; governance: string; currentDeviationBps: number | null; pegScore: number | null; pegPct: number; severityScore: number; ... 18 more ...; dexPriceCheck?: { ...; } | ... 1 more ... | undefined; }'.",
       "count": 1,
@@ -1040,40 +756,12 @@
       ]
     },
     {
-      "file": "src/components/stablecoin-detail/__tests__/hero-card.test.tsx",
-      "code": "TS2739",
-      "message": "Type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: {}; chainTvl: {}; topPools: never[]; liquidityScore: number; ... 23 more ...; scoreComponents: { ...; }; }' is missing the following properties from type '{ totalTvlUsd: number; totalVolume24hUsd: number; totalVolume7dUsd: number; poolCount: number; pairCount: number; chainCount: number; protocolTvl: Record<string, number>; chainTvl: Record<...>; ... 27 more ...; methodologyVersion: string; }': lockedLiquidityPct, methodologyVersion",
-      "count": 1,
-      "examples": [
-        "108:7"
-      ]
-    },
-    {
       "file": "src/components/stablecoin-detail/__tests__/price-transparency-card.test.tsx",
       "code": "TS2739",
       "message": "Type '{ id: string; name: string; symbol: string; geckoId: null; pegType: string; pegMechanism: string; price: number; priceSource: string; priceConfidence: \"high\"; priceUpdatedAt: number; consensusSources: never[]; ... 7 more ...; chains: string[]; }' is missing the following properties from type '{ frozenAt?: string | undefined; frozen?: boolean | undefined; contracts?: ContractDeployment[] | undefined; circulating: Record<string, number>; circulatingPrevDay: Record<...>; ... 22 more ...; agreeSources: string[]; }': priceObservedAt, priceObservedAtMode, priceSyncedAt",
       "count": 1,
       "examples": [
         "10:3"
-      ]
-    },
-    {
-      "file": "src/components/status/__tests__/telegram-bot-stats.test.tsx",
-      "code": "TS2741",
-      "message": "Property 'reserve' is missing in type '{ dews: number; depeg: number; safety: number; launch: number; allTypes: number; }' but required in type 'TelegramAlertTypeChats'.",
-      "count": 2,
-      "examples": [
-        "27:3",
-        "50:5"
-      ]
-    },
-    {
-      "file": "src/components/status/__tests__/yield-health.test.tsx",
-      "code": "TS2322",
-      "message": "Type '{ status: Exclude<YieldHealthFieldStatus, \"unknown\">; statusImpact: \"public-critical\" | \"admin-watch\"; runbookUrl: string; ... 14 more ...; latestCronStartedAt: number | null; }' is not assignable to type 'YieldHealthSummary'.",
-      "count": 1,
-      "examples": [
-        "31:3"
       ]
     },
     {

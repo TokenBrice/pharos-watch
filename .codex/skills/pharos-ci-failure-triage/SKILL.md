@@ -32,7 +32,7 @@ Use this skill from the Pharos repository root for:
 3. `docs/deployment-process.md`
 4. `docs/scripts.md`
 
-For workflow edits, also inspect `.github/workflows/*` and `scripts/lib/validate-contract.mjs` or `scripts/lib/automation-registry.mjs` as needed.
+For workflow edits, also inspect `.github/workflows/*` and `scripts/lib/validation-lanes.mjs` or `scripts/lib/automation-registry.mjs` as needed.
 
 ## Workflow
 

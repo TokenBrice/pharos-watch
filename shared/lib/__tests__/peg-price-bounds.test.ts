@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { PEG_CURRENCY_VALUES } from "@shared/types/core";
+
 import {
   classifyPegClass,
   FX_RATE_BOUNDS,
@@ -33,7 +35,7 @@ describe("peg price bounds", () => {
       hardcodedBounds: [0.01, 2],
       hardcodedWidth: 1.99,
       fxKey: "peggedEUR",
-      fxBounds: [0.50, 2.50],
+      fxBounds: [0.5, 2.5],
       fxWidth: 2,
     },
     {
@@ -42,8 +44,8 @@ describe("peg price bounds", () => {
       hardcodedBounds: [0.01, 2],
       hardcodedWidth: 1.99,
       fxKey: "peggedCHF",
-      fxBounds: [0.40, 2.50],
-      fxWidth: 2.10,
+      fxBounds: [0.4, 2.5],
+      fxWidth: 2.1,
     },
     {
       label: "JPY small-unit fiat FX",
@@ -120,5 +122,44 @@ describe("peg price bounds", () => {
     expect(normalizePegTypeFromCurrency("USD")).toBe("peggedUSD");
     expect(normalizePegTypeFromCurrency("VAR")).toBeUndefined();
     expect(normalizePegTypeFromCurrency("OTHER")).toBeUndefined();
+  });
+
+  it("covers every supported fiat and commodity peg currency", () => {
+    const unsupported: string[] = [];
+    const hardcodedKeys = Object.keys(HARDCODED_PRICE_BOUNDS).filter((key) => key !== "USD");
+    let covered = 0;
+
+    for (const pegCurrency of PEG_CURRENCY_VALUES) {
+      const pegType = normalizePegTypeFromCurrency(pegCurrency);
+      const pegClass = classifyPegClass(pegCurrency, pegType, false);
+      if (pegClass === "unknown") {
+        unsupported.push(pegCurrency);
+        continue;
+      }
+      if (pegClass !== "fiat_fx" && pegClass !== "commodity") continue;
+      expect(pegType, `${pegCurrency} normalized peg type`).toBeDefined();
+      if (!pegType) continue;
+      expect(
+        hardcodedKeys.some((key) => pegType.includes(key)),
+        `${pegCurrency} hardcoded bounds`,
+      ).toBe(true);
+      expect(FX_RATE_BOUNDS[pegType], `${pegCurrency} FX bounds`).toBeDefined();
+      covered += 1;
+    }
+
+    expect(unsupported).toEqual(["INR", "HKD"]);
+    expect(covered).toBe(26);
+  });
+
+  it("keeps non-USD hardcoded maxima within 0.1x-10x of FX maxima", () => {
+    for (const [currency, [, hardcodedMax]] of Object.entries(HARDCODED_PRICE_BOUNDS)) {
+      if (currency === "USD") continue;
+      const pegType = normalizePegTypeFromCurrency(currency);
+      const fxMax = pegType ? FX_RATE_BOUNDS[pegType]?.[1] : undefined;
+      if (fxMax === undefined) continue;
+      const ratio = hardcodedMax / fxMax;
+      expect(ratio, `${currency} hardcoded/FX maximum ratio`).toBeGreaterThanOrEqual(0.1);
+      expect(ratio, `${currency} hardcoded/FX maximum ratio`).toBeLessThanOrEqual(10);
+    }
   });
 });

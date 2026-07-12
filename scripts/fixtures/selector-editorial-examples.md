@@ -1,6 +1,6 @@
 # Selector Editorial Examples
 
-Checked-in prose examples for `npm run check:selector-banned-phrases`.
+Checked-in prose examples for `shared/lib/selector/__tests__/editorial-policy.test.ts`.
 
 ## Treasury
 
