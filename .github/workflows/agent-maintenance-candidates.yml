@@ -1,0 +1,87 @@
+name: Agent Maintenance Candidates
+
+on:
+  schedule:
+    - cron: "15 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  candidates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
+      PHAROS_WORKER_BASE_URL: https://api.pharos.watch
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          tooling-cache: "true"
+      - name: Generate review queues
+        id: generate
+        shell: bash
+        run: |
+          set +e
+          npm run candidates:annotations
+          annotation_status=$?
+          npm run candidates:ai-summaries
+          summary_status=$?
+          npm run digest:curation -- --write
+          digest_status=$?
+          echo "annotation_status=$annotation_status" >> "$GITHUB_OUTPUT"
+          echo "summary_status=$summary_status" >> "$GITHUB_OUTPUT"
+          echo "digest_status=$digest_status" >> "$GITHUB_OUTPUT"
+      - name: Open or update review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANNOTATION_STATUS: ${{ steps.generate.outputs.annotation_status }}
+          DIGEST_STATUS: ${{ steps.generate.outputs.digest_status }}
+          SUMMARY_STATUS: ${{ steps.generate.outputs.summary_status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body=$(mktemp)
+          {
+            echo "<!-- agent-maintenance-candidates -->"
+            echo "# Agent maintenance candidates"
+            echo
+            echo "Generated from commit \`${GITHUB_SHA}\` on $(date -u +%F). These are review queues only; no product data was changed."
+            echo
+            echo "Command status: annotations=${ANNOTATION_STATUS}, AI summaries=${SUMMARY_STATUS}, curation digest=${DIGEST_STATUS}."
+            echo
+            echo "## Curation digest"
+            echo '```text'
+            digest_file=""
+            if [ -d agents ]; then digest_file=$(find agents -maxdepth 1 -name 'curation-digest-*.md' -print | sort | tail -1); fi
+            if [ -n "$digest_file" ]; then sed -n '1,180p' "$digest_file"; else echo "Digest unavailable."; fi
+            echo '```'
+            echo
+            echo "## Annotation queue"
+            echo '```text'
+            if [ -f agents/annotation-candidates.md ]; then sed -n '1,140p' agents/annotation-candidates.md; else echo "Queue unavailable."; fi
+            echo '```'
+            echo
+            echo "## AI-summary queue"
+            echo '```text'
+            if [ -f agents/ai-summary-candidates.md ]; then sed -n '1,140p' agents/ai-summary-candidates.md; else echo "Queue unavailable."; fi
+            echo '```'
+            echo
+            echo "Pre-launch and funding research remain manual because they require external-source verification and explicit review."
+          } > "$body"
+
+          issue_number=$(gh issue list --state open --search 'in:title "Agent maintenance candidates"' --json number,title --jq '.[] | select(.title == "Agent maintenance candidates") | .number' | head -1)
+          if [ -n "$issue_number" ]; then
+            gh issue edit "$issue_number" --body-file "$body"
+          else
+            gh issue create --title "Agent maintenance candidates" --body-file "$body"
+          fi
+
+          if [ "$ANNOTATION_STATUS" != 0 ] || [ "$SUMMARY_STATUS" != 0 ] || [ "$DIGEST_STATUS" != 0 ]; then
+            echo "::warning title=Candidate generation incomplete::See the maintenance issue for command status and available output."
+          fi

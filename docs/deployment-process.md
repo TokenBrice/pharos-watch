@@ -10,7 +10,7 @@ This document defines the production deploy flow and the required local gate bef
 
 1. Pull requests into `main` run the shared validation gate in GitHub Actions; production deploys still ship from pushes to `main`, while a separate Pages-only rebuild workflow refreshes the static export daily. Manual production deploy dispatch is main-only: choose `main` as the workflow ref, and cancel the run if GitHub was opened on another ref.
 2. Agents and routine maintenance default to the current `main` checkout. Do not create a branch, worktree, or PR unless the maintainer explicitly asks for one.
-3. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. After merging that branch into local `main`, run the merge gate before pushing.
+3. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. After merging that branch into local `main`, run focused checks and let the pre-push hook execute the authoritative merge gate once.
 
 ## Optional Worktree Flow
 
@@ -32,13 +32,7 @@ git pull --ff-only origin main
 git merge --no-ff "$BRANCH_NAME"
 ```
 
-4. Run the merge gate on `main`.
-
-```bash
-npm run test:merge-gate
-```
-
-5. Push `main`.
+4. Push `main`; the pre-push hook runs the merge gate for the exact pushed range.
 
 ```bash
 git push origin main
@@ -56,8 +50,9 @@ Hook behavior:
 
 1. Pushes that update `refs/heads/main`: runs `npm run test:merge-gate` against the exact `remote_sha...local_sha` range Git sends to the hook, matching the `github.event.before...github.sha` range used by `.github/workflows/deploy-cloudflare.yml`. Pages smoke is on by default; override with `MERGE_GATE_PAGES_SMOKE=0`.
 2. A new remote `main` push, where Git has no previous remote SHA, forces the full local deploy validate path.
-3. Other pushes fall back to the default local merge-gate range (`origin/main...HEAD`) so branch pushes still receive the existing safety check, including default Pages smoke unless overridden.
-4. Push is blocked on failure.
+3. Other pushes skip the full local gate by default because they cannot deploy production. Set `PHAROS_PRE_PUSH_GATE=all` to opt into exact-range gating for branch pushes.
+4. A successful manual gate writes a 24-hour receipt only for a clean committed state. The hook reuses it when the base/head commits, gate implementation, lockfile, Node major, origin, worktree, and validation environment profile still match.
+5. Push is blocked on failure. Receipt mismatches fail closed and run the gate normally.
 
 ## What `test:merge-gate` Does
 
@@ -87,13 +82,13 @@ After `npm run validate:prebuild` succeeds, the local merge gate runs independen
 
 Gate builds skip the prebuild artifact regeneration (`GENERATED_ARTIFACTS_SKIP` covering every registry id): the same run's `check:generated-artifacts` already byte-verified the committed artifacts, so regenerating them inside `npm run build` is guaranteed no-op work. The gate also records wall-clock per command and prints a slowest-first timing summary at the end (on failures too); when the total exceeds the soft runtime budget (default 8 minutes, `MERGE_GATE_BUDGET_MINUTES` overrides, `0` disables) it emits a non-fatal warning so runtime regressions surface immediately instead of accreting silently. The fast static-check audit also pulled `check:hook-polling-window`, `check:shared-types-imports`, `check:reserve-fixture-freshness`, `check:site-csp-sync`, and `check:dependency-coverage` into the shared prebuild registry; intentionally skipped: `check:safe-browsing` and `check:telegram-load` (own scheduled workflows). Pages validate lanes cover feature-flag inlining, phishing/classifier scans, build-size, and build-attribution after the static export exists.
 
-For post-swarm or very large local batches, use discovery mode before the final gate:
+For post-swarm or very large local batches, use discovery mode before the final push gate:
 
 ```bash
 npm run test:merge-gate:discover
 ```
 
-`scripts/maintenance/run-merge-gate-discovery.mjs` uses the same diff, deploy-surface classifier, command env, node_modules freshness check, and command plan as `test:merge-gate`, but it is optimized for failure discovery rather than release proof. It runs `validate:prebuild` with `VALIDATE_PREBUILD_CONTINUE_ON_ERROR=1`, then keeps independent postbuild groups running after failures so one pass can expose static-check, build/test, coverage, and Worker-validation failures together. Discovery mode skips smoke by default; set `MERGE_GATE_DISCOVERY_SMOKE=1` when smoke failures are the current target, and use `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` to cap local fan-out. Discovery failures block pushing, but discovery success is not sufficient for release: always finish with `npm run test:merge-gate`.
+`scripts/maintenance/run-merge-gate-discovery.mjs` uses the same diff, deploy-surface classifier, command env, node_modules freshness check, and command plan as `test:merge-gate`, but it is optimized for failure discovery rather than release proof. It runs `validate:prebuild` with `VALIDATE_PREBUILD_CONTINUE_ON_ERROR=1`, then keeps independent postbuild groups running after failures so one pass can expose static-check, build/test, coverage, and Worker-validation failures together. Discovery mode skips smoke by default; set `MERGE_GATE_DISCOVERY_SMOKE=1` when smoke failures are the current target, and use `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` to cap local fan-out. Discovery failures block pushing, but discovery success is not sufficient for release: the pre-push hook still runs or reuses the authoritative exact-range gate.
 
 Pages-impacting files now use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, including Worker operational scripts and shared validate/guardrail infrastructure, but `shared/` is classified by subpath so known Pages-only shared helpers do not request Worker validation or promotion. `test:merge-gate` runs Pages smoke by default for Pages-impacting diffs so the normal local merge gate and pushed ranges rehearse the same pre-publish artifact smoke path as production deploys; Worker smoke remains explicit via `MERGE_GATE_WORKER_SMOKE=1`. When Pages smoke runs, desktop overflow smoke uses the deploy-lane canary routes with 6 workers, and local mobile smoke follows the same UI-impact matcher and canary profile as production deploys.
 

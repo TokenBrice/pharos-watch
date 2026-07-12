@@ -3,9 +3,7 @@
   "status": "advisory",
   "purpose": "Map source areas to documentation that agents should consider when behavior changes. This manifest is a navigation aid; existing CI checks and human review remain authoritative.",
   "baseDocs": [
-    "docs/agent-task-router.md",
-    "docs/architecture.md",
-    "matched docs/testing.md section"
+    "docs/agent-task-router.md"
   ],
   "coreRules": [
     "Prefer the smallest root-cause fix; avoid unrelated refactors.",
@@ -131,10 +129,10 @@
       "risk": "medium",
       "docsToRead": ["AGENTS.md", "CLAUDE.md", "docs/process/agent-artifacts.md", "docs/agent-task-router.md"],
       "docsLikelyRequired": ["docs/process/agent-artifacts.md for durable process rules", "AGENTS.md and CLAUDE.md together when top-level guidance changes"],
-      "checks": ["npm run check:agent-doc-sync when AGENTS.md or CLAUDE.md changes", "npm run check:agent-skill-symlinks when skill symlinks change", "focused hook/script tests"],
+      "checks": ["npm run check:agent-doc-sync when AGENTS.md or CLAUDE.md changes", "npm run check:agent-skill-symlinks when skill symlinks change", "npm run check:agent-infra", "focused hook/script tests"],
       "hardRules": ["Top-level AGENTS.md and CLAUDE.md are deliberately kept in sync.", "Temporary agent output belongs in ignored scratch locations, not committed docs."],
-      "prefixes": [".claude/", ".codex/"],
-      "exactPaths": ["AGENTS.md", "CLAUDE.md", "docs/agent-task-router.md", "docs/process/agent-artifacts.md", "scripts/ci/pharos-change-contract.mjs", "scripts/ci/check-agent-doc-sync.mjs", "scripts/ci/check-agent-skill-symlinks.mjs", "scripts/lib/agent-skill-symlink-waivers.json"]
+      "prefixes": [".agents/", ".claude/", ".codex/"],
+      "exactPaths": ["AGENTS.md", "CLAUDE.md", "docs/agent-task-router.md", "docs/process/agent-artifacts.md", "scripts/ci/check-agent-infra.mjs", "scripts/ci/pharos-change-contract.mjs", "scripts/ci/check-agent-doc-sync.mjs", "scripts/ci/check-agent-skill-symlinks.mjs", "scripts/lib/agent-skill-symlink-waivers.json", "scripts/maintenance/setup-agent-hooks.mjs"]
     },
     {
       "id": "documentation",
@@ -146,43 +144,6 @@
       "hardRules": ["Treat docs/ and README.md as the verified documentation corpus."],
       "prefixes": ["docs/"],
       "exactPaths": ["README.md"]
-    }
-  ],
-  "promptRoutes": [
-    {
-      "label": "stablecoin addition or metadata",
-      "familyIds": ["stablecoin-registry"],
-      "patterns": ["\\b(add|create|onboard|promote|launch|track)\\b[\\s\\S]{0,80}\\bstablecoin\\b", "\\b(stablecoin|asset)\\b[\\s\\S]{0,80}\\b(contract|gecko|coingecko|reserve|proof of reserves|pre-?launch)\\b"]
-    },
-    {
-      "label": "pricing pipeline or provider",
-      "familyIds": ["pricing-pipeline"],
-      "patterns": ["\\b(pricing|price|depeg|peg price|market cap|supply)\\b[\\s\\S]{0,80}\\b(pipeline|provider|source|fallback|defillama|coingecko|pyth|dia)\\b", "\\b(pricing pipeline|price provider|authoritative price|price consensus)\\b"]
-    },
-    {
-      "label": "D1 schema or migration",
-      "familyIds": ["d1-migration"],
-      "patterns": ["\\b(d1|database|sqlite|sql|migration|schema)\\b", "\\b(table|index)\\b[\\s\\S]{0,80}\\b(database|d1|sql|migration|schema)\\b", "\\b(database|d1|sql|migration|schema)\\b[\\s\\S]{0,80}\\b(table|index)\\b"]
-    },
-    {
-      "label": "Worker cron or scheduled pipeline",
-      "familyIds": ["worker-cron"],
-      "patterns": ["\\b(cron|scheduled|schedule|worker cron|waitUntil|trigger slot|connection pool)\\b", "\\b(sync|backfill|snapshot)\\b[\\s\\S]{0,80}\\b(cron|job|worker|pipeline)\\b"]
-    },
-    {
-      "label": "methodology or scoring",
-      "familyIds": ["methodology-scoring"],
-      "patterns": ["\\b(methodology|score|scoring|pegscore|dews|psi|liquidityscore|stability index|report card|resilience|chain health|mint/?burn|blacklist|yield intelligence)\\b"]
-    },
-    {
-      "label": "frontend design or UI",
-      "familyIds": ["frontend-route", "design-ui"],
-      "patterns": ["\\b(design|ui|ux|layout|component|page|route|responsive|style|visual|animation|frontend)\\b"]
-    },
-    {
-      "label": "API endpoint or route",
-      "familyIds": ["api-endpoint"],
-      "patterns": ["\\b(api|endpoint|route|handler|admin api|public api|response shape|request contract)\\b"]
     }
   ],
   "mappings": [
