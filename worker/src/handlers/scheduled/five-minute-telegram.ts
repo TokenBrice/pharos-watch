@@ -10,7 +10,10 @@ import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram-l
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
 import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";
 import { planTelegramPersonalizedRecaps } from "../../cron/telegram-recap-planner";
-import { cancelQueuedTelegramRecapsForRollout } from "../../cron/telegram-recap-store";
+import {
+  cancelQueuedTelegramRecapsForRollout,
+  type TelegramRecapRolloutCleanupResult,
+} from "../../cron/telegram-recap-store";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import { publishTelegramPulseSnapshotWithOutcome } from "../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
@@ -109,18 +112,36 @@ function buildTelegramSlotGroups(
   const sharedTelegramState: TelegramDispatchSharedState = {};
   const tasks: ScheduledSlotTask[] = [];
   const recapRollout = resolveTelegramRecapRolloutPolicy(runtime.env);
+  // The shared drain must not see recap rows disallowed by the current mode.
+  // Reuse the result in the planner so cleanup is ordered once per slot.
+  let recapRolloutCleanup: TelegramRecapRolloutCleanupResult | null = null;
+  const ensureRecapRolloutCleanup = async (): Promise<TelegramRecapRolloutCleanupResult> => {
+    if (recapRollout.mode === "public") {
+      return { targetRowsCancelled: 0, pendingRowsDeleted: 0 };
+    }
+    if (recapRolloutCleanup == null) {
+      recapRolloutCleanup = await cancelQueuedTelegramRecapsForRollout(
+        runtime.db,
+        recapRollout,
+        Math.floor(Date.now() / 1000),
+      );
+    }
+    return recapRolloutCleanup;
+  };
   if (botToken) {
     tasks.push({
       job: "dispatch-telegram-alerts",
       errorMessage: "[cron] dispatch-telegram-alerts failed:",
-      run: (signal, reportProgress) =>
-        dispatchTelegramAlerts(
+      run: async (signal, reportProgress) => {
+        await ensureRecapRolloutCleanup();
+        return dispatchTelegramAlerts(
           runtime.db,
           botToken,
           signal,
           sharedTelegramState,
           reportProgress,
-        ),
+        );
+      },
     });
   }
   const shouldRunRecap = recapRollout.mode === "off" || recapRollout.mode === "dark" || Boolean(botToken);
@@ -129,13 +150,7 @@ function buildTelegramSlotGroups(
       job: "telegram-personalized-recap-planner",
       errorMessage: "[cron] telegram-personalized-recap-planner failed:",
       run: async (signal) => {
-        const cleanup = recapRollout.mode === "public"
-          ? { targetRowsCancelled: 0, pendingRowsDeleted: 0 }
-          : await cancelQueuedTelegramRecapsForRollout(
-            runtime.db,
-            recapRollout,
-            Math.floor(Date.now() / 1000),
-          );
+        const cleanup = await ensureRecapRolloutCleanup();
         if (recapRollout.mode === "off") {
           return {
             status: "ok" as const,

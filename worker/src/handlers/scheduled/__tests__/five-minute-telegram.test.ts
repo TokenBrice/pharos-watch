@@ -139,6 +139,44 @@ describe("runFiveMinuteTelegramSlot", () => {
     ]);
   });
 
+  it.each(["off", "canary"])(
+    "cleans queued recaps before pending dispatch in %s mode",
+    async (mode) => {
+      const order: string[] = [];
+      vi.mocked(cancelQueuedTelegramRecapsForRollout).mockImplementation(async () => {
+        order.push("recap-cleanup");
+        return { targetRowsCancelled: 1, pendingRowsDeleted: 1 };
+      });
+      vi.mocked(dispatchTelegramAlerts).mockImplementation(async () => {
+        order.push("dispatch");
+        return { itemCount: 1, metadata: "{}" } as never;
+      });
+      vi.mocked(planTelegramPersonalizedRecaps).mockImplementation(async () => {
+        order.push("recap-plan");
+        return { itemCount: 0, metadata: "{}", status: "ok" } as never;
+      });
+
+      await runFiveMinuteTelegramSlot(buildRuntime("token", mode));
+
+      expect(order[0]).toBe("recap-cleanup");
+      expect(order.indexOf("recap-cleanup")).toBeLessThan(order.indexOf("dispatch"));
+      expect(cancelQueuedTelegramRecapsForRollout).toHaveBeenCalledOnce();
+      expect(dispatchTelegramAlerts).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("fails pending dispatch closed when non-public recap cleanup fails", async () => {
+    vi.mocked(cancelQueuedTelegramRecapsForRollout).mockRejectedValue(new Error("cleanup failed"));
+
+    const summary = await runFiveMinuteTelegramSlot(buildRuntime("token", "off"));
+
+    expect(dispatchTelegramAlerts).not.toHaveBeenCalled();
+    expect(summary.jobs.find((job) => job.job === "dispatch-telegram-alerts")?.outcome).toBe("error");
+    expect(runTelegramDegradationWatchdog).toHaveBeenCalledOnce();
+    expect(cleanExpiredDisambiguations).toHaveBeenCalledOnce();
+    expect(publishTelegramPulseSnapshotWithOutcome).toHaveBeenCalledOnce();
+  });
+
   it("runs critical dispatch and sidecars before all registration units", async () => {
     const order: string[] = [];
     vi.mocked(dispatchTelegramAlerts).mockImplementation(async () => { order.push("dispatch"); return { itemCount: 1, metadata: "{}" } as never; });
@@ -169,6 +207,7 @@ describe("runFiveMinuteTelegramSlot", () => {
 
     expect(summary.budgetOnlyJobs).toBe(1);
     expect(order).toEqual(["dispatch", "recap", "watchdog", "cleanup", "pulse", "commands", "profile", "menu", "webhook"]);
+    expect(cancelQueuedTelegramRecapsForRollout).not.toHaveBeenCalled();
     expect(reconcileTelegramCommandRegistration).toHaveBeenCalledOnce();
     expect(reconcileTelegramProfileRegistration).toHaveBeenCalledOnce();
     expect(reconcileTelegramMenuButton).toHaveBeenCalledOnce();

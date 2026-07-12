@@ -23,6 +23,10 @@ const cronMocks = vi.hoisted(() => ({
   computeAndStoreStabilityIndex: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   computeAndStoreDEWS: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   projectTape: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  cancelQueuedTelegramRecapsForRollout: vi.fn(async () => ({
+    targetRowsCancelled: 0,
+    pendingRowsDeleted: 0,
+  })),
   dispatchTelegramAlerts: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runTelegramDegradationWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   cleanExpiredDisambiguations: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -153,6 +157,13 @@ vi.mock("../cron/sync-fx-rates", () => ({ syncFxRates: cronMocks.syncFxRates }))
 vi.mock("../cron/stability-index", () => ({ computeAndStoreStabilityIndex: cronMocks.computeAndStoreStabilityIndex }));
 vi.mock("../cron/compute-dews", () => ({ computeAndStoreDEWS: cronMocks.computeAndStoreDEWS }));
 vi.mock("../cron/project-tape", () => ({ projectTape: cronMocks.projectTape }));
+vi.mock("../cron/telegram-recap-store", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../cron/telegram-recap-store")>();
+  return {
+    ...original,
+    cancelQueuedTelegramRecapsForRollout: cronMocks.cancelQueuedTelegramRecapsForRollout,
+  };
+});
 vi.mock("../cron/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: cronMocks.dispatchTelegramAlerts }));
 vi.mock("../cron/telegram-degradation-watchdog", () => ({
   runTelegramDegradationWatchdog: cronMocks.runTelegramDegradationWatchdog,
@@ -1021,6 +1032,7 @@ describe("worker.scheduled", () => {
       DB: {} as D1Database,
       CORS_ORIGIN: "https://pharos.watch",
       TELEGRAM_BOT_TOKEN: "bot-token",
+      TELEGRAM_RECAP_ROLLOUT_MODE: "off",
     } as const;
 
     await worker.scheduled(
@@ -1030,9 +1042,41 @@ describe("worker.scheduled", () => {
     );
     await Promise.all(waits);
 
+    expect(cronMocks.cancelQueuedTelegramRecapsForRollout).toHaveBeenCalledTimes(1);
+    expect(cronMocks.cancelQueuedTelegramRecapsForRollout).toHaveBeenCalledWith(
+      env.DB,
+      expect.objectContaining({ mode: "off" }),
+      expect.any(Number),
+    );
     expect(cronMocks.dispatchTelegramAlerts).toHaveBeenCalledTimes(1);
+    expect(cronMocks.cancelQueuedTelegramRecapsForRollout.mock.invocationCallOrder[0]).toBeLessThan(
+      cronMocks.dispatchTelegramAlerts.mock.invocationCallOrder[0],
+    );
     expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
+  });
+
+  it("fails telegram pending dispatch closed when recap rollout cleanup fails", async () => {
+    cronMocks.cancelQueuedTelegramRecapsForRollout.mockRejectedValueOnce(new Error("cleanup failed"));
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+      TELEGRAM_RECAP_ROLLOUT_MODE: "off",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.cancelQueuedTelegramRecapsForRollout).toHaveBeenCalledTimes(2);
+    expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
+    expect(cronMocks.runTelegramDegradationWatchdog).toHaveBeenCalledTimes(1);
+    expect(cronMocks.publishTelegramPulseSnapshotWithOutcome).toHaveBeenCalledTimes(1);
   });
 
   it("polls the manual digest trigger on the shared 5-min trigger", async () => {
