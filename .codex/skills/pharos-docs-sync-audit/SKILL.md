@@ -6,7 +6,7 @@ user_invocable: true
 
 # Pharos Docs Sync Audit
 
-Use this skill in `/home/ahirice/Documents/git/pharos-watch` when the user asks to:
+Use this skill from the Pharos repository root when the user asks to:
 
 - verify docs against code
 - update docs after behavior/API/pipeline/methodology changes
@@ -106,11 +106,7 @@ For broad docs work, prefer the specific failing check first, then `npm run vali
 
 ### 5. Broad Audit With Subagents
 
-For a broad docs-vs-code audit in Claude Code, prefer the saved workflow harnesses over hand-rolled subagents — they already handle fan-out, adversarial adjudication, and deterministic synthesis:
-
-- `.claude/workflows/docs-verify.mjs` — verify the whole `/docs` corpus against code and adjudicate discrepancies.
-- `.claude/workflows/docs-verify-remediate.mjs` — apply adjudicated fixes from `findings.json`, one agent per doc.
-- `.claude/workflows/docs-audit.mjs` — change-aware full-corpus audit with opus-tier adjudication of recently changed docs.
+For a broad docs-vs-code audit in Claude Code, use `.claude/workflows/docs-maintenance.mjs`. Its default mode verifies and adjudicates the corpus; pass `mode: "remediate"` to apply grouped, adjudicated fixes.
 
 In Codex, or for a narrower family-scoped pass, use `references/subagents.md` to split the audit by docs family. Subagents should be read-only unless assigned a narrow doc write set.
 

@@ -6,7 +6,7 @@ user_invocable: true
 
 # Pharos CI Failure Triage
 
-Use this skill in `/home/ahirice/Documents/git/pharos-watch` for:
+Use this skill from the Pharos repository root for:
 
 - failed `npm run test:merge-gate`
 - large local `npm run test:merge-gate` cleanup loops after post-swarm or post-merge batches

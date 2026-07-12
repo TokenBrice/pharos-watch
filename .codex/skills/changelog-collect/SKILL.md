@@ -212,4 +212,4 @@ git add src/data/changelogs/<to>.ts src/data/changelogs/index.ts
 git commit -m "docs(changelog): add changelog for <from> to <to>"
 ```
 
-Per CLAUDE.md, run `npm run test:merge-gate` before any push.
+Before a push, run the focused changelog checks above and let the repo pre-push hook execute the authoritative merge gate once.

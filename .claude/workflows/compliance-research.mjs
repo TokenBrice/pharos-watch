@@ -12,40 +12,26 @@ export const meta = {
 // ---------------------------------------------------------------------------
 // Inputs (passed via Workflow args; scripts have no filesystem access)
 // ---------------------------------------------------------------------------
-const DATE = (args && args.date) || 'unknown-date'
+const DATE = args && args.date
 const AUDIT_COINS = (args && args.auditCoins) || []
 const GENIUS_GAP_POOL_PATH = (args && args.geniusGapPoolPath) || null
 const MICA_GAP_POOL_PATH = (args && args.micaGapPoolPath) || null
 
+if (!/^20\d\d-\d\d-\d\d$/.test(DATE || '')) {
+  throw new Error('args.date must be the current ISO date')
+}
 if (AUDIT_COINS.length === 0) {
   log('No auditCoins supplied in args — nothing to research. Pass args.auditCoins.')
 }
 
 // ---------------------------------------------------------------------------
-// Shared rule context embedded into every research/verify prompt.
-// These mirror docs/genius-tracker.md + docs/mica-tracker.md and the strict
-// Zod schema in shared/types/stablecoin-meta-schemas.ts. Source of truth is
-// those files — agents must Read them if they need more than this summary.
+// Keep volatile schema and regime state in their owning source files. Agents
+// read those files during each pass instead of relying on workflow snapshots.
 // ---------------------------------------------------------------------------
 
-const GENIUS_RULES = [
-  'GENIUS (`genius` object, U.S. GENIUS Act). STRICT object — no unknown keys. Required keys: applicability, authorizationStatus, issuerPathway, reviewer (string), reviewedAt (YYYY-MM-DD).',
-  'applicability enum: apparent-payment-stablecoin | excluded-deposit | excluded-security | excluded-national-currency | non-payment-token | unclear.',
-  'authorizationStatus enum: ppsi-approved | state-qualified | official-application-pending | issuer-announced-intent | no-public-authorization-found | not-applicable | unknown.',
-  'issuerPathway enum: idi-subsidiary | federal-qualified-nonbank | state-qualified | foreign-registered | unknown | not-applicable.',
-  'Optional: applicabilityBasis {summary>=12 chars, references?}, issuerEntity, issuerDomicile, licensingRegulator, primaryFederalRegulator (OCC|Federal Reserve|FDIC|NCUA|Unknown), stateRegulator, foreignExceptionStatus (registered-exception|comparability-determined|registration-pending|not-qualified|not-applicable|unknown), foreignExceptionEvidence {summary>=12, references?}, enforcementStatus (no-public-action-found|warning-or-notice|prohibited-or-revoked|unknown), daspOfferSaleStatus (not-yet-restricted|restricted|foreign-lawful-order-condition-active|not-applicable|unknown), reserveDisclosurePresent (bool), reserveDisclosureUrl (url), redemptionPolicyPresent (bool), monthlyAttestationPresent (bool), latestReportDate (YYYY-MM-DD), notes, references[], negativeEvidenceReview {sourcesChecked[>=1], summary>=12, reviewer, reviewedAt, references?}.',
-  'GeniusReference: {label, url, sourceKind, sourceDate?, accessedAt?}. sourceKind enum: federal-register | federal-regulator | state-regulator | issuer-filing | issuer-disclosure | auditor-report | news.',
-  'ZOD CROSS-FIELD RULES (check:stablecoin-data fails otherwise): (1) ppsi-approved/state-qualified/official-application-pending REQUIRE a references entry of kind federal-register|federal-regulator|state-regulator. (2) issuer-announced-intent REQUIRES a references entry of kind issuer-disclosure|issuer-filing|federal-register|federal-regulator|state-regulator. (3) no-public-authorization-found REQUIRES negativeEvidenceReview. (4) reserveDisclosurePresent:true REQUIRES reserveDisclosureUrl. (5) foreignExceptionStatus registered-exception REQUIRES foreignExceptionEvidence with a federal-register|federal-regulator reference. (6) enforcementStatus warning-or-notice|prohibited-or-revoked REQUIRE a federal-register|federal-regulator|state-regulator reference.',
-  'The GENIUS regime is in rulemaking, NOT effective. Genuine ppsi-approved/state-qualified rows should be exceedingly rare; most honest answers are issuer-announced-intent or no-public-authorization-found. Never fabricate an approval.',
-].join('\n')
+const GENIUS_RULES = 'Read shared/types/stablecoin-meta-schemas.ts, shared/lib/compliance-regime-state.ts, and docs/genius-tracker.md before evaluating GENIUS fields. Those files own enums, cross-field rules, dates, and regime status; never use a remembered snapshot.'
 
-const MICA_RULES = [
-  'MiCA (`mica` object, EU Regulation 2023/1114). STRICT object. Required: status. Optional: tokenType, authorizationType, competentAuthority, authorizedEntity, significant (bool), references[].',
-  'status enum: authorized | pending | transitional | non-compliant | out-of-scope. tokenType enum: EMT | ART. authorizationType enum: emi | credit-institution.',
-  'StablecoinLink reference: {label, url} only.',
-  'ZOD RULES: out-of-scope rows MUST NOT carry tokenType/authorizationType/competentAuthority/authorizedEntity. Any non-out-of-scope status REQUIRES >=1 references entry. authorized REQUIRES a register link naming the issuer entity.',
-  'EMT = single official currency (most EUR/USD fiat-backed). ART = basket/commodity/other (rare). MiCA EMT/ART issuer rules have applied since 30 Jun 2024 with NO issuance grandfathering; the ~mid-2026 transitional window covers CASPs/venues, not issuers.',
-].join('\n')
+const MICA_RULES = 'Read shared/types/stablecoin-meta-schemas.ts and docs/mica-tracker.md before evaluating MiCA fields. Those files own enums, cross-field rules, authorization criteria, and transition status; never use a remembered snapshot.'
 
 const SOURCING = [
   'SOURCING (descending authority). GENIUS authorization: Federal Register > federal regulators (OCC/Federal Reserve/FDIC/NCUA/FinCEN/OFAC/Treasury) > state regulators > issuer filings > issuer disclosures > auditor reports > news (never alone for an official status).',
@@ -178,7 +164,7 @@ const landscapeProbes = [
     label: 'landscape:genius-rulemaking',
     prompt: [
       `Today is ${DATE}. Research the CURRENT status of U.S. GENIUS Act rulemaking and any payment-stablecoin issuer authorizations, as of today.`,
-      'Pharos currently records GENIUS_REGIME_STATE as: publicLawDate 2025-07-18, rulemakingPhase "proposed-rules", statutory fallback / effective date 2027-01-18, with proposed rules from OCC (Bulletin 2026-3), FDIC, FinCEN/OFAC, and Treasury (reviewed 2026-05-27).',
+      'Read shared/lib/compliance-regime-state.ts and docs/genius-tracker.md before searching so checked runtime state, not this workflow, owns dates and rulemaking phase.',
       'Determine: (a) has any PRIMARY-regulator FINAL rule been issued since then, or has the phase moved toward "final-rules-issued"/"effective"? (b) has the effective date changed? (c) have ANY issuers received a permitted-payment-stablecoin-issuer (PPSI) approval or state-qualified approval, or filed a publicly-visible official application? Name them if so with regulator-grade sources. (d) any notable GENIUS enforcement actions?',
       'Use authoritative sources only (Federal Register, OCC/Fed/FDIC/NCUA/FinCEN/OFAC/Treasury). In regimeStateRecommendation, state precisely whether GENIUS_REGIME_STATE needs updating and how, or "no change".',
       SOURCING,
@@ -189,7 +175,7 @@ const landscapeProbes = [
     label: 'landscape:mica-registers',
     prompt: [
       `Today is ${DATE}. Research the CURRENT EU MiCA authorization landscape for stablecoin (EMT/ART) issuers, as of today.`,
-      'Summarize: which issuers/tokens are newly EMI- or credit-institution-authorized as EMT/ART since early 2026; any new EBA "significant" EMT/ART designations; any authorizations withdrawn. Focus on issuers relevant to a tracked stablecoin set (Circle, SG-FORGE, Quantoz, Banking Circle, Membrane, Société Générale, Monerium, Schuman, StablR, etc.).',
+      'Summarize: which issuers/tokens are newly EMI- or credit-institution-authorized as EMT/ART since the review dates currently recorded in the tracker; any new EBA "significant" EMT/ART designations; any authorizations withdrawn. Focus on issuers relevant to the tracked stablecoin set.',
       'Cite ESMA register, EBA registers, and national NCA registers (ACPR REGAFI, BaFin, DNB/AFM, MFSA, CBI, Bank of Lithuania). regimeStateRecommendation: "no change" (MiCA has no central regime-state object).',
       SOURCING,
     ].join('\n\n'),
@@ -251,7 +237,7 @@ if (MICA_GAP_POOL_PATH) {
 
 // Normalize audit coins (compact args may carry only {id, regimes}). The gap
 // agents (gapAgents thunks, above) are NOT executed here — they run concurrently
-// with the audit below so they never block the 116-coin pipeline.
+// with the audit below so they never block the per-coin pipeline.
 const auditItems = AUDIT_COINS.map((c) => ({
   id: c.id,
   symbol: c.symbol || c.id,
@@ -274,7 +260,7 @@ function researchPrompt(coin) {
   const regimes = coin.regimes && coin.regimes.length ? coin.regimes : ['genius', 'mica']
   const gapLine = coin.isGap
     ? `This coin currently has NO row for: ${regimes.join(', ')}. It was shortlisted as a possible high-confidence GAP. Reasons: ${JSON.stringify(coin.gapReasons || {})}. Decide whether a row is genuinely warranted; if not, set assessed=false / changeKind="no-change" for that regime. Any new row is changeKind="add-new-row" and consequential=true.`
-    : `This coin currently HAS data for: ${regimes.join(', ')}. Re-verify and refresh it against live sources; correct errors; tighten precision; add/fix source references. Last reviewed around 2026-05-27.`
+    : `This coin currently HAS data for: ${regimes.join(', ')}. Re-verify and refresh it against live sources; correct errors; tighten precision; add/fix source references. Read reviewedAt from the current object instead of assuming a shared review date.`
   return [
     `Today is ${DATE}. You are auditing the compliance metadata for the tracked stablecoin "${coin.name}" (${coin.symbol}), id="${coin.id}", peg=${coin.peg}, lifecycle status=${coin.status}.`,
     `STEP 1: Read the per-coin JSON at ${coin.file} to see current jurisdiction, genius, and mica blocks. Also Read docs/genius-tracker.md and docs/mica-tracker.md if you need the full criteria.`,
@@ -311,7 +297,7 @@ function verifyPrompt(coin, research) {
 const researchStage = (coin) => agent(researchPrompt(coin), { label: `research:${coin.id}`, phase: 'Research', schema: RESEARCH_SCHEMA, model: 'sonnet' })
 const verifyStage = (research, coin) => agent(verifyPrompt(coin, research), { label: `verify:${coin.id}`, phase: 'Verify', schema: VERIFY_SCHEMA, model: 'sonnet' })
 
-// Start the 116-coin audit pipeline NOW — fills all concurrency slots immediately.
+// Start the per-coin audit pipeline now so it can fill the available concurrency slots.
 phase('Research')
 const auditPromise = pipeline(auditItems, researchStage, verifyStage)
 

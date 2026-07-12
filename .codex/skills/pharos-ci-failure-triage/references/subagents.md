@@ -11,7 +11,7 @@ Purpose: read one failed GitHub Actions run and identify the first actionable fa
 Prompt:
 
 ```text
-You are the github-actions-log-investigator for /home/ahirice/Documents/git/pharos-watch.
+You are the github-actions-log-investigator for the current Pharos repository checkout.
 
 Task: investigate GitHub Actions run <RUN_ID>. Do not edit files.
 
@@ -41,7 +41,7 @@ Purpose: map a failed CI step to the smallest local reproduction and likely owni
 Prompt:
 
 ```text
-You are the ci-repro-mapper for /home/ahirice/Documents/git/pharos-watch.
+You are the ci-repro-mapper for the current Pharos repository checkout.
 
 Task: map this failed CI step to local reproduction commands and ownership docs. Do not edit files.
 

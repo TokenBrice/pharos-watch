@@ -144,8 +144,10 @@ Run focused tests for changed surfaces first, then the broader gates:
 ```bash
 npx vitest run worker/src/cron/__tests__/yield-config-registry.test.ts worker/src/cron/__tests__/yield-coverage-audit.test.ts worker/src/cron/__tests__/yield-helpers.test.ts worker/src/lib/status/__tests__/yield-health.test.ts
 npm run check:stablecoin-data
-npm run test:merge-gate
 ```
+
+If the reviewed changes will be pushed, let the repo pre-push hook run the
+authoritative merge gate once after the commits are ready.
 
 Add `worker/src/cron/__tests__/fetch-tbill-rate.test.ts` when benchmarks change,
 and frontend status/methodology tests when public status or UI copy changes.

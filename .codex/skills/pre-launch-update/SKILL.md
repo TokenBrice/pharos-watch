@@ -104,7 +104,7 @@ Approval is **per coin**, not bulk. For each coin with proposed changes, wait fo
 5. Update AI summaries in `data/ai-summaries.json` only for coins that meet the Material Change Definition (follow `write-ai-summaries` voice guidelines)
 6. Verify:
    - `npm run check:stablecoin-data` — validates the zod schema for the tracked registry (including pre-launch entries). **Required.**
-   - `npm run test:merge-gate` — project pre-push gate (per CLAUDE.md). **Required before the session ends or a commit is made.**
+   - If the approved changes will be pushed, let the repo pre-push hook run the authoritative merge gate once after the commits are ready.
    - `npm run build` alone is not sufficient — it does not enforce the pre-launch schema.
 
 #### Step 5 — Flag promotions (with explicit evidence)
@@ -146,6 +146,7 @@ Do **not** backfill `dateHistory` from guessed prior values. Only the first shif
 ### Milestone Guidelines
 
 Each milestone entry:
+
 ```json
 {
   "date": "2026-03-22",
@@ -157,7 +158,7 @@ Each milestone entry:
 ```
 
 - **date**: Always `YYYY-MM-DD` format
-- **type**: Must be one of the values in `LAUNCH_MILESTONE_TYPE_VALUES` (`shared/types/core.ts`). Read that file for the authoritative list — current values are `announcement`, `milestone`, `delay`, `partnership`, `regulatory`, `audit`, `testnet`, but do not trust this document as the source of truth.
+- **type**: Must be one of the values in `LAUNCH_MILESTONE_TYPE_VALUES`. Read `shared/types/core.ts` for the authoritative list.
 - **title**: Short factual description (not marketing language)
 - **sourceUrl**: Always include when available — milestones without sources are less trustworthy
 - **description**: Optional, only when the title alone is insufficient

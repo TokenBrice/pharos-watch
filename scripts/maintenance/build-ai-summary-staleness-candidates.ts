@@ -13,7 +13,7 @@
  * it to the current value, and writes the mismatches to
  * `agents/ai-summary-candidates.{md,json}` under the gitignored `agents/`
  * scratch folder. It never edits summaries — the rewrite is editorial and is
- * driven by the `ai-summaries-refresh` skill (voice from `write-ai-summaries`).
+ * driven by the `write-ai-summaries` skill.
  *
  * Live data comes from three public endpoints (report-cards, stress-signals,
  * peg-summary). Default base is production; override with PHAROS_API_BASE and
@@ -424,7 +424,7 @@ function writeOutputs(
     "",
     "Severity: **high** = visible hero contradiction (overall grade or DEWS band changed); ",
     "**medium** = dimension-grade change or a cited score off by 5+; **low** = minor score/count drift.",
-    "Refresh `high`/`medium` first. The rewrite is editorial — drive it with the `ai-summaries-refresh` skill.",
+    "Refresh `high`/`medium` first. The rewrite is editorial — drive it with the `write-ai-summaries` skill.",
     "",
   ];
   for (const c of candidates) {

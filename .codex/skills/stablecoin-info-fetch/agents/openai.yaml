@@ -1,4 +1,4 @@
 interface:
   display_name: "Stablecoin Info Fetch"
   short_description: "Verify per-coin stablecoin metadata fields"
-  default_prompt: "Use $stablecoin-info-fetch to verify and populate metadata fields for this stablecoin in shared/data/stablecoins/*.json."
+  default_prompt: "Use $stablecoin-info-fetch to verify and populate metadata fields for this stablecoin in shared/data/stablecoins/coins/*.json."

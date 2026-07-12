@@ -6,7 +6,7 @@ user_invocable: true
 
 # Pharos Release Runner
 
-Use this skill in `/home/ahirice/Documents/git/pharos-watch` when the user asks to:
+Use this skill from the Pharos repository root when the user asks to:
 
 - commit pending work in logical or thematic batches
 - run the local merge/push gate
@@ -20,7 +20,7 @@ Do not use this for a pure review with no requested commit/push, or while anothe
 
 - Default to `main`. Do not create a branch, worktree, or PR unless the user explicitly asks.
 - Preserve unrelated dirty files. Never stash, reset, checkout, or delete work you did not create unless instructed.
-- Commit before the full merge gate. `npm run test:merge-gate` proves the committed diff against `origin/main`; if it reports `Changed files: 0`, the intended work was not visible to the gate.
+- Commit before pushing. The repo pre-push hook owns the authoritative full merge gate for the exact pushed `main` range; do not run the same full gate immediately before `git push`.
 - The pushed state must match the validated state. Re-run `git status --short --branch` after long builds or generators.
 - If the user says other agents are working, skip broad validation/push unless explicitly requested and run only targeted checks for your scope.
 
@@ -78,36 +78,27 @@ git status --short --branch
 
 ### 3. Validate
 
-Run focused checks first when obvious from the touched files. Then, for release/push requests, run:
-
-```bash
-npm run test:merge-gate
-```
+Run focused checks selected from the touched files. The push hook runs the authoritative full gate once after the intended commits are ready.
 
 Useful controls:
 
 - `MERGE_GATE_DRY_RUN=1 npm run test:merge-gate` to inspect the planned commands.
-- `MERGE_GATE_PAGES_SMOKE=0 npm run test:merge-gate` only when the user explicitly asked to skip Pages smoke. The full gate runs in roughly 3-4 minutes, so skipping is rarely worth it.
+- An intentional manual `npm run test:merge-gate` writes a reusable receipt only when it validates a clean committed state. A subsequent matching push reuses that receipt instead of running the gate again.
+- `MERGE_GATE_PAGES_SMOKE=0 npm run test:merge-gate` only when the user explicitly asked to skip Pages smoke.
 - `MERGE_GATE_WORKER_SMOKE=1 npm run test:merge-gate` when worker smoke is needed before a risky worker release.
 - `npm run test:merge-gate:discover` (full discovery gate) for risky data-model, feed-suspension, or coin-lifecycle releases — it surfaces test-level couplings the standard changed-file gate misses.
 
-Fix failures locally, commit the fixes, and rerun the failing focused command or full gate as appropriate.
+Fix failures locally, commit the fixes, and rerun the failing focused command. Use the full gate manually only for deliberate rehearsal or failure investigation.
 
 ### 4. Push
 
-When the gate passes and the intended commit stack is clean:
+When focused checks pass and the intended commit stack is clean:
 
 ```bash
 git push origin main
 ```
 
-The pre-push hook may rerun the merge gate against the exact pushed range. If the normal push hook fails only because unrelated dirty files are present, and the committed branch already passed the full gate, you may use:
-
-```bash
-git push --no-verify origin main
-```
-
-Only do this with an explicit note that the bypass avoided unrelated dirty-work pollution, not release validation.
+The pre-push hook runs the merge gate against the exact pushed range and blocks the push on failure. Do not use `--no-verify` as a normal release path; a matching clean-state receipt is reused automatically when the full gate was intentionally run earlier.
 
 ### 5. Watch Deployment
 
@@ -136,7 +127,7 @@ The parent agent owns staging, committing, pushing, and final judgment.
 End with:
 
 - commits created or pushed
-- validation commands run and outcome
+- focused validation commands and pre-push gate outcome
 - GitHub Actions run watched and final status, if pushed
 - any dirty files intentionally left out
 - any skipped checks and the reason

@@ -17,8 +17,12 @@ export const meta = {
 // ---------------------------------------------------------------------------
 const BASE = 'shared/data/stablecoins/coins'
 const RES = 'shared/data/stablecoins/domains/reserves'
-const TODAY = '2026-07-07'
+const TODAY = args && args.date
 const CHUNK = 5
+
+if (!/^20\d\d-\d\d-\d\d$/.test(TODAY || '')) {
+  throw new Error('args.date must be the current ISO date')
+}
 
 const CATEGORIES = [
   'identity',

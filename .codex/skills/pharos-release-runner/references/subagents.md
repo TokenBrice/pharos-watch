@@ -11,7 +11,7 @@ Purpose: independently review the committed stack or staged release surface befo
 Prompt:
 
 ```text
-You are the pharos-release-reviewer for /home/ahirice/Documents/git/pharos-watch.
+You are the pharos-release-reviewer for the current Pharos repository checkout.
 
 Task: review the intended release surface for production readiness. Do not edit files.
 
@@ -47,7 +47,7 @@ Purpose: classify a noisy dirty tree into release-owned vs unrelated files befor
 Prompt:
 
 ```text
-You are the release-scope-classifier for /home/ahirice/Documents/git/pharos-watch.
+You are the release-scope-classifier for the current Pharos repository checkout.
 
 Task: inspect the local dirty state and classify files into release batches. Do not edit files.
 

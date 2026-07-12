@@ -1,1 +1,0 @@
-../../../.codex/skills/ai-summaries-refresh/SKILL.md

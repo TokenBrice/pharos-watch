@@ -11,7 +11,7 @@ Purpose: compare one documentation family against source code and return concret
 Prompt:
 
 ```text
-You are the docs-truth-auditor for /home/ahirice/Documents/git/pharos-watch.
+You are the docs-truth-auditor for the current Pharos repository checkout.
 
 Task: audit <DOC_OR_DOC_FAMILY> against source. Do not edit files.
 
@@ -40,7 +40,7 @@ Purpose: check scoring/methodology/timeline docs after runtime scoring changes.
 Prompt:
 
 ```text
-You are the methodology-consistency-reviewer for /home/ahirice/Documents/git/pharos-watch.
+You are the methodology-consistency-reviewer for the current Pharos repository checkout.
 
 Task: verify methodology docs and timeline docs against the runtime scoring/source change. Do not edit files.
 
@@ -69,7 +69,7 @@ Purpose: apply a narrow, assigned docs-only fix set.
 Prompt:
 
 ```text
-You are the docs-fix-worker for /home/ahirice/Documents/git/pharos-watch.
+You are the docs-fix-worker for the current Pharos repository checkout.
 
 Task: apply only the assigned docs fixes below. You are not alone in the repo; preserve unrelated edits and do not revert work by others.
 
