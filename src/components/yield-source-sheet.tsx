@@ -15,7 +15,7 @@ import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_CONFIDENCE_STYLES,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
-  classifyYieldSourceFreshness,
+  getYieldSourceFreshnessDisplay,
   formatYieldSourceRiskCompact,
 } from "@/lib/yield-source-risk";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
@@ -74,7 +74,11 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
   const evidenceCompleteness = ranking.provenance?.evidenceCompleteness ?? null;
   const scoreQualification = ranking.provenance?.scoreQualification ?? null;
   const opportunityRisk = ranking.sourceRisk?.opportunityRisk ?? null;
-  const freshness = classifyYieldSourceFreshness(ranking.sourceRisk?.sourceAgeSeconds ?? null);
+  const freshness = getYieldSourceFreshnessDisplay({
+    sourceAgeSeconds: ranking.sourceRisk?.sourceAgeSeconds,
+    sourceFreshness: ranking.provenance?.sourceFreshness,
+    warningSignals: ranking.warningSignals,
+  });
   const hasAlternateSelected =
     selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
   const deepDiveSearch = hasAlternateSelected ? new URLSearchParams({ sources: selectedSourceKey }).toString() : "";
@@ -141,9 +145,9 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
               {freshness && (
                 <span
                   className={freshness.textClassName}
-                  title={`Source observed ${freshness.relativeText} (${freshness.tier})`}
+                  title={freshness.tooltipText}
                 >
-                  {freshness.relativeText}
+                  {freshness.displayText}
                 </span>
               )}
               {sourceExplorer.sourceSwitch.changed ? (
@@ -227,6 +231,8 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
             sourceRiskDrivers={activeSource.sourceRiskDrivers}
             sourceChanged={activeSource.isChosen ? sourceExplorer.sourceSwitch.changed : false}
             confidenceTier={activeSource.confidenceTier}
+            sourceFreshness={activeSource.isChosen ? ranking.provenance?.sourceFreshness : undefined}
+            warningSignals={activeSource.isChosen ? ranking.warningSignals : undefined}
           />
 
           {sourceExplorer.retainedAlternates.length > 0 && (

@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  PRESET_DAYS,
   deriveYieldSourceSegments,
   getYieldHistorySourceDisplayLabel,
 } from "@/components/yield-history-chart-model";
+import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
+
+it("uses the shared public history window for the longest chart preset", () => {
+  expect(PRESET_DAYS.at(-1)).toBe(YIELD_HISTORY_MAX_DAYS);
+});
 
 describe("yield history chart source display", () => {
   it("disambiguates duplicate source names with source identity", () => {

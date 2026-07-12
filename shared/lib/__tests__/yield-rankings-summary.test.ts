@@ -5,7 +5,9 @@ import { YieldRankingSummarySchema, YieldRankingsSummaryResponseSchema } from "@
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
 
 const CURRENT_SCALE_RANKING_COUNT = 175;
-const RAW_PAYLOAD_BUDGET_BYTES = 220_000;
+// Explicit per-row sourceFreshness adds 4,550 raw bytes at this scale but only
+// 39 gzip bytes; retain equivalent raw headroom while the gzip transfer guard stays fixed.
+const RAW_PAYLOAD_BUDGET_BYTES = 225_000;
 const GZIP_PAYLOAD_BUDGET_BYTES = 25_000;
 
 function deterministicToken(seed: number, length: number): string {
@@ -230,6 +232,7 @@ describe("projectYieldRankingsSummary", () => {
         evidenceClass: "direct-first-party",
         evidenceCompleteness: 0.92,
         scoreQualification: "rated",
+        sourceFreshness: "fresh",
       },
       sourceRisk: {
         sourceRiskScore: 18,

@@ -23,7 +23,7 @@ import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@
 import { YIELD_SOURCE_DEPTH_DEFINITIONS, formatYieldSourceRiskSummary } from "@/lib/yield-source-risk";
 import type {
   YieldSourceConfidenceStyle,
-  YieldSourceFreshnessLabel,
+  YieldSourceFreshnessDisplay,
   YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
 import type { YieldRankChangeChipDisplay } from "@/lib/yield-presentation";
@@ -253,7 +253,7 @@ export function YieldSourceDetails({
   confidenceStyle: YieldSourceConfidenceStyle | null;
   confidenceLabel: string | null;
   sourceRiskScore: number | null;
-  freshness: YieldSourceFreshnessLabel | null;
+  freshness: YieldSourceFreshnessDisplay | null;
 }) {
   const depth = YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens];
   const sourceRiskSummary = formatYieldSourceRiskSummary(row.sourceRisk);
@@ -296,10 +296,10 @@ export function YieldSourceDetails({
           <>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className={`cursor-help ${freshness.textClassName}`}>{freshness.relativeText}</span>
+                <span className={`cursor-help ${freshness.textClassName}`}>{freshness.displayText}</span>
               </TooltipTrigger>
               <TooltipContent className="text-[11px]">
-                Source observed {freshness.relativeText} ({freshness.tier})
+                {freshness.tooltipText}
               </TooltipContent>
             </Tooltip>
             <span aria-hidden="true">·</span>

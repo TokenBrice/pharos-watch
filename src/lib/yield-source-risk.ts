@@ -3,6 +3,9 @@ import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type { YieldRanking, YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types";
 
 export type YieldSourceConfidenceTier = NonNullable<YieldRanking["provenance"]>["confidenceTier"];
+export type YieldSourcePublishedFreshness = NonNullable<
+  NonNullable<YieldRanking["provenance"]>["sourceFreshness"]
+>;
 export type YieldSourceDepthLens = "deep" | "moderate" | "thin" | "unknown";
 export type YieldSourcePosture = "clean" | "watch" | "speculative";
 
@@ -27,7 +30,7 @@ export const YIELD_SOURCE_POSTURE_ORDER: readonly YieldSourcePosture[] = ["clean
 export const YIELD_SOURCE_POSTURE_DEFINITIONS: Record<YieldSourcePosture, { label: string; description: string }> = {
   clean: {
     label: "Clean",
-    description: "Non-thin, fresh source with no material source-risk penalty or source-change evidence.",
+    description: "Non-thin source with no published staleness or material source-risk or source-change evidence.",
   },
   watch: {
     label: "Watch",
@@ -103,15 +106,16 @@ export function classifyYieldSourceDepth(params: {
 export function getYieldSourceRiskDrivers(params: {
   sourceRisk?: YieldSourceRisk | null;
   sourceChanged?: boolean;
+  sourceFreshness?: YieldSourcePublishedFreshness | null;
   warningSignals?: readonly string[] | null;
 }): YieldSourceRiskDriver[] {
   const sourceRisk = params.sourceRisk ?? null;
   const warningSignals = params.warningSignals ?? [];
-  if (!sourceRisk && !params.sourceChanged && warningSignals.length === 0) return [];
+  const sourceFreshness = resolveYieldSourceFreshnessStatus(params.sourceFreshness, warningSignals);
+  if (!sourceRisk && !params.sourceChanged && warningSignals.length === 0 && sourceFreshness !== "stale") return [];
 
   const rewardShare = finiteNumber(sourceRisk?.rewardShare);
   const sourceDepthRatio = finiteNumber(sourceRisk?.sourceDepthRatio);
-  const sourceAgeSeconds = finiteNumber(sourceRisk?.sourceAgeSeconds);
   const observationCount30d = finiteNumber(sourceRisk?.observationCount30d);
   const sourceSwitchCount30d = finiteNumber(sourceRisk?.sourceSwitchCount30d);
   const drivers: YieldSourceRiskDriver[] = [];
@@ -187,15 +191,7 @@ export function getYieldSourceRiskDrivers(params: {
     });
   }
 
-  if (sourceAgeSeconds !== null && sourceAgeSeconds > 6 * 60 * 60) {
-    drivers.push({
-      key: "stale-source",
-      label: "stale source",
-      description: "Latest source observation is older than expected for its family.",
-    });
-  }
-
-  if (warningSignals.includes("data-stale") && !hasDriver("stale-source")) {
+  if (sourceFreshness === "stale") {
     drivers.push({
       key: "stale-source",
       label: "stale source",
@@ -241,6 +237,7 @@ export function classifyYieldSourcePosture(params: {
   sourceTvlUsd?: number | null;
   sourceDepthLens?: YieldSourceDepthLens | null;
   sourceChanged?: boolean;
+  sourceFreshness?: YieldSourcePublishedFreshness | null;
   warningSignals?: readonly string[] | null;
 }): YieldSourcePosture {
   const sourceRisk = params.sourceRisk ?? null;
@@ -252,7 +249,12 @@ export function classifyYieldSourcePosture(params: {
   const sourceRiskPenalty = finiteNumber(sourceRisk?.sourceRiskPenalty) ?? 1;
   const sourceSwitchCount30d = finiteNumber(sourceRisk?.sourceSwitchCount30d);
   const sourceChanged = params.sourceChanged === true || (sourceSwitchCount30d !== null && sourceSwitchCount30d > 0);
-  const drivers = getYieldSourceRiskDrivers({ sourceRisk, sourceChanged, warningSignals });
+  const drivers = getYieldSourceRiskDrivers({
+    sourceRisk,
+    sourceChanged,
+    sourceFreshness: params.sourceFreshness,
+    warningSignals,
+  });
   const driverKeys = new Set(drivers.map((driver) => driver.key));
   const hasSevereDriver =
     driverKeys.has("high-risk-venue") ||
@@ -352,38 +354,102 @@ export const YIELD_SOURCE_CONFIDENCE_STYLES: Record<YieldSourceConfidenceTier, Y
   },
 };
 
-export type YieldSourceFreshnessTier = "fresh" | "recent" | "aging" | "stale";
+export type YieldSourceAgeContextBand = "within-6h" | "within-12h" | "within-24h" | "over-24h";
 
-export interface YieldSourceFreshnessLabel {
-  tier: YieldSourceFreshnessTier;
+export interface YieldSourceAgeContext {
+  band: YieldSourceAgeContextBand;
   relativeText: string;
-  textClassName: string;
+  description: string;
 }
 
-const YIELD_SOURCE_FRESHNESS_STYLES: Record<YieldSourceFreshnessTier, string> = {
+export interface YieldSourceFreshnessDisplay {
+  status: YieldSourcePublishedFreshness;
+  statusLabel: string;
+  displayText: string;
+  ageContext: YieldSourceAgeContext | null;
+  textClassName: string;
+  tooltipText: string;
+}
+
+const YIELD_SOURCE_FRESHNESS_STYLES: Record<YieldSourcePublishedFreshness, string> = {
   fresh: "text-emerald-700 dark:text-emerald-400",
-  recent: "text-sky-700 dark:text-sky-400",
-  aging: "text-amber-700 dark:text-amber-400",
-  stale: "text-muted-foreground",
+  stale: "text-amber-700 dark:text-amber-400",
+  unknown: "text-muted-foreground",
 };
 
-/** Tiers: <=6h fresh, <=12h recent, <=24h aging, >24h stale. Null sourceAgeSeconds -> null. */
-export function classifyYieldSourceFreshness(
+const YIELD_SOURCE_FRESHNESS_LABELS: Record<YieldSourcePublishedFreshness, string> = {
+  fresh: "Fresh",
+  stale: "Stale",
+  unknown: "Unknown",
+};
+
+export function classifyYieldSourceAgeContext(
   sourceAgeSeconds: number | null | undefined,
-): YieldSourceFreshnessLabel | null {
+): YieldSourceAgeContext | null {
   if (sourceAgeSeconds == null) return null;
   if (typeof sourceAgeSeconds !== "number" || !Number.isFinite(sourceAgeSeconds) || sourceAgeSeconds < 0) {
     return null;
   }
-  let tier: YieldSourceFreshnessTier;
-  if (sourceAgeSeconds <= 6 * 60 * 60) tier = "fresh";
-  else if (sourceAgeSeconds <= 12 * 60 * 60) tier = "recent";
-  else if (sourceAgeSeconds <= 24 * 60 * 60) tier = "aging";
-  else tier = "stale";
+  let band: YieldSourceAgeContextBand;
+  let description: string;
+  if (sourceAgeSeconds <= 6 * 60 * 60) {
+    band = "within-6h";
+    description = "observed within 6 hours";
+  } else if (sourceAgeSeconds <= 12 * 60 * 60) {
+    band = "within-12h";
+    description = "observed within 12 hours";
+  } else if (sourceAgeSeconds <= 24 * 60 * 60) {
+    band = "within-24h";
+    description = "observed within 24 hours";
+  } else {
+    band = "over-24h";
+    description = "observed more than 24 hours ago";
+  }
   return {
-    tier,
+    band,
     relativeText: formatRelativeAgeSeconds(sourceAgeSeconds, { maxDays: 30 }),
-    textClassName: YIELD_SOURCE_FRESHNESS_STYLES[tier],
+    description,
+  };
+}
+
+export function resolveYieldSourceFreshnessStatus(
+  sourceFreshness: YieldSourcePublishedFreshness | null | undefined,
+  warningSignals: readonly string[] | null | undefined,
+): YieldSourcePublishedFreshness {
+  if (sourceFreshness) return sourceFreshness;
+  return warningSignals?.includes("data-stale") ? "stale" : "unknown";
+}
+
+export function getYieldSourceFreshnessDisplay(params: {
+  sourceAgeSeconds?: number | null;
+  sourceFreshness?: YieldSourcePublishedFreshness | null;
+  warningSignals?: readonly string[] | null;
+}): YieldSourceFreshnessDisplay | null {
+  const ageContext = classifyYieldSourceAgeContext(params.sourceAgeSeconds);
+  const hasPublishedStatus = params.sourceFreshness != null;
+  const hasStaleWarning = params.warningSignals?.includes("data-stale") ?? false;
+  const hasUnknownWarning = params.warningSignals?.includes("data-freshness-unknown") ?? false;
+  if (!ageContext && !hasPublishedStatus && !hasStaleWarning && !hasUnknownWarning) return null;
+
+  const status = resolveYieldSourceFreshnessStatus(params.sourceFreshness, params.warningSignals);
+  const statusLabel = YIELD_SOURCE_FRESHNESS_LABELS[status];
+  const displayText = ageContext ? `${statusLabel} · ${ageContext.relativeText}` : statusLabel;
+  const statusContext = hasPublishedStatus
+    ? `Published source freshness: ${statusLabel}.`
+    : hasStaleWarning
+      ? "Source freshness: Stale (data-stale warning)."
+      : "Source freshness: Unknown.";
+  const ageText = ageContext
+    ? ` Source observed ${ageContext.relativeText}; age context: ${ageContext.description}.`
+    : " Source observation age is unavailable.";
+
+  return {
+    status,
+    statusLabel,
+    displayText,
+    ageContext,
+    textClassName: YIELD_SOURCE_FRESHNESS_STYLES[status],
+    tooltipText: `${statusContext}${ageText}`,
   };
 }
 

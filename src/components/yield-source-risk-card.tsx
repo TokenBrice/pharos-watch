@@ -7,11 +7,12 @@ import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
   YIELD_SOURCE_POSTURE_DEFINITIONS,
-  classifyYieldSourceFreshness,
   classifyYieldSourcePosture,
   formatYieldSourcePosture,
+  getYieldSourceFreshnessDisplay,
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
+  type YieldSourcePublishedFreshness,
   type YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
 import { formatCurrency } from "@shared/lib/format";
@@ -28,6 +29,8 @@ export interface YieldSourceRiskCardProps {
   sourceDepthLens: YieldSourceDepthLens;
   sourceRiskDrivers: readonly YieldSourceRiskDriver[];
   sourceChanged?: boolean;
+  sourceFreshness?: YieldSourcePublishedFreshness | null;
+  warningSignals?: readonly string[] | null;
   confidenceTier?: YieldSourceConfidenceTier | null;
   compact?: boolean;
   showVenueBreakdown?: boolean;
@@ -50,11 +53,21 @@ function formatScore(sourceRisk: YieldSourceRisk): string {
   return score === null ? "n/a" : `${Math.round(score)}/100`;
 }
 
-function RiskMetric({ label, value, title }: { label: string; value: string; title?: string }) {
+function RiskMetric({
+  label,
+  value,
+  title,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  title?: string;
+  valueClassName?: string;
+}) {
   return (
     <div className="min-w-0 rounded-md bg-muted/40 px-2.5 py-2" title={title}>
       <dt className="text-[10px] font-medium text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 truncate font-mono text-xs tabular-nums text-foreground">{value}</dd>
+      <dd className={cn("mt-0.5 truncate font-mono text-xs tabular-nums text-foreground", valueClassName)}>{value}</dd>
     </div>
   );
 }
@@ -66,6 +79,8 @@ export function YieldSourceRiskCard({
   sourceDepthLens,
   sourceRiskDrivers,
   sourceChanged = false,
+  sourceFreshness,
+  warningSignals,
   confidenceTier = null,
   compact = false,
   showVenueBreakdown = true,
@@ -76,11 +91,17 @@ export function YieldSourceRiskCard({
     sourceTvlUsd,
     sourceDepthLens,
     sourceChanged,
+    sourceFreshness,
+    warningSignals,
   });
   const postureMeta = YIELD_SOURCE_POSTURE_DEFINITIONS[posture];
   const postureLabel = formatYieldSourcePosture(posture);
   const depthMeta = YIELD_SOURCE_DEPTH_DEFINITIONS[sourceDepthLens];
-  const freshness = classifyYieldSourceFreshness(sourceRisk?.sourceAgeSeconds ?? null);
+  const freshness = getYieldSourceFreshnessDisplay({
+    sourceAgeSeconds: sourceRisk?.sourceAgeSeconds,
+    sourceFreshness,
+    warningSignals,
+  });
   const venueTier = sourceRisk?.venueRiskTier ?? null;
   const venueConfidence = sourceRisk?.venueRiskConfidence ?? null;
   const dependency = sourceRisk?.dependencyConcentration ?? null;
@@ -110,7 +131,12 @@ export function YieldSourceRiskCard({
         <RiskMetric label="Score" value={formatScore(sourceRisk)} />
         <RiskMetric label="Penalty" value={formatPenalty(sourceRisk)} />
         <RiskMetric label="Depth" value={depthMeta.label} title={depthMeta.description} />
-        <RiskMetric label="Freshness" value={freshness?.relativeText ?? "n/a"} title={freshness?.tier} />
+        <RiskMetric
+          label="Freshness"
+          value={freshness?.displayText ?? "n/a"}
+          title={freshness?.tooltipText}
+          valueClassName={freshness?.textClassName}
+        />
       </dl>
 
       <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">

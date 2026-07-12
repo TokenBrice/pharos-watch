@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   classifyYieldSourcePosture,
   classifyYieldSourceDepth,
-  classifyYieldSourceFreshness,
+  classifyYieldSourceAgeContext,
   formatYieldSourceRiskSummary,
   formatYieldSourceRiskDriverSummary,
   getYieldSourceRiskDrivers,
+  getYieldSourceFreshnessDisplay,
 } from "@/lib/yield-source-risk";
 import {
   SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS,
@@ -17,6 +18,7 @@ describe("yield source risk UI helpers", () => {
   it("maps populated source-risk evidence to public driver labels", () => {
     const drivers = getYieldSourceRiskDrivers({
       sourceChanged: true,
+      sourceFreshness: "stale",
       sourceRisk: mergeSourceRiskGoldenFixtures([
         "reward-heavy",
         "low-source-depth",
@@ -161,55 +163,119 @@ describe("yield source risk UI helpers", () => {
   });
 });
 
-describe("classifyYieldSourceFreshness", () => {
+describe("classifyYieldSourceAgeContext", () => {
   it("returns null for null or undefined input", () => {
-    expect(classifyYieldSourceFreshness(null)).toBeNull();
-    expect(classifyYieldSourceFreshness(undefined)).toBeNull();
+    expect(classifyYieldSourceAgeContext(null)).toBeNull();
+    expect(classifyYieldSourceAgeContext(undefined)).toBeNull();
   });
 
-  it("returns fresh tier for 0s", () => {
-    const result = classifyYieldSourceFreshness(0);
-    expect(result?.tier).toBe("fresh");
+  it("returns within-6h context for 0s", () => {
+    const result = classifyYieldSourceAgeContext(0);
+    expect(result?.band).toBe("within-6h");
     expect(result?.relativeText).toBe("0s ago");
   });
 
-  it("returns fresh tier for 1h", () => {
-    const result = classifyYieldSourceFreshness(60 * 60);
-    expect(result?.tier).toBe("fresh");
+  it("returns within-6h context for 1h", () => {
+    const result = classifyYieldSourceAgeContext(60 * 60);
+    expect(result?.band).toBe("within-6h");
     expect(result?.relativeText).toBe("1h ago");
   });
 
-  it("returns fresh tier at the 6h boundary", () => {
-    const result = classifyYieldSourceFreshness(6 * 60 * 60);
-    expect(result?.tier).toBe("fresh");
+  it("returns within-6h context at the 6h boundary", () => {
+    const result = classifyYieldSourceAgeContext(6 * 60 * 60);
+    expect(result?.band).toBe("within-6h");
     expect(result?.relativeText).toBe("6h ago");
   });
 
-  it("returns recent tier at the 12h boundary", () => {
-    const result = classifyYieldSourceFreshness(12 * 60 * 60);
-    expect(result?.tier).toBe("recent");
+  it("returns within-12h context at the 12h boundary", () => {
+    const result = classifyYieldSourceAgeContext(12 * 60 * 60);
+    expect(result?.band).toBe("within-12h");
     expect(result?.relativeText).toBe("12h ago");
   });
 
-  it("returns aging tier at the 24h boundary", () => {
-    const result = classifyYieldSourceFreshness(24 * 60 * 60);
-    expect(result?.tier).toBe("aging");
+  it("returns within-24h context at the 24h boundary", () => {
+    const result = classifyYieldSourceAgeContext(24 * 60 * 60);
+    expect(result?.band).toBe("within-24h");
     expect(result?.relativeText).toBe("1d ago");
   });
 
-  it("returns stale tier for 7d with days formatting", () => {
-    const result = classifyYieldSourceFreshness(7 * 24 * 60 * 60);
-    expect(result?.tier).toBe("stale");
+  it("returns over-24h context for 7d with days formatting", () => {
+    const result = classifyYieldSourceAgeContext(7 * 24 * 60 * 60);
+    expect(result?.band).toBe("over-24h");
     expect(result?.relativeText).toBe("7d ago");
   });
 
   it("clamps days formatting at >30d for 31d", () => {
-    const result = classifyYieldSourceFreshness(31 * 24 * 60 * 60);
-    expect(result?.tier).toBe("stale");
+    const result = classifyYieldSourceAgeContext(31 * 24 * 60 * 60);
+    expect(result?.band).toBe("over-24h");
     expect(result?.relativeText).toBe(">30d ago");
   });
 
   it("returns null for NaN", () => {
-    expect(classifyYieldSourceFreshness(Number.NaN)).toBeNull();
+    expect(classifyYieldSourceAgeContext(Number.NaN)).toBeNull();
+  });
+});
+
+describe("getYieldSourceFreshnessDisplay", () => {
+  it("keeps a 4h observation stale when the published status is stale", () => {
+    const result = getYieldSourceFreshnessDisplay({
+      sourceAgeSeconds: 4 * 60 * 60,
+      sourceFreshness: "stale",
+    });
+
+    expect(result).toMatchObject({
+      status: "stale",
+      displayText: "Stale · 4h ago",
+      ageContext: { band: "within-6h" },
+    });
+    expect(result?.textClassName).toContain("amber");
+    expect(result?.tooltipText).toContain("Published source freshness: Stale");
+  });
+
+  it("keeps a 30h observation fresh when the published status is fresh", () => {
+    const result = getYieldSourceFreshnessDisplay({
+      sourceAgeSeconds: 30 * 60 * 60,
+      sourceFreshness: "fresh",
+    });
+
+    expect(result).toMatchObject({
+      status: "fresh",
+      displayText: "Fresh · 1d ago",
+      ageContext: { band: "over-24h" },
+    });
+    expect(result?.textClassName).toContain("emerald");
+    expect(result?.tooltipText).toContain("age context: observed more than 24 hours ago");
+  });
+
+  it("uses data-stale only when published freshness is absent", () => {
+    expect(getYieldSourceFreshnessDisplay({
+      sourceAgeSeconds: 60,
+      warningSignals: ["data-stale"],
+    })?.status).toBe("stale");
+    expect(getYieldSourceFreshnessDisplay({
+      sourceAgeSeconds: 60,
+      sourceFreshness: "fresh",
+      warningSignals: ["data-stale"],
+    })?.status).toBe("fresh");
+  });
+
+  it("keeps freshness unknown when only data-freshness-unknown is published", () => {
+    const result = getYieldSourceFreshnessDisplay({
+      warningSignals: ["data-freshness-unknown"],
+    });
+
+    expect(result).toMatchObject({ status: "unknown", displayText: "Unknown", ageContext: null });
+    expect(result?.tooltipText).toContain("Source observation age is unavailable");
+  });
+
+  it("uses the authoritative status for stale-source risk drivers", () => {
+    expect(getYieldSourceRiskDrivers({
+      sourceRisk: { sourceAgeSeconds: 4 * 60 * 60 },
+      sourceFreshness: "stale",
+    }).map((driver) => driver.key)).toContain("stale-source");
+    expect(getYieldSourceRiskDrivers({
+      sourceRisk: { sourceAgeSeconds: 30 * 60 * 60 },
+      sourceFreshness: "fresh",
+    }).map((driver) => driver.key)).not.toContain("stale-source");
   });
 });

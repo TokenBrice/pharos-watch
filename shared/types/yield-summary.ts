@@ -16,6 +16,7 @@ export const YieldRankingSummaryProvenanceSchema = DetailedYieldRankingProvenanc
   evidenceClass: true,
   evidenceCompleteness: true,
   scoreQualification: true,
+  sourceFreshness: true,
   sourceSwitch: true,
   usedDefaultSafety: true,
   safetyProvenance: true,

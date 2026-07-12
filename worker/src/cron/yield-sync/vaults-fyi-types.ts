@@ -10,6 +10,7 @@ export type VaultsFyiSkipReason =
   | "circuit-open"
   | "unauthorized"
   | "invalid-config"
+  | "credit-ledger-corrupt"
   | "request-failed"
   | "invalid-payload";
 
@@ -34,6 +35,7 @@ export interface VaultsFyiTelemetry {
   monthlyBudgetUtilization: number | null;
   monthlyBudgetWarning: boolean;
   monthlyRunsRemaining: number | null;
+  monthlyLedgerState: "unavailable" | "missing" | "valid" | "corrupt";
   coverageBudgetState: "unavailable" | "within-budget" | "warning" | "throttled" | "exhausted";
   rawVaultCount: number;
   rankableCandidateCount: number;

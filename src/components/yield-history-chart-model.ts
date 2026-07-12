@@ -6,11 +6,12 @@ import { DAY_MS } from "@/lib/constants";
 import { toTimestampMs } from "@/lib/time";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { formatChartDate, formatDecimal } from "@shared/lib/format";
+import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
 import type { YieldHistoryPoint } from "@shared/types";
 
 export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
 export const DEFAULT_DAYS = 90;
-export const PRESET_DAYS = [7, 30, 90, 365] as const;
+export const PRESET_DAYS = [7, 30, 90, YIELD_HISTORY_MAX_DAYS] as const;
 const MAX_OVERLAY_SOURCES = 4;
 const SOURCE_KEY_SUFFIX_LENGTH = 12;
 
@@ -268,7 +269,7 @@ function buildTicks(points: YieldHistoryChartPoint[], days: number) {
   const last = points[points.length - 1].date;
   const ticks = new Set<number>([first, last]);
 
-  if (days === 365) {
+  if (days === YIELD_HISTORY_MAX_DAYS) {
     const cursor = new Date(first);
     cursor.setDate(1);
     cursor.setHours(0, 0, 0, 0);

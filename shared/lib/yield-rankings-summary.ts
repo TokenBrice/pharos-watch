@@ -16,6 +16,7 @@ function projectProvenance(provenance: YieldRanking["provenance"]): YieldRanking
     evidenceClass: provenance.evidenceClass,
     evidenceCompleteness: provenance.evidenceCompleteness,
     scoreQualification: provenance.scoreQualification,
+    sourceFreshness: provenance.sourceFreshness,
     sourceSwitch: provenance.sourceSwitch,
     usedDefaultSafety: provenance.usedDefaultSafety,
     safetyProvenance: provenance.safetyProvenance,

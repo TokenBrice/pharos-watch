@@ -16,6 +16,7 @@ const {
   setParamMock,
   pushMock,
   leaderboardPropsMock,
+  staleQueriesMock,
 } = vi.hoisted(() => ({
   useYieldAdapterManifestMock: vi.fn(),
   useYieldRankingsSummaryMock: vi.fn(),
@@ -24,6 +25,7 @@ const {
   setParamMock: vi.fn(),
   pushMock: vi.fn(),
   leaderboardPropsMock: vi.fn(),
+  staleQueriesMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -59,6 +61,13 @@ vi.mock("@/components/yield-leaderboard", () => ({
   YieldLeaderboard: (props: unknown) => {
     leaderboardPropsMock(props);
     return <div data-testid="yield-leaderboard" />;
+  },
+}));
+
+vi.mock("@/components/stale-data-banner", () => ({
+  StaleDataBanner: ({ queries }: { queries: unknown[] }) => {
+    staleQueriesMock(queries);
+    return <div data-testid="stale-data-banner" />;
   },
 }));
 
@@ -116,10 +125,11 @@ describe("YieldClient", () => {
       refetch: vi.fn(),
     });
     useYieldAdapterManifestMock.mockReturnValue({
-      data: { adapters: [], generatedAt: 1_776_000_000 },
-      meta: null,
+      data: { methodologyVersion: "v1", updatedAt: 1_776_000_000, entries: [] },
+      isLoading: false,
       error: null,
       dataUpdatedAt: 1_776_000_000,
+      refetch: vi.fn(),
     });
   });
 
@@ -156,6 +166,31 @@ describe("YieldClient", () => {
     expect(useYieldRankingsSummaryMock).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("slider", { name: "Risk tolerance" })).toBeTruthy();
     expect(screen.getByTestId("yield-scatter-plot")).toBeTruthy();
+  });
+
+  it("keeps the build-static adapter manifest out of live freshness aggregation", () => {
+    render(<YieldClient />);
+
+    const queries = staleQueriesMock.mock.calls.at(-1)?.[0] as Array<{ label?: string; preset?: string }>;
+    expect(queries).toEqual([expect.objectContaining({ preset: "yieldRankings" })]);
+    expect(queries.some((query) => query.label === "Yield source roster")).toBe(false);
+  });
+
+  it("preserves a retryable error notice when the static adapter manifest fails", () => {
+    const refetch = vi.fn();
+    useYieldAdapterManifestMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("Manifest unavailable"),
+      dataUpdatedAt: 0,
+      refetch,
+    });
+
+    render(<YieldClient />);
+
+    expect(screen.getByText("Manifest unavailable")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledOnce();
   });
 
   it("shows the selector return strip when opened from the Stablecoin Picker", () => {

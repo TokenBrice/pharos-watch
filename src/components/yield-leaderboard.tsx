@@ -30,7 +30,7 @@ import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_CONFIDENCE_STYLES,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
-  classifyYieldSourceFreshness,
+  getYieldSourceFreshnessDisplay,
   formatYieldSourceRiskSummary,
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
@@ -474,7 +474,11 @@ export function YieldMobileCard({
   const confidenceTier = row.provenance?.confidenceTier ?? null;
   const confidenceStyle = confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] : null;
   const confidenceLabel = confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier].label : null;
-  const freshness = classifyYieldSourceFreshness(row.sourceRisk?.sourceAgeSeconds ?? null);
+  const freshness = getYieldSourceFreshnessDisplay({
+    sourceAgeSeconds: row.sourceRisk?.sourceAgeSeconds,
+    sourceFreshness: row.provenance?.sourceFreshness,
+    warningSignals: row.warningSignals,
+  });
   const sourceRiskScore = row.sourceRisk?.sourceRiskScore ?? null;
   const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
   const sourceRiskMaterial = rawSourceRiskPenalty !== null && rawSourceRiskPenalty > 1.05;
@@ -494,6 +498,8 @@ export function YieldMobileCard({
   const sourceRiskDrivers = getYieldSourceRiskDrivers({
     sourceRisk: row.sourceRisk,
     sourceChanged: row.provenance?.sourceSwitch ?? false,
+    sourceFreshness: row.provenance?.sourceFreshness,
+    warningSignals: row.warningSignals,
   });
 
   return (
@@ -604,11 +610,11 @@ export function YieldMobileCard({
           <Tooltip>
             <TooltipTrigger asChild>
               <MobileMetricPill className={`cursor-help ${freshness.textClassName}`}>
-                Updated {freshness.relativeText}
+                {freshness.displayText}
               </MobileMetricPill>
             </TooltipTrigger>
             <TooltipContent className="text-[11px]">
-              Source observed {freshness.relativeText} ({freshness.tier})
+              {freshness.tooltipText}
             </TooltipContent>
           </Tooltip>
         ) : null}

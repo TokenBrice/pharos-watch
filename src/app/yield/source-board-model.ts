@@ -294,6 +294,7 @@ export function buildYieldSourceBoardModel(
         sourceTvlUsd: ranking.sourceTvlUsd,
         sourceDepthLens,
         sourceChanged: ranking.provenance?.sourceSwitch ?? false,
+        sourceFreshness: ranking.provenance?.sourceFreshness,
         warningSignals: ranking.warningSignals,
       })
     ] += 1;
@@ -301,6 +302,7 @@ export function buildYieldSourceBoardModel(
     for (const driver of getYieldSourceRiskDrivers({
       sourceRisk: ranking.sourceRisk,
       sourceChanged: ranking.provenance?.sourceSwitch ?? false,
+      sourceFreshness: ranking.provenance?.sourceFreshness,
       warningSignals: ranking.warningSignals,
     })) {
       const existing = sourceRiskDriverCounts.get(driver.key);

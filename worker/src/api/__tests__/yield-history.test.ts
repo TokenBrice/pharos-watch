@@ -10,6 +10,7 @@ import {
   buildSourceRiskGoldenFixture,
   getSourceRiskGoldenRow,
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
 
 const v748HistoryPayload = {
   current: {
@@ -189,7 +190,9 @@ describe("handleYieldHistory", () => {
     const db = mockD1([]);
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether&days=9999"));
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Invalid days: must be between 1 and 365" });
+    expect(await res.json()).toEqual({
+      error: `Invalid days: must be between 1 and ${YIELD_HISTORY_MAX_DAYS}`,
+    });
   });
 
   it("maps snake_case to camelCase", async () => {

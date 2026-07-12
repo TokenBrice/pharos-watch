@@ -17,6 +17,7 @@ import { parseYieldRankingsPublishedCutoff } from "../cron/yield-sync/cache";
 import { isSuppressedYieldHistoryRow } from "../cron/yield-sync/history";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { isRecord } from "@shared/lib/type-guards";
+import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
 import {
   normalizeYieldSourceRisk,
   YieldPysInputsAtPublishSchema,
@@ -164,7 +165,7 @@ export const handleYieldHistory = withErrorHandler(
     const parsed = parseStablecoinHistoryQuery(url, {
       defaultDays: 90,
       minDays: 1,
-      maxDays: 365,
+      maxDays: YIELD_HISTORY_MAX_DAYS,
       rangePolicy: "reject",
     });
     if (parsed instanceof Response) {

@@ -25,7 +25,7 @@ import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_CONFIDENCE_STYLES,
-  classifyYieldSourceFreshness,
+  getYieldSourceFreshnessDisplay,
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
 import { PYS_NULL_REASON_TEXT, buildRankChangeChipDisplay } from "@/lib/yield-presentation";
@@ -242,8 +242,12 @@ function YieldInstrumentRowBase({
   const confidenceStyle = confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] : null;
   const confidenceLabel = confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier].label : null;
   const freshness = useMemo(
-    () => classifyYieldSourceFreshness(row.sourceRisk?.sourceAgeSeconds ?? null),
-    [row.sourceRisk?.sourceAgeSeconds],
+    () => getYieldSourceFreshnessDisplay({
+      sourceAgeSeconds: row.sourceRisk?.sourceAgeSeconds,
+      sourceFreshness: row.provenance?.sourceFreshness,
+      warningSignals: row.warningSignals,
+    }),
+    [row.provenance?.sourceFreshness, row.sourceRisk?.sourceAgeSeconds, row.warningSignals],
   );
   const sourceRiskScore = row.sourceRisk?.sourceRiskScore ?? null;
   const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
@@ -258,8 +262,10 @@ function YieldInstrumentRowBase({
       getYieldSourceRiskDrivers({
         sourceRisk: row.sourceRisk,
         sourceChanged: row.provenance?.sourceSwitch ?? false,
+        sourceFreshness: row.provenance?.sourceFreshness,
+        warningSignals: row.warningSignals,
       }),
-    [row.provenance?.sourceSwitch, row.sourceRisk],
+    [row.provenance?.sourceFreshness, row.provenance?.sourceSwitch, row.sourceRisk, row.warningSignals],
   );
   const availableSources = useMemo(() => getYieldAvailableSources(row), [row]);
 

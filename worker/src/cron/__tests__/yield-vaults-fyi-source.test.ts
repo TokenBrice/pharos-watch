@@ -182,9 +182,61 @@ describe("fetchVaultsFyiSources", () => {
       creditsEstimated: 4,
       monthlyCreditsEstimated: 104,
       monthlyCreditsReserved: 0,
+      monthlyLedgerState: "valid",
       monthlyBudgetWarning: true,
       coverageBudgetState: "throttled",
     });
+  });
+
+  it("fails closed without fetching when the paid credit ledger is corrupt", async () => {
+    const { db, writes } = creditLedgerDb("{not-json");
+    const fetchSpy = vi.fn();
+    const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await fetchVaultsFyiSources({
+      db,
+      config: enabledConfig(),
+      startSec: Date.parse("2026-07-01T00:25:00.000Z") / 1000,
+    });
+
+    expect(result).toMatchObject({
+      candidates: [],
+      telemetry: {
+        status: "failed",
+        skipReason: "credit-ledger-corrupt",
+        monthlyLedgerState: "corrupt",
+        coverageBudgetState: "unavailable",
+        requestCount: 0,
+      },
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(writes).toHaveLength(0);
+    logSpy.mockRestore();
+  });
+
+  it("distinguishes an absent paid credit ledger from a malformed ledger", async () => {
+    const bucket = "2026-07";
+    const nowSec = Date.parse("2026-07-01T00:25:00.000Z") / 1000;
+    const missing = await readMonthlyCredits(creditLedgerDb(null).db, bucket, nowSec);
+    const malformed = await readMonthlyCredits(creditLedgerDb(JSON.stringify({
+      version: 3,
+      bucket,
+      creditsEstimated: -1,
+    })).db, bucket, nowSec);
+    const overflowing = await readMonthlyCredits(creditLedgerDb(JSON.stringify({
+      version: 3,
+      bucket,
+      generation: 1,
+      creditsEstimated: Number.MAX_SAFE_INTEGER,
+      creditsReserved: 1,
+      reservationId: "expired-owner",
+      reservationExpiresAt: nowSec - 1,
+    })).db, bucket, nowSec);
+
+    expect(missing).toMatchObject({ state: "missing", creditsEstimated: 0 });
+    expect(malformed).toMatchObject({ state: "corrupt", creditsEstimated: 0 });
+    expect(overflowing).toMatchObject({ state: "corrupt", creditsEstimated: 0 });
   });
 
   it("allows only one concurrent reservation owner to win the ledger CAS", async () => {

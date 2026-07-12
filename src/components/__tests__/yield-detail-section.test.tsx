@@ -250,6 +250,7 @@ describe("YieldDetailSection", () => {
             sourceKey: "primary-source",
             sourceObservedAt: 1_700_000_000,
             sourceAgeSeconds: 8 * 60 * 60,
+            sourceFreshness: "stale",
             confidenceTier: "curated",
             selectionMethod: "confidence-weighted",
             selectionReason: "Higher confidence than retained alternates.",

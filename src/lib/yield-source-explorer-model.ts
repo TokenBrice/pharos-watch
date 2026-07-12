@@ -206,6 +206,8 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
       sourceRiskDrivers: getYieldSourceRiskDrivers({
         sourceRisk: source.sourceRisk,
         sourceChanged,
+        sourceFreshness: source.isChosen ? ranking.provenance?.sourceFreshness : undefined,
+        warningSignals: source.isChosen ? ranking.warningSignals : undefined,
       }),
     };
   });

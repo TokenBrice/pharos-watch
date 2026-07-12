@@ -1,5 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
 import { deleteOrphanYieldRows, deleteStaleYieldRows, purgeYieldHistoryOwnershipHandoffs } from "./history";
 import { isMissingColumnError, isMissingTableError } from "../../lib/db";
 
@@ -80,7 +81,7 @@ export async function pruneYieldTables(
     await deleteOrphanYieldRows(db, managedYieldIds);
   }
 
-  const pruneCutoff = startSec - 365 * DAY_SECONDS;
+  const pruneCutoff = startSec - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS;
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =
     frozenIdsList.length > 0

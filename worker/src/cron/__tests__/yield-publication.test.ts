@@ -5,6 +5,8 @@ import {
   buildSourceRiskGoldenFixture,
   getSourceRiskGoldenRow,
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
@@ -1018,6 +1020,9 @@ describe("publishYieldCoordinatorResults", () => {
     expect(cacheWriteIndex).toBeGreaterThanOrEqual(0);
     expect(freshnessIndex).toBeGreaterThan(cacheWriteIndex);
     expect(historyRetentionIndex).toBeGreaterThan(freshnessIndex);
+    expect(history[historyRetentionIndex]?.binds[0]).toBe(
+      Math.floor(FIXED_NOW.getTime() / 1000) - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS,
+    );
     expect(handoffCleanupIndex).toBeGreaterThan(historyRetentionIndex);
 
     const degradedDb = makePublicationDb(1);

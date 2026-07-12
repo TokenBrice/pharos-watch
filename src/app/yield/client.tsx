@@ -47,26 +47,19 @@ interface YieldFreshnessBannerProps {
 }
 
 function YieldFreshnessBanner({ dataUpdatedAt, error, hasData, meta }: YieldFreshnessBannerProps) {
-  const {
-    data: adapterManifest,
-    meta: adapterManifestMeta,
-    dataUpdatedAt: adapterManifestUpdatedAt,
-    error: adapterManifestError,
-  } = useYieldAdapterManifest();
+  return <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData, meta }]} />;
+}
 
+function YieldAdapterManifestStatus() {
+  const { data, isLoading, error, refetch } = useYieldAdapterManifest();
+  if (isLoading) return null;
   return (
-    <StaleDataBanner
-      queries={[
-        { preset: "yieldRankings", dataUpdatedAt, error, hasData, meta },
-        {
-          preset: "yieldRankings",
-          label: "Yield source roster",
-          dataUpdatedAt: adapterManifestUpdatedAt,
-          error: adapterManifestError,
-          hasData: !!adapterManifest,
-          meta: adapterManifestMeta,
-        },
-      ]}
+    <QueryErrorNotice
+      error={error}
+      hasData={!!data}
+      onRetry={() => {
+        void refetch();
+      }}
     />
   );
 }
@@ -488,6 +481,7 @@ export function YieldClient() {
   return (
     <div className="space-y-6">
       <YieldFreshnessBanner dataUpdatedAt={dataUpdatedAt} error={error} hasData={!!data} meta={meta} />
+      <YieldAdapterManifestStatus />
       <YieldApiWarnings warnings={data.warnings} />
       <SelectorHandoffNotice visible={arrivedFromSelector} />
       <YieldWorkbenchFallbackNotice stablecoinId={workbenchFallbackId} />

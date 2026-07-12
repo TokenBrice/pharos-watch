@@ -48,6 +48,7 @@ const baseRow = {
     confidenceTier: "curated",
     sourceObservedAt: 0,
     sourceAgeSeconds: 60,
+    sourceFreshness: "fresh",
     selectionMethod: "confidence-weighted",
     selectionReason: "best source",
     sourceSwitch: false,
@@ -195,6 +196,35 @@ describe("YieldInstrumentBoard", () => {
     renderBoard(row);
 
     expect(screen.getByText("Source risk 42/100 | 1.32x")).toBeTruthy();
+  });
+
+  it("renders published stale status for a 4h-old default source", () => {
+    const row = {
+      ...baseRow,
+      provenance: { ...baseRow.provenance, sourceFreshness: "stale" },
+      sourceRisk: { ...baseRow.sourceRisk, sourceAgeSeconds: 4 * 60 * 60 },
+    } as YieldViewModelRow;
+
+    renderBoard(row);
+
+    const freshness = screen.getByText("Stale · 4h ago");
+    expect(freshness.className).toContain("text-amber-700");
+    expect(screen.queryByText("Fresh · 4h ago")).toBeNull();
+  });
+
+  it("renders published fresh status for a 30h-old price-derived source", () => {
+    const row = {
+      ...baseRow,
+      dataSource: "price-derived",
+      provenance: { ...baseRow.provenance, calculationMode: "price-return", sourceFreshness: "fresh" },
+      sourceRisk: { ...baseRow.sourceRisk, sourceAgeSeconds: 30 * 60 * 60 },
+    } as YieldViewModelRow;
+
+    renderMobileCard(row);
+
+    const freshness = screen.getByText("Fresh · 1d ago");
+    expect(freshness.className).toContain("text-emerald-700");
+    expect(screen.queryByText("Stale · 1d ago")).toBeNull();
   });
 
   it("invokes onToggleCompare with the row id when the compare checkbox is clicked", () => {

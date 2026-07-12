@@ -547,6 +547,8 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
           sourceRiskDrivers={sourceExplorer.selectedSource.sourceRiskDrivers}
           sourceChanged={sourceExplorer.sourceSwitch.changed}
           confidenceTier={sourceExplorer.selectedSource.confidenceTier}
+          sourceFreshness={ranking.provenance?.sourceFreshness}
+          warningSignals={ranking.warningSignals}
         />
       ) : null}
 

@@ -299,6 +299,10 @@ describe("YieldSourceSheet", () => {
       <YieldSourceSheet
         ranking={{
           ...makeRanking("usdc", "best-usdc", "alt-usdc"),
+          provenance: {
+            ...makeRanking("usdc", "best-usdc", "alt-usdc").provenance!,
+            sourceFreshness: "fresh",
+          },
           sourceRisk: { sourceRiskScore: null, sourceAgeSeconds: 90 * 60 },
         }}
         logo={undefined}
@@ -310,8 +314,8 @@ describe("YieldSourceSheet", () => {
     );
 
     const stamp = screen
-      .getAllByText("1h ago")
-      .find((node) => node.getAttribute("title") === "Source observed 1h ago (fresh)");
+      .getAllByText("Fresh · 1h ago")
+      .find((node) => node.getAttribute("title")?.startsWith("Published source freshness: Fresh."));
     expect(stamp).toBeTruthy();
   });
 
@@ -403,10 +407,15 @@ describe("YieldSourceSheet", () => {
 
   it("shows source-risk driver labels from the shared golden fixture", () => {
     const onOpenChange = vi.fn();
+    const baseRanking = makeRanking("usdc", "best-usdc", "alt-usdc");
     render(
       <YieldSourceSheet
         ranking={{
-          ...makeRanking("usdc", "best-usdc", "alt-usdc"),
+          ...baseRanking,
+          provenance: {
+            ...baseRanking.provenance!,
+            sourceFreshness: "stale",
+          },
           sourceRisk: mergeSourceRiskGoldenFixtures([
             "reward-heavy",
             "low-source-depth",

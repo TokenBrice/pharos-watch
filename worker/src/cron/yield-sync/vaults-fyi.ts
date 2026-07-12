@@ -65,6 +65,7 @@ function emptyTelemetry(overrides: Partial<VaultsFyiTelemetry> = {}): VaultsFyiT
     monthlyBudgetUtilization: null,
     monthlyBudgetWarning: false,
     monthlyRunsRemaining: null,
+    monthlyLedgerState: "unavailable",
     coverageBudgetState: "unavailable",
     rawVaultCount: 0,
     rankableCandidateCount: 0,
@@ -88,6 +89,7 @@ function getCurrentMonthBucket(nowSec: number): string {
 }
 
 export interface VaultsFyiCreditLedger {
+  state: "missing" | "valid" | "corrupt";
   generation: number;
   creditsEstimated: number;
   creditsReserved: number;
@@ -100,8 +102,9 @@ interface VaultsFyiCreditReservation extends VaultsFyiCreditLedger {
   ledgerValue: string;
 }
 
-function emptyCreditLedger(): VaultsFyiCreditLedger {
+function emptyCreditLedger(state: VaultsFyiCreditLedger["state"]): VaultsFyiCreditLedger {
   return {
+    state,
     generation: 0,
     creditsEstimated: 0,
     creditsReserved: 0,
@@ -111,43 +114,73 @@ function emptyCreditLedger(): VaultsFyiCreditLedger {
 }
 
 function parseCreditLedger(value: string | null | undefined, bucket: string, nowSec: number): VaultsFyiCreditLedger {
-  if (!value) return emptyCreditLedger();
+  if (value == null) return emptyCreditLedger("missing");
   try {
     const parsed = JSON.parse(value) as unknown;
-    if (!isRecord(parsed) || parsed.bucket !== bucket || typeof parsed.creditsEstimated !== "number") {
-      return emptyCreditLedger();
+    if (
+      !isRecord(parsed)
+      || parsed.bucket !== bucket
+      || !Number.isSafeInteger(parsed.creditsEstimated)
+      || (parsed.creditsEstimated as number) < 0
+    ) {
+      return emptyCreditLedger("corrupt");
     }
-    const creditsEstimated = Number.isFinite(parsed.creditsEstimated) && parsed.creditsEstimated > 0
-      ? Math.trunc(parsed.creditsEstimated)
-      : 0;
-    const generation = typeof parsed.generation === "number" && Number.isInteger(parsed.generation) && parsed.generation > 0
-      ? parsed.generation
-      : 0;
-    const reservationExpiresAt = typeof parsed.reservationExpiresAt === "number"
-      ? Math.trunc(parsed.reservationExpiresAt)
-      : null;
-    const creditsReserved = typeof parsed.creditsReserved === "number" && Number.isFinite(parsed.creditsReserved)
-      ? Math.max(0, Math.trunc(parsed.creditsReserved))
-      : 0;
+    const generation = parsed.generation == null
+      ? 0
+      : Number.isSafeInteger(parsed.generation)
+          && (parsed.generation as number) >= 0
+          && (parsed.generation as number) < Number.MAX_SAFE_INTEGER
+        ? parsed.generation as number
+        : null;
+    const creditsReserved = parsed.creditsReserved == null
+      ? 0
+      : Number.isSafeInteger(parsed.creditsReserved) && (parsed.creditsReserved as number) >= 0
+        ? parsed.creditsReserved as number
+        : null;
+    const reservationExpiresAt = parsed.reservationExpiresAt == null
+      ? null
+      : Number.isSafeInteger(parsed.reservationExpiresAt) && (parsed.reservationExpiresAt as number) > 0
+        ? parsed.reservationExpiresAt as number
+        : null;
+    const reservationId = parsed.reservationId == null
+      ? null
+      : typeof parsed.reservationId === "string" && parsed.reservationId.length > 0
+        ? parsed.reservationId
+        : null;
+    if (
+      generation == null
+      || creditsReserved == null
+      || (parsed.reservationExpiresAt != null && reservationExpiresAt == null)
+      || (parsed.reservationId != null && reservationId == null)
+      || (creditsReserved > 0 && (reservationId == null || reservationExpiresAt == null))
+      || (creditsReserved === 0 && (reservationId != null || reservationExpiresAt != null))
+    ) {
+      return emptyCreditLedger("corrupt");
+    }
     const reservationActive =
       reservationExpiresAt != null
       && reservationExpiresAt > nowSec
-      && typeof parsed.reservationId === "string";
+      && reservationId != null;
     // A crashed owner may have consumed any or all of its reserved credits
     // before losing the chance to finalize. Once its reservation is no longer
     // active, charge the full reservation conservatively. A successor CAS
     // persists this folded value, while repeated reads of the unchanged row do
     // not accumulate the charge again.
     const expiredReservationCharge = !reservationActive ? creditsReserved : 0;
+    const chargedCredits = (parsed.creditsEstimated as number) + expiredReservationCharge;
+    if (!Number.isSafeInteger(chargedCredits)) {
+      return emptyCreditLedger("corrupt");
+    }
     return {
+      state: "valid",
       generation,
-      creditsEstimated: creditsEstimated + expiredReservationCharge,
+      creditsEstimated: chargedCredits,
       creditsReserved: reservationActive ? creditsReserved : 0,
-      reservationId: reservationActive && typeof parsed.reservationId === "string" ? parsed.reservationId : null,
+      reservationId: reservationActive ? reservationId : null,
       reservationExpiresAt: reservationActive ? reservationExpiresAt : null,
     };
   } catch {
-    return emptyCreditLedger();
+    return emptyCreditLedger("corrupt");
   }
 }
 
@@ -162,7 +195,15 @@ export async function readMonthlyCredits(
 }
 
 function serializeMonthlyCredits(bucket: string, ledger: VaultsFyiCreditLedger): string {
-  return JSON.stringify({ version: 3, bucket, ...ledger });
+  return JSON.stringify({
+    version: 3,
+    bucket,
+    generation: ledger.generation,
+    creditsEstimated: ledger.creditsEstimated,
+    creditsReserved: ledger.creditsReserved,
+    reservationId: ledger.reservationId,
+    reservationExpiresAt: ledger.reservationExpiresAt,
+  });
 }
 
 async function compareAndSwapMonthlyCredits(
@@ -250,7 +291,9 @@ export async function reserveMonthlyCredits(
   const cached = await getCache(db, `${VAULTS_FYI_BUDGET_CACHE_PREFIX}:${bucket}`);
   const ledger = parseCreditLedger(cached?.value, bucket, nowSec);
   if (
-    ledger.generation !== expectedLedger.generation
+    ledger.state === "corrupt"
+    || ledger.state !== expectedLedger.state
+    || ledger.generation !== expectedLedger.generation
     || ledger.creditsEstimated !== expectedLedger.creditsEstimated
     || ledger.creditsReserved !== expectedLedger.creditsReserved
     || ledger.reservationId !== expectedLedger.reservationId
@@ -262,6 +305,7 @@ export async function reserveMonthlyCredits(
   }
   const reservationId = crypto.randomUUID();
   const nextLedger: VaultsFyiCreditLedger = {
+    state: "valid",
     generation: ledger.generation + 1,
     creditsEstimated: ledger.creditsEstimated,
     creditsReserved: credits,
@@ -292,6 +336,7 @@ export async function finalizeMonthlyCredits(
     reservation.bucket,
     reservation.ledgerValue,
     {
+      state: "valid",
       generation: reservation.generation + 1,
       creditsEstimated: reservation.creditsEstimated + creditsSpent,
       creditsReserved: 0,
@@ -602,6 +647,24 @@ export async function fetchVaultsFyiSources({
   const ledger = await readMonthlyCredits(db, bucket, startSec);
   let reservation: VaultsFyiCreditReservation | null = null;
   if (ledger) {
+    telemetry.monthlyLedgerState = ledger.state;
+    if (ledger.state === "corrupt") {
+      telemetry.status = "failed";
+      telemetry.skipReason = "credit-ledger-corrupt";
+      telemetry.creditsCap = 0;
+      telemetry.durationMs = Date.now() - startedAtMs;
+      logWorkerEvent({
+        scope: "lib",
+        level: "error",
+        event: "vaults_fyi_credit_ledger_corrupt",
+        job: "sync-yield-supplemental",
+        provider: "vaults-fyi",
+        source: "credit-ledger",
+        message: "vaults.fyi paid-source fetch blocked because the monthly credit ledger is corrupt",
+        metadata: { bucket },
+      });
+      return { candidates: [], telemetry };
+    }
     const plan = buildVaultsFyiBudgetPlan({
       nowSec: startSec,
       creditsEstimated: ledger.creditsEstimated,

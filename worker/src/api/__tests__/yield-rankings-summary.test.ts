@@ -142,6 +142,7 @@ describe("handleYieldRankings summary projection", () => {
             sourceKey: "selected-source",
             calculationMode: "market-api",
             evidenceClass: "direct-first-party",
+            sourceFreshness: "fresh",
           },
         },
       ],

@@ -57,6 +57,7 @@ function getSourcePosture(row: YieldWorkbenchRanking, sourceDepthLens: YieldSour
     sourceTvlUsd: row.sourceTvlUsd,
     sourceDepthLens,
     sourceChanged: row.provenance?.sourceSwitch ?? false,
+    sourceFreshness: row.provenance?.sourceFreshness,
     warningSignals: row.warningSignals,
   });
 }
