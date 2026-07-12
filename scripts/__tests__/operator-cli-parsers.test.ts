@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parseWorkerDeploymentArgs } from "../../.github/scripts/deploy-worker-version.mjs";
+import { parseWranglerRetryArgs } from "../../.github/scripts/retry-wrangler-control-plane.mjs";
 import { parseWorkflowWaitArgs } from "../../.github/scripts/wait-for-workflow-job.mjs";
 import { parseWorkerDeployGuardArgs } from "../ci/guard-worker-deploy.mjs";
 import { syncJson } from "../lib/sync-from-api";
@@ -165,6 +166,19 @@ describe("priority operator CLI parsers", () => {
     expect(() => parseWorkflowWaitArgs(["--job", "one", "--job", "two"])).toThrow(
       "may only be specified once",
     );
+  });
+
+  it("strictly bounds the Wrangler control-plane retry contract", () => {
+    expect(parseWranglerRetryArgs(["--operation", "version-upload", "--attempts", "4"]))
+      .toMatchObject({ attempts: 4, operation: "version-upload" });
+    expect(() => parseWranglerRetryArgs(["--operation", "unknown"])).toThrow("must be deployment-status");
+    expect(() => parseWranglerRetryArgs(["--operation", "deployment-status", "--attempts", "0"]))
+      .toThrow("must be between");
+    expect(() =>
+      parseWranglerRetryArgs(["--operation", "deployment-status", "--operation", "version-upload"]),
+    ).toThrow("may only be specified once");
+    expect(() => parseWranglerRetryArgs(["--operation", "deployment-status", "--unknown"]))
+      .toThrow("Unknown option");
   });
 });
 

@@ -92,8 +92,13 @@ jobs:
       - name: Capture current production version
         id: current-deployment
         run: |
-          cd worker
-          npx --no-install wrangler deployments status --json > /tmp/wrangler-deployment-status.json
+          node .github/scripts/retry-wrangler-control-plane.mjs \
+            --operation deployment-status \
+            --attempts 4 \
+            --base-delay-sec 5 \
+            --cwd worker \
+            --log-file /tmp/wrangler-deployment-status.log \
+            --stdout-file /tmp/wrangler-deployment-status.json
           node <<'NODE' >> "$GITHUB_OUTPUT"
           const fs = require("node:fs");
           const status = JSON.parse(fs.readFileSync("/tmp/wrangler-deployment-status.json", "utf8"));
@@ -106,13 +111,16 @@ jobs:
         env:
           WRANGLER_OUTPUT_FILE_PATH: /tmp/wrangler-output.jsonl
         run: |
-          rm -f "$WRANGLER_OUTPUT_FILE_PATH"
-          cd worker
           set +e
-          npx --no-install wrangler versions upload --message "GitHub Actions candidate ${GITHUB_SHA}" 2>&1 | tee /tmp/wrangler-versions-upload.log
-          upload_status="${PIPESTATUS[0]}"
+          node .github/scripts/retry-wrangler-control-plane.mjs \
+            --operation version-upload \
+            --attempts 4 \
+            --base-delay-sec 5 \
+            --cwd worker \
+            --log-file /tmp/wrangler-versions-upload.log \
+            --message "GitHub Actions candidate ${GITHUB_SHA}"
+          upload_status="$?"
           set -e
-          cd ..
 
           if [ "$upload_status" -ne 0 ]; then
             if grep -q "entitlements.not_available \\[code: 10007\\]" /tmp/wrangler-versions-upload.log; then

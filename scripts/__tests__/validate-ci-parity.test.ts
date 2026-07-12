@@ -450,8 +450,10 @@ describe("validate-ci parity", () => {
     expect(uploadWorkerJob).not.toContain("Smoke uploaded preview worker");
     expect(uploadWorkerJob).toContain("uses: ./.github/actions/setup-workspace");
     expect(uploadWorkerJob).not.toContain("node-version:");
-    expect(uploadWorkerJob).toContain("npx --no-install wrangler deployments status --json");
-    expect(uploadWorkerJob).toContain("npx --no-install wrangler versions upload");
+    expect(uploadWorkerJob).toContain("node .github/scripts/retry-wrangler-control-plane.mjs");
+    expect(uploadWorkerJob).toContain("--operation deployment-status");
+    expect(uploadWorkerJob).toContain("--operation version-upload");
+    expect(uploadWorkerJob).toContain("--attempts 4");
     expect(uploadWorkerJob).toContain("entitlements.not_available \\\\[code: 10007\\\\]");
     expect(uploadWorkerJob).toContain("version_upload_unavailable=true");
     expect(uploadWorkerJob).toContain("reduced rollback safety");

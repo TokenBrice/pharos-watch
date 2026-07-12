@@ -22,6 +22,7 @@ export const CLI_ARGV_EXEMPTION_CATEGORIES = Object.freeze({
 export const CLI_ARGV_POLICY = Object.freeze({
   strict: Object.freeze([
     strict(".github/scripts/deploy-worker-version.mjs"),
+    strict(".github/scripts/retry-wrangler-control-plane.mjs"),
     strict(".github/scripts/wait-for-workflow-job.mjs"),
     strict("scripts/ci/guard-worker-deploy.mjs"),
     strict("scripts/maintenance/backfill-ai-summary-provenance.mjs"),
