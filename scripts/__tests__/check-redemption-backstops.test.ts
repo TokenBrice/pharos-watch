@@ -79,8 +79,10 @@ describe("check-redemption-backstops CLI", () => {
       capacityFallbackSource: expect.any(String),
     });
     expect(report.auditRows[0]).toHaveProperty("reviewedAt");
-    expect(report.auditRows.find((row: { stablecoinId: string }) => row.stablecoinId === "ybold-yearn")).toMatchObject({
-      filePath: "shared/lib/redemption-backstop-configs/stablecoin-redeem/ybold-yearn.ts",
+    expect(
+      report.auditRows.find((row: { stablecoinId: string }) => row.stablecoinId === "ybold-yearn"),
+    ).toMatchObject({
+      filePath: "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
     });
     expect(
       report.auditRows.find((row: { stablecoinId: string }) => row.stablecoinId === "fdusd-first-digital"),

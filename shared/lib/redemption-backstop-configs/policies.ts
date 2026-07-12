@@ -51,7 +51,7 @@ const SCOREABLE_REDEMPTION_FRESHNESS_KINDS = new Set<RedemptionLiveFreshnessKind
 //     is admin-configurable on the proxy (verified zero on-chain at review time).
 //     If the admin sets a non-zero fee the static 0-bps assumption silently goes
 //     wrong. Wire the live proxy fee into telemetry so the cost model tracks it.
-//     See stablecoin-redeem/eearn-ember.ts.
+//     See stablecoin-redeem/configs.ts.
 export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPolicyEntry[] = [
   {
     kind: "unverified-freshness",

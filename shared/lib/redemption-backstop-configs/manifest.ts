@@ -10,7 +10,7 @@ import {
 import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "./offchain-issuer/index";
 import { PSM_AND_BASKET_BACKSTOP_CONFIGS } from "./psm-and-basket";
 import { QUEUE_REDEEM_BACKSTOP_CONFIGS } from "./queue-redeem";
-import { STABLECOIN_REDEEM_BACKSTOP_CONFIGS } from "./stablecoin-redeem/index";
+import { STABLECOIN_REDEEM_BACKSTOP_CONFIGS } from "./stablecoin-redeem/configs";
 
 export interface RedemptionBackstopConfigManifestEntry {
   name: string;
@@ -51,7 +51,7 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   },
   {
     name: "stablecoin-redeem",
-    filePath: "shared/lib/redemption-backstop-configs/stablecoin-redeem/index.ts",
+    filePath: "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
     configs: STABLECOIN_REDEEM_BACKSTOP_CONFIGS,
     allowedRouteFamilies: ["stablecoin-redeem"],
     reviewerLane: "protocol stablecoin redemption rails",

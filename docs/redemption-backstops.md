@@ -363,7 +363,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 ## Frontend Consumers
 
-- `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()`, wired through `FRONTEND_API_QUERY_REGISTRY.redemptionBackstops` in `src/lib/api-query-registry.ts` with the `CRON_RESERVE_SYNC` producer interval (4-hour reserve lane cadence)
+- `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()`, wired through `FRONTEND_API_QUERY_DESCRIPTORS.redemptionBackstops` in `src/lib/api-query-descriptors.ts` with the `CRON_RESERVE_SYNC` producer interval (4-hour reserve lane cadence)
 - `src/hooks/use-stablecoin-detail-view-model.ts` fetches the map and passes the coin-specific entry into the stablecoin detail view model
 - `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, resolution state, route status, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions)
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail

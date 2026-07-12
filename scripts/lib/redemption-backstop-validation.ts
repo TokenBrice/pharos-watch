@@ -184,7 +184,6 @@ export function validateRedemptionBackstopRegistry(
       sourceFileById.set(id, sourceFilePath);
     }
   }
-  inferStaticConfigSourceFilePaths(manifest, options.sourceTextByPath, sourceFileById);
   const findings: RedemptionRegistryFinding[] = [];
   const seenById = new Map<string, string>();
   const ownerById = new Map<string, RedemptionBackstopConfigManifestEntry>();
@@ -897,19 +896,6 @@ function isAsciiWordChar(char: string): boolean {
   );
 }
 
-function collectVariableDeclarationFiles(
-  node: ts.Node,
-  filePath: string,
-  declarationFileByIdentifier: Map<string, string>,
-): void {
-  if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
-    declarationFileByIdentifier.set(node.name.text, filePath);
-  }
-  ts.forEachChild(node, (child) =>
-    collectVariableDeclarationFiles(child, filePath, declarationFileByIdentifier),
-  );
-}
-
 function isBackstopConfigsDecl(
   node: ts.Node,
 ): node is ts.VariableDeclaration & { name: ts.Identifier; initializer: ts.ObjectLiteralExpression } {
@@ -920,51 +906,6 @@ function isBackstopConfigsDecl(
     node.initializer != null &&
     ts.isObjectLiteralExpression(node.initializer)
   );
-}
-
-function resolveRegistrySourceFiles(
-  node: ts.Node,
-  moduleFilePath: string,
-  declarationFileByIdentifier: ReadonlyMap<string, string>,
-  sourceFileById: Map<string, string>,
-): void {
-  if (isBackstopConfigsDecl(node)) {
-    for (const property of node.initializer.properties) {
-      if (!ts.isPropertyAssignment(property)) continue;
-      const id = propertyNameText(property.name);
-      if (!id || sourceFileById.has(id)) continue;
-      const initializer = unwrapExpression(property.initializer);
-      if (!ts.isIdentifier(initializer)) continue;
-      const sourceFilePath = declarationFileByIdentifier.get(initializer.text);
-      if (sourceFilePath && sourceFilePath !== moduleFilePath) {
-        sourceFileById.set(id, sourceFilePath);
-      }
-    }
-  }
-  ts.forEachChild(node, (child) =>
-    resolveRegistrySourceFiles(child, moduleFilePath, declarationFileByIdentifier, sourceFileById),
-  );
-}
-
-function inferStaticConfigSourceFilePaths(
-  manifest: readonly RedemptionBackstopConfigManifestEntry[],
-  sourceTextByPath: ReadonlyMap<string, string> | undefined,
-  sourceFileById: Map<string, string>,
-): void {
-  if (!sourceTextByPath) return;
-
-  const declarationFileByIdentifier = new Map<string, string>();
-  for (const [filePath, sourceText] of sourceTextByPath) {
-    const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true);
-    collectVariableDeclarationFiles(sourceFile, filePath, declarationFileByIdentifier);
-  }
-
-  for (const moduleEntry of manifest) {
-    const sourceText = sourceTextByPath.get(moduleEntry.filePath);
-    if (sourceText == null) continue;
-    const sourceFile = ts.createSourceFile(moduleEntry.filePath, sourceText, ts.ScriptTarget.Latest, true);
-    resolveRegistrySourceFiles(sourceFile, moduleEntry.filePath, declarationFileByIdentifier, sourceFileById);
-  }
 }
 
 function validateStaticConfigOverwrites(
@@ -1097,17 +1038,6 @@ function propertyNameText(name: ts.PropertyName | ts.BindingName): string | unde
     return name.text;
   }
   return undefined;
-}
-
-function unwrapExpression(expression: ts.Expression): ts.Expression {
-  if (
-    ts.isAsExpression(expression) ||
-    ts.isSatisfiesExpression(expression) ||
-    ts.isParenthesizedExpression(expression)
-  ) {
-    return unwrapExpression(expression.expression);
-  }
-  return expression;
 }
 
 function collectStringArray(expression: ts.Expression | undefined): string[] | null {
