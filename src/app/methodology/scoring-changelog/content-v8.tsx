@@ -1,8 +1,8 @@
-import { VersionCard, getScoringEntry } from "./content-shared";
+import type { ReactNode } from "react";
 
-export function ScoringChangelogV813Entry() {
-  return (
-    <VersionCard entry={getScoringEntry("8.13")}>
+export const scoringChangelogV8Details: Record<string, ReactNode> = {
+  "8.13": (
+    <>
       <p>
         Dependency Risk now falls back to curated reserve links or manual dependencies when a score-grade live reserve
         snapshot contains no mapped tracked-asset links at all.
@@ -21,13 +21,10 @@ export function ScoringChangelogV813Entry() {
           live-unmapped dependency sets; curated/manual fallback dependencies report false.
         </li>
       </ul>
-    </VersionCard>
-  );
-}
-
-export function ScoringChangelogV812Entry() {
-  return (
-    <VersionCard entry={getScoringEntry("8.12")}>
+    </>
+  ),
+  "8.12": (
+    <>
       <p>
         Reviewed bridge-route profiles now feed Decentralization through a penalty-only blend after CDP oracle scoring
         and before Mint Authority:{" "}
@@ -46,13 +43,10 @@ export function ScoringChangelogV812Entry() {
           metadata.
         </li>
       </ul>
-    </VersionCard>
-  );
-}
-
-export function ScoringChangelogV811Entry() {
-  return (
-    <VersionCard entry={getScoringEntry("8.11")}>
+    </>
+  ),
+  "8.11": (
+    <>
       <p>
         Oracle-risk reviews now carry provenance and optional branch rows. When a CDP profile has branch-level oracle
         tiers, the Decentralization blend uses the weakest branch/profile score so multi-collateral systems are scored
@@ -72,13 +66,10 @@ export function ScoringChangelogV811Entry() {
           review of the 25% blend weight.
         </li>
       </ul>
-    </VersionCard>
-  );
-}
-
-export function ScoringChangelogV81Entry() {
-  return (
-    <VersionCard entry={getScoringEntry("8.1")}>
+    </>
+  ),
+  "8.1": (
+    <>
       <p>
         Crypto-backed CDP stablecoins can now carry a reviewed oracle-risk profile. When one is present,
         Decentralization applies a penalty-only oracle setup blend —{" "}
@@ -99,13 +90,10 @@ export function ScoringChangelogV81Entry() {
           failover. Other CDPs stay unchanged until reviewed oracle metadata is curated.
         </li>
       </ul>
-    </VersionCard>
-  );
-}
-
-export function ScoringChangelogV80Entry() {
-  return (
-    <VersionCard entry={getScoringEntry("8.0")}>
+    </>
+  ),
+  "8.0": (
+    <>
       <p>
         The Mint Authority Score becomes a Safety Score input: the Decentralization dimension now applies a penalty-only
         blend — <span className="pharos-numeric">min(current, 0.65 × current + 0.35 × MAS)</span> — so a weak
@@ -128,18 +116,6 @@ export function ScoringChangelogV80Entry() {
           protocols, while issuers whose governance scores already reflect their mint topology are unchanged.
         </li>
       </ul>
-    </VersionCard>
-  );
-}
-
-export function ScoringChangelogV8Entries() {
-  return (
-    <>
-      <ScoringChangelogV813Entry />
-      <ScoringChangelogV812Entry />
-      <ScoringChangelogV811Entry />
-      <ScoringChangelogV81Entry />
-      <ScoringChangelogV80Entry />
     </>
-  );
-}
+  ),
+};

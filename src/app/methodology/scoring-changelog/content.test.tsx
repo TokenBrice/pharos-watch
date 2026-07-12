@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/safety-score-version";
-import { ScoringChangelogContent, scoringAnchorId } from "./content";
+import { ScoringChangelogContent, scoringAnchorId, scoringChangelogDetails } from "./content";
 
 describe("ScoringChangelogContent", () => {
   it("preserves the version anchor and quick-reference rendering contracts", () => {
@@ -28,5 +28,22 @@ describe("ScoringChangelogContent", () => {
     for (const entry of SAFETY_SCORE_METHODOLOGY_CHANGELOG) {
       expect(html).toContain(`id="${scoringAnchorId(`v${entry.version}`)}"`);
     }
+  });
+
+  it("has exactly one detail entry for every machine changelog version", () => {
+    expect(Object.keys(scoringChangelogDetails).sort()).toEqual(
+      SAFETY_SCORE_METHODOLOGY_CHANGELOG.map((entry) => entry.version).sort(),
+    );
+  });
+
+  it("renders version-card anchors in machine changelog order", () => {
+    const html = renderToStaticMarkup(<ScoringChangelogContent />);
+    const expectedAnchors = SAFETY_SCORE_METHODOLOGY_CHANGELOG.map((entry) => scoringAnchorId(`v${entry.version}`));
+    const expectedAnchorSet = new Set(expectedAnchors);
+    const anchors = Array.from(html.matchAll(/id="([^"]+)"/g), (match) => match[1]).filter((id) =>
+      expectedAnchorSet.has(id),
+    );
+
+    expect(anchors).toEqual(expectedAnchors);
   });
 });

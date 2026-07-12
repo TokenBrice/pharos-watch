@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/safety-score-version";
 import {
   formatMethodologyDisplayDate,
   toMethodologyVersionLabel,
@@ -9,18 +8,8 @@ import { slugifyId } from "@shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 
-const SCORING_CHANGELOG_BY_VERSION = new Map(SAFETY_SCORE_METHODOLOGY_CHANGELOG.map((entry) => [entry.version, entry]));
-
 export function scoringAnchorId(version: string) {
   return `scoring-${slugifyId(version)}`;
-}
-
-export function getScoringEntry(version: string): MethodologyChangelogEntry {
-  const entry = SCORING_CHANGELOG_BY_VERSION.get(version);
-  if (!entry) {
-    throw new Error(`Missing Safety Score changelog entry for ${version}`);
-  }
-  return entry;
 }
 
 function Pill({ children }: { children: ReactNode }) {
