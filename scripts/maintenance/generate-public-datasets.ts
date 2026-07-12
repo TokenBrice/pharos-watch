@@ -57,10 +57,10 @@ const ALLOW_STUB_MODE = process.argv.includes("--allow-stub") || process.env.PUB
 const REQUIRE_API_SOURCE = process.env.PUBLIC_DATASETS_REQUIRE_API === "1";
 const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
   "top-stablecoins": 493,
-  // depeg-history floor reflects the post-rework incident model (rolling
-  // cutoff over deduplicated events, ~333 live rows on 2026-07-08), not the
-  // pre-rework 2068-row legacy corpus the 2026-05-16 mirror was built from.
-  "depeg-history": 300,
+  // A fixed floor is invalid for this rolling window because legitimate event
+  // volume can decline. Live generation separately proves that the fetched
+  // source crosses the retention boundary before accepting the projection.
+  "depeg-history": 1,
   "scores-latest": 493,
   "peg-mechanism-distribution": 99,
 };
@@ -671,6 +671,20 @@ function cutoffSecForSnapshotDate(snapshotDate: string): number {
   return Math.floor(new Date(`${snapshotDate}T00:00:00Z`).getTime() / 1000) - RETENTION_DAYS * 86_400;
 }
 
+function validateDepegHistoryCoverage(events: readonly DepegEvent[], snapshotDate: string): void {
+  const cutoffSec = cutoffSecForSnapshotDate(snapshotDate);
+  const oldestStartedAt = events.reduce(
+    (oldest, event) => Math.min(oldest, event.startedAt),
+    Number.POSITIVE_INFINITY,
+  );
+  if (oldestStartedAt >= cutoffSec) {
+    throw new Error(
+      `Depeg event source does not cover the ${RETENTION_DAYS}-day export window for ${snapshotDate}; ` +
+        "refusing a potentially truncated public dataset.",
+    );
+  }
+}
+
 function asOfIsoFromEnvelope(envelope: SnapshotEnvelope, snapshotDate: string): string {
   if (envelope.methodologyVersions.source === "live-endpoint-fallback") {
     return new Date(Math.max(Date.now(), envelope.generatedAt * 1000)).toISOString();
@@ -718,6 +732,7 @@ export async function loadPublicDatasetLiveInputs(
   if (!depegEvents) {
     throw new Error("Unable to fetch depeg events for public dataset generation.");
   }
+  validateDepegHistoryCoverage(depegEvents, effectiveSnapshotDate);
 
   return { envelope, depegEvents, effectiveSnapshotDate, asOfISO };
 }
@@ -764,6 +779,7 @@ export const testExports = {
   checkTopic,
   cutoffSecForSnapshotDate,
   projectDepegHistory,
+  validateDepegHistoryCoverage,
   validateTopicRowFloor,
 };
 

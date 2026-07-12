@@ -74,6 +74,14 @@ function makeEvent(pendingReason: string | null) {
   };
 }
 
+function makeBoundaryEvent(snapshotDate: string) {
+  return {
+    ...makeEvent(null),
+    id: 43,
+    startedAt: testExports.cutoffSecForSnapshotDate(snapshotDate) - 60,
+  };
+}
+
 describe("generate-public-datasets", () => {
   it("fails closed when no API source is configured outside explicit stub mode", async () => {
     const { stderr } = await execFileAsync(
@@ -110,7 +118,7 @@ describe("generate-public-datasets", () => {
         return jsonResponse(makeEnvelope("2026-05-15"));
       }
       if (href.endsWith("/api/depeg-events?limit=1000")) {
-        return jsonResponse({ events: [makeEvent("large-cap")] });
+        return jsonResponse({ events: [makeEvent("large-cap"), makeBoundaryEvent("2026-05-15")] });
       }
       return jsonResponse({ error: "unexpected" }, { status: 500 });
     });
@@ -159,7 +167,7 @@ describe("generate-public-datasets", () => {
         return jsonResponse({ "usdc-circle": { liquidityScore: 95, coverageClass: "deep" } });
       }
       if (href.endsWith("/api/depeg-events?limit=1000")) {
-        return jsonResponse({ events: [makeEvent("low-confidence")] });
+        return jsonResponse({ events: [makeEvent("low-confidence"), makeBoundaryEvent("2026-05-16")] });
       }
       return jsonResponse({ error: "unexpected" }, { status: 500 });
     });
@@ -246,6 +254,26 @@ describe("generate-public-datasets", () => {
     );
   });
 
+  it("rejects a depeg event response that does not cover the rolling export window", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL | Request) => {
+        const href = String(url);
+        if (href.endsWith("/api/snapshots/2026-05-16.json")) {
+          return jsonResponse(makeEnvelope("2026-05-16"));
+        }
+        if (href.endsWith("/api/depeg-events?limit=1000")) {
+          return jsonResponse({ events: [makeEvent(null)] });
+        }
+        return jsonResponse({ error: "unexpected" }, { status: 500 });
+      }),
+    );
+
+    await expect(loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16")).rejects.toThrow(
+      "does not cover the 90-day export window",
+    );
+  });
+
   it("does not drop confirmed depeg events that retain pendingReason provenance", () => {
     const rows = testExports.projectDepegHistory([makeEvent("low-confidence")], "2026-05-16");
 
@@ -261,6 +289,16 @@ describe("generate-public-datasets", () => {
     const rows = testExports.projectDepegHistory([tiedHighId, later, tiedLowId], "2026-05-16");
 
     expect(rows.map((row) => row.id)).toEqual([3, 2, 9]);
+  });
+
+  it("uses source coverage instead of a volatile fixed floor for rolling depeg history", () => {
+    expect(() => testExports.validateTopicRowFloor("depeg-history", [makeEvent(null)])).not.toThrow();
+    expect(() =>
+      testExports.validateDepegHistoryCoverage(
+        [makeEvent(null), makeBoundaryEvent("2026-05-16")],
+        "2026-05-16",
+      ),
+    ).not.toThrow();
   });
 
   it("rejects empty live-backed dataset rows and checked artifacts", async () => {
