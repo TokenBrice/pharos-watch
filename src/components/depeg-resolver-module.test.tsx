@@ -12,7 +12,7 @@ import {
   type DdrResponse,
   type DdrRow,
   type DdrV2ResponseRow,
-} from "@shared/types";
+} from "@shared/types/depeg-resolver";
 
 vi.mock("@/lib/feature-flags", () => ({
   isDepegResolverEnabled: () => true,
