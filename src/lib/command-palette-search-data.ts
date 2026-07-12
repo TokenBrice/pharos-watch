@@ -342,7 +342,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["fxd-fathom", "Fathom Dollar", "FXD"],
   ["usdv-solomon", "Solomon USDv", "USDV"],
   ["ussd-sonic-labs", "US Sonic Dollar", "USSD"],
-  ["usdpt-western-union", "US Dollar Payment Token", "USDPT", "pre-launch"],
+  ["usdpt-western-union", "US Dollar Payment Token", "USDPT"],
   ["roughrider-bnd", "Roughrider Coin", "ROUGHRIDER", "pre-launch"],
   ["fiusd-fiserv", "Fiserv USD", "FIUSD", "pre-launch"],
   ["eur-qivalis", "Qivalis Euro", "QEUR", "pre-launch"],

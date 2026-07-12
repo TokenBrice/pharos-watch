@@ -116,17 +116,8 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "status": "pre-launch",
+  "status": "active",
   "announcedDate": "2025-10",
-  "expectedLaunchDate": "2026-05",
-  "dateHistory": [
-    {
-      "date": "2026-Q2",
-      "setOn": "2026-05-03"
-    }
-  ],
-  "launchPhase": "launching-soon",
-  "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian. As of late May 2026 DefiLlama tracks USDPT with ~$1.5M circulating against a verified Solana mint (HVWf8JmLoHs99Lw8Psf3fyqAtA4crWxCPkrmSdNjhNH3); the CoinGecko entry (usdpt-western-union) remains preview-only with no price feed, so promotion to active is pending confirmation of a fetchable runtime price path. On June 4 2026 Bybit became the first major exchange to list USDPT, adding LatAm fiat on/off-ramp access",
   "featuredContent": [
     {
       "type": "tweet",

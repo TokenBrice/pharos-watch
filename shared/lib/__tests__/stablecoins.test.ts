@@ -125,7 +125,6 @@ describe("tracked stablecoin metadata", () => {
     expect(ACTIVE_STABLECOINS.length + inactiveStablecoinCount).toBe(TRACKED_STABLECOINS.length);
     expect(new Set(partitionIds).size).toBe(TRACKED_STABLECOINS.length);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
-      "usdpt-western-union",
       "roughrider-bnd",
       "fiusd-fiserv",
       "eur-qivalis",
