@@ -118,6 +118,10 @@ export async function readResponseTextWithinLimitWithSignal(
 
   try {
     for (;;) {
+      if (signal?.aborted) {
+        await reader.cancel(abortReason(signal)).catch(() => undefined);
+        throw abortReason(signal);
+      }
       const result = abortPromise
         ? await Promise.race([reader.read(), abortPromise])
         : await reader.read();

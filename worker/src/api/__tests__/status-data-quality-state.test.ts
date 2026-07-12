@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   handleStatus,
   makeCacheRow,
@@ -11,6 +11,9 @@ import {
 } from "./status.test-support";
 
 describe("handleStatus", () => {
+  beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.now());
+  });
   afterEach(cleanupStatusTest);
   it("marks on-chain monitor unavailable instead of forcing stale data quality", async () => {
     const now = Math.floor(Date.now() / 1000);
