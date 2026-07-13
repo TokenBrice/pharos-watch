@@ -34,6 +34,11 @@ import {
   type ReportCardDexEvidenceInput,
 } from "@shared/lib/report-card-liquidity-evidence";
 import {
+  resolveBridgeRouteMateriality,
+  type BridgeChainCirculating,
+  type BridgeRouteMaterialityResult,
+} from "@shared/lib/bridge-route-materiality";
+import {
   computeMintAuthorityScore,
   stablecoinToMintAuthorityScoringInput,
   type MintAuthorityParentResolver,
@@ -56,6 +61,7 @@ import type {
 } from "@shared/types/report-cards";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { LiveReserveSnapshotProvenance } from "./live-reserves-store";
+import type { SameNotionalExitScoringMode } from "@shared/lib/redemption-backstop-scoring";
 
 export interface ComputeCardInput {
   meta: (typeof ACTIVE_STABLECOINS)[number];
@@ -81,6 +87,12 @@ export interface ComputeCardInput {
   dependencies: DependencyWeight[];
   dependencySet: DerivedDependencySet;
   dependencySnapshotProvenance?: LiveReserveSnapshotProvenance;
+  bridgeRouteMateriality: BridgeRouteMaterialityResult;
+  sameNotionalScoringMode?: SameNotionalExitScoringMode;
+  exitObservationAsOfSec?: number;
+  maxExitObservationAgeSec?: number;
+  circulatingSupplyUsd?: number | null;
+  impairedOutputAssetIds?: readonly string[];
 }
 
 export interface BuildLiveReportCardsInput {
@@ -92,6 +104,10 @@ export interface BuildLiveReportCardsInput {
   resolvedBlacklistStatuses: Map<string, BlacklistStatus>;
   liveReserveMap: Map<string, ReserveSlice[]>;
   liveReserveProvenanceMap?: ReadonlyMap<string, LiveReserveSnapshotProvenance>;
+  chainCirculatingById?: ReadonlyMap<string, BridgeChainCirculating>;
+  sameNotionalScoringMode?: SameNotionalExitScoringMode;
+  exitObservationAsOfSec?: number;
+  maxExitObservationAgeSec?: number;
 }
 
 export interface BuildLiveReportCardsResult {
@@ -276,7 +292,10 @@ function projectOracleRiskForReportCard(
   };
 }
 
-function projectBridgeRouteRiskForReportCard(meta: StablecoinMeta): ReportCardBridgeRouteRisk | null {
+function projectBridgeRouteRiskForReportCard(
+  meta: StablecoinMeta,
+  materiality: BridgeRouteMaterialityResult,
+): ReportCardBridgeRouteRisk | null {
   const resolved = resolveBridgeRouteRiskScore(meta);
   if (!resolved || !meta.bridgeRouteRisk) return null;
 
@@ -290,6 +309,15 @@ function projectBridgeRouteRiskForReportCard(meta: StablecoinMeta): ReportCardBr
     confidence: meta.bridgeRouteRisk.confidence,
     protocols: meta.bridgeRouteRisk.protocols,
     sources: meta.bridgeRouteRisk.sources,
+    materiality: {
+      status: materiality.status,
+      effectiveTier: materiality.effectiveTier,
+      selectedRouteId: materiality.selectedRouteId,
+      matchedSupplyRatio: materiality.matchedSupplyRatio,
+      unknownSupplyRatio: materiality.unknownSupplyRatio,
+      unknownChains: materiality.unknownChains,
+      reason: materiality.reason,
+    },
   };
 }
 
@@ -308,6 +336,7 @@ function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMint
     dependencies,
     dependencySet,
     dependencySnapshotProvenance,
+    bridgeRouteMateriality,
   } = input;
   const resolvedPeg = resolvePegInput(meta, pegDataById);
   const peg = resolvedPeg.peg;
@@ -360,7 +389,14 @@ function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMint
       inheritedFromReference: resolvedPeg.inheritedFromReference,
       pegReferenceMeta: resolvedPeg.pegReferenceMeta,
     }),
-    liquidity: scoreLiquidity(liq, redemption, { activeDepegBps }),
+    liquidity: scoreLiquidity(liq, redemption, {
+      activeDepegBps,
+      circulatingSupplyUsd: input.circulatingSupplyUsd,
+      sameNotionalScoringMode: input.sameNotionalScoringMode,
+      exitObservationAsOfSec: input.exitObservationAsOfSec,
+      maxExitObservationAgeSec: input.maxExitObservationAgeSec,
+      impairedOutputAssetIds: input.impairedOutputAssetIds,
+    }),
     resilience: scoreResilience(meta, blacklistStatus, liveSlices),
     decentralization: decentralization.dimension,
     dependencyRisk: scoreDependencyRisk(
@@ -378,7 +414,7 @@ function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMint
   const oracleRisk = resolveOracleRiskScore(meta);
   const bridgeRouteRisk = resolveBridgeRouteRiskScore(meta);
   const oracleRiskProfile = projectOracleRiskForReportCard(meta, wrappedAssetDependency);
-  const bridgeRouteRiskProfile = projectBridgeRouteRiskForReportCard(meta);
+  const bridgeRouteRiskProfile = projectBridgeRouteRiskForReportCard(meta, bridgeRouteMateriality);
   const overall = applyVariantOverallCap(
     computeOverallGrade(dimensions, { navToken, activeDepegBps }),
     meta.variantOf != null ? (overallScores.get(meta.variantOf) ?? null) : null,
@@ -429,6 +465,14 @@ function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMint
     oracleRiskScore: oracleRisk?.score ?? null,
     bridgeRouteRiskTier: bridgeRouteRisk?.tier ?? null,
     bridgeRouteRiskScore: bridgeRouteRisk?.score ?? null,
+    bridgeRouteEffectiveTier: bridgeRouteMateriality.effectiveTier,
+    bridgeRouteMaterialityStatus: bridgeRouteMateriality.status,
+    bridgeRouteMatchedSupplyRatio:
+      bridgeRouteMateriality.totalSupplyUsd > 0 ? bridgeRouteMateriality.matchedSupplyRatio : null,
+    bridgeRouteUnknownSupplyRatio:
+      bridgeRouteMateriality.totalSupplyUsd > 0 ? bridgeRouteMateriality.unknownSupplyRatio : null,
+    bridgeRouteSelectedRouteId: bridgeRouteMateriality.selectedRouteId,
+    bridgeRouteUnknownChains: bridgeRouteMateriality.unknownChains,
     dependencies,
     variantParentId: meta.variantOf ?? null,
     variantKind: meta.variantKind ?? null,
@@ -553,6 +597,10 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
   const decentralizationScores = new Map<string, number>();
   const blendedDecentralizationScores = new Map<string, number>();
   const liveCards: ReportCard[] = [];
+  const impairedOutputAssetIds = [...input.pegDataById.entries()]
+    .filter(([, peg]) => peg.activeDepeg)
+    .map(([id]) => id)
+    .sort();
 
   for (const meta of sortedMetas) {
     const { card, preMintAuthorityScore } = computeReportCard({
@@ -570,6 +618,15 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
       dependencies: dependenciesById.get(meta.id) ?? [],
       dependencySet: dependencySetsById.get(meta.id)!,
       dependencySnapshotProvenance: input.liveReserveProvenanceMap?.get(meta.id),
+      bridgeRouteMateriality: resolveBridgeRouteMateriality(meta, input.chainCirculatingById?.get(meta.id)),
+      sameNotionalScoringMode: input.sameNotionalScoringMode,
+      exitObservationAsOfSec: input.exitObservationAsOfSec,
+      maxExitObservationAgeSec: input.maxExitObservationAgeSec,
+      circulatingSupplyUsd: Object.values(input.chainCirculatingById?.get(meta.id) ?? {}).reduce((sum, point) => {
+        const current = point?.current;
+        return sum + (typeof current === "number" && Number.isFinite(current) && current >= 0 ? current : 0);
+      }, 0),
+      impairedOutputAssetIds,
     });
     liveCards.push(card);
     if (card.overallScore !== null) {

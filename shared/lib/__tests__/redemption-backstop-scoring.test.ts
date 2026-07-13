@@ -9,6 +9,7 @@ import {
   computeRedemptionBackstopScore,
   isStrongLiveDirectRoute,
   REDEMPTION_EFFECTIVE_EXIT_MODEL,
+  SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY,
 } from "../redemption-backstop-scoring";
 import type { ExitRouteObservation } from "../../types/market";
 import { RedemptionCapacityProfileSchema } from "../../types/redemption";
@@ -332,6 +333,53 @@ describe("computeEffectiveExitScore", () => {
         maxExitObservationAgeSec: 500,
       }),
     ).toBe(80);
+  });
+
+  it("uses the reviewed-terms horizon instead of the live producer freshness window", () => {
+    const asOfSec = 40_000_000;
+    const dex = exitRoute({
+      routeId: "dex:fresh",
+      routeFamily: "dex-amm",
+      evidenceKind: "reserve-based-amm-simulation",
+      observedAt: asOfSec - 60,
+      commonModeKeys: ["protocol:dex"],
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+    });
+    const reviewed = exitRoute({
+      routeId: "redeem:reviewed",
+      evidenceKind: "documented-terms",
+      observedAt: asOfSec - 300 * 86_400,
+      freshnessSeconds: 300 * 86_400,
+      commonModeKeys: ["issuer:example"],
+      output: { kind: "fiat", currency: "USD" },
+    });
+    const options = {
+      modeledExitSizeUsd: 1_000_000,
+      dexExitRouteObservations: [dex],
+      sameNotionalScoringMode: "active" as const,
+      exitObservationAsOfSec: asOfSec,
+      maxExitObservationAgeSec: 3_600,
+      modelConfidence: "high" as const,
+    };
+
+    expect(
+      computeEffectiveExitScoreDiagnostics(80, 70, {
+        ...options,
+        redemptionExitRouteObservations: [reviewed],
+      }).comparedRouteIds,
+    ).toEqual({ dex: "dex:fresh", redemption: "redeem:reviewed" });
+    expect(
+      computeEffectiveExitScoreDiagnostics(80, 70, {
+        ...options,
+        redemptionExitRouteObservations: [
+          {
+            ...reviewed,
+            observedAt: asOfSec - SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec - 1,
+            freshnessSeconds: SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec + 1,
+          },
+        ],
+      }).comparedRouteIds,
+    ).toBeNull();
   });
 
   it("suppresses independence for shared domains, outputs, impairment, and unresolved outputs", () => {

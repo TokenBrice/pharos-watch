@@ -243,7 +243,7 @@ export function computeDexDeploymentSupplyCoverage(
     }
   }
 
-  const ratio = (value: number) => value / totalSupplyUsd;
+  const ratio = (value: number) => Math.max(0, Math.min(1, value / totalSupplyUsd));
   return {
     totalSupplyUsd,
     observedSupplyUsd,

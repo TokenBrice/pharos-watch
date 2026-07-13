@@ -3,16 +3,10 @@ import { derivePegAnalyticsSnapshot } from "./peg-analytics";
 import { writePegAnalyticsCache } from "./peg-analytics-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { toErrorMessage } from "./error-utils";
-import {
-  summarizeCollateralDriftFromLiveReserveMap,
-  type CollateralDriftEntry,
-} from "./collateral-drift";
+import { summarizeCollateralDriftFromLiveReserveMap, type CollateralDriftEntry } from "./collateral-drift";
 import { parseBluechipRatingsCache } from "./bluechip-cache";
 import { resolveBlacklistStatuses } from "@shared/lib/report-cards";
-import {
-  loadReportCardsSnapshotInputs,
-  type ReportCardsInputFreshness,
-} from "./report-cards-snapshot-inputs";
+import { loadReportCardsSnapshotInputs, type ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
 import type { StablecoinsCacheLoadResult } from "./stablecoins-cache";
 import { buildLiveReportCards } from "./report-cards-snapshot-card";
 import {
@@ -22,11 +16,8 @@ import {
 } from "./report-cards-snapshot-finalize";
 import type { StablecoinData } from "@shared/types/market";
 import type { DependencyGraphEdge } from "@shared/lib/dependency-graph";
-import type {
-  DimensionKey,
-  ReportCard,
-  ReportCardGrade,
-} from "@shared/types/report-cards";
+import type { DimensionKey, ReportCard, ReportCardGrade } from "@shared/types/report-cards";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 export { ReportCardsSnapshotUnavailableError } from "./report-cards-snapshot-inputs";
 export { topologicalOrder } from "./report-cards-snapshot-card";
@@ -65,6 +56,7 @@ export interface BuildReportCardsSnapshotOptions {
    */
   publishPegAnalytics?: boolean;
   preloadedStablecoinsCache?: StablecoinsCacheLoadResult;
+  sameNotionalScoringMode?: "legacy" | "active";
 }
 
 export async function buildReportCardsSnapshot(
@@ -72,6 +64,7 @@ export async function buildReportCardsSnapshot(
   {
     publishPegAnalytics = false,
     preloadedStablecoinsCache,
+    sameNotionalScoringMode = "legacy",
   }: BuildReportCardsSnapshotOptions = {},
 ): Promise<ReportCardsSnapshot> {
   const {
@@ -89,10 +82,7 @@ export async function buildReportCardsSnapshot(
   const peggedAssets: StablecoinData[] = stablecoinsCached.payload.peggedAssets;
   const fxFallbackRates = stablecoinsCached.payload.fxFallbackRates;
 
-  const bluechipMap = parseBluechipRatingsCache(
-    bluechipCached?.value,
-    "report-cards-snapshot",
-  );
+  const bluechipMap = parseBluechipRatingsCache(bluechipCached?.value, "report-cards-snapshot");
 
   // Nav-inclusive so the published peg-analytics cache can serve peg-summary
   // (which needs nav tokens); the cards path filters nav entries back out.
@@ -135,13 +125,10 @@ export async function buildReportCardsSnapshot(
     [...pegAnalytics.pegDataById].filter(([id]) => ACTIVE_META_BY_ID.get(id)?.flags.navToken !== true),
   );
 
-  const resolvedBlacklistStatuses = resolveBlacklistStatuses(
-    ACTIVE_STABLECOINS,
-    {
-      reserveSlicesById: liveReserveMap,
-      trackedMetaById: ACTIVE_META_BY_ID,
-    },
-  );
+  const resolvedBlacklistStatuses = resolveBlacklistStatuses(ACTIVE_STABLECOINS, {
+    reserveSlicesById: liveReserveMap,
+    trackedMetaById: ACTIVE_META_BY_ID,
+  });
   const activeDepegPeakBpsById = new Map<string, number>();
   for (const [stablecoinId, events] of pegAnalytics.eventsByCoin ?? new Map()) {
     const activePeakBps = events
@@ -161,12 +148,15 @@ export async function buildReportCardsSnapshot(
     resolvedBlacklistStatuses,
     liveReserveMap,
     liveReserveProvenanceMap,
+    chainCirculatingById: new Map(peggedAssets.map((asset) => [asset.id, asset.chainCirculating])),
+    sameNotionalScoringMode,
+    exitObservationAsOfSec: pegAnalytics.nowSec,
+    maxExitObservationAgeSec:
+      Math.max(CRON_INTERVALS["sync-dex-liquidity"], CRON_INTERVALS["sync-redemption-backstops"]) * 2,
   });
 
-  const {
-    driftCoins: collateralDriftCoins,
-    fallbackCoins: liveToFallbackCoins,
-  } = summarizeCollateralDriftFromLiveReserveMap(liveReserveMap);
+  const { driftCoins: collateralDriftCoins, fallbackCoins: liveToFallbackCoins } =
+    summarizeCollateralDriftFromLiveReserveMap(liveReserveMap);
 
   return buildReportCardsSnapshotEnvelope({
     cards: sortReportCards([...liveReportCards.cards, ...buildDefunctReportCards()]),

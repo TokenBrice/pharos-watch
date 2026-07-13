@@ -2,12 +2,14 @@ import { writeFileSync } from "node:fs";
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveBlacklistStatuses } from "@shared/lib/report-cards";
 import { BluechipRatingsMapSchema } from "@shared/types/bluechip";
-import { DexLiquidityMapSchema, PegSummaryResponseSchema } from "@shared/types/market";
+import { DexLiquidityMapSchema, PegSummaryResponseSchema, StablecoinListResponseSchema } from "@shared/types/market";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "../src/lib/report-cards-fixed-input";
+import { computeDexDeploymentSupplyCoverage } from "../src/lib/report-cards-snapshot-inputs";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 const USAGE = `Usage: npx tsx worker/scripts/capture-report-cards-fixed-input.ts [options]
 
@@ -63,21 +65,24 @@ export async function captureReportCardsFixedInput(
   options: CaptureOptions,
 ): Promise<{ fixedInput: ReportCardsFixedInput; baseline: unknown }> {
   const configuredCoins = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig != null);
-  const [baselineValue, pegValue, dexValue, redemptionValue, bluechipValue, reserveRows] = await Promise.all([
-    fetchJson(options.origin, "/_site-data/report-cards"),
-    fetchJson(options.origin, "/_site-data/peg-summary"),
-    fetchJson(options.origin, "/_site-data/dex-liquidity"),
-    fetchJson(options.origin, "/_site-data/redemption-backstops"),
-    fetchJson(options.origin, "/_site-data/bluechip-ratings"),
-    mapConcurrent(configuredCoins, options.concurrency, async (coin) => ({
-      coin,
-      response: StablecoinReservesResponseSchema.parse(
-        await fetchJson(options.origin, `/_site-data/stablecoin-reserves/${encodeURIComponent(coin.id)}`),
-      ),
-    })),
-  ]);
+  const [baselineValue, stablecoinValue, pegValue, dexValue, redemptionValue, bluechipValue, reserveRows] =
+    await Promise.all([
+      fetchJson(options.origin, "/_site-data/report-cards"),
+      fetchJson(options.origin, "/_site-data/stablecoins"),
+      fetchJson(options.origin, "/_site-data/peg-summary"),
+      fetchJson(options.origin, "/_site-data/dex-liquidity"),
+      fetchJson(options.origin, "/_site-data/redemption-backstops"),
+      fetchJson(options.origin, "/_site-data/bluechip-ratings"),
+      mapConcurrent(configuredCoins, options.concurrency, async (coin) => ({
+        coin,
+        response: StablecoinReservesResponseSchema.parse(
+          await fetchJson(options.origin, `/_site-data/stablecoin-reserves/${encodeURIComponent(coin.id)}`),
+        ),
+      })),
+    ]);
 
   const baseline = ReportCardsResponseSchema.parse(baselineValue);
+  const stablecoins = StablecoinListResponseSchema.parse(stablecoinValue);
   const peg = PegSummaryResponseSchema.parse(pegValue);
   const dex = DexLiquidityMapSchema.parse(dexValue);
   const redemption = RedemptionBackstopsResponseSchema.parse(redemptionValue);
@@ -108,6 +113,28 @@ export async function captureReportCardsFixedInput(
     dexLiquidity: { updatedAt: null, ageSeconds: null, stale: true },
     redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
   };
+  const dexDeploymentSupplyCoverageById = Object.fromEntries(
+    stablecoins.peggedAssets.flatMap((asset) => {
+      const dexRow = dex[asset.id];
+      if (!dexRow) return [];
+      const coverage = computeDexDeploymentSupplyCoverage(
+        asset,
+        dexRow.deploymentCoverage?.deployments ?? [],
+        new Map(Object.entries(dexRow.chainTvl)),
+        {
+          asOfSec: baseline.updatedAt,
+          maxOutcomeAgeSec: CRON_INTERVALS["sync-dex-liquidity"] * 2,
+        },
+      );
+      return coverage ? [[asset.id, coverage] as const] : [];
+    }),
+  );
+  const fixedClockSec = Math.max(
+    baseline.updatedAt,
+    ...Object.values(inputFreshness).flatMap((entry) =>
+      entry.updatedAt != null && entry.ageSeconds != null ? [entry.updatedAt + entry.ageSeconds] : [],
+    ),
+  );
 
   const fixedInput = normalizeFixedInput({
     schemaVersion: 1,
@@ -115,7 +142,7 @@ export async function captureReportCardsFixedInput(
     sourceGeneration: baseline.publication?.generationId ?? `report-cards:${baseline.updatedAt}`,
     registryRevision: options.registryRevision,
     methodologyVersion: baseline.methodology.version,
-    clockSec: baseline.updatedAt,
+    clockSec: fixedClockSec,
     updatedAt: baseline.updatedAt,
     liquidityStale: baseline.liquidityStale ?? inputFreshness.dexLiquidity.stale,
     redemptionStale: baseline.redemptionStale ?? inputFreshness.redemptionBackstops.stale,
@@ -128,6 +155,10 @@ export async function captureReportCardsFixedInput(
     resolvedBlacklistStatuses: Object.fromEntries(blacklistStatuses),
     liveReserveMap: Object.fromEntries(liveReserveMap),
     liveReserveProvenanceMap: Object.fromEntries(liveReserveProvenanceMap),
+    chainCirculatingById: Object.fromEntries(
+      stablecoins.peggedAssets.map((asset) => [asset.id, asset.chainCirculating]),
+    ),
+    dexDeploymentSupplyCoverageById,
     collateralDriftCoins: baseline.collateralDriftCoins ?? [],
     liveToFallbackCoins: baseline.liveToFallbackCoins ?? [],
   });

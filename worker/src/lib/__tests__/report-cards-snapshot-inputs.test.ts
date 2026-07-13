@@ -134,4 +134,23 @@ describe("report-card DEX deployment supply join", () => {
       unknownSupplyRatio: 0,
     });
   });
+
+  it("clamps floating-point ratio noise at the serialized contract boundary", () => {
+    const coverage = computeDexDeploymentSupplyCoverage(
+      {
+        chainCirculating: {
+          Ethereum: supplyPoint(0.1),
+          Base: supplyPoint(0.2),
+        },
+        contracts: [
+          { chain: "ethereum", address: "0x111", decimals: 18 },
+          { chain: "base", address: "0x222", decimals: 18 },
+        ],
+      },
+      [],
+      new Map(),
+    );
+
+    expect(coverage?.unknownSupplyRatio).toBe(1);
+  });
 });

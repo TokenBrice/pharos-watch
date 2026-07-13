@@ -67,6 +67,10 @@ export const SAME_NOTIONAL_EXIT_REQUEST_POLICY = {
   settlementHorizonSec: 300,
 } as const;
 
+export const SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY = {
+  documentedTermsMaxAgeSec: 365 * 86_400,
+} as const;
+
 export type SameNotionalExitScoringMode = "legacy" | "active";
 
 export interface EffectiveExitScoreOptions {
@@ -690,7 +694,11 @@ function isExitRouteObservationScoreEligible(
     return false;
   }
   const ageSec = Math.max(0, asOfSec - observation.observedAt, observation.freshnessSeconds);
-  return ageSec <= maxAgeSec;
+  const evidenceMaxAgeSec =
+    observation.evidenceKind === "documented-terms"
+      ? SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec
+      : maxAgeSec;
+  return ageSec <= evidenceMaxAgeSec;
 }
 
 function isCapacityPointConsistent(point: {

@@ -5,6 +5,7 @@ import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import { ReportCardsResponseSchema, type ReportCard, type ReportCardsResponse } from "@shared/types/report-cards";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import { buildLiveReportCards } from "./report-cards-snapshot-card";
 import {
   buildDefunctReportCards,
@@ -19,6 +20,19 @@ const FreshnessEntrySchema = z.object({
 });
 
 const BlacklistStatusSchema = z.union([z.boolean(), z.literal("possible"), z.literal("inherited")]);
+
+const DexDeploymentSupplyCoverageSchema: z.ZodType<DexDeploymentSupplyCoverage> = z.strictObject({
+  totalSupplyUsd: z.number().finite().positive(),
+  observedSupplyUsd: z.number().finite().nonnegative(),
+  verifiedNoPoolsSupplyUsd: z.number().finite().nonnegative(),
+  providerInaccessibleSupplyUsd: z.number().finite().nonnegative(),
+  unknownSupplyUsd: z.number().finite().nonnegative(),
+  observedSupplyRatio: z.number().finite().min(0).max(1),
+  verifiedNoPoolsSupplyRatio: z.number().finite().min(0).max(1),
+  providerInaccessibleSupplyRatio: z.number().finite().min(0).max(1),
+  unknownSupplyRatio: z.number().finite().min(0).max(1),
+  unknownChains: z.array(z.string().min(1)),
+});
 
 const ReportCardsFixedInputSchema = z
   .object({
@@ -46,6 +60,21 @@ const ReportCardsFixedInputSchema = z
       z.string(),
       z.object({ source: z.string().min(1), fetchedAt: z.number().int().nonnegative() }),
     ),
+    chainCirculatingById: z
+      .record(
+        z.string(),
+        z.record(
+          z.string(),
+          z.object({
+            current: z.number().finite().nonnegative(),
+            circulatingPrevDay: z.number().finite().nonnegative(),
+            circulatingPrevWeek: z.number().finite().nonnegative(),
+            circulatingPrevMonth: z.number().finite().nonnegative(),
+          }),
+        ),
+      )
+      .default({}),
+    dexDeploymentSupplyCoverageById: z.record(z.string(), DexDeploymentSupplyCoverageSchema).default({}),
     collateralDriftCoins: z
       .array(z.object({ id: z.string(), liveScore: z.number(), curatedScore: z.number(), delta: z.number() }))
       .default([]),
@@ -57,6 +86,8 @@ export type ReportCardsFixedInput = z.infer<typeof ReportCardsFixedInputSchema>;
 
 export interface FixedReplayOptions {
   allowMethodologyMismatch?: boolean;
+  sameNotionalScoringMode?: "legacy" | "active";
+  maxExitObservationAgeSec?: number;
 }
 
 function recordToMap<T>(record: Record<string, T>): Map<string, T> {
@@ -113,15 +144,25 @@ export function buildReportCardsSnapshotFromFixedInput(
     );
   }
 
+  const dexLiqMap = Object.fromEntries(
+    Object.entries(input.dexLiqMap).map(([stablecoinId, row]) => {
+      const deploymentSupplyCoverage = input.dexDeploymentSupplyCoverageById[stablecoinId];
+      return [stablecoinId, deploymentSupplyCoverage ? { ...row, deploymentSupplyCoverage } : row];
+    }),
+  );
   const live = buildLiveReportCards({
     pegDataById: recordToMap(input.pegDataById),
     activeDepegPeakBpsById: recordToMap(input.activeDepegPeakBpsById),
-    dexLiqMap: input.dexLiqMap,
+    dexLiqMap,
     redemptionBackstopMap: input.redemptionBackstopMap,
     bluechipMap: input.bluechipMap,
     resolvedBlacklistStatuses: recordToMap(input.resolvedBlacklistStatuses),
     liveReserveMap: recordToMap(input.liveReserveMap),
     liveReserveProvenanceMap: recordToMap(input.liveReserveProvenanceMap),
+    chainCirculatingById: recordToMap(input.chainCirculatingById),
+    sameNotionalScoringMode: options.sameNotionalScoringMode,
+    exitObservationAsOfSec: input.clockSec,
+    maxExitObservationAgeSec: options.maxExitObservationAgeSec,
   });
 
   return ReportCardsResponseSchema.parse(
@@ -183,6 +224,8 @@ export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
     bluechipMap: sortedRecord(input.bluechipMap),
     resolvedBlacklistStatuses: sortedRecord(input.resolvedBlacklistStatuses),
     liveReserveMap: sortedRecord(input.liveReserveMap),
+    chainCirculatingById: sortedRecord(input.chainCirculatingById),
+    dexDeploymentSupplyCoverageById: sortedRecord(input.dexDeploymentSupplyCoverageById),
     liveReserveProvenanceMap: sortedRecord(input.liveReserveProvenanceMap),
     collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => left.id.localeCompare(right.id)),
     liveToFallbackCoins: [...input.liveToFallbackCoins].sort(),
