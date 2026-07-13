@@ -72,7 +72,7 @@ function route(routeId = "dex:primary", observedAt = OBSERVED_AT_SEC): ExitRoute
   };
 }
 
-function exactFixedInput(args: { liquidityScore?: number; classifiedReserve?: boolean } = {}) {
+function exactFixedInput(args: { liquidityScore?: number; classifiedReserve?: boolean; omitPegRow?: boolean } = {}) {
   const reserve = {
     name: "Custodied cash",
     pct: 100,
@@ -104,7 +104,7 @@ function exactFixedInput(args: { liquidityScore?: number; classifiedReserve?: bo
       dexLiquidity: { updatedAt: OBSERVED_AT_SEC, ageSeconds: 100, stale: false },
       redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
     },
-    pegDataById: {
+    pegDataById: args.omitPegRow ? {} : {
       alpha: {
         id: "alpha",
         symbol: "ALPHA",
@@ -606,6 +606,23 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const high = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ liquidityScore: 99 }), extension());
     expect(low.assets).toEqual(high.assets);
     expect(low.baseInputGenerationId).not.toBe(high.baseInputGenerationId);
+  });
+
+  it("treats a pure NAV peg reference as not-applicable while fiat assets still require a peg row", () => {
+    const withoutPegRow = () => exactFixedInput({ omitPegRow: true });
+    const navExtension = extension();
+    navExtension.assets[0]!.pegReference = { referenceKind: "nav", referenceKey: "nav:alpha", failureDomains: [] };
+    const navCompiled = compileSafetyScoreV9FactSetFromFixedInput(withoutPegRow(), navExtension);
+    const navPeg = navCompiled.assets[0]!.peg;
+    expect(navPeg.status.applicability.state).toBe("not-applicable");
+    expect(navPeg.status.observationState).toBe("known");
+    expect(navPeg.pegScore).toBeNull();
+    const navEvaluated = evaluateV9FactSet(navCompiled, V9_CANDIDATE_POLICY_V1);
+    expect(navEvaluated.assets[0]!.trace.finalGrade).not.toBe("NR");
+
+    const fiatCompiled = compileSafetyScoreV9FactSetFromFixedInput(withoutPegRow(), extension());
+    expect(fiatCompiled.assets[0]!.peg.status.observationState).toBe("missing");
+    expect(evaluateV9FactSet(fiatCompiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).toBe("NR");
   });
 
   it("canonicalizes extension ordering and produces a deterministic digest", () => {

@@ -46,7 +46,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
   candidate deterministically. The current policy semantic digest is
   `204dc01eb2ca995b874b55323ed8c7d7fbab150f6f8b61c42aa374082839c17a`;
   the current evaluation-build digest is
-  `03e1ed0fe7845769d4b5557955f2ce9a86f6ac815e71ffc65fad8c1dbb21ebe0`.
+  `f5784711ca5982a50cf227fbce8f84c7bde3c20b887d9e951a6a48a46aa80403`.
 - The shadow extension builder now maps reviewed repository evidence into the
   strict fact set instead of clamping every fact to an unresolved state: peg
   references from the registry peg currency, chain-supply bridge materiality
@@ -66,7 +66,10 @@ The V9 implementation establishes candidate infrastructure without changing prod
   instead of the producer cron cadence, and the exit portfolio only reports
   `known` completeness when every retained DEX pool carries a score-eligible
   exact observation, so diagnostic-only route sets stay bounded-unknown
-  rather than arming the reviewed-complete zero-score path. With
+  rather than arming the reviewed-complete zero-score path. Pure NAV tokens
+  (`flags.navToken`) publish a known not-applicable peg fact (the v8 pure NAV
+  carve-over): they have no fixed peg by design, so the formula skips the peg
+  multiplier instead of reason-coding `missing-applicable-peg`. With
   the 2026-07-13 exact publication capture, the candidate produces real
   scores for `usdt-tether` and `usdc-circle` (83.15% of tracked supply
   weight); every other asset remains reason-coded `NR` pending exit-route

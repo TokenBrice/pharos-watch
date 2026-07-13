@@ -558,6 +558,12 @@ const ORACLE_BRANCH_ADAPTERS = [
 ] as const;
 
 function buildPegReference(meta: V9ExtensionRegistryMeta): ExtensionAsset["pegReference"] {
+  // Pure NAV tokens track fund NAV by design: they have no fixed peg to
+  // deviate from, so the peg fact is published not-applicable (the v8 pure
+  // NAV carve-over) instead of failing on a missing peg reference.
+  if (meta.flags?.navToken === true) {
+    return { referenceKind: "nav", referenceKey: `nav:${meta.id}`, failureDomains: [] };
+  }
   const pegCurrency = meta.flags?.pegCurrency;
   if (pegCurrency === undefined) return null;
   if (pegCurrency === "VAR" || pegCurrency === "OTHER") {

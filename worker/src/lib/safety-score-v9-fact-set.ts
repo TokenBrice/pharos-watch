@@ -342,7 +342,7 @@ const ControlReviewSchema = z.discriminatedUnion("state", [
 
 const PegReferenceSchema = z
   .object({
-    referenceKind: z.enum(["fiat", "asset", "index", "other"]),
+    referenceKind: z.enum(["fiat", "asset", "index", "nav", "other"]),
     referenceKey: CanonicalTextSchema,
     failureDomains: FailureDomainsSchema,
   })
@@ -1837,6 +1837,32 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
   const pegKey = reference
     ? `peg:${reference.referenceKind}:${reference.referenceKey}`
     : `peg:unresolved:${context.asset.assetId}`;
+  if (reference?.referenceKind === "nav") {
+    // Pure NAV tokens have no fixed peg by design (v8 pure NAV carve-over):
+    // the peg fact is a known not-applicable review, and the formula skips
+    // the peg multiplier for pegApplicable=false assets.
+    return {
+      status: createV9FactStatus({
+        applicability: notApplicableV9Fact(
+          "v9.peg.current",
+          "Pure NAV token: the unit tracks fund NAV by design, so no fixed peg reference exists to deviate from.",
+        ),
+        observationState: "known",
+        evidenceRefIds: [researchEvidence(context)],
+      }),
+      pegKey,
+      sourceGenerationId: source.generationId,
+      referenceKind: reference.referenceKind,
+      referenceKey: reference.referenceKey,
+      methodologyVersion: context.fixedInput.methodologyVersion,
+      pegScore: null,
+      currentDeviationBps: null,
+      activeDepeg: null,
+      activeDepegBps: null,
+      trackingSpanDays: null,
+      failureDomains: reference.failureDomains,
+    };
+  }
   if (!peg) {
     return {
       status: missingLocalFact(context, {

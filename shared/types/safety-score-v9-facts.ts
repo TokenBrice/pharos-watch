@@ -835,7 +835,7 @@ const V9PegFactV2Schema = z
     status: V9FactStatusV2Schema,
     pegKey: CanonicalTextSchema,
     sourceGenerationId: CanonicalTextSchema,
-    referenceKind: z.enum(["fiat", "asset", "index", "other"]),
+    referenceKind: z.enum(["fiat", "asset", "index", "nav", "other"]),
     referenceKey: CanonicalTextSchema,
     methodologyVersion: CanonicalTextSchema,
     pegScore: z.number().finite().min(0).max(100).nullable(),
