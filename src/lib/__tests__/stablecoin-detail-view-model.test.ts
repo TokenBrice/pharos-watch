@@ -215,10 +215,34 @@ describe("stablecoin detail view-model builder", () => {
   it("uses only compact mint-authority summaries for client detail presentation", () => {
     const fullCoin = TRACKED_META_BY_ID.get("usdc-circle");
     expect(fullCoin?.mintAuthority).toBeDefined();
-    const clientCoin = buildStablecoinDetailClientCoin(fullCoin!);
+    const coinWithServerOnlyResearch = {
+      ...fullCoin!,
+      blacklistabilityReview: { sentinel: true } as never,
+      bridgeRouteRisk: { sentinel: true } as never,
+      custodyProfile: { sentinel: true } as never,
+      dependencyReview: { sentinel: true } as never,
+      implementationLaunchDate: "2026-01-01",
+      mechanismArchetypeReview: { sentinel: true } as never,
+      oracleRisk: { sentinel: true } as never,
+      reserveReview: { sentinel: true } as never,
+    };
+    const clientCoin = buildStablecoinDetailClientCoin(coinWithServerOnlyResearch);
 
     expect(buildMintAuthorityDetailViewModel(fullCoin!).status).toBe("not-reviewed");
-    expect("mintAuthority" in clientCoin).toBe(false);
+    for (const serverOnlyField of [
+      "blacklistabilityReview",
+      "bridgeRouteRisk",
+      "custodyProfile",
+      "dependencyReview",
+      "implementationLaunchDate",
+      "mechanismArchetypeReview",
+      "mintAuthority",
+      "oracleRisk",
+      "reserveReview",
+    ]) {
+      expect(serverOnlyField in coinWithServerOnlyResearch).toBe(true);
+      expect(serverOnlyField in clientCoin).toBe(false);
+    }
     expect(clientCoin.mintAuthoritySummary).toBeDefined();
     expect(buildMintAuthorityDetailViewModel(clientCoin).status).toBe("reviewed");
   });

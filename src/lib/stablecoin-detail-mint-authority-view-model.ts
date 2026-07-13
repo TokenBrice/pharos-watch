@@ -108,7 +108,18 @@ export interface MintAuthorityDetailViewModel {
   unresolvedQuestions: string[];
 }
 
-export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, "mintAuthority"> & {
+type StablecoinDetailServerOnlyField =
+  | "blacklistabilityReview"
+  | "bridgeRouteRisk"
+  | "custodyProfile"
+  | "dependencyReview"
+  | "implementationLaunchDate"
+  | "mechanismArchetypeReview"
+  | "mintAuthority"
+  | "oracleRisk"
+  | "reserveReview";
+
+export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, StablecoinDetailServerOnlyField> & {
   mintAuthoritySummary?: MintAuthorityClientSummary | null;
   mintAuthorityParentSummaries?: Record<string, MintAuthorityClientSummary>;
 };
@@ -144,7 +155,18 @@ export function buildStablecoinDetailClientCoin(
   coin: StablecoinMeta,
   options: BuildStablecoinDetailClientCoinOptions = {},
 ): StablecoinDetailCoinMeta {
-  const { mintAuthority: _serverOnlyMintAuthority, ...clientCoin } = coin;
+  const {
+    blacklistabilityReview: _serverOnlyBlacklistabilityReview,
+    bridgeRouteRisk: _serverOnlyBridgeRouteRisk,
+    custodyProfile: _serverOnlyCustodyProfile,
+    dependencyReview: _serverOnlyDependencyReview,
+    implementationLaunchDate: _serverOnlyImplementationLaunchDate,
+    mechanismArchetypeReview: _serverOnlyMechanismArchetypeReview,
+    mintAuthority: _serverOnlyMintAuthority,
+    oracleRisk: _serverOnlyOracleRisk,
+    reserveReview: _serverOnlyReserveReview,
+    ...clientCoin
+  } = coin;
   const mintAuthoritySummary = projectMintAuthorityClientSummary(coin);
   const mintAuthorityParentSummaries = collectMintAuthorityParentSummaries(mintAuthoritySummary, options.parentById);
   return {

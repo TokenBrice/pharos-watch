@@ -43,10 +43,10 @@ const DEFAULT_BUDGETS = {
   // narrow post-ratchet ceiling with about 1 KiB of headroom for gzip variance.
   largestCssGzipBytes: 69_632,
   totalStaticMediaBytes: 2_000_000,
-  // API-reference schema and route-contract growth measured 2,705,204 bytes
+  // API-reference schema and route-contract growth measured 2,724,991 bytes
   // in the July 2026 export. Retain about 10 KB of headroom while keeping
   // future docs-heavy App Router payload growth reviewable.
-  largestHtmlBytes: 2_715_000,
+  largestHtmlBytes: 2_735_000,
   // Keep the homepage bootstrap/RSC payload from silently growing into the
   // mobile critical path again without constraining long-form docs pages.
   // The homepage table moved directly under the KPI band (1f76d3c36), which
@@ -59,9 +59,10 @@ const DEFAULT_BUDGETS = {
   // Yield source-role / alternate-summary contracts then pushed the generated
   // API reference helper to ~1.33 MB. Night Watch publication and recovery
   // contracts measured 1,350,636 bytes; the July 2026 API-reference expansion
-  // measured 1,369,509 bytes. Retain about 10 KB of headroom so the next public
-  // schema expansion still has to re-ratchet deliberately.
-  largestTxtBytes: 1_380_000,
+  // dependency provenance contracts measured 1,380,021 bytes. Retain about
+  // 10 KB of headroom so the next public schema expansion still has to
+  // re-ratchet deliberately.
+  largestTxtBytes: 1_390_000,
   // Production Pages builds hydrate mirrors from live API data. USDC's detail
   // page now carries richer SEO JSON-LD plus the inline critical-CSS block
   // (~68 KB raw) that replaced the render-blocking global stylesheet, so the
@@ -229,9 +230,7 @@ const classicZodHtmlReferenceCount = countDocumentsReferencingChunks(
   htmlFiles.map((file) => readFileSync(file.path, "utf8")),
   classicZodChunkNames,
 );
-const classicZodHtmlReferenceRatio = htmlFiles.length > 0
-  ? classicZodHtmlReferenceCount / htmlFiles.length
-  : 0;
+const classicZodHtmlReferenceRatio = htmlFiles.length > 0 ? classicZodHtmlReferenceCount / htmlFiles.length : 0;
 
 console.log("# Pharos Build Size Report");
 console.log(`out total files: ${allOutFiles.length}`);
@@ -251,8 +250,8 @@ console.log(
   `direct-upload file headroom: ${overallCapacity.fileHeadroom} (${(overallCapacity.headroomRatio * 100).toFixed(1)}%)`,
 );
 console.log(
-  `classic Zod HTML references: ${classicZodHtmlReferenceCount}/${htmlFiles.length} `
-    + `(${(classicZodHtmlReferenceRatio * 100).toFixed(1)}%) across ${classicZodChunkNames.length} chunk(s)`,
+  `classic Zod HTML references: ${classicZodHtmlReferenceCount}/${htmlFiles.length} ` +
+    `(${(classicZodHtmlReferenceRatio * 100).toFixed(1)}%) across ${classicZodChunkNames.length} chunk(s)`,
 );
 
 console.log("\nStatic route family capacity");
@@ -264,9 +263,9 @@ for (const family of routeFamilySummaries) {
     averageFilesPerRoute: family.averageFilesPerRoute,
   });
   console.log(
-    `  ${family.family}: ${family.routeCount} routes, ${family.fileCount} files, ${formatBytes(family.totalBytes)}; `
-      + `${family.averageFilesPerRoute.toFixed(1)} files/route, ${formatBytes(Math.round(family.averageBytesPerRoute))}/route; `
-      + `${projection.routesUntilHeadroomFloor} routes to 25% floor, ${projection.routesUntilHardLimit} to hard limit`,
+    `  ${family.family}: ${family.routeCount} routes, ${family.fileCount} files, ${formatBytes(family.totalBytes)}; ` +
+      `${family.averageFilesPerRoute.toFixed(1)} files/route, ${formatBytes(Math.round(family.averageBytesPerRoute))}/route; ` +
+      `${projection.routesUntilHeadroomFloor} routes to 25% floor, ${projection.routesUntilHardLimit} to hard limit`,
   );
 }
 
@@ -286,7 +285,10 @@ if (fontSummary) {
 
 const representativeDetails = REPRESENTATIVE_DETAIL_ROUTES.flatMap((route) => {
   const htmlPath = path.join(outDir, route, "index.html");
-  const pageTxtFiles = collectFiles(path.join(outDir, route), (file) => file.includes("__PAGE__") && file.endsWith(".txt"));
+  const pageTxtFiles = collectFiles(
+    path.join(outDir, route),
+    (file) => file.includes("__PAGE__") && file.endsWith(".txt"),
+  );
   return [
     ...(existsSync(htmlPath)
       ? [{ kind: "html", route, rel: path.relative(root, htmlPath), size: statSync(htmlPath).size }]
@@ -312,9 +314,7 @@ const representativeDetailEagerJs = REPRESENTATIVE_DETAIL_ROUTES.flatMap((route)
   const htmlPath = path.join(outDir, route, "index.html");
   if (!existsSync(htmlPath)) return [];
   const html = readFileSync(htmlPath, "utf8");
-  const scriptSrcs = new Set(
-    [...html.matchAll(/<script[^>]+src="(\/_next\/[^"]+\.js)"/g)].map((match) => match[1]),
-  );
+  const scriptSrcs = new Set([...html.matchAll(/<script[^>]+src="(\/_next\/[^"]+\.js)"/g)].map((match) => match[1]));
   let eagerGzipBytes = 0;
   let scriptCount = 0;
   for (const src of scriptSrcs) {
@@ -346,17 +346,17 @@ if (check) {
   }
   if (classicZodHtmlReferenceRatio > MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO) {
     failures.push(
-      `classic Zod HTML reference ratio is ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}%; `
-        + `maximum is ${MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100}%`,
+      `classic Zod HTML reference ratio is ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}%; ` +
+        `maximum is ${MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100}%`,
     );
     console.log(
-      `FAIL classic Zod HTML references: ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}% / `
-        + `${(MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100).toFixed(1)}% maximum`,
+      `FAIL classic Zod HTML references: ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}% / ` +
+        `${(MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100).toFixed(1)}% maximum`,
     );
   } else {
     console.log(
-      `ok classic Zod HTML references: ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}% / `
-        + `${(MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100).toFixed(1)}% maximum`,
+      `ok classic Zod HTML references: ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}% / ` +
+        `${(MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100).toFixed(1)}% maximum`,
     );
   }
   checkBudget("total JS chunks", sum(jsFiles), budgets.totalJsBytes, failures);
@@ -375,12 +375,7 @@ if (check) {
   }
 
   for (const detail of representativeDetailEagerJs) {
-    checkBudget(
-      `${detail.route} eager JS gzip`,
-      detail.size,
-      budgets.representativeDetailEagerJsGzipBytes,
-      failures,
-    );
+    checkBudget(`${detail.route} eager JS gzip`, detail.size, budgets.representativeDetailEagerJsGzipBytes, failures);
   }
 
   if (failures.length > 0) {
