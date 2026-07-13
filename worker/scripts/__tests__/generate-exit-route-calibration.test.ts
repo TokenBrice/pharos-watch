@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexLiquidityData, ExitRouteObservation } from "@shared/types/market";
 import {
   computeDexLiquidityPayloadFingerprint,
   computeReportCardsRegistryFingerprint,
+  createReportCardsFixedInput,
 } from "../../src/lib/report-cards-fixed-input";
 import { buildExitRouteCalibrationReport, selectBestRouteCapacity } from "../generate-exit-route-calibration";
+
+function withoutBaseInputGenerationId<T extends { baseInputGenerationId: string }>(input: T) {
+  const { baseInputGenerationId: _baseInputGenerationId, ...legacy } = input;
+  return legacy;
+}
 
 const CLOCK_SEC = 1_783_891_200;
 
@@ -40,6 +47,51 @@ function fixedInput(dexLiqMap: Record<string, DexLiquidityData> = {}) {
     collateralDriftCoins: [],
     liveToFallbackCoins: [],
   };
+}
+
+function exactFixedInput() {
+  const dexUpdatedAt = CLOCK_SEC - 100;
+  return createReportCardsFixedInput({
+    captureKind: "exact-publication-inputs",
+    capturedAt: "2026-07-12T22:00:00.000Z",
+    sourceGeneration: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${CLOCK_SEC}`,
+    dexGenerationId: `dex-liquidity-${dexUpdatedAt}`,
+    redemptionGenerationId: "redemption-backstops-unavailable",
+    registryRevision: "fixture-revision",
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    clockSec: CLOCK_SEC,
+    updatedAt: CLOCK_SEC,
+    liquidityStale: false,
+    redemptionStale: true,
+    inputFreshness: {
+      dexLiquidity: { updatedAt: dexUpdatedAt, ageSeconds: 100, stale: false },
+      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
+    },
+    pegDataById: {},
+    activeDepegPeakBpsById: {},
+    dexLiqMap: Object.fromEntries(
+      ACTIVE_STABLECOINS.map((coin) => [
+        coin.id,
+        {
+          liquidityScore: null,
+          concentrationHhi: null,
+          poolCount: 0,
+          chainCount: 0,
+          methodologyVersion: "fixture",
+          updatedAt: dexUpdatedAt,
+        },
+      ]),
+    ),
+    redemptionBackstopMap: {},
+    bluechipMap: {},
+    resolvedBlacklistStatuses: Object.fromEntries(ACTIVE_STABLECOINS.map((coin) => [coin.id, false])),
+    liveReserveMap: {},
+    liveReserveProvenanceMap: {},
+    chainCirculatingById: {},
+    dexDeploymentSupplyCoverageById: {},
+    collateralDriftCoins: [],
+    liveToFallbackCoins: [],
+  });
 }
 
 function dexRow(
@@ -207,6 +259,18 @@ describe("exit-route decision-gate calibration", () => {
       namedAssetTuning: false,
       comparisonRequest: { maxCostBps: 200, settlementHorizonSec: 300 },
     });
+    expect(first.source).toMatchObject({
+      captureKind: "public-reconstruction",
+      methodologyMismatchBypassUsed: false,
+      registryMismatchBypassUsed: false,
+      dexGenerationId: "dex-generation-42",
+      redemptionGenerationId: "redemption-backstops-1783891000",
+      inputMethodologyVersions: {
+        safetyScore: SAFETY_SCORE_METHODOLOGY_VERSION,
+      },
+    });
+    expect(first.source.legacyReplayPayloadFingerprint).toMatch(/^[a-f0-9]{64}$/);
+    expect(first.source.activeReplayPayloadFingerprint).toMatch(/^[a-f0-9]{64}$/);
     expect(first.coverage).toMatchObject({
       activeAssets: first.rows.length,
       dex: { eligibleAssets: 0, observations: 0 },
@@ -216,7 +280,11 @@ describe("exit-route decision-gate calibration", () => {
       decision: "hold",
       activationReady: false,
       decisionConsistentWithGate: true,
-      blockers: ["dex-eligible-asset-floor-not-met", "redemption-eligible-asset-floor-not-met"],
+      blockers: [
+        "capture-not-publication-exact",
+        "dex-eligible-asset-floor-not-met",
+        "redemption-eligible-asset-floor-not-met",
+      ],
     });
     expect(first.movements.overall).toMatchObject({
       increased: 0,
@@ -284,6 +352,63 @@ describe("exit-route decision-gate calibration", () => {
     ).toThrow("minimumDexEligibleAssets must be an integer at least 45");
   });
 
+  it("records replay bypass requests as explicit activation blockers", () => {
+    const input = exactFixedInput();
+    const report = buildExitRouteCalibrationReport(input, {
+      generationId: input.dexGenerationId,
+      producerGenerationStatus: "complete",
+      activationDecision: "hold",
+      decisionReason: "Historical drift replay only.",
+      allowMethodologyMismatch: true,
+      allowRegistryMismatch: true,
+    });
+
+    expect(report.source).toMatchObject({
+      captureKind: "exact-publication-inputs",
+      methodologyMismatchBypassUsed: true,
+      registryMismatchBypassUsed: true,
+    });
+    expect(report.activationDecision.blockers).toEqual([
+      "methodology-mismatch-bypass-used",
+      "registry-mismatch-bypass-used",
+      "dex-eligible-asset-floor-not-met",
+      "redemption-eligible-asset-floor-not-met",
+    ]);
+  });
+
+  it("derives calibration methodology provenance and rejects a forged exact declaration", () => {
+    const input = exactFixedInput();
+    const forgedMethodologyVersions = {
+      ...input.inputMethodologyVersions,
+      dexLiquidity: ["forged-methodology"],
+    };
+    const reconstruction = withoutBaseInputGenerationId({
+      ...input,
+      captureKind: "public-reconstruction" as const,
+      inputMethodologyVersions: forgedMethodologyVersions,
+    });
+    const report = buildExitRouteCalibrationReport(reconstruction, {
+      generationId: input.dexGenerationId,
+      producerGenerationStatus: "complete",
+      activationDecision: "hold",
+      decisionReason: "Reconstruction provenance test.",
+    });
+
+    expect(report.source.inputMethodologyVersions.dexLiquidity).toEqual(["fixture"]);
+    expect(report.source.inputMethodologyVersions.dexLiquidity).not.toEqual(forgedMethodologyVersions.dexLiquidity);
+    expect(() =>
+      buildExitRouteCalibrationReport(
+        withoutBaseInputGenerationId({ ...input, inputMethodologyVersions: forgedMethodologyVersions }),
+        {
+          generationId: input.dexGenerationId,
+          producerGenerationStatus: "complete",
+          activationDecision: "hold",
+          decisionReason: "Exact provenance test.",
+        },
+      ),
+    ).toThrow("producer methodology versions do not match its score-bearing payload rows");
+  });
+
   it("refuses to emit an activation decision while the gate has blockers", () => {
     expect(() =>
       buildExitRouteCalibrationReport(fixedInput(), {
@@ -292,6 +417,6 @@ describe("exit-route decision-gate calibration", () => {
         activationDecision: "activate",
         decisionReason: "fixture",
       }),
-    ).toThrow("Cannot activate same-notional scoring");
+    ).toThrow("Cannot activate same-notional scoring: capture-not-publication-exact");
   });
 });

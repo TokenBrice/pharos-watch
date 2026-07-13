@@ -11,8 +11,10 @@ import {
   type V9EvidenceLevel,
   type V9EvidenceReference,
   type V9PillarEvidence,
+  type V9ReasonCode,
   type V9StructuralSignal,
   type V9UnresolvedFact,
+  type V9ValidatedPolicyEnvelope,
 } from "../types/safety-score-v9";
 import type { DexLiquidityData } from "../types/market";
 import type { ReportCard } from "../types/report-cards";
@@ -21,6 +23,9 @@ import type { ExitRouteObservation } from "../types/exit-route";
 import { isDexExitRouteCoverageComplete } from "./p4-exit-route-capacity";
 import { isExitRouteObservationScoreEligible } from "./redemption-backstop-scoring";
 import { collectCriticalControlIdentities, type CriticalControlIdentityOccurrence } from "./control-identities";
+import { mergeExitRouteObservations } from "./safety-score-v9/exit-observation-set";
+import { assertV9ValidatedPolicyEnvelope, normalizeV9UnresolvedFacts } from "./safety-score-v9/policy";
+import { scoreV9ReserveExposureClassification } from "./safety-score-v9/backing";
 
 export interface V9CommonControlDomain {
   assetIds: readonly string[];
@@ -33,6 +38,7 @@ type V9DexLiquidityEvidenceRow = Pick<
 >;
 
 export interface CompileV9AssetOptions {
+  policy: V9ValidatedPolicyEnvelope;
   asOf: string;
   compiledAt: string;
   methodologyVersion: string;
@@ -45,7 +51,7 @@ export interface CompileV9AssetOptions {
   commonControlDomains?: ReadonlyMap<string, V9CommonControlDomain>;
 }
 
-function unresolved(code: string, reason: string, critical: boolean, path?: string): V9UnresolvedFact {
+function unresolved(code: V9ReasonCode, reason: string, critical: boolean, path?: string): V9UnresolvedFact {
   return { code, reason, critical, ...(path ? { path } : {}) };
 }
 
@@ -121,6 +127,7 @@ function uniqueEvidence(references: readonly V9EvidenceReference[]): V9EvidenceR
 }
 
 function pillarEvidence(args: {
+  policy: V9ValidatedPolicyEnvelope;
   score: number | null;
   evidenceLevel: V9EvidenceLevel;
   evidence: readonly V9EvidenceReference[];
@@ -128,15 +135,16 @@ function pillarEvidence(args: {
   signals?: string[];
 }): V9PillarEvidence {
   const evidence = uniqueEvidence(args.evidence);
-  const hasCriticalGap = args.unresolved.some((fact) => fact.critical);
-  const score = evidence.length === 0 ? null : args.score;
+  const normalizedUnresolved = normalizeV9UnresolvedFacts(args.policy, args.unresolved);
+  const hasCriticalGap = normalizedUnresolved.some((fact) => fact.critical);
+  const score = evidence.length === 0 || hasCriticalGap ? null : args.score;
   const scoreUnresolved =
     score === null && !hasCriticalGap
-      ? [
-          ...args.unresolved,
+      ? normalizeV9UnresolvedFacts(args.policy, [
+          ...normalizedUnresolved,
           unresolved("missing-pillar-evidence", "No dated source supports the derived pillar facts.", true),
-        ]
-      : args.unresolved;
+        ])
+      : normalizedUnresolved;
   return {
     score,
     evidenceLevel: score === null ? "insufficient" : args.evidenceLevel,
@@ -164,20 +172,13 @@ export function computeConservativeTrackRecordMonths(launchDate: string | null, 
   return Math.max(0, months);
 }
 
-const RESERVE_RISK_QUALITY = {
-  "very-low": 95,
-  low: 85,
-  medium: 65,
-  high: 35,
-  "very-high": 10,
-} as const;
-
 function compileBackingPillar(
   meta: StablecoinMeta,
   card: ReportCard,
   options: CompileV9AssetOptions,
   structuralSignals: V9StructuralSignal[],
 ): V9PillarEvidence {
+  const policy = options.policy.policy.semantic.backing;
   const gaps: V9UnresolvedFact[] = [];
   const reserves = meta.reserves ?? [];
   const review = meta.reserveReview;
@@ -283,7 +284,7 @@ function compileBackingPillar(
         ),
       );
     }
-    if (review.knownUnknownExposurePct >= 10) {
+    if (review.knownUnknownExposurePct >= policy.structural.materialExposureShare * 100) {
       gaps.push(
         unresolved(
           "material-unknown-reserve-exposure",
@@ -305,7 +306,7 @@ function compileBackingPillar(
   }
 
   for (const [index, slice] of reserves.entries()) {
-    if (slice.pct < 10) continue;
+    if (slice.pct < policy.structural.materialExposureShare * 100) continue;
     const missing = [
       ...(slice.assetClass ? [] : ["assetClass"]),
       ...(slice.riskFactors?.length ? [] : ["riskFactors"]),
@@ -351,7 +352,9 @@ function compileBackingPillar(
 
   const diagnostics = card.dimensions.dependencyRisk.dependencyDiagnostics;
   const materialUnavailable =
-    diagnostics?.contributions.filter((entry) => !entry.available && entry.normalizedWeight >= 0.1) ?? [];
+    diagnostics?.contributions.filter(
+      (entry) => !entry.available && entry.normalizedWeight >= policy.structural.materialExposureShare,
+    ) ?? [];
   if (materialUnavailable.length > 0) {
     gaps.push(
       unresolved(
@@ -389,46 +392,70 @@ function compileBackingPillar(
   const reserveScore =
     reserves.length === 0
       ? null
-      : Math.round(reserves.reduce((total, slice) => total + slice.pct * RESERVE_RISK_QUALITY[slice.risk], 0) / 100);
-  const custodyAdjustment = meta.custodyProfile
-    ? meta.custodyProfile.segregation === "segregated" &&
-      meta.custodyProfile.bankruptcyRemoteness === "structured" &&
-      meta.custodyProfile.rehypothecation === "prohibited"
-      ? 0
-      : -10
-    : 0;
-  const derivedScore = reserveScore === null ? null : Math.max(0, Math.min(100, reserveScore + custodyAdjustment));
-  const score = gaps.some((fact) => fact.critical) ? null : derivedScore;
+      : Math.round(
+          reserves.reduce(
+            (total, slice) =>
+              total +
+              slice.pct *
+                scoreV9ReserveExposureClassification(
+                  {
+                    assetClass: slice.assetClass ?? null,
+                    liquidityHorizon: slice.liquidityHorizon ?? null,
+                    maturityDaysMax: slice.maturityDaysMax ?? null,
+                  },
+                  options.policy,
+                ),
+            0,
+          ) / 100,
+        );
+  const score = reserveScore;
 
   if (meta.flags.backing === "algorithmic") {
+    const signal = policy.structural.algorithmic.signal;
     structuralSignals.push({
-      kind: "algorithmic-reflexivity",
-      severity: "high",
+      kind: signal.kind,
+      severity: signal.severity,
       reason: "Backing depends on an algorithmic or reflexive stabilization mechanism.",
       failureDomainKeys: [`mechanism:${meta.id}`],
       evidence: reviewRefs,
     });
   }
-  if (reserves.some((slice) => slice.risk === "very-high" && slice.pct >= 10)) {
+  const unsafeReserves = reserves.filter(
+    (slice) =>
+      slice.pct >= policy.structural.materialExposureShare * 100 &&
+      scoreV9ReserveExposureClassification(
+        {
+          assetClass: slice.assetClass ?? null,
+          liquidityHorizon: slice.liquidityHorizon ?? null,
+          maturityDaysMax: slice.maturityDaysMax ?? null,
+        },
+        options.policy,
+      ) <= policy.structural.unsafeExposureQuality,
+  );
+  if (unsafeReserves.length > 0) {
+    const signal = policy.structural.unsafeExposureSignal;
     structuralSignals.push({
-      kind: "unsafe-backing",
-      severity: "high",
-      reason: "At least 10% of reviewed reserves has very-high backing risk.",
-      materialSharePct: reserves
-        .filter((slice) => slice.risk === "very-high")
-        .reduce((sum, slice) => sum + slice.pct, 0),
-      failureDomainKeys: reserves
-        .filter((slice) => slice.risk === "very-high")
-        .map((slice) => `reserve:${slice.coinId ?? slice.issuerOrObligor ?? slice.name}`),
+      kind: signal.kind,
+      severity: signal.severity,
+      reason: "A material reviewed reserve exposure has weak classification-derived backing quality.",
+      materialSharePct: unsafeReserves.reduce((sum, slice) => sum + slice.pct, 0),
+      failureDomainKeys: unsafeReserves.map(
+        (slice) => `reserve:${slice.coinId ?? slice.issuerOrObligor ?? slice.name}`,
+      ),
       evidence: reviewRefs,
     });
   }
-  if (meta.mechanismArchetype === "rwa-credit-fund") {
+  const speculativeCreditReserves = reserves.filter(
+    (slice) => slice.assetClass === "private-credit" && slice.pct >= policy.structural.materialExposureShare * 100,
+  );
+  if (speculativeCreditReserves.length > 0) {
+    const signal = policy.structural.speculativeCreditSignal;
     structuralSignals.push({
-      kind: "speculative-credit",
-      severity: "moderate",
+      kind: signal.kind,
+      severity: signal.severity,
       reason: "The reviewed reserve mechanism is exposed to private or speculative credit performance.",
-      failureDomainKeys: reserves.map((slice) => `credit:${slice.issuerOrObligor ?? slice.name}`),
+      materialSharePct: speculativeCreditReserves.reduce((sum, slice) => sum + slice.pct, 0),
+      failureDomainKeys: speculativeCreditReserves.map((slice) => `credit:${slice.issuerOrObligor ?? slice.name}`),
       evidence: reviewRefs,
     });
   }
@@ -443,13 +470,14 @@ function compileBackingPillar(
         ? "adequate"
         : "insufficient";
   return pillarEvidence({
+    policy: options.policy,
     score,
     evidenceLevel,
     evidence,
     unresolved: gaps,
     signals: reserves.map(
       (slice) =>
-        `reserve:${slice.pct}:${slice.risk}:${slice.assetClass ?? "unknown"}:${slice.liquidityHorizon ?? "unknown"}`,
+        `reserve:${slice.pct}:${slice.assetClass ?? "unknown"}:${slice.liquidityHorizon ?? "unknown"}:${slice.maturityDaysMax ?? "unknown"}`,
     ),
   });
 }
@@ -468,6 +496,10 @@ function observationEvidence(
   };
 }
 
+function isDexRouteObservation(observation: ExitRouteObservation): boolean {
+  return observation.routeFamily === "dex-amm" || observation.routeFamily === "dex-orderbook";
+}
+
 function compileExitPillar(meta: StablecoinMeta, options: CompileV9AssetOptions): V9PillarEvidence {
   const row = options.dexLiquidityById?.get(meta.id);
   const suppliedObservations = options.exitRouteObservationsById?.get(meta.id);
@@ -481,14 +513,25 @@ function compileExitPillar(meta: StablecoinMeta, options: CompileV9AssetOptions)
         "exitRouteObservations",
       ),
     );
-    return pillarEvidence({ score: null, evidenceLevel: "insufficient", evidence: [], unresolved: gaps });
+    return pillarEvidence({
+      policy: options.policy,
+      score: null,
+      evidenceLevel: "insufficient",
+      evidence: [],
+      unresolved: gaps,
+    });
   }
 
-  const observations: readonly ExitRouteObservation[] = suppliedObservations ?? row?.exitRouteObservations ?? [];
-  const exitObservationAsOfSec = Date.parse(options.asOf) / 1_000;
-  const dexObservations = observations.filter(
-    (observation) => observation.routeFamily === "dex-amm" || observation.routeFamily === "dex-orderbook",
+  const suppliedDexObservations = suppliedObservations?.filter(isDexRouteObservation) ?? [];
+  const suppliedRedemptionObservations =
+    suppliedObservations?.filter((observation) => !isDexRouteObservation(observation)) ?? [];
+  const observations = mergeExitRouteObservations(
+    [...(row?.exitRouteObservations ?? []), ...suppliedDexObservations],
+    suppliedRedemptionObservations,
+    meta.id,
   );
+  const exitObservationAsOfSec = Date.parse(options.asOf) / 1_000;
+  const dexObservations = observations.filter(isDexRouteObservation);
   if (dexObservations.length > 0 && !isDexExitRouteCoverageComplete(row?.exitRouteObservationCoverage)) {
     gaps.push(
       unresolved(
@@ -509,8 +552,7 @@ function compileExitPillar(meta: StablecoinMeta, options: CompileV9AssetOptions)
     );
   }
   const eligibleObservations = observations.filter((observation) => {
-    const lane =
-      observation.routeFamily === "dex-amm" || observation.routeFamily === "dex-orderbook" ? "dex" : "redemption";
+    const lane = isDexRouteObservation(observation) ? "dex" : "redemption";
     return (
       observation.executableUsd > 0 &&
       isExitRouteObservationScoreEligible(observation, lane, {
@@ -525,7 +567,23 @@ function compileExitPillar(meta: StablecoinMeta, options: CompileV9AssetOptions)
     const reference = observationEvidence(meta, observation, options);
     if (reference) supported.push({ observation, evidence: reference });
   }
-  if (supported.length === 0) {
+  const unresolvedOutputRoutes = supported.filter(({ observation }) =>
+    ["unresolved-asset", "unresolved-basket", "unknown"].includes(observation.output.kind),
+  );
+  if (unresolvedOutputRoutes.length > 0) {
+    gaps.push(
+      unresolved(
+        "unresolved-exit-output",
+        `${unresolvedOutputRoutes.length} otherwise eligible route(s) exit into an unresolved asset or basket and are excluded.`,
+        false,
+        "exitRouteObservations.output",
+      ),
+    );
+  }
+  const scoreableSupported = supported.filter(
+    ({ observation }) => !["unresolved-asset", "unresolved-basket", "unknown"].includes(observation.output.kind),
+  );
+  if (scoreableSupported.length === 0) {
     const status = row?.exitRouteObservationCoverage?.status ?? "unknown";
     gaps.push(
       unresolved(
@@ -537,11 +595,17 @@ function compileExitPillar(meta: StablecoinMeta, options: CompileV9AssetOptions)
         "exitRouteObservations",
       ),
     );
-    return pillarEvidence({ score: null, evidenceLevel: "insufficient", evidence: [], unresolved: gaps });
+    return pillarEvidence({
+      policy: options.policy,
+      score: null,
+      evidenceLevel: "insufficient",
+      evidence: [],
+      unresolved: gaps,
+    });
   }
 
   const requestKeys = new Set(
-    supported.map(
+    scoreableSupported.map(
       ({ observation }) =>
         `${observation.requestedNotionalUsd}|${observation.maxCostBps}|${observation.settlementHorizonSec}`,
     ),
@@ -556,11 +620,11 @@ function compileExitPillar(meta: StablecoinMeta, options: CompileV9AssetOptions)
       ),
     );
   }
-  const commonModes = supported.map(({ observation }) => new Set(observation.commonModeKeys));
+  const commonModes = scoreableSupported.map(({ observation }) => new Set(observation.commonModeKeys));
   const sharedCommonModes = [...(commonModes[0] ?? new Set<string>())].filter((key) =>
     commonModes.every((route) => route.has(key)),
   );
-  if (supported.length > 1 && sharedCommonModes.length > 0) {
+  if (scoreableSupported.length > 1 && sharedCommonModes.length > 0) {
     gaps.push(
       unresolved(
         "correlated-exit-routes",
@@ -570,77 +634,33 @@ function compileExitPillar(meta: StablecoinMeta, options: CompileV9AssetOptions)
       ),
     );
   }
-  const impairedOutput = supported.some(({ observation }) =>
-    ["unresolved-asset", "unresolved-basket", "unknown"].includes(observation.output.kind),
+  const derivedScore = Math.round(
+    Math.max(...scoreableSupported.map(({ observation }) => observation.completionRatio * 100)),
   );
-  if (impairedOutput) {
-    gaps.push(
-      unresolved(
-        "unresolved-exit-output",
-        "An otherwise eligible route exits into an unresolved asset or basket.",
-        true,
-        "exitRouteObservations.output",
-      ),
-    );
-  }
-
-  const derivedScore = Math.round(Math.max(...supported.map(({ observation }) => observation.completionRatio * 100)));
-  const score = gaps.some((fact) => fact.critical) ? null : derivedScore;
-  const evidenceLevel: V9EvidenceLevel = supported.some(
+  const score = derivedScore;
+  const evidenceLevel: V9EvidenceLevel = scoreableSupported.some(
     ({ observation }) =>
       observation.confidence === "high" &&
-      [
-        "measured-executable-depth",
-        "reserve-based-amm-simulation",
-        "direct-orderbook-depth",
-        "live-reserve-state",
-        "onchain-contract-state",
-      ].includes(observation.evidenceKind),
+      options.policy.policy.semantic.exit.strongEvidenceKinds.includes(observation.evidenceKind),
   )
     ? "strong"
-    : supported.some(({ observation }) => observation.confidence === "high" || observation.confidence === "medium")
+    : scoreableSupported.some(
+          ({ observation }) => observation.confidence === "high" || observation.confidence === "medium",
+        )
       ? "adequate"
       : "limited";
   return pillarEvidence({
+    policy: options.policy,
     score,
     evidenceLevel,
-    evidence: supported.map((entry) => entry.evidence),
+    evidence: scoreableSupported.map((entry) => entry.evidence),
     unresolved: gaps,
-    signals: supported.map(
+    signals: scoreableSupported.map(
       ({ observation }) =>
         `route:${observation.routeFamily}:${observation.output.kind}:${observation.commonModeKeys.slice().sort().join("+") || "independent"}`,
     ),
   });
 }
-
-const MINT_POSTURE_QUALITY = {
-  "none-resolved": 95,
-  "bounded-admin": 85,
-  "partially-bounded-admin": 70,
-  "concentrated-admin": 55,
-  "unbounded-or-compromised": 25,
-  unknown: 0,
-} as const;
-
-const ORACLE_TIER_QUALITY = {
-  "oracleless-or-internal": 95,
-  "redundant-with-failover": 90,
-  "medianized-with-delay": 80,
-  "standard-external": 70,
-  "single-source-or-laggy": 45,
-  "opaque-or-unknown": 0,
-} as const;
-
-const BRIDGE_TIER_QUALITY = {
-  "single-chain-or-native": 95,
-  "issuer-native-burn-mint": 90,
-  "canonical-rollup-bridge": 85,
-  "issuer-native-lock-mint": 75,
-  "external-validated-network": 65,
-  "liquidity-or-intent-route": 65,
-  "external-lock-mint": 45,
-  "opaque-or-unknown": 0,
-} as const;
 
 function compileOracleControlPath(args: {
   meta: StablecoinMeta;
@@ -654,6 +674,7 @@ function compileOracleControlPath(args: {
 }): void {
   const { meta, archetype, options, gaps, pathScores, evidence, signals, structuralSignals } = args;
   if (archetype !== "cdp") return;
+  const oracleTierQuality = options.policy.policy.semantic.control.oracleTierQuality;
 
   const oracle = meta.oracleRisk;
   if (!oracle) {
@@ -719,9 +740,9 @@ function compileOracleControlPath(args: {
   }
   const branchScores =
     branchApplicability?.disposition === "branches-required"
-      ? (oracle.branches ?? []).map((branch) => ORACLE_TIER_QUALITY[branch.tier])
+      ? (oracle.branches ?? []).map((branch) => oracleTierQuality[branch.tier])
       : [];
-  pathScores.push(branchScores.length ? Math.min(...branchScores) : ORACLE_TIER_QUALITY[oracle.tier]);
+  pathScores.push(branchScores.length ? Math.min(...branchScores) : oracleTierQuality[oracle.tier]);
   signals.push(`oracle:${oracle.branchModel ?? "unspecified"}:${oracle.tier}`);
   if (!oracle.reviewedAt || !oracle.reviewer || !oracle.confidence || oracle.confidence === "unknown") {
     gaps.push(
@@ -779,6 +800,7 @@ function compileControlPillar(
   options: CompileV9AssetOptions,
   structuralSignals: V9StructuralSignal[],
 ): V9PillarEvidence {
+  const controlPolicy = options.policy.policy.semantic.control;
   const gaps: V9UnresolvedFact[] = [];
   const pathScores: number[] = [];
   const evidence: V9EvidenceReference[] = [];
@@ -836,7 +858,7 @@ function compileControlPillar(
         ),
       );
     } else {
-      pathScores.push(MINT_POSTURE_QUALITY[mint.authorityPosture]);
+      pathScores.push(controlPolicy.mintPostureQuality[mint.authorityPosture]);
     }
     for (const [index, question] of (mint.review.unresolvedQuestions ?? []).entries()) {
       gaps.push(
@@ -1063,7 +1085,10 @@ function compileControlPillar(
         ),
       );
     }
-    if ((card.rawInputs.bridgeRouteUnknownSupplyRatio ?? 0) >= 0.1) {
+    if (
+      (card.rawInputs.bridgeRouteUnknownSupplyRatio ?? 0) >=
+      options.policy.policy.semantic.materiality.deploymentMaterialSharePct / 100
+    ) {
       gaps.push(
         unresolved(
           "material-bridge-supply-unmatched",
@@ -1074,7 +1099,7 @@ function compileControlPillar(
       );
     }
     const tier = card.rawInputs.bridgeRouteEffectiveTier ?? bridge.tier;
-    pathScores.push(BRIDGE_TIER_QUALITY[tier]);
+    pathScores.push(controlPolicy.bridgeTierQuality[tier]);
     signals.push(`bridge:${tier}:${bridgeStatus ?? "missing"}`);
     const materialSharePct = (card.rawInputs.bridgeRouteMatchedSupplyRatio ?? 0) * 100;
     if (tier === "external-lock-mint" || tier === "opaque-or-unknown") {
@@ -1092,7 +1117,8 @@ function compileControlPillar(
   appendCommonControlSignals({ meta, options, evidence, signals, structuralSignals });
 
   return pillarEvidence({
-    score: gaps.some((fact) => fact.critical) || pathScores.length === 0 ? null : Math.min(...pathScores),
+    policy: options.policy,
+    score: pathScores.length === 0 ? null : Math.min(...pathScores),
     evidenceLevel:
       mint?.confidence === "verified" && (!oracleApplicable || oracle?.confidence === "verified")
         ? "strong"
@@ -1203,6 +1229,7 @@ function appendCommonControlSignals(args: {
   structuralSignals: V9StructuralSignal[];
 }): void {
   const { meta, options, evidence, signals, structuralSignals } = args;
+  const materiality = options.policy.policy.semantic.materiality;
   const localByKey = new Map<string, Set<CriticalControlIdentityOccurrence["path"]>>();
   for (const occurrence of collectCriticalControlIdentitiesAsOf(meta, options.asOf)) {
     const paths = localByKey.get(occurrence.key) ?? new Set<CriticalControlIdentityOccurrence["path"]>();
@@ -1213,7 +1240,12 @@ function appendCommonControlSignals(args: {
   for (const [key, localPathSet] of [...localByKey.entries()].sort(([left], [right]) => left.localeCompare(right))) {
     const localPaths = [...localPathSet].sort();
     const domain = options.commonControlDomains?.get(key) ?? { assetIds: [meta.id], paths: localPaths };
-    if (domain.assetIds.length < 2 && domain.paths.length < 2) continue;
+    if (
+      domain.assetIds.length < materiality.commonControlMinAssets &&
+      domain.paths.length < materiality.commonControlMinPaths
+    ) {
+      continue;
+    }
 
     const paths = [...domain.paths].sort();
     signals.push(`common-control:${key}:assets=${domain.assetIds.length}:paths=${paths.join("+")}`);
@@ -1227,7 +1259,7 @@ function appendCommonControlSignals(args: {
       evidence: uniqueEvidence(evidence),
     });
 
-    if (localPathSet.has("mint") && domain.assetIds.length >= 2) {
+    if (localPathSet.has("mint") && domain.assetIds.length >= materiality.commonControlMinAssets) {
       structuralSignals.push({
         kind: "centralized-mint",
         severity: "moderate",
@@ -1245,6 +1277,7 @@ export function compileReportCardToV9Input(
   card: ReportCard,
   options: CompileV9AssetOptions,
 ): CompiledV9AssetInput {
+  assertV9ValidatedPolicyEnvelope(options.policy);
   if (meta.id !== card.id) throw new Error(`V9 compiler ID mismatch: ${meta.id} != ${card.id}`);
   const archetype = resolveMechanismArchetype(meta, options.metaById);
   const effectiveImplementation = resolveEffectiveImplementationLaunchDate(
@@ -1321,6 +1354,10 @@ export function compileReportCardToV9Input(
 
   return CompiledV9AssetInputSchema.parse({
     schemaVersion: 1,
+    compilerPolicy: {
+      policyId: options.policy.policy.policyId,
+      semanticDigest: options.policy.semanticDigest,
+    },
     assetId: meta.id,
     asOf: options.asOf,
     compiledAt: options.compiledAt,
@@ -1347,7 +1384,7 @@ export function compileReportCardToV9Input(
         }
       : null,
     structuralSignals,
-    unresolved: globalUnresolved,
+    unresolved: normalizeV9UnresolvedFacts(options.policy, globalUnresolved),
     sourceTimestamps,
   });
 }
@@ -1386,6 +1423,7 @@ export function compileReportCardSetToV9Inputs(
   cards: readonly ReportCard[],
   options: Omit<CompileV9AssetOptions, "metaById" | "commonControlDomains">,
 ): CompiledV9AssetInput[] {
+  assertV9ValidatedPolicyEnvelope(options.policy);
   assertExactReportCardIds(
     metadata.map((meta) => meta.id),
     cards,
@@ -1404,16 +1442,14 @@ export function compileReportCardSetToV9Inputs(
     );
 }
 
-const HISTORICAL_RISK_SCORE = {
-  low: 85,
-  moderate: 70,
-  high: 50,
-  critical: 30,
-} as const;
-
 /** Compile point-in-time fact signals without reading the known outcome. */
-export function compileHistoricalFixtureToV9Input(input: HistoricalV9FactsInput): CompiledV9AssetInput {
+export function compileHistoricalFixtureToV9Input(
+  input: HistoricalV9FactsInput,
+  policy: V9ValidatedPolicyEnvelope,
+): CompiledV9AssetInput {
+  assertV9ValidatedPolicyEnvelope(policy);
   const fixture = HistoricalV9FactsInputSchema.parse(input);
+  const historicalPolicy = policy.policy.semantic.historicalValidation;
   const evidence: V9EvidenceReference[] = fixture.sources.map((source, index) => ({
     sourceId: `historical:${fixture.id}:${index}`,
     observedAt: source.publishedAt,
@@ -1423,7 +1459,9 @@ export function compileHistoricalFixtureToV9Input(input: HistoricalV9FactsInput)
   }));
   const pillarScore = (pillar: "backing" | "exit" | "control"): number => {
     const relevant = fixture.facts.riskSignals.filter((signal) => signal.pillar === pillar);
-    return relevant.length === 0 ? 90 : Math.min(...relevant.map((signal) => HISTORICAL_RISK_SCORE[signal.severity]));
+    return relevant.length === 0
+      ? historicalPolicy.noRiskSignalScore
+      : Math.min(...relevant.map((signal) => historicalPolicy.severityQuality[signal.severity]));
   };
   const structuralSignals: V9StructuralSignal[] = fixture.facts.riskSignals.map((signal) => ({
     kind: signal.kind,
@@ -1433,10 +1471,11 @@ export function compileHistoricalFixtureToV9Input(input: HistoricalV9FactsInput)
     evidence,
   }));
   const globalUnresolved = fixture.facts.unresolvedCriticalFacts.map((reason, index) =>
-    unresolved(`historical-critical-${index + 1}`, reason, true, "historicalFacts"),
+    unresolved("historical-critical-input", reason, true, `historicalFacts.${index}`),
   );
   const makeHistoricalPillar = (pillar: "backing" | "exit" | "control"): V9PillarEvidence =>
     pillarEvidence({
+      policy,
       score: pillarScore(pillar),
       evidenceLevel: "adequate",
       evidence,
@@ -1448,6 +1487,10 @@ export function compileHistoricalFixtureToV9Input(input: HistoricalV9FactsInput)
 
   return CompiledV9AssetInputSchema.parse({
     schemaVersion: 1,
+    compilerPolicy: {
+      policyId: policy.policy.policyId,
+      semanticDigest: policy.semanticDigest,
+    },
     assetId: fixture.assetId,
     asOf: fixture.asOf,
     compiledAt: fixture.factFreeze.frozenAt,
@@ -1462,7 +1505,7 @@ export function compileHistoricalFixtureToV9Input(input: HistoricalV9FactsInput)
     trackRecordMonths: fixture.facts.implementationAgeMonths,
     parent: null,
     structuralSignals,
-    unresolved: globalUnresolved,
+    unresolved: normalizeV9UnresolvedFacts(policy, globalUnresolved),
     sourceTimestamps: Object.fromEntries(evidence.map((source) => [source.sourceId, source.observedAt])),
   });
 }

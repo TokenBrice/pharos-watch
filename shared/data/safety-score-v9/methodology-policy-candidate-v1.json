@@ -1,0 +1,1396 @@
+{
+  "schemaVersion": 1,
+  "policyId": "safety-score-v9-candidate-v1",
+  "lifecycle": "candidate",
+  "releaseVersion": null,
+  "semantic": {
+    "formula": {
+      "pillarWeights": {
+        "backing": 0.4,
+        "exit": 0.35,
+        "control": 0.25
+      },
+      "compensabilityHeadroom": 20,
+      "pegExponent": 0.4,
+      "activeDepegCaps": [
+        {
+          "minimumBps": 2500,
+          "limit": 39,
+          "kind": "active-depeg:f",
+          "reason": "An active depeg of at least 25% limits the candidate rating to the F range."
+        },
+        {
+          "minimumBps": 1000,
+          "limit": 49,
+          "kind": "active-depeg:d",
+          "reason": "An active depeg of at least 10% limits the candidate rating to the D range."
+        }
+      ],
+      "trackRecordCeilings": [
+        {
+          "minMonthsInclusive": 0,
+          "maxMonthsExclusive": 6,
+          "limit": 79,
+          "kind": "track-record:<6m",
+          "reason": "Less than six months of implementation history."
+        },
+        {
+          "minMonthsInclusive": 6,
+          "maxMonthsExclusive": 24,
+          "limit": 84,
+          "kind": "track-record:<24m",
+          "reason": "Less than two years of implementation history."
+        },
+        {
+          "minMonthsInclusive": 24,
+          "maxMonthsExclusive": 36,
+          "limit": 86,
+          "kind": "track-record:<36m",
+          "reason": "Less than three years of implementation history."
+        },
+        {
+          "minMonthsInclusive": 36,
+          "maxMonthsExclusive": null,
+          "limit": null,
+          "kind": "track-record:>=36m",
+          "reason": "At least three years of implementation history."
+        }
+      ],
+      "gradeThresholds": [
+        {
+          "grade": "A+",
+          "minScore": 87
+        },
+        {
+          "grade": "A",
+          "minScore": 83
+        },
+        {
+          "grade": "A-",
+          "minScore": 80
+        },
+        {
+          "grade": "B+",
+          "minScore": 75
+        },
+        {
+          "grade": "B",
+          "minScore": 70
+        },
+        {
+          "grade": "B-",
+          "minScore": 65
+        },
+        {
+          "grade": "C+",
+          "minScore": 60
+        },
+        {
+          "grade": "C",
+          "minScore": 55
+        },
+        {
+          "grade": "C-",
+          "minScore": 50
+        },
+        {
+          "grade": "D",
+          "minScore": 40
+        },
+        {
+          "grade": "F",
+          "minScore": 0
+        }
+      ],
+      "capTiePriority": ["active-depeg", "structural", "parent", "evidence", "track-record", "bounded-compensability"],
+      "scoreDecimals": 0,
+      "rounding": {
+        "uncapped": "nearest",
+        "capped": "floor"
+      }
+    },
+    "evidence": {
+      "ceilings": {
+        "strong": null,
+        "adequate": 84,
+        "limited": 69,
+        "insufficient": null
+      },
+      "rank": {
+        "strong": 0,
+        "adequate": 1,
+        "limited": 2,
+        "insufficient": 3
+      },
+      "dispositions": [
+        {
+          "factClass": "not-applicable",
+          "boundedness": "not-applicable",
+          "defaultTreatment": "diagnostic",
+          "rateability": "rateable",
+          "routeAction": "not-applicable",
+          "publicLabel": "Reviewed as not applicable"
+        },
+        {
+          "factClass": "known-current",
+          "boundedness": "not-applicable",
+          "defaultTreatment": "pillar",
+          "rateability": "rateable",
+          "routeAction": "include",
+          "publicLabel": "Known and current"
+        },
+        {
+          "factClass": "missing-bounded-exposure",
+          "boundedness": "exposure-bounded",
+          "defaultTreatment": "pillar",
+          "rateability": "rateable",
+          "routeAction": "include",
+          "publicLabel": "Unknown within a bounded exposure"
+        },
+        {
+          "factClass": "missing-global-bounded",
+          "boundedness": "globally-bounded",
+          "defaultTreatment": "ceiling",
+          "rateability": "rateable",
+          "routeAction": "include",
+          "publicLabel": "Unknown with a defensible upper bound"
+        },
+        {
+          "factClass": "missing-serial-required",
+          "boundedness": "unbounded",
+          "defaultTreatment": "NR",
+          "rateability": "NR",
+          "routeAction": "include",
+          "publicLabel": "Required claim cannot be established"
+        },
+        {
+          "factClass": "optional-unsupported",
+          "boundedness": "not-applicable",
+          "defaultTreatment": "diagnostic",
+          "rateability": "rateable",
+          "routeAction": "exclude",
+          "publicLabel": "Optional path excluded"
+        },
+        {
+          "factClass": "proved-no-viable-path",
+          "boundedness": "unbounded",
+          "defaultTreatment": "pillar",
+          "rateability": "rateable",
+          "routeAction": "include",
+          "publicLabel": "Evidence shows no viable path"
+        },
+        {
+          "factClass": "applicability-unresolved",
+          "boundedness": "unbounded",
+          "defaultTreatment": "NR",
+          "rateability": "NR",
+          "routeAction": "exclude",
+          "publicLabel": "Material applicability is unresolved"
+        },
+        {
+          "factClass": "stale-bounded",
+          "boundedness": "globally-bounded",
+          "defaultTreatment": "ceiling",
+          "rateability": "rateable",
+          "routeAction": "include",
+          "publicLabel": "Stale evidence with a conservative bound"
+        },
+        {
+          "factClass": "stale-material",
+          "boundedness": "unbounded",
+          "defaultTreatment": "NR",
+          "rateability": "NR",
+          "routeAction": "exclude",
+          "publicLabel": "Material evidence is stale"
+        }
+      ]
+    },
+    "materiality": {
+      "serialRequiredPathsAlwaysBind": true,
+      "basketExposureTreatment": "proportional",
+      "deploymentMaterialSharePct": 10,
+      "commonModeOracleMinBranches": 2,
+      "commonControlMinAssets": 2,
+      "commonControlMinPaths": 2,
+      "commonModeSignal": {
+        "kind": "critical-dependency",
+        "severity": "high"
+      }
+    },
+    "backing": {
+      "componentQuality": {
+        "strong": 95,
+        "adequate": 80,
+        "limited": 60,
+        "weak": 35,
+        "failed": 10
+      },
+      "boundedUnknownQuality": 35,
+      "reserve": {
+        "assetClassQuality": {
+          "cash": 98,
+          "bank-deposit": 88,
+          "treasury-bill": 96,
+          "government-security": 92,
+          "repo": 90,
+          "money-market-fund": 88,
+          "stablecoin": 75,
+          "cryptoasset": 65,
+          "hedged-crypto": 68,
+          "private-credit": 35,
+          "public-credit": 72,
+          "tokenized-security": 75,
+          "fund-share": 82,
+          "protocol-position": 65,
+          "other": 40
+        },
+        "liquidityQuality": {
+          "immediate": 98,
+          "one-day": 92,
+          "seven-days": 78,
+          "over-seven-days": 55,
+          "unknown": 45
+        },
+        "maturityNotApplicableClasses": ["cash", "stablecoin", "cryptoasset", "hedged-crypto", "protocol-position"],
+        "maturityBands": [
+          { "maxDaysInclusive": 1, "score": 98 },
+          { "maxDaysInclusive": 30, "score": 94 },
+          { "maxDaysInclusive": 90, "score": 86 },
+          { "maxDaysInclusive": 365, "score": 70 },
+          { "maxDaysInclusive": null, "score": 48 }
+        ],
+        "factorWeights": {
+          "assetQuality": 0.55,
+          "liquidity": 0.3,
+          "maturity": 0.15
+        },
+        "concentrationWeight": 0.15,
+        "concentrationBands": [
+          { "minShareInclusive": 0, "score": 98 },
+          { "minShareInclusive": 0.25, "score": 92 },
+          { "minShareInclusive": 0.5, "score": 75 },
+          { "minShareInclusive": 0.75, "score": 55 },
+          { "minShareInclusive": 0.9, "score": 35 }
+        ]
+      },
+      "structural": {
+        "materialExposureShare": 0.1,
+        "commonModeShare": 0.25,
+        "commonModeMinExposures": 2,
+        "unsafeExposureQuality": 45,
+        "severityShares": {
+          "moderate": 0.05,
+          "high": 0.1,
+          "critical": 0.25
+        },
+        "unsafeExposureSignal": { "kind": "unsafe-backing", "severity": "high" },
+        "speculativeCreditSignal": { "kind": "speculative-credit", "severity": "high" },
+        "commonModeSignal": { "kind": "unsafe-backing", "severity": "moderate" },
+        "nonSubstitutableFailureSignal": { "kind": "unsafe-backing", "severity": "critical" },
+        "algorithmic": {
+          "materialReflexiveShare": 0.1,
+          "signal": { "kind": "algorithmic-reflexivity", "severity": "critical" }
+        },
+        "cdp": {
+          "minimumCollateralizationRatio": 1.1,
+          "minimumLiquidationCapacityRatio": 0.5,
+          "collateralizationSignal": { "kind": "unsafe-backing", "severity": "critical" },
+          "liquidationSignal": { "kind": "unsafe-backing", "severity": "high" }
+        },
+        "synthetic": {
+          "minimumHedgeCoverageRatio": 0.95,
+          "minimumLossAbsorptionShare": 0.03,
+          "hedgeSignal": { "kind": "unsafe-backing", "severity": "critical" },
+          "lossAbsorptionSignal": { "kind": "unsafe-backing", "severity": "high" }
+        },
+        "rwaCreditFund": {
+          "maturityMismatchDays": 365,
+          "signal": { "kind": "speculative-credit", "severity": "high" }
+        }
+      },
+      "archetypes": {
+        "fiat-cash": {
+          "reserveWeight": 0.55,
+          "componentWeights": {
+            "claim-and-segregation": 0.18,
+            "custody-continuity": 0.12,
+            "assurance-and-reconciliation": 0.15
+          },
+          "serialComponentKeys": ["claim-and-segregation", "custody-continuity"],
+          "structuralComponents": {
+            "claim-and-segregation": { "kind": "unsafe-backing", "severity": "critical" },
+            "custody-continuity": { "kind": "unsafe-backing", "severity": "high" }
+          }
+        },
+        "tbill": {
+          "reserveWeight": 0.35,
+          "componentWeights": {
+            "fund-claim-and-seniority": 0.2,
+            "nav-valuation": 0.15,
+            "duration-and-liquidity": 0.1,
+            "loss-recovery-design": 0.2
+          },
+          "serialComponentKeys": ["fund-claim-and-seniority", "nav-valuation"],
+          "structuralComponents": {
+            "fund-claim-and-seniority": { "kind": "unsafe-backing", "severity": "critical" },
+            "loss-recovery-design": { "kind": "unsafe-backing", "severity": "high" }
+          }
+        },
+        "cdp": {
+          "reserveWeight": 0.4,
+          "componentWeights": {
+            "collateralization-parameters": 0.12,
+            "liquidation-mechanics": 0.15,
+            "backstop": 0.1,
+            "branch-isolation": 0.08,
+            "shutdown-and-bad-debt": 0.08,
+            "structural-redemption": 0.07
+          },
+          "serialComponentKeys": ["collateralization-parameters", "liquidation-mechanics", "shutdown-and-bad-debt"],
+          "structuralComponents": {
+            "collateralization-parameters": { "kind": "unsafe-backing", "severity": "critical" },
+            "liquidation-mechanics": { "kind": "unsafe-backing", "severity": "high" },
+            "shutdown-and-bad-debt": { "kind": "unsafe-backing", "severity": "critical" }
+          }
+        },
+        "synthetic-delta-neutral": {
+          "reserveWeight": 0.3,
+          "componentWeights": {
+            "venue-and-custody": 0.08,
+            "hedge-reconciliation": 0.15,
+            "funding-basis-stress": 0.12,
+            "margin-and-liquidation": 0.13,
+            "unwind-capacity": 0.12,
+            "loss-absorption": 0.1
+          },
+          "serialComponentKeys": ["venue-and-custody", "hedge-reconciliation", "margin-and-liquidation"],
+          "structuralComponents": {
+            "venue-and-custody": { "kind": "unsafe-backing", "severity": "high" },
+            "hedge-reconciliation": { "kind": "unsafe-backing", "severity": "critical" },
+            "margin-and-liquidation": { "kind": "unsafe-backing", "severity": "high" }
+          }
+        },
+        "algorithmic": {
+          "reserveWeight": 0.25,
+          "componentWeights": {
+            "contraction-capacity": 0.2,
+            "confidence-and-incentives": 0.2,
+            "oracle-and-control-assumptions": 0.1,
+            "emergency-recovery": 0.15,
+            "loss-recovery": 0.1
+          },
+          "serialComponentKeys": ["contraction-capacity", "confidence-and-incentives"],
+          "structuralComponents": {
+            "contraction-capacity": { "kind": "algorithmic-reflexivity", "severity": "critical" },
+            "confidence-and-incentives": { "kind": "algorithmic-reflexivity", "severity": "critical" }
+          }
+        },
+        "rwa-credit-fund": {
+          "reserveWeight": 0.4,
+          "componentWeights": {
+            "credit-quality": 0.15,
+            "seniority": 0.1,
+            "legal-enforceability": 0.1,
+            "valuation-cadence": 0.07,
+            "maturity-and-liquidity": 0.07,
+            "custody": 0.04,
+            "recovery": 0.07
+          },
+          "serialComponentKeys": ["legal-enforceability", "custody"],
+          "structuralComponents": {
+            "credit-quality": { "kind": "speculative-credit", "severity": "high" },
+            "legal-enforceability": { "kind": "unsafe-backing", "severity": "critical" },
+            "recovery": { "kind": "unsafe-backing", "severity": "high" }
+          }
+        }
+      }
+    },
+    "exit": {
+      "stressRequest": {
+        "notionalGridUsd": [100000, 1000000, 10000000, 25000000],
+        "referenceNotionalUsd": 1000000,
+        "supplyRatio": 0.05,
+        "floorUsd": 100000,
+        "capUsd": 25000000,
+        "maxCostBps": 200,
+        "settlementHorizonSec": 300
+      },
+      "componentWeights": {
+        "access": 0.2,
+        "settlement": 0.15,
+        "executionCertainty": 0.15,
+        "capacity": 0.25,
+        "outputAssetQuality": 0.15,
+        "cost": 0.1
+      },
+      "independentRouteBenefitLimit": 0.1,
+      "modeledConfidenceFactors": {
+        "high": 1,
+        "medium": 0.75,
+        "low": 0.35
+      },
+      "observationConfidenceFactors": {
+        "high": 1,
+        "medium": 0.85,
+        "low": 0.6,
+        "unknown": 0.35
+      },
+      "scoreableEvidenceKinds": {
+        "dex": ["measured-executable-depth", "reserve-based-amm-simulation", "direct-orderbook-depth"],
+        "redemption": ["documented-terms", "live-reserve-state", "onchain-contract-state"]
+      },
+      "strongEvidenceKinds": [
+        "measured-executable-depth",
+        "reserve-based-amm-simulation",
+        "direct-orderbook-depth",
+        "live-reserve-state",
+        "onchain-contract-state"
+      ],
+      "documentedTermsMaxAgeSec": 31536000,
+      "ammModeledTvlRatio": {
+        "min": 0.5,
+        "max": 2
+      },
+      "accessScores": {
+        "permissionless-onchain": 100,
+        "whitelisted-onchain": 75,
+        "issuer-api": 40,
+        "manual": 20
+      },
+      "settlementScores": {
+        "atomic": 100,
+        "immediate": 90,
+        "same-day": 65,
+        "days": 35,
+        "queued": 20
+      },
+      "executionScores": {
+        "deterministic-onchain": 100,
+        "deterministic-basket": 80,
+        "rules-based-nav": 60,
+        "opaque": 30
+      },
+      "outputAssetScores": {
+        "stable-single": 100,
+        "stable-basket": 80,
+        "bluechip-collateral": 65,
+        "mixed-collateral": 45,
+        "nav": 20
+      },
+      "routeFamilyCaps": {
+        "queueRedeem": 70,
+        "offchainIssuer": 65
+      },
+      "coverageRatioBreakpoints": [
+        {
+          "value": 0,
+          "score": 0
+        },
+        {
+          "value": 0.01,
+          "score": 20
+        },
+        {
+          "value": 0.05,
+          "score": 40
+        },
+        {
+          "value": 0.1,
+          "score": 60
+        },
+        {
+          "value": 0.25,
+          "score": 80
+        },
+        {
+          "value": 0.5,
+          "score": 100
+        }
+      ],
+      "absoluteCapacityBreakpoints": [
+        {
+          "value": 0,
+          "score": 0
+        },
+        {
+          "value": 100000,
+          "score": 20
+        },
+        {
+          "value": 1000000,
+          "score": 40
+        },
+        {
+          "value": 10000000,
+          "score": 60
+        },
+        {
+          "value": 50000000,
+          "score": 80
+        },
+        {
+          "value": 250000000,
+          "score": 100
+        }
+      ],
+      "settlementDelayBands": [
+        {
+          "maxSec": 3600,
+          "multiplier": 1
+        },
+        {
+          "maxSec": 86400,
+          "multiplier": 0.9
+        },
+        {
+          "maxSec": 604800,
+          "multiplier": 0.75
+        },
+        {
+          "maxSec": null,
+          "multiplier": 0.6
+        }
+      ],
+      "queueBacklogBands": [
+        {
+          "threshold": 1,
+          "multiplier": 0.65
+        },
+        {
+          "threshold": 0.5,
+          "multiplier": 0.8
+        },
+        {
+          "threshold": 0,
+          "multiplier": 0.9
+        }
+      ],
+      "minimumRedeemBands": [
+        {
+          "threshold": 1000000,
+          "multiplier": 0.75
+        },
+        {
+          "threshold": 10000,
+          "multiplier": 0.9
+        }
+      ],
+      "holderEligibilityMultipliers": {
+        "any-holder": 1,
+        "verified-customer": 0.9,
+        "whitelisted-primary": 0.85,
+        "pre-incident-holder": 0.85,
+        "issuer-discretionary": 0.6,
+        "unknown": 0.85
+      }
+    },
+    "control": {
+      "mintPostureQuality": {
+        "none-resolved": 95,
+        "bounded-admin": 85,
+        "partially-bounded-admin": 70,
+        "concentrated-admin": 55,
+        "unbounded-or-compromised": 25,
+        "unknown": 0
+      },
+      "oracleTierQuality": {
+        "oracleless-or-internal": 95,
+        "redundant-with-failover": 90,
+        "medianized-with-delay": 80,
+        "standard-external": 70,
+        "single-source-or-laggy": 45,
+        "opaque-or-unknown": 0
+      },
+      "bridgeTierQuality": {
+        "single-chain-or-native": 95,
+        "issuer-native-burn-mint": 90,
+        "canonical-rollup-bridge": 85,
+        "issuer-native-lock-mint": 75,
+        "external-validated-network": 65,
+        "liquidity-or-intent-route": 65,
+        "external-lock-mint": 45,
+        "opaque-or-unknown": 0
+      }
+    },
+    "structural": {
+      "signalLimits": {
+        "unsafe-backing": {
+          "low": 84,
+          "moderate": 74,
+          "high": 59,
+          "critical": 39
+        },
+        "speculative-credit": {
+          "low": 79,
+          "moderate": 74,
+          "high": 59,
+          "critical": 39
+        },
+        "algorithmic-reflexivity": {
+          "low": 84,
+          "moderate": 74,
+          "high": 59,
+          "critical": 39
+        },
+        "centralized-mint": {
+          "low": null,
+          "moderate": 74,
+          "high": 59,
+          "critical": 39
+        },
+        "unreviewed-upgrade": {
+          "low": null,
+          "moderate": 74,
+          "high": 59,
+          "critical": 39
+        },
+        "material-bridge": {
+          "low": null,
+          "moderate": 74,
+          "high": 59,
+          "critical": 39
+        },
+        "peripheral-bridge": {
+          "low": null,
+          "moderate": null,
+          "high": null,
+          "critical": null
+        },
+        "weak-oracle-branch": {
+          "low": null,
+          "moderate": 74,
+          "high": 59,
+          "critical": 39
+        },
+        "active-control-incident": {
+          "low": 84,
+          "moderate": 74,
+          "high": 59,
+          "critical": 39
+        },
+        "critical-dependency": {
+          "low": null,
+          "moderate": null,
+          "high": 64,
+          "critical": 49
+        },
+        "bounded-unknown": {
+          "low": null,
+          "moderate": null,
+          "high": 69,
+          "critical": 49
+        }
+      },
+      "commonModeOracleLimit": 49
+    },
+    "historicalValidation": {
+      "noRiskSignalScore": 90,
+      "severityQuality": {
+        "low": 85,
+        "moderate": 70,
+        "high": 50,
+        "critical": 30
+      }
+    },
+    "decisions": {
+      "formulaOrder": "quality-peg-caps",
+      "parentPropagation": "required-parent-ceiling",
+      "collateralUpstreamUnknown": "exposure-bounded-unless-serial-claim-unestablished",
+      "dependencyScc": "member-and-descendant-treatment",
+      "commonModeAggregation": "failure-domain",
+      "implementationDateUnknown": "most-conservative-track-record-ceiling",
+      "navAndPegReference": "nav-in-backing-peg-reference-in-peg",
+      "frozenAssets": "archive-only-no-live-recompute",
+      "historyTransition": "new-model-baseline",
+      "accessPostureScoring": "categorical-unless-economic-loss-path"
+    },
+    "accessPostureVocabulary": {
+      "transfer": ["permissionless", "restrictable", "permissioned", "unknown"],
+      "freezeExposure": ["none-known", "upstream", "direct", "possible", "unknown"],
+      "primaryExit": ["permissionless", "eligibility-gated", "issuer-discretionary", "none", "unknown"],
+      "governance": ["immutable", "distributed", "concentrated", "single-entity", "unknown"]
+    }
+  },
+  "reasonRegistry": [
+    {
+      "code": "bounded-unknown-reserve-exposure",
+      "ownerDomain": "backing",
+      "archetypes": ["*"],
+      "pathKinds": ["collateral-exposure"],
+      "defaultFactClass": "missing-bounded-exposure",
+      "boundedness": "exposure-bounded",
+      "permittedTreatments": ["pillar", "ceiling", "diagnostic"],
+      "defaultTreatment": "pillar",
+      "releaseSeverity": "review-required",
+      "publicLabel": "Bounded reserve exposure is unresolved",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "correlated-exit-routes",
+      "ownerDomain": "exit",
+      "archetypes": ["*"],
+      "pathKinds": ["optional-exit"],
+      "defaultFactClass": "known-current",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": ["ceiling", "diagnostic"],
+      "defaultTreatment": "diagnostic",
+      "releaseSeverity": "review-required",
+      "publicLabel": "Exit routes share a failure domain",
+      "auditClassification": "unresolved-methodology"
+    },
+    {
+      "code": "critical-unresolved",
+      "ownerDomain": "evidence",
+      "archetypes": ["*"],
+      "pathKinds": ["*"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "A critical fact is unresolved",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "future-dated-input-fact",
+      "ownerDomain": "evidence",
+      "archetypes": ["*"],
+      "pathKinds": ["*"],
+      "defaultFactClass": "stale-material",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Evidence is later than the scoring clock",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "historical-critical-input",
+      "ownerDomain": "evidence",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Historical point-in-time fact is unresolved",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "implementation-parent-cycle",
+      "ownerDomain": "dependency",
+      "archetypes": ["*"],
+      "pathKinds": ["serial-dependency"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Implementation dependency contains a cycle",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "incomparable-route-requests",
+      "ownerDomain": "exit",
+      "archetypes": ["*"],
+      "pathKinds": ["optional-exit"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Exit routes were measured under different stress requests",
+      "auditClassification": "unresolved-methodology"
+    },
+    {
+      "code": "incomplete-dex-route-coverage",
+      "ownerDomain": "exit",
+      "archetypes": ["*"],
+      "pathKinds": ["optional-exit"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "DEX route coverage is incomplete",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "incomplete-oracle-liquidation-branch",
+      "ownerDomain": "control",
+      "archetypes": ["cdp"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Oracle and liquidation branch is incomplete",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "insufficient-evidence",
+      "ownerDomain": "evidence",
+      "archetypes": ["*"],
+      "pathKinds": ["*"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Evidence is insufficient to rate",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "material-bridge-supply-unmatched",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["deployment-control"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Material deployment supply is not mapped to a bridge route",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "material-dependency-unavailable",
+      "ownerDomain": "dependency",
+      "archetypes": ["*"],
+      "pathKinds": ["collateral-exposure", "serial-dependency"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["ceiling", "NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Material upstream dependency is unavailable",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "material-reserve-slice-unstructured",
+      "ownerDomain": "backing",
+      "archetypes": ["*"],
+      "pathKinds": ["collateral-exposure"],
+      "defaultFactClass": "missing-bounded-exposure",
+      "boundedness": "exposure-bounded",
+      "permittedTreatments": ["pillar", "ceiling"],
+      "defaultTreatment": "pillar",
+      "releaseSeverity": "review-required",
+      "publicLabel": "Material reserve slice lacks structured evidence",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "material-unknown-reserve-exposure",
+      "ownerDomain": "backing",
+      "archetypes": ["*"],
+      "pathKinds": ["collateral-exposure"],
+      "defaultFactClass": "missing-bounded-exposure",
+      "boundedness": "exposure-bounded",
+      "permittedTreatments": ["pillar", "ceiling"],
+      "defaultTreatment": "ceiling",
+      "ceilingRule": { "source": "evidence-level", "level": "limited" },
+      "releaseSeverity": "review-required",
+      "publicLabel": "Material reserve exposure remains unknown",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "mint-control-question",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Mint control question is unresolved",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-applicable-peg",
+      "ownerDomain": "peg",
+      "archetypes": ["*"],
+      "pathKinds": ["peg"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Applicable peg evidence is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-archetype",
+      "ownerDomain": "methodology",
+      "archetypes": ["*"],
+      "pathKinds": ["methodology"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Mechanism archetype is unresolved",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-bridge-route-rows",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["deployment-control"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Bridge profile lacks deployment routes",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-bridge-routes",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["deployment-control"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Material bridge routes are not reviewed",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-custody-profile",
+      "ownerDomain": "backing",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Custody profile is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-implementation-date",
+      "ownerDomain": "evidence",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": ["ceiling", "diagnostic"],
+      "defaultTreatment": "ceiling",
+      "ceilingRule": { "source": "minimum-track-record" },
+      "releaseSeverity": "review-required",
+      "publicLabel": "Implementation date is unknown",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-latest-assurance-report",
+      "ownerDomain": "backing",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "stale-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": ["ceiling", "diagnostic"],
+      "defaultTreatment": "ceiling",
+      "ceilingRule": { "source": "evidence-level", "level": "adequate" },
+      "releaseSeverity": "review-required",
+      "publicLabel": "Latest assurance report is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-mint-authority",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Mint authority path is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-oracle-profile",
+      "ownerDomain": "control",
+      "archetypes": ["cdp"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Oracle and liquidation profile is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-parent-score",
+      "ownerDomain": "dependency",
+      "archetypes": ["*"],
+      "pathKinds": ["serial-dependency"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Required parent score is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-peg-input",
+      "ownerDomain": "peg",
+      "archetypes": ["*"],
+      "pathKinds": ["peg"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Peg input is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-pillar",
+      "ownerDomain": "methodology",
+      "archetypes": ["*"],
+      "pathKinds": ["methodology"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Required safety pillar is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-pillar-evidence",
+      "ownerDomain": "evidence",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Pillar lacks dated evidence",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-required-oracle-branches",
+      "ownerDomain": "control",
+      "archetypes": ["cdp"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Required oracle branches are missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-reserve-composition",
+      "ownerDomain": "backing",
+      "archetypes": ["*"],
+      "pathKinds": ["collateral-exposure"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Reserve composition is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-runtime-route-evidence",
+      "ownerDomain": "exit",
+      "archetypes": ["*"],
+      "pathKinds": ["optional-exit"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Runtime exit-route evidence is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-same-notional-route",
+      "ownerDomain": "exit",
+      "archetypes": ["*"],
+      "pathKinds": ["optional-exit"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Comparable exit route is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-upgrade-control",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Upgrade authority is not linked to a reviewed control",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-upgradeability-review",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Upgradeability review is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "nonmaterial-dependency-unavailable",
+      "ownerDomain": "dependency",
+      "archetypes": ["*"],
+      "pathKinds": ["collateral-exposure"],
+      "defaultFactClass": "missing-bounded-exposure",
+      "boundedness": "exposure-bounded",
+      "permittedTreatments": ["pillar", "diagnostic"],
+      "defaultTreatment": "diagnostic",
+      "releaseSeverity": "diagnostic",
+      "publicLabel": "Non-material upstream dependency is unavailable",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "no-viable-exit-path",
+      "ownerDomain": "exit",
+      "archetypes": ["*"],
+      "pathKinds": ["optional-exit"],
+      "defaultFactClass": "proved-no-viable-path",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["pillar"],
+      "defaultTreatment": "pillar",
+      "releaseSeverity": "review-required",
+      "publicLabel": "No viable exit path is established",
+      "auditClassification": "unsupported-design"
+    },
+    {
+      "code": "parent-cycle",
+      "ownerDomain": "dependency",
+      "archetypes": ["*"],
+      "pathKinds": ["serial-dependency"],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Required parent chain contains a cycle",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "partial-reserve-review",
+      "ownerDomain": "backing",
+      "archetypes": ["*"],
+      "pathKinds": ["collateral-exposure"],
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": ["ceiling", "NR"],
+      "defaultTreatment": "ceiling",
+      "ceilingRule": { "source": "evidence-level", "level": "limited" },
+      "releaseSeverity": "review-required",
+      "publicLabel": "Reserve review covers only part of the backing envelope",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "runtime-bridge-materiality-unavailable",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["deployment-control"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Bridge deployment materiality is unavailable",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "selected-bridge-route-missing",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["deployment-control"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Selected bridge route is missing",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "selected-bridge-route-unresolved",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["deployment-control"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Selected bridge route is unresolved",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "unknown-control-cap-authority",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Control cap authority is unknown",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "unknown-control-mint-ability",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Control mint ability is unknown",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "unknown-upgrade-authority",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Upgrade authority is unknown",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "unresolved-control-identity",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Critical control identity is unresolved",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "unresolved-exit-output",
+      "ownerDomain": "exit",
+      "archetypes": ["*"],
+      "pathKinds": ["optional-exit"],
+      "defaultFactClass": "optional-unsupported",
+      "boundedness": "not-applicable",
+      "permittedTreatments": ["diagnostic"],
+      "defaultTreatment": "diagnostic",
+      "releaseSeverity": "review-required",
+      "publicLabel": "Exit output asset is unresolved",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "unresolved-mint-authority",
+      "ownerDomain": "control",
+      "archetypes": ["*"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Mint authority is unresolved",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "unresolved-oracle-branch-applicability",
+      "ownerDomain": "control",
+      "archetypes": ["cdp"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Oracle branch applicability is unresolved",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "unsupported-same-notional-route",
+      "ownerDomain": "exit",
+      "archetypes": ["*"],
+      "pathKinds": ["optional-exit"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR", "diagnostic"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "No comparable route is supported",
+      "auditClassification": "unsupported-design"
+    },
+    {
+      "code": "unreviewed-dependency-relationships",
+      "ownerDomain": "dependency",
+      "archetypes": ["*"],
+      "pathKinds": ["collateral-exposure", "serial-dependency"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Dependency relationships are not reviewed",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "unreviewed-oracle-profile",
+      "ownerDomain": "control",
+      "archetypes": ["cdp"],
+      "pathKinds": ["local-component"],
+      "defaultFactClass": "stale-material",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Oracle profile lacks review provenance",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "unreviewed-reserve-envelope",
+      "ownerDomain": "backing",
+      "archetypes": ["*"],
+      "pathKinds": ["collateral-exposure"],
+      "defaultFactClass": "applicability-unresolved",
+      "boundedness": "unbounded",
+      "permittedTreatments": ["NR", "ceiling"],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Reserve envelope is not reviewed",
+      "auditClassification": "missing-data"
+    }
+  ]
+}

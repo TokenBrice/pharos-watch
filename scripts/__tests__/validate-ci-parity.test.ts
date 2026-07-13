@@ -165,6 +165,8 @@ describe("validate-ci parity", () => {
       ["postman", 0, "deterministic", true, []],
       ["openapi", 0, "deterministic", true, []],
       ["world-map", 0, "deterministic", true, []],
+      ["safety-score-v8-evaluation-build", 0, "deterministic", true, []],
+      ["safety-score-v9-evaluation-build", 0, "deterministic", true, []],
       ["stablecoin-prevalidated-registry", 1, "deterministic", true, ["stablecoin-catalog"]],
       ["legacy-stablecoin-redirects", 1, "deterministic", true, ["stablecoin-catalog"]],
       ["stablecoin-client-registry", 1, "deterministic", true, ["stablecoin-catalog"]],
@@ -193,6 +195,8 @@ describe("validate-ci parity", () => {
       "tsx scripts/maintenance/generate-postman-collection.ts",
       "tsx scripts/maintenance/generate-openapi-spec.ts",
       "tsx scripts/maintenance/build-world-map-svg.ts",
+      "tsx scripts/maintenance/generate-safety-score-v8-evaluation-build-manifest.ts",
+      "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
       "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs",
       "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs",
       "node scripts/build-data/build-client-registry.mjs",
@@ -215,6 +219,8 @@ describe("validate-ci parity", () => {
       "tsx scripts/maintenance/generate-postman-collection.ts --check",
       "tsx scripts/maintenance/generate-openapi-spec.ts --check",
       "tsx scripts/maintenance/build-world-map-svg.ts --check",
+      "tsx scripts/maintenance/generate-safety-score-v8-evaluation-build-manifest.ts --check",
+      "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts --check",
       "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs --check",
       "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs --check",
       "node scripts/build-data/build-client-registry.mjs --check",
@@ -247,6 +253,8 @@ describe("validate-ci parity", () => {
         "postman",
         "openapi",
         "world-map",
+        "safety-score-v8-evaluation-build",
+        "safety-score-v9-evaluation-build",
         "stablecoin-prevalidated-registry",
         "legacy-stablecoin-redirects",
         "stablecoin-client-registry",
@@ -269,10 +277,10 @@ describe("validate-ci parity", () => {
     expect(
       buildGeneratedArtifactPhases().map(({ artifacts }) => artifacts.map((artifact: { id: string }) => artifact.id)),
     ).toEqual([
-      expectedArtifacts.slice(0, 9).map(([id]) => id),
-      expectedArtifacts.slice(9, 12).map(([id]) => id),
-      expectedArtifacts.slice(12, 17).map(([id]) => id),
-      expectedArtifacts.slice(17).map(([id]) => id),
+      expectedArtifacts.slice(0, 11).map(([id]) => id),
+      expectedArtifacts.slice(11, 14).map(([id]) => id),
+      expectedArtifacts.slice(14, 19).map(([id]) => id),
+      expectedArtifacts.slice(19).map(([id]) => id),
     ]);
     expect(buildGeneratedArtifactExecutionPhases().map(({ phase }) => phase)).toEqual([0, 1, 2, 3]);
     expect(
@@ -280,10 +288,10 @@ describe("validate-ci parity", () => {
         units.map((unit: { commands: string[] }) => unit.commands[0]),
       ),
     ).toEqual([
-      expectedCommands.slice(0, 9),
-      expectedCommands.slice(9, 12),
-      expectedCommands.slice(12, 17),
-      expectedCommands.slice(17),
+      expectedCommands.slice(0, 11),
+      expectedCommands.slice(11, 14),
+      expectedCommands.slice(14, 19),
+      expectedCommands.slice(19),
     ]);
     expect(GENERATED_ARTIFACTS_MAX_PARALLEL).toBe(4);
   });
@@ -313,7 +321,16 @@ describe("validate-ci parity", () => {
         artifacts.map((artifact: { id: string }) => artifact.id),
       ),
     ).toEqual([
-      ["stablecoin-catalog", "case-study-client-index", "depeg-event-search-data", "postman", "openapi", "world-map"],
+      [
+        "stablecoin-catalog",
+        "case-study-client-index",
+        "depeg-event-search-data",
+        "postman",
+        "openapi",
+        "world-map",
+        "safety-score-v8-evaluation-build",
+        "safety-score-v9-evaluation-build",
+      ],
       ["stablecoin-prevalidated-registry", "legacy-stablecoin-redirects", "stablecoin-client-registry"],
       ["agent-code-map"],
     ]);

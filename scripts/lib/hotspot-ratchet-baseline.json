@@ -15,9 +15,9 @@
     "branchCount": 113
   },
   "shared/lib/safety-score-v9-compiler.ts": {
-    "fileLines": 1356,
-    "maxFunctionLines": 343,
-    "branchCount": 146
+    "fileLines": 1512,
+    "maxFunctionLines": 337,
+    "branchCount": 147
   },
   "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
     "fileLines": 859,

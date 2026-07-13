@@ -253,8 +253,8 @@ export function evaluateCliArgsPolicy({ discoveredPaths, policy = CLI_ARGV_POLIC
   };
 }
 
-export function collectCommittedProcessArgvFiles(cwd = process.cwd()) {
-  const output = execFileSync("git", ["ls-files", "-z"], {
+export function collectRepositoryProcessArgvFiles(cwd = process.cwd()) {
+  const output = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], {
     cwd,
     encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024,
@@ -291,10 +291,10 @@ export function checkCliArgsPolicy({
 } = {}) {
   let discoveredPaths;
   try {
-    discoveredPaths = collectCommittedProcessArgvFiles(cwd);
+    discoveredPaths = collectRepositoryProcessArgvFiles(cwd);
   } catch (error) {
     stderr.write(
-      `[cli-args-policy] Unable to list committed files: ${error instanceof Error ? error.message : String(error)}\n`,
+      `[cli-args-policy] Unable to list repository files: ${error instanceof Error ? error.message : String(error)}\n`,
     );
     return 1;
   }

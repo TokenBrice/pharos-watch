@@ -20,6 +20,11 @@ export interface DependencyGraphDiagnostics {
   stronglyConnectedComponents: string[][];
 }
 
+export interface DependencyGraphOrder {
+  order: string[];
+  cyclicComponents: string[][];
+}
+
 function dependencyEdgeKey(edge: DependencyGraphEdge): string {
   return `${edge.from}->${edge.to}:${edge.type}`;
 }
@@ -94,6 +99,79 @@ export function diagnoseDependencyGraph(edges: readonly DependencyGraphEdge[]): 
       .filter(([, group]) => group.length > 1)
       .map(([key, group]) => ({ key, count: group.length, edges: group })),
     stronglyConnectedComponents: components.sort((left, right) => left[0].localeCompare(right[0])),
+  };
+}
+
+/**
+ * Orders upstream nodes before their consumers. Cycles are diagnosed once by
+ * Tarjan, collapsed into deterministic components, and returned for callers to
+ * dispose according to their own methodology.
+ */
+export function orderDependencyGraphNodes(
+  nodeIds: readonly string[],
+  edges: readonly DependencyGraphEdge[],
+): DependencyGraphOrder {
+  const nodes = [...new Set([...nodeIds, ...edges.flatMap((edge) => [edge.from, edge.to])])].sort();
+  const diagnostics = diagnoseDependencyGraph(edges);
+  const cyclicComponents = [
+    ...diagnostics.stronglyConnectedComponents,
+    ...diagnostics.selfEdges.map((edge) => [edge.from]),
+  ].sort((left, right) => left[0]!.localeCompare(right[0]!));
+  const componentByNode = new Map<string, string>();
+  const membersByComponent = new Map<string, string[]>();
+  for (const component of cyclicComponents) {
+    const members = [...component].sort();
+    const key = `scc:${members.join(",")}`;
+    membersByComponent.set(key, members);
+    for (const member of members) componentByNode.set(member, key);
+  }
+  for (const node of nodes) {
+    if (componentByNode.has(node)) continue;
+    const key = `node:${node}`;
+    componentByNode.set(node, key);
+    membersByComponent.set(key, [node]);
+  }
+
+  const outgoing = new Map<string, Set<string>>();
+  const indegree = new Map([...membersByComponent.keys()].map((key) => [key, 0]));
+  for (const edge of edges) {
+    const from = componentByNode.get(edge.from)!;
+    const to = componentByNode.get(edge.to)!;
+    if (from === to) continue;
+    const targets = outgoing.get(from) ?? new Set<string>();
+    if (!targets.has(to)) {
+      targets.add(to);
+      outgoing.set(from, targets);
+      indegree.set(to, (indegree.get(to) ?? 0) + 1);
+    }
+  }
+
+  const componentSortKey = (key: string) => membersByComponent.get(key)!.join("\u0000");
+  const ready = [...indegree.entries()]
+    .filter(([, count]) => count === 0)
+    .map(([key]) => key)
+    .sort((left, right) => componentSortKey(left).localeCompare(componentSortKey(right)));
+  const orderedComponents: string[] = [];
+  while (ready.length > 0) {
+    const component = ready.shift()!;
+    orderedComponents.push(component);
+    for (const target of [...(outgoing.get(component) ?? [])].sort((left, right) =>
+      componentSortKey(left).localeCompare(componentSortKey(right)),
+    )) {
+      const next = (indegree.get(target) ?? 0) - 1;
+      indegree.set(target, next);
+      if (next === 0) {
+        ready.push(target);
+        ready.sort((left, right) => componentSortKey(left).localeCompare(componentSortKey(right)));
+      }
+    }
+  }
+  if (orderedComponents.length !== membersByComponent.size) {
+    throw new Error("Dependency component graph remained cyclic after SCC collapse");
+  }
+  return {
+    order: orderedComponents.flatMap((component) => membersByComponent.get(component)!),
+    cyclicComponents,
   };
 }
 

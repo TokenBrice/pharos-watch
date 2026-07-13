@@ -2,11 +2,27 @@ import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexLiquidityData, ExitRouteObservation } from "@shared/types/market";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import {
+  computeDexLiquidityPayloadFingerprint as computeSharedDexLiquidityPayloadFingerprint,
+  computeRedemptionPayloadFingerprint as computeSharedRedemptionPayloadFingerprint,
+  computeReportCardsReplayPayloadFingerprint as computeSharedReportCardsReplayPayloadFingerprint,
+  computeReportCardsRegistryFingerprint as computeSharedReportCardsRegistryFingerprint,
+  normalizeFixedRedemptionBackstopMap,
+  normalizeReportCardsReplayPayload as normalizeSharedReportCardsReplayPayload,
+  normalizeReportCardsFixedInputMethodologyVersions,
+  projectReportCardsFixedInputMethodologyVersions,
+} from "@shared/lib/report-cards-fixed-input-identity";
 import {
   buildReportCardsSnapshotFromFixedInput,
   buildReportCardsFixedInputCacheEntry,
+  computeDexLiquidityPayloadFingerprint,
+  computeRedemptionPayloadFingerprint,
+  computeReportCardsReplayPayloadFingerprint,
+  computeReportCardsRegistryFingerprint,
   createReportCardsFixedInput,
   normalizeFixedInput,
+  normalizeReportCardsReplayPayload,
   parseReportCardsFixedInputCacheValue,
   serializeNormalizedReportCardsReplay,
 } from "../report-cards-fixed-input";
@@ -47,6 +63,11 @@ function fixedInput(dexLiqMap: Record<string, DexLiquidityData> = {}) {
   });
 }
 
+function withoutBaseInputGenerationId<T extends { baseInputGenerationId: string }>(input: T) {
+  const { baseInputGenerationId: _baseInputGenerationId, ...legacy } = input;
+  return legacy;
+}
+
 function route(routeId: string, commonModeKeys: string[], assetKeys: string[]): ExitRouteObservation {
   return {
     routeId,
@@ -68,6 +89,62 @@ function route(routeId: string, commonModeKeys: string[], assetKeys: string[]): 
       { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 50_000, completionRatio: 0.05 },
       { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 50_000, completionRatio: 0.5 },
     ],
+  };
+}
+
+function redemptionRoute(routeId: string, commonModeKeys: string[], assetKeys: string[]): ExitRouteObservation {
+  return {
+    ...route(routeId, commonModeKeys, assetKeys),
+    routeFamily: "issuer-redemption",
+    scope: { kind: "issuer", issuerId: "fixture-issuer" },
+    evidenceKind: "documented-terms",
+  };
+}
+
+function redemptionEntry(
+  exitRouteObservations: ExitRouteObservation[],
+  methodologyVersion = "4.08",
+): RedemptionBackstopEntry {
+  return {
+    stablecoinId: "fixture-coin",
+    score: 88,
+    effectiveExitScore: 91,
+    dexLiquidityScore: 29,
+    accessScore: 100,
+    settlementScore: 100,
+    executionCertaintyScore: 80,
+    capacityScore: 100,
+    outputAssetQualityScore: 80,
+    costScore: 40,
+    routeFamily: "basket-redeem",
+    accessModel: "permissionless-onchain",
+    settlementModel: "atomic",
+    executionModel: "deterministic-basket",
+    outputAssetType: "stable-basket",
+    provider: "fixture",
+    sourceMode: "estimated",
+    resolutionState: "resolved",
+    routeStatus: "open",
+    routeStatusSource: "static-config",
+    holderEligibility: "unknown",
+    capacityConfidence: "documented-bound",
+    capacitySemantics: "immediate-bounded",
+    capacityProfile: {
+      scoringHorizon: "immediate",
+      capacityProfileConfidence: "documented-bound",
+      exitRouteObservations,
+    },
+    feeConfidence: "undisclosed-reviewed",
+    feeModelKind: "documented-variable",
+    modelConfidence: "medium",
+    immediateCapacityUsd: 10_000_000,
+    immediateCapacityRatio: 0.5,
+    feeBps: null,
+    queueEnabled: false,
+    methodologyVersion,
+    updatedAt: 1_783_891_100,
+    capsApplied: [],
+    notes: [],
   };
 }
 
@@ -161,9 +238,11 @@ function exactFixedInput() {
 describe("fixed report-card input replay", () => {
   it("replays byte-stably without network, D1, or wall-clock reads", () => {
     const input = fixedInput();
-    const first = serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(input));
+    const snapshot = buildReportCardsSnapshotFromFixedInput(input);
+    const first = serializeNormalizedReportCardsReplay(snapshot);
     const second = serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(input));
     expect(first).toBe(second);
+    expect(first).toBe(`${JSON.stringify(normalizeSharedReportCardsReplayPayload(snapshot), null, 2)}\n`);
     expect(JSON.parse(first).cards.length).toBeGreaterThan(300);
   });
 
@@ -187,18 +266,25 @@ describe("fixed report-card input replay", () => {
     expect(() => buildReportCardsSnapshotFromFixedInput(mismatched)).toThrow("does not match current");
     expect(() => buildReportCardsSnapshotFromFixedInput(mismatched, { allowMethodologyMismatch: true })).not.toThrow();
 
-    const registryMismatched = { ...fixedInput(), registryFingerprint: "0".repeat(64) };
+    const registryMismatched = withoutBaseInputGenerationId({
+      ...fixedInput(),
+      registryFingerprint: "0".repeat(64),
+    });
     expect(() => buildReportCardsSnapshotFromFixedInput(registryMismatched)).toThrow("registry fingerprint");
     expect(() =>
       buildReportCardsSnapshotFromFixedInput(registryMismatched, { allowRegistryMismatch: true }),
     ).not.toThrow();
 
     expect(() =>
-      buildReportCardsSnapshotFromFixedInput({ ...fixedInput(), dexPayloadFingerprint: "0".repeat(64) }),
+      buildReportCardsSnapshotFromFixedInput(
+        withoutBaseInputGenerationId({ ...fixedInput(), dexPayloadFingerprint: "0".repeat(64) }),
+      ),
     ).toThrow("DEX payload fingerprint");
 
     expect(() =>
-      buildReportCardsSnapshotFromFixedInput({ ...fixedInput(), dexGenerationId: "different-generation" }),
+      buildReportCardsSnapshotFromFixedInput(
+        withoutBaseInputGenerationId({ ...fixedInput(), dexGenerationId: "different-generation" }),
+      ),
     ).toThrow("DEX payload fingerprint");
   });
 
@@ -222,8 +308,100 @@ describe("fixed report-card input replay", () => {
     expect(JSON.stringify(left)).toBe(JSON.stringify(right));
   });
 
+  it("keeps canonical identity exports and digest vectors stable", () => {
+    expect(computeDexLiquidityPayloadFingerprint).toBe(computeSharedDexLiquidityPayloadFingerprint);
+    expect(computeRedemptionPayloadFingerprint).toBe(computeSharedRedemptionPayloadFingerprint);
+    expect(computeReportCardsReplayPayloadFingerprint).toBe(computeSharedReportCardsReplayPayloadFingerprint);
+    expect(computeReportCardsRegistryFingerprint).toBe(computeSharedReportCardsRegistryFingerprint);
+    expect(normalizeReportCardsReplayPayload).toBe(normalizeSharedReportCardsReplayPayload);
+    expect(computeDexLiquidityPayloadFingerprint({}, "dex-test")).toBe(
+      "eb15cc883287b8a986bb2aa451706ec9f882059876b78aef35c9c0c0ab071937",
+    );
+    expect(computeRedemptionPayloadFingerprint({}, "redemption-test")).toBe(
+      "e4410ccc7fda2f9d507e84f421d1a1ff937353ca153d930b3089ad7c5b9f93e3",
+    );
+    expect(
+      computeReportCardsReplayPayloadFingerprint({
+        cards: [],
+        methodology: {
+          version: "test",
+          weights: {
+            pegStability: 0.25,
+            liquidity: 0.25,
+            resilience: 0.2,
+            decentralization: 0.15,
+            dependencyRisk: 0.15,
+          },
+          pegMultiplierExponent: 1,
+          thresholds: [],
+        },
+        dependencyGraph: { edges: [] },
+        updatedAt: 1,
+      }),
+    ).toBe("d7af69822f28633a7d49c927604fbd7c83577cb9a330282a7e1aee85be5a8b63");
+    const replay = buildReportCardsSnapshotFromFixedInput(fixedInput());
+    expect(computeReportCardsReplayPayloadFingerprint(replay)).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("normalizes redemption payload identity and producer methodology versions", () => {
+    const first = redemptionRoute("redeem:a", ["issuer:test", "rail:fiat"], ["USD:b", "USD:a"]);
+    const second = redemptionRoute("redeem:b", ["rail:fiat", "issuer:test"], ["USD:a"]);
+    const left = {
+      zeta: redemptionEntry([second, first], "4.08"),
+      alpha: redemptionEntry([], "4.07"),
+    };
+    const right = {
+      alpha: redemptionEntry([], "4.07"),
+      zeta: redemptionEntry([
+        {
+          ...first,
+          commonModeKeys: [...first.commonModeKeys].reverse(),
+          capacityCurve: [...first.capacityCurve!].reverse(),
+        },
+        second,
+      ]),
+    };
+
+    expect(normalizeFixedRedemptionBackstopMap(left)).toEqual(normalizeFixedRedemptionBackstopMap(right));
+    expect(computeRedemptionPayloadFingerprint(left, "redemption:test")).toBe(
+      computeRedemptionPayloadFingerprint(right, "redemption:test"),
+    );
+    expect(
+      projectReportCardsFixedInputMethodologyVersions({
+        methodologyVersion: "8.17",
+        dexLiqMap: {
+          first: { methodologyVersion: "5.91" },
+          duplicate: { methodologyVersion: "5.91" },
+          older: { methodologyVersion: "5.9" },
+          absent: {},
+        },
+        pegDataById: { current: { methodologyVersion: "3.04" }, old: { methodologyVersion: "3.03" } },
+        redemptionBackstopMap: left,
+      }),
+    ).toEqual({
+      safetyScore: "8.17",
+      dexLiquidity: ["5.9", "5.91"],
+      pegScore: ["3.03", "3.04"],
+      redemptionBackstop: ["4.07", "4.08"],
+    });
+    expect(
+      normalizeReportCardsFixedInputMethodologyVersions({
+        safetyScore: "8.17",
+        dexLiquidity: ["5.91", "5.9", "5.91"],
+        pegScore: ["3.04", "3.03"],
+        redemptionBackstop: ["4.08", "4.07"],
+      }),
+    ).toEqual({
+      safetyScore: "8.17",
+      dexLiquidity: ["5.9", "5.91"],
+      pegScore: ["3.03", "3.04"],
+      redemptionBackstop: ["4.07", "4.08"],
+    });
+  });
+
   it("round-trips the exact publication input through its bounded checksum envelope", async () => {
     const input = exactFixedInput();
+    expect(input.baseInputGenerationId).toMatch(/^report-cards-input:v1:[a-f0-9]{64}$/);
     const entry = await buildReportCardsFixedInputCacheEntry(input);
     expect(entry.storedBytes).toBeLessThanOrEqual(1_900_000);
     await expect(parseReportCardsFixedInputCacheValue(entry.value)).resolves.toEqual(input);
@@ -231,6 +409,41 @@ describe("fixed report-card input replay", () => {
     const tampered = JSON.parse(entry.value) as { payloadSha256: string };
     tampered.payloadSha256 = "0".repeat(64);
     await expect(parseReportCardsFixedInputCacheValue(JSON.stringify(tampered))).rejects.toThrow("checksum mismatch");
+  });
+
+  it("rejects a stale base-input generation instead of silently rebinding it", () => {
+    const input = exactFixedInput();
+    const firstId = input.activeAssetIds[0]!;
+
+    expect(() =>
+      normalizeFixedInput({
+        ...input,
+        activeDepegPeakBpsById: { ...input.activeDepegPeakBpsById, [firstId]: 25 },
+      }),
+    ).toThrow("Fixed input base generation");
+  });
+
+  it("binds exact producer methodology declarations to score-bearing rows", () => {
+    const declaredMismatch = structuredClone(exactFixedInput());
+    declaredMismatch.inputMethodologyVersions.dexLiquidity = ["forged-methodology"];
+    expect(() => normalizeFixedInput(declaredMismatch)).toThrow(
+      "producer methodology versions do not match its score-bearing payload rows",
+    );
+
+    const rowMismatch = structuredClone(exactFixedInput());
+    const firstDexId = rowMismatch.activeAssetIds[0]!;
+    rowMismatch.dexLiqMap[firstDexId]!.methodologyVersion = "different-row-methodology";
+    rowMismatch.dexPayloadFingerprint = computeDexLiquidityPayloadFingerprint(
+      rowMismatch.dexLiqMap,
+      rowMismatch.dexGenerationId,
+    );
+    expect(() => normalizeFixedInput(rowMismatch)).toThrow(
+      "producer methodology versions do not match its score-bearing payload rows",
+    );
+
+    const missingRowMethodology = structuredClone(exactFixedInput());
+    delete missingRowMethodology.dexLiqMap[firstDexId]!.methodologyVersion;
+    expect(() => normalizeFixedInput(missingRowMethodology)).toThrow("DEX rows lack producer methodology");
   });
 
   it("never persists a public fanout reconstruction as exact P0c evidence", async () => {
@@ -308,7 +521,7 @@ describe("fixed report-card input replay", () => {
       ...complete.dexLiqMap,
       [changedId!]: { ...complete.dexLiqMap[changedId!]!, updatedAt: complete.clockSec },
     };
-    expect(() => normalizeFixedInput({ ...complete, dexLiqMap: mixedRows })).toThrow(
+    expect(() => normalizeFixedInput(withoutBaseInputGenerationId({ ...complete, dexLiqMap: mixedRows }))).toThrow(
       "DEX rows do not match the DEX freshness generation",
     );
   });
@@ -320,26 +533,30 @@ describe("fixed report-card input replay", () => {
       Object.entries(complete.dexLiqMap).map(([id, row]) => [id, { ...row, updatedAt: futureUpdatedAt }]),
     );
     expect(() =>
-      normalizeFixedInput({
-        ...complete,
-        dexGenerationId: `dex-liquidity-${futureUpdatedAt}`,
-        dexLiqMap: futureDexRows,
-        liquidityStale: true,
-        inputFreshness: {
-          ...complete.inputFreshness,
-          dexLiquidity: { updatedAt: futureUpdatedAt, ageSeconds: 0, stale: true },
-        },
-      }),
+      normalizeFixedInput(
+        withoutBaseInputGenerationId({
+          ...complete,
+          dexGenerationId: `dex-liquidity-${futureUpdatedAt}`,
+          dexLiqMap: futureDexRows,
+          liquidityStale: true,
+          inputFreshness: {
+            ...complete.inputFreshness,
+            dexLiquidity: { updatedAt: futureUpdatedAt, ageSeconds: 0, stale: true },
+          },
+        }),
+      ),
     ).toThrow("producer timestamp 1783891201 is later than scoring clock 1783891200");
 
     expect(() =>
-      normalizeFixedInput({
-        ...complete,
-        inputFreshness: {
-          ...complete.inputFreshness,
-          redemptionBackstops: { updatedAt: futureUpdatedAt, ageSeconds: null, stale: true },
-        },
-      }),
+      normalizeFixedInput(
+        withoutBaseInputGenerationId({
+          ...complete,
+          inputFreshness: {
+            ...complete.inputFreshness,
+            redemptionBackstops: { updatedAt: futureUpdatedAt, ageSeconds: null, stale: true },
+          },
+        }),
+      ),
     ).toThrow("producer timestamp 1783891201 is later than scoring clock 1783891200");
   });
 });

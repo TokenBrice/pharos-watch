@@ -1,0 +1,243 @@
+import { describe, expect, it } from "vitest";
+import type { V9FactGapV2, V9FactStatusV2, V9ReserveExposureFactV2 } from "../../types/safety-score-v9-facts";
+import type { V9BackingAssetInput, V9MechanismFactV1 } from "../safety-score-v9/backing";
+import { V9MechanismRiskReviewSchema } from "../../types/safety-score-v9-backing";
+import { evaluateV9Backing, type V9MechanismRiskReview } from "../safety-score-v9/archetypes";
+import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+
+const knownStatus = (id: string): V9FactStatusV2 => ({
+  applicability: { state: "required", policyRuleId: "mechanism.required", rationale: null, gapId: null },
+  observationState: "known",
+  evidenceRefIds: [`evidence:${id}`],
+  gapIds: [],
+});
+
+const strongFact = (id: string): V9MechanismFactV1 => ({
+  status: knownStatus(id),
+  quality: "strong",
+  failureDomains: [{ kind: "reserve-issuer", key: id }],
+});
+
+const reserveExposure = (key: string): V9ReserveExposureFactV2 => ({
+  exposureKey: key,
+  classificationKey: `class:${key}`,
+  sourceGenerationId: "reserves:test",
+  provenance: "curated",
+  status: knownStatus(key),
+  name: key,
+  weight: 0.25,
+  trackedAssetId: null,
+  assetClass: "cash",
+  issuerOrObligorKey: null,
+  riskFactors: [],
+  liquidityHorizon: "immediate",
+  maturityDaysMax: null,
+  failureDomains: [{ kind: "reserve-custodian", key: `custodian:${key}` }],
+});
+
+function asset(gaps: readonly V9FactGapV2[] = []): V9BackingAssetInput {
+  return {
+    assetId: "asset",
+    reserveStatus: knownStatus("reserves"),
+    reserveExposures: ["a", "b", "c", "d"].map(reserveExposure),
+    resolvedUpstreamExposures: [],
+    gaps,
+  };
+}
+
+const reviews: readonly V9MechanismRiskReview[] = [
+  {
+    archetype: "fiat-cash",
+    claimAndSegregation: strongFact("claim"),
+    custodyContinuity: strongFact("custody"),
+    assuranceAndReconciliation: strongFact("assurance"),
+  },
+  {
+    archetype: "tbill",
+    fundClaimAndSeniority: strongFact("fund-claim"),
+    navValuation: strongFact("nav"),
+    durationAndLiquidity: strongFact("duration"),
+    lossRecoveryDesign: strongFact("loss-recovery"),
+  },
+  {
+    archetype: "cdp",
+    collateralizationRatio: 1.5,
+    liquidationCapacityRatio: 1,
+    collateralizationParameters: strongFact("collateralization"),
+    liquidationMechanics: strongFact("liquidation"),
+    backstop: strongFact("backstop"),
+    branchIsolation: strongFact("branch"),
+    shutdownAndBadDebt: strongFact("shutdown"),
+    structuralRedemption: strongFact("psm"),
+  },
+  {
+    archetype: "synthetic-delta-neutral",
+    hedgeCoverageRatio: 1,
+    marginBufferPct: 10,
+    lossAbsorptionShare: 0.05,
+    venueShares: [{ venueKey: "venue", share: 0.2, failureDomains: [{ kind: "reserve-custodian", key: "venue" }] }],
+    venueAndCustody: strongFact("venue"),
+    hedgeReconciliation: strongFact("hedge"),
+    fundingBasisStress: strongFact("funding"),
+    marginAndLiquidation: strongFact("margin"),
+    unwindCapacity: strongFact("unwind"),
+    lossAbsorption: strongFact("insurance"),
+  },
+  {
+    archetype: "algorithmic",
+    exogenousBackingShare: 1,
+    reflexiveBackingShare: 0,
+    contractionCapacityRatio: 1,
+    contractionCapacity: strongFact("contraction"),
+    confidenceAndIncentives: strongFact("confidence"),
+    oracleAndControlAssumptions: strongFact("oracle"),
+    emergencyRecovery: strongFact("emergency"),
+    lossRecovery: strongFact("algorithmic-recovery"),
+  },
+  {
+    archetype: "rwa-credit-fund",
+    weightedAverageMaturityDays: 90,
+    valuationCadenceDays: 7,
+    creditQuality: strongFact("credit"),
+    seniority: strongFact("seniority"),
+    legalEnforceability: strongFact("legal"),
+    valuationCadence: strongFact("valuation"),
+    maturityAndLiquidity: strongFact("maturity"),
+    custody: strongFact("rwa-custody"),
+    recovery: strongFact("recovery"),
+  },
+];
+
+describe("Safety Score v9 archetype backing adapters", () => {
+  it("validates and canonicalizes the discriminated mechanism review contract", () => {
+    const review = reviews[3];
+    expect(review.archetype).toBe("synthetic-delta-neutral");
+    const parsed = V9MechanismRiskReviewSchema.parse({
+      ...review,
+      venueShares: [
+        { venueKey: "z", share: 0.1, failureDomains: [{ kind: "reserve-custodian", key: "z" }] },
+        { venueKey: "a", share: 0.1, failureDomains: [{ kind: "reserve-custodian", key: "a" }] },
+      ],
+    });
+    expect(parsed.archetype === "synthetic-delta-neutral" && parsed.venueShares.map((venue) => venue.venueKey)).toEqual(
+      ["a", "z"],
+    );
+    expect(() =>
+      V9MechanismRiskReviewSchema.parse({ ...reviews[4], reflexiveBackingShare: 0.5, exogenousBackingShare: 0.6 }),
+    ).toThrow();
+  });
+
+  it("routes every supported archetype to exactly one rateable adapter", () => {
+    const results = reviews.map((review) => evaluateV9Backing(asset(), review, V9_CANDIDATE_POLICY_V1));
+    expect(results.map((result) => result.archetype)).toEqual(reviews.map((review) => review.archetype));
+    expect(results.every((result) => result.rateability === "rateable" && result.score !== null)).toBe(true);
+    expect(new Set(results.map((result) => result.traceDigest)).size).toBe(6);
+  });
+
+  it("returns a reason-coded NR for an unknown archetype", () => {
+    const result = evaluateV9Backing(asset(), { archetype: "new-design" }, V9_CANDIDATE_POLICY_V1);
+    expect(result).toMatchObject({ rateability: "NR", score: null });
+    expect(result.unresolved).toEqual([expect.objectContaining({ code: "missing-archetype", treatment: "NR" })]);
+  });
+
+  it("makes a missing non-substitutable claim NR", () => {
+    const gap: V9FactGapV2 = {
+      gapId: "gap:claim",
+      reasonCode: "critical-unresolved",
+      ownerDomain: "backing",
+      policyRuleId: "fiat.claim.required",
+      observationState: "missing",
+      path: { kind: "local-component", componentKey: "claim-and-segregation" },
+      message: "The direct reserve claim is unresolved",
+      evidenceRefIds: [],
+    };
+    const missingClaim: V9MechanismFactV1 = {
+      status: {
+        applicability: { state: "required", policyRuleId: "fiat.claim.required", rationale: null, gapId: null },
+        observationState: "missing",
+        evidenceRefIds: [],
+        gapIds: [gap.gapId],
+      },
+      quality: null,
+      failureDomains: [],
+    };
+    const result = evaluateV9Backing(
+      asset([gap]),
+      {
+        archetype: "fiat-cash",
+        claimAndSegregation: missingClaim,
+        custodyContinuity: strongFact("custody"),
+        assuranceAndReconciliation: strongFact("assurance"),
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.rateability).toBe("NR");
+    expect(result.unresolved).toContainEqual(expect.objectContaining({ code: "critical-unresolved", treatment: "NR" }));
+  });
+
+  it("redistributes an explicitly inapplicable component without inventing a weak score", () => {
+    const notApplicable: V9MechanismFactV1 = {
+      status: {
+        applicability: {
+          state: "not-applicable",
+          policyRuleId: "tbill.duration.not-applicable",
+          rationale: "The fund has no maturity exposure",
+          gapId: null,
+        },
+        observationState: "known",
+        evidenceRefIds: ["evidence:duration-na"],
+        gapIds: [],
+      },
+      quality: null,
+      failureDomains: [],
+    };
+    const review = { ...reviews[1], durationAndLiquidity: notApplicable } as Extract<
+      V9MechanismRiskReview,
+      { archetype: "tbill" }
+    >;
+    const result = evaluateV9Backing(asset(), review, V9_CANDIDATE_POLICY_V1);
+
+    expect(result.rateability).toBe("rateable");
+    expect(result.contributions.some((entry) => entry.componentKey === "mechanism:duration-and-liquidity")).toBe(false);
+  });
+
+  it("emits the algorithmic reflexivity ceiling independently of strong components", () => {
+    const base = reviews[4] as Extract<V9MechanismRiskReview, { archetype: "algorithmic" }>;
+    const result = evaluateV9Backing(
+      asset(),
+      {
+        ...base,
+        exogenousBackingShare: 0.5,
+        reflexiveBackingShare: 0.5,
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.structuralReasons).toContainEqual(
+      expect.objectContaining({
+        kind: "algorithmic-reflexivity",
+        severity: "critical",
+        ceiling: 39,
+      }),
+    );
+    expect(result.pillarCeiling).toBe(39);
+  });
+
+  it("does not require an issuer for direct non-obligor collateral", () => {
+    const directCrypto = {
+      ...reserveExposure("eth"),
+      weight: 1,
+      assetClass: "cryptoasset" as const,
+      issuerOrObligorKey: null,
+      failureDomains: [{ kind: "chain" as const, key: "ethereum" }],
+    };
+    const result = evaluateV9Backing(
+      { ...asset(), reserveExposures: [directCrypto] },
+      reviews[2],
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.rateability).toBe("rateable");
+    expect(result.score).not.toBeNull();
+  });
+});

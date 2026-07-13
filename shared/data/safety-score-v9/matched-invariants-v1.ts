@@ -146,12 +146,18 @@ export const MATCHED_V9_INVARIANTS = [
       noncriticalMissing: {
         evidenceLevel: "limited",
         structuralSignals: [],
-        unresolved: [{ code: "bounded-gap", reason: "A noncritical fact is missing.", critical: false }],
+        unresolved: [
+          {
+            code: "bounded-unknown-reserve-exposure",
+            reason: "A noncritical fact is missing.",
+            critical: false,
+          },
+        ],
       },
       criticalMissing: {
         evidenceLevel: "insufficient",
         structuralSignals: [],
-        unresolved: [{ code: "critical-gap", reason: "A critical fact is missing.", critical: true }],
+        unresolved: [{ code: "insufficient-evidence", reason: "A critical fact is missing.", critical: true }],
       },
     } satisfies Record<
       string,

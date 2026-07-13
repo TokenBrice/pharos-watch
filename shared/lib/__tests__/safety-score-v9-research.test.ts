@@ -6,9 +6,11 @@ import {
 } from "@shared/types/safety-score-v9";
 import historicalFixtures from "@shared/data/safety-score-v9/historical-fixtures-v1.json";
 import {
+  V9_CANDIDATE_POLICY_V1,
   resolveV9StructuralCaps,
   scoreCompiledAsset,
   scoreCompiledAssetSet,
+  scoreV9ResearchScenarioInput,
   scoreV9Input,
 } from "../safety-score-v9-research";
 
@@ -18,6 +20,10 @@ function compiled(assetId: string, parentId?: string): CompiledV9AssetInput {
   const evidence = [{ sourceId: "fixture", observedAt: AS_OF }];
   return {
     schemaVersion: 1,
+    compilerPolicy: {
+      policyId: V9_CANDIDATE_POLICY_V1.policy.policyId,
+      semanticDigest: V9_CANDIDATE_POLICY_V1.semanticDigest,
+    },
     assetId,
     asOf: AS_OF,
     compiledAt: AS_OF,
@@ -50,45 +56,89 @@ describe("v9 research handoff contracts", () => {
   });
 
   it("scores expectation-free input without redistributing a missing pillar", () => {
-    const trace = scoreV9Input({
-      assetId: "missing-exit",
-      pillars: { backing: 90, exit: null, control: 80 },
-      pegScore: 100,
-      pegApplicable: true,
-      evidenceLevel: "adequate",
-      trackRecordMonths: 48,
-      activeDepegBps: null,
-      parentRequired: false,
-      parentScore: null,
-      structuralCaps: [],
-      structuralSignals: [],
-      unresolved: [],
-    });
+    const trace = scoreV9Input(
+      {
+        assetId: "missing-exit",
+        pillars: { backing: 90, exit: null, control: 80 },
+        pegScore: 100,
+        pegApplicable: true,
+        evidenceLevel: "adequate",
+        trackRecordMonths: 48,
+        activeDepegBps: null,
+        parentRequired: false,
+        parentScore: null,
+        structuralSignals: [],
+        unresolved: [],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
     expect(trace.finalGrade).toBe("NR");
     expect(trace.nrReasons).toContainEqual(expect.objectContaining({ code: "missing-pillar" }));
   });
 
   it("gives an active depeg precedence over an equal structural cap", () => {
-    const trace = scoreV9Input({
-      assetId: "active-depeg-tie",
-      pillars: { backing: 90, exit: 90, control: 90 },
-      pegScore: 100,
-      pegApplicable: true,
-      evidenceLevel: "strong",
-      trackRecordMonths: 48,
-      activeDepegBps: 2_500,
-      parentRequired: false,
-      parentScore: null,
-      structuralCaps: [{ kind: "structural:f", limit: 39, reason: "Independent structural F cap." }],
-      structuralSignals: [],
-      unresolved: [],
-    });
+    const trace = scoreV9ResearchScenarioInput(
+      {
+        assetId: "active-depeg-tie",
+        pillars: { backing: 90, exit: 90, control: 90 },
+        pegScore: 100,
+        pegApplicable: true,
+        evidenceLevel: "strong",
+        trackRecordMonths: 48,
+        activeDepegBps: 2_500,
+        parentRequired: false,
+        parentScore: null,
+        structuralSignals: [],
+        unresolved: [],
+      },
+      V9_CANDIDATE_POLICY_V1,
+      [{ kind: "structural:f", limit: 39, reason: "Independent structural F cap." }],
+    );
 
     expect(trace.bindingCap).toMatchObject({
       source: "active-depeg",
       kind: "active-depeg:f",
       limit: 39,
     });
+  });
+
+  it.each([
+    ["material-unknown-reserve-exposure", 69],
+    ["missing-implementation-date", 79],
+    ["missing-latest-assurance-report", 84],
+    ["partial-reserve-review", 69],
+  ] as const)("executes the %s reason-coded ceiling", (code, expectedLimit) => {
+    const trace = scoreV9Input(
+      {
+        assetId: `bounded-unknown-${code}`,
+        pillars: { backing: 95, exit: 95, control: 95 },
+        pegScore: 100,
+        pegApplicable: true,
+        evidenceLevel: "strong",
+        trackRecordMonths: 48,
+        activeDepegBps: null,
+        parentRequired: false,
+        parentScore: null,
+        structuralSignals: [],
+        unresolved: [
+          {
+            code,
+            reason: "A bounded fact remains unresolved.",
+            critical: false,
+            path: "fixture",
+          },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalScore).toBe(expectedLimit);
+    expect(trace.bindingCap).toMatchObject({
+      source: "evidence",
+      kind: `reason:${code}`,
+      limit: expectedLimit,
+    });
+    expect(trace.nrReasons).toEqual([]);
   });
 
   it("resolves fact-shaped signals to caps outside compiled metadata", () => {
@@ -110,10 +160,10 @@ describe("v9 research handoff contracts", () => {
         evidence: [],
       },
     ];
-    expect(resolveV9StructuralCaps(input.structuralSignals)).toEqual([
+    expect(resolveV9StructuralCaps(input.structuralSignals, V9_CANDIDATE_POLICY_V1)).toEqual([
       expect.objectContaining({ kind: "signal:unsafe-backing:critical", limit: 39 }),
     ]);
-    expect(scoreCompiledAsset(input).bindingCap?.kind).toBe("signal:unsafe-backing:critical");
+    expect(scoreCompiledAsset(input, V9_CANDIDATE_POLICY_V1).bindingCap?.kind).toBe("signal:unsafe-backing:critical");
   });
 
   it("evaluates parents deterministically regardless of input order", () => {
@@ -121,20 +171,64 @@ describe("v9 research handoff contracts", () => {
     parent.pillars.backing.score = 60;
     const child = compiled("child", "parent");
 
-    const forward = scoreCompiledAssetSet([parent, child]);
-    const reverse = scoreCompiledAssetSet([child, parent]);
+    const forward = scoreCompiledAssetSet([parent, child], V9_CANDIDATE_POLICY_V1);
+    const reverse = scoreCompiledAssetSet([child, parent], V9_CANDIDATE_POLICY_V1);
     expect(reverse.traces).toEqual(forward.traces);
     expect(forward.traces.find((trace) => trace.assetId === "child")?.finalScore).toBeLessThanOrEqual(
       forward.traces.find((trace) => trace.assetId === "parent")?.finalScore ?? 0,
     );
   });
 
-  it("turns parent cycles into explicit NR traces", () => {
-    const result = scoreCompiledAssetSet([compiled("a", "b"), compiled("b", "a")]);
-    expect(result.traces.every((trace) => trace.finalGrade === "NR")).toBe(true);
-    expect(result.traces.flatMap((trace) => trace.nrReasons).some((reason) => reason.code === "parent-cycle")).toBe(
-      true,
+  it("does not apply a parent ceiling when the parent is informational", () => {
+    const trace = scoreV9Input(
+      {
+        assetId: "informational-parent",
+        pillars: { backing: 90, exit: 90, control: 90 },
+        pegScore: 100,
+        pegApplicable: true,
+        evidenceLevel: "strong",
+        trackRecordMonths: 48,
+        activeDepegBps: null,
+        parentRequired: false,
+        parentScore: 40,
+        structuralSignals: [],
+        unresolved: [],
+      },
+      V9_CANDIDATE_POLICY_V1,
     );
+
+    expect(trace.finalScore).toBe(90);
+    expect(trace.caps.some((cap) => cap.source === "parent")).toBe(false);
+  });
+
+  it("rejects a parent trace that does not match the compiled parent identity", () => {
+    const child = compiled("child", "expected-parent");
+    const wrongParent = scoreCompiledAsset(compiled("wrong-parent"), V9_CANDIDATE_POLICY_V1);
+
+    expect(() => scoreCompiledAsset(child, V9_CANDIDATE_POLICY_V1, wrongParent)).toThrow(
+      "expects parent expected-parent, not wrong-parent",
+    );
+  });
+
+  it("rejects a compiled input evaluated under a different policy", () => {
+    const input = compiled("policy-mismatch");
+    input.compilerPolicy.semanticDigest = "0".repeat(64);
+    expect(() => scoreCompiledAsset(input, V9_CANDIDATE_POLICY_V1)).toThrow(/was produced by/);
+  });
+
+  it("validates policy provenance even for an empty compiled set", () => {
+    const forgedPolicy = { ...V9_CANDIDATE_POLICY_V1 };
+    expect(() => scoreCompiledAssetSet([], forgedPolicy)).toThrow(/loadV9MethodologyPolicy/);
+  });
+
+  it("turns parent cycles into explicit NR traces", () => {
+    const result = scoreCompiledAssetSet([compiled("a", "b"), compiled("b", "a")], V9_CANDIDATE_POLICY_V1);
+    const reversed = scoreCompiledAssetSet([compiled("b", "a"), compiled("a", "b")], V9_CANDIDATE_POLICY_V1);
+    expect(result.traces.every((trace) => trace.finalGrade === "NR")).toBe(true);
+    expect(result.traces.every((trace) => trace.nrReasons.some((reason) => reason.code === "parent-cycle"))).toBe(true);
+    expect(result.traces.every((trace) => trace.bindingCap === null)).toBe(true);
+    expect(result.evaluatedOrder).toEqual(["a", "b"]);
+    expect(reversed).toEqual(result);
   });
 
   it("rejects historical look-ahead evidence", () => {

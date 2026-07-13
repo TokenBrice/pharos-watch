@@ -2,21 +2,34 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
-import { sha256Hex } from "@shared/lib/sha256";
-import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
+import {
+  FixedDexLiquidityRowSchema,
+  ReportCardsFixedInputMethodologyVersionsSchema,
+  computeDexLiquidityPayloadFingerprint,
+  computeRedemptionPayloadFingerprint,
+  computeReportCardsRegistryFingerprint,
+  computeReportCardsReplayPayloadFingerprint,
+  projectReportCardsFixedInputMethodologyVersions,
+} from "@shared/lib/report-cards-fixed-input-identity";
+import {
+  mergeExitRouteObservationSets,
+  type MergedExitObservationSet,
+} from "@shared/lib/safety-score-v9/exit-observation-set";
+import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "@shared/lib/safety-score-v9/policy";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   assertExactReportCardIds,
   compileHistoricalFixtureToV9Input,
   compileReportCardSetToV9Inputs,
 } from "@shared/lib/safety-score-v9-compiler";
-import { scoreCompiledAsset, scoreCompiledAssetSet } from "@shared/lib/safety-score-v9-research";
 import {
-  ExitRouteObservationCoverageSchema,
-  ExitRouteObservationSchema,
-  type ExitRouteObservation,
-} from "@shared/types/market";
+  V9_CANDIDATE_POLICY_V1,
+  scoreCompiledAsset,
+  scoreCompiledAssetSet,
+} from "@shared/lib/safety-score-v9-research";
+import type { ExitRouteObservation } from "@shared/types/market";
 import { RedemptionBackstopMapSchema, type RedemptionBackstopMap } from "@shared/types/redemption";
 import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/types/report-cards";
 import {
@@ -24,7 +37,10 @@ import {
   historicalFactsInput,
   type CompiledV9AssetInput,
   type HistoricalV9Fixture,
+  type V9ManualInputClassification,
+  type V9ReasonCode,
   type V9UnresolvedFact,
+  type V9ValidatedPolicyEnvelope,
 } from "@shared/types/safety-score-v9";
 import historicalFixtureAsset from "../../shared/data/safety-score-v9/historical-fixtures-v1.json";
 import calibrationCohortAsset from "../../shared/data/safety-score-v9/calibration-cohort-v1.json";
@@ -54,13 +70,15 @@ const FreshnessEntrySchema = z
   })
   .strict();
 
-const ReadinessDexRowSchema = z
-  .object({
-    updatedAt: z.number().int().nonnegative(),
-    exitRouteObservations: z.array(ExitRouteObservationSchema).nullable().optional(),
-    exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-  })
-  .passthrough();
+const RequiredProducerMethodologyVersionsSchema = ReportCardsFixedInputMethodologyVersionsSchema.superRefine(
+  (versions, ctx) => {
+    for (const lane of ["dexLiquidity", "pegScore", "redemptionBackstop"] as const) {
+      if (versions[lane].length === 0) {
+        ctx.addIssue({ code: "custom", path: [lane], message: `${lane} requires at least one methodology version` });
+      }
+    }
+  },
+);
 
 const FixedPublicationInputBase = {
   capturedAt: z.string().datetime(),
@@ -77,8 +95,16 @@ const FixedPublicationInputBase = {
       redemptionBackstops: FreshnessEntrySchema,
     })
     .strict(),
-  dexLiqMap: z.record(z.string(), ReadinessDexRowSchema),
+  pegDataById: z.record(z.string(), z.object({ methodologyVersion: z.string().min(1) }).passthrough()),
+  activeDepegPeakBpsById: z.record(z.string(), z.unknown()),
+  dexLiqMap: z.record(z.string(), FixedDexLiquidityRowSchema),
   redemptionBackstopMap: RedemptionBackstopMapSchema,
+  bluechipMap: z.record(z.string(), z.unknown()),
+  resolvedBlacklistStatuses: z.record(z.string(), z.unknown()),
+  liveReserveMap: z.record(z.string(), z.unknown()),
+  liveReserveProvenanceMap: z.record(z.string(), z.unknown()),
+  chainCirculatingById: z.record(z.string(), z.unknown()),
+  dexDeploymentSupplyCoverageById: z.record(z.string(), z.unknown()),
 };
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -110,34 +136,20 @@ const FixedPublicationInputSchema = z.discriminatedUnion("schemaVersion", [
       dexPayloadFingerprint: Sha256Schema,
       redemptionPayloadFingerprint: Sha256Schema,
       registryFingerprint: Sha256Schema,
-      inputMethodologyVersions: z
-        .object({
-          safetyScore: z.string().min(1),
-          dexLiquidity: z.array(z.string().min(1)),
-          pegScore: z.array(z.string().min(1)),
-          redemptionBackstop: z.array(z.string().min(1)),
-        })
-        .strict(),
+      inputMethodologyVersions: RequiredProducerMethodologyVersionsSchema,
+      baseInputGenerationId: z
+        .string()
+        .regex(/^report-cards-input:v1:[a-f0-9]{64}$/)
+        .optional(),
     })
     .passthrough(),
 ]);
 
 type FixedPublicationInput = z.infer<typeof FixedPublicationInputSchema>;
-type ReadinessDexMap = Record<string, z.infer<typeof ReadinessDexRowSchema>>;
+type ReadinessDexMap = Record<string, z.infer<typeof FixedDexLiquidityRowSchema>>;
 
 export function parseFixedPublicationInput(value: unknown): FixedPublicationInput {
   return FixedPublicationInputSchema.parse(value);
-}
-
-function currentRegistryFingerprint(): string {
-  return sha256Hex(
-    stableJsonStringifyV1({
-      domain: "report-cards.fixed-input.registry.v1",
-      activeStablecoins: [...ACTIVE_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
-      frozenStablecoins: [...FROZEN_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
-      deadStablecoins: [...DEAD_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
-    }),
-  );
 }
 
 function exactStringSetMatch(left: readonly string[], right: readonly string[]): boolean {
@@ -187,6 +199,21 @@ export function assessReadinessInputBindings(args: {
       `Report-card replay methodology v${reportCards.methodology.version} does not match calibrated replay v${calibrationSource.replayMethodologyVersion}`,
     );
   }
+  const replayPayloadFingerprint = computeReportCardsReplayPayloadFingerprint(reportCards);
+  if (replayPayloadFingerprint !== calibrationSource.legacyReplayPayloadFingerprint) {
+    blockers.push(
+      `Report-card replay payload fingerprint ${replayPayloadFingerprint} does not match calibrated ${calibrationSource.legacyReplayPayloadFingerprint}`,
+    );
+  }
+  if (calibrationSource.captureKind !== "exact-publication-inputs") {
+    blockers.push(`P4 calibration source is ${calibrationSource.captureKind}, not exact-publication-inputs`);
+  }
+  if (calibrationSource.methodologyMismatchBypassUsed) {
+    blockers.push("P4 calibration used the methodology-mismatch bypass");
+  }
+  if (calibrationSource.registryMismatchBypassUsed) {
+    blockers.push("P4 calibration used the registry-mismatch bypass");
+  }
   if (fixedInput.updatedAt > fixedInput.clockSec) {
     blockers.push("Fixed input report-card timestamp is later than its publication clock");
   }
@@ -217,7 +244,44 @@ export function assessReadinessInputBindings(args: {
   if (fixedInput.captureKind === "exact-publication-inputs" && !exactStringSetMatch(fixedDexIds, activeIds)) {
     blockers.push("Exact fixed input DEX rows do not match the current active registry");
   }
-  const registryFingerprint = currentRegistryFingerprint();
+  if (fixedInput.captureKind === "exact-publication-inputs") {
+    const dexTimestamps = [...new Set(Object.values(fixedInput.dexLiqMap).map((row) => row.updatedAt))];
+    if (
+      dexTimestamps.length !== 1 ||
+      fixedInput.inputFreshness.dexLiquidity.updatedAt === null ||
+      dexTimestamps[0] !== fixedInput.inputFreshness.dexLiquidity.updatedAt
+    ) {
+      blockers.push("Exact fixed input DEX rows do not match the DEX freshness generation");
+    }
+    const expectedDexGeneration = `dex-liquidity-${fixedInput.inputFreshness.dexLiquidity.updatedAt}`;
+    if (fixedInput.dexGenerationId !== expectedDexGeneration) {
+      blockers.push(
+        `Exact fixed input DEX generation ${fixedInput.dexGenerationId} does not match ${expectedDexGeneration}`,
+      );
+    }
+
+    const redemptionRows = Object.values(fixedInput.redemptionBackstopMap);
+    const redemptionTimestamps = [...new Set(redemptionRows.map((row) => row.updatedAt))];
+    if (redemptionRows.length > 0) {
+      if (
+        redemptionTimestamps.length !== 1 ||
+        fixedInput.inputFreshness.redemptionBackstops.updatedAt === null ||
+        redemptionTimestamps[0] !== fixedInput.inputFreshness.redemptionBackstops.updatedAt
+      ) {
+        blockers.push("Exact fixed input redemption rows do not match the redemption freshness generation");
+      }
+      if (!fixedInput.redemptionGenerationId.startsWith("redemption:")) {
+        blockers.push(
+          `Exact fixed input redemption generation ${fixedInput.redemptionGenerationId} is not producer-bound`,
+        );
+      }
+    } else if (fixedInput.redemptionGenerationId !== "redemption-backstops-unavailable") {
+      blockers.push(
+        `Exact fixed input empty redemption generation ${fixedInput.redemptionGenerationId} is not unavailable`,
+      );
+    }
+  }
+  const registryFingerprint = computeReportCardsRegistryFingerprint();
   if (fixedInput.registryFingerprint !== registryFingerprint) {
     blockers.push(
       `Fixed input registry fingerprint ${fixedInput.registryFingerprint} does not match current ${registryFingerprint}`,
@@ -226,20 +290,83 @@ export function assessReadinessInputBindings(args: {
   if (fixedInput.inputMethodologyVersions.safetyScore !== fixedInput.methodologyVersion) {
     blockers.push("Fixed input safety-score methodology metadata is internally inconsistent");
   }
+  const derivedBaseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
+  if (fixedInput.baseInputGenerationId == null) {
+    blockers.push("Exact fixed input lacks a model-neutral base input generation");
+  } else if (fixedInput.baseInputGenerationId !== derivedBaseInputGenerationId) {
+    blockers.push(
+      `Fixed input base generation ${fixedInput.baseInputGenerationId} does not match payload ${derivedBaseInputGenerationId}`,
+    );
+  }
+  const dexPayloadFingerprint = computeDexLiquidityPayloadFingerprint(fixedInput.dexLiqMap, fixedInput.dexGenerationId);
+  if (fixedInput.dexPayloadFingerprint !== dexPayloadFingerprint) {
+    blockers.push(
+      `Fixed input DEX payload fingerprint ${fixedInput.dexPayloadFingerprint} does not match payload ${dexPayloadFingerprint}`,
+    );
+  }
+  const redemptionPayloadFingerprint = computeRedemptionPayloadFingerprint(
+    fixedInput.redemptionBackstopMap,
+    fixedInput.redemptionGenerationId,
+  );
+  if (fixedInput.redemptionPayloadFingerprint !== redemptionPayloadFingerprint) {
+    blockers.push(
+      `Fixed input redemption payload fingerprint ${fixedInput.redemptionPayloadFingerprint} does not match payload ${redemptionPayloadFingerprint}`,
+    );
+  }
+  const projectedMethodologyVersions = projectReportCardsFixedInputMethodologyVersions({
+    methodologyVersion: fixedInput.methodologyVersion,
+    dexLiqMap: fixedInput.dexLiqMap,
+    pegDataById: fixedInput.pegDataById,
+    redemptionBackstopMap: fixedInput.redemptionBackstopMap,
+  });
+  if (
+    stableJsonStringifyV1(fixedInput.inputMethodologyVersions) !== stableJsonStringifyV1(projectedMethodologyVersions)
+  ) {
+    blockers.push("Fixed input producer methodology versions do not match the score-bearing payloads");
+  }
   const bindings = [
-    ["DEX generation", fixedInput.dexGenerationId, exitRouteCalibrationAsset.generationId],
+    ["DEX generation", fixedInput.dexGenerationId, calibrationSource.dexGenerationId],
+    ["redemption generation", fixedInput.redemptionGenerationId, calibrationSource.redemptionGenerationId],
     ["source generation", fixedInput.sourceGeneration, calibrationSource.sourceGeneration],
     ["registry revision", fixedInput.registryRevision, calibrationSource.registryRevision],
     ["registry fingerprint", fixedInput.registryFingerprint, calibrationSource.registryFingerprint],
     ["DEX payload fingerprint", fixedInput.dexPayloadFingerprint, calibrationSource.dexPayloadFingerprint],
+    [
+      "redemption payload fingerprint",
+      fixedInput.redemptionPayloadFingerprint,
+      calibrationSource.redemptionPayloadFingerprint,
+    ],
     ["capture timestamp", fixedInput.capturedAt, calibrationSource.capturedAt],
     ["publication clock", String(fixedInput.clockSec), String(calibrationSource.clockSec)],
     ["input methodology", fixedInput.methodologyVersion, calibrationSource.inputMethodologyVersion],
+    ["base input generation", fixedInput.baseInputGenerationId ?? "missing", calibrationSource.baseInputGenerationId],
   ] as const;
   for (const [label, actual, expected] of bindings) {
     if (actual !== expected) blockers.push(`Fixed input ${label} ${actual} does not match calibrated ${expected}`);
   }
+  if (
+    stableJsonStringifyV1(fixedInput.inputMethodologyVersions) !==
+    stableJsonStringifyV1(calibrationSource.inputMethodologyVersions)
+  ) {
+    blockers.push("Fixed input producer methodology versions do not match the calibrated input");
+  }
   return blockers;
+}
+
+export function buildExitRouteObservationSet(
+  dexMap: ReadinessDexMap,
+  redemptionMap: RedemptionBackstopMap,
+  activeIds: ReadonlySet<string>,
+): MergedExitObservationSet {
+  const dexObservationsByAssetId = new Map<string, readonly ExitRouteObservation[]>();
+  const redemptionObservationsByAssetId = new Map<string, readonly ExitRouteObservation[]>();
+  for (const assetId of [...activeIds].sort()) {
+    const dexObservations = dexMap?.[assetId]?.exitRouteObservations ?? [];
+    const redemptionObservations = redemptionMap[assetId]?.capacityProfile?.exitRouteObservations ?? [];
+    if (dexObservations.length > 0) dexObservationsByAssetId.set(assetId, dexObservations);
+    if (redemptionObservations.length > 0) redemptionObservationsByAssetId.set(assetId, redemptionObservations);
+  }
+  return mergeExitRouteObservationSets(dexObservationsByAssetId, redemptionObservationsByAssetId);
 }
 
 export function buildExitRouteObservationMap(
@@ -247,14 +374,7 @@ export function buildExitRouteObservationMap(
   redemptionMap: RedemptionBackstopMap,
   activeIds: ReadonlySet<string>,
 ): ReadonlyMap<string, readonly ExitRouteObservation[]> {
-  const result = new Map<string, readonly ExitRouteObservation[]>();
-  for (const assetId of [...activeIds].sort()) {
-    const dexObservations = dexMap?.[assetId]?.exitRouteObservations ?? [];
-    const redemptionObservations = redemptionMap[assetId]?.capacityProfile?.exitRouteObservations ?? [];
-    const observations = [...dexObservations, ...redemptionObservations];
-    if (observations.length > 0) result.set(assetId, observations);
-  }
-  return result;
+  return buildExitRouteObservationSet(dexMap, redemptionMap, activeIds).observationsByAssetId;
 }
 
 export function summarizeRedemptionObservationCoverage(
@@ -281,17 +401,26 @@ function increment(record: Record<string, number>, key: string): void {
   record[key] = (record[key] ?? 0) + 1;
 }
 
-function classifyManualInput(code: string): "missing-data" | "unresolved-methodology" | "unsupported-design" {
-  if (code.includes("unsupported")) return "unsupported-design";
-  if (code.includes("incomparable") || code.includes("correlated")) return "unresolved-methodology";
-  return "missing-data";
+export function summarizeHistoricalRateabilityByOutcome(
+  rows: readonly { classification: "adverse" | "resilient"; score: number | null }[],
+) {
+  return Object.fromEntries(
+    (["adverse", "resilient"] as const).map((classification) => {
+      const matching = rows.filter((row) => row.classification === classification);
+      const rateableCount = matching.filter((row) => row.score !== null).length;
+      return [
+        classification,
+        { fixtureCount: matching.length, rateableCount, nrCount: matching.length - rateableCount },
+      ];
+    }),
+  ) as Record<"adverse" | "resilient", { fixtureCount: number; rateableCount: number; nrCount: number }>;
 }
 
 export interface ManualInputAuditItem {
   assetId: string;
   pillar: "global" | "peg" | "backing" | "exit" | "control";
-  code: string;
-  classification: "missing-data" | "unresolved-methodology" | "unsupported-design";
+  code: V9ReasonCode;
+  classification: V9ManualInputClassification;
   critical: boolean;
   path: string | null;
   reason: string;
@@ -309,18 +438,22 @@ function inputFacts(
   ];
 }
 
-export function buildManualInputAudit(compiled: readonly CompiledV9AssetInput[]) {
+export function buildManualInputAudit(compiled: readonly CompiledV9AssetInput[], policy: V9ValidatedPolicyEnvelope) {
+  assertV9ValidatedPolicyEnvelope(policy);
   const items = compiled
     .flatMap((input) =>
-      inputFacts(input).map(({ pillar, fact }): ManualInputAuditItem => ({
-        assetId: input.assetId,
-        pillar,
-        code: fact.code,
-        classification: classifyManualInput(fact.code),
-        critical: fact.critical,
-        path: fact.path ?? null,
-        reason: fact.reason,
-      })),
+      inputFacts(input).map(({ pillar, fact }): ManualInputAuditItem => {
+        const disposition = resolveV9ReasonPolicy(policy, fact.code);
+        return {
+          assetId: input.assetId,
+          pillar,
+          code: fact.code,
+          classification: disposition.reason.auditClassification,
+          critical: disposition.critical,
+          path: fact.path ?? null,
+          reason: fact.reason,
+        };
+      }),
     )
     .sort(
       (left, right) =>
@@ -448,6 +581,24 @@ export function evaluateP4CoverageBlockers(args: {
   ];
 }
 
+export function evaluateCalibrationActivationBlockers(activationDecision: {
+  decision: string;
+  activationReady: boolean;
+  decisionConsistentWithGate: boolean;
+  blockers: readonly string[];
+}): string[] {
+  return [
+    ...(activationDecision.decision === "activate"
+      ? []
+      : [`P4 calibration decision is ${activationDecision.decision}, not activate`]),
+    ...(activationDecision.activationReady ? [] : ["P4 calibration activation gate is not ready"]),
+    ...(activationDecision.decisionConsistentWithGate
+      ? []
+      : ["P4 calibration decision is inconsistent with its activation gate"]),
+    ...activationDecision.blockers.map((blocker) => `P4 calibration blocker: ${blocker}`),
+  ];
+}
+
 export function selectExactActiveReportCards<T extends { id: string; isDefunct: boolean }>(
   cards: readonly T[],
   activeIds: readonly string[],
@@ -477,7 +628,8 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInp
   }
 
   const activeCards = selectExactActiveReportCards(reportCards.cards, activeRegistryIds);
-  const exitRouteObservationsById = buildExitRouteObservationMap(dexMap, fixedInput.redemptionBackstopMap, activeIds);
+  const exitObservationSet = buildExitRouteObservationSet(dexMap, fixedInput.redemptionBackstopMap, activeIds);
+  const exitRouteObservationsById = exitObservationSet.observationsByAssetId;
   const runtimeEvidenceTimes = [
     ...Object.entries(dexMap)
       .filter(([id]) => id !== "__global__" && activeIds.has(id))
@@ -501,6 +653,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInp
   if (generatedAtMs < Date.parse(asOf))
     throw new Error("generatedAt cannot be earlier than the fixed publication clock");
   const compiled = compileReportCardSetToV9Inputs(ACTIVE_STABLECOINS, activeCards, {
+    policy: V9_CANDIDATE_POLICY_V1,
     asOf,
     compiledAt: args.generatedAt,
     methodologyVersion: reportCards.methodology.version,
@@ -510,7 +663,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInp
     exitRouteObservationsById,
     dexLiquidityById: new Map(Object.entries(dexMap).filter(([id]) => id !== "__global__" && activeIds.has(id))),
   });
-  const evaluated = scoreCompiledAssetSet(compiled);
+  const evaluated = scoreCompiledAssetSet(compiled, V9_CANDIDATE_POLICY_V1);
   const cardsById = new Map(activeCards.map((card) => [card.id, card]));
 
   const archetypes: Record<string, number> = {};
@@ -535,7 +688,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInp
       if (fact.critical) increment(criticalUnresolvedByCode, fact.code);
     }
   }
-  const manualInputAudit = buildManualInputAudit(compiled);
+  const manualInputAudit = buildManualInputAudit(compiled, V9_CANDIDATE_POLICY_V1);
 
   const gradeDistribution: Record<string, number> = {};
   const bindingReasons: Record<string, number> = {};
@@ -571,6 +724,9 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInp
     minimumDexEligibleAssets: minimumCoveragePolicy.dexEligibleAssets,
     minimumRedemptionEligibleAssets: minimumCoveragePolicy.redemptionEligibleAssets,
   });
+  const calibrationActivationBlockers = evaluateCalibrationActivationBlockers(
+    exitRouteCalibrationAsset.activationDecision,
+  );
 
   const adverse = historical.fixtures.filter((fixture) => fixture.outcome.classification === "adverse");
   const resilient = historical.fixtures.filter((fixture) => fixture.outcome.classification === "resilient");
@@ -580,7 +736,10 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInp
   }
   const historicalTraces = historical.fixtures.map((fixture) => ({
     fixture,
-    trace: scoreCompiledAsset(compileHistoricalFixtureToV9Input(historicalFactsInput(fixture))),
+    trace: scoreCompiledAsset(
+      compileHistoricalFixtureToV9Input(historicalFactsInput(fixture), V9_CANDIDATE_POLICY_V1),
+      V9_CANDIDATE_POLICY_V1,
+    ),
   }));
   const historicalIntegrity = assessHistoricalEvidenceIntegrity(historical.fixtures);
   const historicalFalseNegatives = historicalTraces
@@ -600,6 +759,12 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInp
         fixture.outcome.classification === "resilient" && (trace.finalScore == null || trace.finalScore < 50),
     )
     .map(({ fixture, trace }) => ({ fixtureId: fixture.id, score: trace.finalScore, nrReasons: trace.nrReasons }));
+  const historicalRateabilityByOutcome = summarizeHistoricalRateabilityByOutcome(
+    historicalTraces.map(({ fixture, trace }) => ({
+      classification: fixture.outcome.classification,
+      score: trace.finalScore,
+    })),
+  );
 
   const nrCount = evaluated.traces.filter((trace) => trace.finalGrade === "NR").length;
   const criticalUnresolvedCount = Object.values(criticalUnresolvedByCode).reduce((sum, value) => sum + value, 0);
@@ -607,6 +772,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInp
     ...fixedInputProvenance.blockers,
     ...(nrCount > 0 ? [`${nrCount} active assets compile to reason-coded NR`] : []),
     ...(criticalUnresolvedCount > 0 ? [`${criticalUnresolvedCount} critical facts remain unresolved`] : []),
+    ...calibrationActivationBlockers,
     ...p4CoverageBlockers,
     ...historicalIntegrity.blockers,
   ];
@@ -638,6 +804,11 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInp
   return {
     schemaVersion: 1,
     generatedAt: args.generatedAt,
+    candidatePolicy: {
+      policyId: V9_CANDIDATE_POLICY_V1.policy.policyId,
+      lifecycle: V9_CANDIDATE_POLICY_V1.policy.lifecycle,
+      semanticDigest: V9_CANDIDATE_POLICY_V1.semanticDigest,
+    },
     input: {
       reportCardsAsOf: new Date(reportCards.updatedAt * 1_000).toISOString(),
       compilerEvidenceAsOf: asOf,
@@ -666,6 +837,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInp
       lookAheadValidation: historicalIntegrity.chronologyValidation,
       evidenceIntegrity: historicalIntegrity,
       evaluationMode: "facts-only typed compiler; outcomes excluded from scorer input",
+      rateabilityByOutcome: historicalRateabilityByOutcome,
       candidateGradeDistribution: historicalTraces.reduce<Record<string, number>>((result, { trace }) => {
         increment(result, trace.finalGrade);
         return result;
@@ -694,7 +866,11 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInp
       }),
       redemptionEligibleAssets,
       redemptionObservations: redemptionRouteCoverage,
+      outputResolutionByLane: exitObservationSet.summary,
       calibratedCoverageSource: `exit-route-calibration:${exitRouteCalibrationAsset.generationId}`,
+      calibrationActivationDecision: exitRouteCalibrationAsset.activationDecision.decision,
+      calibrationActivationReady: exitRouteCalibrationAsset.activationDecision.activationReady,
+      calibrationDecisionBlockers: exitRouteCalibrationAsset.activationDecision.blockers,
       calibratedMinimumEligibleAssets: {
         dex: minimumCoveragePolicy.dexEligibleAssets,
         redemption: minimumCoveragePolicy.redemptionEligibleAssets,

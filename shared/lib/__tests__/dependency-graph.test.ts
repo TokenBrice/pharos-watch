@@ -3,6 +3,7 @@ import {
   buildDependencyGraphEdges,
   diagnoseDependencyGraph,
   filterDependencyGraphEdgesToLive,
+  orderDependencyGraphNodes,
 } from "../dependency-graph";
 import { deriveEffectiveDependencies, deriveEffectiveDependencySet } from "../dependency-derivation";
 import type { StablecoinMeta } from "../../types/core";
@@ -282,5 +283,17 @@ describe("dependency-graph", () => {
     ]);
     expect(diagnostics.stronglyConnectedComponents).toEqual([["a", "b"]]);
     expect(diagnoseDependencyGraph([...edges].reverse())).toEqual(diagnostics);
+  });
+
+  it("orders the SCC-collapsed graph without hiding cyclic components", () => {
+    const edges = [
+      { from: "a", to: "b", weight: 1, type: "wrapper" as const },
+      { from: "b", to: "a", weight: 1, type: "wrapper" as const },
+      { from: "b", to: "child", weight: 1, type: "wrapper" as const },
+    ];
+    const result = orderDependencyGraphNodes(["child", "free", "b", "a"], edges);
+    expect(result.cyclicComponents).toEqual([["a", "b"]]);
+    expect(result.order.indexOf("a")).toBeLessThan(result.order.indexOf("child"));
+    expect(result.order.indexOf("b")).toBeLessThan(result.order.indexOf("child"));
   });
 });

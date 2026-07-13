@@ -1,0 +1,264 @@
+import { describe, expect, it } from "vitest";
+import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import {
+  evaluateV9Exit,
+  projectV9ExitEvaluationRoute,
+  selectV9ExitStressRequest,
+  type V9ExitEvaluationRoute,
+} from "../safety-score-v9/exit";
+
+function route(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluationRoute {
+  return {
+    routeKey: "redemption:issuer",
+    lane: "redemption",
+    routeFamily: "issuer-redemption",
+    applicability: "required",
+    observationState: "known",
+    scoreEligible: true,
+    coverageClass: "exact-complete",
+    evidenceKind: "onchain-contract-state",
+    observationConfidence: "high",
+    modelConfidence: "high",
+    access: "permissionless-onchain",
+    holderEligibility: "any-holder",
+    settlement: "atomic",
+    settlementDelaySec: 300,
+    execution: "deterministic-onchain",
+    outputQuality: "stable-single",
+    outputResolved: true,
+    outputValueRetention: 1,
+    capacityCurve: [
+      { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 100_000, completionRatio: 1, executionCostBps: 0 },
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1, executionCostBps: 0 },
+      { requestedNotionalUsd: 10_000_000, maxCostBps: 200, executableUsd: 10_000_000, completionRatio: 1, executionCostBps: 0 },
+      { requestedNotionalUsd: 25_000_000, maxCostBps: 200, executableUsd: 25_000_000, completionRatio: 1, executionCostBps: 0 },
+    ],
+    routeScoreCap: null,
+    failureDomains: ["redemption-rail:issuer"],
+    physicalResourceKeys: ["rail:issuer"],
+    ...overrides,
+  };
+}
+
+describe("selectV9ExitStressRequest", () => {
+  it("snaps the supply-relative request upward to the reviewed grid", () => {
+    expect(selectV9ExitStressRequest(100_000_000, V9_CANDIDATE_POLICY_V1)).toMatchObject({
+      rawSupplyRequestUsd: 5_000_000,
+      requestedNotionalUsd: 10_000_000,
+      maxCostBps: 200,
+    });
+    expect(selectV9ExitStressRequest(100_000, V9_CANDIDATE_POLICY_V1)?.requestedNotionalUsd).toBe(100_000);
+    expect(selectV9ExitStressRequest(10_000_000_000, V9_CANDIDATE_POLICY_V1)?.requestedNotionalUsd).toBe(
+      25_000_000,
+    );
+  });
+
+  it("fails closed without valid circulating supply", () => {
+    expect(selectV9ExitStressRequest(null, V9_CANDIDATE_POLICY_V1)).toBeNull();
+    expect(selectV9ExitStressRequest(0, V9_CANDIDATE_POLICY_V1)).toBeNull();
+  });
+});
+
+describe("evaluateV9Exit", () => {
+  it("lets a complete 1:1 redemption route support a strong exit score despite absent DEX depth", () => {
+    const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [route()] }, V9_CANDIDATE_POLICY_V1);
+    expect(result.primaryRouteKey).toBe("redemption:issuer");
+    expect(result.score).toBeGreaterThanOrEqual(90);
+  });
+
+  it("does not let a weak optional route lower the best credible route", () => {
+    const strong = route();
+    const baseline = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [strong] }, V9_CANDIDATE_POLICY_V1);
+    const withWeak = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        routes: [
+          strong,
+          route({
+            routeKey: "dex:weak",
+            lane: "dex",
+            routeFamily: "dex-amm",
+            evidenceKind: "measured-executable-depth",
+            capacityCurve: [
+              { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 10_000, completionRatio: 0.01, executionCostBps: 150 },
+            ],
+            failureDomains: ["redemption-rail:issuer"],
+            physicalResourceKeys: ["rail:issuer"],
+          }),
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(withWeak.score).toBe(baseline.score);
+    expect(withWeak.reasons).toContain("correlated-exit-routes");
+  });
+
+  it("adds only a bounded benefit for a disjoint independent route", () => {
+    const result = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        routes: [
+          route(),
+          route({
+            routeKey: "dex:independent",
+            lane: "dex",
+            routeFamily: "dex-amm",
+            evidenceKind: "measured-executable-depth",
+            failureDomains: ["dex-protocol:independent"],
+            physicalResourceKeys: ["pool:independent"],
+          }),
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.diversificationRouteKey).not.toBeNull();
+    expect(result.diversificationBonus).toBeGreaterThan(0);
+    expect(result.score).toBeLessThanOrEqual(100);
+  });
+
+  it("accepts a conservative exact lower bound and excludes diagnostic coverage", () => {
+    const lowerBound = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [route({ coverageClass: "exact-lower-bound" })] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const diagnostic = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [route({ coverageClass: "diagnostic" })] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(lowerBound.score).not.toBeNull();
+    expect(diagnostic.score).toBeNull();
+    expect(diagnostic.reasons).toContain("unsupported-same-notional-route");
+  });
+
+  it("scores a reviewed absence of viable routes poorly but leaves incomplete evidence unrated", () => {
+    const diagnosticRoute = route({ coverageClass: "diagnostic" });
+    const reviewed = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        portfolioStatus: "reviewed-complete",
+        routes: [diagnosticRoute],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const incomplete = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        portfolioStatus: "incomplete",
+        routes: [diagnosticRoute],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(reviewed.score).toBe(0);
+    expect(reviewed.reasons).toContain("no-viable-exit-path");
+    expect(incomplete.score).toBeNull();
+    expect(incomplete.reasons).toContain("missing-same-notional-route");
+  });
+
+  it("keeps unresolved optional output visible without invalidating a resolved route", () => {
+    const result = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        routes: [route(), route({ routeKey: "dex:unknown-output", outputResolved: false })],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.score).not.toBeNull();
+    expect(result.reasons).toContain("unresolved-exit-output");
+  });
+
+  it("applies output-value loss to capacity and route quality", () => {
+    const par = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [route()] }, V9_CANDIDATE_POLICY_V1);
+    const impaired = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [route({ outputValueRetention: 0.6 })] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(impaired.score).toBeLessThan(par.score!);
+  });
+
+  it("is deterministic under route and capacity-curve permutation", () => {
+    const first = route();
+    const second = route({
+      routeKey: "dex:second",
+      lane: "dex",
+      routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      failureDomains: ["dex-protocol:second"],
+      physicalResourceKeys: ["pool:second"],
+      capacityCurve: [...route().capacityCurve].reverse(),
+    });
+    const forward = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [first, second] }, V9_CANDIDATE_POLICY_V1);
+    const reverse = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [second, first] }, V9_CANDIDATE_POLICY_V1);
+    expect(reverse).toEqual(forward);
+  });
+
+  it("projects explicit normalized route facts without route-family access inference", () => {
+    const projected = projectV9ExitEvaluationRoute({
+      routeKey: "redemption:generation:route",
+      routeId: "route",
+      lane: "redemption",
+      sourceGenerationId: "generation",
+      routeFamily: "issuer-redemption",
+      holderAccess: "allowlisted",
+      executionModel: "deterministic",
+      executionCertainty: "bounded",
+      observationConfidence: "medium",
+      evidenceKind: "documented-terms",
+      coverageClass: "exact-lower-bound",
+      settlementModel: "same-day",
+      settlementSlaSec: 86_400,
+      settlementEvidenceRefIds: ["settlement"],
+      physicalResourceKeys: ["rail:issuer"],
+      status: {
+        applicability: { state: "required", policyRuleId: "route-required", rationale: null, gapId: null },
+        observationState: "known",
+        evidenceRefIds: ["route"],
+        gapIds: [],
+      },
+      scoreEligible: true,
+      request: { requestedNotionalUsd: 1_000_000, maxCostBps: 200, settlementHorizonSec: 300 },
+      capacityCurve: [
+        {
+          requestedNotionalUsd: 1_000_000,
+          maxCostBps: 200,
+          executableUsd: 1_000_000,
+          completionRatio: 1,
+          executionCostBps: 10,
+        },
+      ],
+      output: {
+        status: {
+          applicability: { state: "required", policyRuleId: "output-required", rationale: null, gapId: null },
+          observationState: "known",
+          evidenceRefIds: ["valuation"],
+          gapIds: [],
+        },
+        kind: "fiat",
+        assetKeys: ["USD"],
+        basketWeights: [],
+        valuation: {
+          basis: "reviewed-par",
+          referenceAssetKey: "USD",
+          unitValueUsd: 1,
+          expectedUnitValueUsd: 1,
+          valueRetentionRatio: 1,
+          sourceId: "valuation-source",
+          sourceGenerationId: "valuation-generation",
+          observedAtSec: 1,
+          asOfSec: 1,
+          confidence: "high",
+          freshness: { state: "current", ageSec: 0, maxAgeSec: 1 },
+          evidenceRefIds: ["valuation"],
+        },
+      },
+      failureDomains: [{ kind: "redemption-rail", key: "issuer" }],
+    });
+    expect(projected).toMatchObject({
+      access: "whitelisted-onchain",
+      holderEligibility: "whitelisted-primary",
+      modelConfidence: "medium",
+      settlement: "same-day",
+      outputValueRetention: 1,
+    });
+  });
+});

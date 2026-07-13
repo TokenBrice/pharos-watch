@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  checkCliArgsPolicy,
-  evaluateCliArgsPolicy,
-  sourceUsesProcessArgv,
-} from "../ci/check-cli-args-policy.mjs";
+import { checkCliArgsPolicy, evaluateCliArgsPolicy, sourceUsesProcessArgv } from "../ci/check-cli-args-policy.mjs";
 
 const EXEMPTION_REASON = "Reads repository state and reports findings without persistent mutation.";
 const REPOSITORY_SCAN_TIMEOUT_MS = 30_000;
@@ -24,27 +20,31 @@ describe("check-cli-args-policy", () => {
     expect(sourceUsesProcessArgv('const args = process["argv"].slice(2);\n')).toBe(true);
   });
 
-  it("accepts the current committed process.argv inventory", () => {
-    let stdout = "";
-    let stderr = "";
-    const exitCode = checkCliArgsPolicy({
-      stdout: {
-        write(chunk: string) {
-          stdout += chunk;
-          return true;
+  it(
+    "accepts the current tracked and untracked repository process.argv inventory",
+    () => {
+      let stdout = "";
+      let stderr = "";
+      const exitCode = checkCliArgsPolicy({
+        stdout: {
+          write(chunk: string) {
+            stdout += chunk;
+            return true;
+          },
         },
-      },
-      stderr: {
-        write(chunk: string) {
-          stderr += chunk;
-          return true;
+        stderr: {
+          write(chunk: string) {
+            stderr += chunk;
+            return true;
+          },
         },
-      },
-    });
+      });
 
-    expect(exitCode, stderr).toBe(0);
-    expect(stdout).toMatch(/CLI argument policy: OK \(\d+ entrypoints; \d+ strict, \d+ exempt\)/);
-  }, REPOSITORY_SCAN_TIMEOUT_MS);
+      expect(exitCode, stderr).toBe(0);
+      expect(stdout).toMatch(/CLI argument policy: OK \(\d+ entrypoints; \d+ strict, \d+ exempt\)/);
+    },
+    REPOSITORY_SCAN_TIMEOUT_MS,
+  );
 
   it("rejects a newly discovered process.argv entrypoint until it is classified", () => {
     const result = evaluateCliArgsPolicy({

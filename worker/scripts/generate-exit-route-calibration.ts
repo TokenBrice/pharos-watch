@@ -25,9 +25,11 @@ import {
 } from "../../scripts/lib/cli-args.mjs";
 import {
   buildReportCardsSnapshotFromFixedInput,
+  computeReportCardsReplayPayloadFingerprint,
   normalizeFixedInput,
   type ReportCardsFixedInput,
 } from "../src/lib/report-cards-fixed-input";
+import { projectReportCardsFixedInputMethodologyVersions } from "@shared/lib/report-cards-fixed-input-identity";
 
 const DEFAULT_DEX_MAX_OBSERVATION_AGE_SEC = CRON_INTERVALS["sync-dex-liquidity"] * 2;
 const DEFAULT_LIVE_REDEMPTION_MAX_OBSERVATION_AGE_SEC = CRON_INTERVALS["sync-redemption-backstops"] * 2;
@@ -220,6 +222,12 @@ function cardsById(cards: readonly ReportCard[]): Map<string, ReportCard> {
 
 export function buildExitRouteCalibrationReport(fixedInputValue: unknown, options: ExitRouteCalibrationOptions) {
   const fixedInput: ReportCardsFixedInput = normalizeFixedInput(fixedInputValue);
+  const inputMethodologyVersions = projectReportCardsFixedInputMethodologyVersions({
+    methodologyVersion: fixedInput.methodologyVersion,
+    dexLiqMap: fixedInput.dexLiqMap,
+    pegDataById: fixedInput.pegDataById,
+    redemptionBackstopMap: fixedInput.redemptionBackstopMap,
+  });
   const minimumDexEligibleAssets =
     options.minimumDexEligibleAssets ?? P4_GENERAL_ACTIVATION_POLICY_V1.minimumDexEligibleAssets;
   const minimumRedemptionEligibleAssets =
@@ -227,6 +235,8 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
   const dexMaxObservationAgeSec = options.dexMaxObservationAgeSec ?? DEFAULT_DEX_MAX_OBSERVATION_AGE_SEC;
   const liveRedemptionMaxObservationAgeSec =
     options.liveRedemptionMaxObservationAgeSec ?? DEFAULT_LIVE_REDEMPTION_MAX_OBSERVATION_AGE_SEC;
+  const methodologyMismatchBypassUsed = options.allowMethodologyMismatch === true;
+  const registryMismatchBypassUsed = options.allowRegistryMismatch === true;
   if (!options.generationId.trim()) throw new Error("generationId must be non-empty");
   if (options.generationId !== fixedInput.dexGenerationId) {
     throw new Error(
@@ -258,8 +268,8 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
   }
 
   const replayOptions = {
-    allowMethodologyMismatch: options.allowMethodologyMismatch,
-    allowRegistryMismatch: options.allowRegistryMismatch,
+    allowMethodologyMismatch: methodologyMismatchBypassUsed,
+    allowRegistryMismatch: registryMismatchBypassUsed,
     dexExitObservationMaxAgeSec: dexMaxObservationAgeSec,
     liveRedemptionExitObservationMaxAgeSec: liveRedemptionMaxObservationAgeSec,
   };
@@ -355,6 +365,9 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
   const dexEligibleAssets = rows.filter((row) => row.dex.status === "eligible").length;
   const redemptionEligibleAssets = rows.filter((row) => row.redemption.status === "eligible").length;
   const blockers = [
+    ...(fixedInput.captureKind === "exact-publication-inputs" ? [] : ["capture-not-publication-exact"]),
+    ...(methodologyMismatchBypassUsed ? ["methodology-mismatch-bypass-used"] : []),
+    ...(registryMismatchBypassUsed ? ["registry-mismatch-bypass-used"] : []),
     ...(options.producerGenerationStatus === "complete" ? [] : ["producer-generation-incomplete"]),
     ...(dexEligibleAssets >= minimumDexEligibleAssets ? [] : ["dex-eligible-asset-floor-not-met"]),
     ...(redemptionEligibleAssets >= minimumRedemptionEligibleAssets ? [] : ["redemption-eligible-asset-floor-not-met"]),
@@ -369,13 +382,23 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
     generationId: options.generationId,
     source: {
       sourceGeneration: fixedInput.sourceGeneration,
+      baseInputGenerationId: fixedInput.baseInputGenerationId,
+      captureKind: fixedInput.captureKind,
+      methodologyMismatchBypassUsed,
+      registryMismatchBypassUsed,
       registryRevision: fixedInput.registryRevision,
       registryFingerprint: fixedInput.registryFingerprint,
+      dexGenerationId: fixedInput.dexGenerationId,
+      redemptionGenerationId: fixedInput.redemptionGenerationId,
       dexPayloadFingerprint: fixedInput.dexPayloadFingerprint,
+      redemptionPayloadFingerprint: fixedInput.redemptionPayloadFingerprint,
+      inputMethodologyVersions,
       capturedAt: fixedInput.capturedAt,
       clockSec: fixedInput.clockSec,
       inputMethodologyVersion: fixedInput.methodologyVersion,
       replayMethodologyVersion: active.methodology.version,
+      legacyReplayPayloadFingerprint: computeReportCardsReplayPayloadFingerprint(legacy),
+      activeReplayPayloadFingerprint: computeReportCardsReplayPayloadFingerprint(active),
     },
     generalPolicy: {
       activationPolicyVersion: P4_GENERAL_ACTIVATION_POLICY_V1.version,

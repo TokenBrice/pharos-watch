@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { DexExitRouteObservation, DexLiquidityData } from "@shared/types/market";
+import type { RedemptionExitRouteObservation } from "@shared/types/exit-route";
 import type { ReportCard } from "@shared/types/report-cards";
 import {
   compileHistoricalFixtureToV9Input,
@@ -10,6 +11,7 @@ import {
   resolveConservativeImplementationDate,
 } from "../safety-score-v9-compiler";
 import { historicalFactsInput, type HistoricalV9Fixture } from "@shared/types/safety-score-v9";
+import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 const meta: StablecoinMeta = {
   id: "test-usd",
@@ -97,6 +99,7 @@ const card = {
 } as ReportCard;
 
 const options = {
+  policy: V9_CANDIDATE_POLICY_V1,
   asOf: "2026-06-30T00:00:00.000Z",
   compiledAt: "2026-07-01T00:00:00.000Z",
   methodologyVersion: "8.16",
@@ -120,6 +123,16 @@ const route: DexExitRouteObservation = {
   observedAt: Date.parse("2026-06-30T00:00:00.000Z") / 1_000,
   freshnessSeconds: 60,
   commonModeKeys: [],
+};
+
+const redemptionRoute: RedemptionExitRouteObservation = {
+  ...route,
+  routeId: "redemption:test",
+  routeFamily: "issuer-redemption",
+  scope: { kind: "issuer", issuerId: "test-issuer" },
+  executableUsd: 900_000,
+  completionRatio: 0.9,
+  evidenceKind: "documented-terms",
 };
 
 const dexRow = {
@@ -152,14 +165,33 @@ describe("production-to-v9 research compiler", () => {
       metaById: new Map([[meta.id, meta]]),
       dexLiquidityById: new Map([[meta.id, dexRow]]),
     });
-    expect(compiled.pillars.backing.score).toBe(65);
+    expect(compiled.pillars.backing.score).toBe(80);
     expect(compiled.pillars.exit.score).toBe(80);
     expect(compiled.pillars.control.score).toBe(90);
+    expect(compiled.compilerPolicy).toEqual({
+      policyId: V9_CANDIDATE_POLICY_V1.policy.policyId,
+      semanticDigest: V9_CANDIDATE_POLICY_V1.semanticDigest,
+    });
     expect(compiled.pillars.backing.signals).not.toContain("v8-resilience-adapter");
     expect(compiled.pillars.exit.signals).toEqual(["route:dex-amm:fiat:independent"]);
     expect(compiled.implementationLaunchDate).toBe("2020-12-31");
     expect(compiled).not.toHaveProperty("expected");
     expect(compiled).not.toHaveProperty("structuralCaps");
+  });
+
+  it("accepts a pre-merged route set without treating its DEX rows as redemption evidence", () => {
+    const compiled = compileReportCardToV9Input(meta, card, {
+      ...options,
+      metaById: new Map([[meta.id, meta]]),
+      dexLiquidityById: new Map([[meta.id, dexRow]]),
+      exitRouteObservationsById: new Map([[meta.id, [route, redemptionRoute]]]),
+    });
+
+    expect(compiled.pillars.exit.score).toBe(90);
+    expect(compiled.pillars.exit.signals).toEqual([
+      "route:dex-amm:fiat:independent",
+      "route:issuer-redemption:fiat:independent",
+    ]);
   });
 
   it("does not read legacy v8 backing, liquidity, or decentralization scores", () => {
@@ -181,6 +213,44 @@ describe("production-to-v9 research compiler", () => {
     } as ReportCard;
 
     expect(compile(changedLegacyScores).pillars).toEqual(compile(card).pillars);
+  });
+
+  it("does not score or trace the authored legacy reserve risk label", () => {
+    const changedRisk = {
+      ...meta,
+      reserves: meta.reserves!.map((slice) => ({ ...slice, risk: "very-high" as const })),
+    };
+    const compile = (inputMeta: StablecoinMeta) =>
+      compileReportCardToV9Input(inputMeta, card, {
+        ...options,
+        metaById: new Map([[inputMeta.id, inputMeta]]),
+        dexLiquidityById: new Map([[inputMeta.id, dexRow]]),
+      });
+
+    expect(compile(changedRisk).pillars.backing).toEqual(compile(meta).pillars.backing);
+    expect(compile(changedRisk).structuralSignals).toEqual(compile(meta).structuralSignals);
+  });
+
+  it("derives unresolved criticality from the policy registry", () => {
+    const { issuerOrObligor: _issuer, ...unstructuredReserve } = meta.reserves![0]!;
+    const bounded = {
+      ...meta,
+      launchDate: undefined,
+      reserves: [unstructuredReserve],
+    } as StablecoinMeta;
+    const compiled = compileReportCardToV9Input(bounded, card, {
+      ...options,
+      metaById: new Map([[bounded.id, bounded]]),
+      dexLiquidityById: new Map([[bounded.id, dexRow]]),
+    });
+
+    expect(compiled.pillars.backing.score).not.toBeNull();
+    expect(compiled.pillars.backing.unresolved).toContainEqual(
+      expect.objectContaining({ code: "material-reserve-slice-unstructured", critical: false }),
+    );
+    expect(compiled.unresolved).toContainEqual(
+      expect.objectContaining({ code: "missing-implementation-date", critical: false }),
+    );
   });
 
   it("fails closed when retained DEX pools are only partially modeled", () => {
@@ -205,7 +275,11 @@ describe("production-to-v9 research compiler", () => {
   });
 
   it("records future route observations as critical input facts before eligibility filtering", () => {
-    const futureObservation = { ...route, observedAt: Date.parse(options.asOf) / 1_000 + 1 };
+    const futureObservation = {
+      ...route,
+      routeId: "dex:test-future",
+      observedAt: Date.parse(options.asOf) / 1_000 + 1,
+    };
     const futureRow = {
       ...dexRow,
       exitRouteObservations: [route, futureObservation],
@@ -440,6 +514,13 @@ describe("production-to-v9 research compiler", () => {
     expect(() => compileReportCardSetToV9Inputs([meta], [], options)).toThrow("missing report cards");
     expect(() => compileReportCardSetToV9Inputs([meta], [{ ...card, id: "unexpected" }], options)).toThrow(
       "missing report cards: test-usd; unexpected report cards: unexpected",
+    );
+  });
+
+  it("validates policy provenance even for an empty report-card set", () => {
+    const forgedPolicy = { ...V9_CANDIDATE_POLICY_V1 };
+    expect(() => compileReportCardSetToV9Inputs([], [], { ...options, policy: forgedPolicy })).toThrow(
+      /loadV9MethodologyPolicy/,
     );
   });
 
@@ -777,11 +858,14 @@ describe("production-to-v9 research compiler", () => {
       },
     };
 
-    expect(compileHistoricalFixtureToV9Input(historicalFactsInput(resilient))).toEqual(
-      compileHistoricalFixtureToV9Input(historicalFactsInput(fixture)),
+    expect(compileHistoricalFixtureToV9Input(historicalFactsInput(resilient), V9_CANDIDATE_POLICY_V1)).toEqual(
+      compileHistoricalFixtureToV9Input(historicalFactsInput(fixture), V9_CANDIDATE_POLICY_V1),
     );
     expect(() =>
-      compileHistoricalFixtureToV9Input({ ...historicalFactsInput(fixture), outcome: fixture.outcome } as never),
+      compileHistoricalFixtureToV9Input(
+        { ...historicalFactsInput(fixture), outcome: fixture.outcome } as never,
+        V9_CANDIDATE_POLICY_V1,
+      ),
     ).toThrow();
   });
 });

@@ -3,15 +3,31 @@
   "generationId": "dex-liquidity-1783905029",
   "source": {
     "sourceGeneration": "report-cards:8.13:1783904416",
+    "baseInputGenerationId": "report-cards-input:v1:9115dfdcfed0b4b7e69166155e997743cba46bf5901f67f7c74525a42a0f9a10",
+    "captureKind": "public-reconstruction",
+    "methodologyMismatchBypassUsed": true,
+    "registryMismatchBypassUsed": true,
     "registryRevision": "9e99c0a3d",
     "registryFingerprint": "2c1ffcff78c3254819e82f61cbe8a9e4d784ebe4f59137f28735f19ff8acef9b",
+    "dexGenerationId": "dex-liquidity-1783905029",
+    "redemptionGenerationId": "redemption-backstops-1783901584",
     "dexPayloadFingerprint": "d851566b2c0431e4453f49e562f7c4df0f48a98472b631a171ba6328df72a3de",
+    "redemptionPayloadFingerprint": "d13c20e5509654e5b82e1067f796eb04cff00062c7b517db2a4545d9a087f883",
+    "inputMethodologyVersions": {
+      "safetyScore": "8.13",
+      "dexLiquidity": ["5.5", "5.6", "5.81", "5.83", "5.84"],
+      "pegScore": ["6.096"],
+      "redemptionBackstop": ["4.17"]
+    },
     "capturedAt": "2026-07-13T01:15:00.000Z",
     "clockSec": 1783904573,
     "inputMethodologyVersion": "8.13",
-    "replayMethodologyVersion": "8.17"
+    "replayMethodologyVersion": "8.17",
+    "legacyReplayPayloadFingerprint": "4f48bd8dbcbda53f8280a586e16ff59bf08798c3c9cdc32deaaf3a60638ab12f",
+    "activeReplayPayloadFingerprint": "53f3f2095f264daa2df3328fcae2858dd7c53409eddc32075b9c82fb24f141af"
   },
   "generalPolicy": {
+    "activationPolicyVersion": "p4b-activation-v1",
     "modeledExitSize": {
       "supplyRatio": 0.05,
       "floorUsd": 100000,
@@ -36,6 +52,9 @@
     "activationReady": false,
     "decisionConsistentWithGate": true,
     "blockers": [
+      "capture-not-publication-exact",
+      "methodology-mismatch-bypass-used",
+      "registry-mismatch-bypass-used",
       "dex-eligible-asset-floor-not-met"
     ],
     "minimumCoveragePolicy": {

@@ -1,20 +1,29 @@
 import { z } from "zod";
 import { BluechipRatingsMapSchema } from "@shared/types/bluechip";
-import {
-  DexExitRouteObservationSchema,
-  DexLiquidityMapSchema,
-  ExitRouteObservationCoverageSchema,
-  PegSummaryCoinSchema,
-  type ExitRouteObservation,
-} from "@shared/types/market";
+import { DexLiquidityMapSchema, PegSummaryCoinSchema } from "@shared/types/market";
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
-import { ReportCardsResponseSchema, type ReportCard, type ReportCardsResponse } from "@shared/types/report-cards";
+import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/types/report-cards";
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
+import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
+import {
+  FixedDexLiquidityRowSchema,
+  ReportCardsFixedInputMethodologyVersionsSchema,
+  computeDexLiquidityPayloadFingerprint,
+  computeRedemptionPayloadFingerprint,
+  computeReportCardsRegistryFingerprint,
+  normalizeFixedDexLiquidityMap,
+  normalizeFixedInputExitRouteObservations,
+  normalizeFixedRedemptionBackstopMap,
+  normalizeReportCardsReplayPayload,
+  normalizeReportCardsFixedInputMethodologyVersions,
+  projectFixedDexLiquidityMap,
+  projectReportCardsFixedInputMethodologyVersions,
+  type FixedDexLiquidityRow,
+} from "@shared/lib/report-cards-fixed-input-identity";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { sha256Hex } from "@shared/lib/sha256";
-import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import { buildLiveReportCards } from "./report-cards-snapshot-card";
@@ -46,57 +55,15 @@ const DexDeploymentSupplyCoverageSchema: z.ZodType<DexDeploymentSupplyCoverage> 
   unknownChains: z.array(z.string().min(1)),
 });
 
-const FixedDexLiquidityRowSchema = z
-  .object({
-    liquidityScore: z.number().min(0).max(100).nullable(),
-    concentrationHhi: z.number().min(0).max(1).nullable(),
-    poolCount: z.number().int().nonnegative(),
-    chainCount: z.number().int().nonnegative(),
-    coverageClass: z.enum(["primary", "mixed", "fallback", "legacy", "unobserved"]).nullable().optional(),
-    coverageConfidence: z.number().min(0).max(1).nullable().optional(),
-    liquidityEvidenceClass: z
-      .enum(["unobserved", "measured", "partial_measured", "observed_unmeasured"])
-      .nullable()
-      .optional(),
-    hasMeasuredLiquidityEvidence: z.boolean().nullable().optional(),
-    effectiveTvlUsd: z.number().finite().nonnegative().nullable().optional(),
-    balanceMeasuredTvlUsd: z.number().finite().nonnegative().nullable().optional(),
-    organicMeasuredTvlUsd: z.number().finite().nonnegative().nullable().optional(),
-    deploymentCoverage: z
-      .object({
-        observedPools: z.number().int().nonnegative(),
-        verifiedNoPools: z.number().int().nonnegative(),
-        providerInaccessible: z.number().int().nonnegative(),
-      })
-      .nullable()
-      .optional(),
-    exitRouteObservations: z.array(DexExitRouteObservationSchema).nullable().optional(),
-    exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-    methodologyVersion: z.string().min(1).optional(),
-    updatedAt: z.number().int().nonnegative(),
-  })
-  .superRefine((row, ctx) => {
-    if (!row.exitRouteObservations || !row.exitRouteObservationCoverage) return;
-    const eligibleObservationCount = row.exitRouteObservations.filter(
-      (observation) => observation.scoreEligible,
-    ).length;
-    if (row.exitRouteObservationCoverage.observationCount !== row.exitRouteObservations.length) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["exitRouteObservationCoverage", "observationCount"],
-        message: "coverage observation count does not match DEX observations",
-      });
-    }
-    if (row.exitRouteObservationCoverage.scoreEligibleObservationCount !== eligibleObservationCount) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["exitRouteObservationCoverage", "scoreEligibleObservationCount"],
-        message: "coverage eligible-observation count does not match DEX observations",
-      });
-    }
-  });
-
-export type FixedDexLiquidityRow = z.infer<typeof FixedDexLiquidityRowSchema>;
+export {
+  FixedDexLiquidityRowSchema,
+  computeDexLiquidityPayloadFingerprint,
+  computeRedemptionPayloadFingerprint,
+  computeReportCardsReplayPayloadFingerprint,
+  computeReportCardsRegistryFingerprint,
+  normalizeReportCardsReplayPayload,
+  type FixedDexLiquidityRow,
+} from "@shared/lib/report-cards-fixed-input-identity";
 
 const FixedInputPayloadFields = {
   capturedAt: z.string().datetime(),
@@ -161,7 +128,7 @@ const LegacyReportCardsFixedInputV2Schema = z
   })
   .strict();
 
-const ReportCardsFixedInputSchema = z
+const LegacyReportCardsFixedInputV3Schema = z
   .object({
     schemaVersion: z.literal(3),
     ...FixedInputPayloadFields,
@@ -172,17 +139,17 @@ const ReportCardsFixedInputSchema = z
     dexPayloadFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
     redemptionPayloadFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
     registryFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-    inputMethodologyVersions: z.object({
-      safetyScore: z.string().min(1),
-      dexLiquidity: z.array(z.string().min(1)),
-      pegScore: z.array(z.string().min(1)),
-      redemptionBackstop: z.array(z.string().min(1)),
-    }),
+    inputMethodologyVersions: ReportCardsFixedInputMethodologyVersionsSchema,
     dexLiqMap: z.record(z.string(), FixedDexLiquidityRowSchema),
   })
   .strict();
 
+const ReportCardsFixedInputSchema = LegacyReportCardsFixedInputV3Schema.extend({
+  baseInputGenerationId: z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/),
+}).strict();
+
 export type ReportCardsFixedInput = z.infer<typeof ReportCardsFixedInputSchema>;
+type LegacyReportCardsFixedInputV3 = z.infer<typeof LegacyReportCardsFixedInputV3Schema>;
 
 export interface FixedReplayOptions {
   allowMethodologyMismatch?: boolean;
@@ -198,133 +165,6 @@ function recordToMap<T>(record: Record<string, T>): Map<string, T> {
 
 function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
   return Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)));
-}
-
-function normalizeExitRouteObservation<T extends ExitRouteObservation>(observation: T): T {
-  return {
-    ...observation,
-    output: {
-      ...observation.output,
-      ...(observation.output.trackedAssetIds
-        ? { trackedAssetIds: [...observation.output.trackedAssetIds].sort() }
-        : {}),
-      ...(observation.output.assetKeys ? { assetKeys: [...observation.output.assetKeys].sort() } : {}),
-      ...(observation.output.basketWeights
-        ? {
-            basketWeights: [...observation.output.basketWeights].sort(
-              (left, right) =>
-                (left.assetId ?? "").localeCompare(right.assetId ?? "") ||
-                (left.symbol ?? "").localeCompare(right.symbol ?? "") ||
-                left.weight - right.weight,
-            ),
-          }
-        : {}),
-    },
-    commonModeKeys: [...observation.commonModeKeys].sort(),
-    ...(observation.capacityCurve
-      ? {
-          capacityCurve: [...observation.capacityCurve].sort(
-            (left, right) =>
-              left.maxCostBps - right.maxCostBps || left.requestedNotionalUsd - right.requestedNotionalUsd,
-          ),
-        }
-      : {}),
-  } as T;
-}
-
-function normalizeExitRouteObservations<T extends ExitRouteObservation>(
-  observations: readonly T[] | null | undefined,
-): T[] | null | undefined {
-  if (observations == null) return observations;
-  return observations
-    .map(normalizeExitRouteObservation)
-    .sort(
-      (left, right) =>
-        left.routeId.localeCompare(right.routeId) ||
-        stableJsonStringifyV1(left).localeCompare(stableJsonStringifyV1(right)),
-    );
-}
-
-function normalizeDexLiquidityMap(record: Record<string, FixedDexLiquidityRow>): Record<string, FixedDexLiquidityRow> {
-  return sortedRecord(
-    Object.fromEntries(
-      Object.entries(record).map(([id, row]) => [
-        id,
-        {
-          ...row,
-          ...(row.exitRouteObservations !== undefined
-            ? { exitRouteObservations: normalizeExitRouteObservations(row.exitRouteObservations) }
-            : {}),
-        },
-      ]),
-    ),
-  );
-}
-
-function projectFixedDexLiquidityMap(
-  record: Record<string, FixedDexLiquidityRow>,
-): Record<string, FixedDexLiquidityRow> {
-  return Object.fromEntries(Object.entries(record).map(([id, row]) => [id, FixedDexLiquidityRowSchema.parse(row)]));
-}
-
-function normalizeRedemptionBackstopMap(
-  record: ReportCardsFixedInput["redemptionBackstopMap"],
-): ReportCardsFixedInput["redemptionBackstopMap"] {
-  return sortedRecord(
-    Object.fromEntries(
-      Object.entries(record).map(([id, row]) => [
-        id,
-        {
-          ...row,
-          ...(row.capacityProfile?.exitRouteObservations
-            ? {
-                capacityProfile: {
-                  ...row.capacityProfile,
-                  exitRouteObservations: normalizeExitRouteObservations(row.capacityProfile.exitRouteObservations)!,
-                },
-              }
-            : {}),
-        },
-      ]),
-    ),
-  );
-}
-
-export function computeReportCardsRegistryFingerprint(): string {
-  return sha256Hex(
-    stableJsonStringifyV1({
-      domain: "report-cards.fixed-input.registry.v1",
-      activeStablecoins: [...ACTIVE_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
-      frozenStablecoins: [...FROZEN_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
-      deadStablecoins: [...DEAD_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
-    }),
-  );
-}
-
-export function computeDexLiquidityPayloadFingerprint(
-  dexLiqMap: Record<string, FixedDexLiquidityRow>,
-  dexGenerationId: string,
-): string {
-  return sha256Hex(
-    stableJsonStringifyV1({
-      domain: "report-cards.fixed-input.dex-payload.v1",
-      dexGenerationId,
-      dexLiqMap: normalizeDexLiquidityMap(projectFixedDexLiquidityMap(dexLiqMap)),
-    }),
-  );
-}
-
-function computeRedemptionPayloadFingerprint(
-  redemptionBackstopMap: ReportCardsFixedInput["redemptionBackstopMap"],
-  redemptionGenerationId: string,
-): string {
-  return sha256Hex(
-    stableJsonStringifyV1({
-      domain: "report-cards.fixed-input.redemption-payload.v1",
-      redemptionGenerationId,
-      redemptionBackstopMap: normalizeRedemptionBackstopMap(redemptionBackstopMap),
-    }),
-  );
 }
 
 const REPORT_CARDS_FIXED_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
@@ -469,7 +309,7 @@ function computeLegacyDexLiquidityPayloadFingerprint(
         {
           ...row,
           ...(row.exitRouteObservations !== undefined
-            ? { exitRouteObservations: normalizeExitRouteObservations(row.exitRouteObservations) }
+            ? { exitRouteObservations: normalizeFixedInputExitRouteObservations(row.exitRouteObservations) }
             : {}),
         },
       ]),
@@ -504,7 +344,7 @@ function deriveRedemptionGenerationId(
   return `redemption-backstops-${updatedAt}`;
 }
 
-function migrateLegacyFixedInput(value: unknown): ReportCardsFixedInput | null {
+function migrateLegacyFixedInput(value: unknown): LegacyReportCardsFixedInputV3 | null {
   const v2 = LegacyReportCardsFixedInputV2Schema.safeParse(value);
   const legacy = v2.success ? v2.data : LegacyReportCardsFixedInputV1Schema.safeParse(value).data;
   if (!legacy) return null;
@@ -522,7 +362,7 @@ function migrateLegacyFixedInput(value: unknown): ReportCardsFixedInput | null {
     legacy.redemptionBackstopMap,
     legacy.inputFreshness.redemptionBackstops.updatedAt,
   );
-  return ReportCardsFixedInputSchema.parse({
+  return LegacyReportCardsFixedInputV3Schema.parse({
     ...legacy,
     schemaVersion: 3,
     captureKind: "public-reconstruction",
@@ -535,14 +375,12 @@ function migrateLegacyFixedInput(value: unknown): ReportCardsFixedInput | null {
       redemptionGenerationId,
     ),
     registryFingerprint: v2.success ? v2.data.registryFingerprint : computeReportCardsRegistryFingerprint(),
-    inputMethodologyVersions: {
-      safetyScore: legacy.methodologyVersion,
-      dexLiquidity: uniqueSorted(Object.values(legacy.dexLiqMap).map((row) => row.methodologyVersion)),
-      pegScore: uniqueSorted(Object.values(legacy.pegDataById).map((row) => row.methodologyVersion)),
-      redemptionBackstop: uniqueSorted(
-        Object.values(legacy.redemptionBackstopMap).map((row) => row.methodologyVersion),
-      ),
-    },
+    inputMethodologyVersions: projectReportCardsFixedInputMethodologyVersions({
+      methodologyVersion: legacy.methodologyVersion,
+      dexLiqMap: legacy.dexLiqMap,
+      pegDataById: legacy.pegDataById,
+      redemptionBackstopMap: legacy.redemptionBackstopMap,
+    }),
     dexLiqMap,
   });
 }
@@ -556,6 +394,7 @@ export type ReportCardsFixedInputDraft = Omit<
   | "redemptionPayloadFingerprint"
   | "registryFingerprint"
   | "inputMethodologyVersions"
+  | "baseInputGenerationId"
 > & {
   captureKind: ReportCardsFixedInput["captureKind"];
   activeAssetIds?: string[];
@@ -563,8 +402,8 @@ export type ReportCardsFixedInputDraft = Omit<
 
 export function createReportCardsFixedInput(draft: ReportCardsFixedInputDraft): ReportCardsFixedInput {
   const activeAssetIds = [...(draft.activeAssetIds ?? ACTIVE_STABLECOINS.map((coin) => coin.id))].sort();
-  const dexLiqMap = normalizeDexLiquidityMap(projectFixedDexLiquidityMap(draft.dexLiqMap));
-  const redemptionBackstopMap = normalizeRedemptionBackstopMap(draft.redemptionBackstopMap);
+  const dexLiqMap = normalizeFixedDexLiquidityMap(projectFixedDexLiquidityMap(draft.dexLiqMap));
+  const redemptionBackstopMap = normalizeFixedRedemptionBackstopMap(draft.redemptionBackstopMap);
   return normalizeFixedInput({
     ...draft,
     dexLiqMap,
@@ -577,17 +416,12 @@ export function createReportCardsFixedInput(draft: ReportCardsFixedInputDraft): 
       redemptionBackstopMap,
       draft.redemptionGenerationId,
     ),
-    inputMethodologyVersions: {
-      safetyScore: draft.methodologyVersion,
-      dexLiquidity: uniqueSorted(
-        Object.values(dexLiqMap).flatMap((row) => {
-          const methodologyVersion = (row as FixedDexLiquidityRow & { methodologyVersion?: string }).methodologyVersion;
-          return methodologyVersion ? [methodologyVersion] : [];
-        }),
-      ),
-      pegScore: uniqueSorted(Object.values(draft.pegDataById).map((row) => row.methodologyVersion)),
-      redemptionBackstop: uniqueSorted(Object.values(redemptionBackstopMap).map((row) => row.methodologyVersion)),
-    },
+    inputMethodologyVersions: projectReportCardsFixedInputMethodologyVersions({
+      methodologyVersion: draft.methodologyVersion,
+      dexLiqMap,
+      pegDataById: draft.pegDataById,
+      redemptionBackstopMap,
+    }),
   });
 }
 
@@ -671,47 +505,40 @@ function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
       input.activeAssetIds,
       "Exact fixed input blacklist rows",
     );
+    const dexRowsMissingMethodology = Object.entries(input.dexLiqMap).flatMap(([id, row]) =>
+      row.methodologyVersion?.trim() ? [] : [id],
+    );
+    if (dexRowsMissingMethodology.length > 0) {
+      throw new Error(`Exact fixed input DEX rows lack producer methodology: ${dexRowsMissingMethodology.join(",")}`);
+    }
+    const projectedMethodologyVersions = projectReportCardsFixedInputMethodologyVersions({
+      methodologyVersion: input.methodologyVersion,
+      dexLiqMap: input.dexLiqMap,
+      pegDataById: input.pegDataById,
+      redemptionBackstopMap: input.redemptionBackstopMap,
+    });
+    if (stableJsonStringifyV1(input.inputMethodologyVersions) !== stableJsonStringifyV1(projectedMethodologyVersions)) {
+      throw new Error("Exact fixed input producer methodology versions do not match its score-bearing payload rows");
+    }
+  }
+  const expectedBaseInputGenerationId = deriveReportCardsBaseInputGenerationId(input);
+  if (input.baseInputGenerationId !== expectedBaseInputGenerationId) {
+    throw new Error(
+      `Fixed input base generation ${input.baseInputGenerationId} does not match payload ${expectedBaseInputGenerationId}`,
+    );
   }
   assertFreshnessConsistency(input);
 }
 
-function normalizeCard(card: ReportCard): ReportCard {
-  return {
-    ...card,
-    dimensions: Object.fromEntries(
-      Object.entries(card.dimensions).map(([key, dimension]) => [
-        key,
-        {
-          ...dimension,
-          ...(dimension.detailItems
-            ? { detailItems: [...dimension.detailItems].sort((left, right) => left.label.localeCompare(right.label)) }
-            : {}),
-        },
-      ]),
-    ) as ReportCard["dimensions"],
-    rawInputs: {
-      ...card.rawInputs,
-      dependencies: [...card.rawInputs.dependencies].sort(
-        (left, right) =>
-          left.id.localeCompare(right.id) ||
-          (left.type ?? "collateral").localeCompare(right.type ?? "collateral") ||
-          left.weight - right.weight,
-      ),
-    },
-  };
-}
-
-function parseReportCardsFixedInput(value: unknown): ReportCardsFixedInput {
+function parseReportCardsFixedInput(value: unknown): ReportCardsFixedInput | LegacyReportCardsFixedInputV3 {
   const parsed = ReportCardsFixedInputSchema.safeParse(value);
-  if (!parsed.success) {
-    const migrated = migrateLegacyFixedInput(value);
-    if (migrated) return migrated;
-  }
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    throw new Error(`Malformed fixed report-card input at ${issue?.path.join(".") || "root"}: ${issue?.message}`);
-  }
-  return parsed.data;
+  if (parsed.success) return parsed.data;
+  const v3 = LegacyReportCardsFixedInputV3Schema.safeParse(value);
+  if (v3.success) return v3.data;
+  const migrated = migrateLegacyFixedInput(value);
+  if (migrated) return migrated;
+  const issue = parsed.error.issues[0];
+  throw new Error(`Malformed fixed report-card input at ${issue?.path.join(".") || "root"}: ${issue?.message}`);
 }
 
 export function buildReportCardsSnapshotFromFixedInput(
@@ -790,55 +617,20 @@ export function buildReportCardsSnapshotFromFixedInput(
   );
 }
 
-/** Removes only publication-envelope ordering so replay output is byte-comparable. */
-function normalizeReportCardsReplaySnapshot(value: unknown): ReportCardsResponse {
-  const snapshot = ReportCardsResponseSchema.parse(value);
-  return {
-    cards: [...snapshot.cards].map(normalizeCard).sort((left, right) => left.id.localeCompare(right.id)),
-    methodology: snapshot.methodology,
-    dependencyGraph: {
-      edges: [...snapshot.dependencyGraph.edges].sort(
-        (left, right) =>
-          left.from.localeCompare(right.from) ||
-          left.to.localeCompare(right.to) ||
-          left.type.localeCompare(right.type) ||
-          left.weight - right.weight,
-      ),
-    },
-    updatedAt: snapshot.updatedAt,
-    ...(snapshot.liquidityStale != null ? { liquidityStale: snapshot.liquidityStale } : {}),
-    ...(snapshot.redemptionStale != null ? { redemptionStale: snapshot.redemptionStale } : {}),
-    ...(snapshot.inputFreshness ? { inputFreshness: snapshot.inputFreshness } : {}),
-    ...(snapshot.collateralDriftCoins
-      ? {
-          collateralDriftCoins: [...snapshot.collateralDriftCoins].sort((left, right) =>
-            left.id.localeCompare(right.id),
-          ),
-        }
-      : {}),
-    ...(snapshot.liveToFallbackCoins ? { liveToFallbackCoins: [...snapshot.liveToFallbackCoins].sort() } : {}),
-  };
-}
-
 export function serializeNormalizedReportCardsReplay(value: unknown): string {
-  return `${JSON.stringify(normalizeReportCardsReplaySnapshot(value), null, 2)}\n`;
+  return `${JSON.stringify(normalizeReportCardsReplayPayload(value), null, 2)}\n`;
 }
 
 export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
   const input = parseReportCardsFixedInput(value);
-  const redemptionBackstopMap = normalizeRedemptionBackstopMap(input.redemptionBackstopMap);
-  const normalized: ReportCardsFixedInput = {
+  const redemptionBackstopMap = normalizeFixedRedemptionBackstopMap(input.redemptionBackstopMap);
+  const normalizedPayload: LegacyReportCardsFixedInputV3 = {
     ...input,
     activeAssetIds: [...input.activeAssetIds].sort(),
-    inputMethodologyVersions: {
-      safetyScore: input.inputMethodologyVersions.safetyScore,
-      dexLiquidity: uniqueSorted(input.inputMethodologyVersions.dexLiquidity),
-      pegScore: uniqueSorted(input.inputMethodologyVersions.pegScore),
-      redemptionBackstop: uniqueSorted(input.inputMethodologyVersions.redemptionBackstop),
-    },
+    inputMethodologyVersions: normalizeReportCardsFixedInputMethodologyVersions(input.inputMethodologyVersions),
     pegDataById: sortedRecord(input.pegDataById),
     activeDepegPeakBpsById: sortedRecord(input.activeDepegPeakBpsById),
-    dexLiqMap: normalizeDexLiquidityMap(input.dexLiqMap),
+    dexLiqMap: normalizeFixedDexLiquidityMap(input.dexLiqMap),
     redemptionBackstopMap,
     bluechipMap: sortedRecord(input.bluechipMap),
     resolvedBlacklistStatuses: sortedRecord(input.resolvedBlacklistStatuses),
@@ -849,6 +641,12 @@ export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
     collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => left.id.localeCompare(right.id)),
     liveToFallbackCoins: [...input.liveToFallbackCoins].sort(),
   };
+  const derivedBaseInputGenerationId = deriveReportCardsBaseInputGenerationId(normalizedPayload);
+  const normalized = ReportCardsFixedInputSchema.parse({
+    ...normalizedPayload,
+    baseInputGenerationId:
+      "baseInputGenerationId" in input ? input.baseInputGenerationId : derivedBaseInputGenerationId,
+  });
   assertFixedInputConsistency(normalized);
   return normalized;
 }

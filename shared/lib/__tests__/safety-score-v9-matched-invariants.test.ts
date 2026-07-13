@@ -4,6 +4,7 @@ import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { CompiledV9AssetInput, V9ScoringInput, V9StructuralSignal } from "@shared/types/safety-score-v9";
 import { computeEffectiveExitScoreDiagnostics } from "../redemption-backstop-scoring";
 import {
+  V9_CANDIDATE_POLICY_V1,
   deriveV9ReserveLossSignal,
   resolveV9StructuralCaps,
   scoreCompiledAssetSet,
@@ -24,7 +25,6 @@ function scoringInput(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
     activeDepegBps: null,
     parentRequired: false,
     parentScore: null,
-    structuralCaps: [],
     structuralSignals: [],
     unresolved: [],
     ...overrides,
@@ -35,14 +35,17 @@ function scoreSignals(structuralSignals: readonly V9StructuralSignal[], override
   return scoreV9Input(
     scoringInput({
       structuralSignals: [...structuralSignals],
-      structuralCaps: resolveV9StructuralCaps(structuralSignals),
       ...overrides,
     }),
+    V9_CANDIDATE_POLICY_V1,
   );
 }
 
 function minimumCap(signals: readonly V9StructuralSignal[]): number {
-  return Math.min(...resolveV9StructuralCaps(signals).map((cap) => cap.limit), Number.POSITIVE_INFINITY);
+  return Math.min(
+    ...resolveV9StructuralCaps(signals, V9_CANDIDATE_POLICY_V1).map((cap) => cap.limit),
+    Number.POSITIVE_INFINITY,
+  );
 }
 
 function compiledInput(
@@ -59,6 +62,10 @@ function compiledInput(
   };
   return {
     schemaVersion: 1,
+    compilerPolicy: {
+      policyId: V9_CANDIDATE_POLICY_V1.policy.policyId,
+      semanticDigest: V9_CANDIDATE_POLICY_V1.semanticDigest,
+    },
     assetId,
     asOf: AS_OF,
     compiledAt: AS_OF,
@@ -100,8 +107,8 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
       return;
     }
     case "reserve-loss": {
-      const before = scoreSignals([deriveV9ReserveLossSignal(invariant.before)]);
-      const after = scoreSignals([deriveV9ReserveLossSignal(invariant.after)]);
+      const before = scoreSignals([deriveV9ReserveLossSignal(invariant.before, V9_CANDIDATE_POLICY_V1)]);
+      const after = scoreSignals([deriveV9ReserveLossSignal(invariant.after, V9_CANDIDATE_POLICY_V1)]);
       expect(after.finalScore!, invariant.id).toBeLessThan(before.finalScore ?? 0);
       expect(after.structuralSignals[0]?.materialSharePct, invariant.id).toBeGreaterThan(
         before.structuralSignals[0]?.materialSharePct ?? 0,
@@ -140,6 +147,9 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
       expect(bounded.finalScore!, invariant.id).toBeGreaterThanOrEqual(noncritical.finalScore ?? 0);
       expect(noncritical.finalGrade, invariant.id).not.toBe("NR");
       expect(critical.finalGrade, invariant.id).toBe("NR");
+      expect(critical.nrReasons, invariant.id).toContainEqual(
+        expect.objectContaining({ code: "insufficient-evidence" }),
+      );
       return;
     }
     case "parent-graph": {
@@ -149,14 +159,14 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
         required: true,
         relationship: "wrapper",
       });
-      const withParent = scoreCompiledAssetSet([child, parent]);
+      const withParent = scoreCompiledAssetSet([child, parent], V9_CANDIDATE_POLICY_V1);
       const parentTrace = withParent.traces.find((trace) => trace.assetId === invariant.parent.assetId)!;
       const childTrace = withParent.traces.find((trace) => trace.assetId === invariant.child.assetId)!;
       expect(withParent.evaluatedOrder, invariant.id).toEqual([invariant.parent.assetId, invariant.child.assetId]);
       expect(childTrace.finalScore!, invariant.id).toBeLessThanOrEqual(parentTrace.finalScore ?? 0);
       expect(childTrace.bindingCap, invariant.id).toMatchObject({ source: "parent", limit: parentTrace.finalScore });
 
-      const missingParent = scoreCompiledAssetSet([child]).traces[0]!;
+      const missingParent = scoreCompiledAssetSet([child], V9_CANDIDATE_POLICY_V1).traces[0]!;
       expect(missingParent.finalGrade, invariant.id).toBe("NR");
       expect(missingParent.nrReasons, invariant.id).toContainEqual(
         expect.objectContaining({ code: "missing-parent-score" }),
@@ -175,7 +185,10 @@ describe("separate matched v9 invariant corpus", () => {
 
   it("validates reserve-loss fact percentages before deriving a signal", () => {
     expect(() =>
-      deriveV9ReserveLossSignal({ exposurePct: 101, lossAbsorptionPct: 0, failureDomainKey: "reserve:test" }),
+      deriveV9ReserveLossSignal(
+        { exposurePct: 101, lossAbsorptionPct: 0, failureDomainKey: "reserve:test" },
+        V9_CANDIDATE_POLICY_V1,
+      ),
     ).toThrow("exposurePct must be a finite percentage between 0 and 100");
   });
 });
