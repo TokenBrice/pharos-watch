@@ -13,7 +13,8 @@ import { ReportCardsResponseSchema, type ReportCard, type ReportCardsResponse } 
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { sha256Hex } from "@shared/lib/sha256";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import { buildLiveReportCards } from "./report-cards-snapshot-card";
@@ -272,6 +273,8 @@ export function computeReportCardsRegistryFingerprint(): string {
     stableJsonStringifyV1({
       domain: "report-cards.fixed-input.registry.v1",
       activeStablecoins: [...ACTIVE_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
+      frozenStablecoins: [...FROZEN_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
+      deadStablecoins: [...DEAD_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
     }),
   );
 }
