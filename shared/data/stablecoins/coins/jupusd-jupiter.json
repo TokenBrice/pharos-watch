@@ -168,12 +168,51 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "JupUSD mint authority is a PDA of the immutable JupUSD program (JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr, upgradeAuthority: None). Minting and redemption are gated by program logic to KYC/KYB-verified institutional participants. The program upgrade path is locked; minting cannot be altered without redeploying a new mint.",
+    "summary": "JupUSD mint and freeze authority is a PDA of the JupUSD program. The program is upgradeable through a zero-delay autonomous Squads v4 multisig with threshold 4 of 9, so that multisig can change the permissioned mint logic without replacing the SPL mint.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr"
+      ],
+      "implementationAddresses": [
+        "GF7fyG3MC28FzpNVH1rm9AAoDBR9kHTSvGcCoV9a8wkz"
+      ],
+      "adminAddresses": [
+        "31wgH9Czzd3qgquTGxVxtxJuzBd8Fm4xEo8rPX7CNfhM"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "JupUSD program upgrade authority (Squads 4-of-9 vault)",
+      "observedAt": "2026-07-13",
+      "observedBlock": 432737041,
+      "sources": [
+        {
+          "label": "Solana RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "JupUSD program",
+          "url": "https://explorer.solana.com/address/JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr"
+        },
+        {
+          "label": "JupUSD ProgramData",
+          "url": "https://explorer.solana.com/address/GF7fyG3MC28FzpNVH1rm9AAoDBR9kHTSvGcCoV9a8wkz"
+        },
+        {
+          "label": "Latest successful JupUSD program upgrade",
+          "url": "https://explorer.solana.com/tx/2M36bgxBjyUfYnACEAi7egTfazNKGaWaRXDPaXCN95UDNzCruHmofjEQtry2TiRc3Uhxy5mmhuRdym7jbpdK9Ygz"
+        },
+        {
+          "label": "Squads v4 source",
+          "url": "https://github.com/Squads-Protocol/v4"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "solana",
         "address": "CkzLnD9r4d4ZZofsgNVo2VNunxDmte5YJ4vfAgMfBZNA",
-        "label": "JupUSD mint and freeze authority (PDA of immutable JupUSD program)",
+        "label": "JupUSD mint and freeze authority (PDA of JupUSD program)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
@@ -187,9 +226,49 @@
           {
             "label": "Solana RPC getAccountInfo",
             "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Live JupUSD mint transaction",
+            "url": "https://explorer.solana.com/tx/vy3Bq8PWovTceVVS9JAAZ3YsRmS8sUwt2ozwBHizhEswwzY9mmJciU4mJdGUUfiUoY2TQowX9eynrsiY4mVeEkf"
           }
         ],
-        "evidence": "At Solana slot 425778546, JupUSD mint JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD (standard SPL-Token) returned mintAuthority and freezeAuthority both as CkzLnD9r4d4ZZofsgNVo2VNunxDmte5YJ4vfAgMfBZNA. getAccountInfo for that address returned null (unfunded PDA). Redemption transaction (slot 425618663, sig uNQV...UHN) shows program JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr invoking Redeem and calling TokenkegQ MintTo, confirming this is a PDA of JUPUSDecMzA. JUPUSDecMzA programData GF7fy... has upgradeAuthority: None (immutable at slot 425780430)."
+        "observedAt": "2026-07-13",
+        "observedBlock": 432737041,
+        "evidence": "At finalized Solana slot 432737041, the mint and freeze authorities were both CkzLnD9r4d4ZZofsgNVo2VNunxDmte5YJ4vfAgMfBZNA. A successful mint at slot 432727339 shows JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr invoking SPL Token mintTo with that PDA as authority."
+      },
+      {
+        "chain": "solana",
+        "address": "31wgH9Czzd3qgquTGxVxtxJuzBd8Fm4xEo8rPX7CNfhM",
+        "label": "JupUSD program upgrade authority (Squads 4-of-9 vault)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 4,
+        "signerCount": 9,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432737041,
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Squads multisig",
+            "url": "https://explorer.solana.com/address/H4siPbdsgRDoNHyWb1UsTzNhDRAVNoV5MNKjxtL4chzX"
+          },
+          {
+            "label": "Latest successful JupUSD program upgrade",
+            "url": "https://explorer.solana.com/tx/2M36bgxBjyUfYnACEAi7egTfazNKGaWaRXDPaXCN95UDNzCruHmofjEQtry2TiRc3Uhxy5mmhuRdym7jbpdK9Ygz"
+          },
+          {
+            "label": "Squads v4 multisig state",
+            "url": "https://github.com/Squads-Protocol/v4/blob/main/programs/squads_multisig_program/src/state/multisig.rs"
+          }
+        ],
+        "evidence": "At finalized Solana slot 432737041, JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr pointed to ProgramData GF7fyG3MC28FzpNVH1rm9AAoDBR9kHTSvGcCoV9a8wkz, whose live upgrade authority was this Squads vault. The vault is index 0 for autonomous multisig H4siPbdsgRDoNHyWb1UsTzNhDRAVNoV5MNKjxtL4chzX, configured 4-of-9 with time_lock 0. Upgrade transaction 2M36bgx... executed through Squads and invoked the BPF Upgradeable Loader."
       },
       {
         "label": "Ethena Labs issuance backend / reserve operator",
@@ -197,13 +276,13 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
-        "evidence": "JupUSD is issued on Ethena Labs' Stablecoin-as-a-Service infrastructure; Ethena manages reserve operations, custody coordination (Porto/Anchorage), and rebalancing between USDtb and USDC, operating the mint/redeem framework on Jupiter's behalf. This issuer-backend role is consistent with the immutable program gating on-chain."
+        "evidence": "JupUSD is issued on Ethena Labs' Stablecoin-as-a-Service infrastructure; Ethena manages reserve operations, custody coordination (Porto/Anchorage), and rebalancing between USDtb and USDC, operating the mint/redeem framework on Jupiter's behalf. On-chain permissioning is enforced by the upgradeable JupUSD program."
       }
     ],
     "review": {
-      "evidence": "At Solana slot 425780430: JupUSD mint authority confirmed as PDA of immutable program JUPUSDecMzAVgztLe6eGhwUBj1Pn3j9WAXwmtHmfbRr (upgradeAuthority: None). Mint authority CkzL... is null/unfunded PDA that signs via program CPI. Live redemption tx confirms the program handles mint/burn. The upgrade path is locked; permissioned-minter logic is enforced by immutable on-chain code.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At finalized Solana slot 432737041, the JupUSD mint and freeze authority was the program PDA CkzLnD9r.... The program's full ProgramData account GF7fyG3M... named live upgrade authority 31wgH9C..., a zero-delay autonomous 4/9 Squads v4 vault. The classic SPL Token program and Squads v4 program are themselves immutable, leaving the JupUSD program as the only mutable executable in the observed direct mint path.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
       "sources": [
         {
           "label": "JupUSD website",
@@ -216,6 +295,14 @@
         {
           "label": "Solana RPC getAccountInfo",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "JupUSD ProgramData",
+          "url": "https://explorer.solana.com/address/GF7fyG3MC28FzpNVH1rm9AAoDBR9kHTSvGcCoV9a8wkz"
+        },
+        {
+          "label": "Latest successful JupUSD program upgrade",
+          "url": "https://explorer.solana.com/tx/2M36bgxBjyUfYnACEAi7egTfazNKGaWaRXDPaXCN95UDNzCruHmofjEQtry2TiRc3Uhxy5mmhuRdym7jbpdK9Ygz"
         }
       ]
     }

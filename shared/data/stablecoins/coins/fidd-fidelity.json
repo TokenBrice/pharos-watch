@@ -140,7 +140,38 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "FIDD is issuer-operated by Fidelity Digital Assets. The Ethereum token uses AccessControl with DEFAULT_ADMIN_ROLE (3 EOAs) and MINTER_ROLE (5 EOAs); no proxy admin; implementation 0x8ae9cb3d9095da33555494110f567e3d974c6753.",
+    "summary": "FIDD is issuer-operated by Fidelity Digital Assets. The Ethereum token is a UUPS proxy with three DEFAULT_ADMIN_ROLE EOAs, five MINTER_ROLE EOAs, and one separate UPGRADER_ROLE EOA. There is no ProxyAdmin or timelock.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
+      ],
+      "implementationAddresses": [
+        "0x8ae9cb3d9095da33555494110f567e3d974c6753"
+      ],
+      "adminAddresses": [
+        "0xd5d9417d47d547e4e7338d28352dcbae81fe27a3"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "FIDD UPGRADER_ROLE holder",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526837,
+      "sources": [
+        {
+          "label": "Ethereum FIDD UUPS proxy",
+          "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d#code"
+        },
+        {
+          "label": "FIDD implementation verified source",
+          "url": "https://eth.blockscout.com/address/0x8ae9cb3d9095da33555494110f567e3d974c6753?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Fidelity issuer-operated mint authority",
@@ -176,7 +207,32 @@
             "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
           }
         ],
-        "evidence": "At Ethereum block 25294711: EIP-1967 proxy admin slot = zero (no proxy admin); implementation 0x8ae9cb3d9095da33555494110f567e3d974c6753. getRoleMemberCount(DEFAULT_ADMIN_ROLE)=3: 0xce4aaaefbb67baa3711b4841d38a00187c1b9d15, 0x4101605db9a983b57f90f3f7bbdf8a6925eac8bd, 0x2ad8ef80bcc8149400a9f48715fc822887b9d91b — all EOAs (eth_getCode returns empty bytecode). getRoleMemberCount(MINTER_ROLE)=5: 0x2e7b02c3acec979f3232ce4f447f8d06e8a94ae9, 0xe654590b22e0c59f38a466f0908fd1fe5f234190, 0xb685a84171e8aeee76ac2a6aa06d986e4584217a, 0xffc56def4849f0b75f495b5eac06dfe6b81ce9a5, 0xd3bc61e58d8cf2eb01760adc7d860e92c0c09b90 — all EOAs."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "evidence": "At Ethereum block 25526837, the implementation remained 0x8ae9cb3d9095da33555494110f567e3d974c6753 and the proxy-admin and beacon slots were zero. getRoleMemberCount() still returned three DEFAULT_ADMIN_ROLE and five MINTER_ROLE holders, with the same addresses previously enumerated; eth_getCode returned empty bytecode for all eight."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd5d9417d47d547e4e7338d28352dcbae81fe27a3",
+        "label": "FIDD UPGRADER_ROLE holder",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "sources": [
+          {
+            "label": "Ethereum FIDD UUPS proxy",
+            "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d#readProxyContract"
+          },
+          {
+            "label": "FIDD implementation verified source",
+            "url": "https://eth.blockscout.com/address/0x8ae9cb3d9095da33555494110f567e3d974c6753?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25526837, getRoleMemberCount(UPGRADER_ROLE) returned 1 and getRoleMember(...,0) returned this address; eth_getCode returned empty bytecode. Verified MintableToken source restricts _authorizeUpgrade() to UPGRADER_ROLE, so this single EOA can replace mint logic immediately."
       }
     ],
     "review": {
@@ -190,9 +246,9 @@
           "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
         }
       ],
-      "evidence": "At Ethereum block 25294711: FIDD uses OpenZeppelin AccessControl. DEFAULT_ADMIN_ROLE has 3 EOA holders; MINTER_ROLE has 5 EOA holders. No proxy admin (EIP-1967 admin slot = zero). All role holders confirmed as EOAs via eth_getCode (empty bytecode). Issuer-backend model corroborated by all role holders being Fidelity-operated addresses.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25526837, FIDD remained a UUPS proxy with implementation 0x8ae9cb3d..., zero proxy-admin and beacon slots, three default-admin EOAs, five minter EOAs, and one distinct upgrader EOA. Verified source gates _authorizeUpgrade() with UPGRADER_ROLE rather than DEFAULT_ADMIN_ROLE.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13"
     }
   },
   "custodyModel": "institutional-top",
