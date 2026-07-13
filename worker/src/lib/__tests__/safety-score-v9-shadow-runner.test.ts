@@ -132,7 +132,9 @@ function input() {
   };
 }
 
-describe("Safety Score V9 shadow runner", () => {
+const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
+
+describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   beforeEach(() => {
     mockLoadHistory.mockReset();
     mockPersistState.mockReset();

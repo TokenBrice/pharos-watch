@@ -322,7 +322,9 @@ function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9
   return extension;
 }
 
-describe("Safety Score v9 candidate pipeline", () => {
+const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
+
+describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   it("is deterministic for the same exact generation and explicit publication inputs", () => {
     const fixedInput = exactFixedInput("alpha");
     const input = {

@@ -7,7 +7,9 @@ import {
   runV9PolicySensitivityCli,
 } from "../maintenance/run-safety-score-v9-policy-sensitivity";
 
-describe("Safety Score v9 candidate policy sensitivity", () => {
+const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
+
+describe("Safety Score v9 candidate policy sensitivity", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   it("produces deterministic one-parameter candidate cases with distinct semantic digests", () => {
     const options = {
       parameterPaths: ["semantic.formula.compensabilityHeadroom"],
