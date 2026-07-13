@@ -15,9 +15,9 @@
     "branchCount": 113
   },
   "shared/lib/safety-score-v9-compiler.ts": {
-    "fileLines": 1280,
-    "maxFunctionLines": 399,
-    "branchCount": 141
+    "fileLines": 1356,
+    "maxFunctionLines": 343,
+    "branchCount": 146
   },
   "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
     "fileLines": 859,
@@ -30,9 +30,9 @@
     "branchCount": 13
   },
   "shared/types/stablecoin-meta-schemas.ts": {
-    "fileLines": 1252,
+    "fileLines": 1277,
     "maxFunctionLines": 179,
-    "branchCount": 69
+    "branchCount": 71
   },
   "worker/src/api/stablecoin-detail.ts": {
     "fileLines": 152,

@@ -631,6 +631,136 @@ const BRIDGE_TIER_QUALITY = {
   "opaque-or-unknown": 0,
 } as const;
 
+function compileOracleControlPath(args: {
+  meta: StablecoinMeta;
+  archetype: string | null;
+  options: CompileV9AssetOptions;
+  gaps: V9UnresolvedFact[];
+  pathScores: number[];
+  evidence: V9EvidenceReference[];
+  signals: string[];
+  structuralSignals: V9StructuralSignal[];
+}): void {
+  const { meta, archetype, options, gaps, pathScores, evidence, signals, structuralSignals } = args;
+  if (archetype !== "cdp") return;
+
+  const oracle = meta.oracleRisk;
+  if (!oracle) {
+    gaps.push(
+      unresolved("missing-oracle-profile", "CDP has no reviewed oracle/liquidation profile.", true, "oracleRisk"),
+    );
+    return;
+  }
+
+  addFutureDatedFact(gaps, oracle.reviewedAt, options.asOf, "oracleRisk.reviewedAt", "Oracle review");
+  const branchApplicability = oracle.branchApplicability;
+  if (branchApplicability) {
+    addFutureDatedFact(
+      gaps,
+      branchApplicability.reviewedAt,
+      options.asOf,
+      "oracleRisk.branchApplicability.reviewedAt",
+      "Oracle branch-applicability review",
+    );
+  }
+  if (!branchApplicability || branchApplicability.disposition === "unresolved") {
+    gaps.push(
+      unresolved(
+        "unresolved-oracle-branch-applicability",
+        "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required.",
+        true,
+        "oracleRisk.branchApplicability",
+      ),
+    );
+  } else if (
+    branchApplicability.disposition === "branches-required" &&
+    (oracle.branchModel !== "multi-branch" || !oracle.branches?.length)
+  ) {
+    gaps.push(
+      unresolved(
+        "missing-required-oracle-branches",
+        "CDP oracle review requires market-specific branches but no complete branch inventory is available.",
+        true,
+        "oracleRisk.branches",
+      ),
+    );
+  }
+  const oracleEvidence = reviewEvidence({
+    assetId: meta.id,
+    path: "oracleRisk",
+    observedAt: oracle.reviewedAt,
+    links: oracle.sources,
+    note: `Reviewed ${oracle.branchModel ?? "unspecified"} oracle profile (${oracle.confidence ?? "unknown"}).`,
+    options,
+  });
+  evidence.push(...oracleEvidence);
+  if (branchApplicability) {
+    evidence.push(
+      ...reviewEvidence({
+        assetId: meta.id,
+        path: "oracleRisk.branchApplicability",
+        observedAt: branchApplicability.reviewedAt,
+        links: branchApplicability.sources,
+        note: `Reviewed oracle branch applicability (${branchApplicability.disposition}).`,
+        options,
+      }),
+    );
+  }
+  const branchScores =
+    branchApplicability?.disposition === "branches-required"
+      ? (oracle.branches ?? []).map((branch) => ORACLE_TIER_QUALITY[branch.tier])
+      : [];
+  pathScores.push(branchScores.length ? Math.min(...branchScores) : ORACLE_TIER_QUALITY[oracle.tier]);
+  signals.push(`oracle:${oracle.branchModel ?? "unspecified"}:${oracle.tier}`);
+  if (!oracle.reviewedAt || !oracle.reviewer || !oracle.confidence || oracle.confidence === "unknown") {
+    gaps.push(
+      unresolved(
+        "unreviewed-oracle-profile",
+        "Oracle profile lacks complete review provenance or confidence.",
+        true,
+        "oracleRisk",
+      ),
+    );
+  }
+  if (oracle.branchModel === "multi-branch") {
+    for (const [index, branch] of (oracle.branches ?? []).entries()) {
+      const missing = [
+        ...(branch.feeds?.length ? [] : ["feeds"]),
+        ...(branch.collateralParameters?.length ? [] : ["collateralParameters"]),
+        ...(branch.liquidationMechanism ? [] : ["liquidationMechanism"]),
+        ...(branch.shutdownOrBadDebtBehavior ? [] : ["shutdownOrBadDebtBehavior"]),
+      ];
+      if (missing.length > 0) {
+        gaps.push(
+          unresolved(
+            "incomplete-oracle-liquidation-branch",
+            `${branch.label} lacks ${missing.join(", ")}.`,
+            true,
+            `oracleRisk.branches.${index}`,
+          ),
+        );
+      }
+      if (branch.tier === "single-source-or-laggy" || branch.tier === "opaque-or-unknown") {
+        structuralSignals.push({
+          kind: "weak-oracle-branch",
+          severity: branch.tier === "opaque-or-unknown" ? "critical" : "high",
+          reason: `${branch.label} resolves to ${branch.tier}.`,
+          failureDomainKeys: branch.failureDomainKeys ?? [`oracle:${meta.id}:${branch.id}`],
+          evidence: oracleEvidence,
+        });
+      }
+    }
+  } else if (oracle.tier === "single-source-or-laggy" || oracle.tier === "opaque-or-unknown") {
+    structuralSignals.push({
+      kind: "weak-oracle-branch",
+      severity: oracle.tier === "opaque-or-unknown" ? "critical" : "high",
+      reason: `Reviewed oracle profile resolves to ${oracle.tier}.`,
+      failureDomainKeys: [`oracle:${meta.id}`],
+      evidence: oracleEvidence,
+    });
+  }
+}
+
 function compileControlPillar(
   meta: StablecoinMeta,
   card: ReportCard,
@@ -833,119 +963,16 @@ function compileControlPillar(
 
   const oracleApplicable = archetype === "cdp";
   const oracle = meta.oracleRisk;
-  if (oracleApplicable && !oracle) {
-    gaps.push(
-      unresolved("missing-oracle-profile", "CDP has no reviewed oracle/liquidation profile.", true, "oracleRisk"),
-    );
-  } else if (oracleApplicable && oracle) {
-    addFutureDatedFact(gaps, oracle.reviewedAt, options.asOf, "oracleRisk.reviewedAt", "Oracle review");
-    const branchApplicability = oracle.branchApplicability;
-    if (branchApplicability) {
-      addFutureDatedFact(
-        gaps,
-        branchApplicability.reviewedAt,
-        options.asOf,
-        "oracleRisk.branchApplicability.reviewedAt",
-        "Oracle branch-applicability review",
-      );
-    }
-    if (!branchApplicability || branchApplicability.disposition === "unresolved") {
-      gaps.push(
-        unresolved(
-          "unresolved-oracle-branch-applicability",
-          "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required.",
-          true,
-          "oracleRisk.branchApplicability",
-        ),
-      );
-    } else if (
-      branchApplicability.disposition === "branches-required" &&
-      (oracle.branchModel !== "multi-branch" || !oracle.branches?.length)
-    ) {
-      gaps.push(
-        unresolved(
-          "missing-required-oracle-branches",
-          "CDP oracle review requires market-specific branches but no complete branch inventory is available.",
-          true,
-          "oracleRisk.branches",
-        ),
-      );
-    }
-    const oracleEvidence = reviewEvidence({
-      assetId: meta.id,
-      path: "oracleRisk",
-      observedAt: oracle.reviewedAt,
-      links: oracle.sources,
-      note: `Reviewed ${oracle.branchModel ?? "unspecified"} oracle profile (${oracle.confidence ?? "unknown"}).`,
-      options,
-    });
-    evidence.push(...oracleEvidence);
-    if (branchApplicability) {
-      evidence.push(
-        ...reviewEvidence({
-          assetId: meta.id,
-          path: "oracleRisk.branchApplicability",
-          observedAt: branchApplicability.reviewedAt,
-          links: branchApplicability.sources,
-          note: `Reviewed oracle branch applicability (${branchApplicability.disposition}).`,
-          options,
-        }),
-      );
-    }
-    const branchScores =
-      branchApplicability?.disposition === "branches-required"
-        ? (oracle.branches ?? []).map((branch) => ORACLE_TIER_QUALITY[branch.tier])
-        : [];
-    pathScores.push(branchScores.length ? Math.min(...branchScores) : ORACLE_TIER_QUALITY[oracle.tier]);
-    signals.push(`oracle:${oracle.branchModel ?? "unspecified"}:${oracle.tier}`);
-    if (!oracle.reviewedAt || !oracle.reviewer || !oracle.confidence || oracle.confidence === "unknown") {
-      gaps.push(
-        unresolved(
-          "unreviewed-oracle-profile",
-          "Oracle profile lacks complete review provenance or confidence.",
-          true,
-          "oracleRisk",
-        ),
-      );
-    }
-    if (oracle.branchModel === "multi-branch") {
-      for (const [index, branch] of (oracle.branches ?? []).entries()) {
-        const missing = [
-          ...(branch.feeds?.length ? [] : ["feeds"]),
-          ...(branch.collateralParameters?.length ? [] : ["collateralParameters"]),
-          ...(branch.liquidationMechanism ? [] : ["liquidationMechanism"]),
-          ...(branch.shutdownOrBadDebtBehavior ? [] : ["shutdownOrBadDebtBehavior"]),
-        ];
-        if (missing.length > 0) {
-          gaps.push(
-            unresolved(
-              "incomplete-oracle-liquidation-branch",
-              `${branch.label} lacks ${missing.join(", ")}.`,
-              true,
-              `oracleRisk.branches.${index}`,
-            ),
-          );
-        }
-        if (branch.tier === "single-source-or-laggy" || branch.tier === "opaque-or-unknown") {
-          structuralSignals.push({
-            kind: "weak-oracle-branch",
-            severity: branch.tier === "opaque-or-unknown" ? "critical" : "high",
-            reason: `${branch.label} resolves to ${branch.tier}.`,
-            failureDomainKeys: branch.failureDomainKeys ?? [`oracle:${meta.id}:${branch.id}`],
-            evidence: oracleEvidence,
-          });
-        }
-      }
-    } else if (oracle.tier === "single-source-or-laggy" || oracle.tier === "opaque-or-unknown") {
-      structuralSignals.push({
-        kind: "weak-oracle-branch",
-        severity: oracle.tier === "opaque-or-unknown" ? "critical" : "high",
-        reason: `Reviewed oracle profile resolves to ${oracle.tier}.`,
-        failureDomainKeys: [`oracle:${meta.id}`],
-        evidence: oracleEvidence,
-      });
-    }
-  }
+  compileOracleControlPath({
+    meta,
+    archetype,
+    options,
+    gaps,
+    pathScores,
+    evidence,
+    signals,
+    structuralSignals,
+  });
 
   const bridge = meta.bridgeRouteRisk;
   const bridgeStatus = card.rawInputs.bridgeRouteMaterialityStatus;
