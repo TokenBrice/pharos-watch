@@ -60,4 +60,18 @@ describe("buildSafetyScoreV9MechanismReview", () => {
       buildSafetyScoreV9MechanismReview(fixedInputStub({ alpha: [{}] }), ATTESTED_META, "synthetic-delta-neutral"),
     ).toBeNull();
   });
+
+  it("expands a curated overlay with sourced metrics, bounded-unknown defaults, and archetype guarding", () => {
+    const boldMeta = { id: "bold-liquity" } as MechanismMeta;
+    const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), boldMeta, "cdp");
+    if (review?.archetype !== "cdp") throw new Error("expected the curated bold-liquity CDP overlay");
+    expect(review.collateralizationRatio).toBeCloseTo(2.455, 3);
+    expect(review.liquidationCapacityRatio).toBeCloseTo(0.658, 3);
+    expect(review.collateralizationParameters.status.observationState).toBe("known");
+    expect(review.collateralizationParameters.quality).toBe("adequate");
+    expect(review.backstop.status.observationState).toBe("bounded-unknown");
+    expect(review.backstop.quality).toBeNull();
+    // The overlay is ignored when the resolved archetype disagrees.
+    expect(buildSafetyScoreV9MechanismReview(fixedInputStub(), boldMeta, "fiat-cash")).toBeNull();
+  });
 });

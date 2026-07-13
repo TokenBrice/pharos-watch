@@ -7,7 +7,9 @@ function fixedInputStub(chainCirculating: Record<string, { current: number }>): 
   return { chainCirculatingById: { alpha: chainCirculating } } as unknown as ReportCardsFixedInput;
 }
 
-function profile(routes: BridgeRouteRiskProfile["routes"]): BridgeRouteRiskProfile {
+type BridgeRoutes = NonNullable<BridgeRouteRiskProfile["routes"]>;
+
+function profile(routes: BridgeRoutes): BridgeRouteRiskProfile {
   return { routes } as BridgeRouteRiskProfile;
 }
 
@@ -15,7 +17,7 @@ const ETH_ROUTE = {
   id: "ethereum:native",
   reviewDisposition: "reviewed",
   failureDomainKeys: ["chain:Ethereum"],
-} as BridgeRouteRiskProfile["routes"][number];
+} as unknown as BridgeRoutes[number];
 
 describe("buildSafetyScoreV9SupplyReview", () => {
   it("returns null without supply rows and without routes on a multi-chain asset", () => {
@@ -35,7 +37,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       "alpha",
       profile([
         ETH_ROUTE,
-        { id: "tron:bridge", reviewDisposition: "unreviewed" } as BridgeRouteRiskProfile["routes"][number],
+        { id: "tron:bridge", reviewDisposition: "unreviewed" } as unknown as BridgeRoutes[number],
         // base has no route row -> unknown bucket
       ]),
     );
