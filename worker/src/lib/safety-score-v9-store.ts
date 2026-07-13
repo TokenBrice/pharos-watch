@@ -1,10 +1,17 @@
-import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { z } from "zod";
 import { throwIfAborted } from "./abort";
+import { gzipCanonicalJson } from "./canonical-json-gzip";
 import { runWithOverloadRetry } from "./cron-lease";
 import { executeAtomicBatch } from "./db";
+import { sha256Hex } from "./hash";
 import { parseJson } from "./json-parse";
+import {
+  parseSafetyScoreV9DiffReportCacheValue,
+  parseSafetyScoreV9ShadowEnvelopeCacheValue,
+  serializeSafetyScoreV9DiffReportCacheValue,
+  serializeSafetyScoreV9ShadowEnvelopeCacheValue,
+} from "./safety-score-v9-cache-codec";
 import {
   SafetyScoreV9DiffReportSchema,
   SafetyScoreV9ReplayArtifactKindSchema,
@@ -24,11 +31,17 @@ export const SAFETY_SCORE_V9_SHADOW_CACHE_KEYS = {
   diff: "report-cards:v9-shadow:diff",
 } as const;
 
-export const SAFETY_SCORE_V9_REPLAY_ARTIFACT_MAX_UNCOMPRESSED_BYTES = 32 * 1_024 * 1_024;
+export const SAFETY_SCORE_V9_REPLAY_ARTIFACT_MAX_UNCOMPRESSED_BYTES = 12 * 1_024 * 1_024;
 export const SAFETY_SCORE_V9_REPLAY_ARTIFACT_MAX_STORED_BYTES = 1_900_000;
-export const SAFETY_SCORE_V9_SHADOW_CACHE_MAX_BYTES = 1_900_000;
 export const SAFETY_SCORE_V9_SHADOW_HISTORY_DEFAULT_LIMIT = 45;
 export const SAFETY_SCORE_V9_SHADOW_HISTORY_MAX_LIMIT = 400;
+
+export {
+  SAFETY_SCORE_V9_SHADOW_CACHE_MAX_BYTES,
+  SAFETY_SCORE_V9_SHADOW_CACHE_MAX_COMPRESSED_BYTES,
+  SAFETY_SCORE_V9_SHADOW_CACHE_MAX_STORED_BYTES,
+  SAFETY_SCORE_V9_SHADOW_CACHE_MAX_UNCOMPRESSED_BYTES,
+} from "./safety-score-v9-cache-codec";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const UnixSecondsSchema = z.number().int().nonnegative();
@@ -95,6 +108,45 @@ export interface ParsedSafetyScoreV9ReplayArtifact<T = unknown> {
   reference: SafetyScoreV9ReplayArtifact;
 }
 
+declare const SAFETY_SCORE_V9_LOCAL_ARTIFACT_BUNDLE_BRAND: unique symbol;
+
+type DeepReadonly<T> = T extends (...args: never[]) => unknown
+  ? T
+  : T extends readonly (infer Item)[]
+    ? readonly DeepReadonly<Item>[]
+    : T extends object
+      ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }
+      : T;
+
+interface SafetyScoreV9LocalArtifactBundleData {
+  readonly artifacts: readonly SafetyScoreV9StoredReplayArtifact[];
+  readonly references: readonly SafetyScoreV9ReplayArtifact[];
+}
+
+export interface SafetyScoreV9LocalArtifactBundle {
+  readonly [SAFETY_SCORE_V9_LOCAL_ARTIFACT_BUNDLE_BRAND]: true;
+}
+
+const LOCAL_ARTIFACT_BUNDLE_ACCESS = (() => {
+  const dataByBundle = new WeakMap<object, SafetyScoreV9LocalArtifactBundleData>();
+
+  return Object.freeze({
+    create(data: SafetyScoreV9LocalArtifactBundleData): SafetyScoreV9LocalArtifactBundle {
+      const bundle = Object.freeze(Object.create(null) as object);
+      dataByBundle.set(bundle, data);
+      return bundle as SafetyScoreV9LocalArtifactBundle;
+    },
+    read(bundle: SafetyScoreV9LocalArtifactBundle): SafetyScoreV9LocalArtifactBundleData {
+      if (bundle === null || typeof bundle !== "object") {
+        throw new Error("Invalid locally built Safety Score v9 artifact bundle");
+      }
+      const data = dataByBundle.get(bundle);
+      if (data === undefined) throw new Error("Invalid locally built Safety Score v9 artifact bundle");
+      return data;
+    },
+  });
+})();
+
 interface ArtifactRow {
   artifact_key: string;
   artifact_kind: string;
@@ -157,6 +209,14 @@ function utf8ByteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
+function deepFreeze<T>(value: T): Readonly<T> {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
   for (let offset = 0; offset < bytes.length; offset += 0x8000) {
@@ -165,38 +225,35 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-function base64ToBytes(value: string): Uint8Array {
+function maximumBytesBeforeBase64(maximumEncodedBytes: number): number {
+  return Math.floor(maximumEncodedBytes / 4) * 3;
+}
+
+function base64ToBytes(value: string, label = "Safety Score v9 replay artifact"): Uint8Array {
   let binary: string;
   try {
     binary = atob(value);
   } catch {
-    throw new Error("Malformed Safety Score v9 replay artifact base64 payload");
+    throw new Error(`Malformed ${label} base64 payload`);
   }
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
   if (bytesToBase64(bytes) !== value) {
-    throw new Error("Safety Score v9 replay artifact base64 payload is not canonical");
+    throw new Error(`${label} base64 payload is not canonical`);
   }
   return bytes;
-}
-
-async function gzipBytes(bytes: Uint8Array, signal?: AbortSignal): Promise<Uint8Array> {
-  throwIfAborted(signal);
-  const stream = new Response(bytes).body!.pipeThrough(new CompressionStream("gzip"));
-  const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
-  throwIfAborted(signal);
-  return compressed;
 }
 
 async function gunzipBytesBounded(
   compressed: Uint8Array,
   maximumBytes: number,
   signal?: AbortSignal,
+  label = "Safety Score v9 replay artifact",
 ): Promise<Uint8Array> {
   throwIfAborted(signal);
   const stream = new Response(compressed).body!.pipeThrough(new DecompressionStream("gzip"));
   const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
+  const output = new Uint8Array(maximumBytes);
   let byteLength = 0;
   try {
     while (true) {
@@ -205,9 +262,9 @@ async function gunzipBytesBounded(
       if (done) break;
       byteLength += value.byteLength;
       if (byteLength > maximumBytes) {
-        throw new Error(`Safety Score v9 replay artifact exceeds ${maximumBytes} uncompressed bytes`);
+        throw new Error(`${label} exceeds ${maximumBytes} uncompressed bytes`);
       }
-      chunks.push(value);
+      output.set(value, byteLength - value.byteLength);
     }
   } catch (error) {
     await reader.cancel(error).catch(() => undefined);
@@ -216,13 +273,7 @@ async function gunzipBytesBounded(
     reader.releaseLock();
   }
   throwIfAborted(signal);
-  const output = new Uint8Array(byteLength);
-  let offset = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return output;
+  return output.subarray(0, byteLength);
 }
 
 function artifactReference(artifact: SafetyScoreV9StoredReplayArtifact): SafetyScoreV9ReplayArtifact {
@@ -265,32 +316,67 @@ export async function buildSafetyScoreV9ReplayArtifact(
     "Replay artifact stored byte limit",
   );
   const canonicalJson = stableJsonStringifyV1(input.value);
-  const uncompressed = new TextEncoder().encode(canonicalJson);
-  if (uncompressed.byteLength === 0 || uncompressed.byteLength > maxUncompressedBytes) {
-    throw new Error(
-      `Safety Score v9 ${kind} replay artifact is ${uncompressed.byteLength} uncompressed bytes; maximum is ${maxUncompressedBytes}`,
-    );
-  }
-  const payload = bytesToBase64(await gzipBytes(uncompressed, options.signal));
-  const storedBytes = utf8ByteLength(payload);
+  const compressed = await gzipCanonicalJson(canonicalJson, {
+    label: `Safety Score v9 ${kind} replay artifact`,
+    maximumCompressedBytes: maximumBytesBeforeBase64(maxStoredBytes),
+    maximumUncompressedBytes: maxUncompressedBytes,
+    signal: options.signal,
+  });
+  const storedBytes = 4 * Math.ceil(compressed.compressed.byteLength / 3);
   if (storedBytes > maxStoredBytes) {
     throw new Error(
       `Safety Score v9 ${kind} replay artifact is ${storedBytes} stored bytes; maximum is ${maxStoredBytes}`,
     );
   }
-  const contentSha256 = sha256Hex(canonicalJson);
+  const payload = bytesToBase64(compressed.compressed);
+  const contentSha256 = compressed.contentSha256;
   return SafetyScoreV9StoredReplayArtifactSchema.parse({
     artifactKey: `${kind}:${contentSha256}`,
     kind,
     identity,
     contentSha256,
     encoding: "gzip-base64",
-    uncompressedBytes: uncompressed.byteLength,
+    uncompressedBytes: compressed.uncompressedBytes,
     storedBytes,
     payload,
     createdAtSec,
     verifiedAtSec,
   });
+}
+
+function localArtifactBundleData(bundle: SafetyScoreV9LocalArtifactBundle): SafetyScoreV9LocalArtifactBundleData {
+  return LOCAL_ARTIFACT_BUNDLE_ACCESS.read(bundle);
+}
+
+export async function buildSafetyScoreV9LocalArtifactBundle(
+  inputs: readonly BuildSafetyScoreV9ReplayArtifactInput[],
+  options: ReplayArtifactOperationOptions = {},
+): Promise<SafetyScoreV9LocalArtifactBundle> {
+  const artifacts: SafetyScoreV9StoredReplayArtifact[] = [];
+  const references: SafetyScoreV9ReplayArtifact[] = [];
+  for (const input of inputs) {
+    throwIfAborted(options.signal);
+    const artifact = deepFreeze(await buildSafetyScoreV9ReplayArtifact(input, options));
+    artifacts.push(artifact);
+    references.push(deepFreeze(artifactReference(artifact)));
+  }
+  const data: SafetyScoreV9LocalArtifactBundleData = Object.freeze({
+    artifacts: Object.freeze(artifacts),
+    references: Object.freeze(references),
+  });
+  return LOCAL_ARTIFACT_BUNDLE_ACCESS.create(data);
+}
+
+export function getSafetyScoreV9LocalArtifactBundleArtifacts(
+  bundle: SafetyScoreV9LocalArtifactBundle,
+): readonly DeepReadonly<SafetyScoreV9StoredReplayArtifact>[] {
+  return localArtifactBundleData(bundle).artifacts;
+}
+
+export function getSafetyScoreV9LocalArtifactBundleReferences(
+  bundle: SafetyScoreV9LocalArtifactBundle,
+): readonly DeepReadonly<SafetyScoreV9ReplayArtifact>[] {
+  return localArtifactBundleData(bundle).references;
 }
 
 export async function parseSafetyScoreV9ReplayArtifact<T = unknown>(
@@ -332,8 +418,8 @@ export async function parseSafetyScoreV9ReplayArtifact<T = unknown>(
   if (decompressed.byteLength !== artifact.uncompressedBytes) {
     throw new Error("Safety Score v9 replay artifact uncompressed byte length mismatch");
   }
-  const canonicalJson = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(decompressed);
-  if (sha256Hex(canonicalJson) !== artifact.contentSha256) {
+  const canonicalJson = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(decompressed);
+  if ((await sha256Hex(decompressed)) !== artifact.contentSha256) {
     throw new Error("Safety Score v9 replay artifact checksum mismatch");
   }
   const parsed = parseJson(canonicalJson);
@@ -420,6 +506,7 @@ async function resolveExistingArtifact(
   rows: readonly SafetyScoreV9StoredReplayArtifact[],
   artifact: SafetyScoreV9StoredReplayArtifact,
   signal?: AbortSignal,
+  trustExactLocalRepresentation = false,
 ): Promise<SafetyScoreV9StoredReplayArtifact | null> {
   if (rows.length === 0) return null;
   if (rows.length !== 1) {
@@ -438,6 +525,14 @@ async function resolveExistingArtifact(
     throw new SafetyScoreV9StoreConflictError(
       `Immutable Safety Score v9 artifact conflict for ${artifact.kind}:${artifact.identity}`,
     );
+  }
+  if (
+    trustExactLocalRepresentation &&
+    existing.encoding === artifact.encoding &&
+    existing.storedBytes === artifact.storedBytes &&
+    existing.payload === artifact.payload
+  ) {
+    return existing;
   }
   await parseSafetyScoreV9ReplayArtifact(existing, {
     expectedKind: artifact.kind,
@@ -637,15 +732,6 @@ export async function loadSafetyScoreV9ShadowDaily(
   return row ? parseDailyRow(row) : null;
 }
 
-function serializeCacheValue<T>(value: T, schema: z.ZodType<T>, label: string): string {
-  const canonical = stableJsonStringifyV1(schema.parse(value));
-  const byteLength = utf8ByteLength(canonical);
-  if (byteLength > SAFETY_SCORE_V9_SHADOW_CACHE_MAX_BYTES) {
-    throw new Error(`${label} is ${byteLength} bytes; maximum is ${SAFETY_SCORE_V9_SHADOW_CACHE_MAX_BYTES}`);
-  }
-  return canonical;
-}
-
 function validateSuccessfulState(input: {
   artifacts: readonly SafetyScoreV9StoredReplayArtifact[];
   daily: SafetyScoreV9ShadowDaily;
@@ -695,6 +781,7 @@ function validateSuccessfulState(input: {
 
 export interface PersistSafetyScoreV9ShadowStateInput {
   artifacts?: readonly SafetyScoreV9StoredReplayArtifact[];
+  localArtifactBundle?: SafetyScoreV9LocalArtifactBundle;
   daily: SafetyScoreV9ShadowDaily;
   envelope?: SafetyScoreV9ShadowEnvelope;
   diff?: SafetyScoreV9DiffReport;
@@ -706,9 +793,19 @@ export async function persistSafetyScoreV9ShadowState(
   input: PersistSafetyScoreV9ShadowStateInput,
 ): Promise<void> {
   throwIfAborted(input.signal);
-  const artifacts = (input.artifacts ?? []).map((artifact) => SafetyScoreV9StoredReplayArtifactSchema.parse(artifact));
+  if (input.localArtifactBundle !== undefined && input.artifacts !== undefined) {
+    throw new Error("Safety Score v9 state cannot mix external artifacts with a locally built artifact bundle");
+  }
+  const localBundle =
+    input.localArtifactBundle === undefined ? null : localArtifactBundleData(input.localArtifactBundle);
+  const artifacts =
+    localBundle?.artifacts ??
+    (input.artifacts ?? []).map((artifact) => SafetyScoreV9StoredReplayArtifactSchema.parse(artifact));
   const daily = SafetyScoreV9ShadowDailySchema.parse(input.daily);
   const hasLatest = input.envelope !== undefined || input.diff !== undefined;
+  if (localBundle !== null && !hasLatest) {
+    throw new Error("A locally built Safety Score v9 artifact bundle requires latest envelope and diff state");
+  }
   let envelope: SafetyScoreV9ShadowEnvelope | null = null;
   let diff: SafetyScoreV9DiffReport | null = null;
   let envelopeJson: string | null = null;
@@ -720,16 +817,18 @@ export async function persistSafetyScoreV9ShadowState(
     envelope = SafetyScoreV9ShadowEnvelopeSchema.parse(input.envelope);
     diff = SafetyScoreV9DiffReportSchema.parse(input.diff);
     validateSuccessfulState({ artifacts, daily, envelope, diff });
-    envelopeJson = serializeCacheValue(envelope, SafetyScoreV9ShadowEnvelopeSchema, "Safety Score v9 shadow envelope");
-    diffJson = serializeCacheValue(diff, SafetyScoreV9DiffReportSchema, "Safety Score v9 diff report");
+    envelopeJson = await serializeSafetyScoreV9ShadowEnvelopeCacheValue(envelope, input.signal);
+    diffJson = await serializeSafetyScoreV9DiffReportCacheValue(diff, input.signal);
   } else if (daily.selectedRun !== null) {
     const existing = await loadSafetyScoreV9ShadowDaily(db, daily.utcDay, input.signal);
     if (existing?.selectedRun === null || existing === null) {
       throw new Error("A newly selected Safety Score v9 daily run must persist its latest envelope and diff");
     }
   }
-  for (const artifact of artifacts) {
-    await parseSafetyScoreV9ReplayArtifact(artifact, { signal: input.signal });
+  if (localBundle === null) {
+    for (const artifact of artifacts) {
+      await parseSafetyScoreV9ReplayArtifact(artifact, { signal: input.signal });
+    }
   }
   const artifactKeys = artifacts.map((artifact) => artifact.artifactKey);
   const artifactIdentities = artifacts.map((artifact) => `${artifact.kind}:${artifact.identity}`);
@@ -747,6 +846,7 @@ export async function persistSafetyScoreV9ShadowState(
       await findArtifactConflictRows(db, artifact, input.signal),
       artifact,
       input.signal,
+      localBundle !== null,
     );
     if (!existing) missingArtifacts.push(artifact);
   }
@@ -815,10 +915,20 @@ export async function persistSafetyScoreV9ShadowState(
            archive_selection_reasons_json = excluded.archive_selection_reasons_json,
            latest_error_code = excluded.latest_error_code,
            latest_error_message = excluded.latest_error_message,
-           daily_json = excluded.daily_json,
+           daily_json = CASE
+             WHEN (safety_score_v9_shadow_daily.successful_attempt_count + safety_score_v9_shadow_daily.failed_attempt_count
+                     < excluded.successful_attempt_count + excluded.failed_attempt_count
+                   OR safety_score_v9_shadow_daily.daily_json = excluded.daily_json)
+                  AND safety_score_v9_shadow_daily.updated_at_sec <= excluded.updated_at_sec
+                  AND (safety_score_v9_shadow_daily.selected_run_at_sec IS NULL
+                       OR safety_score_v9_shadow_daily.daily_json = excluded.daily_json)
+               THEN excluded.daily_json
+             ELSE NULL
+           END,
            updated_at_sec = CASE
-             WHEN safety_score_v9_shadow_daily.successful_attempt_count + safety_score_v9_shadow_daily.failed_attempt_count
-                    <= excluded.successful_attempt_count + excluded.failed_attempt_count
+             WHEN (safety_score_v9_shadow_daily.successful_attempt_count + safety_score_v9_shadow_daily.failed_attempt_count
+                     < excluded.successful_attempt_count + excluded.failed_attempt_count
+                   OR safety_score_v9_shadow_daily.daily_json = excluded.daily_json)
                   AND safety_score_v9_shadow_daily.updated_at_sec <= excluded.updated_at_sec
                THEN excluded.updated_at_sec
              ELSE -1
@@ -880,8 +990,7 @@ export async function persistSafetyScoreV9ShadowState(
 async function loadCanonicalCacheValue<T>(
   db: D1Database,
   key: string,
-  schema: z.ZodType<T>,
-  label: string,
+  parse: (storedValue: string, signal?: AbortSignal) => Promise<T>,
   signal?: AbortSignal,
 ): Promise<T | null> {
   throwIfAborted(signal);
@@ -892,10 +1001,7 @@ async function loadCanonicalCacheValue<T>(
   );
   throwIfAborted(signal);
   if (!row) return null;
-  if (utf8ByteLength(row.value) > SAFETY_SCORE_V9_SHADOW_CACHE_MAX_BYTES) {
-    throw new Error(`${label} exceeds the cache byte limit`);
-  }
-  return parseCanonicalJson(row.value, schema, label);
+  return parse(row.value, signal);
 }
 
 export async function loadLatestSafetyScoreV9ShadowEnvelope(
@@ -905,8 +1011,7 @@ export async function loadLatestSafetyScoreV9ShadowEnvelope(
   return loadCanonicalCacheValue(
     db,
     SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope,
-    SafetyScoreV9ShadowEnvelopeSchema,
-    "Safety Score v9 shadow envelope",
+    parseSafetyScoreV9ShadowEnvelopeCacheValue,
     signal,
   );
 }
@@ -918,8 +1023,7 @@ export async function loadLatestSafetyScoreV9DiffReport(
   return loadCanonicalCacheValue(
     db,
     SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.diff,
-    SafetyScoreV9DiffReportSchema,
-    "Safety Score v9 diff report",
+    parseSafetyScoreV9DiffReportCacheValue,
     signal,
   );
 }

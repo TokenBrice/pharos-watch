@@ -10,11 +10,11 @@ import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { z } from "zod";
 import {
-  compileSafetyScoreV9FactSetFromFixedInput,
+  compileSafetyScoreV9FactSetFromNormalizedInput,
   SafetyScoreV9FactSetExtensionV2Schema,
   type SafetyScoreV9FactSetExtensionV2,
 } from "./safety-score-v9-fact-set";
-import { buildSafetyScoreV9BaselineExtension } from "./safety-score-v9-extension";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./safety-score-v9-extension";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 
 const SAFETY_SCORE_V9_COMPILER_FACT_SCHEMA_DIGEST_DOMAIN = "safety-score-v9.compiler-fact-schema.v1";
@@ -104,6 +104,13 @@ export interface BuildSafetyScoreV9CandidateInput {
   extension?: unknown;
   policy?: V9ValidatedPolicyEnvelope;
   releaseCandidateId?: string;
+}
+
+export interface BuildSafetyScoreV9CandidateFromNormalizedInput extends Omit<
+  BuildSafetyScoreV9CandidateInput,
+  "fixedInput"
+> {
+  fixedInput: Readonly<ReportCardsFixedInput>;
 }
 
 export interface SafetyScoreV9CandidatePipelineResult {
@@ -232,11 +239,21 @@ function candidatePolicyVersion(policy: V9ValidatedPolicyEnvelope): `candidate-$
 export function buildSafetyScoreV9Candidate(
   input: BuildSafetyScoreV9CandidateInput,
 ): Readonly<SafetyScoreV9CandidatePipelineResult> {
+  return buildSafetyScoreV9CandidateFromNormalizedInput({
+    ...input,
+    fixedInput: normalizeFixedInput(input.fixedInput),
+  });
+}
+
+/** Trusted runtime entrypoint for an already normalized exact input. */
+export function buildSafetyScoreV9CandidateFromNormalizedInput(
+  input: BuildSafetyScoreV9CandidateFromNormalizedInput,
+): Readonly<SafetyScoreV9CandidatePipelineResult> {
   if (!Number.isInteger(input.publishedAtSec) || input.publishedAtSec < 0) {
     throw new Error("Safety Score v9 publication time must be a non-negative integer");
   }
 
-  const fixedInput = normalizeFixedInput(input.fixedInput);
+  const fixedInput = input.fixedInput;
   if (fixedInput.captureKind !== "exact-publication-inputs") {
     throw new Error("Safety Score v9 candidate evaluation requires exact publication inputs");
   }
@@ -248,9 +265,9 @@ export function buildSafetyScoreV9Candidate(
   assertV9ValidatedPolicyEnvelope(policy);
   const policyVersion = candidatePolicyVersion(policy);
   const extension = SafetyScoreV9FactSetExtensionV2Schema.parse(
-    input.extension ?? buildSafetyScoreV9BaselineExtension(fixedInput),
+    input.extension ?? buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput),
   );
-  const compiledFacts = compileSafetyScoreV9FactSetFromFixedInput(fixedInput, extension);
+  const compiledFacts = compileSafetyScoreV9FactSetFromNormalizedInput(fixedInput, extension);
   const evaluatedSet = evaluateV9FactSet(compiledFacts, policy);
   const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);

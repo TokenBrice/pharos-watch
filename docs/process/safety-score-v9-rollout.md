@@ -61,6 +61,14 @@ The private latest entries are:
 - `report-cards:v9-shadow`: latest strict candidate envelope;
 - `report-cards:v9-shadow:diff`: latest V8/V9 movement report.
 
+Both rows use checksum-verified gzip/base64 storage envelopes with strict
+stored, compressed, and uncompressed byte bounds. Readers validate the outer
+V9 identity before returning the unchanged semantic candidate or diff and
+remain compatible with legacy plain canonical rows during a rolling deploy.
+Selected replay artifacts are capped at 12 MiB uncompressed and 1,900,000
+base64 payload bytes so later verification remains within the Worker memory
+budget.
+
 `safety_score_v9_shadow_daily` stores one compact row per UTC day. A row records
 successful and failed attempt counts, the selected run identity, exact-set and
 coverage evidence, movement/review counts, qualification, selected artifact
@@ -72,10 +80,14 @@ exact input, fact set, policy, evaluation-build manifest, and result artifacts
 are retained only for bounded selected evidence:
 
 - the first qualifying day of a frozen-identity streak;
-- the first day that completes the qualifying window, or a later explicitly
-  selected final release-candidate day; and
-- the first occurrence of each distinct non-qualifying anomaly used in the
-  release decision.
+- the first day that completes the qualifying window, exactly once for that
+  uninterrupted frozen-identity streak; and
+- an explicitly selected non-qualifying anomaly used in the release decision.
+
+Routine non-qualifying runs do not build replay blobs. This keeps the scheduled
+shadow path bounded. The quarter-hourly caller does not request anomaly
+retention; that capability is reserved for a separately coordinated evidence
+invocation and is not an online admin selector.
 
 The slowest score-bearing producer cadence is four hours. The gate proves
 elapsed producer coverage and source-generation diversity from the compact
@@ -105,7 +117,8 @@ Every counted day requires:
   consumer-threshold review;
 - at least two distinct observed and archived generations for both
   `liveReserves` and `redemption`;
-- replayable archived evidence for the selected first, final, and anomaly days;
+- replayable archived evidence for the selected first and final days, plus any
+  anomaly explicitly admitted to the release evidence set;
   and
 - no V9 regression that blocks or corrupts V8 publication.
 
@@ -223,6 +236,11 @@ The operator sequence is:
    next producer run; and
 9. revert the activation commit on `main` through the normal release path while
    preserving the failed exact input and result for replay.
+
+After the first compressed private V9 cache row exists, the retained rollback
+Worker must include the V9 gzip/base64 reader even while V8 remains the sole
+public scorer. An older build may still serve V8 but is not a complete rollback
+target because its admin candidate reader cannot decode the persisted row.
 
 Cloudflare deployment history is the immediate code rollback target. Git is
 the durable source record. Neither substitutes for cache identity validation,

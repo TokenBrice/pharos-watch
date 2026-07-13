@@ -38,6 +38,7 @@ import {
 } from "@shared/types/exit-route";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
+import { assertSafetyScoreV9ExactExtensionAssets } from "./safety-score-v9-fact-set-boundary";
 
 const CanonicalTextSchema = z.string().trim().min(1);
 const UnixSecondsSchema = z.number().int().nonnegative();
@@ -2019,22 +2020,6 @@ function compileAsset(
   };
 }
 
-function assertExactExtensionAssets(
-  fixedInput: ReportCardsFixedInput,
-  extension: SafetyScoreV9FactSetExtensionV2,
-): void {
-  const expected = fixedInput.activeAssetIds;
-  const actual = extension.assets.map((asset) => asset.assetId);
-  if (stableJsonStringifyV1(actual) !== stableJsonStringifyV1(expected)) {
-    const expectedSet = new Set(expected);
-    const actualSet = new Set(actual);
-    throw new Error(
-      `Safety Score v9 extension active set mismatch: missing=${expected.filter((id) => !actualSet.has(id)).join(",") || "none"}; ` +
-        `unexpected=${actual.filter((id) => !expectedSet.has(id)).join(",") || "none"}`,
-    );
-  }
-}
-
 /**
  * Compile policy-independent V9 facts directly from publication-exact base inputs.
  * ReportCard score outputs are intentionally not part of this adapter contract.
@@ -2043,17 +2028,26 @@ export function compileSafetyScoreV9FactSetFromFixedInput(
   fixedInputValue: unknown,
   extensionValue: unknown,
 ): Readonly<CompiledV9FactSetV2> {
-  const fixedInput = normalizeFixedInput(fixedInputValue);
+  return compileSafetyScoreV9FactSetFromNormalizedInput(
+    normalizeFixedInput(fixedInputValue),
+    SafetyScoreV9FactSetExtensionV2Schema.parse(extensionValue),
+  );
+}
+
+/** Trusted runtime entrypoint for already validated publication inputs. */
+export function compileSafetyScoreV9FactSetFromNormalizedInput(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  extension: Readonly<SafetyScoreV9FactSetExtensionV2>,
+): Readonly<CompiledV9FactSetV2> {
   if (fixedInput.captureKind !== "exact-publication-inputs") {
     throw new Error("Safety Score v9 fact compilation requires exact publication inputs");
   }
-  const extension = SafetyScoreV9FactSetExtensionV2Schema.parse(extensionValue);
   if (extension.registryFingerprint !== fixedInput.registryFingerprint) {
     throw new Error(
       `Safety Score v9 extension registry fingerprint ${extension.registryFingerprint} does not match fixed input ${fixedInput.registryFingerprint}`,
     );
   }
-  assertExactExtensionAssets(fixedInput, extension);
+  assertSafetyScoreV9ExactExtensionAssets(fixedInput, extension);
   const researchPayloadSha256 = digest(
     "safety-score-v9.research-overlay.v1",
     projectResearchOverlayPayload(extension.assets),

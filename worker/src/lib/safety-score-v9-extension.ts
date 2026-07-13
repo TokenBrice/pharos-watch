@@ -21,10 +21,8 @@ import type {
 } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { ReserveSlice } from "@shared/types/reserves";
-import {
-  computeSafetyScoreV9ReserveExposureKey,
-  type SafetyScoreV9FactSetExtensionV2,
-} from "./safety-score-v9-fact-set";
+import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
+import { buildSafetyScoreV9ReserveClassifications } from "./safety-score-v9-extension-reserves";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 
 export type V9ExtensionRegistryMeta = Pick<
@@ -747,29 +745,6 @@ function adaptMintReview(
   };
 }
 
-function reserveClassifications(slices: readonly ReserveSlice[]) {
-  const byKey = new Map<string, ReserveSlice>();
-  for (const slice of slices) {
-    const key = computeSafetyScoreV9ReserveExposureKey(slice);
-    if (!byKey.has(key)) byKey.set(key, slice);
-  }
-  return [...byKey.entries()]
-    .sort(([left], [right]) => compareText(left, right))
-    .map(([exposureKey, slice]) => {
-      const issuerOrObligorKey = slice.issuerOrObligor ?? (slice.coinId ? `asset:${slice.coinId}` : null);
-      return {
-        exposureKey,
-        classificationKey: `source-native:${exposureKey}`,
-        assetClass: slice.assetClass ?? null,
-        issuerOrObligorKey,
-        riskFactors: [...(slice.riskFactors ?? [])].sort(compareText),
-        liquidityHorizon: slice.liquidityHorizon ?? null,
-        maturityDaysMax: slice.maturityDaysMax ?? null,
-        failureDomains: issuerOrObligorKey ? [{ kind: "reserve-issuer" as const, key: issuerOrObligorKey }] : [],
-      };
-    });
-}
-
 /**
  * Builds a conservative baseline overlay from structured, reviewed fields in
  * the exact publication capture or registry. Unreviewed mechanism, exit, and
@@ -780,7 +755,17 @@ export function buildSafetyScoreV9BaselineExtension(
   fixedInputValue: unknown,
   options: BuildSafetyScoreV9BaselineExtensionOptions = {},
 ): SafetyScoreV9FactSetExtensionV2 {
-  const fixedInput: ReportCardsFixedInput = normalizeFixedInput(fixedInputValue);
+  return buildSafetyScoreV9BaselineExtensionFromNormalizedInput(normalizeFixedInput(fixedInputValue), options);
+}
+
+/**
+ * Trusted runtime entrypoint for callers that already paid the strict fixed-
+ * input parse cost at their storage boundary.
+ */
+export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  options: BuildSafetyScoreV9BaselineExtensionOptions = {},
+): SafetyScoreV9FactSetExtensionV2 {
   const metaById = options.metaById ?? ACTIVE_META_BY_ID;
   const registryFingerprint = options.registryFingerprint ?? computeReportCardsRegistryFingerprint();
   if (registryFingerprint !== fixedInput.registryFingerprint) {
@@ -894,7 +879,7 @@ export function buildSafetyScoreV9BaselineExtension(
             : prepared.dependency.diagnostics,
         },
         reserveApplicability: { state: "required" },
-        reserveClassifications: reserveClassifications(liveReserves),
+        reserveClassifications: buildSafetyScoreV9ReserveClassifications(liveReserves),
         routeReviews: [],
         retainedRoutes: [],
         controlReview:

@@ -26,8 +26,8 @@ const {
   runSafetyScoreV9ShadowAfterV8Publication,
   selectSafetyScoreV9ShadowArchiveReasons,
 } = await import("../safety-score-v9-shadow-runner");
-const { buildSafetyScoreV9ReplayArtifact, parseSafetyScoreV9ReplayArtifact } = await import("../safety-score-v9-store");
-const { verifySafetyScoreV9ArchivedReplays } = await import("../../../scripts/check-safety-score-v9-shadow-gate");
+const { getSafetyScoreV9LocalArtifactBundleArtifacts, parseSafetyScoreV9ReplayArtifact } =
+  await import("../safety-score-v9-store");
 
 const CLOCK_SEC = 2_000_000_000;
 const SOURCE_GENERATION = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${CLOCK_SEC}`;
@@ -144,7 +144,7 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
     mockLoadReviewDispositions.mockResolvedValue({});
   });
 
-  it("persists one exact-generation daily summary and archives its first distinct anomaly", async () => {
+  it("persists one exact-generation daily summary without routine replay artifacts", async () => {
     const result = await runSafetyScoreV9ShadowAfterV8Publication(input());
 
     expect(result).toMatchObject({
@@ -170,73 +170,18 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
         "yield:eligibility",
       ]),
     );
-    expect(persisted.artifacts).toHaveLength(5);
-    expect(persisted.envelope.replayArtifacts).toHaveLength(5);
+    expect(persisted.artifacts).toHaveLength(0);
+    expect(persisted.localArtifactBundle).toBeUndefined();
+    expect(persisted.envelope.replayArtifacts).toHaveLength(0);
     expect(persisted.daily).toMatchObject({
       utcDay: UTC_DAY,
       attemptCounts: { successful: 1, failed: 0 },
       selectedRun: {
         identity: { baseInputGenerationId: input().fixedInput.baseInputGenerationId },
-        archiveSelectionReasons: ["anomaly"],
+        archiveSelectionReasons: [],
       },
     });
-    expect(persisted.daily.selectedRun.artifactKeys).toHaveLength(5);
-    await expect(
-      verifySafetyScoreV9ArchivedReplays({ summaries: [persisted.daily], artifacts: persisted.artifacts }),
-    ).resolves.toMatchObject({
-      replays: [
-        {
-          utcDay: UTC_DAY,
-          status: "passed",
-          replayedResultDigest: persisted.daily.selectedRun.identity.resultDigest,
-        },
-      ],
-    });
-
-    const tamperedArtifacts = structuredClone(persisted.artifacts);
-    tamperedArtifacts[0].payload = `!${tamperedArtifacts[0].payload.slice(1)}`;
-    await expect(
-      verifySafetyScoreV9ArchivedReplays({ summaries: [persisted.daily], artifacts: tamperedArtifacts }),
-    ).resolves.toMatchObject({ replays: [{ status: "failed" }] });
-
-    const resultArtifactIndex = persisted.artifacts.findIndex(
-      (artifact: { kind: string }) => artifact.kind === "result",
-    );
-    const resultArtifact = persisted.artifacts[resultArtifactIndex];
-    if (!resultArtifact) throw new Error("Expected retained result artifact");
-    const parsedResult = await parseSafetyScoreV9ReplayArtifact<{
-      schemaVersion: 2;
-      evaluatedSet: unknown;
-      candidate: { resultDigest: string };
-      envelopeCore: {
-        consumerThresholdRegistryDigest: string;
-      };
-    }>(resultArtifact);
-    const semanticallyTamperedResult = await buildSafetyScoreV9ReplayArtifact({
-      kind: "result",
-      identity: parsedResult.value.candidate.resultDigest,
-      value: {
-        ...parsedResult.value,
-        envelopeCore: {
-          ...parsedResult.value.envelopeCore,
-          consumerThresholdRegistryDigest: "f".repeat(64),
-        },
-      },
-      createdAtSec: resultArtifact.createdAtSec,
-      verifiedAtSec: resultArtifact.verifiedAtSec,
-    });
-    const semanticallyTamperedDaily = structuredClone(persisted.daily);
-    semanticallyTamperedDaily.selectedRun.artifactKeys = semanticallyTamperedDaily.selectedRun.artifactKeys
-      .map((key: string) => (key === resultArtifact.artifactKey ? semanticallyTamperedResult.artifactKey : key))
-      .sort();
-    const semanticallyTamperedArtifacts = structuredClone(persisted.artifacts);
-    semanticallyTamperedArtifacts[resultArtifactIndex] = semanticallyTamperedResult;
-    await expect(
-      verifySafetyScoreV9ArchivedReplays({
-        summaries: [semanticallyTamperedDaily],
-        artifacts: semanticallyTamperedArtifacts,
-      }),
-    ).resolves.toMatchObject({ replays: [{ status: "failed" }] });
+    expect(persisted.daily.selectedRun.artifactKeys).toHaveLength(0);
   });
 
   it("retains all exact replay inputs only for an explicitly selected anomaly", async () => {
@@ -246,14 +191,17 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
     });
 
     const persisted = mockPersistState.mock.calls[0]![1];
-    expect(persisted.artifacts.map((artifact: { kind: string }) => artifact.kind)).toEqual([
+    expect(persisted.artifacts).toBeUndefined();
+    const artifacts = getSafetyScoreV9LocalArtifactBundleArtifacts(persisted.localArtifactBundle);
+    expect(artifacts.map((artifact) => artifact.kind)).toEqual([
       "base-input",
       "fact-set",
       "policy",
       "evaluation-build",
       "result",
     ]);
-    const resultArtifact = persisted.artifacts.find((artifact: { kind: string }) => artifact.kind === "result");
+    const resultArtifact = artifacts.find((artifact) => artifact.kind === "result");
+    if (!resultArtifact) throw new Error("Expected a retained result artifact");
     const retainedResult = await parseSafetyScoreV9ReplayArtifact<{
       schemaVersion: number;
       envelopeCore: unknown;
@@ -272,7 +220,7 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
     expect(persisted.daily.selectedRun.artifactKeys).toHaveLength(5);
   });
 
-  it("bounds automatic first, final, and anomaly selections to window transitions", async () => {
+  it("bounds automatic qualifying selections and requires explicit anomaly retention", async () => {
     await runSafetyScoreV9ShadowAfterV8Publication(input());
     const anomalyDay = mockPersistState.mock.calls[0]![1].daily;
     const qualifyingDay = (utcDay: string) => ({
@@ -317,6 +265,19 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
       }),
     ).toEqual([]);
 
+    const longHistory = Array.from({ length: 27 }, (_, index) => {
+      const day = new Date(Date.parse(`${startDay}T00:00:00.000Z`) + index * 86_400_000).toISOString().slice(0, 10);
+      const selected = qualifyingDay(day);
+      if (day === "2033-05-18") selected.selectedRun.archiveSelectionReasons = ["final"];
+      return selected;
+    });
+    expect(
+      selectSafetyScoreV9ShadowArchiveReasons({
+        history: longHistory,
+        current: qualifyingDay("2033-06-01"),
+      }),
+    ).toEqual([]);
+
     const nextAnomaly = {
       ...structuredClone(anomalyDay),
       utcDay: "2033-05-19",
@@ -325,20 +286,24 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
         selectedAtSec: Date.parse("2033-05-19T00:15:00.000Z") / 1_000,
       },
     };
-    const previousAnomaly = {
-      ...structuredClone(anomalyDay),
-      utcDay: "2033-05-18",
-      selectedRun: {
-        ...structuredClone(anomalyDay.selectedRun),
-        selectedAtSec: Date.parse("2033-05-18T00:15:00.000Z") / 1_000,
-      },
-    };
-    expect(selectSafetyScoreV9ShadowArchiveReasons({ history: [], current: nextAnomaly })).toEqual(["anomaly"]);
-    expect(selectSafetyScoreV9ShadowArchiveReasons({ history: [previousAnomaly], current: nextAnomaly })).toEqual([]);
-    previousAnomaly.selectedRun.identity.candidateId = "previous-anomaly-candidate";
-    expect(selectSafetyScoreV9ShadowArchiveReasons({ history: [previousAnomaly], current: nextAnomaly })).toEqual([
-      "anomaly",
-    ]);
+    expect(selectSafetyScoreV9ShadowArchiveReasons({ history: [], current: nextAnomaly })).toEqual([]);
+    expect(
+      selectSafetyScoreV9ShadowArchiveReasons({
+        history: [],
+        current: nextAnomaly,
+        requested: ["anomaly"],
+      }),
+    ).toEqual(["anomaly"]);
+    expect(() =>
+      selectSafetyScoreV9ShadowArchiveReasons({ history: [], current: first, requested: ["anomaly"] }),
+    ).toThrow("must be selected from a non-qualifying run");
+    expect(() =>
+      selectSafetyScoreV9ShadowArchiveReasons({
+        history,
+        current: finalDay,
+        requested: ["final"] as unknown as ["anomaly"],
+      }),
+    ).toThrow("may be selected explicitly");
   });
 
   it("skips later calls only after the UTC day has a selected success", async () => {

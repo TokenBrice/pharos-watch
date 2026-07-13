@@ -12,9 +12,11 @@ import type { V9Grade } from "@shared/types/safety-score-v9";
 import { V9_RELEASE_COVERAGE_FLOORS } from "@shared/types/safety-score-v9-coverage";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 import type { ReportCardPublicationCompleteness } from "./report-card-publication";
-import { throwIfAborted } from "./abort";
-import { buildSafetyScoreV9Candidate, type SafetyScoreV9CandidatePipelineResult } from "./safety-score-v9-candidate";
-import { buildSafetyScoreV9BaselineExtension } from "./safety-score-v9-extension";
+import {
+  buildSafetyScoreV9CandidateFromNormalizedInput,
+  type SafetyScoreV9CandidatePipelineResult,
+} from "./safety-score-v9-candidate";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./safety-score-v9-extension";
 import { loadSafetyScoreV9MovementReviewDispositions } from "./safety-score-v9-movement-reviews";
 import {
   assessSafetyScoreV9ShadowQualification,
@@ -30,21 +32,19 @@ import {
   type SafetyScoreV8ComparableSnapshot,
   type SafetyScoreV9CoverageFloor,
   type SafetyScoreV9DownstreamThreshold,
-  type SafetyScoreV9ReplayArtifact,
-  type SafetyScoreV9ReplayArtifactKind,
   type SafetyScoreV9ShadowArchiveSelectionReason,
   type SafetyScoreV9ShadowDaily,
   type SafetyScoreV9ShadowEnvelope,
-  type SafetyScoreV9ShadowEnvelopeCore,
   type SafetyScoreV9ShadowFailureStage,
   type SafetyScoreV9ShadowSelectedRun,
 } from "./safety-score-v9-shadow";
 import {
-  buildSafetyScoreV9ReplayArtifact,
+  buildSafetyScoreV9LocalArtifactBundle,
+  getSafetyScoreV9LocalArtifactBundleArtifacts,
+  getSafetyScoreV9LocalArtifactBundleReferences,
   loadSafetyScoreV9ShadowHistory,
-  parseSafetyScoreV9ReplayArtifact,
   persistSafetyScoreV9ShadowState,
-  type SafetyScoreV9StoredReplayArtifact,
+  type SafetyScoreV9LocalArtifactBundle,
 } from "./safety-score-v9-store";
 
 export const SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX = "safety-score-v9-shadow";
@@ -61,7 +61,7 @@ export interface RunSafetyScoreV9ShadowInput {
   signal?: AbortSignal;
   nowSec?: number;
   releaseCandidateId?: string;
-  archiveSelectionReasons?: readonly Exclude<SafetyScoreV9ShadowArchiveSelectionReason, "first">[];
+  archiveSelectionReasons?: readonly Exclude<SafetyScoreV9ShadowArchiveSelectionReason, "first" | "final">[];
 }
 
 export type SafetyScoreV9ShadowRunResult =
@@ -145,36 +145,11 @@ function sameFrozenShadowIdentity(
   );
 }
 
-function anomalyFingerprint(run: SafetyScoreV9ShadowSelectedRun): string {
-  return stableJsonStringifyV1({
-    qualificationBlockers: run.qualification.blockers,
-    failedCoverageFloorIds: run.coverage.coverageFloors
-      .filter((floor) => floor.status === "fail")
-      .map((floor) => floor.id),
-    missingIds: run.coverage.missingIds,
-    unexpectedIds: run.coverage.unexpectedIds,
-    duplicateIds: run.coverage.duplicateIds,
-    compilerExceptions: run.coverage.compilerExceptions,
-    futureDatedEvidenceIds: run.coverage.futureDatedEvidenceIds,
-    publicationRegression: run.coverage.publicationRegression,
-    unresolvedReleaseBlockers: run.coverage.unresolvedReleaseBlockers,
-    unresolvedCriticalMovementIds: run.coverage.unresolvedCriticalMovementIds,
-    movement: {
-      gradeOrNrTransitionCount: run.movement.gradeOrNrTransitionCount,
-      bindingCapChangeCount: run.movement.bindingCapChangeCount,
-      largeScoreMovementCount: run.movement.largeScoreMovementCount,
-      topCutoffMovementCount: run.movement.topCutoffMovementCount,
-      downstreamCrossingCount: run.movement.downstreamCrossingCount,
-      pendingReviewCount: run.movement.pendingReviewCount,
-    },
-  });
-}
-
 /** Selects the bounded replay set without creating an online release authority. */
 export function selectSafetyScoreV9ShadowArchiveReasons(input: {
   history: readonly SafetyScoreV9ShadowDaily[];
   current: SafetyScoreV9ShadowDaily;
-  requested?: readonly Exclude<SafetyScoreV9ShadowArchiveSelectionReason, "first">[];
+  requested?: readonly Exclude<SafetyScoreV9ShadowArchiveSelectionReason, "first" | "final">[];
 }): SafetyScoreV9ShadowArchiveSelectionReason[] {
   const currentRun = input.current.selectedRun;
   if (currentRun === null) throw new Error("Safety Score v9 archive selection requires a successful current run");
@@ -187,42 +162,31 @@ export function selectSafetyScoreV9ShadowArchiveReasons(input: {
       !sameFrozenShadowIdentity(previousRun, currentRun));
 
   let qualifyingStreakDays = currentRun.qualification.qualifies ? 1 : 0;
+  let currentStreakHasFinal = false;
   if (currentRun.qualification.qualifies) {
-    for (let offset = -1; qualifyingStreakDays < SAFETY_SCORE_V9_SHADOW_MINIMUM_QUALIFYING_DAYS; offset -= 1) {
+    for (let offset = -1; ; offset -= 1) {
       const run = historyByDay.get(adjacentUtcDay(input.current.utcDay, offset))?.selectedRun ?? null;
       if (run === null || !run.qualification.qualifies || !sameFrozenShadowIdentity(run, currentRun)) break;
       qualifyingStreakDays += 1;
+      if (run.archiveSelectionReasons.includes("final")) currentStreakHasFinal = true;
     }
   }
-  const currentStreakStart = adjacentUtcDay(input.current.utcDay, 1 - qualifyingStreakDays);
-  const currentStreakHasFinal = input.history.some(
-    (day) =>
-      day.utcDay >= currentStreakStart &&
-      day.utcDay < input.current.utcDay &&
-      day.selectedRun !== null &&
-      sameFrozenShadowIdentity(day.selectedRun, currentRun) &&
-      day.selectedRun.archiveSelectionReasons.includes("final"),
-  );
   const completesQualifyingWindow =
     currentRun.qualification.qualifies &&
     qualifyingStreakDays >= SAFETY_SCORE_V9_SHADOW_MINIMUM_QUALIFYING_DAYS &&
     !currentStreakHasFinal;
 
-  const startsDistinctAnomaly =
-    !currentRun.qualification.qualifies &&
-    (previousRun === null ||
-      previousRun.qualification.qualifies ||
-      !sameFrozenShadowIdentity(previousRun, currentRun) ||
-      anomalyFingerprint(previousRun) !== anomalyFingerprint(currentRun));
   const requested = input.requested ?? [];
-  if (requested.includes("final") && !currentRun.qualification.qualifies) {
-    throw new Error("Final Safety Score v9 replay evidence must be selected from a qualifying run");
+  if (requested.some((reason) => reason !== "anomaly")) {
+    throw new Error("Only anomaly Safety Score v9 replay evidence may be selected explicitly");
+  }
+  if (requested.includes("anomaly") && currentRun.qualification.qualifies) {
+    throw new Error("Anomaly Safety Score v9 replay evidence must be selected from a non-qualifying run");
   }
   return sortedUnique<SafetyScoreV9ShadowArchiveSelectionReason>([
     ...requested,
     ...(startsQualifyingWindow ? (["first"] as const) : []),
     ...(completesQualifyingWindow ? (["final"] as const) : []),
-    ...(startsDistinctAnomaly ? (["anomaly"] as const) : []),
   ]);
 }
 
@@ -357,73 +321,6 @@ function supplyProjection(pipeline: SafetyScoreV9CandidatePipelineResult): {
   };
 }
 
-async function buildReplayArtifacts(
-  pipeline: SafetyScoreV9CandidatePipelineResult,
-  createdAtSec: number,
-  signal?: AbortSignal,
-): Promise<{ stored: SafetyScoreV9StoredReplayArtifact[]; references: SafetyScoreV9ReplayArtifact[] }> {
-  const values: readonly { kind: SafetyScoreV9ReplayArtifactKind; identity: string; value: unknown }[] = [
-    { kind: "base-input", identity: pipeline.candidate.baseInputGenerationId, value: pipeline.fixedInput },
-    {
-      kind: "fact-set",
-      identity: pipeline.candidate.factSetDigest,
-      value: { schemaVersion: 1, extension: pipeline.extension, compiledFacts: pipeline.compiledFacts },
-    },
-    { kind: "policy", identity: pipeline.candidate.policy.semanticDigest, value: V9_CANDIDATE_POLICY_V1 },
-    {
-      kind: "evaluation-build",
-      identity: pipeline.candidate.evaluationBuildDigest,
-      value: { manifest: SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST },
-    },
-  ];
-  const stored: SafetyScoreV9StoredReplayArtifact[] = [];
-  const references: SafetyScoreV9ReplayArtifact[] = [];
-  for (const value of values) {
-    throwIfAborted(signal);
-    const artifact = await buildSafetyScoreV9ReplayArtifact(
-      { ...value, createdAtSec, verifiedAtSec: createdAtSec },
-      { signal },
-    );
-    const parsed = await parseSafetyScoreV9ReplayArtifact(artifact, {
-      expectedKind: value.kind,
-      expectedIdentity: value.identity,
-      signal,
-    });
-    stored.push(artifact);
-    references.push(parsed.reference);
-  }
-  return { stored, references };
-}
-
-async function buildResultReplayArtifact(
-  pipeline: SafetyScoreV9CandidatePipelineResult,
-  envelopeCore: SafetyScoreV9ShadowEnvelopeCore,
-  createdAtSec: number,
-  signal?: AbortSignal,
-): Promise<{ stored: SafetyScoreV9StoredReplayArtifact; reference: SafetyScoreV9ReplayArtifact }> {
-  const stored = await buildSafetyScoreV9ReplayArtifact(
-    {
-      kind: "result",
-      identity: pipeline.candidate.resultDigest,
-      value: {
-        schemaVersion: 2,
-        evaluatedSet: pipeline.evaluatedSet,
-        candidate: pipeline.candidate,
-        envelopeCore,
-      },
-      createdAtSec,
-      verifiedAtSec: createdAtSec,
-    },
-    { signal },
-  );
-  const parsed = await parseSafetyScoreV9ReplayArtifact(stored, {
-    expectedKind: "result",
-    expectedIdentity: pipeline.candidate.resultDigest,
-    signal,
-  });
-  return { stored, reference: parsed.reference };
-}
-
 function safeFailure(error: unknown, stage: SafetyScoreV9ShadowFailureStage): { code: string; message: string } {
   const name = error instanceof Error && error.name ? error.name : "Error";
   const rawMessage = error instanceof Error ? error.message : String(error);
@@ -509,14 +406,16 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
 
     startedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
     stage = "v9-enrichment";
-    const extension = buildSafetyScoreV9BaselineExtension(fixedInput);
+    const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput);
     stage = "compile";
-    const pipeline = buildSafetyScoreV9Candidate({
+    const pipeline = buildSafetyScoreV9CandidateFromNormalizedInput({
       fixedInput,
       extension,
       publishedAtSec: fixedInput.clockSec,
       releaseCandidateId: input.releaseCandidateId,
     });
+    const publicationGenerationId = pipeline.candidate.publicationGenerationId;
+    const candidateId = pipeline.candidate.candidateId;
 
     const completedAtSec = nowSecAtLeast(startedAtSec, input.nowSec);
     const expectedActiveIds = [...fixedInput.activeAssetIds].sort(compareText);
@@ -610,19 +509,59 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       requested: input.archiveSelectionReasons,
     });
 
-    const artifacts: SafetyScoreV9StoredReplayArtifact[] = [];
+    let localArtifactBundle: SafetyScoreV9LocalArtifactBundle | undefined;
     if (archiveSelectionReasons.length > 0) {
       stage = "artifact-retention";
-      const replay = await buildReplayArtifacts(pipeline, completedAtSec, shadowSignal);
       const envelopeCore = projectSafetyScoreV9ShadowEnvelopeCore(envelope);
-      const resultArtifact = await buildResultReplayArtifact(pipeline, envelopeCore, completedAtSec, shadowSignal);
-      replay.stored.push(resultArtifact.stored);
-      replay.references.push(resultArtifact.reference);
-      artifacts.push(...replay.stored);
+      localArtifactBundle = await buildSafetyScoreV9LocalArtifactBundle(
+        [
+          {
+            kind: "base-input",
+            identity: pipeline.candidate.baseInputGenerationId,
+            value: pipeline.fixedInput,
+            createdAtSec: completedAtSec,
+            verifiedAtSec: completedAtSec,
+          },
+          {
+            kind: "fact-set",
+            identity: pipeline.candidate.factSetDigest,
+            value: { schemaVersion: 1, extension: pipeline.extension, compiledFacts: pipeline.compiledFacts },
+            createdAtSec: completedAtSec,
+            verifiedAtSec: completedAtSec,
+          },
+          {
+            kind: "policy",
+            identity: pipeline.candidate.policy.semanticDigest,
+            value: V9_CANDIDATE_POLICY_V1,
+            createdAtSec: completedAtSec,
+            verifiedAtSec: completedAtSec,
+          },
+          {
+            kind: "evaluation-build",
+            identity: pipeline.candidate.evaluationBuildDigest,
+            value: { manifest: SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST },
+            createdAtSec: completedAtSec,
+            verifiedAtSec: completedAtSec,
+          },
+          {
+            kind: "result",
+            identity: pipeline.candidate.resultDigest,
+            value: {
+              schemaVersion: 2,
+              evaluatedSet: pipeline.evaluatedSet,
+              candidate: pipeline.candidate,
+              envelopeCore,
+            },
+            createdAtSec: completedAtSec,
+            verifiedAtSec: completedAtSec,
+          },
+        ],
+        { signal: shadowSignal },
+      );
       envelope = rebuildSafetyScoreV9ShadowEnvelope({
-        candidate: pipeline.candidate,
+        candidate: envelope.candidate,
         core: envelopeCore,
-        replayArtifacts: replay.references,
+        replayArtifacts: getSafetyScoreV9LocalArtifactBundleReferences(localArtifactBundle),
       });
       diff = buildSafetyScoreV9DiffReport({
         generatedAtSec: completedAtSec,
@@ -645,12 +584,16 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
         envelope,
         diff,
         archiveSelectionReasons,
-        artifactKeys: artifacts.map((artifact) => artifact.artifactKey),
+        artifactKeys: getSafetyScoreV9LocalArtifactBundleArtifacts(localArtifactBundle!).map(
+          (artifact) => artifact.artifactKey,
+        ),
       });
     }
+    const pendingReviewCount = diff.summary.pendingReviewCount;
     stage = "shadow-write";
     await persistSafetyScoreV9ShadowState(input.db, {
-      artifacts,
+      artifacts: localArtifactBundle === undefined ? [] : undefined,
+      localArtifactBundle,
       daily,
       envelope,
       diff,
@@ -660,11 +603,11 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       status: "published",
       attemptId: currentAttemptId,
       utcDay,
-      publicationGenerationId: pipeline.candidate.publicationGenerationId,
-      candidateId: pipeline.candidate.candidateId,
+      publicationGenerationId,
+      candidateId,
       qualifying: qualification.qualifies,
       qualificationBlockers: qualification.blockers,
-      pendingReviewCount: diff.summary.pendingReviewCount,
+      pendingReviewCount,
       archiveSelectionReasons,
     };
   } catch (error) {
