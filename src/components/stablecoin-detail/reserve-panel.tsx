@@ -81,12 +81,12 @@ export function ReservePanel({
   }
 
   return (
-    <div className="flex h-full flex-col gap-6">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-6">
       {reserveFetchNotice ? (
         <ReserveStatusNotice notice={reserveFetchNotice} onRetry={onRetry} isFetching={isFetching} />
       ) : null}
       {reserves ? (
-        <section id="reserves" aria-label="Reserve composition" className="flex min-w-0 flex-1 flex-col">
+        <section id="reserves" aria-label="Reserve composition" className="flex min-h-0 min-w-0 flex-1 flex-col">
           <ReserveTreemap
             reserves={reserves.reserves}
             badge={reserves.displayBadge}

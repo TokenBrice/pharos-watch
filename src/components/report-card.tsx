@@ -624,8 +624,15 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
           {hasRightColumn ? (
             <div className="grid min-h-[560px] lg:grid-cols-2">
               <div className="min-w-0 px-4 py-5 sm:px-5">{safetyColumn}</div>
-              <div className="min-w-0 border-t border-border/40 px-4 py-5 sm:px-5 lg:border-l lg:border-t-0">
-                {rightColumn}
+              {/* The wrapper has no box in the stacked layout; at lg it
+                  contains the chart's intrinsic size so the grid row can shrink. */}
+              <div
+                className="contents lg:flex lg:min-h-0 lg:min-w-0 lg:border-l lg:border-border/40 lg:px-5 lg:py-5"
+                style={{ contain: "size" }}
+              >
+                <div className="min-w-0 border-t border-border/40 px-4 py-5 sm:px-5 lg:flex lg:min-h-0 lg:flex-1 lg:border-t-0 lg:p-0">
+                  {rightColumn}
+                </div>
               </div>
             </div>
           ) : (

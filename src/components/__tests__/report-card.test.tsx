@@ -97,6 +97,24 @@ describe("ReportCardDetail", () => {
     expect(screen.getByText("72 / 100")).toBeTruthy();
   });
 
+  it("isolates the right column from report-card row sizing", () => {
+    render(
+      <ReportCardDetail
+        card={makeReportCard()}
+        liquidityComponents={null}
+        rightColumn={<div data-testid="right-column-content" />}
+      />,
+    );
+
+    const stackedColumn = screen.getByTestId("right-column-content").parentElement;
+    const desktopColumn = stackedColumn?.parentElement;
+
+    expect(stackedColumn?.classList.contains("lg:flex-1")).toBe(true);
+    expect(desktopColumn?.style.contain).toBe("size");
+    expect(desktopColumn?.classList.contains("contents")).toBe(true);
+    expect(desktopColumn?.classList.contains("lg:min-h-0")).toBe(true);
+  });
+
   it("distinguishes a capped Safety input from the observed DEX score", () => {
     render(
       <ReportCardDetail
