@@ -24,6 +24,26 @@
     "confidence": "verified",
     "summary": "bbqUSDC is an immutable MetaMorpho ERC-4626 vault (no EIP-1967 proxy slots); shares are minted only against USDC deposits. Vault owner is the Steakhouse Safe v1.4.1 8/5. Base USDC issuance is inherited from Circle.",
     "inheritedFrom": "usdc-circle",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526837,
+      "sources": [
+        {
+          "label": "Smokehouse USDC vault",
+          "url": "https://etherscan.io/address/0xbeefff209270748ddd194831b3fa287a5386f5bc#code"
+        },
+        {
+          "label": "MetaMorpho source",
+          "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -45,7 +65,9 @@
             "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
           }
         ],
-        "evidence": "At Ethereum block 25358823: asset() returned USDC (0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48); EIP-1967 proxy_admin and implementation slots both returned zero; owner() returned 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd. That Safe returned 8 owners, threshold=5, and getModulesPaginated returned no modules."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "evidence": "At Ethereum block 25526837, asset() returned USDC (0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48), owner() returned Steakhouse Safe 0x0a0e559b..., and the EIP-1967 implementation, proxy-admin, and beacon slots were all zero. The direct MetaMorpho code therefore has no implementation-replacement path."
       },
       {
         "chain": "ethereum",

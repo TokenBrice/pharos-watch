@@ -24,6 +24,26 @@
     "confidence": "verified",
     "summary": "gtUSDC is an immutable MetaMorpho V1 vault (no proxy); shares minted only against USDC deposits. Vault owner is a Gauntlet Safe 4/7 (v1.3.0). No upgrade path. Base USDC issuance inherited from Circle.",
     "inheritedFrom": "usdc-circle",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526837,
+      "sources": [
+        {
+          "label": "Gauntlet USDC Prime V1 vault",
+          "url": "https://etherscan.io/address/0xdd0f28e19c1780eb6396170735d45153d261490d#code"
+        },
+        {
+          "label": "MetaMorpho source",
+          "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -44,7 +64,9 @@
             "url": "https://docs.morpho.org/curate/"
           }
         ],
-        "evidence": "At Ethereum block 25295208: EIP-1967 proxy_admin slot = 0x0 and impl slot = 0x0 (not a proxy, immutable). owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (Safe v1.3.0, 7 owners, threshold=4, modules=[], confirmed via getOwners()/getThreshold()/getModulesPaginated()). asset() = 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC confirmed)."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "evidence": "At Ethereum block 25526837, asset() returned USDC (0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48), owner() returned Gauntlet Safe 0xc684c658..., and the EIP-1967 implementation, proxy-admin, and beacon slots were all zero. The direct MetaMorpho V1 code therefore has no implementation-replacement path."
       },
       {
         "chain": "ethereum",
