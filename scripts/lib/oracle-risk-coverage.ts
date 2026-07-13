@@ -3,6 +3,8 @@ import type { OracleRiskProfile, StablecoinMeta } from "../../shared/types";
 export type OracleRiskCoverageFindingKind =
   | "missing-profile"
   | "missing-review-metadata"
+  | "missing-branch-applicability"
+  | "branch-applicability-unresolved"
   | "missing-branches"
   | "missing-branch-evidence"
   | "stale-review"
@@ -21,6 +23,10 @@ export interface OracleRiskCoverageResult {
   withOracleRisk: number;
   missingOracleRisk: number;
   completeProfiles: number;
+  reviewedBranchApplicability: number;
+  branchesRequired: number;
+  branchNotApplicable: number;
+  branchApplicabilityUnresolved: number;
   branchProfiles: number;
   branches: number;
   completeBranches: number;
@@ -111,13 +117,32 @@ export function analyzeOracleRiskCoverage(
       });
     }
 
-    if (profile.branchModel === "multi-branch" && !profile.branches?.length) {
+    const branchApplicability = profile.branchApplicability;
+    if (!branchApplicability) {
+      findings.push({
+        id: coin.id,
+        symbol: coin.symbol,
+        name: coin.name,
+        kind: "missing-branch-applicability",
+        detail: "oracleRisk has no reviewed branch applicability disposition",
+      });
+    } else if (branchApplicability.disposition === "unresolved") {
+      findings.push({
+        id: coin.id,
+        symbol: coin.symbol,
+        name: coin.name,
+        kind: "branch-applicability-unresolved",
+        detail: `branch applicability remains unresolved: ${branchApplicability.rationale}`,
+      });
+    }
+
+    if (branchApplicability?.disposition === "branches-required" && !profile.branches?.length) {
       findings.push({
         id: coin.id,
         symbol: coin.symbol,
         name: coin.name,
         kind: "missing-branches",
-        detail: "multi-branch oracleRisk profile has no branch rows",
+        detail: "branch-required oracleRisk profile has no branch rows",
       });
     }
 
@@ -161,7 +186,15 @@ export function analyzeOracleRiskCoverage(
   const missingOracleRisk = inScope.length - withOracleRisk;
   const incompleteIds = new Set(
     findings
-      .filter((finding) => finding.kind !== "stale-review" && finding.kind !== "stale-branch-observation")
+      .filter(
+        (finding) =>
+          ![
+            "stale-review",
+            "stale-branch-observation",
+            "missing-branch-applicability",
+            "branch-applicability-unresolved",
+          ].includes(finding.kind),
+      )
       .map((finding) => finding.id),
   );
   const completeProfiles = withOracleRisk - incompleteIds.size;
@@ -172,12 +205,26 @@ export function analyzeOracleRiskCoverage(
       .filter((finding) => finding.kind === "missing-branch-evidence")
       .map((finding) => `${finding.id}:${finding.detail.split(" branch missing", 1)[0]}`),
   );
+  const reviewedBranchApplicability = inScope.filter((coin) => coin.oracleRisk?.branchApplicability != null).length;
+  const branchesRequired = inScope.filter(
+    (coin) => coin.oracleRisk?.branchApplicability?.disposition === "branches-required",
+  ).length;
+  const branchNotApplicable = inScope.filter(
+    (coin) => coin.oracleRisk?.branchApplicability?.disposition === "not-applicable",
+  ).length;
+  const branchApplicabilityUnresolved = inScope.filter(
+    (coin) => coin.oracleRisk?.branchApplicability?.disposition === "unresolved",
+  ).length;
 
   return {
     totalCryptoCdp: inScope.length,
     withOracleRisk,
     missingOracleRisk,
     completeProfiles,
+    reviewedBranchApplicability,
+    branchesRequired,
+    branchNotApplicable,
+    branchApplicabilityUnresolved,
     branchProfiles,
     branches,
     completeBranches: branches - incompleteBranchKeys.size,

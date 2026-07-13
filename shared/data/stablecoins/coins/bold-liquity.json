@@ -21,6 +21,22 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Liquity V2 collateral branches use external Chainlink/RedStone-style feeds with response validation, last-good-price handling, per-branch isolation, and branch shutdown on oracle failure.",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-13",
+      "reviewer": "Codex data review",
+      "rationale": "BOLD has separately parameterized WETH, wstETH, and rETH collateral branches whose oracle fallback, liquidation thresholds, Stability Pools, and shutdown behavior can differ.",
+      "sources": [
+        {
+          "label": "Liquity V2 contracts and mainnet addresses",
+          "url": "https://github.com/liquity/bold/"
+        },
+        {
+          "label": "Liquity V2 risk disclosure",
+          "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+        }
+      ]
+    },
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
     "confidence": "verified",

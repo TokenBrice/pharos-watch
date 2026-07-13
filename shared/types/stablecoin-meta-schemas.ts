@@ -75,6 +75,7 @@ import {
   MINT_AUTHORITY_UPGRADE_MODEL_VALUES,
   MICA_AUTHORIZATION_TYPE_VALUES,
   ORACLE_RISK_CONFIDENCE_VALUES,
+  ORACLE_RISK_BRANCH_APPLICABILITY_VALUES,
   ORACLE_RISK_BRANCH_MODEL_VALUES,
   ORACLE_RISK_TIER_VALUES,
   RESEARCH_REVIEW_CONFIDENCE_VALUES,
@@ -332,6 +333,16 @@ export const OracleRiskProfileSchema: z.ZodType<OracleRiskProfile> = z
     tier: z.enum(ORACLE_RISK_TIER_VALUES),
     summary: z.string().min(12),
     branchModel: z.enum(ORACLE_RISK_BRANCH_MODEL_VALUES).optional(),
+    branchApplicability: z
+      .object({
+        disposition: z.enum(ORACLE_RISK_BRANCH_APPLICABILITY_VALUES),
+        reviewedAt: ReviewDateSchema,
+        reviewer: z.string().min(1),
+        rationale: z.string().min(12),
+        sources: z.array(StablecoinLinkSchema).min(1),
+      })
+      .strict()
+      .optional(),
     reviewedAt: ReviewDateSchema.optional(),
     reviewer: z.string().min(1).optional(),
     confidence: z.enum(ORACLE_RISK_CONFIDENCE_VALUES).optional(),
@@ -359,6 +370,20 @@ export const OracleRiskProfileSchema: z.ZodType<OracleRiskProfile> = z
         code: z.ZodIssueCode.custom,
         message: "oracleRisk branches require branchModel multi-branch",
         path: ["branchModel"],
+      });
+    }
+    if (profile.branchApplicability?.disposition === "branches-required" && profile.branchModel !== "multi-branch") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "branches-required oracle applicability requires branchModel multi-branch",
+        path: ["branchModel"],
+      });
+    }
+    if (profile.branchApplicability?.disposition === "not-applicable" && profile.branchModel === "multi-branch") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "not-applicable oracle applicability cannot declare a multi-branch model",
+        path: ["branchApplicability", "disposition"],
       });
     }
   });

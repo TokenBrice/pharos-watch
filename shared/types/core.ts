@@ -651,6 +651,25 @@ export const ORACLE_RISK_CONFIDENCE_VALUES = ["verified", "probable", "limited",
 export type OracleRiskConfidence = (typeof ORACLE_RISK_CONFIDENCE_VALUES)[number];
 export const ORACLE_RISK_BRANCH_MODEL_VALUES = ["single-path", "multi-branch"] as const;
 export type OracleRiskBranchModel = (typeof ORACLE_RISK_BRANCH_MODEL_VALUES)[number];
+export const ORACLE_RISK_BRANCH_APPLICABILITY_VALUES = [
+  "branches-required",
+  "not-applicable",
+  "unresolved",
+] as const;
+export type OracleRiskBranchApplicability = (typeof ORACLE_RISK_BRANCH_APPLICABILITY_VALUES)[number];
+
+/**
+ * Reviewed decision on whether a CDP needs market-specific oracle and
+ * liquidation evidence. It is intentionally score-inert until a separately
+ * approved scoring release consumes it.
+ */
+export interface OracleRiskBranchApplicabilityReview {
+  disposition: OracleRiskBranchApplicability;
+  reviewedAt: string;
+  reviewer: string;
+  rationale: string;
+  sources: StablecoinLink[];
+}
 
 export interface OracleRiskFeed {
   provider: string;
@@ -696,6 +715,7 @@ export interface OracleRiskProfile {
   tier: OracleRiskTier;
   summary: string;
   branchModel?: OracleRiskBranchModel;
+  branchApplicability?: OracleRiskBranchApplicabilityReview;
   reviewedAt?: string;
   reviewer?: string;
   confidence?: OracleRiskConfidence;

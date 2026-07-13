@@ -25,13 +25,23 @@ const prefix = ENFORCE ? "oracleRisk coverage" : "oracleRisk coverage warning";
 
 process.stdout.write(
   `${prefix}: ${result.withOracleRisk}/${result.totalCryptoCdp} direct active crypto-backed CDPs have oracleRisk; ` +
-    `${result.completeProfiles} complete profiles; ${result.completeBranches}/${result.branches} branches complete.\n`,
+    `${result.completeProfiles} complete profiles; ${result.completeBranches}/${result.branches} branches complete; ` +
+    `${result.reviewedBranchApplicability} reviewed branch dispositions ` +
+    `(${result.branchesRequired} required, ${result.branchNotApplicable} not applicable, ` +
+    `${result.branchApplicabilityUnresolved} unresolved).\n`,
 );
 
 if (result.findings.length > 0) {
   process.stdout.write("Findings:\n");
   for (const finding of result.findings) {
-    const tag = finding.kind === "stale-review" || finding.kind === "stale-branch-observation" ? " (advisory)" : "";
+    const tag = [
+      "stale-review",
+      "stale-branch-observation",
+      "missing-branch-applicability",
+      "branch-applicability-unresolved",
+    ].includes(finding.kind)
+      ? " (advisory)"
+      : "";
     process.stdout.write(`  - ${finding.id} (${finding.symbol}): ${finding.kind}${tag} — ${finding.detail}\n`);
   }
 }
@@ -40,7 +50,13 @@ if (result.findings.length > 0) {
 // window still scores. Enforce only on missing/incomplete profiles so the merge
 // gate cannot become a time-bomb that blocks unrelated work as reviews age.
 const blockingFindings = result.findings.filter(
-  (finding) => finding.kind !== "stale-review" && finding.kind !== "stale-branch-observation",
+  (finding) =>
+    ![
+      "stale-review",
+      "stale-branch-observation",
+      "missing-branch-applicability",
+      "branch-applicability-unresolved",
+    ].includes(finding.kind),
 );
 
 if (ENFORCE && blockingFindings.length > 0) {

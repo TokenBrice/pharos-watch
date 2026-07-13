@@ -7,6 +7,7 @@ import {
   StablecoinMintAuthoritySidecarSchema,
   StablecoinRiskReviewSidecarSchema,
 } from "../schema";
+import { OracleRiskProfileSchema } from "@shared/types/stablecoin-meta-schemas";
 
 const baseFlags = {
   pegCurrency: "USD",
@@ -1001,6 +1002,61 @@ describe("Stablecoin research sidecar schemas", () => {
   it("requires at least one owned field in optional multi-field domains", () => {
     expect(StablecoinComplianceSidecarSchema.safeParse({ id: "fixture-usd" }).success).toBe(false);
     expect(StablecoinRiskReviewSidecarSchema.safeParse({ id: "fixture-usd" }).success).toBe(false);
+  });
+
+  it("requires branch rows when a reviewed oracle applicability decision says they are required", () => {
+    const baseProfile = {
+      tier: "standard-external",
+      summary: "The fixture records a multi-market collateral oracle design.",
+      branchApplicability: {
+        disposition: "branches-required",
+        reviewedAt: "2026-07-13",
+        reviewer: "test",
+        rationale: "Each collateral market has independent oracle and liquidation behavior.",
+        sources: [{ label: "Docs", url: "https://example.com/docs" }],
+      },
+    };
+
+    expect(OracleRiskProfileSchema.safeParse(baseProfile).success).toBe(false);
+    expect(
+      OracleRiskProfileSchema.safeParse({
+        ...baseProfile,
+        branchModel: "multi-branch",
+        branches: [
+          {
+            id: "eth",
+            label: "ETH",
+            tier: "standard-external",
+            summary: "The branch fixture supplies a valid independently reviewed feed path.",
+          },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a not-applicable oracle applicability decision on a multi-branch profile", () => {
+    expect(
+      OracleRiskProfileSchema.safeParse({
+        tier: "standard-external",
+        summary: "The fixture records a multi-market collateral oracle design.",
+        branchModel: "multi-branch",
+        branches: [
+          {
+            id: "eth",
+            label: "ETH",
+            tier: "standard-external",
+            summary: "The branch fixture supplies a valid independently reviewed feed path.",
+          },
+        ],
+        branchApplicability: {
+          disposition: "not-applicable",
+          reviewedAt: "2026-07-13",
+          reviewer: "test",
+          rationale: "This intentionally contradictory fixture checks schema validation.",
+          sources: [{ label: "Docs", url: "https://example.com/docs" }],
+        },
+      }).success,
+    ).toBe(false);
   });
 
   it("requires route-level evidence for reviewed bridge deployments", () => {

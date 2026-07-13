@@ -49,10 +49,10 @@ describe("analyzeOracleRiskCoverage", () => {
 
     expect(result.withOracleRisk).toBe(1);
     expect(result.completeProfiles).toBe(0);
-    expect(result.findings[0]).toMatchObject({
+    expect(result.findings).toContainEqual(expect.objectContaining({
       kind: "missing-review-metadata",
       detail: "oracleRisk missing reviewedAt, reviewer, confidence",
-    });
+    }));
   });
 
   it("accepts complete fresh profiles and ignores non-CDP assets and variants", () => {
@@ -62,6 +62,13 @@ describe("analyzeOracleRiskCoverage", () => {
           oracleRisk: {
             tier: "medianized-with-delay",
             summary: "Medianized feeds with delay are documented.",
+            branchApplicability: {
+              disposition: "not-applicable",
+              reviewedAt: "2026-06-01",
+              reviewer: "Codex data review",
+              rationale: "The reviewed system has one shared collateral path rather than separately parameterized markets.",
+              sources: [{ label: "Docs", url: "https://example.com/docs" }],
+            },
             reviewedAt: "2026-06-01",
             reviewer: "Codex data review",
             confidence: "verified",
@@ -99,6 +106,13 @@ describe("analyzeOracleRiskCoverage", () => {
         oracleRisk: {
           tier: "standard-external",
           summary: "Multiple collateral markets are reviewed separately.",
+          branchApplicability: {
+            disposition: "branches-required",
+            reviewedAt: "2026-07-13",
+            reviewer: "test",
+            rationale: "Each collateral market has independent oracle and liquidation behavior.",
+            sources: [{ label: "Docs", url: "https://example.com/docs" }],
+          },
           branchModel: "multi-branch",
           reviewedAt: "2026-07-13",
           reviewer: "test",
@@ -113,6 +127,13 @@ describe("analyzeOracleRiskCoverage", () => {
         oracleRisk: {
           tier: "standard-external",
           summary: "Multiple collateral markets are reviewed separately.",
+          branchApplicability: {
+            disposition: "branches-required",
+            reviewedAt: "2026-07-13",
+            reviewer: "test",
+            rationale: "Each collateral market has independent oracle and liquidation behavior.",
+            sources: [{ label: "Docs", url: "https://example.com/docs" }],
+          },
           branchModel: "multi-branch",
           reviewedAt: "2026-07-13",
           reviewer: "test",
@@ -134,6 +155,13 @@ describe("analyzeOracleRiskCoverage", () => {
           oracleRisk: {
             tier: "standard-external",
             summary: "Multiple collateral markets are reviewed separately.",
+            branchApplicability: {
+              disposition: "branches-required",
+              reviewedAt: "2026-07-13",
+              reviewer: "test",
+              rationale: "Each collateral market has independent oracle and liquidation behavior.",
+              sources: [{ label: "Docs", url: "https://example.com/docs" }],
+            },
             branchModel: "multi-branch",
             reviewedAt: "2026-07-13",
             reviewer: "test",
@@ -165,5 +193,48 @@ describe("analyzeOracleRiskCoverage", () => {
     expect(result.completeBranches).toBe(1);
     expect(result.completeProfiles).toBe(1);
     expect(result.findings).toEqual([expect.objectContaining({ kind: "stale-branch-observation" })]);
+  });
+
+  it("surfaces reviewed unresolved branch applicability without changing the v8 profile-completeness gate", () => {
+    const result = analyzeOracleRiskCoverage([
+      makeCoin({
+        oracleRisk: {
+          tier: "standard-external",
+          summary: "The profile has source-backed system-wide evidence but no market inventory.",
+          branchApplicability: {
+            disposition: "unresolved",
+            reviewedAt: "2026-07-13",
+            reviewer: "test",
+            rationale: "The system has multiple collateral markets, but reviewed sources lack complete per-market evidence.",
+            sources: [{ label: "Docs", url: "https://example.com/docs" }],
+          },
+          reviewedAt: "2026-07-13",
+          reviewer: "test",
+          confidence: "verified",
+        },
+      }),
+    ]);
+
+    expect(result.completeProfiles).toBe(1);
+    expect(result.branchApplicabilityUnresolved).toBe(1);
+    expect(result.findings).toEqual([expect.objectContaining({ kind: "branch-applicability-unresolved" })]);
+  });
+
+  it("keeps unreviewed profile-only branch applicability visible as an advisory backlog", () => {
+    const result = analyzeOracleRiskCoverage([
+      makeCoin({
+        oracleRisk: {
+          tier: "standard-external",
+          summary: "A complete profile that predates the branch-applicability review contract.",
+          reviewedAt: "2026-07-13",
+          reviewer: "test",
+          confidence: "verified",
+        },
+      }),
+    ]);
+
+    expect(result.completeProfiles).toBe(1);
+    expect(result.reviewedBranchApplicability).toBe(0);
+    expect(result.findings).toEqual([expect.objectContaining({ kind: "missing-branch-applicability" })]);
   });
 });

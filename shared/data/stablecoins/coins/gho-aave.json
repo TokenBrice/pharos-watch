@@ -21,6 +21,22 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "GHO minting follows Aave reserve collateralization, where each reserve has a governance-selected oracle contract for market prices.",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-13",
+      "reviewer": "Codex data review",
+      "rationale": "Aave V3 supports multiple collateral reserve markets, but the reviewed GHO and oracle sources do not provide a source-backed per-market feed, liquidation, fallback, and backstop inventory. Keep GHO out of branch-complete v9 evaluation until that evidence is reviewed.",
+      "sources": [
+        {
+          "label": "Aave GHO docs",
+          "url": "https://aave.com/docs/ecosystem/gho"
+        },
+        {
+          "label": "Aave Oracle docs",
+          "url": "https://aave.com/docs/ecosystem/oracle"
+        }
+      ]
+    },
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
     "confidence": "verified",
