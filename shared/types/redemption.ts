@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ExitRouteObservationSchema } from "./market";
+import { ExitRouteObservationSchema } from "./exit-route";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "./validators";
 
