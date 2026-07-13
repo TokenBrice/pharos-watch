@@ -277,6 +277,7 @@ async function recordStalePage(
   preferences: readonly DueTelegramRecapPreference[],
   subscriberByChat: ReadonlyMap<string, SubscriberRecapRow>,
   nowSec: number,
+  reason: "delivery-window-expired" | "project-tape-stale",
 ): Promise<number> {
   let skipped = 0;
   for (const preference of preferences) {
@@ -284,7 +285,7 @@ async function recordStalePage(
     const subscriber = subscriberByChat.get(preference.chatId);
     const timezone = subscriber?.timezone;
     if (!timezone) continue;
-    const localDate = localDateInIanaTimezone(nowSec * 1000, timezone);
+    const localDate = localDateInIanaTimezone(preference.expectedNextDueAt * 1000, timezone);
     const nextDueAt = nextDueAtSec(nowSec, timezone, preference.deliveryHourLocal);
     if (!localDate || nextDueAt == null) continue;
     const window = recapWindow(preference, nowSec);
@@ -303,7 +304,7 @@ async function recordStalePage(
         nextDueAtAfter: nextDueAt,
       },
       status: "skipped_stale",
-      reason: "project-tape-stale",
+      reason,
       consumeWindow: false,
     });
     if (didRecord) skipped += 1;
@@ -386,7 +387,7 @@ export async function planTelegramPersonalizedRecaps(
     counts.due = due.length;
     counts.stale = dryRun
       ? due.filter((preference) => shouldRecordStaleSkip(preference, nowSec)).length
-      : await recordStalePage(db, due, subscribers, nowSec);
+      : await recordStalePage(db, due, subscribers, nowSec, "project-tape-stale");
     counts.oldestDueAgeSec = Math.max(0, ...due.map((preference) => nowSec - preference.expectedNextDueAt));
     return finish("degraded", "stale");
   }
@@ -412,8 +413,24 @@ export async function planTelegramPersonalizedRecaps(
       counts.oldestDueAgeSec,
       ...preferences.map((preference) => Math.max(0, nowSec - preference.expectedNextDueAt)),
     );
-    const chatIds = preferences.map((preference) => preference.chatId);
-    const subscriberByChat = await loadSubscriberRows(db, chatIds);
+    const subscriberByChat = await loadSubscriberRows(db, preferences.map((preference) => preference.chatId));
+    const stalePreferences = preferences.filter((preference) =>
+      shouldRecordStaleSkip(preference, nowSec) && subscriberByChat.get(preference.chatId)?.timezone,
+    );
+    const staleChatIds = new Set(stalePreferences.map((preference) => preference.chatId));
+    if (stalePreferences.length > 0) {
+      const recorded = dryRun
+        ? stalePreferences.length
+        : await recordStalePage(db, stalePreferences, subscriberByChat, nowSec, "delivery-window-expired");
+      counts.stale += recorded;
+      counts.deferred += stalePreferences.length - recorded;
+    }
+    const planningPreferences = preferences.filter((preference) => !staleChatIds.has(preference.chatId));
+    if (planningPreferences.length === 0) {
+      counts.pagesCompleted += 1;
+      continue;
+    }
+    const chatIds = planningPreferences.map((preference) => preference.chatId);
     const directByChat = await loadDirectSubscriptions(db, chatIds, nowSec);
     const presetsByChat = await loadPresetSubscriptions(db, chatIds);
     const allPresetIds = [...new Set([...presetsByChat.values()].flat())];
@@ -421,19 +438,19 @@ export async function planTelegramPersonalizedRecaps(
       ? { kind: "ok" as const, presets: [] }
       : await resolveTelegramPresetTargets(db, allPresetIds);
     if (resolvedPresets.kind !== "ok") {
-      counts.deferred += preferences.length;
-      counts.presetDeferred += preferences.length;
+      counts.deferred += planningPreferences.length;
+      counts.presetDeferred += planningPreferences.length;
       counts.pagesDeferred += 1;
       break;
     }
-    const earliestStartSec = Math.min(...preferences.map((preference) => recapWindow(preference, nowSec).startSec));
+    const earliestStartSec = Math.min(...planningPreferences.map((preference) => recapWindow(preference, nowSec).startSec));
     const loadedFacts = await loadTapeFacts(db, earliestStartSec, nowSec, tapePageLimit);
     counts.factsLoaded += loadedFacts.loadedCount;
     counts.factsAdmitted += loadedFacts.facts.length;
     counts.factsRejected += loadedFacts.rejectedCount;
     if (loadedFacts.truncated) {
-      counts.deferred += preferences.length;
-      counts.truncatedDeferred += preferences.length;
+      counts.deferred += planningPreferences.length;
+      counts.truncatedDeferred += planningPreferences.length;
       counts.pagesDeferred += 1;
       break;
     }
@@ -441,10 +458,10 @@ export async function planTelegramPersonalizedRecaps(
       resolvedPresets.presets.map((preset) => [preset.definition.id, preset.stablecoinIds]),
     );
 
-    for (const [preferenceIndex, preference] of preferences.entries()) {
+    for (const [preferenceIndex, preference] of planningPreferences.entries()) {
       throwIfAborted(signal);
       if (deadlineReached()) {
-        const deferred = preferences.length - preferenceIndex;
+        const deferred = planningPreferences.length - preferenceIndex;
         counts.deferred += deferred;
         counts.softDeadlineDeferred += deferred;
         counts.pagesDeferred += 1;

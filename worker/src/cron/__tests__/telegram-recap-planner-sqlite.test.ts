@@ -149,6 +149,44 @@ describe("telegram personalized recap planner", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets").get()).toEqual({ count: 0 });
   });
 
+  it("skips an expired delivery window instead of bursting an overdue recap after recovery", async () => {
+    const { sqlite, db } = setup();
+    const scheduledAt = Math.floor(Date.parse("2027-01-14T14:00:00Z") / 1_000);
+    const lateNow = Math.floor(Date.parse("2027-01-14T23:12:00Z") / 1_000);
+    const nextLocalDelivery = Math.floor(Date.parse("2027-01-15T14:00:00Z") / 1_000);
+    insertSubscriber(sqlite, "late-recap");
+    sqlite.prepare("UPDATE telegram_subscribers SET timezone = 'Europe/Paris' WHERE chat_id = 'late-recap'").run();
+    sqlite.prepare(`UPDATE telegram_recap_preferences
+      SET delivery_hour_local = 15, next_due_at = ?
+      WHERE chat_id = 'late-recap'`).run(scheduledAt);
+    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES ('late-recap', 'usdc-circle', 1)").run();
+    markTapeFresh(sqlite, lateNow - 1);
+    insertTape(sqlite, "late-recap-1", lateNow - 60);
+    insertTape(sqlite, "late-recap-2", lateNow - 30);
+
+    const result = await planTelegramPersonalizedRecaps(db, undefined, {
+      nowSec: lateNow,
+      tapePageLimit: 1,
+    });
+
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata)).toMatchObject({
+      stale: 1,
+      queued: 0,
+      truncatedDeferred: 0,
+      factsLoaded: 0,
+    });
+    expect(sqlite.prepare(`SELECT local_date, status, terminal_reason
+      FROM telegram_recap_targets WHERE chat_id = 'late-recap'`).get()).toEqual({
+      local_date: "2027-01-14",
+      status: "skipped_stale",
+      terminal_reason: "delivery-window-expired",
+    });
+    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = 'late-recap'").get())
+      .toEqual({ next_due_at: nextLocalDelivery });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+  });
+
   it("plans through the observed public-launch Tape volume without permanently deferring due work", async () => {
     const { sqlite, db } = setup();
     insertSubscriber(sqlite, "global", { globalDepeg: true });
