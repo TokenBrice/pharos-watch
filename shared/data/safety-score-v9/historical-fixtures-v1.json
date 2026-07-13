@@ -32,7 +32,11 @@
           "title": "Terra Money documentation",
           "url": "https://docs.terra.money/learn/protocol.html",
           "publishedAt": "2021-12-01T00:00:00.000Z",
-          "supports": ["algorithmic stabilization and LUNA dependency"]
+          "supports": ["algorithmic stabilization and LUNA dependency"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -42,10 +46,23 @@
         "observedThrough": "2022-05-31T00:00:00.000Z",
         "summary": "UST lost its peg as the reflexive stabilization mechanism entered a death spiral."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Pre-collapse mechanism facts test reflexive-backing detection without postmortem evidence."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Pre-collapse mechanism facts test reflexive-backing detection without postmortem evidence."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -73,7 +90,11 @@
           "title": "Circle January 2023 reserve report",
           "url": "https://www.circle.com/hubfs/USDCAttestationReports/2023/2023%20USDC_Circle%20Examination%20Report%20January%202023.pdf",
           "publishedAt": "2023-02-28T00:00:00.000Z",
-          "supports": ["reserve composition and banking model"]
+          "supports": ["reserve composition and banking model"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -83,10 +104,23 @@
         "observedThrough": "2023-03-13T00:00:00.000Z",
         "summary": "USDC depegged during uncertainty over cash held at Silicon Valley Bank and later recovered."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Uses the last reserve examination available before the bank failure weekend."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Uses the last reserve examination available before the bank failure weekend."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -114,7 +148,11 @@
           "title": "Maker Protocol technical docs",
           "url": "https://docs.makerdao.com/smart-contract-modules/core-module/dog-and-clipper-detailed-documentation",
           "publishedAt": "2022-12-01T00:00:00.000Z",
-          "supports": ["collateralized debt and liquidation design"]
+          "supports": ["collateralized debt and liquidation design"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -124,10 +162,23 @@
         "observedThrough": "2023-03-13T00:00:00.000Z",
         "summary": "DAI followed USDC below peg because the upstream exposure was mechanism-material."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Dependency fixture tests propagation rather than treating the CDP label as isolation."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Dependency fixture tests propagation rather than treating the CDP label as isolation."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -155,7 +206,11 @@
           "title": "Abracadabra cauldron documentation",
           "url": "https://docs.abracadabra.money/learn/intro/stake/cauldrons",
           "publishedAt": "2022-04-01T00:00:00.000Z",
-          "supports": ["isolated collateral market design"]
+          "supports": ["isolated collateral market design"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -165,10 +220,23 @@
         "observedThrough": "2022-05-16T00:00:00.000Z",
         "summary": "MIM experienced contagion and exit stress during the Terra collapse."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Tests material ecosystem dependency and collateral-market isolation."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Tests material ecosystem dependency and collateral-market isolation."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -196,7 +264,11 @@
           "title": "Neutrino protocol documentation",
           "url": "https://docs.neutrino.at/neutrino-protocol/overview",
           "publishedAt": "2021-12-01T00:00:00.000Z",
-          "supports": ["WAVES-backed stabilization mechanism"]
+          "supports": ["WAVES-backed stabilization mechanism"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -206,10 +278,23 @@
         "observedThrough": "2022-12-31T00:00:00.000Z",
         "summary": "USDN entered repeated and ultimately persistent depegs as WAVES backing weakened."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Pre-depeg protocol facts expose reflexive collateral and recapitalization risk."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Pre-depeg protocol facts expose reflexive collateral and recapitalization risk."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -237,7 +322,11 @@
           "title": "Fei Protocol genesis announcement",
           "url": "https://medium.com/fei-protocol/fei-protocol-genesis-group-6c7f6a57d8d8",
           "publishedAt": "2021-03-31T00:00:00.000Z",
-          "supports": ["genesis mechanism and incentive design"]
+          "supports": ["genesis mechanism and incentive design"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -247,10 +336,23 @@
         "observedThrough": "2021-04-30T00:00:00.000Z",
         "summary": "FEI traded materially below peg after launch while direct incentives constrained exit."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Tests a novel stabilization design at its launch boundary."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Tests a novel stabilization design at its launch boundary."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -278,7 +380,11 @@
           "title": "Iron Finance mechanism documentation",
           "url": "https://docs.iron.finance/",
           "publishedAt": "2021-05-01T00:00:00.000Z",
-          "supports": ["USDC and TITAN partial-collateral mechanism"]
+          "supports": ["USDC and TITAN partial-collateral mechanism"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -288,10 +394,23 @@
         "observedThrough": "2021-06-18T00:00:00.000Z",
         "summary": "IRON suffered a bank run and the reflexive TITAN component collapsed."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Tests partial collateral and reflexive loss absorption before the run."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Tests partial collateral and reflexive loss absorption before the run."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -319,7 +438,11 @@
           "title": "Cashio application repository",
           "url": "https://github.com/cashioapp/cashio",
           "publishedAt": "2022-02-01T00:00:00.000Z",
-          "supports": ["collateral and mint implementation"]
+          "supports": ["collateral and mint implementation"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -329,10 +452,23 @@
         "observedThrough": "2022-03-24T00:00:00.000Z",
         "summary": "A validation flaw enabled unbacked minting and destroyed the peg."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Tests whether unresolved mint invariants force an unrated result."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Tests whether unresolved mint invariants force an unrated result."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -360,7 +496,11 @@
           "title": "Beanstalk Farms whitepaper",
           "url": "https://docs.bean.money/almanac/protocol/whitepaper",
           "publishedAt": "2022-03-01T00:00:00.000Z",
-          "supports": ["governance and reserve design"]
+          "supports": ["governance and reserve design"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -370,10 +510,23 @@
         "observedThrough": "2022-05-01T00:00:00.000Z",
         "summary": "A governance exploit drained protocol assets and impaired BEAN."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Tests common control between governance and backing assets."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Tests common control between governance and backing assets."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -401,7 +554,11 @@
           "title": "HUSD attestations",
           "url": "https://www.stcoins.com/attestation/index",
           "publishedAt": "2022-07-31T00:00:00.000Z",
-          "supports": ["issuer reserve and attestation model"]
+          "supports": ["issuer reserve and attestation model"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -411,10 +568,23 @@
         "observedThrough": "2022-10-31T00:00:00.000Z",
         "summary": "HUSD lost liquidity and peg support as redemption operations deteriorated."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Tests fiat backing where operational exit evidence is the critical missing fact."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Tests fiat backing where operational exit evidence is the critical missing fact."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -442,7 +612,11 @@
           "title": "USN launch announcement",
           "url": "https://near.org/blog/near-native-stablecoin-usn-launches",
           "publishedAt": "2022-04-25T00:00:00.000Z",
-          "supports": ["USN mechanism and reserve design"]
+          "supports": ["USN mechanism and reserve design"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -452,10 +626,23 @@
         "observedThrough": "2022-11-30T00:00:00.000Z",
         "summary": "A reserve shortfall led to wind-down and a protection programme."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Tests assets-only reserve visibility without reconciled liabilities."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Tests assets-only reserve visibility without reconciled liabilities."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -489,7 +676,11 @@
           "title": "Tangible USDR documentation",
           "url": "https://docs.tangible.store/usdr",
           "publishedAt": "2023-09-01T00:00:00.000Z",
-          "supports": ["real-estate backing and redemption model"]
+          "supports": ["real-estate backing and redemption model"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -499,13 +690,25 @@
         "observedThrough": "2023-10-31T00:00:00.000Z",
         "summary": "A redemption run exhausted liquid backing while real-estate assets could not settle immediately."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Tests maturity mismatch and absolute exit capacity for RWA credit."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Tests maturity mismatch and absolute exit capacity for RWA credit."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
-
     {
       "schemaVersion": 1,
       "id": "usdt-bank-stress-survivor-2023",
@@ -531,7 +734,11 @@
           "title": "Tether December 2022 assurance opinion",
           "url": "https://assets.ctfassets.net/vyse88cgwfbl/4hiNJsZ98LlZqCJHKzrLpV/2cbb5a2e025096279173c0c36094f8ea/Tether_CRR_December_2022.pdf",
           "publishedAt": "2023-02-09T00:00:00.000Z",
-          "supports": ["reserve composition and liabilities"]
+          "supports": ["reserve composition and liabilities"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -541,10 +748,23 @@
         "observedThrough": "2023-03-20T00:00:00.000Z",
         "summary": "USDT maintained practical exit function through the March banking stress window."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Fiat-anchor survivor paired with contemporaneous reserve assurance."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Fiat-anchor survivor paired with contemporaneous reserve assurance."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -565,7 +785,11 @@
           "title": "Liquity protocol documentation",
           "url": "https://docs.liquity.org/liquity-v1/faq/lusd-redemptions",
           "publishedAt": "2022-01-01T00:00:00.000Z",
-          "supports": ["redemption and collateral mechanism"]
+          "supports": ["redemption and collateral mechanism"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -575,10 +799,23 @@
         "observedThrough": "2023-03-20T00:00:00.000Z",
         "summary": "LUSD remained functional during centralized-bank and USDC stress."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Mature crypto-backed CDP survivor with direct redemption."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Mature crypto-backed CDP survivor with direct redemption."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -606,7 +843,11 @@
           "title": "Frax documentation",
           "url": "https://docs.frax.finance/frax-v1-original/original-design",
           "publishedAt": "2022-06-01T00:00:00.000Z",
-          "supports": ["collateral ratio and AMO mechanism"]
+          "supports": ["collateral ratio and AMO mechanism"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -616,10 +857,23 @@
         "observedThrough": "2023-03-20T00:00:00.000Z",
         "summary": "FRAX absorbed the banking-stress window and returned to peg."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Bounded survivor case with a known upstream common mode."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Bounded survivor case with a known upstream common mode."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -647,7 +901,11 @@
           "title": "Pax Dollar transparency",
           "url": "https://www.paxos.com/usdp-transparency",
           "publishedAt": "2023-02-28T00:00:00.000Z",
-          "supports": ["reserve and redemption structure"]
+          "supports": ["reserve and redemption structure"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -657,10 +915,23 @@
         "observedThrough": "2023-03-20T00:00:00.000Z",
         "summary": "USDP retained redemption function through the U.S. banking stress."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Regulated fiat issuer survivor."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Regulated fiat issuer survivor."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -688,7 +959,11 @@
           "title": "Gemini dollar transparency",
           "url": "https://www.gemini.com/dollar",
           "publishedAt": "2023-02-28T00:00:00.000Z",
-          "supports": ["reserve and issuance model"]
+          "supports": ["reserve and issuance model"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -698,10 +973,23 @@
         "observedThrough": "2023-03-20T00:00:00.000Z",
         "summary": "GUSD remained redeemable through the banking-stress observation window."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Smaller fiat issuer survivor with bounded evidence gaps."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Smaller fiat issuer survivor with bounded evidence gaps."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -722,7 +1010,11 @@
           "title": "Reflexer RAI documentation",
           "url": "https://docs.reflexer.finance/",
           "publishedAt": "2022-01-01T00:00:00.000Z",
-          "supports": ["collateral and redemption-price control"]
+          "supports": ["collateral and redemption-price control"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -732,10 +1024,23 @@
         "observedThrough": "2023-03-20T00:00:00.000Z",
         "summary": "RAI's crypto-native mechanism remained functional through centralized stablecoin stress."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Non-fiat CDP survivor prevents overfitting to one-dollar redemption."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Non-fiat CDP survivor prevents overfitting to one-dollar redemption."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -763,7 +1068,11 @@
           "title": "crvUSD documentation",
           "url": "https://docs.curve.finance/crvUSD/overview/",
           "publishedAt": "2023-05-17T00:00:00.000Z",
-          "supports": ["LLAMMA liquidation and collateral design"]
+          "supports": ["LLAMMA liquidation and collateral design"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -773,10 +1082,23 @@
         "observedThrough": "2023-08-10T00:00:00.000Z",
         "summary": "crvUSD remained operational during the Curve Vyper exploit stress."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Young multi-market CDP survivor with a protocol common mode."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Young multi-market CDP survivor with a protocol common mode."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -804,7 +1126,11 @@
           "title": "Aave GHO documentation",
           "url": "https://aave.com/docs/primitives/gho",
           "publishedAt": "2023-07-15T00:00:00.000Z",
-          "supports": ["facilitator and collateral mechanism"]
+          "supports": ["facilitator and collateral mechanism"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -814,10 +1140,23 @@
         "observedThrough": "2023-08-10T00:00:00.000Z",
         "summary": "GHO remained operational during contemporaneous DeFi market stress."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Young governed CDP survivor; track-record ceiling remains visible."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Young governed CDP survivor; track-record ceiling remains visible."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -845,7 +1184,11 @@
           "title": "PayPal USD launch",
           "url": "https://newsroom.paypal-corp.com/2023-08-07-PayPal-Launches-U-S-Dollar-Stablecoin",
           "publishedAt": "2023-08-07T00:00:00.000Z",
-          "supports": ["issuer, backing, and launch boundary"]
+          "supports": ["issuer, backing, and launch boundary"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -855,10 +1198,23 @@
         "observedThrough": "2024-08-07T00:00:00.000Z",
         "summary": "PYUSD completed its first year without a material backing or redemption failure."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Fiat launch survivor used to calibrate track-record treatment."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Fiat launch survivor used to calibrate track-record treatment."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -886,7 +1242,11 @@
           "title": "Ethena backing and custody overview",
           "url": "https://docs.ethena.fi/backing-custody-and-security/overview",
           "publishedAt": "2024-02-01T00:00:00.000Z",
-          "supports": ["delta-neutral backing and custody paths"]
+          "supports": ["delta-neutral backing and custody paths"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -896,10 +1256,23 @@
         "observedThrough": "2024-04-30T00:00:00.000Z",
         "summary": "USDe's hedging and custody system remained solvent through its initial rapid-growth window."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Synthetic survivor keeps venue and custody common modes explicit."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Synthetic survivor keeps venue and custody common modes explicit."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -927,7 +1300,11 @@
           "title": "Circle Euro Coin reserve reports",
           "url": "https://www.circle.com/transparency",
           "publishedAt": "2023-02-28T00:00:00.000Z",
-          "supports": ["reserve and issuer model"]
+          "supports": ["reserve and issuer model"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -937,10 +1314,23 @@
         "observedThrough": "2023-03-20T00:00:00.000Z",
         "summary": "EURC remained functional through the U.S. banking stress despite shared issuer control."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Cross-currency fiat survivor with shared issuer failure domain."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Cross-currency fiat survivor with shared issuer failure domain."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -968,7 +1358,11 @@
           "title": "Inverse Finance DOLA documentation",
           "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/dola",
           "publishedAt": "2022-03-01T00:00:00.000Z",
-          "supports": ["DOLA issuance and collateral markets"]
+          "supports": ["DOLA issuance and collateral markets"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -978,10 +1372,23 @@
         "observedThrough": "2022-05-01T00:00:00.000Z",
         "summary": "DOLA remained operational through the Beanstalk governance exploit window."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "CDP survivor checks isolation from an unrelated protocol failure."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: CDP survivor checks isolation from an unrelated protocol failure."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -1009,7 +1416,11 @@
           "title": "Synthetix debt pool documentation",
           "url": "https://docs.synthetix.io/synthetix-protocol/the-synthetix-protocol/debt-pool",
           "publishedAt": "2022-06-01T00:00:00.000Z",
-          "supports": ["shared debt and oracle mechanism"]
+          "supports": ["shared debt and oracle mechanism"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -1019,10 +1430,23 @@
         "observedThrough": "2023-03-20T00:00:00.000Z",
         "summary": "sUSD's shared debt mechanism remained operational during centralized stablecoin stress."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Synthetic survivor with explicit oracle and debt-pool common modes."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Synthetic survivor with explicit oracle and debt-pool common modes."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     },
     {
@@ -1050,7 +1474,11 @@
           "title": "Liquity v2 documentation",
           "url": "https://docs.liquity.org/v2-documentation",
           "publishedAt": "2024-12-20T00:00:00.000Z",
-          "supports": ["branch, redemption, liquidation, and backstop design"]
+          "supports": ["branch, redemption, liquidation, and backstop design"],
+          "capture": {
+            "status": "unarchived",
+            "note": "No immutable capture, digest, or archival URL was recorded for this historical source."
+          }
         }
       ],
       "outcome": {
@@ -1060,10 +1488,23 @@
         "observedThrough": "2025-06-30T00:00:00.000Z",
         "summary": "BOLD remained operational during its first six-month calibration window."
       },
-      "provenance": {
+      "factFreeze": {
+        "role": "facts-curator",
         "reviewer": "Pharos research",
-        "reviewedAt": "2026-07-01T00:00:00.000Z",
-        "rationale": "Young multi-branch CDP survivor requires branch-aware evidence rather than a hand-set pillar."
+        "frozenAt": "2026-07-01T00:00:00.000Z",
+        "outcomeAccess": "not-attested",
+        "attestation": "Retrospective fact-freeze provenance was recorded with the fixture; outcome access during fact curation was not independently attested."
+      },
+      "outcomeAnnotation": {
+        "role": "outcome-annotator",
+        "reviewer": "Pharos research",
+        "annotatedAt": "2026-07-01T00:00:00.000Z",
+        "factSetVersion": 1,
+        "attestation": "Outcome annotation provenance was recorded retrospectively. Original review rationale: Young multi-branch CDP survivor requires branch-aware evidence rather than a hand-set pillar."
+      },
+      "blinding": {
+        "mode": "retrospective-unverified",
+        "rationale": "The initial corpus did not preserve independently verifiable author separation or source captures. The facts-only compiler boundary prevents outcome fields from entering scoring, but does not retroactively prove blind authoring."
       }
     }
   ]

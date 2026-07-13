@@ -157,8 +157,16 @@ describe("v9 research handoff contracts", () => {
           url: "https://example.com/postmortem",
           publishedAt: "2022-05-15T00:00:00.000Z",
           supports: ["failure cause"],
+          capture: { status: "unarchived", note: "Negative-control source." },
         },
       ],
+      factFreeze: {
+        role: "facts-curator",
+        reviewer: "facts reviewer",
+        frozenAt: "2026-07-01T00:00:00.000Z",
+        outcomeAccess: "withheld",
+        attestation: "Facts were frozen without outcome access.",
+      },
       outcome: {
         classification: "adverse",
         categories: ["backing"],
@@ -166,11 +174,14 @@ describe("v9 research handoff contracts", () => {
         observedThrough: "2022-05-15T00:00:00.000Z",
         summary: "Failed after the fixed observation date.",
       },
-      provenance: {
-        reviewer: "Pharos research",
-        reviewedAt: "2026-07-01T00:00:00.000Z",
-        rationale: "Negative control for look-ahead validation.",
+      outcomeAnnotation: {
+        role: "outcome-annotator",
+        reviewer: "outcome reviewer",
+        annotatedAt: "2026-07-01T00:00:00.000Z",
+        factSetVersion: 1,
+        attestation: "Negative-control outcome annotation.",
       },
+      blinding: { mode: "independent-reviewers", rationale: "Separate reviewers for negative control." },
     });
     expect(parsed.success).toBe(false);
     expect(parsed.error?.issues[0]?.message).toContain("Look-ahead evidence");

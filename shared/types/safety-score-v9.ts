@@ -185,7 +185,7 @@ export const V9ScoringInputSchema = z
   .strict();
 export type V9ScoringInput = z.infer<typeof V9ScoringInputSchema>;
 
-export const HistoricalV9FixtureSchema = z
+const HistoricalV9FixtureBaseSchema = z
   .object({
     schemaVersion: z.literal(1),
     id: z.string().min(1),
@@ -218,10 +218,47 @@ export const HistoricalV9FixtureSchema = z
             url: z.string().url(),
             publishedAt: IsoTimestampSchema,
             supports: z.array(z.string().min(1)).min(1),
+            capture: z
+              .object({
+                status: z.enum(["content-addressed", "archived", "immutable-url", "unarchived"]),
+                capturedAt: IsoTimestampSchema.optional(),
+                archivedUrl: z.string().url().optional(),
+                contentSha256: z
+                  .string()
+                  .regex(/^[a-f0-9]{64}$/)
+                  .optional(),
+                note: z.string().min(1).optional(),
+              })
+              .strict()
+              .superRefine((capture, ctx) => {
+                if (capture.status === "content-addressed" && !capture.contentSha256) {
+                  ctx.addIssue({
+                    code: "custom",
+                    path: ["contentSha256"],
+                    message: "Content-addressed historical sources require a SHA-256 digest",
+                  });
+                }
+                if (capture.status === "archived" && !capture.archivedUrl) {
+                  ctx.addIssue({
+                    code: "custom",
+                    path: ["archivedUrl"],
+                    message: "Archived historical sources require their archive URL",
+                  });
+                }
+              }),
           })
           .strict(),
       )
       .min(1),
+    factFreeze: z
+      .object({
+        role: z.literal("facts-curator"),
+        reviewer: z.string().min(1),
+        frozenAt: IsoTimestampSchema,
+        outcomeAccess: z.enum(["withheld", "not-attested"]),
+        attestation: z.string().min(1),
+      })
+      .strict(),
     outcome: z
       .object({
         classification: z.enum(["adverse", "resilient"]),
@@ -231,42 +268,105 @@ export const HistoricalV9FixtureSchema = z
         summary: z.string().min(1),
       })
       .strict(),
-    provenance: z
+    outcomeAnnotation: z
       .object({
+        role: z.literal("outcome-annotator"),
         reviewer: z.string().min(1),
-        reviewedAt: IsoTimestampSchema,
+        annotatedAt: IsoTimestampSchema,
+        factSetVersion: z.literal(1),
+        attestation: z.string().min(1),
+      })
+      .strict(),
+    blinding: z
+      .object({
+        mode: z.enum(["independent-reviewers", "role-separated-fact-freeze", "retrospective-unverified"]),
         rationale: z.string().min(1),
       })
       .strict(),
   })
-  .strict()
-  .superRefine((fixture, ctx) => {
-    const asOfMs = Date.parse(fixture.asOf);
-    fixture.sources.forEach((source, index) => {
-      if (Date.parse(source.publishedAt) > asOfMs) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["sources", index, "publishedAt"],
-          message: `Look-ahead evidence: source was published after fixture asOf ${fixture.asOf}`,
-        });
-      }
-    });
-    if (Date.parse(fixture.outcome.observedThrough) < Date.parse(fixture.outcome.observedFrom)) {
+  .strict();
+
+export const HistoricalV9FixtureSchema = HistoricalV9FixtureBaseSchema.superRefine((fixture, ctx) => {
+  const asOfMs = Date.parse(fixture.asOf);
+  fixture.sources.forEach((source, index) => {
+    if (Date.parse(source.publishedAt) > asOfMs) {
       ctx.addIssue({
         code: "custom",
-        path: ["outcome", "observedThrough"],
-        message: "Outcome observation window is reversed",
-      });
-    }
-    if (fixture.outcome.classification === "adverse" && Date.parse(fixture.outcome.observedFrom) < asOfMs) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["outcome", "observedFrom"],
-        message: "Adverse fixture asOf must not follow the adverse outcome",
+        path: ["sources", index, "publishedAt"],
+        message: `Look-ahead evidence: source was published after fixture asOf ${fixture.asOf}`,
       });
     }
   });
+  if (Date.parse(fixture.outcome.observedThrough) < Date.parse(fixture.outcome.observedFrom)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["outcome", "observedThrough"],
+      message: "Outcome observation window is reversed",
+    });
+  }
+  if (fixture.outcome.classification === "adverse" && Date.parse(fixture.outcome.observedFrom) < asOfMs) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["outcome", "observedFrom"],
+      message: "Adverse fixture asOf must not follow the adverse outcome",
+    });
+  }
+  if (Date.parse(fixture.factFreeze.frozenAt) < asOfMs) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["factFreeze", "frozenAt"],
+      message: "Fact freeze cannot predate the point-in-time observation date",
+    });
+  }
+  if (Date.parse(fixture.outcomeAnnotation.annotatedAt) < Date.parse(fixture.factFreeze.frozenAt)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["outcomeAnnotation", "annotatedAt"],
+      message: "Outcome annotation cannot predate the frozen fact set",
+    });
+  }
+  if (
+    fixture.blinding.mode === "independent-reviewers" &&
+    fixture.factFreeze.reviewer === fixture.outcomeAnnotation.reviewer
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["blinding", "mode"],
+      message: "Independent-reviewers mode requires distinct facts and outcome reviewers",
+    });
+  }
+});
 export type HistoricalV9Fixture = z.infer<typeof HistoricalV9FixtureSchema>;
+
+/**
+ * The only historical input accepted by the scorer. Outcome labels and their
+ * annotation provenance are intentionally absent so no caller can pass them
+ * through the compiler boundary.
+ */
+export const HistoricalV9FactsInputSchema = HistoricalV9FixtureBaseSchema.pick({
+  schemaVersion: true,
+  id: true,
+  assetId: true,
+  asOf: true,
+  factsVersion: true,
+  facts: true,
+  sources: true,
+  factFreeze: true,
+}).strict();
+export type HistoricalV9FactsInput = z.infer<typeof HistoricalV9FactsInputSchema>;
+
+export function historicalFactsInput(fixture: HistoricalV9Fixture): HistoricalV9FactsInput {
+  return HistoricalV9FactsInputSchema.parse({
+    schemaVersion: fixture.schemaVersion,
+    id: fixture.id,
+    assetId: fixture.assetId,
+    asOf: fixture.asOf,
+    factsVersion: fixture.factsVersion,
+    facts: fixture.facts,
+    sources: fixture.sources,
+    factFreeze: fixture.factFreeze,
+  });
+}
 
 export const HistoricalV9FixtureCorpusSchema = z
   .object({ schemaVersion: z.literal(1), fixtures: z.array(HistoricalV9FixtureSchema).min(24) })

@@ -241,6 +241,12 @@
             "reason": "Runtime bridge materiality is partial."
           },
           {
+            "pillar": "control",
+            "code": "unresolved-oracle-branch-applicability",
+            "path": "oracleRisk.branchApplicability",
+            "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+          },
+          {
             "pillar": "exit",
             "code": "unsupported-same-notional-route",
             "path": "exitRouteObservations",
@@ -304,6 +310,12 @@
             "code": "runtime-bridge-materiality-unavailable",
             "path": "rawInputs.bridgeRouteMaterialityStatus",
             "reason": "Runtime bridge materiality is partial."
+          },
+          {
+            "pillar": "control",
+            "code": "unresolved-oracle-branch-applicability",
+            "path": "oracleRisk.branchApplicability",
+            "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
           },
           {
             "pillar": "exit",
@@ -460,6 +472,12 @@
             "reason": "A privileged mint path has no structured upgradeability record."
           },
           {
+            "pillar": "control",
+            "code": "unresolved-oracle-branch-applicability",
+            "path": "oracleRisk.branchApplicability",
+            "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+          },
+          {
             "pillar": "exit",
             "code": "unsupported-same-notional-route",
             "path": "exitRouteObservations",
@@ -558,6 +576,12 @@
             "code": "runtime-bridge-materiality-unavailable",
             "path": "rawInputs.bridgeRouteMaterialityStatus",
             "reason": "Runtime bridge materiality is partial."
+          },
+          {
+            "pillar": "control",
+            "code": "unresolved-oracle-branch-applicability",
+            "path": "oracleRisk.branchApplicability",
+            "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
           },
           {
             "pillar": "exit",
@@ -669,6 +693,12 @@
             "code": "runtime-bridge-materiality-unavailable",
             "path": "rawInputs.bridgeRouteMaterialityStatus",
             "reason": "Runtime bridge materiality is unavailable."
+          },
+          {
+            "pillar": "control",
+            "code": "unresolved-oracle-branch-applicability",
+            "path": "oracleRisk.branchApplicability",
+            "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
           },
           {
             "pillar": "exit",
@@ -925,6 +955,12 @@
             "reason": "USDD Tron Join (active ward / direct minter) has unresolved authority to raise its mint cap."
           },
           {
+            "pillar": "control",
+            "code": "unresolved-oracle-branch-applicability",
+            "path": "oracleRisk.branchApplicability",
+            "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+          },
+          {
             "pillar": "exit",
             "code": "missing-same-notional-route",
             "path": "exitRouteObservations",
@@ -1149,6 +1185,12 @@
             "reason": "Runtime bridge materiality is partial."
           },
           {
+            "pillar": "control",
+            "code": "unresolved-oracle-branch-applicability",
+            "path": "oracleRisk.branchApplicability",
+            "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+          },
+          {
             "pillar": "exit",
             "code": "unsupported-same-notional-route",
             "path": "exitRouteObservations",
@@ -1260,7 +1302,27 @@
       "survivor": 14
     },
     "lookAheadValidation": "passed",
-    "evaluationMode": "outcome-blind typed fact compiler",
+    "evidenceIntegrity": {
+      "sourceCount": 26,
+      "sourceCaptureStatuses": {
+        "unarchived": 26
+      },
+      "blindingModes": {
+        "retrospective-unverified": 26
+      },
+      "outcomeAccess": {
+        "not-attested": 26
+      },
+      "chronologyValidation": "passed",
+      "immutabilityValidation": "blocked",
+      "blindingValidation": "blocked",
+      "blockers": [
+        "26 historical sources are mutable and unarchived",
+        "26 historical fixtures lack independently verified outcome blinding",
+        "26 fact-freeze records lack an outcome-access attestation"
+      ]
+    },
+    "evaluationMode": "facts-only typed compiler; outcomes excluded from scorer input",
     "candidateGradeDistribution": {
       "NR": 18,
       "C+": 1,
@@ -1759,9 +1821,8 @@
         "insufficient": 360
       },
       "control": {
-        "insufficient": 349,
-        "strong": 9,
-        "adequate": 2
+        "insufficient": 356,
+        "strong": 4
       }
     },
     "unresolvedByCode": {
@@ -1778,6 +1839,7 @@
       "mint-control-question": 76,
       "partial-reserve-review": 12,
       "material-unknown-reserve-exposure": 16,
+      "unresolved-oracle-branch-applicability": 81,
       "selected-bridge-route-unresolved": 95,
       "missing-peg-input": 55,
       "material-bridge-supply-unmatched": 3,
@@ -1806,6 +1868,7 @@
       "mint-control-question": 76,
       "partial-reserve-review": 12,
       "material-unknown-reserve-exposure": 16,
+      "unresolved-oracle-branch-applicability": 81,
       "selected-bridge-route-unresolved": 95,
       "missing-peg-input": 55,
       "material-bridge-supply-unmatched": 3,
@@ -1858,14 +1921,14 @@
     "largestMovements": []
   },
   "remainingManualInputs": {
-    "total": 2866,
+    "total": 2947,
     "byClass": {
-      "missing-data": 2692,
+      "missing-data": 2773,
       "unresolved-methodology": 1,
       "unsupported-design": 173
     },
     "byCriticality": {
-      "critical": 2736,
+      "critical": 2817,
       "noncritical": 130
     },
     "items": [
@@ -2336,6 +2399,15 @@
         "critical": true,
         "path": "mintAuthority.controls.1",
         "reason": "Alchemix MultiSigWalletWithTimeLock (ADMIN_ROLE) is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "alusd-alchemix",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "alusd-alchemix",
@@ -2858,6 +2930,15 @@
         "critical": true,
         "path": "mintAuthority.controls.1.canRaiseCap",
         "reason": "Mento Timelock — AUDm token owner and proxy admin has unresolved authority to raise its mint cap."
+      },
+      {
+        "assetId": "audm-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "audm-mento",
@@ -3788,6 +3869,15 @@
       },
       {
         "assetId": "bnusd-balanced",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "bnusd-balanced",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -4067,6 +4157,15 @@
       },
       {
         "assetId": "brlm-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "brlm-mento",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -4337,6 +4436,15 @@
       },
       {
         "assetId": "btcusd-btcfi",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "btcusd-btcfi",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -4406,6 +4514,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0.canRaiseCap",
         "reason": "BucketProtocol shared object holding BUCK TreasuryCap has unresolved authority to raise its mint cap."
+      },
+      {
+        "assetId": "buck-bucket-protocol",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "buck-bucket-protocol",
@@ -4733,6 +4850,15 @@
       },
       {
         "assetId": "cadm-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "cadm-mento",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -4886,6 +5012,15 @@
       },
       {
         "assetId": "cdp-enosys",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "cdp-enosys",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -4919,6 +5054,15 @@
         "critical": true,
         "path": "mintAuthority.upgradeability",
         "reason": "A privileged mint path has no structured upgradeability record."
+      },
+      {
+        "assetId": "cdxusd-cod3x",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "cdxusd-cod3x",
@@ -5327,6 +5471,15 @@
       },
       {
         "assetId": "chfm-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "chfm-mento",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -5387,6 +5540,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0.canRaiseCap",
         "reason": "Yamato pledge contract (ETH CDP mint) has unresolved authority to raise its mint cap."
+      },
+      {
+        "assetId": "cjpy-yamato",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "cjpy-yamato",
@@ -5534,6 +5696,15 @@
       },
       {
         "assetId": "copm-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "copm-mento",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -5603,6 +5774,15 @@
         "critical": true,
         "path": "rawInputs.bridgeRouteMaterialityStatus",
         "reason": "Runtime bridge materiality is partial."
+      },
+      {
+        "assetId": "crvusd-curve",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "crvusd-curve",
@@ -6038,6 +6218,15 @@
       },
       {
         "assetId": "dai-makerdao",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "dai-makerdao",
         "pillar": "exit",
         "code": "incomplete-dex-route-coverage",
         "classification": "missing-data",
@@ -6125,6 +6314,15 @@
         "critical": true,
         "path": "mintAuthority.controls.1",
         "reason": "nDEPS veto governance (Equity contract) is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "deuro-deuro",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "deuro-deuro",
@@ -6281,6 +6479,15 @@
       },
       {
         "assetId": "djed-coti",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "djed-coti",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -6314,6 +6521,15 @@
         "critical": true,
         "path": "mintAuthority.upgradeability",
         "reason": "A privileged mint path has no structured upgradeability record."
+      },
+      {
+        "assetId": "dllr-sovryn",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "dllr-sovryn",
@@ -6416,6 +6632,15 @@
       },
       {
         "assetId": "doc-money-on-chain",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "doc-money-on-chain",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -6467,6 +6692,15 @@
         "critical": true,
         "path": "bridgeRouteRisk.routes",
         "reason": "Profile-level evidence does not identify this deployment's route semantics or scope."
+      },
+      {
+        "assetId": "dola-inverse-finance",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "dola-inverse-finance",
@@ -6575,6 +6809,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0",
         "reason": "Alto isolated mint markets (collateral mint) is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "dusd-alto",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "dusd-alto",
@@ -6944,6 +7187,15 @@
         "critical": true,
         "path": "mintAuthority.controls.1",
         "reason": "Ebisu Gnosis Safe (EbisuUpgradeable admin, 7-day timelock) is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "ebusd-ebisu",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "ebusd-ebisu",
@@ -7529,6 +7781,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0",
         "reason": "3A VaultFactory and VaultCore contracts (authorized minters) is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "euro3-3a-dao",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "euro3-3a-dao",
@@ -8504,6 +8765,15 @@
       },
       {
         "assetId": "feusd-felix",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "feusd-felix",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -9089,6 +9359,15 @@
       },
       {
         "assetId": "fxd-fathom",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "fxd-fathom",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -9152,6 +9431,15 @@
       },
       {
         "assetId": "fxsave-f-x-protocol",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "fxsave-f-x-protocol",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -9203,6 +9491,15 @@
         "critical": true,
         "path": "bridgeRouteRisk.routes",
         "reason": "Profile-level evidence does not identify this deployment's route semantics or scope."
+      },
+      {
+        "assetId": "fxusd-f-x-protocol",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "fxusd-f-x-protocol",
@@ -9347,6 +9644,15 @@
         "critical": true,
         "path": "mintAuthority.controls.1.canRaiseCap",
         "reason": "Mento Safe — GBPm token owner and proxy admin has unresolved authority to raise its mint cap."
+      },
+      {
+        "assetId": "gbpm-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "gbpm-mento",
@@ -9593,6 +9899,15 @@
       },
       {
         "assetId": "gho-aave",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "gho-aave",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -9626,6 +9941,15 @@
         "critical": true,
         "path": "mintAuthority.upgradeability",
         "reason": "A privileged mint path has no structured upgradeability record."
+      },
+      {
+        "assetId": "ghsm-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "ghsm-mento",
@@ -10439,6 +10763,15 @@
       },
       {
         "assetId": "hchf-hedera-swiss-franc",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "hchf-hedera-swiss-franc",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -10754,6 +11087,15 @@
       },
       {
         "assetId": "hollar-hydrated",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "hollar-hydrated",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -10994,6 +11336,15 @@
         "critical": true,
         "path": "mintAuthority.controls.1",
         "reason": "Hylo program upgrade authority (single EOA) is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "hyusd-hylo",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "hyusd-hylo",
@@ -11501,6 +11852,15 @@
       },
       {
         "assetId": "iusd-indigo-protocol",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "iusd-indigo-protocol",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -11879,6 +12239,15 @@
       },
       {
         "assetId": "jpym-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "jpym-mento",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -11966,6 +12335,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0",
         "reason": "JPYT MINTER_ROLE holder — Optimism is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "jpyt-dephaser",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "jpyt-dephaser",
@@ -12221,6 +12599,15 @@
       },
       {
         "assetId": "jusd-juicedollar",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "jusd-juicedollar",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -12461,6 +12848,15 @@
         "critical": true,
         "path": "mintAuthority.upgradeability",
         "reason": "A privileged mint path has no structured upgradeability record."
+      },
+      {
+        "assetId": "kesm-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "kesm-mento",
@@ -12752,6 +13148,15 @@
       },
       {
         "assetId": "lisusd-lista",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "lisusd-lista",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -12830,6 +13235,15 @@
         "critical": true,
         "path": "rawInputs.bridgeRouteMaterialityStatus",
         "reason": "Runtime bridge materiality is partial."
+      },
+      {
+        "assetId": "lusd-liquity",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "lusd-liquity",
@@ -13040,6 +13454,15 @@
       },
       {
         "assetId": "mai-qidao",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "mai-qidao",
         "pillar": "exit",
         "code": "correlated-exit-routes",
         "classification": "unresolved-methodology",
@@ -13145,6 +13568,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0.canRaiseCap",
         "reason": "Mezo MUSD borrower/CDP mint path (BorrowerOperations; mintList also includes InterestRateManager 0x4a4537… and EnclaveDebtManager 0x2c5e9a…) has unresolved authority to raise its mint cap."
+      },
+      {
+        "assetId": "meusd-mezo",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "meusd-mezo",
@@ -13391,6 +13823,15 @@
       },
       {
         "assetId": "mim-abracadabra",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "mim-abracadabra",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -13562,6 +14003,15 @@
       },
       {
         "assetId": "money-defi-money",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "money-defi-money",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -13721,6 +14171,15 @@
         "critical": true,
         "path": "bridgeRouteRisk.routes",
         "reason": "Profile-level evidence does not identify this deployment's route semantics or scope."
+      },
+      {
+        "assetId": "msusd-metronome",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "msusd-metronome",
@@ -14246,6 +14705,15 @@
       },
       {
         "assetId": "nect-beraborrow",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "nect-beraborrow",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -14666,6 +15134,15 @@
         "critical": true,
         "path": "mintAuthority.upgradeability",
         "reason": "A privileged mint path has no structured upgradeability record."
+      },
+      {
+        "assetId": "nxusd-nereus",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "nxusd-nereus",
@@ -15434,6 +15911,15 @@
       },
       {
         "assetId": "phpm-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "phpm-mento",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -15530,6 +16016,15 @@
         "critical": true,
         "path": "mintAuthority.controls.2",
         "reason": "Vat CDP engine admin (debt ceiling / risk param control) is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "pht-pht",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "pht-pht",
@@ -16025,6 +16520,15 @@
         "critical": true,
         "path": "mintAuthority.upgradeability",
         "reason": "A privileged mint path has no structured upgradeability record."
+      },
+      {
+        "assetId": "reusd-resupply",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "reusd-resupply",
@@ -16622,6 +17126,15 @@
       },
       {
         "assetId": "satusd-river",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "satusd-river",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -16793,6 +17306,15 @@
       },
       {
         "assetId": "sbold-k3-capital",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "sbold-k3-capital",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -16826,6 +17348,15 @@
         "critical": true,
         "path": "mintAuthority.upgradeability",
         "reason": "A privileged mint path has no structured upgradeability record."
+      },
+      {
+        "assetId": "scrvusd-curve",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "scrvusd-curve",
@@ -16937,6 +17468,15 @@
       },
       {
         "assetId": "sdai-sky",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "sdai-sky",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -16979,6 +17519,15 @@
         "critical": true,
         "path": "rawInputs.bridgeRouteMaterialityStatus",
         "reason": "Runtime bridge materiality is unavailable."
+      },
+      {
+        "assetId": "sdola-inverse-finance",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "sdola-inverse-finance",
@@ -17117,6 +17666,15 @@
       },
       {
         "assetId": "sgho-aave",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "sgho-aave",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -17213,6 +17771,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0",
         "reason": "ShadeLend CDP / SILK minter contract is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "silk-shade-protocol",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "silk-shade-protocol",
@@ -18503,6 +19070,15 @@
       },
       {
         "assetId": "susds-sky",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "susds-sky",
         "pillar": "exit",
         "code": "incomplete-dex-route-coverage",
         "classification": "missing-data",
@@ -19511,6 +20087,15 @@
       },
       {
         "assetId": "usbd-bima",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "usbd-bima",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -19997,6 +20582,15 @@
       },
       {
         "assetId": "usda-avalon",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "usda-avalon",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -20030,6 +20624,15 @@
         "critical": true,
         "path": "reserveReview",
         "reason": "Reserve composition lacks a dated review envelope and known-unknown exposure."
+      },
+      {
+        "assetId": "usdaf-asymmetry",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "usdaf-asymmetry",
@@ -20444,6 +21047,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0.canRaiseCap",
         "reason": "USDD Tron Join (active ward / direct minter) has unresolved authority to raise its mint cap."
+      },
+      {
+        "assetId": "usdd-tron-dao-reserve",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "usdd-tron-dao-reserve",
@@ -20984,6 +21596,15 @@
         "critical": true,
         "path": "mintAuthority.upgradeability",
         "reason": "A privileged mint path has no structured upgradeability record."
+      },
+      {
+        "assetId": "usdh-hubble",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "usdh-hubble",
@@ -21869,6 +22490,15 @@
       },
       {
         "assetId": "usdp-parallel",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "usdp-parallel",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -22112,6 +22742,15 @@
       },
       {
         "assetId": "usdq-quill",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "usdq-quill",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -22247,6 +22886,15 @@
       },
       {
         "assetId": "usdrif-rif",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "usdrif-rif",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -22334,6 +22982,15 @@
         "critical": true,
         "path": "rawInputs.bridgeRouteMaterialityStatus",
         "reason": "Runtime bridge materiality is partial."
+      },
+      {
+        "assetId": "usds-sky",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "usds-sky",
@@ -22985,6 +23642,15 @@
       },
       {
         "assetId": "usdx-kava",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "usdx-kava",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -23072,6 +23738,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0",
         "reason": "HypurrFi USDXL facilitator / borrow contracts (Aave-v3 fork, GHO model; role set frozen) is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "usdxl-last",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "usdxl-last",
@@ -23297,6 +23972,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0.canRaiseCap",
         "reason": "USG token role-gated mint functions has unresolved authority to raise its mint cap."
+      },
+      {
+        "assetId": "usg-tangent",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "usg-tangent",
@@ -23831,6 +24515,15 @@
       },
       {
         "assetId": "usx-dforce",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "usx-dforce",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -24179,6 +24872,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0",
         "reason": "Youves minting engine / vault contracts is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "uusd-youves",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "uusd-youves",
@@ -24656,6 +25358,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0",
         "reason": "Virtue Money borrower-operations / branch contracts (Liquity V2 fork) is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "vusd-virtue",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "vusd-virtue",
@@ -25847,6 +26558,15 @@
       },
       {
         "assetId": "xai-silo-finance",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "xai-silo-finance",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -26369,6 +27089,15 @@
       },
       {
         "assetId": "xofm-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "xofm-mento",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -26528,6 +27257,15 @@
         "critical": true,
         "path": "mintAuthority.controls.0",
         "reason": "XTDao vault/protocol mint route is mint-capable but has neither an address nor a reviewed failure-domain identity."
+      },
+      {
+        "assetId": "xtusd-xt",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "xtusd-xt",
@@ -26726,6 +27464,15 @@
         "critical": true,
         "path": "reserveReview",
         "reason": "Reserve composition lacks a dated review envelope and known-unknown exposure."
+      },
+      {
+        "assetId": "ybold-yearn",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "ybold-yearn",
@@ -27170,6 +27917,15 @@
       },
       {
         "assetId": "yzusd-yuzu",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "yzusd-yuzu",
         "pillar": "exit",
         "code": "unsupported-same-notional-route",
         "classification": "unsupported-design",
@@ -27212,6 +27968,15 @@
         "critical": true,
         "path": "mintAuthority.upgradeability",
         "reason": "A privileged mint path has no structured upgradeability record."
+      },
+      {
+        "assetId": "zarm-mento",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "zarm-mento",
@@ -27392,6 +28157,15 @@
         "critical": true,
         "path": "bridgeRouteRisk.routes",
         "reason": "Profile-level evidence does not identify this deployment's route semantics or scope."
+      },
+      {
+        "assetId": "zchf-frankencoin",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
         "assetId": "zchf-frankencoin",
@@ -27593,6 +28367,15 @@
       },
       {
         "assetId": "zsd-zephyr-protocol",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "zsd-zephyr-protocol",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -27647,6 +28430,15 @@
       },
       {
         "assetId": "zys-zephyr-protocol",
+        "pillar": "control",
+        "code": "unresolved-oracle-branch-applicability",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "oracleRisk.branchApplicability",
+        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
+      },
+      {
+        "assetId": "zys-zephyr-protocol",
         "pillar": "exit",
         "code": "missing-same-notional-route",
         "classification": "missing-data",
@@ -27669,8 +28461,11 @@
     "decision": "no-go",
     "blockers": [
       "360 active assets compile to reason-coded NR",
-      "2736 critical facts remain unresolved",
-      "DEX same-notional coverage is 0 eligible assets; calibrated floor is 45"
+      "2817 critical facts remain unresolved",
+      "DEX same-notional coverage is 0 eligible assets; calibrated floor is 45",
+      "26 historical sources are mutable and unarchived",
+      "26 historical fixtures lack independently verified outcome blinding",
+      "26 fact-freeze records lack an outcome-access attestation"
     ],
     "dataReadiness": "not-ready",
     "methodologyCalibration": "provisional",

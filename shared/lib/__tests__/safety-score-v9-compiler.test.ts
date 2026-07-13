@@ -9,7 +9,7 @@ import {
   computeConservativeTrackRecordMonths,
   resolveConservativeImplementationDate,
 } from "../safety-score-v9-compiler";
-import type { HistoricalV9Fixture } from "@shared/types/safety-score-v9";
+import { historicalFactsInput, type HistoricalV9Fixture } from "@shared/types/safety-score-v9";
 
 const meta: StablecoinMeta = {
   id: "test-usd",
@@ -52,6 +52,13 @@ const meta: StablecoinMeta = {
     tier: "redundant-with-failover",
     summary: "Two independent oracle providers with failover.",
     branchModel: "single-path",
+    branchApplicability: {
+      disposition: "not-applicable",
+      reviewedAt: "2026-06-01",
+      reviewer: "research",
+      rationale: "This fixture has one collateral and liquidation path.",
+      sources: [{ label: "Oracle docs", url: "https://example.com/oracle" }],
+    },
     reviewedAt: "2026-06-01",
     reviewer: "research",
     confidence: "verified",
@@ -238,6 +245,29 @@ describe("production-to-v9 research compiler", () => {
     expect(compiled.pillars.backing.unresolved.map((fact) => fact.code)).toContain("missing-reserve-composition");
     expect(compiled.pillars.exit.unresolved.map((fact) => fact.code)).toContain("missing-runtime-route-evidence");
     expect(compiled.pillars.control.unresolved.map((fact) => fact.code)).toContain("missing-mint-authority");
+  });
+
+  it("fails closed when a CDP has unresolved oracle branch applicability", () => {
+    const unresolvedApplicability = {
+      ...meta,
+      oracleRisk: {
+        ...meta.oracleRisk!,
+        branchApplicability: {
+          ...meta.oracleRisk!.branchApplicability!,
+          disposition: "unresolved" as const,
+          rationale: "Market-specific oracle and liquidation branches remain unreviewed.",
+        },
+      },
+    };
+    const compiled = compileReportCardToV9Input(unresolvedApplicability, card, {
+      ...options,
+      metaById: new Map([[unresolvedApplicability.id, unresolvedApplicability]]),
+      dexLiquidityById: new Map([[unresolvedApplicability.id, dexRow]]),
+    });
+
+    expect(compiled.pillars.control.unresolved).toContainEqual(
+      expect.objectContaining({ code: "unresolved-oracle-branch-applicability", critical: true }),
+    );
   });
 
   it("does not infer an active incident from unbounded authority", () => {
@@ -486,8 +516,16 @@ describe("production-to-v9 research compiler", () => {
           url: "https://example.com/2021-docs",
           publishedAt: "2021-12-01T00:00:00.000Z",
           supports: ["collateral"],
+          capture: { status: "unarchived", note: "Regression fixture deliberately has no archival capture." },
         },
       ],
+      factFreeze: {
+        role: "facts-curator",
+        reviewer: "facts reviewer",
+        frozenAt: "2026-07-01T00:00:00.000Z",
+        outcomeAccess: "withheld",
+        attestation: "Facts were frozen before labels were supplied to the scorer.",
+      },
       outcome: {
         classification: "adverse",
         categories: ["backing"],
@@ -495,11 +533,14 @@ describe("production-to-v9 research compiler", () => {
         observedThrough: "2022-03-01T00:00:00.000Z",
         summary: "Adverse label unavailable to the compiler.",
       },
-      provenance: {
-        reviewer: "research",
-        reviewedAt: "2026-07-01T00:00:00.000Z",
-        rationale: "Outcome-blind regression fixture.",
+      outcomeAnnotation: {
+        role: "outcome-annotator",
+        reviewer: "outcome reviewer",
+        annotatedAt: "2026-07-01T00:00:00.000Z",
+        factSetVersion: 1,
+        attestation: "Outcome was annotated after the frozen facts input.",
       },
+      blinding: { mode: "independent-reviewers", rationale: "Separate fixture reviewers." },
     };
     const resilient = {
       ...fixture,
@@ -511,6 +552,11 @@ describe("production-to-v9 research compiler", () => {
       },
     };
 
-    expect(compileHistoricalFixtureToV9Input(resilient)).toEqual(compileHistoricalFixtureToV9Input(fixture));
+    expect(compileHistoricalFixtureToV9Input(historicalFactsInput(resilient))).toEqual(
+      compileHistoricalFixtureToV9Input(historicalFactsInput(fixture)),
+    );
+    expect(() =>
+      compileHistoricalFixtureToV9Input({ ...historicalFactsInput(fixture), outcome: fixture.outcome } as never),
+    ).toThrow();
   });
 });

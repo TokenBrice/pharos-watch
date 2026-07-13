@@ -4,7 +4,7 @@ This document describes the pre-v9 compiler, calibration corpus, and current act
 
 ## Durable Artifacts
 
-- `shared/data/safety-score-v9/historical-fixtures-v1.json`: 26 point-in-time fixtures (12 adverse, 14 resilient). Every source publication is at or before the fixture `asOf`; adverse outcome windows start at or after `asOf`.
+- `shared/data/safety-score-v9/historical-fixtures-v1.json`: 26 point-in-time fixtures (12 adverse, 14 resilient). Every source publication is at or before the fixture `asOf`; adverse outcome windows start at or after `asOf`. Each source now declares its capture state, and each fixture separates fact-freeze from outcome-annotation provenance. The legacy corpus honestly records all 26 sources as unarchived and all authoring controls as retrospective/unverified, so it cannot clear activation evidence integrity.
 - `shared/data/safety-score-v9/calibration-cohort-v1.json`: 24 active assets spanning fiat anchors, CDPs, wrappers, private credit, synthetic designs, RWA funds, bridge scope, dependencies, and missing-evidence cases.
 - `shared/data/safety-score-v9/matched-invariants-v1.ts`: expectation-free transformations for redemption, optional routes, reserve and bridge materiality, dependency availability, oracle common mode, evidence criticality, and parent propagation.
 - `shared/data/safety-score-v9/exit-route-calibration-v1.json`: all-active P4 producer coverage, calibrated coverage floors, legacy-versus-active score movements, and the activation disposition.
@@ -14,7 +14,7 @@ This document describes the pre-v9 compiler, calibration corpus, and current act
 
 `shared/lib/safety-score-v9-compiler.ts` converts the exact active `StablecoinMeta` and fixed report-card sets into `CompiledV9AssetInput` records. Compilation fails on duplicate, missing, or unexpected report-card IDs. The readiness generator keeps the report-card observation time separate and sets `compilerEvidenceAsOf` to the latest accepted report-card, DEX-row, or exact-route observation time; `generatedAt` may not precede that evidence clock.
 
-The compiler may carry structured pillar, peg, parent, evidence, implementation-age, failure-domain, and unresolved facts. It must not accept or store:
+The compiler may carry structured pillar, peg, parent, evidence, implementation-age, failure-domain, and unresolved facts. The historical compiler accepts `HistoricalV9FactsInput`, a strict facts-only projection that excludes outcome labels and outcome annotation provenance at the type and runtime schema boundary. It must not accept or store:
 
 - desired v9 grades or scores;
 - scenario-supplied cap values;
@@ -34,13 +34,14 @@ Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `
 | Active registry / active report cards                     |            360 / 360 |
 | Compiler exceptions / silent omissions                    |                0 / 0 |
 | Candidate rateable / reason-coded `NR`                    |              0 / 360 |
-| Manual audit items, critical / noncritical                |          2,736 / 130 |
-| Manual audit classes, missing / methodology / unsupported |      2,692 / 1 / 173 |
+| Manual audit items, critical / noncritical                |          2,817 / 130 |
+| Manual audit classes, missing / methodology / unsupported |      2,773 / 1 / 173 |
 | Calibration cohort, critical-complete / unresolved `NR`   |               0 / 24 |
 | Historical adverse / resilient fixtures                   |              12 / 14 |
 | Historical rateable / `NR` fixtures                       |               8 / 18 |
 | Historical false negatives / false positives              |                0 / 9 |
-| Historical look-ahead validation                          |               passed |
+| Historical timestamp chronology validation                |               passed |
+| Historical source immutability / authoring blinding       |              blocked |
 | P4 DEX populated / unsupported / unknown assets           |        7 / 173 / 180 |
 | Retained-pool assets / retained pools                     |          180 / 4,641 |
 | Exact observations / score-eligible observations          |               21 / 0 |
@@ -52,11 +53,11 @@ Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `
 | P4 activation decision                                    |                 hold |
 | V9 readiness decision                                     |                no-go |
 
-The manual-evidence audit contains 2,866 itemized records: 2,692 `missing-data`, 173 `unsupported-design`, and 1 `unresolved-methodology`; 2,736 are critical. The largest reason-coded queues are 544 material reserve slices without structured evidence, 373 unknown control-cap authorities, 340 unreviewed reserve envelopes, 329 missing upgradeability reviews, 209 unresolved control identities, 180 missing and 173 unsupported same-notional routes, 145 unavailable runtime bridge-materiality facts, 125 missing custody profiles, 95 unresolved selected bridge routes, 76 mint-control questions, 55 missing peg inputs, 36 missing implementation dates, 7 incomplete DEX route-coverage records, and 3 unresolved archetypes. Another 127 missing latest assurance reports are noncritical. These are work queues, not implied defaults.
+The manual-evidence audit contains 2,947 itemized records: 2,773 `missing-data`, 173 `unsupported-design`, and 1 `unresolved-methodology`; 2,817 are critical. The largest reason-coded queues are 544 material reserve slices without structured evidence, 373 unknown control-cap authorities, 340 unreviewed reserve envelopes, 329 missing upgradeability reviews, 209 unresolved control identities, 180 missing and 173 unsupported same-notional routes, 145 unavailable runtime bridge-materiality facts, 125 missing custody profiles, 95 unresolved selected bridge routes, 81 CDP oracle branch-applicability decisions, 76 mint-control questions, 55 missing peg inputs, 36 missing implementation dates, 7 incomplete DEX route-coverage records, and 3 unresolved archetypes. Another 127 missing latest assurance reports are noncritical. These are work queues, not implied defaults.
 
 All 24 calibration-cohort assets are currently `reason-coded-critical-unresolved` and candidate `NR`; the stored dispositions expose the exact blocking facts for manual audit. The shadow pass likewise produces `NR` for all 360 active assets, including 305 entries from currently graded assets. That is a deliberate fail-closed result of the stricter itemized contracts, not a compiler omission.
 
-The historical outcome-blind research pass has no adverse false negatives under the provisional thresholds, but 18 fixtures are `NR` and 9 resilient fixtures are conservative false positives because critical point-in-time evidence was unresolved. That is calibration debt; it is not a reason to weaken the no-look-ahead or critical-evidence rules. P4 remains on `hold` because calibrated DEX coverage is 0 eligible assets against the 45-asset floor; redemption coverage clears its 27-asset floor at 31. The historical P4 generation predates the per-pool `scoreEligiblePoolCount` field, so its 21 observations remain visible but fail closed as incomplete pool coverage. Active replay makes 244 exit scores `NR` and changes 140 overall grades.
+The historical facts-only research pass has no adverse false negatives under the provisional thresholds, but 18 fixtures are `NR` and 9 resilient fixtures are conservative false positives because critical point-in-time evidence was unresolved. That is calibration debt; it is not a reason to weaken the no-look-ahead or critical-evidence rules. The corpus has passed only source-date chronology. Its source pages are mutable and unarchived, and its original author separation/outcome access was not preserved; readiness therefore records both conditions as explicit no-go blockers rather than presenting a look-ahead-proof claim. P4 remains on `hold` because calibrated DEX coverage is 0 eligible assets against the 45-asset floor; redemption coverage clears its 27-asset floor at 31. The historical P4 generation predates the per-pool `scoreEligiblePoolCount` field, so its 21 observations remain visible but fail closed as incomplete pool coverage. Active replay makes 244 exit scores `NR` and changes 140 overall grades.
 
 ## Reproduction
 

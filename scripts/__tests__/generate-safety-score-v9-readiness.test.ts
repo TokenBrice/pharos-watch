@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { DexLiquidityMap } from "@shared/types/market";
 import type { CompiledV9AssetInput } from "@shared/types/safety-score-v9";
+import { HistoricalV9FixtureCorpusSchema } from "@shared/types/safety-score-v9";
+import historicalFixtures from "@shared/data/safety-score-v9/historical-fixtures-v1.json";
 import {
+  assessHistoricalEvidenceIntegrity,
   applyCalibratedDexEligibility,
   buildManualInputAudit,
   evaluateP4CoverageBlockers,
@@ -10,6 +13,26 @@ import {
 } from "../maintenance/generate-safety-score-v9-readiness";
 
 describe("v9 readiness audit helpers", () => {
+  it("reports mutable sources and unverified historical authoring as no-go evidence blockers", () => {
+    const corpus = HistoricalV9FixtureCorpusSchema.parse(historicalFixtures);
+    const integrity = assessHistoricalEvidenceIntegrity(corpus.fixtures);
+
+    expect(integrity).toMatchObject({
+      sourceCount: 26,
+      sourceCaptureStatuses: { unarchived: 26 },
+      blindingModes: { "retrospective-unverified": 26 },
+      outcomeAccess: { "not-attested": 26 },
+      chronologyValidation: "passed",
+      immutabilityValidation: "blocked",
+      blindingValidation: "blocked",
+    });
+    expect(integrity.blockers).toEqual([
+      "26 historical sources are mutable and unarchived",
+      "26 historical fixtures lack independently verified outcome blinding",
+      "26 fact-freeze records lack an outcome-access attestation",
+    ]);
+  });
+
   it("reports every manual input with computed class and criticality", () => {
     const compiled = [
       {

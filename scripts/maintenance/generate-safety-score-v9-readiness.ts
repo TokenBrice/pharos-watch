@@ -12,7 +12,9 @@ import { DexLiquidityMapSchema, type DexLiquidityMap } from "@shared/types/marke
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import {
   HistoricalV9FixtureCorpusSchema,
+  historicalFactsInput,
   type CompiledV9AssetInput,
+  type HistoricalV9Fixture,
   type V9UnresolvedFact,
 } from "@shared/types/safety-score-v9";
 import historicalFixtureAsset from "../../shared/data/safety-score-v9/historical-fixtures-v1.json";
@@ -138,6 +140,51 @@ export function applyCalibratedDexEligibility<
     rawScoreEligibleObservations: coverage.scoreEligibleObservations,
     dexEligibleAssets: calibrated.eligibleAssets,
     scoreEligibleObservations: calibrated.eligibleObservations,
+  };
+}
+
+export function assessHistoricalEvidenceIntegrity(fixtures: readonly HistoricalV9Fixture[]) {
+  const sources = fixtures.flatMap((fixture) => fixture.sources);
+  const sourceCaptureStatuses = sources.reduce<Record<string, number>>((result, source) => {
+    increment(result, source.capture.status);
+    return result;
+  }, {});
+  const blindingModes = fixtures.reduce<Record<string, number>>((result, fixture) => {
+    increment(result, fixture.blinding.mode);
+    return result;
+  }, {});
+  const outcomeAccess = fixtures.reduce<Record<string, number>>((result, fixture) => {
+    increment(result, fixture.factFreeze.outcomeAccess);
+    return result;
+  }, {});
+  const unarchivedSources = sourceCaptureStatuses.unarchived ?? 0;
+  const unverifiedBlinding =
+    (blindingModes["retrospective-unverified"] ?? 0) + (blindingModes["role-separated-fact-freeze"] ?? 0);
+  const unattestedOutcomeAccess = outcomeAccess["not-attested"] ?? 0;
+  const blockers = [
+    ...(unarchivedSources > 0
+      ? [`${unarchivedSources} historical source${unarchivedSources === 1 ? " is" : "s are"} mutable and unarchived`]
+      : []),
+    ...(unverifiedBlinding > 0
+      ? [
+          `${unverifiedBlinding} historical fixture${unverifiedBlinding === 1 ? " lacks" : "s lack"} independently verified outcome blinding`,
+        ]
+      : []),
+    ...(unattestedOutcomeAccess > 0
+      ? [
+          `${unattestedOutcomeAccess} fact-freeze record${unattestedOutcomeAccess === 1 ? " lacks" : "s lack"} an outcome-access attestation`,
+        ]
+      : []),
+  ];
+  return {
+    sourceCount: sources.length,
+    sourceCaptureStatuses,
+    blindingModes,
+    outcomeAccess,
+    chronologyValidation: "passed",
+    immutabilityValidation: unarchivedSources === 0 ? "passed" : "blocked",
+    blindingValidation: unverifiedBlinding === 0 && unattestedOutcomeAccess === 0 ? "passed" : "blocked",
+    blockers,
   };
 }
 
@@ -291,8 +338,9 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
   }
   const historicalTraces = historical.fixtures.map((fixture) => ({
     fixture,
-    trace: scoreCompiledAsset(compileHistoricalFixtureToV9Input(fixture)),
+    trace: scoreCompiledAsset(compileHistoricalFixtureToV9Input(historicalFactsInput(fixture))),
   }));
+  const historicalIntegrity = assessHistoricalEvidenceIntegrity(historical.fixtures);
   const historicalFalseNegatives = historicalTraces
     .filter(
       ({ fixture, trace }) =>
@@ -317,6 +365,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
     ...(nrCount > 0 ? [`${nrCount} active assets compile to reason-coded NR`] : []),
     ...(criticalUnresolvedCount > 0 ? [`${criticalUnresolvedCount} critical facts remain unresolved`] : []),
     ...p4CoverageBlockers,
+    ...historicalIntegrity.blockers,
   ];
   const traceById = new Map(evaluated.traces.map((trace) => [trace.assetId, trace]));
   const compiledById = new Map(compiled.map((input) => [input.assetId, input]));
@@ -370,8 +419,9 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
       adverseCount: adverse.length,
       resilientCount: resilient.length,
       categoryCounts: historicalCategories,
-      lookAheadValidation: "passed",
-      evaluationMode: "outcome-blind typed fact compiler",
+      lookAheadValidation: historicalIntegrity.chronologyValidation,
+      evidenceIntegrity: historicalIntegrity,
+      evaluationMode: "facts-only typed compiler; outcomes excluded from scorer input",
       candidateGradeDistribution: historicalTraces.reduce<Record<string, number>>((result, { trace }) => {
         increment(result, trace.finalGrade);
         return result;

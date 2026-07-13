@@ -5,8 +5,9 @@ import {
 } from "./classification/resolve-implementation-launch-date";
 import {
   CompiledV9AssetInputSchema,
+  HistoricalV9FactsInputSchema,
   type CompiledV9AssetInput,
-  type HistoricalV9Fixture,
+  type HistoricalV9FactsInput,
   type V9EvidenceLevel,
   type V9EvidenceReference,
   type V9PillarEvidence,
@@ -838,6 +839,38 @@ function compileControlPillar(
     );
   } else if (oracleApplicable && oracle) {
     addFutureDatedFact(gaps, oracle.reviewedAt, options.asOf, "oracleRisk.reviewedAt", "Oracle review");
+    const branchApplicability = oracle.branchApplicability;
+    if (branchApplicability) {
+      addFutureDatedFact(
+        gaps,
+        branchApplicability.reviewedAt,
+        options.asOf,
+        "oracleRisk.branchApplicability.reviewedAt",
+        "Oracle branch-applicability review",
+      );
+    }
+    if (!branchApplicability || branchApplicability.disposition === "unresolved") {
+      gaps.push(
+        unresolved(
+          "unresolved-oracle-branch-applicability",
+          "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required.",
+          true,
+          "oracleRisk.branchApplicability",
+        ),
+      );
+    } else if (
+      branchApplicability.disposition === "branches-required" &&
+      (oracle.branchModel !== "multi-branch" || !oracle.branches?.length)
+    ) {
+      gaps.push(
+        unresolved(
+          "missing-required-oracle-branches",
+          "CDP oracle review requires market-specific branches but no complete branch inventory is available.",
+          true,
+          "oracleRisk.branches",
+        ),
+      );
+    }
     const oracleEvidence = reviewEvidence({
       assetId: meta.id,
       path: "oracleRisk",
@@ -847,7 +880,22 @@ function compileControlPillar(
       options,
     });
     evidence.push(...oracleEvidence);
-    const branchScores = (oracle.branches ?? []).map((branch) => ORACLE_TIER_QUALITY[branch.tier]);
+    if (branchApplicability) {
+      evidence.push(
+        ...reviewEvidence({
+          assetId: meta.id,
+          path: "oracleRisk.branchApplicability",
+          observedAt: branchApplicability.reviewedAt,
+          links: branchApplicability.sources,
+          note: `Reviewed oracle branch applicability (${branchApplicability.disposition}).`,
+          options,
+        }),
+      );
+    }
+    const branchScores =
+      branchApplicability?.disposition === "branches-required"
+        ? (oracle.branches ?? []).map((branch) => ORACLE_TIER_QUALITY[branch.tier])
+        : [];
     pathScores.push(branchScores.length ? Math.min(...branchScores) : ORACLE_TIER_QUALITY[oracle.tier]);
     signals.push(`oracle:${oracle.branchModel ?? "unspecified"}:${oracle.tier}`);
     if (!oracle.reviewedAt || !oracle.reviewer || !oracle.confidence || oracle.confidence === "unknown") {
@@ -1224,7 +1272,8 @@ const HISTORICAL_RISK_SCORE = {
 } as const;
 
 /** Compile point-in-time fact signals without reading the known outcome. */
-export function compileHistoricalFixtureToV9Input(fixture: HistoricalV9Fixture): CompiledV9AssetInput {
+export function compileHistoricalFixtureToV9Input(input: HistoricalV9FactsInput): CompiledV9AssetInput {
+  const fixture = HistoricalV9FactsInputSchema.parse(input);
   const evidence: V9EvidenceReference[] = fixture.sources.map((source, index) => ({
     sourceId: `historical:${fixture.id}:${index}`,
     observedAt: source.publishedAt,
@@ -1261,7 +1310,7 @@ export function compileHistoricalFixtureToV9Input(fixture: HistoricalV9Fixture):
     schemaVersion: 1,
     assetId: fixture.assetId,
     asOf: fixture.asOf,
-    compiledAt: fixture.provenance.reviewedAt,
+    compiledAt: fixture.factFreeze.frozenAt,
     archetype: fixture.facts.archetype,
     pillars: {
       backing: makeHistoricalPillar("backing"),
