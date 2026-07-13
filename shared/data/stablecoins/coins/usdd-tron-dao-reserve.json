@@ -42,20 +42,17 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "USDD is tracked on Tron, Ethereum, and BSC, while the workflow evidence resolves Across-style cross-chain route signals rather than issuer-native bridge controls. The reviewed profile treats cross-chain movement as a liquidity/intent route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "single-chain-or-native",
+    "summary": "Material USDD supply on Tron, Ethereum, and BSC uses chain-local native token and Join rails. Legacy BTTC predicate representations remain peripheral bridge risk and are not treated as canonical issuance.",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Across",
-        "slug": "across",
-        "url": "https://l2beat.com/interop/protocols/across",
+        "source": "issuer",
+        "name": "USDD chain-local native issuance",
         "bridgeTypes": [
-          "liquidity",
-          "intent"
+          "issuer-native-mint-redeem"
         ]
       }
     ],
@@ -67,10 +64,6 @@
       {
         "label": "USDD website",
         "url": "https://usdd.io/"
-      },
-      {
-        "label": "L2BEAT Across",
-        "url": "https://l2beat.com/interop/protocols/across"
       }
     ],
     "routes": [
@@ -78,46 +71,73 @@
         "id": "tron:TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
         "destinationChain": "tron",
         "contractAddress": "TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "Tron USDD token",
+            "url": "https://tronscan.org/#/contract/TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz/code"
+          }
+        ]
       },
       {
         "id": "ethereum:0x4f8e5de400de08b164e7421b3ee387f461becd1a",
         "destinationChain": "ethereum",
         "contractAddress": "0x4f8e5de400de08b164e7421b3ee387f461becd1a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "Ethereum USDD token",
+            "url": "https://eth.blockscout.com/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a?tab=contract"
+          }
+        ]
       },
       {
         "id": "bsc:0x45e51bc23d592eb2dba86da3985299f7895d66ba",
         "destinationChain": "bsc",
         "contractAddress": "0x45e51bc23d592eb2dba86da3985299f7895d66ba",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "BSC USDD token",
+            "url": "https://bscscan.com/address/0x45e51bc23d592eb2dba86da3985299f7895d66ba#code"
+          }
+        ]
       }
     ]
   },
@@ -249,7 +269,34 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "USDD mints through Maker-style collateralized TRON DAO Reserve rails; Ethereum token source exposes warded mint authority and the USDD Join contract is the resolved direct minter, while governance/Pause/Vat administration remains unresolved.",
+    "summary": "USDD uses direct Maker-style token and Join contracts on Tron, Ethereum, and BSC. Each Join can mint only against existing Vat credit/debt accounting; chain-local GovActionsProxy owner paths can immediately change system authorization and limits with no timelock.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "USDD deployment addresses",
+          "url": "https://docs.usdd.io/developers/deployment-addresses"
+        },
+        {
+          "label": "Ethereum USDD verified contract",
+          "url": "https://eth.blockscout.com/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a?tab=contract"
+        },
+        {
+          "label": "Ethereum USDD Join verified contract",
+          "url": "https://eth.blockscout.com/address/0x983dfef6d71862d809e239845da5a959492f63b8?tab=contract"
+        },
+        {
+          "label": "BSC USDD verified contract",
+          "url": "https://bscscan.com/address/0x45e51bc23d592eb2dba86da3985299f7895d66ba#code"
+        },
+        {
+          "label": "Tron USDD verified contract",
+          "url": "https://tronscan.org/#/contract/TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz/code"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "tron",
@@ -258,7 +305,7 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
@@ -266,7 +313,7 @@
             "url": "https://docs.usdd.io/developers/deployment-addresses"
           }
         ],
-        "evidence": "At Tron block 83506136 (2026-06-11): wards(TronJoin) on USDD token (TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz) = 1 (confirmed ward). Tron Vat (TH5dhX7o39afSbfDT2e3c9k4itWjNKD4D9) live() = 1 (active). All other queried addresses (Pause, PauseProxy, GovActionsProxy) have ward=0 on the token. The legacy ETH-side 1.0 Vat/Join queried in the June 2026 review was caged, but USDD 2.0 documentation later introduced an Ethereum PSM mint/redeem route; Pharos no longer treats Ethereum as permanently disabled."
+        "evidence": "At Tron block 83506136, wards(TronJoin) on the direct USDD token returned 1 and the Tron Vat was live. The Join can mint only while consuming existing Vat credit/debt accounting; it cannot raise the system debt ceiling or authorize itself."
       },
       {
         "chain": "tron",
@@ -275,7 +322,8 @@
         "role": "governor",
         "authorityType": "contract",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "evidence": "Tron Pause (TNq6E9XsQfrzqVwam67LApZQx1omsj8dyW) authority() = GovActionsProxy (TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d); Pause delay() = 0 (no timelock). GovActionsProxy.authority() = zero address (no higher authority set); GovActionsProxy govActions() = TDLgCe2SatVew6PxSwYmqsc3zfahqXwuqX and pause() = Pause contract. This contract's cast() function is the system's governance executor. The signer set that can call cast() was not confirmed — authority()=zero means access control falls back to contract-level access checks or is operated by the deployer."
       },
@@ -286,6 +334,8 @@
         "role": "governor",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
@@ -294,6 +344,126 @@
           }
         ],
         "evidence": "GovActionsProxy.owner() returned 41b28033...eb069 (TSF2rqLdrrZG7PZkDxtvu6B2PTpofidMAX) via triggerconstantcontract; trongrid getaccount shows a normal account with 1-of-1 owner and active permissions (single keypair, no Tron-native multisig). All recent GovActionsProxy transactions originate from this account; with authority()=zero, ds-auth restricts cast() to this owner."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x983dfef6d71862d809e239845da5a959492f63b8",
+        "label": "USDD Ethereum Join",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "Ethereum USDD Join",
+            "url": "https://eth.blockscout.com/address/0x983dfef6d71862d809e239845da5a959492f63b8?tab=contract"
+          }
+        ],
+        "evidence": "The direct verified Join is authorized to mint the chain-local USDD token only while consuming existing Vat credit/debt accounting. It cannot independently raise the system debt ceiling or authorize itself."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3dba111255d3888c723242320595588754cf493e",
+        "label": "USDD Ethereum GovActionsProxy",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Ethereum USDD GovActionsProxy",
+            "url": "https://eth.blockscout.com/address/0x3dba111255d3888c723242320595588754cf493e?tab=contract"
+          }
+        ],
+        "evidence": "This chain-local governance executor can change Vat/Join authorization and debt limits. Its owner path is immediate and the reviewed Pause delay is zero."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x25198d0d111eeac0fb1bd1de826294d9fce84378",
+        "label": "USDD Ethereum GovActionsProxy owner EOA",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Ethereum USDD GovActionsProxy",
+            "url": "https://eth.blockscout.com/address/0x3dba111255d3888c723242320595588754cf493e?tab=contract"
+          }
+        ],
+        "evidence": "GovActionsProxy.owner() returned this address and eth_getCode returned empty. The EOA can immediately execute governance changes that authorize mint rails or raise system limits."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x6b00039d76795fd59baf17e0c9c6d87011e7edac",
+        "label": "USDD BSC Join",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "BSC USDD Join",
+            "url": "https://bscscan.com/address/0x6b00039d76795fd59baf17e0c9c6d87011e7edac#code"
+          }
+        ],
+        "evidence": "The direct verified Join is authorized to mint the chain-local USDD token only while consuming existing Vat credit/debt accounting. It cannot independently raise the system debt ceiling or authorize itself."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x2662e860ea672e4d31df3438114c48511229e60f",
+        "label": "USDD BSC GovActionsProxy",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "BSC USDD GovActionsProxy",
+            "url": "https://bscscan.com/address/0x2662e860ea672e4d31df3438114c48511229e60f#code"
+          }
+        ],
+        "evidence": "This chain-local governance executor can change Vat/Join authorization and debt limits. Its owner path is immediate and the reviewed Pause delay is zero."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x25198d0d111eeac0fb1bd1de826294d9fce84378",
+        "label": "USDD BSC GovActionsProxy owner EOA",
+        "role": "governor",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "BSC USDD GovActionsProxy",
+            "url": "https://bscscan.com/address/0x2662e860ea672e4d31df3438114c48511229e60f#code"
+          }
+        ],
+        "evidence": "GovActionsProxy.owner() returned this address and eth_getCode returned empty. The EOA can immediately execute governance changes that authorize mint rails or raise system limits."
       }
     ],
     "review": {
@@ -309,11 +479,23 @@
         {
           "label": "Etherscan USDD token source",
           "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+        },
+        {
+          "label": "Ethereum USDD Join",
+          "url": "https://eth.blockscout.com/address/0x983dfef6d71862d809e239845da5a959492f63b8?tab=contract"
+        },
+        {
+          "label": "BSC USDD token",
+          "url": "https://bscscan.com/address/0x45e51bc23d592eb2dba86da3985299f7895d66ba#code"
+        },
+        {
+          "label": "BSC USDD Join",
+          "url": "https://bscscan.com/address/0x6b00039d76795fd59baf17e0c9c6d87011e7edac#code"
         }
       ],
-      "evidence": "At ETH block 25294783 and Tron block 83506136 (2026-06-11), the legacy ETH Vat/Join was caged while Tron Join remained an active ward. USDD 2.0 documentation later introduced an Ethereum PSM route for native USDD mint/redeem, so the profile no longer states that active minting is Tron-only. Tron governance remains concentrated: Pause delay=0, GovActionsProxy owner resolved to a single-key Tron account, and this owner is the sole historical governance caller.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Deployment-wide review covered the current Tron, Ethereum, and BSC direct token/Join rails. Each Join mints only against Vat credit/debt accounting and cannot independently raise its limit; each chain-local GovActionsProxy owner can immediately change authorization and system limits with no timelock. Ethereum/BSC use the same owner EOA, while Tron uses a 1/1 native account. The tracked token and Join contracts are direct non-proxy deployments with no implementation-replacement surface; legacy BTTC predicate upgrades remain a separate peripheral bridge risk.",
+      "reviewer": "Codex Safety Score V9 data research",
+      "reviewedAt": "2026-07-13"
     }
   },
   "chainTier": "established-alt-l1",
