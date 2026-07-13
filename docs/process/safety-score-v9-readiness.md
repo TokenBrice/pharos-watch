@@ -1,6 +1,6 @@
 # Safety Score v9 Readiness
 
-This document describes the pre-v9 compiler, calibration corpus, and current activation gate. It does not define an active Safety Score methodology. Production remains on Safety Score v8.16 and P4 same-notional scoring remains shadow-only.
+This document describes the pre-v9 compiler, calibration corpus, and current activation gate. It does not define an active Safety Score methodology. Production remains on Safety Score v8.17 and P4 same-notional scoring remains shadow-only.
 
 ## Durable Artifacts
 
@@ -90,6 +90,6 @@ npm run safety-score-v9:readiness -- \
   --generated-at 2026-07-13T01:30:00.000Z
 ```
 
-The exact-cache export may be either the raw private cache envelope or Wrangler's D1 JSON query result. The public endpoint reconstruction mode instead requires `--baseline-output`, `--captured-at`, `--registry-revision`, and `--dex-generation-id`; it is not exact release-calibration evidence. The committed calibration was conservatively rebuilt as a historical drift record from the pre-exact public reconstruction and therefore cannot authorize activation. Replay offers `--allow-methodology-mismatch` but intentionally has no registry-mismatch bypass. Calibration separately offers `--allow-methodology-mismatch` and `--allow-registry-mismatch`; use either only for an explicitly labeled drift study, never for activation evidence.
+The exact-cache export may be either the raw private cache envelope or Wrangler's D1 JSON query result. The public endpoint reconstruction mode instead requires `--baseline-output`, `--captured-at`, `--registry-revision`, and `--dex-generation-id`; it is not exact release-calibration evidence. The committed calibration was conservatively rebuilt as a historical drift record from the pre-exact public reconstruction and therefore cannot authorize activation. Replay offers `--allow-methodology-mismatch` but intentionally has no registry-mismatch bypass. Calibration separately offers `--allow-methodology-mismatch` and `--allow-registry-mismatch`; use either only for an explicitly labeled drift study, never for activation evidence. The `p4b-activation-v1` policy defaults to, and refuses any override below, 45 eligible DEX assets and 27 eligible redemption assets. An `activate` request throws instead of writing a contradictory report whenever producer or coverage blockers remain.
 
-Files under `agents/` are ignored fixed-input/research working artifacts. The committed exit-route calibration and readiness baseline are the durable decision records. Production remains on v8.16, P4 remains shadow-only, and no v9 activation is authorized while the recorded dispositions are `hold` and `no-go`.
+Files under `agents/` are ignored fixed-input/research working artifacts. The committed exit-route calibration and readiness baseline are the durable decision records. Production remains on v8.17, P4 remains shadow-only, and no v9 activation is authorized while the recorded dispositions are `hold` and `no-go`.
