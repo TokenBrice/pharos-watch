@@ -73,35 +73,60 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "CHFm is a legacy StableTokenV3 (cCHF) whose mint() is authorized via the Celo Registry Broker (0x777A...). The token owner and proxy admin both resolve to the 4/6 Mento Safe (0x58099...). Signercount corrected from 7 to 6 (one signer rotated out, confirmed via Safe API).",
+    "summary": "CHFm is minted by Mento's immutable BorrowerOperations and ActivePool contracts for borrower debt and accrued interest. The token owner and proxy admin, plus the SystemParams ProxyAdmin owner, resolve to the same immediate 4/6 Mento Safe.",
     "controls": [
       {
         "chain": "celo",
-        "address": "0x777A8255cA72412f0d706dc03C9D1987306B4CaD",
-        "label": "Mento Broker — authorized minter for CHFm via Celo Registry",
+        "address": "0x7Fe90CF5A41473179fCE89Df55bc9afcd1c5c0be",
+        "label": "CHFm BorrowerOperations debt minter",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "CHFm deprecated_broker_storage_slot__ on-chain read",
-            "url": "https://celo.blockscout.com/address/0xb55a79f398e759e43c95b979163f30ec87ee131d"
+            "label": "Pinned Mento deployment registry",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/62fedbe0a97984339a5c3c00d05a15f9ea780b4b/.treb/deployments.json"
+          },
+          {
+            "label": "BorrowerOperations source",
+            "url": "https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/BorrowerOperations.sol"
           }
         ],
-        "evidence": "At Celo block 69287341, deprecated_broker_storage_slot__() on CHFm (StableTokenV3, 0xb55a79f398e759e43c95b979163f30ec87ee131d) returned 0x777A8255cA72412f0d706dc03C9D1987306B4CaD. Celo Registry getAddressFor(keccak256('Broker')) also returns 0x777A..., confirming it is the live authorized minter. isMinter(Broker) = false (StableTokenV3 uses registry-based auth, not isMinter mapping)."
+        "evidence": "At finalized Celo block 72082708, CHFm isMinter(0x7Fe90CF5A41473179fCE89Df55bc9afcd1c5c0be) returned true. The contract had zero EIP-1967 implementation, admin, and beacon slots and owner() reverted. Pinned Mento source shows BorrowerOperations mints the borrower's CHFm debt through this immutable deployment."
+      },
+      {
+        "chain": "celo",
+        "address": "0x9947CEe121586fC31b0b0a162A40D6516979E7cB",
+        "label": "CHFm ActivePool interest minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Pinned Mento deployment registry",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/62fedbe0a97984339a5c3c00d05a15f9ea780b4b/.treb/deployments.json"
+          },
+          {
+            "label": "ActivePool source",
+            "url": "https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/ActivePool.sol"
+          }
+        ],
+        "evidence": "At finalized Celo block 72082708, CHFm isMinter(0x9947CEe121586fC31b0b0a162A40D6516979E7cB) returned true. The contract had zero EIP-1967 implementation, admin, and beacon slots and owner() reverted. Pinned Mento source shows ActivePool mints accrued CHFm interest through this immutable deployment."
       },
       {
         "chain": "celo",
         "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
-        "label": "Mento Safe — CHFm token owner and proxy admin",
+        "label": "Mento Safe - CHFm token, minter, and SystemParams admin",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "threshold": 4,
         "signerCount": 6,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
@@ -116,37 +141,80 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "version": "1.4.1+L2",
-          "observedBlock": 69287341,
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "version": "1.4.1",
+          "observedBlock": 72082708,
           "source": "safe-api"
         },
         "sources": [
           {
-            "label": "Mento V3 stablecoin docs",
-            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            "label": "CHFm minter migration transaction",
+            "url": "https://celo.blockscout.com/tx/0x8a40283e17d6ab0512a525e8e0c63f42c8ec77014bece5c1cf7fc5c6c60dd7b5"
           },
           {
             "label": "Safe Transaction Service - Celo",
             "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
           }
         ],
-        "evidence": "At Celo block 69287341, owner() on CHFm returned 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458; EIP-1967 proxy admin slot returned the same Safe address. Safe API (celo chain) confirmed threshold 4, 6 owners (drift from prior 7-owner data — one signer rotated out), no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99."
+        "evidence": "At finalized Celo block 72082708, CHFm owner() and its custom EIP-1967 owner/admin slot both returned this Safe. SystemParams ProxyAdmin 0x68932b8fDd82dA5B0fCe2AcA20A82ea0e11D894A also returned this Safe as owner. The Safe can immediately set token minters and replace token or SystemParams logic. Current state was 4-of-6 with no enabled modules or guard."
       }
     ],
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0xb55a79f398e759e43c95b979163f30ec87ee131d",
+        "0xe604507642469be4699febdf4a701d9a104dd173"
+      ],
+      "implementationAddresses": [
+        "0x815795c30d0758a297b08cd4e0643620c974c318",
+        "0x66cf2aa9fc91ffbf2cc8e8057e54e5ea670029c1"
+      ],
+      "adminAddresses": [
+        "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "0x68932b8fdd82da5b0fce2aca20a82ea0e11d894a"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Mento Safe - CHFm token, minter, and SystemParams admin",
+      "observedAt": "2026-07-13",
+      "observedBlock": 72082708,
+      "sources": [
+        {
+          "label": "StableTokenV3 implementation",
+          "url": "https://celo.blockscout.com/address/0x815795C30D0758A297B08cD4e0643620c974c318"
+        },
+        {
+          "label": "CHFm SystemParams proxy",
+          "url": "https://celo.blockscout.com/address/0xe604507642469bE4699FeBDf4A701D9A104dd173"
+        },
+        {
+          "label": "CHFm minter migration transaction",
+          "url": "https://celo.blockscout.com/tx/0x8a40283e17d6ab0512a525e8e0c63f42c8ec77014bece5c1cf7fc5c6c60dd7b5"
+        },
+        {
+          "label": "Celo Forno RPC",
+          "url": "https://forno.celo.org"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
-          "label": "Mento V3 stablecoin docs",
-          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          "label": "Pinned Mento deployment registry",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/62fedbe0a97984339a5c3c00d05a15f9ea780b4b/.treb/deployments.json"
+        },
+        {
+          "label": "CHFm minter migration transaction",
+          "url": "https://celo.blockscout.com/tx/0x8a40283e17d6ab0512a525e8e0c63f42c8ec77014bece5c1cf7fc5c6c60dd7b5"
         },
         {
           "label": "Safe Transaction Service - Celo",
           "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
         }
       ],
-      "evidence": "At Celo block 69287341: owner() = Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 (confirmed); EIP-1967 proxy admin slot = same Safe; Safe API: threshold 4, 6 owners (corrected from stale 7), no modules, zero guard. Mint authorization: deprecated_broker_storage_slot__() = 0x777A... (Mento Broker); Celo Registry keccak('Broker') lookup = 0x777A... confirming live Broker is the authorized minter. All mint-capable surfaces resolved.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At finalized Celo block 72082708, isMinter was true for immutable BorrowerOperations 0x7Fe90CF5A41473179fCE89Df55bc9afcd1c5c0be and immutable ActivePool 0x9947CEe121586fC31b0b0a162A40D6516979E7cB, and false for legacy Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD. The April 27 migration transaction independently records that revocation and both grants. Token ownership, token upgrades, minter changes, and the upgradeable SystemParams dependency all resolve to the same immediate 4/6 Safe with no modules, guard, or timelock.",
+      "reviewer": "Codex Safety Score V9 review",
+      "reviewedAt": "2026-07-13"
     }
   },
   "chainTier": "established-alt-l1",
