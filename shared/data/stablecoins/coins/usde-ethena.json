@@ -200,7 +200,32 @@
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "USDe minting uses Ethena signed-order flows; the Ethereum token minter is a contract and token ownership is held by a 5/10 Safe.",
+    "summary": "USDe minting uses signed-order flows through the EthenaMinting contract. The 5/10 token-owner Safe can replace that minter directly, while a one-day timelock controls the active minter contract's administrative roles and caps.",
+    "upgradeability": {
+      "model": "custom",
+      "adminAddresses": [
+        "0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "USDe token owner Safe",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526176,
+      "sources": [
+        {
+          "label": "Ethena USDe contract overview",
+          "url": "https://docs.ethena.fi/solution-design/overview/github-overview"
+        },
+        {
+          "label": "USDe verified token source with owner-only setMinter",
+          "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -211,10 +236,12 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526176,
         "routeChecks": {
           "signingModel": "Ethena docs describe signed mint/redeem order flows with the token minter contract as the active minting endpoint.",
-          "onchainAmountBounds": "This review confirmed the token minter address but did not resolve a hard on-chain max supply or per-transaction cap.",
-          "pausersAdminsUpgraders": "Token owner Safe can administer the token minter path."
+          "onchainAmountBounds": "EthenaMinting V2 enforces a 200,000,000 USDe global mint cap per block; current signer-specific cap-raising authority remains unknown because MINTER_ROLE membership is not enumerable from the deployed ABI.",
+          "pausersAdminsUpgraders": "A one-day TimelockController holds the active EthenaMinting default-admin role; the token-owner Safe separately controls token setMinter(address)."
         },
         "sources": [
           {
@@ -223,10 +250,14 @@
           },
           {
             "label": "Ethereum USDe token",
-            "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3#readProxyContract"
+            "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3#code"
+          },
+          {
+            "label": "EthenaMinting V2 verified source",
+            "url": "https://etherscan.io/address/0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3#code"
           }
         ],
-        "evidence": "At Ethereum block 25294739, USDe minter() returned 0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3 (confirmed). Ethena docs describe signed mint/redeem order flows with this contract as the active minting endpoint; backend trust assumptions documented."
+        "evidence": "At Ethereum block 25526176, USDe minter() returned this direct-deployment EthenaMinting V2 contract. Verified source and on-chain reads show a 200,000,000 USDe global mint cap per block and a separate TimelockController default admin. Ethena docs describe the signed mint/redeem order flow; current MINTER_ROLE membership remains unresolved rather than inferred."
       },
       {
         "chain": "ethereum",
@@ -237,11 +268,13 @@
         "directMintAbility": "can-authorize",
         "threshold": 5,
         "signerCount": 10,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526176,
         "routeChecks": {
-          "pausersAdminsUpgraders": "USDe owner is a 5-of-10 Safe with no modules and zero guard in the Safe API snapshot.",
-          "caps": "Owner/admin cap-raising posture remains unknown; this Safe controls the minter-administration surface."
+          "pausersAdminsUpgraders": "USDe owner is a 5-of-10 Safe with no enabled modules and guard 0x74abe7805541c28f31953b3cDA9711Dc96278D29 at the observed block.",
+          "caps": "The owner can replace the capped EthenaMinting contract with an arbitrary minter through token setMinter(address)."
         },
         "safe": {
           "owners": [
@@ -258,19 +291,59 @@
           ],
           "threshold": 5,
           "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
+          "guard": "0x74abe7805541c28f31953b3cDA9711Dc96278D29",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
           "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
-          "observedBlock": 25294739,
-          "source": "safe-api"
+          "observedBlock": 25526176,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
         },
         "sources": [
           {
             "label": "Safe API snapshot",
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862"
+          },
+          {
+            "label": "USDe verified token source",
+            "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3#code"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25294739, USDe owner() returned this Safe (confirmed). Safe API returned: threshold=5, 10 owners, modules=[], guard=zero address, masterCopy=0xd9Db27 (Gnosis Safe 1.3.0)."
+        "evidence": "At Ethereum block 25526176, USDe owner() returned this 5-of-10 Safe and pendingOwner() returned 0xE8Dc0Fab349EA169283C48Ccfd09d797E6DB7c94, which had not accepted token ownership. The Safe had no enabled modules and guard 0x74abe7805541c28f31953b3cDA9711Dc96278D29. Verified USDe source gives the owner unrestricted setMinter(address), so this Safe can replace the active mint endpoint without an on-chain delay."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE8Dc0Fab349EA169283C48Ccfd09d797E6DB7c94",
+        "label": "EthenaMinting V2 default-admin timelock",
+        "role": "minter-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526176,
+        "failureDomainKeys": [
+          "ethereum:0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862"
+        ],
+        "sources": [
+          {
+            "label": "EthenaMinting V2 verified source",
+            "url": "https://etherscan.io/address/0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3#code"
+          },
+          {
+            "label": "Ethena timelock verified source",
+            "url": "https://etherscan.io/address/0xE8Dc0Fab349EA169283C48Ccfd09d797E6DB7c94#code"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25526176, this 86,400-second TimelockController held EthenaMinting V2's default-admin authority and could change mint caps and role membership. Its sole proposer and canceller was the 5-of-10 USDe owner Safe. The reviewed cap, role, and token setMinter selectors were not configured for delay bypass."
       }
     ],
     "review": {
@@ -285,12 +358,28 @@
         },
         {
           "label": "Ethereum USDe token contract",
-          "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3#readProxyContract"
+          "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3#code"
+        },
+        {
+          "label": "EthenaMinting V2 contract",
+          "url": "https://etherscan.io/address/0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3#code"
+        },
+        {
+          "label": "Ethena timelock contract",
+          "url": "https://etherscan.io/address/0xE8Dc0Fab349EA169283C48Ccfd09d797E6DB7c94#code"
+        },
+        {
+          "label": "Safe API snapshot",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "At block 25294739: minter() confirmed at 0xe3490297 (issuer-backend; Ethena signed-order mint docs corroborate). owner() confirmed at 5/10 Safe 0x3B0AAf6e (Safe API snapshot: 10 owners, no modules, guard=zero). All addressable on-chain mint surfaces confirmed; issuer-backend model corroborated by docs.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25526176: USDe minter() returned EthenaMinting V2 0xe3490297; owner() returned 5/10 Safe 0x3B0AAf6e; pendingOwner() returned timelock 0xE8Dc0Fab, which had not accepted token ownership. The owner Safe had no enabled modules and a current guard. USDe's verified direct-deployment source exposes owner-only setMinter(address). The active EthenaMinting default admin was the one-day timelock, whose sole proposer and canceller was the same Safe. The minter contract enforces a 200,000,000 USDe per-block global mint cap, while its timelock admin can change cap and role parameters.",
+      "reviewer": "OpenAI Codex mint-authority review",
+      "reviewedAt": "2026-07-13"
     }
   },
   "deploymentModel": "third-party-bridge",
