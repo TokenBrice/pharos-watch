@@ -190,6 +190,30 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "DAI minting is vault/module based, with DaiJoin moving Vat.dai into ERC-20 DAI and Maker/Sky governance controlling module authorization and debt ceilings through the Pause process.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526176,
+      "sources": [
+        {
+          "label": "Sky DSS Dai source",
+          "url": "https://github.com/sky-ecosystem/dss/blob/fa4f6630afb0624d04a003e920b0d71a00331d98/src/dai.sol"
+        },
+        {
+          "label": "Sky DSS DaiJoin source",
+          "url": "https://github.com/sky-ecosystem/dss/blob/fa4f6630afb0624d04a003e920b0d71a00331d98/src/join.sol"
+        },
+        {
+          "label": "DAI Ethereum verified contract",
+          "url": "https://etherscan.io/address/0x6B175474E89094C44Da98b954EedeAC495271d0F#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
