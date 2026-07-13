@@ -43,6 +43,8 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [process/ddrr-calibration.md](./process/ddrr-calibration.md) - advisory DDRR calibration report process for evidence-gated DDR refinements
 - [process/feature-flags.md](./process/feature-flags.md) - `NEXT_PUBLIC_PHAROS_*` feature flag inventory and default-state rules
 - [process/pages-env-rollout.md](./process/pages-env-rollout.md) - rollout procedure for flipping `NEXT_PUBLIC_PHAROS_*` flags on production Pages
+- [process/safety-score-v9-rollout.md](./process/safety-score-v9-rollout.md) - single-publisher V9 shadow, activation, rollback, observation, and retirement contract
+- [process/safety-score-v9-consumer-ledger.md](./process/safety-score-v9-consumer-ledger.md) - first-party V8-to-V9 consumer mappings, mismatch behavior, tests, and activation blockers
 
 ## Runbooks
 

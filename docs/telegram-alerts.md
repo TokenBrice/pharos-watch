@@ -535,7 +535,7 @@ DEWS and depeg dispatch snapshots older than `24 hours` are treated as stale and
 
 Reserve-drift transitions diff the producer's current drift set (`alert:reserve-snapshot`) against the dispatch baseline (`alert:reserve-dispatched-snapshot`). The producer (four-hourly reserve slot) is the only writer of the current set, so the dispatch trigger never opens reserve-adapter connections. Dispatch requires the expected source generation and a `publishedAt` age no greater than two producer intervals (8 hours). Missing, malformed, future-dated, stale, or wrong-generation envelopes suppress reserve transitions and preserve the prior baseline. The first fresh publish after a missing/legacy/wrong-generation/stale predecessor is marked `continuous: false`; dispatch reports the source as `recovering`, cold-seeds the current drift set, and sends no reserve transition. Only the next continuous fresh generation becomes alertable. A general DEWS/depeg seed run still preserves an existing reserve baseline, while a first healthy run with no baseline treats the current producer set as the baseline.
 
-The live safety source cache is evaluated separately from those historical snapshots. It is hard-required for safety-grade fan-out and is considered stale after two `publish-report-card-cache` producer intervals. Legacy rows without `explain` remain valid; malformed or future-version `explain` payloads are dropped at parse time without dropping the row.
+The live safety source cache is evaluated separately from those historical snapshots. It is hard-required for safety-grade fan-out and is considered stale after two `publish-report-card-cache` producer intervals. The source carries the same strict Safety Score identity as the canonical full, compact, and exact-input projections. The prior alert snapshot persists that identity; a missing or different model/schema/methodology/evaluation-build identity forces a baseline seed instead of an organic grade-change fan-out. Legacy rows without `explain` remain valid inside an otherwise current identified source; malformed or future-version `explain` payloads are dropped at parse time without dropping the row.
 
 ### First-Run / Stale-Snapshot Behavior
 
@@ -547,7 +547,7 @@ If the raw DEWS/depeg snapshots are missing, unparsable, or older than 24 hours,
 
 This prevents a cold start from blasting subscribers with every current condition as if it were a new event.
 
-Safety-grade fan-out has its own source-cache freshness gate and seeds `alert:safety-snapshot` separately when the prior safety snapshot is absent, unparsable, or stale.
+Safety-grade fan-out has its own source-cache freshness gate and seeds `alert:safety-snapshot` separately when the prior safety snapshot is absent, unparsable, stale, or bound to a different Safety Score methodology identity.
 
 ### Eventless Fast Path
 

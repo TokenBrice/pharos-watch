@@ -5,6 +5,11 @@ shadow pipeline, calibration corpus, and current activation gate. It does not
 define an active Safety Score methodology. Production remains on Safety Score
 v8.17 and P4 same-notional scoring remains shadow-only.
 
+Release mechanics are governed by the
+[single-publisher V9 rollout contract](./safety-score-v9-rollout.md). Candidate
+readiness and rollout readiness are independent: neither can override the
+other.
+
 ## Durable Artifacts
 
 - `shared/data/safety-score-v9/historical-fixtures-v1.json`: 26 point-in-time fixtures (12 adverse, 14 resilient). Every source publication is at or before the fixture `asOf`; adverse outcome windows start at or after `asOf`. Each source now declares its capture state, and each fixture separates fact-freeze from outcome-annotation provenance. The legacy corpus honestly records all 26 sources as unarchived and all authoring controls as retrospective/unverified, so it cannot clear activation evidence integrity.
@@ -22,7 +27,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `shared/types/safety-score-v9.ts` defines and cross-validates the strict methodology-policy schema, evidence-disposition vocabulary, and exhaustive reason registry.
 - `shared/lib/safety-score-v9/policy.ts` loads the candidate policy, canonicalizes its semantic payload with code-unit ordering, computes a domain-separated SHA-256 semantic digest, and makes the closed reason registry authoritative for rateability, treatment, reason-coded ceiling resolution, and audit classification. Lifecycle labels and release metadata are excluded from the semantic digest, so a later promotion can prove that its scoring semantics are unchanged.
 - `shared/lib/safety-score-v9-research.ts` and `shared/lib/safety-score-v9-compiler.ts` now require an explicit validated policy. Compiled inputs bind the semantic digest that produced them, and scoring rejects a mismatched policy. Score traces carry both the evaluation policy ID and semantic digest. Production-shaped scoring inputs cannot supply arbitrary numeric caps; that capability is confined to the phase-zero scenario adapter used by the research harness.
-- `shared/types/safety-score-v9-base-input.ts` and `shared/lib/safety-score-v9/base-input-identity.ts` define a model-neutral, canonical base-input identity and deterministic generation ID.
+- `shared/types/report-cards-base-input.ts` and `shared/lib/report-cards-base-input-identity.ts` define the model-neutral, canonical base-input identity and deterministic generation ID shared by the V8 publisher and V9 candidate.
 - `shared/lib/safety-score-v9/exit-observation-set.ts` provides deterministic DEX/redemption observation merging, stable route ordering, duplicate handling, conflict rejection, and per-lane diagnostics.
 - `scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts` perturbs one numeric semantic field at a time over the durable golden corpus and reports affected archetypes, grade cliffs, full cap-candidate and binding-cap changes, score saturation, and all 28 pairwise ordering gaps/pass transitions. Its parameter listing contains only fields whose two default isolated perturbations both satisfy the policy schema; coupled fields are not advertised, and explicit invalid attempts fail closed.
 - The runtime-neutral `facts`, archetype, Backing, Exit, Control, access-posture,
@@ -41,21 +46,31 @@ The V9 implementation establishes candidate infrastructure without changing prod
   candidate deterministically. The current policy semantic digest is
   `5ec0823b12f9e1fd21fb31ba4a2ec059d25388d64ffe13fac80de376142c8a85`;
   the current evaluation-build digest is
-  `9daf02b66af811963fa0db8999238c022f806c90370ffead885cdd75f24257f4`.
+  `c8a7fc445491fcdee54b8efe2c383380a30a77a69d345e22c36441375eb8b039`.
 - After a valid V8 publication commits, the Worker runs V9 in a separate
-  failure domain. It retains all five content-addressed replay artifacts,
-  candidate/diff state, every scheduled attempt, and canonical UTC-day history.
-  A V9 compile, retention, or D1 failure cannot suppress or replace V8.
+  failure domain. It retains latest candidate/diff state and one compact daily
+  summary. Full replay artifacts are retained only for selected first, final,
+  or distinct anomaly evidence. The four-hour slowest producer cadence is
+  proven from elapsed time and source generations, not by archiving every
+  producer cycle. A V9 compile, retention, or D1 failure cannot suppress or
+  replace V8, and a later same-day retry may still select a success.
 - `GET /api/admin-safety-score-v9` and the internal admin workspace expose only
   exact retained candidate state. Material movements use append-only semantic
   review keys through `POST /api/admin-safety-score-v9/reviews`; a review record
   cannot activate V9.
-- The release-window evaluator accepts no caller-supplied pass booleans. The D1
-  authorization verifier cross-binds the candidate seal, independent validation
-  report, canonical 30-entry daily release-coverage series, policy/build
-  identities, every canonical day, and byte-identical replay of all five
-  retained artifacts. Only an
-  explicit `v9-rc-N` candidate can count; ordinary candidate-shadow days cannot.
+- The read-only `safety-score-v9:shadow-gate` evaluator accepts compact daily
+  summaries plus the selected immutable artifact rows and derives replay status
+  by rebuilding each candidate. It requires at least 14 consecutive UTC days,
+  at least two elapsed cycles of the four-hour slowest score-bearing producer,
+  and at least two distinct observed and archived `liveReserves` and
+  `redemption` generations for one frozen candidate/policy/build/capability and
+  operational-policy identity. It also requires exact active-ID and coverage
+  evidence, resolved reviews/blockers, and passed first/final/anomaly replays.
+  It cannot authorize or activate production at runtime.
+- The `ratified-release-coverage` floor intentionally fails closed until the
+  frozen V9-9 release cohort and its passing report are wired into the shadow
+  producer. Every daily run therefore remains non-qualifying and activation is
+  hard-blocked even if the operational shadow infrastructure is deployed.
 - Safety history now dual-writes identity-rich V2 rows while preserving the
   public V8 compatibility response. Methodology-boundary rows are excluded from
   continuous V8 history, and no V9 cutover baseline writer exists yet.

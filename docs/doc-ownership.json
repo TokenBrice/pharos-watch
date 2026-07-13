@@ -212,6 +212,12 @@
       "notes": ["Mint Authority Score; feeds the Decentralization dimension via a penalty-only blend as of Safety Score v8.0."]
     },
     {
+      "name": "safety-score-v9-rollout",
+      "sources": ["shared/lib/safety-score-v9/**", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9-*.ts", "worker/src/cron/publish-report-card-cache.ts", "worker/src/cron/snapshot-safety-grade-history.ts", "worker/src/api/admin-safety-score-v9.ts", "src/app/admin/safety-score-v9/**", "worker/scripts/check-safety-score-v9-shadow-gate.ts", "worker/migrations/0200_safety_score_v9_shadow_history.sql", "worker/migrations/0201_safety_score_history_v2.sql", "worker/migrations/0202_safety_score_v9_movement_reviews.sql"],
+      "docs": ["docs/process/safety-score-v9-rollout.md", "docs/process/safety-score-v9-consumer-ledger.md", "docs/process/safety-score-v9-readiness.md", "docs/report-cards.md", "docs/worker-infrastructure.md", "docs/data-flow-map.md", "docs/api-reference.md", "docs/telegram-alerts.md", "docs/tape-page.md"],
+      "notes": ["Keep V9 correctness/readiness gates separate from rollout authorization. Do not advertise or activate methodology 9.0 from shadow infrastructure alone."]
+    },
+    {
       "name": "pages-functions-hosting",
       "sources": ["functions/**", "shared/lib/site-data-lane.ts", "shared/lib/runtime-origins.ts", "src/lib/api.ts", "scripts/maintenance/serve-static-export.mjs", "next.config.ts"],
       "docs": ["docs/architecture.md", "docs/worker-infrastructure.md", "docs/deployment-process.md", "docs/operator-origin-access.md"],

@@ -38,14 +38,16 @@ This map links each major Pharos data domain from upstream source to frontend co
 | Timeline / Tape events                | Depeg, freeze, safety-score, PSI, DEWS, mint/burn, yield, methodology, cemetery, and lifecycle source tables/static registries                                                                                                                                                                                                                                                                                                               | `worker/src/cron/project-tape.ts` projects source transitions through class-specific tape projectors on the DEWS/PSI DB-only lane                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `tape_events`                                                                                                                                                                                                                                                               | `GET /api/events`                                                                                                                                                                                             | `useEvents`, `useLatestEvents`, `useTimelineFeedData`                                                                                                                                                                       | `/timeline/` cross-class event feed and homepage timeline modules                                                                                     |
 
 The report-card publication flow also runs a candidate-only Safety Score V9
-sidecar after the atomic V8 family commits. It reuses the exact normalized base
-generation, adds reviewed V9 facts, and writes immutable replay artifacts,
-shadow attempts/days, the latest candidate/diff cache, and append-only movement
-reviews. `GET /api/admin-safety-score-v9` and its review mutation are the only
-current UI/API consumers. These rows do not feed `GET /api/report-cards`, yield,
-Telegram, chain analytics, public history, or active aliases; those remain V8
-until the independent validation, coverage, shadow-window, and consumer-cutover
-gates are satisfied.
+sidecar after the atomic V8 publication commits. It reuses the exact normalized
+base generation, adds reviewed V9 facts, and writes the latest candidate/diff,
+one compact summary per UTC day, selected content-addressed replay evidence,
+and append-only movement reviews. A failed attempt can be retried later on the
+same day; routine successful runs do not retain a full artifact bundle.
+`GET /api/admin-safety-score-v9` and its review mutation are the only current
+UI/API consumers. Shadow state does not feed `GET /api/report-cards`, yield,
+Telegram, chain analytics, or public history; those remain V8 until the
+independent validation, coverage, shadow-window, and consumer-cutover gates are
+satisfied. See [Safety Score V9 Rollout](./process/safety-score-v9-rollout.md).
 
 ## Scheduling Backbone
 

@@ -2340,6 +2340,14 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 
 ```text
 {
+  "safetyScoreIdentity": {
+    "model": "v8",
+    "schemaVersion": 1,
+    "methodologyVersion": "8.11",
+    "evaluationBuildDigest": "<64-character SHA-256>",
+    "baseInputGenerationId": "report-cards-input:v1:<64-character SHA-256>",
+    "publicationGenerationId": "report-cards:8.11:1771977600"
+  },
   "cards": [ReportCard, ...],
   "dependencyGraph": {
     "edges": [{ "from": "usdc-circle", "to": "usde-ethena", "weight": 0.9, "type": "collateral" }, ...]
@@ -2385,7 +2393,9 @@ For CDP oracle handling, `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskSco
 
 For bridge-route handling, `rawInputs.bridgeRouteRiskTier` and `rawInputs.bridgeRouteRiskScore` are populated only when a coin has a reviewed `bridgeRouteRisk` profile. Missing route reviews return `null` and stay neutral. Since Safety Score v8.12, cards can also carry an optional display-only `bridgeRouteRisk` object with the reviewed summary, source links, protocol evidence, review provenance, and confidence. L2BEAT Interop is used only as static review evidence and candidate-queue material; the report-card API does not fetch L2BEAT live.
 
-`GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. That envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, generation-mismatched, or methodology-mismatched. Published payloads also expose `publication`, which proves the exact active-set identity as scored plus NR rows. The full snapshot used for yield hydration, the smaller `report_card_cache` score map used by lightweight Chain Health/OG consumers, and the Telegram safety source all carry the same publication generation and methodology and are committed in one D1 batch.
+`GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. That envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, generation-mismatched, methodology-mismatched, or missing the current V8 evaluation identity. Published and computed responses expose `safetyScoreIdentity`, which binds model `v8`, response schema, methodology, evaluation-build digest, exact base-input generation, and publication generation. They also expose `publication`, which proves the exact active-set identity as scored plus NR rows. The full snapshot, exact fixed input, smaller `report_card_cache` score map used by lightweight Chain Health/OG consumers, and Telegram safety source carry the same identity and are committed in one D1 batch.
+
+The unversioned `/api/report-cards` route remains a V8 contract and must never silently serve a V9 payload. A future active V9 API uses a genuinely versioned endpoint and independently versioned schema; its compatibility and deprecation dates are explicit product decisions, not runtime rollback controls.
 
 Report-card generation treats the stablecoins cache and readable redemption-backstop table as hard dependencies. The stablecoins cache is read in published-contract mode, so malformed cached objects that fail `StablecoinListResponseSchema` validation fail closed instead of being partially filtered for scoring. DEX liquidity, bluechip ratings, live-reserve inputs, and materially stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale beyond its scoring freshness runway, generation continues with a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
 
@@ -5623,7 +5633,9 @@ Counts from one through four and rates derived from low-count cells are `null`. 
 ### `GET /api/admin-safety-score-v9`
 
 Returns the latest retained Safety Score v9 candidate shadow envelope, its exact
-v8/v9 diff report, and the bounded canonical daily shadow history. The handler
+v8/v9 diff report, and compact daily shadow summaries. Each daily row contains
+retry counts, a selected candidate identity/coverage/movement/qualification
+summary, selected replay-artifact keys, and bounded latest-error context. The handler
 only reads the generation-bound values written by the shadow publisher; it
 never computes or reconstructs v9 from current v8 report-card rows.
 
