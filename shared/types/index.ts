@@ -24,3 +24,4 @@ export * from "./api-key-requests";
 export * from "./editorial";
 export * from "./pharosville";
 export * from "./validators";
+export * from "./safety-score-v9";

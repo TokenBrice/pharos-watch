@@ -1,0 +1,1070 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "schemaVersion": 1,
+      "id": "terra-ust-pre-collapse-2022",
+      "assetId": "ust-terra",
+      "asOf": "2022-05-01T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "algorithmic",
+        "implementationAgeMonths": 19,
+        "signals": ["reflexive backing", "concentrated exit path"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "algorithmic-reflexivity",
+            "severity": "critical",
+            "reason": "Backing and recapitalization are reflexive."
+          },
+          {
+            "pillar": "exit",
+            "kind": "bounded-unknown",
+            "severity": "high",
+            "reason": "Stress redemption capacity was not demonstrated."
+          }
+        ],
+        "unresolvedCriticalFacts": ["stress redemption capacity"]
+      },
+      "sources": [
+        {
+          "title": "Terra Money documentation",
+          "url": "https://docs.terra.money/learn/protocol.html",
+          "publishedAt": "2021-12-01T00:00:00.000Z",
+          "supports": ["algorithmic stabilization and LUNA dependency"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["backing", "exit", "peg-incident"],
+        "observedFrom": "2022-05-09T00:00:00.000Z",
+        "observedThrough": "2022-05-31T00:00:00.000Z",
+        "summary": "UST lost its peg as the reflexive stabilization mechanism entered a death spiral."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Pre-collapse mechanism facts test reflexive-backing detection without postmortem evidence."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "usdc-svb-pre-depeg-2023",
+      "assetId": "usdc-circle",
+      "asOf": "2023-03-10T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "fiat-cash",
+        "implementationAgeMonths": 42,
+        "signals": ["cash-bank counterparty concentration"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "unsafe-backing",
+            "severity": "high",
+            "reason": "Cash bank concentration was incompletely disclosed."
+          }
+        ],
+        "unresolvedCriticalFacts": ["intraday bank exposure"]
+      },
+      "sources": [
+        {
+          "title": "Circle January 2023 reserve report",
+          "url": "https://www.circle.com/hubfs/USDCAttestationReports/2023/2023%20USDC_Circle%20Examination%20Report%20January%202023.pdf",
+          "publishedAt": "2023-02-28T00:00:00.000Z",
+          "supports": ["reserve composition and banking model"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["backing", "exit", "peg-incident"],
+        "observedFrom": "2023-03-11T00:00:00.000Z",
+        "observedThrough": "2023-03-13T00:00:00.000Z",
+        "summary": "USDC depegged during uncertainty over cash held at Silicon Valley Bank and later recovered."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Uses the last reserve examination available before the bank failure weekend."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "dai-usdc-contagion-2023",
+      "assetId": "dai-makerdao",
+      "asOf": "2023-03-10T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "cdp",
+        "implementationAgeMonths": 52,
+        "signals": ["material USDC dependency", "fixed-price stability module"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "critical-dependency",
+            "severity": "high",
+            "reason": "A material fixed-price module depended on USDC."
+          }
+        ],
+        "unresolvedCriticalFacts": []
+      },
+      "sources": [
+        {
+          "title": "Maker Protocol technical docs",
+          "url": "https://docs.makerdao.com/smart-contract-modules/core-module/dog-and-clipper-detailed-documentation",
+          "publishedAt": "2022-12-01T00:00:00.000Z",
+          "supports": ["collateralized debt and liquidation design"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["dependency", "peg-incident"],
+        "observedFrom": "2023-03-11T00:00:00.000Z",
+        "observedThrough": "2023-03-13T00:00:00.000Z",
+        "summary": "DAI followed USDC below peg because the upstream exposure was mechanism-material."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Dependency fixture tests propagation rather than treating the CDP label as isolation."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "mim-ust-contagion-2022",
+      "assetId": "mim-abracadabra",
+      "asOf": "2022-05-08T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "cdp",
+        "implementationAgeMonths": 12,
+        "signals": ["UST ecosystem collateral dependency"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "critical-dependency",
+            "severity": "high",
+            "reason": "Collateral depended on the Terra ecosystem."
+          }
+        ],
+        "unresolvedCriticalFacts": ["real-time collateral concentration"]
+      },
+      "sources": [
+        {
+          "title": "Abracadabra cauldron documentation",
+          "url": "https://docs.abracadabra.money/learn/intro/stake/cauldrons",
+          "publishedAt": "2022-04-01T00:00:00.000Z",
+          "supports": ["isolated collateral market design"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["dependency", "exit", "peg-incident"],
+        "observedFrom": "2022-05-10T00:00:00.000Z",
+        "observedThrough": "2022-05-16T00:00:00.000Z",
+        "summary": "MIM experienced contagion and exit stress during the Terra collapse."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Tests material ecosystem dependency and collateral-market isolation."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "usdn-waves-depeg-2022",
+      "assetId": "usdn-neutrino",
+      "asOf": "2022-03-31T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "algorithmic",
+        "implementationAgeMonths": 29,
+        "signals": ["WAVES reflexive backing", "governance recapitalization dependency"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "algorithmic-reflexivity",
+            "severity": "critical",
+            "reason": "WAVES backing and recapitalization were reflexive."
+          }
+        ],
+        "unresolvedCriticalFacts": []
+      },
+      "sources": [
+        {
+          "title": "Neutrino protocol documentation",
+          "url": "https://docs.neutrino.at/neutrino-protocol/overview",
+          "publishedAt": "2021-12-01T00:00:00.000Z",
+          "supports": ["WAVES-backed stabilization mechanism"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["backing", "peg-incident"],
+        "observedFrom": "2022-04-04T00:00:00.000Z",
+        "observedThrough": "2022-12-31T00:00:00.000Z",
+        "summary": "USDN entered repeated and ultimately persistent depegs as WAVES backing weakened."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Pre-depeg protocol facts expose reflexive collateral and recapitalization risk."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "fei-genesis-instability-2021",
+      "assetId": "fei-fei-protocol",
+      "asOf": "2021-04-02T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "algorithmic",
+        "implementationAgeMonths": 0,
+        "signals": ["direct incentive mechanism", "protocol-owned exit liquidity"],
+        "riskSignals": [
+          {
+            "pillar": "exit",
+            "kind": "algorithmic-reflexivity",
+            "severity": "high",
+            "reason": "Direct incentives constrained exit during imbalance."
+          }
+        ],
+        "unresolvedCriticalFacts": ["live stress behavior"]
+      },
+      "sources": [
+        {
+          "title": "Fei Protocol genesis announcement",
+          "url": "https://medium.com/fei-protocol/fei-protocol-genesis-group-6c7f6a57d8d8",
+          "publishedAt": "2021-03-31T00:00:00.000Z",
+          "supports": ["genesis mechanism and incentive design"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["exit", "peg-incident"],
+        "observedFrom": "2021-04-04T00:00:00.000Z",
+        "observedThrough": "2021-04-30T00:00:00.000Z",
+        "summary": "FEI traded materially below peg after launch while direct incentives constrained exit."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Tests a novel stabilization design at its launch boundary."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "iron-finance-bank-run-2021",
+      "assetId": "iron-iron-finance",
+      "asOf": "2021-06-15T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "algorithmic",
+        "implementationAgeMonths": 3,
+        "signals": ["partially collateralized", "reflexive governance-token backing"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "algorithmic-reflexivity",
+            "severity": "critical",
+            "reason": "Partial collateral relied on a reflexive governance token."
+          }
+        ],
+        "unresolvedCriticalFacts": []
+      },
+      "sources": [
+        {
+          "title": "Iron Finance mechanism documentation",
+          "url": "https://docs.iron.finance/",
+          "publishedAt": "2021-05-01T00:00:00.000Z",
+          "supports": ["USDC and TITAN partial-collateral mechanism"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["backing", "exit", "peg-incident"],
+        "observedFrom": "2021-06-16T00:00:00.000Z",
+        "observedThrough": "2021-06-18T00:00:00.000Z",
+        "summary": "IRON suffered a bank run and the reflexive TITAN component collapsed."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Tests partial collateral and reflexive loss absorption before the run."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "cashio-mint-exploit-2022",
+      "assetId": "cash-cashio",
+      "asOf": "2022-03-22T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "cdp",
+        "implementationAgeMonths": 4,
+        "signals": ["permissionless collateral validation", "upgrade and mint path uncertainty"],
+        "riskSignals": [
+          {
+            "pillar": "control",
+            "kind": "active-control-incident",
+            "severity": "critical",
+            "reason": "Mint validation invariants were not independently verified."
+          }
+        ],
+        "unresolvedCriticalFacts": ["mint invariant verification"]
+      },
+      "sources": [
+        {
+          "title": "Cashio application repository",
+          "url": "https://github.com/cashioapp/cashio",
+          "publishedAt": "2022-02-01T00:00:00.000Z",
+          "supports": ["collateral and mint implementation"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["control", "backing", "peg-incident"],
+        "observedFrom": "2022-03-23T00:00:00.000Z",
+        "observedThrough": "2022-03-24T00:00:00.000Z",
+        "summary": "A validation flaw enabled unbacked minting and destroyed the peg."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Tests whether unresolved mint invariants force an unrated result."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "beanstalk-governance-exploit-2022",
+      "assetId": "bean-beanstalk",
+      "asOf": "2022-04-16T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "algorithmic",
+        "implementationAgeMonths": 8,
+        "signals": ["flash-loan-sensitive governance", "protocol reserve control"],
+        "riskSignals": [
+          {
+            "pillar": "control",
+            "kind": "active-control-incident",
+            "severity": "critical",
+            "reason": "Governance could execute reserve-critical actions without a defensive delay."
+          }
+        ],
+        "unresolvedCriticalFacts": ["governance execution delay"]
+      },
+      "sources": [
+        {
+          "title": "Beanstalk Farms whitepaper",
+          "url": "https://docs.bean.money/almanac/protocol/whitepaper",
+          "publishedAt": "2022-03-01T00:00:00.000Z",
+          "supports": ["governance and reserve design"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["control", "backing", "peg-incident"],
+        "observedFrom": "2022-04-17T00:00:00.000Z",
+        "observedThrough": "2022-05-01T00:00:00.000Z",
+        "summary": "A governance exploit drained protocol assets and impaired BEAN."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Tests common control between governance and backing assets."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "husd-redemption-freeze-2022",
+      "assetId": "husd-stable-universal",
+      "asOf": "2022-08-16T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "fiat-cash",
+        "implementationAgeMonths": 25,
+        "signals": ["issuer redemption dependency", "banking and market-maker concentration"],
+        "riskSignals": [
+          {
+            "pillar": "exit",
+            "kind": "bounded-unknown",
+            "severity": "high",
+            "reason": "Current issuer redemption operations were not evidenced."
+          }
+        ],
+        "unresolvedCriticalFacts": ["current redemption operations"]
+      },
+      "sources": [
+        {
+          "title": "HUSD attestations",
+          "url": "https://www.stcoins.com/attestation/index",
+          "publishedAt": "2022-07-31T00:00:00.000Z",
+          "supports": ["issuer reserve and attestation model"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["exit", "peg-incident"],
+        "observedFrom": "2022-08-18T00:00:00.000Z",
+        "observedThrough": "2022-10-31T00:00:00.000Z",
+        "summary": "HUSD lost liquidity and peg support as redemption operations deteriorated."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Tests fiat backing where operational exit evidence is the critical missing fact."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "usn-undercollateralization-2022",
+      "assetId": "usn-decentral-bank",
+      "asOf": "2022-10-23T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "algorithmic",
+        "implementationAgeMonths": 6,
+        "signals": ["legacy algorithmic liability", "reserve accounting uncertainty"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "unsafe-backing",
+            "severity": "high",
+            "reason": "Reserve assets were not fully reconciled to legacy liabilities."
+          }
+        ],
+        "unresolvedCriticalFacts": ["liability reconciliation"]
+      },
+      "sources": [
+        {
+          "title": "USN launch announcement",
+          "url": "https://near.org/blog/near-native-stablecoin-usn-launches",
+          "publishedAt": "2022-04-25T00:00:00.000Z",
+          "supports": ["USN mechanism and reserve design"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["backing", "control"],
+        "observedFrom": "2022-10-24T00:00:00.000Z",
+        "observedThrough": "2022-11-30T00:00:00.000Z",
+        "summary": "A reserve shortfall led to wind-down and a protection programme."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Tests assets-only reserve visibility without reconciled liabilities."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "usdr-tangible-run-2023",
+      "assetId": "usdr-tangible",
+      "asOf": "2023-10-10T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "rwa-credit-fund",
+        "implementationAgeMonths": 14,
+        "signals": ["illiquid real-estate backing", "thin immediate redemption liquidity"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "speculative-credit",
+            "severity": "high",
+            "reason": "Backing depended on illiquid real-estate credit."
+          },
+          {
+            "pillar": "exit",
+            "kind": "bounded-unknown",
+            "severity": "critical",
+            "reason": "Liquid reserves could not cover the stressed exit request."
+          }
+        ],
+        "unresolvedCriticalFacts": ["same-notional liquidation capacity"]
+      },
+      "sources": [
+        {
+          "title": "Tangible USDR documentation",
+          "url": "https://docs.tangible.store/usdr",
+          "publishedAt": "2023-09-01T00:00:00.000Z",
+          "supports": ["real-estate backing and redemption model"]
+        }
+      ],
+      "outcome": {
+        "classification": "adverse",
+        "categories": ["backing", "exit", "peg-incident"],
+        "observedFrom": "2023-10-11T00:00:00.000Z",
+        "observedThrough": "2023-10-31T00:00:00.000Z",
+        "summary": "A redemption run exhausted liquid backing while real-estate assets could not settle immediately."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Tests maturity mismatch and absolute exit capacity for RWA credit."
+      }
+    },
+
+    {
+      "schemaVersion": 1,
+      "id": "usdt-bank-stress-survivor-2023",
+      "assetId": "usdt-tether",
+      "asOf": "2023-03-09T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "fiat-cash",
+        "implementationAgeMonths": 89,
+        "signals": ["diversified liquid reserves", "direct issuer redemption"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "bounded-unknown",
+            "severity": "low",
+            "reason": "Named bank concentration was not fully disclosed."
+          }
+        ],
+        "unresolvedCriticalFacts": ["named bank concentration"]
+      },
+      "sources": [
+        {
+          "title": "Tether December 2022 assurance opinion",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/4hiNJsZ98LlZqCJHKzrLpV/2cbb5a2e025096279173c0c36094f8ea/Tether_CRR_December_2022.pdf",
+          "publishedAt": "2023-02-09T00:00:00.000Z",
+          "supports": ["reserve composition and liabilities"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "backing", "exit"],
+        "observedFrom": "2023-03-10T00:00:00.000Z",
+        "observedThrough": "2023-03-20T00:00:00.000Z",
+        "summary": "USDT maintained practical exit function through the March banking stress window."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Fiat-anchor survivor paired with contemporaneous reserve assurance."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "lusd-bank-stress-survivor-2023",
+      "assetId": "lusd-liquity",
+      "asOf": "2023-03-09T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "cdp",
+        "implementationAgeMonths": 23,
+        "signals": ["ETH-only collateral", "protocol redemption", "immutable contracts"],
+        "riskSignals": [],
+        "unresolvedCriticalFacts": []
+      },
+      "sources": [
+        {
+          "title": "Liquity protocol documentation",
+          "url": "https://docs.liquity.org/liquity-v1/faq/lusd-redemptions",
+          "publishedAt": "2022-01-01T00:00:00.000Z",
+          "supports": ["redemption and collateral mechanism"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "backing", "exit", "control"],
+        "observedFrom": "2023-03-10T00:00:00.000Z",
+        "observedThrough": "2023-03-20T00:00:00.000Z",
+        "summary": "LUSD remained functional during centralized-bank and USDC stress."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Mature crypto-backed CDP survivor with direct redemption."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "frax-bank-stress-survivor-2023",
+      "assetId": "frax-frax",
+      "asOf": "2023-03-09T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "algorithmic",
+        "implementationAgeMonths": 28,
+        "signals": ["collateralized AMO design", "multiple liquidity routes"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "critical-dependency",
+            "severity": "moderate",
+            "reason": "USDC remained a material common-mode dependency."
+          }
+        ],
+        "unresolvedCriticalFacts": ["USDC common-mode share"]
+      },
+      "sources": [
+        {
+          "title": "Frax documentation",
+          "url": "https://docs.frax.finance/frax-v1-original/original-design",
+          "publishedAt": "2022-06-01T00:00:00.000Z",
+          "supports": ["collateral ratio and AMO mechanism"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "exit", "dependency"],
+        "observedFrom": "2023-03-10T00:00:00.000Z",
+        "observedThrough": "2023-03-20T00:00:00.000Z",
+        "summary": "FRAX absorbed the banking-stress window and returned to peg."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Bounded survivor case with a known upstream common mode."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "usdp-bank-stress-survivor-2023",
+      "assetId": "usdp-paxos",
+      "asOf": "2023-03-09T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "fiat-cash",
+        "implementationAgeMonths": 42,
+        "signals": ["regulated segregated reserves", "issuer redemption"],
+        "riskSignals": [
+          {
+            "pillar": "control",
+            "kind": "centralized-mint",
+            "severity": "moderate",
+            "reason": "Issuer controls remained centralized."
+          }
+        ],
+        "unresolvedCriticalFacts": []
+      },
+      "sources": [
+        {
+          "title": "Pax Dollar transparency",
+          "url": "https://www.paxos.com/usdp-transparency",
+          "publishedAt": "2023-02-28T00:00:00.000Z",
+          "supports": ["reserve and redemption structure"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "backing", "exit"],
+        "observedFrom": "2023-03-10T00:00:00.000Z",
+        "observedThrough": "2023-03-20T00:00:00.000Z",
+        "summary": "USDP retained redemption function through the U.S. banking stress."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Regulated fiat issuer survivor."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "gusd-bank-stress-survivor-2023",
+      "assetId": "gusd-gemini",
+      "asOf": "2023-03-09T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "fiat-cash",
+        "implementationAgeMonths": 54,
+        "signals": ["cash and treasury backing", "issuer redemption"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "bounded-unknown",
+            "severity": "moderate",
+            "reason": "Named bank distribution was unavailable."
+          }
+        ],
+        "unresolvedCriticalFacts": ["bank distribution"]
+      },
+      "sources": [
+        {
+          "title": "Gemini dollar transparency",
+          "url": "https://www.gemini.com/dollar",
+          "publishedAt": "2023-02-28T00:00:00.000Z",
+          "supports": ["reserve and issuance model"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "backing"],
+        "observedFrom": "2023-03-10T00:00:00.000Z",
+        "observedThrough": "2023-03-20T00:00:00.000Z",
+        "summary": "GUSD remained redeemable through the banking-stress observation window."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Smaller fiat issuer survivor with bounded evidence gaps."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "rai-bank-stress-survivor-2023",
+      "assetId": "rai-reflexer",
+      "asOf": "2023-03-09T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "cdp",
+        "implementationAgeMonths": 25,
+        "signals": ["ETH collateral", "non-USD redemption price", "autonomous controller"],
+        "riskSignals": [],
+        "unresolvedCriticalFacts": []
+      },
+      "sources": [
+        {
+          "title": "Reflexer RAI documentation",
+          "url": "https://docs.reflexer.finance/",
+          "publishedAt": "2022-01-01T00:00:00.000Z",
+          "supports": ["collateral and redemption-price control"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "backing", "control"],
+        "observedFrom": "2023-03-10T00:00:00.000Z",
+        "observedThrough": "2023-03-20T00:00:00.000Z",
+        "summary": "RAI's crypto-native mechanism remained functional through centralized stablecoin stress."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Non-fiat CDP survivor prevents overfitting to one-dollar redemption."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "crvusd-curve-exploit-survivor-2023",
+      "assetId": "crvusd-curve",
+      "asOf": "2023-07-29T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "cdp",
+        "implementationAgeMonths": 2,
+        "signals": ["soft liquidation", "multi-market collateral", "Curve common mode"],
+        "riskSignals": [
+          {
+            "pillar": "control",
+            "kind": "weak-oracle-branch",
+            "severity": "moderate",
+            "reason": "Branch-specific oracle fallback evidence was incomplete."
+          }
+        ],
+        "unresolvedCriticalFacts": ["branch-specific oracle fallback"]
+      },
+      "sources": [
+        {
+          "title": "crvUSD documentation",
+          "url": "https://docs.curve.finance/crvUSD/overview/",
+          "publishedAt": "2023-05-17T00:00:00.000Z",
+          "supports": ["LLAMMA liquidation and collateral design"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "exit", "control"],
+        "observedFrom": "2023-07-30T00:00:00.000Z",
+        "observedThrough": "2023-08-10T00:00:00.000Z",
+        "summary": "crvUSD remained operational during the Curve Vyper exploit stress."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Young multi-market CDP survivor with a protocol common mode."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "gho-curve-exploit-survivor-2023",
+      "assetId": "gho-aave",
+      "asOf": "2023-07-29T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "cdp",
+        "implementationAgeMonths": 0,
+        "signals": ["facilitator mint buckets", "Aave liquidation branches"],
+        "riskSignals": [
+          {
+            "pillar": "control",
+            "kind": "centralized-mint",
+            "severity": "moderate",
+            "reason": "Facilitator controls shared governed mint authority."
+          }
+        ],
+        "unresolvedCriticalFacts": ["facilitator common controls"]
+      },
+      "sources": [
+        {
+          "title": "Aave GHO documentation",
+          "url": "https://aave.com/docs/primitives/gho",
+          "publishedAt": "2023-07-15T00:00:00.000Z",
+          "supports": ["facilitator and collateral mechanism"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "control", "exit"],
+        "observedFrom": "2023-07-30T00:00:00.000Z",
+        "observedThrough": "2023-08-10T00:00:00.000Z",
+        "summary": "GHO remained operational during contemporaneous DeFi market stress."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Young governed CDP survivor; track-record ceiling remains visible."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "pyusd-first-year-survivor-2023",
+      "assetId": "pyusd-paypal",
+      "asOf": "2023-08-07T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "fiat-cash",
+        "implementationAgeMonths": 0,
+        "signals": ["Paxos reserve and redemption", "centralized freeze control"],
+        "riskSignals": [
+          {
+            "pillar": "control",
+            "kind": "centralized-mint",
+            "severity": "moderate",
+            "reason": "Issuer mint and freeze controls were centralized."
+          }
+        ],
+        "unresolvedCriticalFacts": []
+      },
+      "sources": [
+        {
+          "title": "PayPal USD launch",
+          "url": "https://newsroom.paypal-corp.com/2023-08-07-PayPal-Launches-U-S-Dollar-Stablecoin",
+          "publishedAt": "2023-08-07T00:00:00.000Z",
+          "supports": ["issuer, backing, and launch boundary"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "backing", "control"],
+        "observedFrom": "2023-08-08T00:00:00.000Z",
+        "observedThrough": "2024-08-07T00:00:00.000Z",
+        "summary": "PYUSD completed its first year without a material backing or redemption failure."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Fiat launch survivor used to calibrate track-record treatment."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "usde-early-growth-survivor-2024",
+      "assetId": "usde-ethena",
+      "asOf": "2024-02-18T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "synthetic-delta-neutral",
+        "implementationAgeMonths": 0,
+        "signals": ["CEX hedge custody", "funding and basis risk", "off-exchange settlement"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "bounded-unknown",
+            "severity": "moderate",
+            "reason": "Venue and custody common-mode capacity was unresolved."
+          }
+        ],
+        "unresolvedCriticalFacts": ["common-mode venue capacity"]
+      },
+      "sources": [
+        {
+          "title": "Ethena backing and custody overview",
+          "url": "https://docs.ethena.fi/backing-custody-and-security/overview",
+          "publishedAt": "2024-02-01T00:00:00.000Z",
+          "supports": ["delta-neutral backing and custody paths"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "backing", "exit"],
+        "observedFrom": "2024-02-19T00:00:00.000Z",
+        "observedThrough": "2024-04-30T00:00:00.000Z",
+        "summary": "USDe's hedging and custody system remained solvent through its initial rapid-growth window."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Synthetic survivor keeps venue and custody common modes explicit."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "eurc-bank-stress-survivor-2023",
+      "assetId": "eurc-circle",
+      "asOf": "2023-03-09T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "fiat-cash",
+        "implementationAgeMonths": 9,
+        "signals": ["euro bank reserves", "Circle common control"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "bounded-unknown",
+            "severity": "moderate",
+            "reason": "Named euro-bank concentration was unavailable."
+          }
+        ],
+        "unresolvedCriticalFacts": ["named bank concentration"]
+      },
+      "sources": [
+        {
+          "title": "Circle Euro Coin reserve reports",
+          "url": "https://www.circle.com/transparency",
+          "publishedAt": "2023-02-28T00:00:00.000Z",
+          "supports": ["reserve and issuer model"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "backing"],
+        "observedFrom": "2023-03-10T00:00:00.000Z",
+        "observedThrough": "2023-03-20T00:00:00.000Z",
+        "summary": "EURC remained functional through the U.S. banking stress despite shared issuer control."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Cross-currency fiat survivor with shared issuer failure domain."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "dola-beanstalk-stress-survivor-2022",
+      "assetId": "dola-inverse-finance",
+      "asOf": "2022-04-16T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "cdp",
+        "implementationAgeMonths": 17,
+        "signals": ["isolated lending markets", "governed mint ceilings"],
+        "riskSignals": [
+          {
+            "pillar": "control",
+            "kind": "weak-oracle-branch",
+            "severity": "moderate",
+            "reason": "Market-specific oracle branches were incomplete."
+          }
+        ],
+        "unresolvedCriticalFacts": ["market-specific oracle branches"]
+      },
+      "sources": [
+        {
+          "title": "Inverse Finance DOLA documentation",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/dola",
+          "publishedAt": "2022-03-01T00:00:00.000Z",
+          "supports": ["DOLA issuance and collateral markets"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "dependency", "control"],
+        "observedFrom": "2022-04-17T00:00:00.000Z",
+        "observedThrough": "2022-05-01T00:00:00.000Z",
+        "summary": "DOLA remained operational through the Beanstalk governance exploit window."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "CDP survivor checks isolation from an unrelated protocol failure."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "susd-bank-stress-survivor-2023",
+      "assetId": "susd-synthetix",
+      "asOf": "2023-03-09T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "synthetic-delta-neutral",
+        "implementationAgeMonths": 35,
+        "signals": ["shared debt pool", "oracle dependency", "protocol exchange exit"],
+        "riskSignals": [
+          {
+            "pillar": "backing",
+            "kind": "critical-dependency",
+            "severity": "moderate",
+            "reason": "The shared debt pool created a common dependency."
+          }
+        ],
+        "unresolvedCriticalFacts": []
+      },
+      "sources": [
+        {
+          "title": "Synthetix debt pool documentation",
+          "url": "https://docs.synthetix.io/synthetix-protocol/the-synthetix-protocol/debt-pool",
+          "publishedAt": "2022-06-01T00:00:00.000Z",
+          "supports": ["shared debt and oracle mechanism"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "dependency", "control"],
+        "observedFrom": "2023-03-10T00:00:00.000Z",
+        "observedThrough": "2023-03-20T00:00:00.000Z",
+        "summary": "sUSD's shared debt mechanism remained operational during centralized stablecoin stress."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Synthetic survivor with explicit oracle and debt-pool common modes."
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "liquity-bold-early-survivor-2024",
+      "assetId": "bold-liquity",
+      "asOf": "2024-12-31T00:00:00.000Z",
+      "factsVersion": 1,
+      "facts": {
+        "archetype": "cdp",
+        "implementationAgeMonths": 0,
+        "signals": ["multi-branch collateral", "branch redemption", "stability pool backstop"],
+        "riskSignals": [
+          {
+            "pillar": "control",
+            "kind": "weak-oracle-branch",
+            "severity": "moderate",
+            "reason": "Branch-specific shutdown and oracle evidence remained incomplete."
+          }
+        ],
+        "unresolvedCriticalFacts": ["branch-specific oracle and shutdown evidence"]
+      },
+      "sources": [
+        {
+          "title": "Liquity v2 documentation",
+          "url": "https://docs.liquity.org/v2-documentation",
+          "publishedAt": "2024-12-20T00:00:00.000Z",
+          "supports": ["branch, redemption, liquidation, and backstop design"]
+        }
+      ],
+      "outcome": {
+        "classification": "resilient",
+        "categories": ["survivor", "backing", "exit", "control"],
+        "observedFrom": "2025-01-01T00:00:00.000Z",
+        "observedThrough": "2025-06-30T00:00:00.000Z",
+        "summary": "BOLD remained operational during its first six-month calibration window."
+      },
+      "provenance": {
+        "reviewer": "Pharos research",
+        "reviewedAt": "2026-07-01T00:00:00.000Z",
+        "rationale": "Young multi-branch CDP survivor requires branch-aware evidence rather than a hand-set pillar."
+      }
+    }
+  ]
+}
