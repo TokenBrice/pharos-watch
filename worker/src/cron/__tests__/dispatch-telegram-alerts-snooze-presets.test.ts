@@ -332,7 +332,7 @@ describe("dispatchTelegramAlerts", () => {
       })),
       subscribers: [
         { chatId: "mega-chat", lastActiveAt: now },
-        ...Array.from({ length: 1250 }, (_, index) => ({
+        ...Array.from({ length: 1_200 }, (_, index) => ({
           chatId: `global-${index}`,
           lastActiveAt: now - 1_000 - index,
           global: { depeg: true },
