@@ -36,6 +36,7 @@ import {
   readRedemptionBackstopLiveMetadata,
   type RedemptionBackstopLiveMetadata,
 } from "./redemption-backstop-live-metadata";
+import { buildRedemptionExitRouteObservation } from "./redemption-exit-route-observations";
 
 function resolveStaticFields(
   stablecoinId: string,
@@ -201,10 +202,32 @@ export async function buildRedemptionBackstopEntry(
 
   const routeExitCorrelation = config.routeExitCorrelation ?? inferDefaultRouteExitCorrelation(config);
   const modeledExitSizeUsd = computeModeledExitSizeUsd(supplyUsd);
-  const capacityProfile = capacity.capacityProfile
+  const baseCapacityProfile = capacity.capacityProfile
     ? {
         ...capacity.capacityProfile,
         ...(modeledExitSizeUsd != null ? { modeledExitSizeUsd } : {}),
+      }
+    : undefined;
+  const exitRouteObservation = buildRedemptionExitRouteObservation({
+    stablecoinId,
+    config,
+    capacityProfile: baseCapacityProfile,
+    scoringCapacityUsd: capacity.scoringCapacityUsd,
+    supplyUsd,
+    routeStatus,
+    resolutionState,
+    sourceMode: capacity.sourceMode,
+    capacityConfidence: capacity.capacityConfidence,
+    ...(capacity.capacityKind ? { capacityKind: capacity.capacityKind } : {}),
+    ...(capacity.freshnessKind ? { freshnessKind: capacity.freshnessKind } : {}),
+    ...(capacity.sourceTimestamp != null ? { sourceTimestamp: capacity.sourceTimestamp } : {}),
+    resolvedFeeBps: staticFields.feeBps,
+    now,
+  });
+  const capacityProfile = baseCapacityProfile
+    ? {
+        ...baseCapacityProfile,
+        ...(exitRouteObservation ? { exitRouteObservations: [exitRouteObservation] } : {}),
       }
     : undefined;
   const capacityBasis = resolveCapacityBasis(config.routeFamily, config.capacityModel, capacity.capacityConfidence);

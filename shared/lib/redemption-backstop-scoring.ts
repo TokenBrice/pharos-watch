@@ -777,8 +777,8 @@ export function classifyExitRouteCorrelation(
 ): { independent: boolean; reason: string } {
   const impairedOutputs = new Set(impairedOutputAssetIds.map(normalizeCorrelationKey));
   const routeOutputIds = [
-    ...collectTrackedOutputIds(dexRoute.output),
-    ...collectTrackedOutputIds(redemptionRoute.output),
+    ...collectImpairmentOutputIds(dexRoute.output),
+    ...collectImpairmentOutputIds(redemptionRoute.output),
   ].map(normalizeCorrelationKey);
   const impairedRouteOutputs = [...new Set(routeOutputIds.filter((id) => impairedOutputs.has(id)))].sort();
   if (impairedRouteOutputs.length > 0) {
@@ -821,19 +821,29 @@ function collectTrackedOutputIds(output: ExitRouteOutput): string[] {
   ];
 }
 
+function collectImpairmentOutputIds(output: ExitRouteOutput): string[] {
+  return [...collectTrackedOutputIds(output), ...(output.assetKeys ?? [])];
+}
+
 function collectOutputIdentityKeys(output: ExitRouteOutput): string[] {
   return [
     ...collectTrackedOutputIds(output).map((id) => `asset:${id}`),
+    ...(output.assetKeys ?? []).map((key) => `asset-key:${key}`),
     ...(output.currency?.trim() ? [`currency:${output.currency}`] : []),
   ];
 }
 
 function hasResolvedOutputIdentity(output: ExitRouteOutput): boolean {
   if (output.kind === "fiat") return !!output.currency?.trim();
-  if (output.kind === "tracked-stablecoin") return collectTrackedOutputIds(output).length > 0;
-  if (output.kind === "collateral") {
-    return collectTrackedOutputIds(output).length > 0 || !!output.currency?.trim();
+  if (output.kind === "tracked-stablecoin") {
+    return collectTrackedOutputIds(output).length > 0 || (output.assetKeys?.length ?? 0) > 0;
   }
+  if (output.kind === "collateral") {
+    return (
+      collectTrackedOutputIds(output).length > 0 || (output.assetKeys?.length ?? 0) > 0 || !!output.currency?.trim()
+    );
+  }
+  if (output.kind === "unresolved-asset") return (output.assetKeys?.length ?? 0) > 0;
   return false;
 }
 

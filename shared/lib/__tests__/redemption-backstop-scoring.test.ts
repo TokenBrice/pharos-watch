@@ -373,6 +373,35 @@ describe("computeEffectiveExitScore", () => {
         "independent-issuer-rail",
       ).independent,
     ).toBe(false);
+
+    const collateralKey = "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    const keyedDex = exitRoute({
+      routeId: "dex:keyed",
+      output: { kind: "unresolved-asset", assetKeys: [collateralKey] },
+      commonModeKeys: ["chain:ethereum", "protocol:dex"],
+    });
+    expect(
+      classifyExitRouteCorrelation(
+        keyedDex,
+        exitRoute({
+          routeId: "redeem:keyed",
+          output: { kind: "collateral", assetKeys: [collateralKey] },
+          commonModeKeys: ["issuer:example"],
+        }),
+      ).reason,
+    ).toContain("shared-output");
+    expect(
+      classifyExitRouteCorrelation(
+        keyedDex,
+        exitRoute({
+          routeId: "redeem:other",
+          output: { kind: "fiat", currency: "USD" },
+          commonModeKeys: ["issuer:example"],
+        }),
+        undefined,
+        [collateralKey],
+      ).reason,
+    ).toContain("impaired-output");
   });
 });
 
