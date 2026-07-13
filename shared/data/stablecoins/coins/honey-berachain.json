@@ -208,7 +208,44 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "HONEY is minted through the Berachain HoneyFactory by depositing whitelisted stablecoin collateral (USDC, USDT0, pyUSD/BYUSD, USDe) into per-asset vaults; collateral whitelisting and mint/redeem rates are configured by a 3/5 Berachain multisig holding DEFAULT_ADMIN_ROLE and MANAGER_ROLE on the HoneyFactory, with Basket Mode safety controls.",
+    "summary": "HONEY is minted only by the Berachain HoneyFactory against whitelisted collateral vaults. Both the HONEY token and HoneyFactory are UUPS proxies, and the same 3/5 Berachain Safe holds DEFAULT_ADMIN_ROLE for immediate upgrades and HoneyFactory parameter administration.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce",
+        "0xa4afef880f5ce1f63c9fb48f661e27f8b4216401"
+      ],
+      "implementationAddresses": [
+        "0x96b1a552a97da5503343d0f9ff2766c616e62905",
+        "0x6331f0a4e0220a14be27bd31af091f0a1ac036a1"
+      ],
+      "adminAddresses": [
+        "0xd13948f99525fb271809f45c268d72a3c00a568d"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Berachain HoneyFactory admin (3/5 Safe)",
+      "observedAt": "2026-07-13",
+      "observedBlock": 23484618,
+      "sources": [
+        {
+          "label": "Berachain HONEY documentation",
+          "url": "https://docs.berachain.com/learn/pol/tokens/honey"
+        },
+        {
+          "label": "HONEY implementation verified source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x96b1a552a97da5503343d0f9ff2766c616e62905"
+        },
+        {
+          "label": "HoneyFactory implementation verified source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x6331f0a4e0220a14be27bd31af091f0a1ac036a1"
+        },
+        {
+          "label": "Berachain PublicNode RPC",
+          "url": "https://berachain-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "berachain",
@@ -220,7 +257,9 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "HONEY mints only when whitelisted stablecoin collateral is deposited through the HoneyFactory into per-asset vaults; Basket Mode restricts mint/redeem when a collateral asset depegs.",
-        "evidence": "At Berachain block 22086398, paused() returned false; ABI-verified source (Routescan) confirms HoneyFactory is an ERC1967 UUPS proxy implementing AccessControl with DEFAULT_ADMIN_ROLE, MANAGER_ROLE, and PAUSER_ROLE; hasRole(DEFAULT_ADMIN_ROLE, 0xd13948f99525fB271809F45c268d72A3C00a568d) returned true; hasRole(MANAGER_ROLE keccak256, same address) returned true.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 23484618,
+        "evidence": "At Berachain block 23484618, HoneyFactory's implementation slot resolved to 0x6331f0a4e0220a14be27bd31af091f0a1ac036a1 while its proxy-admin and beacon slots were zero. Verified VaultAdmin source authorizes UUPS upgrades through DEFAULT_ADMIN_ROLE, which the reviewed Safe still held.",
         "sources": [
           {
             "label": "Berachain HONEY docs",
@@ -255,10 +294,13 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
-          "observedBlock": 22086398,
+          "version": "1.3.0",
+          "observedBlock": 23484618,
           "source": "onchain"
         },
-        "evidence": "At Berachain block 22086398, getOwners() on 0xd13948f99525fB271809F45c268d72A3C00a568d returned 5 addresses; getThreshold() returned 3; getModules() returned empty array; guard slot returned zero; masterCopy() returned 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Gnosis Safe L2 v1.3.0); fallbackHandler slot = 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. hasRole(DEFAULT_ADMIN_ROLE, this address) on HoneyFactory = true.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 23484618,
+        "evidence": "At Berachain block 23484618, getOwners() returned the same five owners, getThreshold() returned 3, getModulesPaginated() returned no modules, VERSION() returned 1.3.0, the guard slot was zero, and the fallback-handler slot remained 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. hasRole(DEFAULT_ADMIN_ROLE, Safe) returned true on both the HONEY token and HoneyFactory.",
         "sources": [
           {
             "label": "HoneyFactory on Berachain explorer",
@@ -268,9 +310,9 @@
       }
     ],
     "review": {
-      "evidence": "At Berachain block 22086398: HoneyFactory (0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401) is an ERC1967 UUPS proxy (impl 0x6331f0a4e0220a14be27bd31af091f0a1ac036a1, verified source HoneyFactory.sol on Routescan) implementing AccessControl; hasRole(DEFAULT_ADMIN_ROLE=bytes32(0), 0xd13948...) = true; hasRole(MANAGER_ROLE keccak256, same) = true. The admin is a 3/5 Gnosis Safe (getOwners 5 signers, getThreshold 3, no modules, no guard, masterCopy = Safe L2 v1.3.0 at 0x3e5c63...). HONEY token slot0 = HoneyFactory address confirming factory-only minting.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Berachain block 23484618, HONEY and HoneyFactory were UUPS proxies with implementations 0x96b1a552... and 0x6331f0a4..., zero proxy-admin and beacon slots, and implementations returning the standard proxiable UUID. Verified HONEY source permits mint/burn only from factory() 0xa4afef88... and authorizes upgrades through DEFAULT_ADMIN_ROLE. The same unchanged 3/5 Safe held that role on both proxies with no enabled modules or guard.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
       "sources": [
         {
           "label": "Berachain HONEY docs",
