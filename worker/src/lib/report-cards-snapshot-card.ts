@@ -25,7 +25,10 @@ import {
   ORACLE_RISK_SCORE,
   type BlacklistStatus,
 } from "@shared/lib/report-cards";
-import { isRedemptionEligibleForLiquidity } from "@shared/lib/report-card-peg-liquidity";
+import {
+  isRedemptionEligibleForLiquidity,
+  type DexDeploymentSupplyCoverage,
+} from "@shared/lib/report-card-peg-liquidity";
 import {
   applyReportCardDexEvidencePolicy,
   type ReportCardDexEvidenceInput,
@@ -61,7 +64,10 @@ export interface ComputeCardInput {
   dexLiqMap: Record<
     string,
     Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> &
-      Omit<ReportCardDexEvidenceInput, "liquidityScore">
+      Omit<ReportCardDexEvidenceInput, "liquidityScore"> &
+      Partial<Pick<DexLiquidityData, "exitRouteObservations">> & {
+        deploymentSupplyCoverage?: DexDeploymentSupplyCoverage | null;
+      }
   >;
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
   bluechipMap: Record<string, BluechipRating>;

@@ -6,9 +6,11 @@ import type {
   StablecoinMeta,
 } from "../types";
 import {
-  computeEffectiveExitScore,
+  computeEffectiveExitScoreDiagnostics,
   isStrongLiveDirectRoute,
   REDEMPTION_ROUTE_FAMILY_LABELS,
+  type EffectiveExitScoreDiagnostics,
+  type SameNotionalExitScoringMode,
 } from "./redemption-backstop-scoring";
 import { ACTIVE_DEPEG_CAP_F_BPS } from "./report-card-active-depeg";
 import { formatCompactUsdShort } from "./format";
@@ -141,6 +143,34 @@ type RedemptionLiquidityInput = Pick<
     >
   >;
 
+export interface DexDeploymentSupplyCoverage {
+  totalSupplyUsd: number;
+  observedSupplyUsd: number;
+  verifiedNoPoolsSupplyUsd: number;
+  providerInaccessibleSupplyUsd: number;
+  unknownSupplyUsd: number;
+  observedSupplyRatio: number;
+  verifiedNoPoolsSupplyRatio: number;
+  providerInaccessibleSupplyRatio: number;
+  unknownSupplyRatio: number;
+  unknownChains: string[];
+}
+
+type LiquidityInput = Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> &
+  Omit<ReportCardDexEvidenceInput, "liquidityScore"> & {
+    exitRouteObservations?: DexLiquidityData["exitRouteObservations"];
+    deploymentSupplyCoverage?: DexDeploymentSupplyCoverage | null;
+  };
+
+export interface LiquidityScoreOptions {
+  activeDepegBps?: number | null;
+  circulatingSupplyUsd?: number | null;
+  sameNotionalScoringMode?: SameNotionalExitScoringMode;
+  exitObservationAsOfSec?: number | null;
+  maxExitObservationAgeSec?: number | null;
+  impairedOutputAssetIds?: readonly string[];
+}
+
 function hasStrongLiveDirectRoute(redemption: RedemptionLiquidityInput): boolean {
   if (
     redemption.capacityConfidence == null ||
@@ -243,6 +273,9 @@ export function isRedemptionEligibleForLiquidity(
 interface LiquidityScoringFacts {
   dexScore: number | null;
   dexEvidencePolicy: ReportCardDexEvidencePolicy;
+  deploymentSupplyCoverage: DexDeploymentSupplyCoverage | null;
+  deploymentSupplyScoreCeiling: number | null;
+  deploymentSupplyUncoveredRatio: number | null;
   redemptionEligibleForLiquidity: boolean;
   redemptionExclusionReason: string | null;
   redemptionScore: number | null;
@@ -251,15 +284,21 @@ interface LiquidityScoringFacts {
   hasResolvedRedemption: boolean;
   hasLowConfidenceRedemption: boolean;
   hasImpairedRedemption: boolean;
+  exitScoreDiagnostics: EffectiveExitScoreDiagnostics;
 }
 
 function buildLiquidityScoringFacts(
-  liq: ReportCardDexEvidenceInput | undefined,
+  liq: LiquidityInput | undefined,
   redemption: RedemptionLiquidityInput | undefined,
-  options?: { activeDepegBps?: number | null },
+  options?: LiquidityScoreOptions,
 ): LiquidityScoringFacts {
   const dexEvidencePolicy = applyReportCardDexEvidencePolicy(liq ?? { liquidityScore: null });
-  const dexScore = dexEvidencePolicy.effectiveScore;
+  const deploymentSupplyPolicy = applyDeploymentSupplyCoveragePolicy(
+    dexEvidencePolicy.effectiveScore,
+    liq?.deploymentSupplyCoverage,
+    options?.sameNotionalScoringMode === "active",
+  );
+  const dexScore = deploymentSupplyPolicy.effectiveScore;
   const eligibilityOptions = { ...options, dexLiquidityScore: dexScore };
   const redemptionEligibleForLiquidity = isRedemptionEligibleForLiquidity(redemption, eligibilityOptions);
   const redemptionExclusionReason = getRedemptionExclusionReason(redemption, eligibilityOptions);
@@ -267,28 +306,75 @@ function buildLiquidityScoringFacts(
   const eligibleRedemptionScore = redemptionEligibleForLiquidity
     ? getSafetyEligibleRedemptionScore(redemption, dexScore)
     : null;
+  const exitScoreDiagnostics = computeEffectiveExitScoreDiagnostics(
+    dexScore,
+    eligibleRedemptionScore,
+    redemption
+      ? {
+          circulatingSupplyUsd: options?.circulatingSupplyUsd ?? liq?.deploymentSupplyCoverage?.totalSupplyUsd,
+          modeledExitSizeUsd: redemption.capacityProfile?.modeledExitSizeUsd,
+          currentExecutableCapacityUsd: redemption.capacityProfile?.scoringUsd ?? redemption.immediateCapacityUsd,
+          routeExitCorrelation: redemption.routeExitCorrelation,
+          modelConfidence: redemption.modelConfidence,
+          dexExitRouteObservations: liq?.exitRouteObservations,
+          redemptionExitRouteObservations: redemption.capacityProfile?.exitRouteObservations,
+          sameNotionalScoringMode: options?.sameNotionalScoringMode,
+          exitObservationAsOfSec: options?.exitObservationAsOfSec,
+          maxExitObservationAgeSec: options?.maxExitObservationAgeSec,
+          impairedOutputAssetIds: options?.impairedOutputAssetIds,
+        }
+      : {
+          circulatingSupplyUsd: options?.circulatingSupplyUsd ?? liq?.deploymentSupplyCoverage?.totalSupplyUsd,
+          dexExitRouteObservations: liq?.exitRouteObservations,
+          sameNotionalScoringMode: options?.sameNotionalScoringMode,
+          exitObservationAsOfSec: options?.exitObservationAsOfSec,
+          maxExitObservationAgeSec: options?.maxExitObservationAgeSec,
+          impairedOutputAssetIds: options?.impairedOutputAssetIds,
+        },
+  );
   return {
     dexScore,
     dexEvidencePolicy,
+    deploymentSupplyCoverage: liq?.deploymentSupplyCoverage ?? null,
+    deploymentSupplyScoreCeiling: deploymentSupplyPolicy.scoreCeiling,
+    deploymentSupplyUncoveredRatio: deploymentSupplyPolicy.uncoveredRatio,
     redemptionEligibleForLiquidity,
     redemptionExclusionReason,
     redemptionScore,
-    effectiveScore: computeEffectiveExitScore(
-      dexScore,
-      eligibleRedemptionScore,
-      redemption
-        ? {
-            modeledExitSizeUsd: redemption.capacityProfile?.modeledExitSizeUsd,
-            currentExecutableCapacityUsd: redemption.capacityProfile?.scoringUsd ?? redemption.immediateCapacityUsd,
-            routeExitCorrelation: redemption.routeExitCorrelation,
-            modelConfidence: redemption.modelConfidence,
-          }
-        : undefined,
-    ),
+    effectiveScore: exitScoreDiagnostics.score,
     hasConfiguredRedemption: !!redemption,
     hasResolvedRedemption: redemption?.resolutionState === "resolved",
     hasLowConfidenceRedemption: redemption?.modelConfidence === "low",
     hasImpairedRedemption: redemption?.resolutionState === "impaired",
+    exitScoreDiagnostics,
+  };
+}
+
+function applyDeploymentSupplyCoveragePolicy(
+  dexScore: number | null,
+  coverage: DexDeploymentSupplyCoverage | null | undefined,
+  active: boolean,
+): { effectiveScore: number | null; scoreCeiling: number | null; uncoveredRatio: number | null } {
+  if (!active || dexScore == null || !coverage || coverage.totalSupplyUsd <= 0) {
+    return { effectiveScore: dexScore, scoreCeiling: null, uncoveredRatio: null };
+  }
+  const uncoveredRatio = Math.max(
+    0,
+    Math.min(
+      1,
+      coverage.verifiedNoPoolsSupplyRatio + coverage.providerInaccessibleSupplyRatio + coverage.unknownSupplyRatio,
+    ),
+  );
+  let scoreCeiling: number | null = null;
+  if (coverage.observedSupplyRatio <= 0 && uncoveredRatio > 0) scoreCeiling = 45;
+  else if (uncoveredRatio >= 0.5) scoreCeiling = 55;
+  else if (uncoveredRatio >= 0.25) scoreCeiling = 70;
+  else if (uncoveredRatio >= 0.1) scoreCeiling = 85;
+
+  return {
+    effectiveScore: scoreCeiling == null ? dexScore : Math.min(dexScore, scoreCeiling),
+    scoreCeiling,
+    uncoveredRatio,
   };
 }
 
@@ -310,12 +396,9 @@ function describeUnavailableLiquidity(facts: LiquidityScoringFacts): string {
 }
 
 export function scoreLiquidity(
-  liq:
-    | (Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> &
-        Omit<ReportCardDexEvidenceInput, "liquidityScore">)
-    | undefined,
+  liq: LiquidityInput | undefined,
   redemption?: RedemptionLiquidityInput,
-  options?: { activeDepegBps?: number | null },
+  options?: LiquidityScoreOptions,
 ): ReportCardDimension {
   const facts = buildLiquidityScoringFacts(liq, redemption, options);
 
@@ -334,23 +417,34 @@ export function scoreLiquidity(
   parts.push(`Effective exit score: ${score}/100`);
   if (facts.dexScore !== null) {
     parts.push(`DEX liquidity ${roundScore(facts.dexScore)}/100`);
-    if (
-      facts.dexEvidencePolicy.observedScore != null &&
-      facts.dexEvidencePolicy.observedScore !== facts.dexScore
-    ) {
+    if (facts.dexEvidencePolicy.observedScore != null && facts.dexEvidencePolicy.observedScore !== facts.dexScore) {
       parts.push(
         `observed DEX score ${roundScore(facts.dexEvidencePolicy.observedScore)}/100 capped by ${facts.dexEvidencePolicy.evidenceKind ?? "weak"} evidence`,
       );
     } else if (facts.dexEvidencePolicy.evidenceKind != null) {
       parts.push(`DEX evidence: ${facts.dexEvidencePolicy.evidenceKind}`);
     }
+    if (facts.deploymentSupplyScoreCeiling != null && facts.deploymentSupplyUncoveredRatio != null) {
+      parts.push(
+        `DEX deployment evidence capped at ${facts.deploymentSupplyScoreCeiling}/100 with ${(facts.deploymentSupplyUncoveredRatio * 100).toFixed(1)}% of supply uncovered`,
+      );
+    }
   } else {
     parts.push("DEX liquidity unavailable");
   }
+  if (facts.exitScoreDiagnostics.scoringMode === "active") {
+    const modeledExitSizeUsd = facts.exitScoreDiagnostics.modeledExitSizeUsd;
+    if (modeledExitSizeUsd != null) {
+      parts.push(`same-notional exit request ${formatCompactUsdShort(modeledExitSizeUsd)}`);
+    }
+    if (facts.exitScoreDiagnostics.diversificationBonusApplied) {
+      parts.push("independent route bonus applied");
+    } else if (facts.exitScoreDiagnostics.correlationReason) {
+      parts.push(`no independent route bonus (${facts.exitScoreDiagnostics.correlationReason})`);
+    }
+  }
   if (liq) {
-    parts.push(
-      `${plural(liq.poolCount, "pool")} across ${plural(liq.chainCount, "chain")}`,
-    );
+    parts.push(`${plural(liq.poolCount, "pool")} across ${plural(liq.chainCount, "chain")}`);
   }
   if (liq?.concentrationHhi != null && liq.concentrationHhi > 0.5) {
     parts.push(`high concentration (HHI: ${liq.concentrationHhi.toFixed(2)})`);

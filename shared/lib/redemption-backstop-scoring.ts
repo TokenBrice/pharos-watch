@@ -11,7 +11,9 @@ import type {
   RedemptionSettlementModel,
   RedemptionSourceMode,
 } from "../types";
+import type { ExitRouteObservation, ExitRouteOutput } from "../types/market";
 import { roundScore } from "./math";
+import { validateExitRouteCapacityCurve } from "./p4-exit-route-capacity";
 
 export const REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS = {
   access: 0.2,
@@ -35,6 +37,68 @@ const REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS = {
   medium: 0.75,
   low: 0.35,
 } as const satisfies Record<RedemptionModelConfidence, number>;
+
+const EXIT_ROUTE_OBSERVATION_CONFIDENCE_FACTORS = {
+  high: 1,
+  medium: 0.85,
+  low: 0.6,
+  unknown: 0.35,
+} as const satisfies Record<ExitRouteObservation["confidence"], number>;
+
+const DEX_SCOREABLE_EXIT_EVIDENCE = new Set<ExitRouteObservation["evidenceKind"]>([
+  "measured-executable-depth",
+  "reserve-based-amm-simulation",
+  "direct-orderbook-depth",
+]);
+
+const REDEMPTION_SCOREABLE_EXIT_EVIDENCE = new Set<ExitRouteObservation["evidenceKind"]>([
+  "documented-terms",
+  "live-reserve-state",
+  "onchain-contract-state",
+]);
+
+/**
+ * Shadow P4 common-request policy. Both producers must encode this requested
+ * bound and horizon; actual route fees/delays belong in route evidence and do
+ * not redefine the comparison request.
+ */
+export const SAME_NOTIONAL_EXIT_REQUEST_POLICY = {
+  maxCostBps: 200,
+  settlementHorizonSec: 300,
+} as const;
+
+export type SameNotionalExitScoringMode = "legacy" | "active";
+
+export interface EffectiveExitScoreOptions {
+  circulatingSupplyUsd?: number | null;
+  modeledExitSizeUsd?: number | null;
+  currentExecutableCapacityUsd?: number | null;
+  routeExitCorrelation?: RedemptionRouteExitCorrelation;
+  modelConfidence?: RedemptionModelConfidence;
+  dexExitRouteObservations?: readonly ExitRouteObservation[] | null;
+  redemptionExitRouteObservations?: readonly ExitRouteObservation[] | null;
+  sameNotionalScoringMode?: SameNotionalExitScoringMode;
+  /** Fixed scoring clock. Required before route observations can be consumed. */
+  exitObservationAsOfSec?: number | null;
+  maxExitObservationAgeSec?: number | null;
+  impairedOutputAssetIds?: readonly string[];
+}
+
+export interface EffectiveExitScoreDiagnostics {
+  score: number | null;
+  scoringMode: SameNotionalExitScoringMode;
+  modeledExitSizeUsd: number | null;
+  dexRouteScore: number | null;
+  redemptionRouteScore: number | null;
+  comparedRouteIds: { dex: string; redemption: string } | null;
+  diversificationBonusApplied: boolean;
+  correlationReason: string | null;
+}
+
+interface EvaluatedExitRoute {
+  observation: ExitRouteObservation;
+  score: number;
+}
 
 /**
  * `missingCapacityBehavior: "unbounded"` is intentional and load-bearing:
@@ -276,7 +340,12 @@ export function applyCapacityConstraintScoreEffects(args: {
     }
   }
 
-  if (args.queueDepthUsd != null && args.queueDepthUsd > 0 && args.scoringCapacityUsd != null && args.scoringCapacityUsd > 0) {
+  if (
+    args.queueDepthUsd != null &&
+    args.queueDepthUsd > 0 &&
+    args.scoringCapacityUsd != null &&
+    args.scoringCapacityUsd > 0
+  ) {
     const backlogRatio = args.queueDepthUsd / args.scoringCapacityUsd;
     const queueMultiplier = resolveQueueBacklogMultiplier(backlogRatio);
     score *= queueMultiplier;
@@ -381,23 +450,40 @@ export function computeRedemptionBackstopScore(args: {
 export function computeEffectiveExitScore(
   liquidityScore: number | null | undefined,
   redemptionBackstopScore: number | null | undefined,
-  options?: {
-    circulatingSupplyUsd?: number | null;
-    modeledExitSizeUsd?: number | null;
-    currentExecutableCapacityUsd?: number | null;
-    routeExitCorrelation?: RedemptionRouteExitCorrelation;
-    modelConfidence?: RedemptionModelConfidence;
-  },
+  options?: EffectiveExitScoreOptions,
 ): number | null {
+  return computeEffectiveExitScoreDiagnostics(liquidityScore, redemptionBackstopScore, options).score;
+}
+
+export function computeEffectiveExitScoreDiagnostics(
+  liquidityScore: number | null | undefined,
+  redemptionBackstopScore: number | null | undefined,
+  options?: EffectiveExitScoreOptions,
+): EffectiveExitScoreDiagnostics {
   const liquidity =
     liquidityScore != null && Number.isFinite(liquidityScore) ? Math.max(0, Math.min(100, liquidityScore)) : null;
   const rawRedemption =
     redemptionBackstopScore != null && Number.isFinite(redemptionBackstopScore)
       ? Math.max(0, Math.min(100, redemptionBackstopScore))
       : null;
+
+  const modeledExitSizeUsd = resolveModeledExitSizeUsd(options);
+  const hasRouteObservations =
+    (options?.dexExitRouteObservations?.length ?? 0) > 0 || (options?.redemptionExitRouteObservations?.length ?? 0) > 0;
+  if (options?.sameNotionalScoringMode === "active" && modeledExitSizeUsd != null && hasRouteObservations) {
+    return computeSameNotionalEffectiveExitScore({
+      liquidity,
+      rawRedemption,
+      modeledExitSizeUsd,
+      options,
+    });
+  }
+
   const redemption =
     rawRedemption != null && options
-      ? rawRedemption * resolveEffectiveExitCapacityFactor(options) * resolveEffectiveExitConfidenceFactor(options.modelConfidence)
+      ? rawRedemption *
+        resolveEffectiveExitCapacityFactor(options) *
+        resolveEffectiveExitConfidenceFactor(options.modelConfidence)
       : rawRedemption;
   const roundedRedemption = redemption != null ? roundScore(redemption) : null;
 
@@ -407,12 +493,368 @@ export function computeEffectiveExitScore(
     const bonus = applyDiversificationBonus
       ? Math.min(liquidity, roundedRedemption) * EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR
       : 0;
-    return Math.round(Math.min(100, bestPath + bonus));
+    return {
+      score: Math.round(Math.min(100, bestPath + bonus)),
+      scoringMode: "legacy",
+      modeledExitSizeUsd,
+      dexRouteScore: Math.round(liquidity),
+      redemptionRouteScore: roundedRedemption,
+      comparedRouteIds: null,
+      diversificationBonusApplied: bonus > 0,
+      correlationReason: bonus > 0 ? "legacy-independent-issuer-rail" : "legacy-correlation-not-independent",
+    };
   }
 
-  if (liquidity != null) return Math.round(liquidity);
-  if (roundedRedemption != null) return roundedRedemption;
-  return null;
+  const score = liquidity != null ? Math.round(liquidity) : roundedRedemption;
+  return {
+    score,
+    scoringMode: "legacy",
+    modeledExitSizeUsd,
+    dexRouteScore: liquidity != null ? Math.round(liquidity) : null,
+    redemptionRouteScore: roundedRedemption,
+    comparedRouteIds: null,
+    diversificationBonusApplied: false,
+    correlationReason: null,
+  };
+}
+
+function computeSameNotionalEffectiveExitScore(args: {
+  liquidity: number | null;
+  rawRedemption: number | null;
+  modeledExitSizeUsd: number;
+  options: EffectiveExitScoreOptions;
+}): EffectiveExitScoreDiagnostics {
+  const dexRoutes = evaluateExitRoutes(
+    args.options.dexExitRouteObservations,
+    args.modeledExitSizeUsd,
+    args.liquidity,
+    undefined,
+    "dex",
+    args.options,
+  );
+  const redemptionRoutes = evaluateExitRoutes(
+    args.options.redemptionExitRouteObservations,
+    args.modeledExitSizeUsd,
+    args.rawRedemption,
+    args.options.modelConfidence,
+    "redemption",
+    args.options,
+  );
+
+  // Old redemption rows remain usable during rollout, but they cannot earn a
+  // same-notional diversification bonus because their cost/horizon identity is
+  // absent. Capacity is still normalized against the exact modeled request.
+  const legacyRedemptionScore =
+    redemptionRoutes.length === 0 && args.rawRedemption != null
+      ? roundScore(
+          args.rawRedemption *
+            resolveEffectiveExitCapacityFactor({
+              modeledExitSizeUsd: args.modeledExitSizeUsd,
+              currentExecutableCapacityUsd: args.options.currentExecutableCapacityUsd,
+            }) *
+            resolveEffectiveExitConfidenceFactor(args.options.modelConfidence),
+        )
+      : null;
+  const legacyDexScore = dexRoutes.length === 0 ? args.liquidity : null;
+
+  const bestDexRoute = maxRouteByScore(dexRoutes);
+  const bestRedemptionRoute = maxRouteByScore(redemptionRoutes);
+  let bestScore = Math.max(
+    bestDexRoute?.score ?? Number.NEGATIVE_INFINITY,
+    bestRedemptionRoute?.score ?? Number.NEGATIVE_INFINITY,
+    legacyDexScore ?? Number.NEGATIVE_INFINITY,
+    legacyRedemptionScore ?? Number.NEGATIVE_INFINITY,
+  );
+  let comparedRouteIds: EffectiveExitScoreDiagnostics["comparedRouteIds"] = null;
+  let diversificationBonusApplied = false;
+  let correlationReason: string | null = null;
+
+  for (const dexRoute of dexRoutes) {
+    for (const redemptionRoute of redemptionRoutes) {
+      if (!haveIdenticalExitRequest(dexRoute.observation, redemptionRoute.observation)) continue;
+      const correlation = classifyExitRouteCorrelation(
+        dexRoute.observation,
+        redemptionRoute.observation,
+        args.options.routeExitCorrelation,
+        args.options.impairedOutputAssetIds,
+      );
+      const bestPath = Math.max(dexRoute.score, redemptionRoute.score);
+      const bonus = correlation.independent
+        ? Math.min(dexRoute.score, redemptionRoute.score) * EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR
+        : 0;
+      const combined = Math.min(100, bestPath + bonus);
+      if (combined > bestScore || (combined === bestScore && comparedRouteIds == null && bestPath === bestScore)) {
+        bestScore = combined;
+        comparedRouteIds = {
+          dex: dexRoute.observation.routeId,
+          redemption: redemptionRoute.observation.routeId,
+        };
+        diversificationBonusApplied = bonus > 0;
+        correlationReason = correlation.reason;
+      }
+    }
+  }
+
+  if (!Number.isFinite(bestScore)) {
+    // Observation activation is additive for old payloads. If the only
+    // observations are for a different retained notional, preserve the legacy
+    // route until the common modeled point is published.
+    const legacy = computeEffectiveExitScoreDiagnostics(args.liquidity, args.rawRedemption, {
+      ...args.options,
+      sameNotionalScoringMode: "legacy",
+    });
+    return legacy;
+  }
+
+  if (comparedRouteIds == null) {
+    correlationReason =
+      dexRoutes.length > 0 && redemptionRoutes.length > 0
+        ? "no-identical-cost-and-horizon-observation"
+        : "single-observed-route";
+  }
+
+  return {
+    score: Math.round(bestScore),
+    scoringMode: "active",
+    modeledExitSizeUsd: args.modeledExitSizeUsd,
+    dexRouteScore: bestDexRoute?.score ?? legacyDexScore,
+    redemptionRouteScore: bestRedemptionRoute?.score ?? legacyRedemptionScore,
+    comparedRouteIds,
+    diversificationBonusApplied,
+    correlationReason,
+  };
+}
+
+function evaluateExitRoutes(
+  observations: readonly ExitRouteObservation[] | null | undefined,
+  modeledExitSizeUsd: number,
+  baseScore: number | null,
+  redemptionModelConfidence: RedemptionModelConfidence | undefined,
+  lane: "dex" | "redemption",
+  options: EffectiveExitScoreOptions,
+): EvaluatedExitRoute[] {
+  if (baseScore == null) return [];
+  const evaluated: EvaluatedExitRoute[] = [];
+  for (const observation of observations ?? []) {
+    if (!isExitRouteObservationScoreEligible(observation, lane, options)) continue;
+    const point = resolveObservationCapacityPoint(observation, modeledExitSizeUsd);
+    if (!point) continue;
+    const evidenceFactor = EXIT_ROUTE_OBSERVATION_CONFIDENCE_FACTORS[observation.confidence];
+    const confidenceFactor = redemptionModelConfidence
+      ? Math.min(evidenceFactor, resolveEffectiveExitConfidenceFactor(redemptionModelConfidence))
+      : evidenceFactor;
+    const executableRatio = Math.max(
+      0,
+      Math.min(1, point.completionRatio, point.executableUsd / point.requestedNotionalUsd),
+    );
+    evaluated.push({
+      observation: {
+        ...observation,
+        requestedNotionalUsd: point.requestedNotionalUsd,
+        maxCostBps: point.maxCostBps,
+        executableUsd: point.executableUsd,
+        completionRatio: point.completionRatio,
+      },
+      score: roundScore(baseScore * executableRatio * confidenceFactor),
+    });
+  }
+  return evaluated;
+}
+
+function isExitRouteObservationScoreEligible(
+  observation: ExitRouteObservation,
+  lane: "dex" | "redemption",
+  options: EffectiveExitScoreOptions,
+): boolean {
+  if (!observation.scoreEligible) return false;
+  if (observation.settlementHorizonSec !== SAME_NOTIONAL_EXIT_REQUEST_POLICY.settlementHorizonSec) return false;
+  if (!isCapacityPointConsistent(observation)) return false;
+  if (
+    observation.capacityCurve &&
+    (validateExitRouteCapacityCurve(observation.capacityCurve).length > 0 ||
+      observation.capacityCurve.some((point) => !isCapacityPointConsistent(point)))
+  ) {
+    return false;
+  }
+  const allowedEvidence = lane === "dex" ? DEX_SCOREABLE_EXIT_EVIDENCE : REDEMPTION_SCOREABLE_EXIT_EVIDENCE;
+  if (!allowedEvidence.has(observation.evidenceKind)) return false;
+  const asOfSec = options.exitObservationAsOfSec;
+  const maxAgeSec = options.maxExitObservationAgeSec;
+  if (
+    asOfSec == null ||
+    !Number.isFinite(asOfSec) ||
+    maxAgeSec == null ||
+    !Number.isFinite(maxAgeSec) ||
+    maxAgeSec < 0
+  ) {
+    return false;
+  }
+  const ageSec = Math.max(0, asOfSec - observation.observedAt, observation.freshnessSeconds);
+  return ageSec <= maxAgeSec;
+}
+
+function isCapacityPointConsistent(point: {
+  requestedNotionalUsd: number;
+  executableUsd: number;
+  completionRatio: number;
+}): boolean {
+  if (point.executableUsd > point.requestedNotionalUsd + 0.01) return false;
+  return Math.abs(point.completionRatio - point.executableUsd / point.requestedNotionalUsd) <= 0.00001;
+}
+
+function resolveObservationCapacityPoint(
+  observation: ExitRouteObservation,
+  modeledExitSizeUsd: number,
+): {
+  requestedNotionalUsd: number;
+  maxCostBps: number;
+  executableUsd: number;
+  completionRatio: number;
+} | null {
+  const points = [observation, ...(observation.capacityCurve ?? [])].filter(
+    (point) => Math.abs(point.maxCostBps - SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps) <= 1e-9,
+  );
+  const byCost = new Map<number, typeof points>();
+  for (const point of points) {
+    byCost.set(point.maxCostBps, [...(byCost.get(point.maxCostBps) ?? []), point]);
+  }
+
+  const derived = [...byCost.entries()].flatMap(([maxCostBps, costPoints]) => {
+    const sorted = [...costPoints].sort((left, right) => left.requestedNotionalUsd - right.requestedNotionalUsd);
+    const exact = sorted.find((point) => approximatelyEqualNotional(point.requestedNotionalUsd, modeledExitSizeUsd));
+    if (exact) return [exact];
+
+    // A validated monotonic curve proves only a lower bound between retained
+    // grid points. Reuse the executable amount from the greatest smaller
+    // request; for a smaller-than-grid request, cap the first point's capacity
+    // at the requested amount. This never invents capacity by interpolation.
+    const lower = [...sorted].reverse().find((point) => point.requestedNotionalUsd < modeledExitSizeUsd);
+    const capacityLowerBound = lower?.executableUsd ?? Math.min(modeledExitSizeUsd, sorted[0]?.executableUsd ?? 0);
+    const executableUsd = Math.min(modeledExitSizeUsd, Math.max(0, capacityLowerBound));
+    return [
+      {
+        requestedNotionalUsd: modeledExitSizeUsd,
+        maxCostBps,
+        executableUsd,
+        completionRatio: executableUsd / modeledExitSizeUsd,
+      },
+    ];
+  });
+  if (derived.length === 0) return null;
+  return derived.reduce((best, point) => {
+    const bestExecutable = Math.min(best.completionRatio, best.executableUsd / best.requestedNotionalUsd);
+    const pointExecutable = Math.min(point.completionRatio, point.executableUsd / point.requestedNotionalUsd);
+    if (pointExecutable !== bestExecutable) return pointExecutable > bestExecutable ? point : best;
+    return point.maxCostBps < best.maxCostBps ? point : best;
+  });
+}
+
+function maxRouteByScore(routes: readonly EvaluatedExitRoute[]): EvaluatedExitRoute | null {
+  return routes.reduce<EvaluatedExitRoute | null>((best, route) => {
+    if (!best || route.score > best.score) return route;
+    if (route.score < best.score) return best;
+    return route.observation.routeId < best.observation.routeId ? route : best;
+  }, null);
+}
+
+function approximatelyEqualNotional(left: number, right: number): boolean {
+  return Math.abs(left - right) <= Math.max(0.01, Math.abs(right) * 1e-9);
+}
+
+function haveIdenticalExitRequest(left: ExitRouteObservation, right: ExitRouteObservation): boolean {
+  return (
+    approximatelyEqualNotional(left.requestedNotionalUsd, right.requestedNotionalUsd) &&
+    left.settlementHorizonSec === right.settlementHorizonSec &&
+    Math.abs(left.maxCostBps - right.maxCostBps) <= 1e-9
+  );
+}
+
+export function classifyExitRouteCorrelation(
+  dexRoute: ExitRouteObservation,
+  redemptionRoute: ExitRouteObservation,
+  _legacyCorrelation?: RedemptionRouteExitCorrelation,
+  impairedOutputAssetIds: readonly string[] = [],
+): { independent: boolean; reason: string } {
+  const impairedOutputs = new Set(impairedOutputAssetIds.map(normalizeCorrelationKey));
+  const routeOutputIds = [
+    ...collectTrackedOutputIds(dexRoute.output),
+    ...collectTrackedOutputIds(redemptionRoute.output),
+  ].map(normalizeCorrelationKey);
+  const impairedRouteOutputs = [...new Set(routeOutputIds.filter((id) => impairedOutputs.has(id)))].sort();
+  if (impairedRouteOutputs.length > 0) {
+    return { independent: false, reason: `impaired-output:${impairedRouteOutputs.join(",")}` };
+  }
+  const sharedCommonModeKeys = intersectNormalized(dexRoute.commonModeKeys, redemptionRoute.commonModeKeys);
+  if (sharedCommonModeKeys.length > 0) {
+    return { independent: false, reason: `shared-common-mode:${sharedCommonModeKeys.join(",")}` };
+  }
+
+  const sharedOutputIds = intersectNormalized(
+    collectOutputIdentityKeys(dexRoute.output),
+    collectOutputIdentityKeys(redemptionRoute.output),
+  );
+  if (sharedOutputIds.length > 0) {
+    return { independent: false, reason: `shared-output:${sharedOutputIds.join(",")}` };
+  }
+
+  const hasReviewedRouteKeys =
+    hasFailureDomainKey(dexRoute.commonModeKeys) && hasFailureDomainKey(redemptionRoute.commonModeKeys);
+  const hasResolvedOutputs =
+    hasResolvedOutputIdentity(dexRoute.output) && hasResolvedOutputIdentity(redemptionRoute.output);
+  if (hasReviewedRouteKeys && hasResolvedOutputs) {
+    return { independent: true, reason: "reviewed-disjoint-failure-domains" };
+  }
+  if (!hasResolvedOutputs) {
+    return { independent: false, reason: "unresolved-output-correlation" };
+  }
+  return { independent: false, reason: "insufficient-correlation-evidence" };
+}
+
+function hasFailureDomainKey(keys: readonly string[]): boolean {
+  return keys.some((key) => /^(issuer|parent|protocol|custodian|oracle|chain|bridge):/i.test(key.trim()));
+}
+
+function collectTrackedOutputIds(output: ExitRouteOutput): string[] {
+  return [
+    ...(output.trackedAssetIds ?? []),
+    ...(output.basketWeights ?? []).flatMap((slice) => (slice.assetId ? [slice.assetId] : [])),
+  ];
+}
+
+function collectOutputIdentityKeys(output: ExitRouteOutput): string[] {
+  return [
+    ...collectTrackedOutputIds(output).map((id) => `asset:${id}`),
+    ...(output.currency?.trim() ? [`currency:${output.currency}`] : []),
+  ];
+}
+
+function hasResolvedOutputIdentity(output: ExitRouteOutput): boolean {
+  if (output.kind === "fiat") return !!output.currency?.trim();
+  if (output.kind === "tracked-stablecoin") return collectTrackedOutputIds(output).length > 0;
+  if (output.kind === "collateral") {
+    return collectTrackedOutputIds(output).length > 0 || !!output.currency?.trim();
+  }
+  return false;
+}
+
+function intersectNormalized(left: readonly string[], right: readonly string[]): string[] {
+  const rightKeys = new Set(right.map(normalizeCorrelationKey).filter(Boolean));
+  return [...new Set(left.map(normalizeCorrelationKey).filter((key) => key && rightKeys.has(key)))].sort();
+}
+
+function normalizeCorrelationKey(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function resolveModeledExitSizeUsd(options: EffectiveExitScoreOptions | undefined): number | null {
+  if (
+    options?.modeledExitSizeUsd != null &&
+    Number.isFinite(options.modeledExitSizeUsd) &&
+    options.modeledExitSizeUsd > 0
+  ) {
+    return options.modeledExitSizeUsd;
+  }
+  return computeModeledExitSizeUsd(options?.circulatingSupplyUsd);
 }
 
 export function computeModeledExitSizeUsd(circulatingSupplyUsd: number | null | undefined): number | null {

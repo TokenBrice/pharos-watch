@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ExitRouteObservationSchema } from "./market";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "./validators";
 
@@ -187,6 +188,12 @@ export const RedemptionCapacityProfileSchema = z.object({
   scoringHorizon: RedemptionCapacityScoringHorizonSchema,
   capacityProfileConfidence: RedemptionCapacityConfidenceSchema,
   modeledExitSizeUsd: PositiveNumberSchema.optional(),
+  /**
+   * Optional same-notional route evidence. This stays inside the existing
+   * details/history JSON envelope so old rows remain valid and no parallel
+   * redemption store is required.
+   */
+  exitRouteObservations: z.array(ExitRouteObservationSchema).max(16).optional(),
 });
 export type RedemptionCapacityProfile = z.infer<typeof RedemptionCapacityProfileSchema>;
 

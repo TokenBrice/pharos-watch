@@ -8,9 +8,7 @@ function dexLiquidity(liquidityScore: number): DexLiquidityInput {
   return { liquidityScore, concentrationHhi: 0.04, poolCount: 100, chainCount: 10 };
 }
 
-function documentedOffchainEventualRoute(
-  overrides: Partial<RedemptionLiquidityInput> = {},
-): RedemptionLiquidityInput {
+function documentedOffchainEventualRoute(overrides: Partial<RedemptionLiquidityInput> = {}): RedemptionLiquidityInput {
   return {
     score: null,
     eventualRedeemabilityScore: 65,
@@ -391,10 +389,7 @@ describe("scoreLiquidity", () => {
   });
 
   it("does not treat eventual offchain routes with missing capacityConfidence as documented-bound", () => {
-    const result = scoreLiquidity(
-      dexLiquidity(40),
-      documentedOffchainEventualRoute({ capacityConfidence: undefined }),
-    );
+    const result = scoreLiquidity(dexLiquidity(40), documentedOffchainEventualRoute({ capacityConfidence: undefined }));
 
     expect(result.score).toBe(40);
     expect(result.detail).toContain("not used for Safety Score uplift (eventual-only route)");
@@ -416,10 +411,7 @@ describe("scoreLiquidity", () => {
   });
 
   it("does not let low-confidence offchain issuer eventual redemption add a primary-market bonus", () => {
-    const result = scoreLiquidity(
-      dexLiquidity(63),
-      documentedOffchainEventualRoute({ modelConfidence: "low" }),
-    );
+    const result = scoreLiquidity(dexLiquidity(63), documentedOffchainEventualRoute({ modelConfidence: "low" }));
 
     expect(result.score).toBe(63);
     expect(result.detail).toContain("low confidence");
@@ -460,5 +452,52 @@ describe("scoreLiquidity", () => {
 
     // Queue cap and medium confidence discount the redemption contribution before blending.
     expect(result.score).toBe(53);
+  });
+
+  it("keeps supply-weighted deployment materiality behind explicit activation", () => {
+    const liq: DexLiquidityInput = {
+      ...dexLiquidity(95),
+      deploymentSupplyCoverage: {
+        totalSupplyUsd: 100_000_000,
+        observedSupplyUsd: 80_000_000,
+        verifiedNoPoolsSupplyUsd: 0,
+        providerInaccessibleSupplyUsd: 20_000_000,
+        unknownSupplyUsd: 0,
+        observedSupplyRatio: 0.8,
+        verifiedNoPoolsSupplyRatio: 0,
+        providerInaccessibleSupplyRatio: 0.2,
+        unknownSupplyRatio: 0,
+        unknownChains: [],
+      },
+    };
+
+    expect(scoreLiquidity(liq).score).toBe(95);
+    const active = scoreLiquidity(liq, undefined, { sameNotionalScoringMode: "active" });
+    expect(active.score).toBe(85);
+    expect(active.detail).toContain("20.0% of supply uncovered");
+  });
+
+  it("does not cap peripheral uncovered deployment supply", () => {
+    const result = scoreLiquidity(
+      {
+        ...dexLiquidity(95),
+        deploymentSupplyCoverage: {
+          totalSupplyUsd: 100_000_000,
+          observedSupplyUsd: 95_000_000,
+          verifiedNoPoolsSupplyUsd: 0,
+          providerInaccessibleSupplyUsd: 0,
+          unknownSupplyUsd: 5_000_000,
+          observedSupplyRatio: 0.95,
+          verifiedNoPoolsSupplyRatio: 0,
+          providerInaccessibleSupplyRatio: 0,
+          unknownSupplyRatio: 0.05,
+          unknownChains: ["peripheral"],
+        },
+      },
+      undefined,
+      { sameNotionalScoringMode: "active" },
+    );
+
+    expect(result.score).toBe(95);
   });
 });

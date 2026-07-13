@@ -1,13 +1,38 @@
 import { describe, it, expect } from "vitest";
 import {
   applyCapacityConstraintScoreEffects,
+  classifyExitRouteCorrelation,
   computeEffectiveExitScore,
+  computeEffectiveExitScoreDiagnostics,
   computeCapacityScore,
   computeModeledExitSizeUsd,
   computeRedemptionBackstopScore,
   isStrongLiveDirectRoute,
   REDEMPTION_EFFECTIVE_EXIT_MODEL,
 } from "../redemption-backstop-scoring";
+import type { ExitRouteObservation } from "../../types/market";
+import { RedemptionCapacityProfileSchema } from "../../types/redemption";
+
+function exitRoute(overrides: Partial<ExitRouteObservation> = {}): ExitRouteObservation {
+  return {
+    routeId: "route:test",
+    routeFamily: "protocol-redemption",
+    scope: { kind: "protocol", protocol: "test-protocol", chain: "ethereum" },
+    requestedNotionalUsd: 1_000_000,
+    settlementHorizonSec: 300,
+    maxCostBps: 200,
+    executableUsd: 1_000_000,
+    completionRatio: 1,
+    output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
+    evidenceKind: "onchain-contract-state",
+    confidence: "high",
+    scoreEligible: true,
+    observedAt: 1_000,
+    freshnessSeconds: 0,
+    commonModeKeys: ["chain:ethereum", "protocol:test-protocol"],
+    ...overrides,
+  };
+}
 
 describe("computeEffectiveExitScore", () => {
   it("returns null when both inputs are null", () => {
@@ -177,6 +202,195 @@ describe("computeEffectiveExitScore", () => {
         low: 0.35,
       },
     });
+  });
+
+  it("keeps same-notional observations shadow-only unless explicitly activated", () => {
+    const dex = exitRoute({
+      routeId: "dex:thin",
+      routeFamily: "dex-amm",
+      executableUsd: 100_000,
+      completionRatio: 0.1,
+      evidenceKind: "measured-executable-depth",
+      commonModeKeys: ["chain:ethereum", "protocol:dex"],
+    });
+    expect(
+      computeEffectiveExitScore(80, null, {
+        modeledExitSizeUsd: 1_000_000,
+        dexExitRouteObservations: [dex],
+        exitObservationAsOfSec: 1_100,
+        maxExitObservationAgeSec: 1_000,
+      }),
+    ).toBe(80);
+  });
+
+  it("lets a strong same-notional redemption route carry thin DEX capacity", () => {
+    const dex = exitRoute({
+      routeId: "dex:thin",
+      routeFamily: "dex-amm",
+      executableUsd: 100_000,
+      completionRatio: 0.1,
+      evidenceKind: "measured-executable-depth",
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+      commonModeKeys: ["chain:ethereum", "protocol:dex"],
+    });
+    const redemption = exitRoute({
+      routeId: "redeem:strong",
+      output: { kind: "fiat", currency: "USD" },
+      commonModeKeys: ["issuer:example", "custodian:example-bank"],
+    });
+    const result = computeEffectiveExitScoreDiagnostics(80, 90, {
+      modeledExitSizeUsd: 1_000_000,
+      dexExitRouteObservations: [dex],
+      redemptionExitRouteObservations: [redemption],
+      modelConfidence: "high",
+      sameNotionalScoringMode: "active",
+      exitObservationAsOfSec: 1_100,
+      maxExitObservationAgeSec: 1_000,
+    });
+
+    expect(result.score).toBe(91);
+    expect(result.dexRouteScore).toBe(8);
+    expect(result.redemptionRouteScore).toBe(90);
+    expect(result.diversificationBonusApplied).toBe(true);
+  });
+
+  it("does not let a weaker optional route lower the strong route", () => {
+    const dex = exitRoute({
+      routeId: "dex:strong",
+      routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+      commonModeKeys: ["chain:ethereum", "protocol:dex"],
+    });
+    const weakRedemption = exitRoute({
+      routeId: "redeem:weak",
+      executableUsd: 100_000,
+      completionRatio: 0.1,
+      output: { kind: "fiat", currency: "USD" },
+      commonModeKeys: ["issuer:example"],
+    });
+    const options = {
+      modeledExitSizeUsd: 1_000_000,
+      dexExitRouteObservations: [dex],
+      sameNotionalScoringMode: "active" as const,
+      exitObservationAsOfSec: 1_100,
+      maxExitObservationAgeSec: 1_000,
+      modelConfidence: "high" as const,
+    };
+
+    const dexOnly = computeEffectiveExitScore(80, null, options)!;
+    const withWeakRedemption = computeEffectiveExitScore(80, 20, {
+      ...options,
+      redemptionExitRouteObservations: [weakRedemption],
+    })!;
+    expect(withWeakRedemption).toBeGreaterThanOrEqual(dexOnly);
+  });
+
+  it("uses conservative curve lower bounds for arbitrary modeled notionals", () => {
+    const dex = exitRoute({
+      routeId: "dex:grid",
+      routeFamily: "dex-orderbook",
+      evidenceKind: "direct-orderbook-depth",
+      requestedNotionalUsd: 1_000_000,
+      executableUsd: 1_000_000,
+      completionRatio: 1,
+      capacityCurve: [
+        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1 },
+        { requestedNotionalUsd: 10_000_000, maxCostBps: 200, executableUsd: 2_000_000, completionRatio: 0.2 },
+      ],
+    });
+    const result = computeEffectiveExitScoreDiagnostics(80, null, {
+      modeledExitSizeUsd: 5_000_000,
+      dexExitRouteObservations: [dex],
+      sameNotionalScoringMode: "active",
+      exitObservationAsOfSec: 1_100,
+      maxExitObservationAgeSec: 1_000,
+    });
+
+    expect(result.score).toBe(16);
+  });
+
+  it("keeps diagnostic-only and stale observations out of active scoring", () => {
+    const diagnostic = exitRoute({
+      routeId: "dex:diagnostic",
+      routeFamily: "dex-orderbook",
+      evidenceKind: "direct-orderbook-depth",
+      scoreEligible: false,
+    });
+    const stale = exitRoute({
+      routeId: "dex:stale",
+      routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      observedAt: 100,
+    });
+    expect(
+      computeEffectiveExitScore(80, null, {
+        modeledExitSizeUsd: 1_000_000,
+        dexExitRouteObservations: [diagnostic, stale],
+        sameNotionalScoringMode: "active",
+        exitObservationAsOfSec: 2_000,
+        maxExitObservationAgeSec: 500,
+      }),
+    ).toBe(80);
+  });
+
+  it("suppresses independence for shared domains, outputs, impairment, and unresolved outputs", () => {
+    const dex = exitRoute({
+      routeId: "dex",
+      routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      commonModeKeys: ["chain:ethereum", "protocol:dex"],
+    });
+    expect(
+      classifyExitRouteCorrelation(
+        dex,
+        exitRoute({ routeId: "redeem", commonModeKeys: ["chain:ethereum", "issuer:example"] }),
+      ).independent,
+    ).toBe(false);
+    expect(
+      classifyExitRouteCorrelation(dex, exitRoute({ routeId: "redeem", commonModeKeys: ["issuer:example"] })).reason,
+    ).toContain("shared-output");
+    expect(
+      classifyExitRouteCorrelation(
+        dex,
+        exitRoute({
+          routeId: "redeem",
+          output: { kind: "fiat", currency: "USD" },
+          commonModeKeys: ["issuer:example"],
+        }),
+        undefined,
+        ["usdc-circle"],
+      ).reason,
+    ).toContain("impaired-output");
+    expect(
+      classifyExitRouteCorrelation(
+        dex,
+        exitRoute({
+          routeId: "redeem",
+          output: { kind: "unresolved-basket" },
+          commonModeKeys: ["issuer:example"],
+        }),
+        "independent-issuer-rail",
+      ).independent,
+    ).toBe(false);
+  });
+});
+
+describe("redemption exit route observation envelope", () => {
+  it("accepts old capacity profiles and optional observations in the same JSON envelope", () => {
+    expect(
+      RedemptionCapacityProfileSchema.parse({
+        scoringHorizon: "immediate",
+        capacityProfileConfidence: "documented-bound",
+      }).exitRouteObservations,
+    ).toBeUndefined();
+    expect(
+      RedemptionCapacityProfileSchema.parse({
+        scoringHorizon: "immediate",
+        capacityProfileConfidence: "live-direct",
+        exitRouteObservations: [exitRoute()],
+      }).exitRouteObservations,
+    ).toHaveLength(1);
   });
 });
 

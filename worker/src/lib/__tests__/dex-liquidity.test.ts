@@ -9,32 +9,50 @@ function mockDb(rows: unknown[]): D1Database {
   } as unknown as D1Database;
 }
 
+function liquidityRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    stablecoin_id: "usdc-circle",
+    liquidity_score: 91,
+    concentration_hhi: 0.2,
+    pool_count: 4,
+    chain_count: 2,
+    total_tvl_usd: 20_000_000,
+    effective_tvl_usd: 15_000_000,
+    coverage_class: "primary",
+    coverage_confidence: 0.9,
+    balance_measured_tvl_usd: 12_000_000,
+    organic_measured_tvl_usd: 9_000_000,
+    deployment_chain: null,
+    deployment_contract_address: null,
+    deployment_outcome: null,
+    updated_at: 123,
+    ...overrides,
+  };
+}
+
 describe("loadDexLiquiditySnapshot", () => {
   it("preserves republished evidence and deployment coverage", async () => {
     const db = mockDb([
-      {
-        stablecoin_id: "coin-a",
-        liquidity_score: 91,
-        concentration_hhi: 0.2,
-        pool_count: 4,
-        chain_count: 2,
-        total_tvl_usd: 20_000_000,
-        effective_tvl_usd: 15_000_000,
-        coverage_class: "primary",
-        coverage_confidence: 0.9,
-        balance_measured_tvl_usd: 12_000_000,
-        organic_measured_tvl_usd: 9_000_000,
-        deployment_total: 3,
-        deployment_observed_pools: 1,
-        deployment_verified_no_pools: 1,
-        deployment_provider_inaccessible: 1,
-        updated_at: 123,
-      },
+      liquidityRow({
+        deployment_chain: "ethereum",
+        deployment_contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        deployment_outcome: "observed_pools",
+      }),
+      liquidityRow({
+        deployment_chain: "arbitrum",
+        deployment_contract_address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+        deployment_outcome: "verified_no_pools",
+      }),
+      liquidityRow({
+        deployment_chain: "base",
+        deployment_contract_address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        deployment_outcome: "provider_inaccessible",
+      }),
     ]);
 
     await expect(loadDexLiquiditySnapshot(db)).resolves.toEqual({
       map: {
-        "coin-a": {
+        "usdc-circle": {
           liquidityScore: 91,
           concentrationHhi: 0.2,
           poolCount: 4,
@@ -55,7 +73,7 @@ describe("loadDexLiquiditySnapshot", () => {
 
   it("keeps old rows evidence-neutral", async () => {
     const db = mockDb([
-      {
+      liquidityRow({
         stablecoin_id: "legacy",
         liquidity_score: 80,
         concentration_hhi: null,
@@ -67,12 +85,8 @@ describe("loadDexLiquiditySnapshot", () => {
         coverage_confidence: null,
         balance_measured_tvl_usd: null,
         organic_measured_tvl_usd: null,
-        deployment_total: 0,
-        deployment_observed_pools: 0,
-        deployment_verified_no_pools: 0,
-        deployment_provider_inaccessible: 0,
         updated_at: 100,
-      },
+      }),
     ]);
 
     const result = await loadDexLiquiditySnapshot(db);
@@ -81,6 +95,65 @@ describe("loadDexLiquiditySnapshot", () => {
       concentrationHhi: null,
       poolCount: 1,
       chainCount: 1,
+    });
+  });
+
+  it("quarantines malformed coverage evidence without suppressing valid rows", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const baseRow = liquidityRow({
+      stablecoin_id: "valid",
+      liquidity_score: 90,
+      concentration_hhi: null,
+      pool_count: 1,
+      chain_count: 1,
+      total_tvl_usd: 1_000_000,
+      effective_tvl_usd: 1_000_000,
+      coverage_class: "primary",
+      coverage_confidence: 0.9,
+      balance_measured_tvl_usd: 1_000_000,
+      organic_measured_tvl_usd: 1_000_000,
+      updated_at: 100,
+    });
+
+    const result = await loadDexLiquiditySnapshot(
+      mockDb([
+        baseRow,
+        { ...baseRow, stablecoin_id: "bad-class", coverage_class: "unexpected" },
+        { ...baseRow, stablecoin_id: "bad-confidence", coverage_confidence: 1.1 },
+        { ...baseRow, stablecoin_id: "incomplete", coverage_confidence: null },
+      ]),
+    );
+
+    expect(Object.keys(result.map)).toEqual(["valid"]);
+    expect(consoleError).toHaveBeenCalledTimes(3);
+    expect(consoleError.mock.calls.map(([message]) => message)).toEqual([
+      expect.stringContaining("bad-class"),
+      expect.stringContaining("bad-confidence"),
+      expect.stringContaining("incomplete"),
+    ]);
+    consoleError.mockRestore();
+  });
+
+  it("ignores outcomes for deployments removed from the active catalog", async () => {
+    const result = await loadDexLiquiditySnapshot(
+      mockDb([
+        liquidityRow({
+          deployment_chain: "ethereum",
+          deployment_contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          deployment_outcome: "verified_no_pools",
+        }),
+        liquidityRow({
+          deployment_chain: "ethereum",
+          deployment_contract_address: "0x000000000000000000000000000000000000dead",
+          deployment_outcome: "provider_inaccessible",
+        }),
+      ]),
+    );
+
+    expect(result.map["usdc-circle"].deploymentCoverage).toEqual({
+      observedPools: 0,
+      verifiedNoPools: 1,
+      providerInaccessible: 0,
     });
   });
 });
