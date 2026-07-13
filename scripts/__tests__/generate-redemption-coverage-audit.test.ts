@@ -10,7 +10,9 @@ import {
   parseArgs,
   renderRedemptionCoverageAuditMarkdown,
   runCli,
+  validateReviewedRedemptionDispositions,
 } from "../maintenance/generate-redemption-coverage-audit";
+import type { ReviewedRedemptionCoverageDisposition } from "../lib/redemption-coverage-dispositions";
 
 function coin(input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">): StablecoinMeta {
   return {
@@ -50,136 +52,115 @@ const heuristicRoute: RedemptionBackstopConfig = {
   capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic" },
 };
 
+function review(
+  id: string,
+  overrides: Partial<ReviewedRedemptionCoverageDisposition> = {},
+): ReviewedRedemptionCoverageDisposition {
+  return {
+    id,
+    disposition: "needs-research",
+    reasonCode: "documentation-insufficient",
+    blocker: "Fixture blocker.",
+    rationale: "Fixture source-reviewed rationale.",
+    evidenceNeeded: "Fixture evidence requirement.",
+    evidenceUrls: [`https://example.com/evidence/${id}`],
+    reviewer: "Fixture reviewer",
+    reviewedDate: "2026-07-13",
+    allowedRouteFamilyIfProven: null,
+    ...overrides,
+  };
+}
+
 describe("generate-redemption-coverage-audit", () => {
-  it("classifies active unconfigured coins with V4 reason-code placeholders", () => {
+  it("uses reviewed registry rows and preserves canonical market-cap order", () => {
     const activeCoins = [
       coin({ id: "usdc-circle" }),
       coin({ id: "mmxn-moneta-digital", symbol: "MMXN" }),
-      coin({
-        id: "iusd-initia",
-        flags: {
-          backing: "rwa-backed",
-          pegCurrency: "USD",
-          governance: "centralized-dependent",
-          yieldBearing: false,
-          rwa: false,
-          navToken: true,
-        },
-      }),
-      coin({
-        id: "random-crypto",
-        flags: {
-          backing: "crypto-backed",
-          pegCurrency: "USD",
-          governance: "decentralized",
-          yieldBearing: false,
-          rwa: false,
-          navToken: false,
-        },
-      }),
+      coin({ id: "iusd-initia" }),
+      coin({ id: "random-crypto" }),
     ];
 
     const audit = generateRedemptionCoverageAudit({
       trackedCoins: activeCoins,
       activeCoins,
       configs: { "usdc-circle": configuredRoute },
+      reviewedDispositions: [
+        review("mmxn-moneta-digital", {
+          reasonCode: "issuer-terms-missing",
+          allowedRouteFamilyIfProven: "offchain-issuer",
+        }),
+        review("iusd-initia", {
+          disposition: "defer",
+          reasonCode: "capacity-unpublished",
+          allowedRouteFamilyIfProven: "queue-redeem",
+        }),
+        review("random-crypto"),
+      ],
       generatedAt: "2026-05-12T00:00:00.000Z",
     });
 
     expect(audit.summary.activeUnconfigured).toBe(3);
     expect(audit.summary.activeUnclassified).toBe(0);
-    expect(audit.summary.activeDefaultClassified).toBe(1);
+    expect(audit.summary.activeDefaultClassified).toBe(0);
     expect(audit.dispositionCounts).toEqual({
       add: 0,
-      defer: 0,
+      defer: 1,
       "hard-reject": 0,
-      "needs-research": 3,
+      "needs-research": 2,
     });
     expect(audit.activeUnconfigured).toEqual([
       expect.objectContaining({
-        id: "iusd-initia",
-        disposition: "needs-research",
-        reasonCode: "capacity-unpublished",
-        classificationSource: "curated",
-        allowedRouteFamilyIfProven: "queue-redeem",
-      }),
-      expect.objectContaining({
         id: "mmxn-moneta-digital",
+        marketCapRank: 2,
         disposition: "needs-research",
         reasonCode: "issuer-terms-missing",
-        classificationSource: "curated",
+        classificationSource: "reviewed-registry",
         allowedRouteFamilyIfProven: "offchain-issuer",
       }),
       expect.objectContaining({
+        id: "iusd-initia",
+        marketCapRank: 3,
+        disposition: "defer",
+        classificationSource: "reviewed-registry",
+      }),
+      expect.objectContaining({
         id: "random-crypto",
+        marketCapRank: 4,
         disposition: "needs-research",
-        reasonCode: "source-review-needed",
-        classificationSource: "default-inferred",
-        allowedRouteFamilyIfProven: "collateral-redeem",
+        reasonCode: "documentation-insufficient",
+        classificationSource: "reviewed-registry",
       }),
     ]);
   });
 
-  it("pins curated defer, hard-reject, research, and default backlog rows", () => {
-    const cryptoFlags = {
-      backing: "crypto-backed",
-      pegCurrency: "USD",
-      governance: "decentralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    } satisfies StablecoinMeta["flags"];
-    const activeCoins = [
-      coin({ id: "mim-abracadabra", flags: cryptoFlags }),
-      coin({ id: "frax-frax", flags: cryptoFlags }),
-      coin({ id: "hollar-hydrated", flags: cryptoFlags }),
-      coin({ id: "unreviewed-crypto", flags: cryptoFlags }),
-    ];
+  it("rejects missing, duplicate, unknown, configured, and inactive registry rows", () => {
+    const alpha = coin({ id: "alpha" });
+    const beta = coin({ id: "beta" });
+    const frozen = coin({ id: "frozen", status: "frozen" });
+    const validationInput = {
+      trackedCoins: [alpha, beta, frozen],
+      activeCoins: [alpha, beta],
+      configuredIds: new Set(["beta"]),
+    };
 
-    const audit = generateRedemptionCoverageAudit({
-      trackedCoins: activeCoins,
-      activeCoins,
-      configs: {},
-    });
-
-    expect(audit.dispositionCounts).toEqual({
-      add: 0,
-      defer: 1,
-      "hard-reject": 1,
-      "needs-research": 2,
-    });
-    expect(audit.summary.activeUnclassified).toBe(0);
-    expect(audit.summary.activeDefaultClassified).toBe(1);
-    expect(audit.activeUnconfigured).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "mim-abracadabra",
-          disposition: "defer",
-          reasonCode: "no-holder-route",
-          classificationSource: "curated",
-        }),
-        expect.objectContaining({
-          id: "frax-frax",
-          disposition: "hard-reject",
-          reasonCode: "no-holder-route",
-          classificationSource: "curated",
-          allowedRouteFamilyIfProven: null,
-        }),
-        expect.objectContaining({
-          id: "hollar-hydrated",
-          disposition: "needs-research",
-          reasonCode: "capacity-unpublished",
-          classificationSource: "curated",
-        }),
-        expect.objectContaining({
-          id: "unreviewed-crypto",
-          disposition: "needs-research",
-          reasonCode: "source-review-needed",
-          classificationSource: "default-inferred",
-          allowedRouteFamilyIfProven: "collateral-redeem",
-        }),
-      ]),
+    expect(() => validateReviewedRedemptionDispositions({ ...validationInput, reviewedDispositions: [] })).toThrow(
+      "Missing reviewed redemption dispositions",
     );
+    expect(() =>
+      validateReviewedRedemptionDispositions({
+        ...validationInput,
+        reviewedDispositions: [review("alpha"), review("alpha")],
+      }),
+    ).toThrow("Duplicate reviewed redemption disposition");
+    expect(() =>
+      validateReviewedRedemptionDispositions({ ...validationInput, reviewedDispositions: [review("unknown")] }),
+    ).toThrow("unknown stablecoin");
+    expect(() =>
+      validateReviewedRedemptionDispositions({ ...validationInput, reviewedDispositions: [review("beta")] }),
+    ).toThrow("route is now configured");
+    expect(() =>
+      validateReviewedRedemptionDispositions({ ...validationInput, reviewedDispositions: [review("frozen")] }),
+    ).toThrow("stablecoin is not active");
   });
 
   it("separates pre-launch and frozen unconfigured coins from active gaps", () => {
@@ -193,6 +174,7 @@ describe("generate-redemption-coverage-audit", () => {
       preLaunchCoins,
       frozenCoins,
       configs: { "usdc-circle": configuredRoute },
+      reviewedDispositions: [],
     });
 
     expect(audit.summary.activeUnconfigured).toBe(0);
@@ -245,6 +227,7 @@ describe("generate-redemption-coverage-audit", () => {
         "usdc-circle": configuredRoute,
         "pmusd-precious-metals": heuristicRoute,
       },
+      reviewedDispositions: [],
     });
 
     expect(audit.summary.heuristicConfiguredRoutes).toBe(1);
@@ -258,21 +241,18 @@ describe("generate-redemption-coverage-audit", () => {
   });
 
   it("renders the expected reviewer tables", () => {
-    const sourceLinkWithTableSyntax = "https://example.com/source|with-pipe\nhttps://example.com/next";
+    const rationaleWithTableSyntax = "First line|with-pipe\nsecond line";
     const audit = generateRedemptionCoverageAudit({
-      trackedCoins: [
-        coin({
-          id: "mmxn-moneta-digital",
-          links: [{ label: "Docs", url: sourceLinkWithTableSyntax }],
-        }),
-      ],
-      activeCoins: [
-        coin({
-          id: "mmxn-moneta-digital",
-          links: [{ label: "Docs", url: sourceLinkWithTableSyntax }],
-        }),
-      ],
+      trackedCoins: [coin({ id: "mmxn-moneta-digital" })],
+      activeCoins: [coin({ id: "mmxn-moneta-digital" })],
       configs: {},
+      reviewedDispositions: [
+        review("mmxn-moneta-digital", {
+          reasonCode: "issuer-terms-missing",
+          rationale: rationaleWithTableSyntax,
+          allowedRouteFamilyIfProven: "offchain-issuer",
+        }),
+      ],
       generatedAt: "2026-05-12T00:00:00.000Z",
     });
 
@@ -280,11 +260,13 @@ describe("generate-redemption-coverage-audit", () => {
 
     expect(markdown).toContain("## Active Unconfigured Gaps");
     expect(markdown).toContain(
-      "id | lifecycle | current disposition | classification source | blocker | evidence needed | allowed route family if proven",
+      "market-cap rank | id | lifecycle | current disposition | classification source | blocker | rationale",
     );
-    expect(markdown).toContain("mmxn-moneta-digital | active | needs-research (issuer-terms-missing) | curated");
-    expect(markdown).toContain("https://example.com/source\\|with-pipe https://example.com/next");
-    expect(markdown).not.toContain("with-pipe\nhttps://example.com/next");
+    expect(markdown).toContain(
+      "1 | mmxn-moneta-digital | active | needs-research (issuer-terms-missing) | reviewed-registry",
+    );
+    expect(markdown).toContain("First line\\|with-pipe second line");
+    expect(markdown).not.toContain("with-pipe\nsecond line");
   });
 
   it("parses CLI format and report options", () => {
@@ -298,79 +280,37 @@ describe("generate-redemption-coverage-audit", () => {
     expect(() => parseArgs(["--unknown"])).toThrow("Unknown argument: --unknown");
   });
 
-  it("strict CLI mode fails default-inferred active gaps but allows curated active gaps", () => {
+  it("strict CLI mode accepts durably reviewed active gaps", () => {
     const cwd = mkdtempSync(join(tmpdir(), "redemption-coverage-audit-"));
-    const defaultGapAudit = () =>
+    const reviewedGapAudit = () =>
       generateRedemptionCoverageAudit({
-        trackedCoins: [coin({ id: "random-crypto" })],
-        activeCoins: [
-          coin({
-            id: "random-crypto",
-            flags: {
-              backing: "crypto-backed",
-              pegCurrency: "USD",
-              governance: "decentralized",
-              yieldBearing: false,
-              rwa: false,
-              navToken: false,
-            },
-          }),
-        ],
+        trackedCoins: [coin({ id: "reviewed-coin" })],
+        activeCoins: [coin({ id: "reviewed-coin" })],
         configs: {},
-      });
-    const curatedGapAudit = () =>
-      generateRedemptionCoverageAudit({
-        trackedCoins: [coin({ id: "mmxn-moneta-digital", symbol: "MMXN" })],
-        activeCoins: [coin({ id: "mmxn-moneta-digital", symbol: "MMXN" })],
-        configs: {},
+        reviewedDispositions: [review("reviewed-coin")],
       });
 
-    expect(runCli(["--json", "--strict-active-gaps", "--report", "default.json"], cwd, defaultGapAudit)).toBe(1);
-    expect(runCli(["--json", "--strict-active-gaps", "--report", "curated.json"], cwd, curatedGapAudit)).toBe(0);
-    const defaultReport = JSON.parse(readFileSync(join(cwd, "default.json"), "utf8")) as {
+    expect(runCli(["--json", "--strict-active-gaps", "--report", "reviewed.json"], cwd, reviewedGapAudit)).toBe(0);
+    const report = JSON.parse(readFileSync(join(cwd, "reviewed.json"), "utf8")) as {
       summary: { activeDefaultClassified: number };
     };
-    expect(defaultReport.summary.activeDefaultClassified).toBe(1);
+    expect(report.summary.activeDefaultClassified).toBe(0);
   });
 
-  it("check mode ratchets the default backlog without requiring strict-zero immediately", () => {
+  it("keeps the default-classified count at strict zero", () => {
     const audit = generateRedemptionCoverageAudit({
       trackedCoins: [coin({ id: "random-crypto" })],
-      activeCoins: [
-        coin({
-          id: "random-crypto",
-          flags: {
-            backing: "crypto-backed",
-            pegCurrency: "USD",
-            governance: "decentralized",
-            yieldBearing: false,
-            rwa: false,
-            navToken: false,
-          },
-        }),
-      ],
+      activeCoins: [coin({ id: "random-crypto" })],
       configs: {},
+      reviewedDispositions: [review("random-crypto")],
     });
 
     expect(
       evaluateRedemptionCoverageAudit(audit, {
-        baseline: { activeDefaultClassified: 1, activeUnconfigured: 1, heuristicConfiguredRoutes: 0 },
-      }),
-    ).toEqual([]);
-    expect(
-      evaluateRedemptionCoverageAudit(audit, {
         baseline: { activeDefaultClassified: 0, activeUnconfigured: 1, heuristicConfiguredRoutes: 0 },
       }),
-    ).toEqual([
-      expect.objectContaining({
-        code: "active-default-classified-ratchet-regressed",
-      }),
-    ]);
-    expect(evaluateRedemptionCoverageAudit(audit, { strictActiveGaps: true })).toEqual([
-      expect.objectContaining({
-        code: "active-default-classified-gaps",
-      }),
-    ]);
+    ).toEqual([]);
+    expect(evaluateRedemptionCoverageAudit(audit, { strictActiveGaps: true })).toEqual([]);
   });
 
   it("check mode ratchets active unconfigured and heuristic route growth", () => {
@@ -378,6 +318,7 @@ describe("generate-redemption-coverage-audit", () => {
       trackedCoins: [coin({ id: "random-crypto" })],
       activeCoins: [coin({ id: "random-crypto" })],
       configs: {},
+      reviewedDispositions: [review("random-crypto")],
     });
     const heuristicAudit = generateRedemptionCoverageAudit({
       trackedCoins: [coin({ id: "usdc-circle" }), coin({ id: "pmusd-precious-metals" })],
@@ -386,6 +327,7 @@ describe("generate-redemption-coverage-audit", () => {
         "usdc-circle": configuredRoute,
         "pmusd-precious-metals": heuristicRoute,
       },
+      reviewedDispositions: [],
     });
 
     expect(
@@ -415,6 +357,7 @@ describe("generate-redemption-coverage-audit", () => {
         trackedCoins: [coin({ id: "usdc-circle" })],
         activeCoins: [coin({ id: "usdc-circle" })],
         configs: { "usdc-circle": configuredRoute },
+        reviewedDispositions: [],
         generatedAt: "2026-05-12T00:00:00.000Z",
       }),
     );

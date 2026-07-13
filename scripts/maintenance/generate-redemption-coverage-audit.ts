@@ -14,21 +14,19 @@ import {
   TRACKED_STABLECOINS,
 } from "../../shared/lib/stablecoins/registry";
 import { writeOutputFile } from "../lib/coverage-audit-cli";
+import {
+  REDEMPTION_COVERAGE_DISPOSITIONS,
+  REDEMPTION_COVERAGE_REASON_CODES,
+  REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS,
+  type RedemptionCoverageDisposition,
+  type RedemptionCoverageReasonCode,
+  type ReviewedRedemptionCoverageDisposition,
+} from "../lib/redemption-coverage-dispositions";
 
-export type RedemptionCoverageDisposition = "add" | "defer" | "hard-reject" | "needs-research";
-
-export type RedemptionCoverageReasonCode =
-  | "borrower-repay-only"
-  | "capacity-unpublished"
-  | "frozen"
-  | "issuer-terms-missing"
-  | "no-holder-route"
-  | "pegkeeper-only"
-  | "pre-launch"
-  | "source-review-needed";
+export type { RedemptionCoverageDisposition, RedemptionCoverageReasonCode };
 
 export type RedemptionCoverageLifecycle = "active" | "pre-launch" | "frozen";
-export type RedemptionCoverageClassificationSource = "curated" | "default-inferred";
+export type RedemptionCoverageClassificationSource = "reviewed-registry" | "lifecycle-default";
 
 type AuditCoin = Pick<
   StablecoinMeta,
@@ -37,12 +35,14 @@ type AuditCoin = Pick<
 
 export interface CoverageClassification {
   disposition: RedemptionCoverageDisposition;
-  reasonCode: RedemptionCoverageReasonCode;
+  reasonCode: RedemptionCoverageReasonCode | "frozen" | "pre-launch";
   classificationSource: RedemptionCoverageClassificationSource;
   blocker: string;
+  rationale: string;
   evidenceNeeded: string;
   allowedRouteFamilyIfProven: RedemptionRouteFamily | null;
-  sourceLink: string | null;
+  evidenceUrls: readonly string[];
+  reviewer: string | null;
   reviewedDate: string | null;
 }
 
@@ -51,6 +51,7 @@ export interface CoverageAuditRow extends CoverageClassification {
   name: string;
   symbol: string;
   lifecycle: RedemptionCoverageLifecycle;
+  marketCapRank: number;
 }
 
 export interface HeuristicRouteAuditRow {
@@ -100,127 +101,24 @@ export interface RedemptionCoverageAuditCheckFinding {
 
 const CHECK_BASELINE_PATH = "scripts/lib/redemption-coverage-audit-baseline.json";
 
-const OFFCHAIN_CANDIDATES = new Set(["mmxn-moneta-digital", "vndc-jade-labs", "zkusd-goal3"]);
-const WRAPPER_OR_NAV_CANDIDATES = new Set(["iusd-initia", "susd1plus-lorenzo", "witry-brix", "inalpha-nest"]);
-const PROTOCOL_RESEARCH_CANDIDATES = new Set(["hollar-hydrated", "crvusd-curve"]);
-const PROTOCOL_DEFER_CANDIDATES = new Set([
-  "mim-abracadabra",
-  "mai-qidao",
-  "usdx-kava",
-  "usdh-hubble",
-  "bnusd-balanced",
-  "fxd-fathom",
-  "iusd-indigo-protocol",
-  "pht-pht",
-  "nxusd-nereus",
-]);
-const PROTOCOL_HARD_REJECTS = new Set([
-  "frax-frax",
-  "usg-tangent",
-  "xtusd-xt",
-  "usdv-solomon",
-  "spusd-soulpeg",
-  "jusd-jusd-stable-token",
-  "usdr-ring",
-  "gramg-token-teknoloji",
-  "grams-token-teknoloji",
-]);
-
 function lifecycleForCoin(coin: AuditCoin): RedemptionCoverageLifecycle {
   if (coin.status === "pre-launch" || coin.status === "frozen") return coin.status;
   return "active";
 }
 
-function firstSourceLink(coin: AuditCoin): string | null {
-  return coin.links?.[0]?.url ?? null;
-}
-
-function classifyActiveUnconfiguredCoin(coin: AuditCoin): CoverageClassification {
-  if (OFFCHAIN_CANDIDATES.has(coin.id)) {
-    return {
-      disposition: "needs-research",
-      reasonCode: "issuer-terms-missing",
-      classificationSource: "curated",
-      blocker: "Official holder redemption terms have not been source-reviewed for v4.",
-      evidenceNeeded: "Holder eligibility, output asset, mechanics, capacity basis, fees, and settlement timing.",
-      allowedRouteFamilyIfProven: "offchain-issuer",
-      sourceLink: firstSourceLink(coin),
-      reviewedDate: null,
-    };
-  }
-
-  if (WRAPPER_OR_NAV_CANDIDATES.has(coin.id)) {
-    return {
-      disposition: "needs-research",
-      reasonCode: "capacity-unpublished",
-      classificationSource: "curated",
-      blocker: "Wrapper, vault, or NAV exit has not been source-reviewed for holder exercisability and capacity.",
-      evidenceNeeded:
-        "App or contract redemption docs, downstream dependency, output asset, cooldown/queue terms, and capacity source.",
-      allowedRouteFamilyIfProven: coin.flags?.navToken ? "queue-redeem" : "stablecoin-redeem",
-      sourceLink: firstSourceLink(coin),
-      reviewedDate: null,
-    };
-  }
-
-  if (PROTOCOL_RESEARCH_CANDIDATES.has(coin.id)) {
-    return {
-      disposition: "needs-research",
-      reasonCode: coin.id === "crvusd-curve" ? "pegkeeper-only" : "capacity-unpublished",
-      classificationSource: "curated",
-      blocker: "Protocol route requires strict proof of broad holder-exercisable redemption.",
-      evidenceNeeded:
-        "Official docs or audited contract evidence proving holder redemption beyond market-operations routes.",
-      allowedRouteFamilyIfProven: "collateral-redeem",
-      sourceLink: firstSourceLink(coin),
-      reviewedDate: null,
-    };
-  }
-
-  if (PROTOCOL_DEFER_CANDIDATES.has(coin.id)) {
-    return {
-      disposition: "defer",
-      reasonCode: "no-holder-route",
-      classificationSource: "curated",
-      blocker: "No broad holder-exercisable route is accepted without new public source evidence.",
-      evidenceNeeded: "Official redemption docs or audited callable route available to ordinary holders.",
-      allowedRouteFamilyIfProven: "collateral-redeem",
-      sourceLink: firstSourceLink(coin),
-      reviewedDate: null,
-    };
-  }
-
-  if (PROTOCOL_HARD_REJECTS.has(coin.id)) {
-    return {
-      disposition: "hard-reject",
-      reasonCode: "no-holder-route",
-      classificationSource: "curated",
-      blocker: "V4 plan marks this as a hard reject until new public terms prove holder redemption.",
-      evidenceNeeded: "New issuer or protocol terms proving a holder-exercisable redemption route.",
-      allowedRouteFamilyIfProven: null,
-      sourceLink: firstSourceLink(coin),
-      reviewedDate: null,
-    };
-  }
-
+function toReviewedClassification(row: ReviewedRedemptionCoverageDisposition): CoverageClassification {
   return {
-    disposition: "needs-research",
-    reasonCode: "source-review-needed",
-    classificationSource: "default-inferred",
-    blocker: "Active unconfigured coin has not yet been source-reviewed for v4 redemption coverage.",
-    evidenceNeeded:
-      "Official issuer/protocol docs, audited contracts, or live API/onchain evidence for route, capacity, fees, access, and settlement.",
-    allowedRouteFamilyIfProven: inferLikelyRouteFamily(coin),
-    sourceLink: firstSourceLink(coin),
-    reviewedDate: null,
+    disposition: row.disposition,
+    reasonCode: row.reasonCode,
+    classificationSource: "reviewed-registry",
+    blocker: row.blocker,
+    rationale: row.rationale,
+    evidenceNeeded: row.evidenceNeeded,
+    allowedRouteFamilyIfProven: row.allowedRouteFamilyIfProven,
+    evidenceUrls: row.evidenceUrls,
+    reviewer: row.reviewer,
+    reviewedDate: row.reviewedDate,
   };
-}
-
-function inferLikelyRouteFamily(coin: AuditCoin): RedemptionRouteFamily | null {
-  if (coin.flags?.navToken || coin.variantOf) return "queue-redeem";
-  if (coin.flags?.governance === "centralized") return "offchain-issuer";
-  if (coin.flags?.backing === "crypto-backed") return "collateral-redeem";
-  return null;
 }
 
 function classifyLifecycleExcludedCoin(
@@ -231,11 +129,13 @@ function classifyLifecycleExcludedCoin(
     return {
       disposition: "defer",
       reasonCode: "pre-launch",
-      classificationSource: "curated",
+      classificationSource: "lifecycle-default",
       blocker: "Pre-launch assets are excluded from active route count targets.",
+      rationale: "Redemption coverage becomes mandatory only when the asset enters the active lifecycle.",
       evidenceNeeded: "Lifecycle must change to active before source-reviewed route config work.",
       allowedRouteFamilyIfProven: null,
-      sourceLink: firstSourceLink(coin),
+      evidenceUrls: coin.links?.[0]?.url ? [coin.links[0].url] : [],
+      reviewer: null,
       reviewedDate: null,
     };
   }
@@ -243,11 +143,13 @@ function classifyLifecycleExcludedCoin(
   return {
     disposition: "hard-reject",
     reasonCode: "frozen",
-    classificationSource: "curated",
+    classificationSource: "lifecycle-default",
     blocker: "Frozen assets are excluded from active route count targets.",
+    rationale: "Frozen assets do not participate in current score production or active route coverage.",
     evidenceNeeded: "Lifecycle must change back to active before route config work.",
     allowedRouteFamilyIfProven: null,
-    sourceLink: firstSourceLink(coin),
+    evidenceUrls: coin.links?.[0]?.url ? [coin.links[0].url] : [],
+    reviewer: null,
     reviewedDate: null,
   };
 }
@@ -255,6 +157,7 @@ function classifyLifecycleExcludedCoin(
 function toAuditRow(
   coin: AuditCoin,
   classification: CoverageClassification,
+  marketCapRank: number,
   lifecycle: RedemptionCoverageLifecycle = lifecycleForCoin(coin),
 ): CoverageAuditRow {
   return {
@@ -262,12 +165,96 @@ function toAuditRow(
     name: coin.name,
     symbol: coin.symbol,
     lifecycle,
+    marketCapRank,
     ...classification,
   };
 }
 
 function sortById<T extends { id: string }>(rows: T[]): T[] {
   return rows.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+const ROUTE_FAMILIES = new Set<RedemptionRouteFamily>([
+  "stablecoin-redeem",
+  "basket-redeem",
+  "collateral-redeem",
+  "psm-swap",
+  "queue-redeem",
+  "offchain-issuer",
+]);
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function validateReviewedRedemptionDispositions(input: {
+  reviewedDispositions: readonly ReviewedRedemptionCoverageDisposition[];
+  trackedCoins: readonly AuditCoin[];
+  activeCoins: readonly AuditCoin[];
+  configuredIds: ReadonlySet<string>;
+}): ReadonlyMap<string, ReviewedRedemptionCoverageDisposition> {
+  const trackedIds = new Set(input.trackedCoins.map((coin) => coin.id));
+  const activeIds = new Set(input.activeCoins.map((coin) => coin.id));
+  const expectedIds = new Set(
+    input.activeCoins.filter((coin) => !input.configuredIds.has(coin.id)).map((coin) => coin.id),
+  );
+  const byId = new Map<string, ReviewedRedemptionCoverageDisposition>();
+
+  for (const row of input.reviewedDispositions) {
+    if (byId.has(row.id)) {
+      throw new Error(`Duplicate reviewed redemption disposition: ${row.id}`);
+    }
+    if (!trackedIds.has(row.id)) {
+      throw new Error(`Reviewed redemption disposition references unknown stablecoin: ${row.id}`);
+    }
+    if (!activeIds.has(row.id)) {
+      throw new Error(`Reviewed redemption disposition is stale because the stablecoin is not active: ${row.id}`);
+    }
+    if (input.configuredIds.has(row.id)) {
+      throw new Error(`Reviewed redemption disposition is stale because a route is now configured: ${row.id}`);
+    }
+    if (!REDEMPTION_COVERAGE_DISPOSITIONS.includes(row.disposition)) {
+      throw new Error(`Reviewed redemption disposition has invalid disposition for ${row.id}`);
+    }
+    if (!REDEMPTION_COVERAGE_REASON_CODES.includes(row.reasonCode)) {
+      throw new Error(`Reviewed redemption disposition has invalid reasonCode for ${row.id}`);
+    }
+    if (!row.blocker.trim() || !row.rationale.trim() || !row.evidenceNeeded.trim() || !row.reviewer.trim()) {
+      throw new Error(`Reviewed redemption disposition has incomplete review fields for ${row.id}`);
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(row.reviewedDate) || Number.isNaN(Date.parse(`${row.reviewedDate}T00:00:00Z`))) {
+      throw new Error(`Reviewed redemption disposition has invalid reviewedDate for ${row.id}`);
+    }
+    if (row.evidenceUrls.length === 0 || row.evidenceUrls.some((url) => !isHttpUrl(url))) {
+      throw new Error(`Reviewed redemption disposition has invalid evidenceUrls for ${row.id}`);
+    }
+    if (new Set(row.evidenceUrls).size !== row.evidenceUrls.length) {
+      throw new Error(`Reviewed redemption disposition has duplicate evidenceUrls for ${row.id}`);
+    }
+    if (row.allowedRouteFamilyIfProven !== null && !ROUTE_FAMILIES.has(row.allowedRouteFamilyIfProven)) {
+      throw new Error(`Reviewed redemption disposition has invalid route family for ${row.id}`);
+    }
+    if (row.disposition === "add" && row.allowedRouteFamilyIfProven === null) {
+      throw new Error(`Reviewed redemption add disposition lacks a route family for ${row.id}`);
+    }
+    if (row.disposition === "hard-reject" && row.allowedRouteFamilyIfProven !== null) {
+      throw new Error(`Reviewed redemption hard reject must not retain a route family for ${row.id}`);
+    }
+    byId.set(row.id, row);
+  }
+
+  const missingIds = [...expectedIds].filter((id) => !byId.has(id)).sort();
+  if (missingIds.length > 0) {
+    throw new Error(
+      `Missing reviewed redemption dispositions for active unconfigured stablecoins: ${missingIds.join(", ")}`,
+    );
+  }
+  return byId;
 }
 
 export function generateRedemptionCoverageAudit(
@@ -277,6 +264,7 @@ export function generateRedemptionCoverageAudit(
     preLaunchCoins?: readonly AuditCoin[];
     frozenCoins?: readonly AuditCoin[];
     configs?: Record<string, RedemptionBackstopConfig>;
+    reviewedDispositions?: readonly ReviewedRedemptionCoverageDisposition[];
     generatedAt?: string;
   } = {},
 ): RedemptionCoverageAudit {
@@ -286,20 +274,47 @@ export function generateRedemptionCoverageAudit(
   const frozenCoins = input.frozenCoins ?? FROZEN_STABLECOINS;
   const configs = input.configs ?? REDEMPTION_BACKSTOP_CONFIGS;
   const configuredIds = new Set(Object.keys(configs));
+  const trackedRankById = new Map(trackedCoins.map((coin, index) => [coin.id, index + 1]));
+  const reviewedById = validateReviewedRedemptionDispositions({
+    reviewedDispositions: input.reviewedDispositions ?? REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS,
+    trackedCoins,
+    activeCoins,
+    configuredIds,
+  });
 
-  const activeUnconfigured = sortById(
-    activeCoins
-      .filter((coin) => !configuredIds.has(coin.id))
-      .map((coin) => toAuditRow(coin, classifyActiveUnconfiguredCoin(coin))),
-  );
+  const activeUnconfigured = activeCoins
+    .filter((coin) => !configuredIds.has(coin.id))
+    .map((coin) => {
+      const review = reviewedById.get(coin.id);
+      if (!review) throw new Error(`Missing reviewed redemption disposition after validation: ${coin.id}`);
+      return toAuditRow(
+        coin,
+        toReviewedClassification(review),
+        trackedRankById.get(coin.id) ?? Number.MAX_SAFE_INTEGER,
+      );
+    });
 
   const lifecycleExcludedUnconfigured = sortById([
     ...preLaunchCoins
       .filter((coin) => !configuredIds.has(coin.id))
-      .map((coin) => toAuditRow(coin, classifyLifecycleExcludedCoin(coin, "pre-launch"), "pre-launch")),
+      .map((coin) =>
+        toAuditRow(
+          coin,
+          classifyLifecycleExcludedCoin(coin, "pre-launch"),
+          trackedRankById.get(coin.id) ?? Number.MAX_SAFE_INTEGER,
+          "pre-launch",
+        ),
+      ),
     ...frozenCoins
       .filter((coin) => !configuredIds.has(coin.id))
-      .map((coin) => toAuditRow(coin, classifyLifecycleExcludedCoin(coin, "frozen"), "frozen")),
+      .map((coin) =>
+        toAuditRow(
+          coin,
+          classifyLifecycleExcludedCoin(coin, "frozen"),
+          trackedRankById.get(coin.id) ?? Number.MAX_SAFE_INTEGER,
+          "frozen",
+        ),
+      ),
   ]);
 
   const heuristicConfiguredRoutes = sortById(
@@ -336,7 +351,7 @@ export function generateRedemptionCoverageAudit(
       preLaunchUnconfigured: preLaunchCoins.filter((coin) => !configuredIds.has(coin.id)).length,
       frozenUnconfigured: frozenCoins.filter((coin) => !configuredIds.has(coin.id)).length,
       activeUnclassified: activeUnconfigured.filter((row) => !row.disposition || !row.reasonCode).length,
-      activeDefaultClassified: activeUnconfigured.filter((row) => row.classificationSource === "default-inferred")
+      activeDefaultClassified: activeUnconfigured.filter((row) => row.classificationSource !== "reviewed-registry")
         .length,
       heuristicConfiguredRoutes: heuristicConfiguredRoutes.length,
     },
@@ -352,8 +367,8 @@ function markdownValue(value: string | null): string {
 }
 
 const COVERAGE_ROW_HEADER =
-  "id | lifecycle | current disposition | classification source | blocker | evidence needed | allowed route family if proven | source link | reviewed date";
-const COVERAGE_ROW_SEPARATOR = "--- | --- | --- | --- | --- | --- | --- | --- | ---";
+  "market-cap rank | id | lifecycle | current disposition | classification source | blocker | rationale | evidence needed | allowed route family if proven | evidence URLs | reviewer | reviewed date";
+const COVERAGE_ROW_SEPARATOR = "--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---";
 
 function renderCoverageRows(rows: readonly CoverageAuditRow[]): string[] {
   return [
@@ -361,14 +376,17 @@ function renderCoverageRows(rows: readonly CoverageAuditRow[]): string[] {
     COVERAGE_ROW_SEPARATOR,
     ...rows.map((row) =>
       [
+        String(row.marketCapRank),
         row.id,
         row.lifecycle,
         `${row.disposition} (${row.reasonCode})`,
         row.classificationSource,
         row.blocker,
+        row.rationale,
         row.evidenceNeeded,
-        row.allowedRouteFamilyIfProven ?? "TBD",
-        row.sourceLink,
+        row.allowedRouteFamilyIfProven ?? "none",
+        row.evidenceUrls.join(" "),
+        row.reviewer,
         row.reviewedDate,
       ]
         .map(markdownValue)
