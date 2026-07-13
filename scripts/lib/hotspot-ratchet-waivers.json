@@ -15,22 +15,6 @@
     "reviewAfter": "2026-09-16",
     "nextAction": "Separate Mini App state/auth orchestration and preset mutation handling from the route presentation shell."
   },
-  "src/components/command-palette.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Design Council Wave 3/9 wired the verb parser (compare/screen/pin/unpin/tape), the synthetic Run-command row, empty-state verb hints, and the expanded content sections (chains/pegs/mechanisms/recent depegs) into the cmdk shell. Split verb execution and result assembly into focused hooks before adding more palette modes.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/components/status/cron-metadata-summary.ts": {
-    "disposition": "deferred",
-    "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Reassess after the owning surface stabilizes."
-  },
   "src/components/tape/event-card.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes.",
@@ -54,14 +38,6 @@
     "createdAt": "2026-07-11",
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract portability and bulk operation handlers from the general Mini App mutation dispatcher while preserving the shared auth, rate-limit, generation, and response contracts."
-  },
-  "worker/src/api/telegram-mini-app.ts": {
-    "disposition": "queued-p4",
-    "notes": "The Telegram Mini App API coordinates authenticated session reads, mutation routing, action telemetry, and recap settings under one versioned contract. Keep it together while the v4 recap contract stabilizes, then separate session and mutation concerns.",
-    "owner": "telegram-delivery",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Split authenticated session loading and mutation/action routing behind the stable Mini App v4 response contract."
   },
   "worker/src/cron/reserve-adapters/erc4626-single-asset.ts": {
     "disposition": "queued-p4",
@@ -119,22 +95,6 @@
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract cron-lane row modeling and budget/status detail cells into focused modules, leaving CronLaneTable as the composition shell."
   },
-  "worker/src/cron/telegram-alert-source-events.ts": {
-    "disposition": "queued-p4",
-    "notes": "Telegram source-event persistence spans event lifecycle storage, subscriber page resolution, baseline commits, expiry, and completion. The file-size hotspot reflects several durable workflow responsibilities that need a coordinated store split.",
-    "owner": "telegram-delivery",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Separate source-event row persistence from subscriber-page resolution and lifecycle transitions behind the current exported API."
-  },
-  "src/components/status/api-keys-panel-parts.tsx": {
-    "disposition": "queued-p4",
-    "notes": "API-key panel parts intentionally collect inventory controls, creation and reveal dialogs, pagination, table rendering, and detail editing. The file is a top-size candidate and should be split by interaction family before more admin controls are added.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Move inventory controls, dialogs, table, and detail editor into focused component modules while keeping the panel-facing props stable."
-  },
   "worker/src/cron/yield-sync/evaluation.ts": {
     "disposition": "queued-p4",
     "notes": "Yield evaluation still coordinates source qualification, benchmark policy, arbitration, history, and cooperative progress reporting. The long evaluation function needs a dedicated split that preserves deterministic ranking behavior.",
@@ -150,14 +110,6 @@
     "createdAt": "2026-07-11",
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract API-key query/mutation state and dialog orchestration into focused hooks, leaving ApiKeysPanel responsible for composition."
-  },
-  "src/lib/pipeline-workspace-model.ts": {
-    "disposition": "queued-p4",
-    "notes": "The pipeline workspace model derives quality, integrity, loader-error, severity, and mode summaries from the status response. Its branch hotspot reflects multiple independent operational projections sharing one module.",
-    "owner": "worker-infrastructure",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Split quality, integrity, and mode-summary derivation into focused model modules while retaining the current workspace API."
   },
   "src/components/status/admin-action-execution-dialog.tsx": {
     "disposition": "queued-p4",

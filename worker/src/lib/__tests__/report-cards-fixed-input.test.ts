@@ -23,6 +23,7 @@ import {
   createReportCardsFixedInput,
   normalizeFixedInput,
   normalizeReportCardsReplayPayload,
+  parseReportCardsFixedInputCacheArtifact,
   parseReportCardsFixedInputCacheValue,
   serializeNormalizedReportCardsReplay,
 } from "../report-cards-fixed-input";
@@ -409,6 +410,30 @@ describe("fixed report-card input replay", () => {
     const tampered = JSON.parse(entry.value) as { payloadSha256: string };
     tampered.payloadSha256 = "0".repeat(64);
     await expect(parseReportCardsFixedInputCacheValue(JSON.stringify(tampered))).rejects.toThrow("checksum mismatch");
+  });
+
+  it("binds the canonical fixed-input envelope to the common V8 publication identity", async () => {
+    const input = exactFixedInput();
+    const identity = {
+      model: "v8" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: input.methodologyVersion,
+      evaluationBuildDigest: "a".repeat(64),
+      baseInputGenerationId: input.baseInputGenerationId,
+      publicationGenerationId: input.sourceGeneration,
+    };
+    const entry = await buildReportCardsFixedInputCacheEntry(input, identity);
+
+    await expect(parseReportCardsFixedInputCacheArtifact(entry.value)).resolves.toEqual({
+      input,
+      safetyScoreIdentity: identity,
+    });
+    await expect(
+      buildReportCardsFixedInputCacheEntry(input, {
+        ...identity,
+        publicationGenerationId: "different-publication",
+      }),
+    ).rejects.toThrow(/does not match/);
   });
 
   it("rejects a stale base-input generation instead of silently rebinding it", () => {

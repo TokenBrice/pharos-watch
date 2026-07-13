@@ -4,7 +4,7 @@ import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependen
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 
-export const V9_DEPENDENCY_PLAN_DIGEST_DOMAIN = "safety-score-v9.dependency-plan.v1";
+const V9_DEPENDENCY_PLAN_DIGEST_DOMAIN = "safety-score-v9.dependency-plan.v1";
 
 export interface V9DependencyPlanningEdge {
   edgeKey: string;

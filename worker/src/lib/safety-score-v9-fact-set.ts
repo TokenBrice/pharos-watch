@@ -455,10 +455,6 @@ export const SafetyScoreV9FactSetExtensionV2Schema = z
   });
 
 export type SafetyScoreV9FactSetExtensionV2 = z.infer<typeof SafetyScoreV9FactSetExtensionV2Schema>;
-/** @deprecated Safety Score V9 candidate facts now require extension contract V2. */
-export const SafetyScoreV9FactSetExtensionV1Schema = SafetyScoreV9FactSetExtensionV2Schema;
-/** @deprecated Safety Score V9 candidate facts now require extension contract V2. */
-export type SafetyScoreV9FactSetExtensionV1 = SafetyScoreV9FactSetExtensionV2;
 type AssetExtension = SafetyScoreV9FactSetExtensionV2["assets"][number];
 
 interface AssetBuildContext {

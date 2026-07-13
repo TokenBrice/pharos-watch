@@ -50,7 +50,6 @@ function candidateAndDiffMatch(
     identity.candidateId === candidate.candidateId &&
     identity.policyVersion === candidate.policyVersion &&
     identity.publicationGenerationId === candidate.publicationGenerationId &&
-    identity.publicationEpoch === candidate.publicationEpoch &&
     identity.baseInputGenerationId === candidate.baseInputGenerationId &&
     identity.factSetDigest === candidate.factSetDigest &&
     identity.policyId === candidate.policy.id &&
@@ -95,29 +94,21 @@ export const handleAdminSafetyScoreV9 = makeAdminRoute<AdminRouteContext>(
   },
 );
 
-export async function handleAdminSafetyScoreV9MovementReviewTrusted({
+async function handleAdminSafetyScoreV9MovementReviewTrusted({
   db,
   request,
 }: AdminRouteContext): Promise<Response> {
   if (!isWellFormedIdempotencyKey(request.headers.get("Idempotency-Key"))) {
-    return adminErrorResponse(
-      400,
-      "A valid Idempotency-Key header between 8 and 128 characters is required",
-    );
+    return adminErrorResponse(400, "A valid Idempotency-Key header between 8 and 128 characters is required");
   }
 
-  const parsed = await parseRequestJsonWithSchema(
-    request,
-    SafetyScoreV9MovementReviewRequestSchema,
-    {
-      invalidJsonMessage: "Invalid Safety Score v9 movement review body",
-      bodyTooLargeMessage: "Safety Score v9 movement review body is too large",
-      formatSchemaError: (issues) =>
-        issues[0]?.message ?? "Invalid Safety Score v9 movement review body",
-      responseOptions: { noStore: true },
-      maxBytes: 16 * 1024,
-    },
-  );
+  const parsed = await parseRequestJsonWithSchema(request, SafetyScoreV9MovementReviewRequestSchema, {
+    invalidJsonMessage: "Invalid Safety Score v9 movement review body",
+    bodyTooLargeMessage: "Safety Score v9 movement review body is too large",
+    formatSchemaError: (issues) => issues[0]?.message ?? "Invalid Safety Score v9 movement review body",
+    responseOptions: { noStore: true },
+    maxBytes: 16 * 1024,
+  });
   if (parsed instanceof Response) return parsed;
 
   try {
@@ -149,9 +140,8 @@ export async function handleAdminSafetyScoreV9MovementReviewTrusted({
   }
 }
 
-export const handleAdminSafetyScoreV9MovementReview =
-  makeIdempotentAdminRoute<AdminRouteContext>(
-    "route-admin-safety-score-v9-review",
-    "admin-safety-score-v9-review",
-    handleAdminSafetyScoreV9MovementReviewTrusted,
-  );
+export const handleAdminSafetyScoreV9MovementReview = makeIdempotentAdminRoute<AdminRouteContext>(
+  "route-admin-safety-score-v9-review",
+  "admin-safety-score-v9-review",
+  handleAdminSafetyScoreV9MovementReviewTrusted,
+);

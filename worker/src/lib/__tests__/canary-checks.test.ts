@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
@@ -13,6 +14,7 @@ import { REPORT_CARD_CACHE_GENERATION } from "../report-card-cache";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 
 const NOW = 1_775_900_000;
+const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
 
 afterEach(() => {
   vi.useRealTimers();
@@ -32,12 +34,18 @@ function stablecoinsPayload(activeCount = ACTIVE_IDS.size) {
 function reportCardPayload(updatedAt = NOW - 60) {
   const scoreIds = [...ACTIVE_IDS].sort();
   const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
+  const safetyScoreIdentity = buildSafetyScoreV8PublicationIdentity({
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    baseInputGenerationId: BASE_INPUT_GENERATION_ID,
+    publicationGenerationId,
+  });
   return JSON.stringify({
     generation: REPORT_CARD_CACHE_GENERATION,
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
     payload: {
       updatedAt,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      safetyScoreIdentity,
       publicationGenerationId,
       completeness: {
         generationId: publicationGenerationId,

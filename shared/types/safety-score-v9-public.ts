@@ -251,7 +251,6 @@ export const SafetyScoreV9ResponseSchema = z
     candidateId: z.string().min(1),
     policyVersion: CandidatePolicyVersionSchema,
     publicationGenerationId: z.string().min(1),
-    publicationEpoch: z.number().int().nonnegative(),
     baseInputGenerationId: BaseInputGenerationIdSchema,
     factSetDigest: Sha256Schema,
     resultDigest: Sha256Schema,
@@ -281,32 +280,3 @@ export const SafetyScoreV9ResponseSchema = z
     }
   });
 export type SafetyScoreV9Response = z.infer<typeof SafetyScoreV9ResponseSchema>;
-
-export const SafetyScoreModelManifestSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    state: z.enum(["v8-active-v9-shadow", "v9-active-v8-warm", "v8-restored-v9-retained"]),
-    activeModel: z.enum(["v8", "v9"]),
-    activeGenerationId: z.string().min(1),
-    v8GenerationId: z.string().min(1).nullable(),
-    v9GenerationId: z.string().min(1).nullable(),
-    transitionEpoch: z.number().int().nonnegative(),
-    updatedAtSec: z.number().int().nonnegative(),
-  })
-  .strict()
-  .superRefine((manifest, ctx) => {
-    const expected = manifest.activeModel === "v8" ? manifest.v8GenerationId : manifest.v9GenerationId;
-    if (expected === null || expected !== manifest.activeGenerationId) {
-      ctx.addIssue({ code: "custom", path: ["activeGenerationId"], message: "Active generation does not match model" });
-    }
-    if (manifest.state === "v8-active-v9-shadow" && manifest.activeModel !== "v8") {
-      ctx.addIssue({ code: "custom", path: ["activeModel"], message: "Shadow state requires v8 active" });
-    }
-    if (manifest.state === "v9-active-v8-warm" && manifest.activeModel !== "v9") {
-      ctx.addIssue({ code: "custom", path: ["activeModel"], message: "Warm rollback state requires v9 active" });
-    }
-    if (manifest.state === "v8-restored-v9-retained" && manifest.activeModel !== "v8") {
-      ctx.addIssue({ code: "custom", path: ["activeModel"], message: "Restored state requires v8 active" });
-    }
-  });
-export type SafetyScoreModelManifest = z.infer<typeof SafetyScoreModelManifestSchema>;

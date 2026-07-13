@@ -6,7 +6,7 @@ import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
 
 export const REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX = "report-cards-input:v1:";
-export const REPORT_CARDS_BASE_INPUT_UNAVAILABLE_METHODOLOGY = "unavailable";
+const REPORT_CARDS_BASE_INPUT_UNAVAILABLE_METHODOLOGY = "unavailable";
 
 export interface ReportCardsBaseInputSourceV1 {
   captureKind: "exact-publication-inputs" | "public-reconstruction";

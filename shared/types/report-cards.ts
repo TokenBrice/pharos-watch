@@ -20,6 +20,7 @@ import type { BluechipGrade, CustodyModel } from "./core";
 import { RedemptionModelConfidenceSchema, RedemptionRouteFamilySchema } from "./redemption";
 import { DependencyWeightSchema, StablecoinLinkSchema } from "./stablecoin-meta-schemas";
 import { DexExitEvidenceKindSchema, LiquidityCoverageClassSchema, LiquidityEvidenceClassSchema } from "./market";
+import { SafetyScoreV8PublicationIdentitySchema } from "./safety-score-publication";
 
 export type ReportCardGrade = BluechipGrade | "NR";
 const REPORT_CARD_GRADE_VALUES = [...BLUECHIP_GRADE_VALUES, "NR"] as const;
@@ -353,6 +354,7 @@ const CollateralDriftEntrySchema = z.object({
 });
 
 export const ReportCardsResponseSchema = z.object({
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.optional(),
   cards: z.array(ReportCardSchema),
   methodology: ReportCardsMethodologySchema,
   dependencyGraph: ReportCardsDependencyGraphSchema,

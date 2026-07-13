@@ -117,12 +117,10 @@ function mockSnapshot(
     identity: {
       model: "v8",
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      policyId: null,
-      policyDigest: null,
       evaluationBuildDigest: DIGEST,
       baseInputGenerationId: BASE_INPUT_GENERATION_ID,
-      modelPublicationGenerationId: MODEL_PUBLICATION_GENERATION_ID,
-      publicationEpoch: 0,
+      publicationGenerationId: MODEL_PUBLICATION_GENERATION_ID,
+      schemaVersion: 1,
     },
     publishedAtSec: 1_777_770_000,
   });

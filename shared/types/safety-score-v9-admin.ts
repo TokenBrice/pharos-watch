@@ -39,32 +39,36 @@ const CoverageFloorSchema = z
   })
   .strict();
 
+const ShadowCoverageSchema = z
+  .object({
+    expectedActiveCount: z.number().int().nonnegative(),
+    observedResultCount: z.number().int().nonnegative(),
+    presentExpectedCount: z.number().int().nonnegative(),
+    ratedResultCount: z.number().int().nonnegative(),
+    notRatedResultCount: z.number().int().nonnegative(),
+    expectedActiveIdsDigest: Sha256Schema,
+    presentExpectedIdsDigest: Sha256Schema,
+    missingIds: z.array(NonEmptyTextSchema),
+    unexpectedIds: z.array(NonEmptyTextSchema),
+    duplicateIds: z.array(NonEmptyTextSchema),
+    compilerExceptions: z.array(NonEmptyTextSchema),
+    futureDatedEvidenceIds: z.array(NonEmptyTextSchema),
+    coverageFloors: z.array(CoverageFloorSchema),
+    publicationRegression: z.boolean(),
+    unresolvedReleaseBlockers: z.array(NonEmptyTextSchema),
+    unresolvedCriticalMovementIds: z.array(NonEmptyTextSchema),
+  })
+  .strict();
+
 export const SafetyScoreV9AdminShadowEnvelopeSchema = z
   .object({
     schemaVersion: z.literal(1),
     candidate: SafetyScoreV9ResponseSchema,
     compilerFactSchemaDigest: Sha256Schema,
     producerCapabilityDigest: Sha256Schema,
-    coverage: z
-      .object({
-        expectedActiveCount: z.number().int().nonnegative(),
-        observedResultCount: z.number().int().nonnegative(),
-        presentExpectedCount: z.number().int().nonnegative(),
-        ratedResultCount: z.number().int().nonnegative(),
-        notRatedResultCount: z.number().int().nonnegative(),
-        expectedActiveIdsDigest: Sha256Schema,
-        presentExpectedIdsDigest: Sha256Schema,
-        missingIds: z.array(NonEmptyTextSchema),
-        unexpectedIds: z.array(NonEmptyTextSchema),
-        duplicateIds: z.array(NonEmptyTextSchema),
-        compilerExceptions: z.array(NonEmptyTextSchema),
-        futureDatedEvidenceIds: z.array(NonEmptyTextSchema),
-        coverageFloors: z.array(CoverageFloorSchema),
-        publicationRegression: z.boolean(),
-        unresolvedReleaseBlockers: z.array(NonEmptyTextSchema),
-        unresolvedCriticalMovementIds: z.array(NonEmptyTextSchema),
-      })
-      .strict(),
+    releaseCoveragePolicyDigest: Sha256Schema,
+    consumerThresholdRegistryDigest: Sha256Schema,
+    coverage: ShadowCoverageSchema,
     replayArtifacts: z.array(ReplayArtifactSchema),
   })
   .strict();
@@ -78,8 +82,6 @@ const ShadowQualificationSchema = z
         "compiler-exception",
         "future-dated-evidence",
         "coverage-floor-failed",
-        "replay-artifact-missing",
-        "replay-artifact-unverified",
         "publication-regression",
         "unresolved-release-blocker",
         "unresolved-critical-movement",
@@ -88,12 +90,11 @@ const ShadowQualificationSchema = z
   })
   .strict();
 
-const ShadowAttemptIdentitySchema = z
+const ShadowIdentitySchema = z
   .object({
     candidateId: NonEmptyTextSchema,
     policyVersion: NonEmptyTextSchema,
     publicationGenerationId: NonEmptyTextSchema,
-    publicationEpoch: z.number().int().nonnegative(),
     baseInputGenerationId: BaseInputGenerationIdSchema,
     factSetDigest: Sha256Schema,
     policyId: NonEmptyTextSchema,
@@ -102,27 +103,57 @@ const ShadowAttemptIdentitySchema = z
     resultDigest: Sha256Schema,
     compilerFactSchemaDigest: Sha256Schema,
     producerCapabilityDigest: Sha256Schema,
+    releaseCoveragePolicyDigest: Sha256Schema,
+    consumerThresholdRegistryDigest: Sha256Schema,
     envelopeDigest: Sha256Schema,
     sourceGenerations: z.record(NonEmptyTextSchema, NonEmptyTextSchema),
   })
   .strict();
 
-const ShadowAttemptSchema = z
+const DiffSummarySchema = z
+  .object({
+    expectedCount: z.number().int().nonnegative(),
+    comparedCount: z.number().int().nonnegative(),
+    missingInputCount: z.number().int().nonnegative(),
+    gradeOrNrTransitionCount: z.number().int().nonnegative(),
+    bindingCapChangeCount: z.number().int().nonnegative(),
+    largeScoreMovementCount: z.number().int().nonnegative(),
+    topCutoffMovementCount: z.number().int().nonnegative(),
+    downstreamCrossingCount: z.number().int().nonnegative(),
+    requiresReviewCount: z.number().int().nonnegative(),
+    pendingReviewCount: z.number().int().nonnegative(),
+    comparableSupplyUsd: z.number().finite().nonnegative(),
+    supplyWeightedMeanAbsoluteDelta: z.number().finite().nonnegative().nullable(),
+  })
+  .strict();
+
+export const SafetyScoreV9AdminShadowDaySchema = z
   .object({
     schemaVersion: z.literal(1),
-    attemptId: NonEmptyTextSchema,
-    trigger: z.enum(["scheduled", "retry"]),
-    retryOfAttemptId: NonEmptyTextSchema.nullable(),
-    scheduledForSec: UnixSecondsSchema,
     utcDay: UtcDaySchema,
-    startedAtSec: UnixSecondsSchema.nullable(),
-    completedAtSec: UnixSecondsSchema.nullable(),
-    recordedAtSec: UnixSecondsSchema,
-    outcome: z.enum(["missed", "aborted", "failed", "succeeded"]),
-    identity: ShadowAttemptIdentitySchema.nullable(),
-    qualification: ShadowQualificationSchema.nullable(),
-    failure: z
+    updatedAtSec: UnixSecondsSchema,
+    attemptCounts: z
       .object({
+        successful: z.number().int().nonnegative(),
+        failed: z.number().int().nonnegative(),
+      })
+      .strict(),
+    selectedRun: z
+      .object({
+        selectedAtSec: UnixSecondsSchema,
+        identity: ShadowIdentitySchema,
+        coverage: ShadowCoverageSchema,
+        movement: DiffSummarySchema,
+        qualification: ShadowQualificationSchema,
+        diffReportDigest: Sha256Schema,
+        archiveSelectionReasons: z.array(z.enum(["anomaly", "final", "first"])),
+        artifactKeys: z.array(z.string().regex(/^(base-input|evaluation-build|fact-set|policy|result):[a-f0-9]{64}$/)),
+      })
+      .strict()
+      .nullable(),
+    latestError: z
+      .object({
+        atSec: UnixSecondsSchema,
         stage: z.enum([
           "scheduler",
           "base-input",
@@ -135,48 +166,11 @@ const ShadowAttemptSchema = z
           "shadow-write",
           "aborted",
         ]),
-        code: NonEmptyTextSchema,
-        message: NonEmptyTextSchema,
+        code: NonEmptyTextSchema.max(160),
+        message: NonEmptyTextSchema.max(500),
       })
       .strict()
       .nullable(),
-  })
-  .strict();
-
-export const SafetyScoreV9AdminShadowDaySchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    utcDay: UtcDaySchema,
-    attempts: z.array(ShadowAttemptSchema),
-    projection: z
-      .object({
-        expectedScheduledAttemptIds: z.array(NonEmptyTextSchema),
-        missingScheduledAttemptIds: z.array(NonEmptyTextSchema),
-        unexpectedScheduledAttemptIds: z.array(NonEmptyTextSchema),
-        outcomeCounts: z
-          .object({
-            missed: z.number().int().nonnegative(),
-            aborted: z.number().int().nonnegative(),
-            failed: z.number().int().nonnegative(),
-            succeeded: z.number().int().nonnegative(),
-          })
-          .strict(),
-        canonicalQualifyingGenerationId: NonEmptyTextSchema.nullable(),
-        blockingAttemptIds: z.array(NonEmptyTextSchema),
-        blockers: z.array(
-          z.enum([
-            "expected-scheduled-attempt-missing",
-            "unexpected-scheduled-attempt",
-            "attempt-missed",
-            "attempt-aborted",
-            "attempt-failed",
-            "generation-nonqualifying",
-            "qualifying-generation-missing",
-          ]),
-        ),
-        qualifies: z.boolean(),
-      })
-      .strict(),
   })
   .strict();
 
@@ -246,9 +240,11 @@ export const SafetyScoreV9AdminDiffReportSchema = z
         evaluationBuildDigest: Sha256Schema,
       })
       .strict(),
-    v9Identity: ShadowAttemptIdentitySchema.omit({
+    v9Identity: ShadowIdentitySchema.omit({
       compilerFactSchemaDigest: true,
       producerCapabilityDigest: true,
+      releaseCoveragePolicyDigest: true,
+      consumerThresholdRegistryDigest: true,
       envelopeDigest: true,
       sourceGenerations: true,
     }),
@@ -268,22 +264,7 @@ export const SafetyScoreV9AdminDiffReportSchema = z
         ),
       })
       .strict(),
-    summary: z
-      .object({
-        expectedCount: z.number().int().nonnegative(),
-        comparedCount: z.number().int().nonnegative(),
-        missingInputCount: z.number().int().nonnegative(),
-        gradeOrNrTransitionCount: z.number().int().nonnegative(),
-        bindingCapChangeCount: z.number().int().nonnegative(),
-        largeScoreMovementCount: z.number().int().nonnegative(),
-        topCutoffMovementCount: z.number().int().nonnegative(),
-        downstreamCrossingCount: z.number().int().nonnegative(),
-        requiresReviewCount: z.number().int().nonnegative(),
-        pendingReviewCount: z.number().int().nonnegative(),
-        comparableSupplyUsd: z.number().finite().nonnegative(),
-        supplyWeightedMeanAbsoluteDelta: z.number().finite().nonnegative().nullable(),
-      })
-      .strict(),
+    summary: DiffSummarySchema,
     topSupplyWeightedMovements: z.array(
       z
         .object({

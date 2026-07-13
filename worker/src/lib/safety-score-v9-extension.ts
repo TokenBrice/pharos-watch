@@ -813,6 +813,18 @@ export function buildSafetyScoreV9BaselineExtension(
     clockSec,
   );
   const registryObservedAtSec = boundedObservedAt(fixedInput.updatedAt, clockSec);
+  const liveReservesGenerationDigest = digest("safety-score-v9.live-reserves.v1", {
+    reserves: fixedInput.liveReserveMap,
+    provenance: fixedInput.liveReserveProvenanceMap,
+  });
+  const chainSupplyGenerationDigest = digest("safety-score-v9.chain-supply.v1", {
+    chainCirculatingById: fixedInput.chainCirculatingById,
+    dexDeploymentSupplyCoverageById: fixedInput.dexDeploymentSupplyCoverageById,
+  });
+  const pegGenerationDigest = digest("safety-score-v9.peg.v1", {
+    pegDataById: fixedInput.pegDataById,
+    activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
+  });
   const sources = {
     registryObservedAtSec,
     unavailableRedemptionObservedAtSec: boundedObservedAt(
@@ -820,17 +832,17 @@ export function buildSafetyScoreV9BaselineExtension(
       clockSec,
     ),
     liveReserves: {
-      generationId: `fixed-input:${fixedInput.baseInputGenerationId}:live-reserves`,
+      generationId: `live-reserves:v1:${liveReservesGenerationDigest}`,
       observedAtSec: reserveObservedAtSec,
-      maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
+      maxAgeSec: CRON_INTERVALS["sync-live-reserves"] * 2,
     },
     chainSupply: {
-      generationId: `fixed-input:${fixedInput.baseInputGenerationId}:chain-supply`,
+      generationId: `chain-supply:v1:${chainSupplyGenerationDigest}`,
       observedAtSec: boundedObservedAt(fixedInput.updatedAt, clockSec),
       maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
     },
     peg: {
-      generationId: `fixed-input:${fixedInput.baseInputGenerationId}:peg`,
+      generationId: `peg:v1:${pegGenerationDigest}`,
       observedAtSec: pegObservedAtSec,
       maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
     },

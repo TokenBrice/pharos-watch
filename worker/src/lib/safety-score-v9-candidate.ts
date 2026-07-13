@@ -1,10 +1,7 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import { evaluateV9FactSet, type V9EvaluatedSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacity";
-import {
-  assertV9ValidatedPolicyEnvelope,
-  V9_CANDIDATE_POLICY_V1,
-} from "@shared/lib/safety-score-v9/policy";
+import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -20,26 +17,22 @@ import {
 import { buildSafetyScoreV9BaselineExtension } from "./safety-score-v9-extension";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 
-export const SAFETY_SCORE_V9_COMPILER_FACT_SCHEMA_DIGEST_DOMAIN =
-  "safety-score-v9.compiler-fact-schema.v1";
-export const SAFETY_SCORE_V9_PRODUCER_CAPABILITY_DIGEST_DOMAIN =
-  "safety-score-v9.producer-capability-build.v1";
-export const SAFETY_SCORE_V9_CANDIDATE_ID_DIGEST_DOMAIN = "safety-score-v9.candidate-id.v1";
+const SAFETY_SCORE_V9_COMPILER_FACT_SCHEMA_DIGEST_DOMAIN = "safety-score-v9.compiler-fact-schema.v1";
+const SAFETY_SCORE_V9_PRODUCER_CAPABILITY_DIGEST_DOMAIN = "safety-score-v9.producer-capability-build.v1";
+const SAFETY_SCORE_V9_CANDIDATE_ID_DIGEST_DOMAIN = "safety-score-v9.candidate-id.v1";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const ReleaseCandidateIdSchema = z.string().regex(/^v9-rc-[1-9][0-9]*$/);
-const CanonicalStringArraySchema = z
-  .array(z.string().min(1))
-  .superRefine((values, ctx) => {
-    if (
-      new Set(values).size !== values.length ||
-      values.some((value, index) => index > 0 && values[index - 1]! >= value)
-    ) {
-      ctx.addIssue({ code: "custom", message: "Values must be unique and sorted" });
-    }
-  });
+const CanonicalStringArraySchema = z.array(z.string().min(1)).superRefine((values, ctx) => {
+  if (
+    new Set(values).size !== values.length ||
+    values.some((value, index) => index > 0 && values[index - 1]! >= value)
+  ) {
+    ctx.addIssue({ code: "custom", message: "Values must be unique and sorted" });
+  }
+});
 
-export const SafetyScoreV9CompilerFactSchemaIdentityV1Schema = z
+const SafetyScoreV9CompilerFactSchemaIdentityV1Schema = z
   .object({
     schemaVersion: z.literal(1),
     fixedInputSchemaVersion: z.literal(3),
@@ -49,11 +42,9 @@ export const SafetyScoreV9CompilerFactSchemaIdentityV1Schema = z
     evaluationBuildDigest: Sha256Schema,
   })
   .strict();
-export type SafetyScoreV9CompilerFactSchemaIdentityV1 = z.infer<
-  typeof SafetyScoreV9CompilerFactSchemaIdentityV1Schema
->;
+export type SafetyScoreV9CompilerFactSchemaIdentityV1 = z.infer<typeof SafetyScoreV9CompilerFactSchemaIdentityV1Schema>;
 
-export const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
+const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
   .object({
     schemaVersion: z.literal(1),
     inputContractVersions: z
@@ -93,11 +84,9 @@ export const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
       .strict(),
   })
   .strict();
-export type SafetyScoreV9ProducerCapabilityIdentityV1 = z.infer<
-  typeof SafetyScoreV9ProducerCapabilityIdentityV1Schema
->;
+export type SafetyScoreV9ProducerCapabilityIdentityV1 = z.infer<typeof SafetyScoreV9ProducerCapabilityIdentityV1Schema>;
 
-export const SafetyScoreV9CandidateIdentityV1Schema = z
+const SafetyScoreV9CandidateIdentityV1Schema = z
   .object({
     schemaVersion: z.literal(1),
     policyId: z.string().min(1),
@@ -112,7 +101,6 @@ export type SafetyScoreV9CandidateIdentityV1 = z.infer<typeof SafetyScoreV9Candi
 export interface BuildSafetyScoreV9CandidateInput {
   fixedInput: unknown;
   publishedAtSec: number;
-  publicationEpoch: number;
   extension?: unknown;
   policy?: V9ValidatedPolicyEnvelope;
   releaseCandidateId?: string;
@@ -151,7 +139,7 @@ function digest(domain: string, payload: unknown): string {
   return sha256Hex(stableJsonStringifyV1({ domain, payload }));
 }
 
-export function computeSafetyScoreV9CompilerFactSchemaDigest(
+function computeSafetyScoreV9CompilerFactSchemaDigest(
   identityValue: SafetyScoreV9CompilerFactSchemaIdentityV1,
 ): string {
   const identity = SafetyScoreV9CompilerFactSchemaIdentityV1Schema.parse(identityValue);
@@ -244,9 +232,6 @@ function candidatePolicyVersion(policy: V9ValidatedPolicyEnvelope): `candidate-$
 export function buildSafetyScoreV9Candidate(
   input: BuildSafetyScoreV9CandidateInput,
 ): Readonly<SafetyScoreV9CandidatePipelineResult> {
-  if (!Number.isInteger(input.publicationEpoch) || input.publicationEpoch < 0) {
-    throw new Error("Safety Score v9 publication epoch must be a non-negative integer");
-  }
   if (!Number.isInteger(input.publishedAtSec) || input.publishedAtSec < 0) {
     throw new Error("Safety Score v9 publication time must be a non-negative integer");
   }
@@ -279,26 +264,22 @@ export function buildSafetyScoreV9Candidate(
     compilerFactSchemaDigest,
     producerCapabilityDigest,
   });
-  const candidateId = input.releaseCandidateId === undefined
-    ? computeSafetyScoreV9CandidateId(candidateIdentity)
-    : ReleaseCandidateIdSchema.parse(input.releaseCandidateId);
-  const publicationGenerationId = `report-cards:v9:candidate:v1:${digest(
-    "safety-score-v9.candidate-publication.v1",
-    {
-      candidateId,
-      baseInputGenerationId: evaluatedSet.baseInputGenerationId,
-      factSetDigest: evaluatedSet.factSetDigest,
-      evaluatedSetDigest: evaluatedSet.evaluatedSetDigest,
-      resultDigest: evaluatedSet.scoreResultDigest,
-      publicationEpoch: input.publicationEpoch,
-      publishedAtSec: input.publishedAtSec,
-    },
-  )}`;
+  const candidateId =
+    input.releaseCandidateId === undefined
+      ? computeSafetyScoreV9CandidateId(candidateIdentity)
+      : ReleaseCandidateIdSchema.parse(input.releaseCandidateId);
+  const publicationGenerationId = `report-cards:v9:candidate:v1:${digest("safety-score-v9.candidate-publication.v1", {
+    candidateId,
+    baseInputGenerationId: evaluatedSet.baseInputGenerationId,
+    factSetDigest: evaluatedSet.factSetDigest,
+    evaluatedSetDigest: evaluatedSet.evaluatedSetDigest,
+    resultDigest: evaluatedSet.scoreResultDigest,
+    publishedAtSec: input.publishedAtSec,
+  })}`;
   const candidate = buildSafetyScoreV9Response({
     candidateId,
     policyVersion,
     publicationGenerationId,
-    publicationEpoch: input.publicationEpoch,
     publishedAtSec: input.publishedAtSec,
     results: evaluatedSet.assets.map((asset) => ({
       trace: asset.trace,

@@ -102,18 +102,15 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     const args = {
       fixedInput: exactFixedInput(),
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 4,
     };
     const left = serializeSafetyScoreV9ReplayArtifact(buildSafetyScoreV9ReplayArtifact(args));
-    const right = serializeSafetyScoreV9ReplayArtifact(
-      buildSafetyScoreV9ReplayArtifact(structuredClone(args)),
-    );
+    const right = serializeSafetyScoreV9ReplayArtifact(buildSafetyScoreV9ReplayArtifact(structuredClone(args)));
     const parsed = JSON.parse(left) as {
       schemaVersion: number;
       kind: string;
       lifecycle: string;
       releaseAuthorization: { authorized: boolean; reason: string };
-      pipeline: { candidate: { lifecycle: string; publicationEpoch: number; publishedAtSec: number } };
+      pipeline: { candidate: { lifecycle: string; publishedAtSec: number } };
     };
 
     expect(right).toBe(left);
@@ -126,7 +123,6 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       pipeline: {
         candidate: {
           lifecycle: "candidate",
-          publicationEpoch: 4,
           publishedAtSec: PUBLISHED_AT_SEC,
         },
       },
@@ -147,12 +143,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       writeTestFile(envelopePath, cacheEntry.value);
       writeTestFile(extensionPath, JSON.stringify(buildSafetyScoreV9BaselineExtension(fixedInput)));
 
-      const commonArgs = [
-        "--published-at",
-        PUBLISHED_AT_ISO,
-        "--publication-epoch",
-        "4",
-      ];
+      const commonArgs = ["--published-at", PUBLISHED_AT_ISO];
       await runSafetyScoreV9ReplayCli([
         "--input",
         rawPath,
@@ -162,13 +153,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
         extensionPath,
         ...commonArgs,
       ]);
-      await runSafetyScoreV9ReplayCli([
-        "--input",
-        envelopePath,
-        "--output",
-        envelopeOutput,
-        ...commonArgs,
-      ]);
+      await runSafetyScoreV9ReplayCli(["--input", envelopePath, "--output", envelopeOutput, ...commonArgs]);
 
       expect(readTestFile(envelopeOutput)).toBe(readTestFile(rawOutput));
     } finally {
@@ -176,14 +161,12 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     }
   });
 
-  it("accepts only explicit whole-second times, epochs, and v9-rc-N overrides", async () => {
+  it("accepts only explicit whole-second times and v9-rc-N overrides", async () => {
     expect(parseSafetyScoreV9PublishedAtSec(PUBLISHED_AT_ISO)).toBe(PUBLISHED_AT_SEC);
     expect(parseSafetyScoreV9PublishedAtSec(String(PUBLISHED_AT_SEC))).toBe(PUBLISHED_AT_SEC);
-    expect(() =>
-      parseSafetyScoreV9PublishedAtSec(
-        new Date(PUBLISHED_AT_SEC * 1_000 + 1).toISOString(),
-      ),
-    ).toThrow(/whole Unix seconds/);
+    expect(() => parseSafetyScoreV9PublishedAtSec(new Date(PUBLISHED_AT_SEC * 1_000 + 1).toISOString())).toThrow(
+      /whole Unix seconds/,
+    );
 
     const dir = mkdtempSync(resolve(tmpdir(), "pharos-v9-replay-rc-"));
     try {
@@ -197,8 +180,6 @@ describe("Safety Score v9 deterministic replay CLI", () => {
         output,
         "--published-at",
         String(PUBLISHED_AT_SEC),
-        "--publication-epoch",
-        "0",
         "--release-candidate-id",
         "v9-rc-2",
       ]);
@@ -212,8 +193,6 @@ describe("Safety Score v9 deterministic replay CLI", () => {
           output,
           "--published-at",
           String(PUBLISHED_AT_SEC),
-          "--publication-epoch",
-          "0",
           "--release-candidate-id",
           "candidate-latest",
         ]),

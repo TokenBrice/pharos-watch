@@ -25,6 +25,10 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import { sha256Hex } from "@shared/lib/sha256";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import {
+  SafetyScoreV8PublicationIdentitySchema,
+  type SafetyScoreV8PublicationIdentity,
+} from "@shared/types/safety-score-publication";
 import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import { buildLiveReportCards } from "./report-cards-snapshot-card";
 import {
@@ -56,7 +60,6 @@ const DexDeploymentSupplyCoverageSchema: z.ZodType<DexDeploymentSupplyCoverage> 
 });
 
 export {
-  FixedDexLiquidityRowSchema,
   computeDexLiquidityPayloadFingerprint,
   computeRedemptionPayloadFingerprint,
   computeReportCardsReplayPayloadFingerprint,
@@ -167,7 +170,7 @@ function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
   return Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)));
 }
 
-const REPORT_CARDS_FIXED_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
+export const REPORT_CARDS_FIXED_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
 const REPORT_CARDS_FIXED_INPUT_CACHE_MAX_BYTES = 1_900_000;
 
 const FixedInputCacheEnvelopeSchema = z.object({
@@ -175,6 +178,7 @@ const FixedInputCacheEnvelopeSchema = z.object({
   kind: z.literal("report-cards-fixed-input-exact"),
   encoding: z.literal("gzip-base64"),
   sourceGeneration: z.string().min(1),
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.optional(),
   payloadSha256: z.string().regex(/^[a-f0-9]{64}$/),
   uncompressedBytes: z.number().int().positive(),
   payload: z.string().min(1),
@@ -207,10 +211,21 @@ async function gunzipText(bytes: Uint8Array): Promise<string> {
 
 export async function buildReportCardsFixedInputCacheEntry(
   value: unknown,
+  safetyScoreIdentity?: SafetyScoreV8PublicationIdentity,
 ): Promise<{ key: string; value: string; storedBytes: number; uncompressedBytes: number }> {
   const input = normalizeFixedInput(value);
   if (input.captureKind !== "exact-publication-inputs") {
     throw new Error("Only exact publication inputs may be persisted as the P0c cache artifact");
+  }
+  const identity =
+    safetyScoreIdentity === undefined ? undefined : SafetyScoreV8PublicationIdentitySchema.parse(safetyScoreIdentity);
+  if (
+    identity &&
+    (identity.baseInputGenerationId !== input.baseInputGenerationId ||
+      identity.methodologyVersion !== input.methodologyVersion ||
+      identity.publicationGenerationId !== input.sourceGeneration)
+  ) {
+    throw new Error("Exact report-card fixed input does not match its Safety Score publication identity");
   }
   const payload = JSON.stringify(input);
   const uncompressedBytes = new TextEncoder().encode(payload);
@@ -220,6 +235,7 @@ export async function buildReportCardsFixedInputCacheEntry(
     kind: "report-cards-fixed-input-exact",
     encoding: "gzip-base64",
     sourceGeneration: input.sourceGeneration,
+    ...(identity ? { safetyScoreIdentity: identity } : {}),
     payloadSha256: sha256Hex(payload),
     uncompressedBytes: uncompressedBytes.byteLength,
     payload: bytesToBase64(compressed),
@@ -238,7 +254,14 @@ export async function buildReportCardsFixedInputCacheEntry(
   };
 }
 
-export async function parseReportCardsFixedInputCacheValue(value: unknown): Promise<ReportCardsFixedInput> {
+export interface ReportCardsFixedInputCacheArtifact {
+  input: ReportCardsFixedInput;
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
+}
+
+export async function parseReportCardsFixedInputCacheArtifact(
+  value: unknown,
+): Promise<ReportCardsFixedInputCacheArtifact> {
   const parsedEnvelope = typeof value === "string" ? parseJson(value) : null;
   if (parsedEnvelope && !parsedEnvelope.ok) {
     throw new Error(`Malformed exact report-card fixed input cache envelope: ${parsedEnvelope.message}`);
@@ -263,7 +286,22 @@ export async function parseReportCardsFixedInputCacheValue(value: unknown): Prom
   if (input.sourceGeneration !== envelope.sourceGeneration) {
     throw new Error("Exact report-card fixed input cache generation mismatch");
   }
-  return input;
+  if (
+    envelope.safetyScoreIdentity &&
+    (envelope.safetyScoreIdentity.baseInputGenerationId !== input.baseInputGenerationId ||
+      envelope.safetyScoreIdentity.methodologyVersion !== input.methodologyVersion ||
+      envelope.safetyScoreIdentity.publicationGenerationId !== input.sourceGeneration)
+  ) {
+    throw new Error("Exact report-card fixed input cache identity mismatch");
+  }
+  return {
+    input,
+    safetyScoreIdentity: envelope.safetyScoreIdentity ?? null,
+  };
+}
+
+export async function parseReportCardsFixedInputCacheValue(value: unknown): Promise<ReportCardsFixedInput> {
+  return (await parseReportCardsFixedInputCacheArtifact(value)).input;
 }
 
 function uniqueSorted(values: Iterable<string>): string[] {

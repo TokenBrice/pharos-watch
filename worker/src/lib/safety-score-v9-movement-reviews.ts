@@ -16,8 +16,7 @@ import {
   type SafetyScoreV9DiffReport,
 } from "./safety-score-v9-shadow";
 
-export const SAFETY_SCORE_V9_MOVEMENT_REVIEW_DIGEST_DOMAIN =
-  "safety-score-v9.movement-review.v1";
+const SAFETY_SCORE_V9_MOVEMENT_REVIEW_DIGEST_DOMAIN = "safety-score-v9.movement-review.v1";
 
 interface MovementReviewRow {
   review_key: string;
@@ -69,7 +68,7 @@ function hasSameImmutableReviewIntent(
   );
 }
 
-export function computeSafetyScoreV9MovementReviewDigest(
+function computeSafetyScoreV9MovementReviewDigest(
   review: Omit<SafetyScoreV9MovementReviewRecord, "reviewDigest">,
 ): string {
   return sha256Hex(

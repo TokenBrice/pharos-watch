@@ -1,7 +1,9 @@
 import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/types/report-cards";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import {
   loadVersionedSnapshotCache,
+  parseVersionedSnapshotCache,
   buildVersionedSnapshotCacheValue,
   writeVersionedSnapshotCache,
   type VersionedSnapshotCacheLoadResult,
@@ -19,6 +21,8 @@ export type ReportCardsSnapshotCacheFailureReason =
   | "invalid-envelope"
   | "generation-mismatch"
   | "methodology-mismatch"
+  | "identity-missing"
+  | "identity-mismatch"
   | "completeness-missing"
   | "completeness-mismatch";
 
@@ -58,6 +62,24 @@ const REPORT_CARDS_SNAPSHOT_CACHE_OPTIONS: VersionedSnapshotCacheOptions<
         message: "Report-cards snapshot has no publication completeness manifest",
       };
     }
+    const identity = payload.safetyScoreIdentity;
+    if (!identity) {
+      return {
+        reason: "identity-missing",
+        message: "Report-cards snapshot has no Safety Score publication identity",
+      };
+    }
+    if (
+      identity.model !== "v8" ||
+      identity.methodologyVersion !== payload.methodology.version ||
+      identity.evaluationBuildDigest !== SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST ||
+      identity.publicationGenerationId !== payload.publication.generationId
+    ) {
+      return {
+        reason: "identity-mismatch",
+        message: "Report-cards snapshot Safety Score identity does not match its publication",
+      };
+    }
     try {
       const expected = buildReportCardPublicationPlan(
         payload.cards,
@@ -80,22 +102,24 @@ const REPORT_CARDS_SNAPSHOT_CACHE_OPTIONS: VersionedSnapshotCacheOptions<
   },
 };
 
-export async function loadPublishedReportCardsSnapshot(
-  db: D1Database,
-): Promise<ReportCardsSnapshotCacheLoadResult> {
+export async function loadPublishedReportCardsSnapshot(db: D1Database): Promise<ReportCardsSnapshotCacheLoadResult> {
   return loadVersionedSnapshotCache(db, REPORT_CARDS_SNAPSHOT_CACHE_OPTIONS);
 }
 
-export async function writePublishedReportCardsSnapshot(
-  db: D1Database,
-  snapshot: ReportCardsResponse,
-): Promise<void> {
+export function parsePublishedReportCardsSnapshotCacheValue(
+  cached: { value: string; updatedAt: number } | null,
+): ReportCardsSnapshotCacheLoadResult {
+  return parseVersionedSnapshotCache(cached, REPORT_CARDS_SNAPSHOT_CACHE_OPTIONS);
+}
+
+export async function writePublishedReportCardsSnapshot(db: D1Database, snapshot: ReportCardsResponse): Promise<void> {
   await writeVersionedSnapshotCache(db, snapshot, REPORT_CARDS_SNAPSHOT_CACHE_OPTIONS);
 }
 
-export function buildPublishedReportCardsSnapshotCacheEntry(
-  snapshot: ReportCardsResponse,
-): { key: string; value: string } {
+export function buildPublishedReportCardsSnapshotCacheEntry(snapshot: ReportCardsResponse): {
+  key: string;
+  value: string;
+} {
   return {
     key: REPORT_CARDS_SNAPSHOT_CACHE_KEY,
     value: buildVersionedSnapshotCacheValue(snapshot, REPORT_CARDS_SNAPSHOT_CACHE_OPTIONS),

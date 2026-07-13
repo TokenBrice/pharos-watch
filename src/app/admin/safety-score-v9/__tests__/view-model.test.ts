@@ -7,22 +7,38 @@ describe("Safety Score V9 admin view model", () => {
     const model = buildSafetyScoreV9WorkspaceModel(makeSafetyScoreV9AdminAvailableResponse());
 
     expect(model.isNoGo).toBe(true);
-    expect(model.currentAttempt?.attemptId).toBe("scheduled-1");
-    expect(model.gradeCounts).toEqual([{ grade: "A+", count: 1 }, { grade: "NR", count: 1 }]);
+    expect(model.currentDay?.selectedRun?.identity.publicationGenerationId).toBe("v9-generation-1");
+    expect(model.currentDay?.attemptCounts).toEqual({ successful: 1, failed: 0 });
+    expect(model.gradeCounts).toEqual([
+      { grade: "A+", count: 1 },
+      { grade: "NR", count: 1 },
+    ]);
     expect(model.reviewRows.map((row) => row.id)).toEqual(["coin-a"]);
-    expect(model.blockers).toEqual(expect.arrayContaining([
-      "Independent validation is not sealed",
-      "rated-coverage: Only half rated",
-      "1 material movement reviews remain pending",
-    ]));
+    expect(model.blockers).toEqual(
+      expect.arrayContaining([
+        "Independent validation is not sealed",
+        "rated-coverage: Only half rated",
+        "1 material movement reviews remain pending",
+      ]),
+    );
   });
 
   it("filters asset rows by grade, review requirement, ID, and reason code", () => {
     const rows = buildSafetyScoreV9WorkspaceModel(makeSafetyScoreV9AdminAvailableResponse()).assetRows;
 
-    expect(filterSafetyScoreV9AssetRows(rows, { query: "coin-b", grade: "all", reviewOnly: false }).map(({ card }) => card.id)).toEqual(["coin-b"]);
-    expect(filterSafetyScoreV9AssetRows(rows, { query: "insufficient", grade: "NR", reviewOnly: false }).map(({ card }) => card.id)).toEqual(["coin-b"]);
-    expect(filterSafetyScoreV9AssetRows(rows, { query: "", grade: "all", reviewOnly: true }).map(({ card }) => card.id)).toEqual(["coin-a"]);
+    expect(
+      filterSafetyScoreV9AssetRows(rows, { query: "coin-b", grade: "all", reviewOnly: false }).map(
+        ({ card }) => card.id,
+      ),
+    ).toEqual(["coin-b"]);
+    expect(
+      filterSafetyScoreV9AssetRows(rows, { query: "insufficient", grade: "NR", reviewOnly: false }).map(
+        ({ card }) => card.id,
+      ),
+    ).toEqual(["coin-b"]);
+    expect(
+      filterSafetyScoreV9AssetRows(rows, { query: "", grade: "all", reviewOnly: true }).map(({ card }) => card.id),
+    ).toEqual(["coin-a"]);
   });
 
   it("projects durable semantic reviews without rewriting the retained diff", () => {

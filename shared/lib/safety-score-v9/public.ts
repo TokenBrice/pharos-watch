@@ -38,7 +38,6 @@ export interface BuildSafetyScoreV9ResponseArgs {
   candidateId: string;
   policyVersion: `candidate-${string}`;
   publicationGenerationId: string;
-  publicationEpoch: number;
   publishedAtSec: number;
   results: readonly V9PublicCardProjectionInput[];
 }
@@ -265,7 +264,6 @@ export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs)
     candidateId: args.candidateId,
     policyVersion: args.policyVersion,
     publicationGenerationId: args.publicationGenerationId,
-    publicationEpoch: args.publicationEpoch,
     baseInputGenerationId: first.baseInputGenerationId,
     factSetDigest: first.factSetDigest,
     resultDigest: computeV9ResultDigest(traces),

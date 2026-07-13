@@ -44,6 +44,9 @@ describe("SafetyScoreV9Client", () => {
     expect(screen.getAllByText("coin-a")).toHaveLength(2);
     expect(screen.getAllByText("A- → A+")).toHaveLength(2);
     expect(screen.getByText("Independent validation is not sealed")).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Run counts" })).toBeTruthy();
+    expect(screen.getByText("1 succeeded · 0 failed")).toBeTruthy();
+    expect(screen.getByText("Routine summary only")).toBeTruthy();
   });
 
   it("filters the candidate workbench without hiding the release state", () => {

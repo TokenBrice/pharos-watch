@@ -91,7 +91,7 @@ export function normalizeReportCardsFixedInputMethodologyVersions(
   };
 }
 
-export function normalizeFixedInputExitRouteObservation<T extends ExitRouteObservation>(observation: T): T {
+function normalizeFixedInputExitRouteObservation<T extends ExitRouteObservation>(observation: T): T {
   return {
     ...observation,
     output: {

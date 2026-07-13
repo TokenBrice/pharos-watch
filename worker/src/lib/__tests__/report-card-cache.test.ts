@@ -4,6 +4,19 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { loadReportCardCache, REPORT_CARD_CACHE_GENERATION, writeReportCardCache } from "../report-card-cache";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
+const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
+
+function safetyScoreIdentity(updatedAt: number) {
+  return {
+    model: "v8" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    evaluationBuildDigest: "b".repeat(64),
+    baseInputGenerationId: BASE_INPUT_GENERATION_ID,
+    publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`,
+  };
+}
+
 function exactCachePayload(overrides: { scoreIds?: string[]; notRatedIds?: string[] } = {}) {
   const notRatedIds = overrides.notRatedIds ?? [];
   const scoreIds = overrides.scoreIds ?? [...ACTIVE_IDS].filter((id) => !notRatedIds.includes(id));
@@ -13,6 +26,7 @@ function exactCachePayload(overrides: { scoreIds?: string[]; notRatedIds?: strin
     scores: Object.fromEntries(scoreIds.map((id) => [id, { score: 80, grade: "B+" }])),
     updatedAt,
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    safetyScoreIdentity: safetyScoreIdentity(updatedAt),
     publicationGenerationId: generationId,
     completeness: {
       generationId,
@@ -82,13 +96,16 @@ describe("loadReportCardCache", () => {
 
     const staleUpdatedAt = Math.floor(Date.now() / 1000) - 8 * 3600;
     const result = await loadReportCardCache(
-      makeReportCardDb(JSON.stringify({
-        scores: {
-          "usdt-tether": { score: 71, grade: "B" },
-        },
-        updatedAt: staleUpdatedAt,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      }), staleUpdatedAt),
+      makeReportCardDb(
+        JSON.stringify({
+          scores: {
+            "usdt-tether": { score: 71, grade: "B" },
+          },
+          updatedAt: staleUpdatedAt,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        }),
+        staleUpdatedAt,
+      ),
       { maxAgeMs: 2 * 3600 * 1000 },
     );
 
@@ -103,13 +120,16 @@ describe("loadReportCardCache", () => {
     const payloadUpdatedAt = 1_700_000_000;
     const rowUpdatedAt = payloadUpdatedAt + 900;
     const result = await loadReportCardCache(
-      makeReportCardDb(JSON.stringify({
-        scores: {
-          "usdt-tether": { score: 71, grade: "B" },
-        },
-        updatedAt: payloadUpdatedAt,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      }), rowUpdatedAt),
+      makeReportCardDb(
+        JSON.stringify({
+          scores: {
+            "usdt-tether": { score: 71, grade: "B" },
+          },
+          updatedAt: payloadUpdatedAt,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        }),
+        rowUpdatedAt,
+      ),
     );
 
     expect(result).toEqual({
@@ -127,13 +147,15 @@ describe("loadReportCardCache", () => {
 
   it("rejects cache payloads from older Safety Score methodologies", async () => {
     const result = await loadReportCardCache(
-      makeReportCardDb(JSON.stringify({
-        scores: {
-          "usdt-tether": { score: 73, grade: "B+" },
-        },
-        updatedAt: 1_700_000_000,
-        methodologyVersion: "7.29",
-      })),
+      makeReportCardDb(
+        JSON.stringify({
+          scores: {
+            "usdt-tether": { score: 73, grade: "B+" },
+          },
+          updatedAt: 1_700_000_000,
+          methodologyVersion: "7.29",
+        }),
+      ),
     );
 
     expect(result).toEqual({
@@ -145,12 +167,14 @@ describe("loadReportCardCache", () => {
 
   it("rejects legacy cache payloads without methodology version", async () => {
     const result = await loadReportCardCache(
-      makeReportCardDb(JSON.stringify({
-        scores: {
-          "usdt-tether": { score: 73, grade: "B+" },
-        },
-        updatedAt: 1_700_000_000,
-      })),
+      makeReportCardDb(
+        JSON.stringify({
+          scores: {
+            "usdt-tether": { score: 73, grade: "B+" },
+          },
+          updatedAt: 1_700_000_000,
+        }),
+      ),
     );
 
     expect(result).toEqual({
@@ -162,19 +186,21 @@ describe("loadReportCardCache", () => {
 
   it("accepts degraded input metadata on cache payloads", async () => {
     const result = await loadReportCardCache(
-      makeReportCardDb(JSON.stringify({
-        scores: {
-          "usdt-tether": { score: 71, grade: "B" },
-        },
-        updatedAt: 1_700_000_000,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-        degradedInputs: {
-          inputsStale: true,
-          liquidityStale: false,
-          redemptionStale: true,
-          staleInputs: ["redemptionBackstops"],
-        },
-      })),
+      makeReportCardDb(
+        JSON.stringify({
+          scores: {
+            "usdt-tether": { score: 71, grade: "B" },
+          },
+          updatedAt: 1_700_000_000,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          degradedInputs: {
+            inputsStale: true,
+            liquidityStale: false,
+            redemptionStale: true,
+            staleInputs: ["redemptionBackstops"],
+          },
+        }),
+      ),
     );
 
     expect(result.kind).toBe("ok");
@@ -190,22 +216,24 @@ describe("loadReportCardCache", () => {
 
   it("accepts the future versioned score-cache envelope without changing the load result shape", async () => {
     const result = await loadReportCardCache(
-      makeReportCardDb(JSON.stringify({
-        generation: REPORT_CARD_CACHE_GENERATION,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-        payload: {
-          scores: {
-            "usdt-tether": { score: 71, grade: "B" },
+      makeReportCardDb(
+        JSON.stringify({
+          generation: REPORT_CARD_CACHE_GENERATION,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          payload: {
+            scores: {
+              "usdt-tether": { score: 71, grade: "B" },
+            },
+            updatedAt: 1_700_000_000,
+            degradedInputs: {
+              inputsStale: true,
+              liquidityStale: true,
+              redemptionStale: false,
+              staleInputs: ["dexLiquidity"],
+            },
           },
-          updatedAt: 1_700_000_000,
-          degradedInputs: {
-            inputsStale: true,
-            liquidityStale: true,
-            redemptionStale: false,
-            staleInputs: ["dexLiquidity"],
-          },
-        },
-      })),
+        }),
+      ),
     );
 
     expect(result).toEqual({
@@ -229,16 +257,18 @@ describe("loadReportCardCache", () => {
 
   it("rejects future versioned score-cache envelopes from other generations", async () => {
     const result = await loadReportCardCache(
-      makeReportCardDb(JSON.stringify({
-        generation: REPORT_CARD_CACHE_GENERATION + 1,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-        payload: {
-          scores: {
-            "usdt-tether": { score: 71, grade: "B" },
+      makeReportCardDb(
+        JSON.stringify({
+          generation: REPORT_CARD_CACHE_GENERATION + 1,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          payload: {
+            scores: {
+              "usdt-tether": { score: 71, grade: "B" },
+            },
+            updatedAt: 1_700_000_000,
           },
-          updatedAt: 1_700_000_000,
-        },
-      })),
+        }),
+      ),
     );
 
     expect(result).toEqual({
@@ -262,14 +292,16 @@ describe("loadReportCardCache", () => {
 
   it("rejects legacy and same-count swapped publication identities", async () => {
     const legacy = await loadReportCardCache(
-      makeReportCardDb(JSON.stringify({
-        scores: { "usdt-tether": { score: 80, grade: "B+" } },
-        updatedAt: 1_700_000_000,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      })),
+      makeReportCardDb(
+        JSON.stringify({
+          scores: { "usdt-tether": { score: 80, grade: "B+" } },
+          updatedAt: 1_700_000_000,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        }),
+      ),
       { requireCompleteness: true },
     );
-    expect(legacy).toMatchObject({ kind: "error", reason: "completeness-missing" });
+    expect(legacy).toMatchObject({ kind: "error", reason: "identity-missing" });
 
     const scoreIds = [...ACTIVE_IDS];
     scoreIds.splice(0, 1, "unexpected-stablecoin");
@@ -291,7 +323,7 @@ describe("loadReportCardCache", () => {
       requireCompleteness: true,
     });
 
-    expect(result).toMatchObject({ kind: "error", reason: "completeness-mismatch" });
+    expect(result).toMatchObject({ kind: "error", reason: "identity-mismatch" });
   });
 
   it("rejects malformed score entries without throwing for completeness checks", async () => {
@@ -312,22 +344,28 @@ describe("writeReportCardCache", () => {
   it("writes scored non-defunct cards with degraded input metadata", async () => {
     const db = mockD1([{ match: "INSERT OR REPLACE INTO cache", rows: [] }]);
 
-    const result = await writeReportCardCache(db, [
-      { id: "rated", overallScore: 82, overallGrade: "B+", isDefunct: false },
-      { id: "nr", overallScore: null, overallGrade: "NR", isDefunct: false },
-      { id: "dead", overallScore: 0, overallGrade: "F", isDefunct: true },
-    ] as never, 1_777_000_000, {
-      liquidityStale: true,
-      redemptionStale: false,
-      completeness: {
-        generationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1777000000`,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-        expectedCount: 2,
-        scoredCount: 1,
-        notRatedCount: 1,
-        notRatedIds: ["nr"],
+    const result = await writeReportCardCache(
+      db,
+      [
+        { id: "rated", overallScore: 82, overallGrade: "B+", isDefunct: false },
+        { id: "nr", overallScore: null, overallGrade: "NR", isDefunct: false },
+        { id: "dead", overallScore: 0, overallGrade: "F", isDefunct: true },
+      ] as never,
+      1_777_000_000,
+      {
+        liquidityStale: true,
+        redemptionStale: false,
+        completeness: {
+          generationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1777000000`,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          expectedCount: 2,
+          scoredCount: 1,
+          notRatedCount: 1,
+          notRatedIds: ["nr"],
+        },
+        safetyScoreIdentity: safetyScoreIdentity(1_777_000_000),
       },
-    });
+    );
 
     expect(result.writtenCount).toBe(1);
     const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
@@ -341,6 +379,7 @@ describe("writeReportCardCache", () => {
         },
         updatedAt: 1_777_000_000,
         methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        safetyScoreIdentity: safetyScoreIdentity(1_777_000_000),
         publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1777000000`,
         completeness: {
           generationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1777000000`,

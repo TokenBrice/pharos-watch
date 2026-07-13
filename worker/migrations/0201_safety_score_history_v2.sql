@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS safety_score_history_v2 (
     AND length(base_input_generation_id) = 86
   ),
   model_publication_generation_id TEXT NOT NULL CHECK (length(model_publication_generation_id) > 0),
-  publication_epoch INTEGER NOT NULL DEFAULT 0 CHECK (publication_epoch >= 0),
   transition_kind TEXT NOT NULL CHECK (
     transition_kind IN (
       'initial-baseline',

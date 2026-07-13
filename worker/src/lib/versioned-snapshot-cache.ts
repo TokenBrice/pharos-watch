@@ -32,8 +32,7 @@ export interface VersionedSnapshotCacheEnvelope<TPayload> {
 }
 
 export type VersionedSnapshotCacheLoadResult<TPayload, TReason extends string> =
-  | { kind: "ok"; payload: TPayload; updatedAt: number }
-  | { kind: "error"; reason: TReason; updatedAt: number | null };
+  { kind: "ok"; payload: TPayload; updatedAt: number } | { kind: "error"; reason: TReason; updatedAt: number | null };
 
 type VersionFailure<TReason extends string> = { reason: TReason; message?: string };
 
@@ -58,40 +57,44 @@ export async function loadVersionedSnapshotCache<TPayload, TReason extends strin
   db: D1Database,
   options: VersionedSnapshotCacheOptions<TPayload, TReason>,
 ): Promise<VersionedSnapshotCacheLoadResult<TPayload, TReason>> {
-  const decoded = decodeCachedJson<TPayload, TReason>(
-    await getCache(db, options.cacheKey),
-    {
-      mode: "strict",
-      missingReason: options.reasons.missingCache,
-      parseErrorReason: options.reasons.jsonParseFailed,
-      normalize: (parsed) => {
-        if (!isEnvelope(parsed)) {
-          return { ok: false, reason: options.reasons.invalidEnvelope };
-        }
-        if (parsed.generation !== options.generation) {
-          return { ok: false, reason: options.reasons.generationMismatch };
-        }
-        if (parsed.methodologyVersion !== options.methodologyVersion) {
-          return { ok: false, reason: options.reasons.methodologyMismatch };
-        }
-        const envelopeFailure = options.validateEnvelope?.(parsed);
-        if (envelopeFailure) {
-          return { ok: false, reason: envelopeFailure };
-        }
+  return parseVersionedSnapshotCache(await getCache(db, options.cacheKey), options);
+}
 
-        const result = options.schema.safeParse(parsed.payload);
-        if (!result.success) {
-          return { ok: false, reason: options.reasons.invalidPayload };
-        }
+export function parseVersionedSnapshotCache<TPayload, TReason extends string>(
+  cached: { value: string; updatedAt: number } | null,
+  options: VersionedSnapshotCacheOptions<TPayload, TReason>,
+): VersionedSnapshotCacheLoadResult<TPayload, TReason> {
+  const decoded = decodeCachedJson<TPayload, TReason>(cached, {
+    mode: "strict",
+    missingReason: options.reasons.missingCache,
+    parseErrorReason: options.reasons.jsonParseFailed,
+    normalize: (parsed) => {
+      if (!isEnvelope(parsed)) {
+        return { ok: false, reason: options.reasons.invalidEnvelope };
+      }
+      if (parsed.generation !== options.generation) {
+        return { ok: false, reason: options.reasons.generationMismatch };
+      }
+      if (parsed.methodologyVersion !== options.methodologyVersion) {
+        return { ok: false, reason: options.reasons.methodologyMismatch };
+      }
+      const envelopeFailure = options.validateEnvelope?.(parsed);
+      if (envelopeFailure) {
+        return { ok: false, reason: envelopeFailure };
+      }
 
-        const payloadFailure = options.validatePayload?.(result.data);
-        if (payloadFailure) {
-          return { ok: false, reason: payloadFailure.reason };
-        }
-        return { ok: true, payload: result.data };
-      },
+      const result = options.schema.safeParse(parsed.payload);
+      if (!result.success) {
+        return { ok: false, reason: options.reasons.invalidPayload };
+      }
+
+      const payloadFailure = options.validatePayload?.(result.data);
+      if (payloadFailure) {
+        return { ok: false, reason: payloadFailure.reason };
+      }
+      return { ok: true, payload: result.data };
     },
-  );
+  });
 
   if (!decoded.ok) {
     return { kind: "error", reason: decoded.reason, updatedAt: decoded.updatedAt };

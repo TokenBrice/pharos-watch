@@ -9,15 +9,13 @@ import {
   SafetyScoreV9DiffReportSchema,
   SafetyScoreV9ReplayArtifactKindSchema,
   SafetyScoreV9ReplayArtifactSchema,
-  SafetyScoreV9ShadowAttemptSchema,
-  SafetyScoreV9ShadowDaySchema,
+  SafetyScoreV9ShadowDailySchema,
   SafetyScoreV9ShadowEnvelopeSchema,
   computeSafetyScoreV9ShadowEnvelopeDigest,
   type SafetyScoreV9DiffReport,
   type SafetyScoreV9ReplayArtifact,
   type SafetyScoreV9ReplayArtifactKind,
-  type SafetyScoreV9ShadowAttempt,
-  type SafetyScoreV9ShadowDay,
+  type SafetyScoreV9ShadowDaily,
   type SafetyScoreV9ShadowEnvelope,
 } from "./safety-score-v9-shadow";
 
@@ -110,36 +108,41 @@ interface ArtifactRow {
   verified_at_sec: number;
 }
 
-interface AttemptRow {
-  attempt_id: string;
+interface DailyRow {
   utc_day: string;
-  scheduled_for_sec: number;
-  started_at_sec: number | null;
-  completed_at_sec: number | null;
-  recorded_at_sec: number;
-  outcome: string;
-  qualifying: number;
+  updated_at_sec: number;
+  successful_attempt_count: number;
+  failed_attempt_count: number;
+  selected_run_at_sec: number | null;
   publication_generation_id: string | null;
   base_input_generation_id: string | null;
   fact_set_digest: string | null;
   policy_digest: string | null;
   evaluation_build_digest: string | null;
   producer_capability_digest: string | null;
-  envelope_digest: string | null;
-  attempt_json: string;
-}
-
-interface DayRow {
-  utc_day: string;
-  canonical_attempt_id: string | null;
+  release_coverage_policy_digest: string | null;
+  consumer_threshold_registry_digest: string | null;
+  result_digest: string | null;
+  diff_report_digest: string | null;
+  active_asset_count: number | null;
+  rateable_count: number | null;
+  nr_count: number | null;
+  present_active_count: number | null;
+  missing_active_count: number | null;
+  unexpected_active_count: number | null;
+  duplicate_active_count: number | null;
+  grade_nr_transition_count: number | null;
+  large_score_movement_count: number | null;
+  top_cutoff_movement_count: number | null;
+  binding_cap_change_count: number | null;
+  downstream_crossing_count: number | null;
+  unresolved_review_count: number | null;
   qualifying: number;
-  expected_attempt_count: number;
-  recorded_attempt_count: number;
-  policy_digest: string | null;
-  evaluation_build_digest: string | null;
-  producer_capability_digest: string | null;
-  day_json: string;
-  updated_at_sec: number;
+  blockers_json: string;
+  archive_selection_reasons_json: string;
+  latest_error_code: string | null;
+  latest_error_message: string | null;
+  daily_json: string;
 }
 
 function resolveLimit(requested: number | undefined, hardMaximum: number, label: string): number {
@@ -521,192 +524,117 @@ function parseCanonicalJson<T>(raw: string, schema: z.ZodType<T>, label: string)
   return value;
 }
 
-function expectedAttemptColumns(attempt: SafetyScoreV9ShadowAttempt) {
+function expectedDailyColumns(daily: SafetyScoreV9ShadowDaily) {
+  const selected = daily.selectedRun;
   return {
-    utcDay: attempt.utcDay,
-    scheduledForSec: attempt.scheduledForSec,
-    startedAtSec: attempt.startedAtSec,
-    completedAtSec: attempt.completedAtSec,
-    recordedAtSec: attempt.recordedAtSec,
-    outcome: attempt.outcome,
-    qualifying: attempt.qualification?.qualifies ? 1 : 0,
-    publicationGenerationId: attempt.identity?.publicationGenerationId ?? null,
-    baseInputGenerationId: attempt.identity?.baseInputGenerationId ?? null,
-    factSetDigest: attempt.identity?.factSetDigest ?? null,
-    policyDigest: attempt.identity?.policyDigest ?? null,
-    evaluationBuildDigest: attempt.identity?.evaluationBuildDigest ?? null,
-    producerCapabilityDigest: attempt.identity?.producerCapabilityDigest ?? null,
-    envelopeDigest: attempt.identity?.envelopeDigest ?? null,
+    updatedAtSec: daily.updatedAtSec,
+    successfulAttemptCount: daily.attemptCounts.successful,
+    failedAttemptCount: daily.attemptCounts.failed,
+    selectedRunAtSec: selected?.selectedAtSec ?? null,
+    publicationGenerationId: selected?.identity.publicationGenerationId ?? null,
+    baseInputGenerationId: selected?.identity.baseInputGenerationId ?? null,
+    factSetDigest: selected?.identity.factSetDigest ?? null,
+    policyDigest: selected?.identity.policyDigest ?? null,
+    evaluationBuildDigest: selected?.identity.evaluationBuildDigest ?? null,
+    producerCapabilityDigest: selected?.identity.producerCapabilityDigest ?? null,
+    releaseCoveragePolicyDigest: selected?.identity.releaseCoveragePolicyDigest ?? null,
+    consumerThresholdRegistryDigest: selected?.identity.consumerThresholdRegistryDigest ?? null,
+    resultDigest: selected?.identity.resultDigest ?? null,
+    diffReportDigest: selected?.diffReportDigest ?? null,
+    activeAssetCount: selected?.coverage.expectedActiveCount ?? null,
+    rateableCount: selected?.coverage.ratedResultCount ?? null,
+    nrCount: selected?.coverage.notRatedResultCount ?? null,
+    presentActiveCount: selected?.coverage.presentExpectedCount ?? null,
+    missingActiveCount: selected?.coverage.missingIds.length ?? null,
+    unexpectedActiveCount: selected?.coverage.unexpectedIds.length ?? null,
+    duplicateActiveCount: selected?.coverage.duplicateIds.length ?? null,
+    gradeNrTransitionCount: selected?.movement.gradeOrNrTransitionCount ?? null,
+    largeScoreMovementCount: selected?.movement.largeScoreMovementCount ?? null,
+    topCutoffMovementCount: selected?.movement.topCutoffMovementCount ?? null,
+    bindingCapChangeCount: selected?.movement.bindingCapChangeCount ?? null,
+    downstreamCrossingCount: selected?.movement.downstreamCrossingCount ?? null,
+    unresolvedReviewCount: selected?.movement.pendingReviewCount ?? null,
+    qualifying: selected?.qualification.qualifies ? 1 : 0,
+    blockersJson: stableJsonStringifyV1(selected?.qualification.blockers ?? []),
+    archiveSelectionReasonsJson: stableJsonStringifyV1(selected?.archiveSelectionReasons ?? []),
+    latestErrorCode: daily.latestError?.code ?? null,
+    latestErrorMessage: daily.latestError?.message ?? null,
   };
 }
 
-function prepareAttemptInsert(
-  db: D1Database,
-  attempt: SafetyScoreV9ShadowAttempt,
-  attemptJson: string,
-  conflictClause: string,
-): D1PreparedStatement {
-  const columns = expectedAttemptColumns(attempt);
-  return db
-    .prepare(
-      `INSERT INTO safety_score_v9_shadow_attempts
-       (attempt_id, utc_day, scheduled_for_sec, started_at_sec, completed_at_sec,
-        recorded_at_sec, outcome, qualifying, publication_generation_id,
-        base_input_generation_id, fact_set_digest, policy_digest,
-        evaluation_build_digest, producer_capability_digest, envelope_digest, attempt_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ${conflictClause}`,
-    )
-    .bind(
-      attempt.attemptId,
-      columns.utcDay,
-      columns.scheduledForSec,
-      columns.startedAtSec,
-      columns.completedAtSec,
-      columns.recordedAtSec,
-      columns.outcome,
-      columns.qualifying,
-      columns.publicationGenerationId,
-      columns.baseInputGenerationId,
-      columns.factSetDigest,
-      columns.policyDigest,
-      columns.evaluationBuildDigest,
-      columns.producerCapabilityDigest,
-      columns.envelopeDigest,
-      attemptJson,
-    );
-}
-
-function parseAttemptRow(row: AttemptRow): SafetyScoreV9ShadowAttempt {
-  const attempt = parseCanonicalJson(row.attempt_json, SafetyScoreV9ShadowAttemptSchema, "Safety Score v9 attempt");
-  if (attempt.attemptId !== row.attempt_id) throw new Error("Safety Score v9 attempt row ID mismatch");
-  const expected = expectedAttemptColumns(attempt);
+function parseDailyRow(row: DailyRow): SafetyScoreV9ShadowDaily {
+  const daily = parseCanonicalJson(row.daily_json, SafetyScoreV9ShadowDailySchema, "Safety Score v9 shadow daily");
+  if (daily.utcDay !== row.utc_day) throw new Error("Safety Score v9 shadow daily row date mismatch");
+  const expected = expectedDailyColumns(daily);
   const observed = {
-    utcDay: row.utc_day,
-    scheduledForSec: row.scheduled_for_sec,
-    startedAtSec: row.started_at_sec,
-    completedAtSec: row.completed_at_sec,
-    recordedAtSec: row.recorded_at_sec,
-    outcome: row.outcome,
-    qualifying: row.qualifying,
+    updatedAtSec: row.updated_at_sec,
+    successfulAttemptCount: row.successful_attempt_count,
+    failedAttemptCount: row.failed_attempt_count,
+    selectedRunAtSec: row.selected_run_at_sec,
     publicationGenerationId: row.publication_generation_id,
     baseInputGenerationId: row.base_input_generation_id,
     factSetDigest: row.fact_set_digest,
     policyDigest: row.policy_digest,
     evaluationBuildDigest: row.evaluation_build_digest,
     producerCapabilityDigest: row.producer_capability_digest,
-    envelopeDigest: row.envelope_digest,
+    releaseCoveragePolicyDigest: row.release_coverage_policy_digest,
+    consumerThresholdRegistryDigest: row.consumer_threshold_registry_digest,
+    resultDigest: row.result_digest,
+    diffReportDigest: row.diff_report_digest,
+    activeAssetCount: row.active_asset_count,
+    rateableCount: row.rateable_count,
+    nrCount: row.nr_count,
+    presentActiveCount: row.present_active_count,
+    missingActiveCount: row.missing_active_count,
+    unexpectedActiveCount: row.unexpected_active_count,
+    duplicateActiveCount: row.duplicate_active_count,
+    gradeNrTransitionCount: row.grade_nr_transition_count,
+    largeScoreMovementCount: row.large_score_movement_count,
+    topCutoffMovementCount: row.top_cutoff_movement_count,
+    bindingCapChangeCount: row.binding_cap_change_count,
+    downstreamCrossingCount: row.downstream_crossing_count,
+    unresolvedReviewCount: row.unresolved_review_count,
+    qualifying: row.qualifying,
+    blockersJson: row.blockers_json,
+    archiveSelectionReasonsJson: row.archive_selection_reasons_json,
+    latestErrorCode: row.latest_error_code,
+    latestErrorMessage: row.latest_error_message,
   };
   if (stableJsonStringifyV1(observed) !== stableJsonStringifyV1(expected)) {
-    throw new Error(`Safety Score v9 attempt row projection mismatch for ${attempt.attemptId}`);
+    throw new Error(`Safety Score v9 shadow daily row projection mismatch for ${daily.utcDay}`);
   }
-  return attempt;
+  return daily;
 }
 
-async function loadAttemptRow(
+const SAFETY_SCORE_V9_SHADOW_DAILY_SELECT = `
+  utc_day, updated_at_sec, successful_attempt_count, failed_attempt_count, selected_run_at_sec,
+  publication_generation_id, base_input_generation_id, fact_set_digest, policy_digest,
+  evaluation_build_digest, producer_capability_digest, release_coverage_policy_digest,
+  consumer_threshold_registry_digest, result_digest, diff_report_digest,
+  active_asset_count, rateable_count, nr_count, present_active_count, missing_active_count,
+  unexpected_active_count, duplicate_active_count, grade_nr_transition_count,
+  large_score_movement_count, top_cutoff_movement_count, binding_cap_change_count,
+  downstream_crossing_count, unresolved_review_count, qualifying, blockers_json,
+  archive_selection_reasons_json, latest_error_code, latest_error_message, daily_json
+`;
+
+export async function loadSafetyScoreV9ShadowDaily(
   db: D1Database,
-  attemptId: string,
+  utcDay: string,
   signal?: AbortSignal,
-): Promise<SafetyScoreV9ShadowAttempt | null> {
+): Promise<SafetyScoreV9ShadowDaily | null> {
   throwIfAborted(signal);
   const row = await runWithOverloadRetry(
     () =>
       db
-        .prepare(
-          `SELECT attempt_id, utc_day, scheduled_for_sec, started_at_sec, completed_at_sec,
-                  recorded_at_sec, outcome, qualifying, publication_generation_id,
-                  base_input_generation_id, fact_set_digest, policy_digest,
-                  evaluation_build_digest, producer_capability_digest, envelope_digest, attempt_json
-           FROM safety_score_v9_shadow_attempts
-           WHERE attempt_id = ?`,
-        )
-        .bind(attemptId)
-        .first<AttemptRow>(),
+        .prepare(`SELECT ${SAFETY_SCORE_V9_SHADOW_DAILY_SELECT} FROM safety_score_v9_shadow_daily WHERE utc_day = ?`)
+        .bind(utcDay)
+        .first<DailyRow>(),
     3,
     signal,
   );
   throwIfAborted(signal);
-  return row ? parseAttemptRow(row) : null;
-}
-
-export async function persistSafetyScoreV9ShadowAttempt(
-  db: D1Database,
-  attemptInput: SafetyScoreV9ShadowAttempt,
-  signal?: AbortSignal,
-): Promise<SafetyScoreV9ShadowAttempt> {
-  throwIfAborted(signal);
-  const attempt = SafetyScoreV9ShadowAttemptSchema.parse(attemptInput);
-  const attemptJson = stableJsonStringifyV1(attempt);
-  const existing = await loadAttemptRow(db, attempt.attemptId, signal);
-  if (existing) {
-    if (stableJsonStringifyV1(existing) !== attemptJson) {
-      throw new SafetyScoreV9StoreConflictError(`Immutable Safety Score v9 attempt conflict for ${attempt.attemptId}`);
-    }
-    return existing;
-  }
-  const result = await runWithOverloadRetry(
-    () => prepareAttemptInsert(db, attempt, attemptJson, "ON CONFLICT(attempt_id) DO NOTHING").run(),
-    3,
-    signal,
-  );
-  throwIfAborted(signal);
-  if (Number(result.meta.changes ?? 0) > 0) return attempt;
-  const racedExisting = await loadAttemptRow(db, attempt.attemptId, signal);
-  if (!racedExisting || stableJsonStringifyV1(racedExisting) !== attemptJson) {
-    throw new SafetyScoreV9StoreConflictError(`Immutable Safety Score v9 attempt conflict for ${attempt.attemptId}`);
-  }
-  return racedExisting;
-}
-
-function canonicalAttemptForDay(day: SafetyScoreV9ShadowDay): SafetyScoreV9ShadowAttempt | null {
-  const generationId = day.projection.canonicalQualifyingGenerationId;
-  if (generationId === null) return null;
-  return (
-    day.attempts
-      .filter(
-        (attempt) =>
-          attempt.outcome === "succeeded" &&
-          attempt.qualification?.qualifies === true &&
-          attempt.identity?.publicationGenerationId === generationId,
-      )
-      .sort(
-        (left, right) =>
-          (left.completedAtSec ?? Number.MAX_SAFE_INTEGER) - (right.completedAtSec ?? Number.MAX_SAFE_INTEGER) ||
-          left.attemptId.localeCompare(right.attemptId),
-      )[0] ?? null
-  );
-}
-
-function expectedDayColumns(day: SafetyScoreV9ShadowDay) {
-  const canonicalAttempt = canonicalAttemptForDay(day);
-  return {
-    canonicalAttemptId: canonicalAttempt?.attemptId ?? null,
-    qualifying: day.projection.qualifies ? 1 : 0,
-    expectedAttemptCount: day.projection.expectedScheduledAttemptIds.length,
-    recordedAttemptCount: day.attempts.length,
-    policyDigest: canonicalAttempt?.identity?.policyDigest ?? null,
-    evaluationBuildDigest: canonicalAttempt?.identity?.evaluationBuildDigest ?? null,
-    producerCapabilityDigest: canonicalAttempt?.identity?.producerCapabilityDigest ?? null,
-  };
-}
-
-function parseDayRow(row: DayRow): SafetyScoreV9ShadowDay {
-  const day = parseCanonicalJson(row.day_json, SafetyScoreV9ShadowDaySchema, "Safety Score v9 shadow day");
-  if (day.utcDay !== row.utc_day) throw new Error("Safety Score v9 shadow day row date mismatch");
-  const expected = expectedDayColumns(day);
-  const observed = {
-    canonicalAttemptId: row.canonical_attempt_id,
-    qualifying: row.qualifying,
-    expectedAttemptCount: row.expected_attempt_count,
-    recordedAttemptCount: row.recorded_attempt_count,
-    policyDigest: row.policy_digest,
-    evaluationBuildDigest: row.evaluation_build_digest,
-    producerCapabilityDigest: row.producer_capability_digest,
-  };
-  if (stableJsonStringifyV1(observed) !== stableJsonStringifyV1(expected)) {
-    throw new Error(`Safety Score v9 shadow day row projection mismatch for ${day.utcDay}`);
-  }
-  return day;
+  return row ? parseDailyRow(row) : null;
 }
 
 function serializeCacheValue<T>(value: T, schema: z.ZodType<T>, label: string): string {
@@ -720,18 +648,18 @@ function serializeCacheValue<T>(value: T, schema: z.ZodType<T>, label: string): 
 
 function validateSuccessfulState(input: {
   artifacts: readonly SafetyScoreV9StoredReplayArtifact[];
-  attempt: SafetyScoreV9ShadowAttempt;
+  daily: SafetyScoreV9ShadowDaily;
   envelope: SafetyScoreV9ShadowEnvelope;
   diff: SafetyScoreV9DiffReport;
 }): void {
-  const identity = input.attempt.identity;
-  if (input.attempt.outcome !== "succeeded" || identity === null) {
-    throw new Error("Latest Safety Score v9 state requires a successful shadow attempt");
-  }
+  const selected = input.daily.selectedRun;
+  if (selected === null) throw new Error("Latest Safety Score v9 state requires a selected successful run");
+  const identity = selected.identity;
   if (identity.envelopeDigest !== computeSafetyScoreV9ShadowEnvelopeDigest(input.envelope)) {
-    throw new Error("Safety Score v9 attempt and candidate envelope digests do not match");
+    throw new Error("Safety Score v9 daily and candidate envelope digests do not match");
   }
   if (
+    input.diff.reportDigest !== selected.diffReportDigest ||
     input.diff.v9Identity.publicationGenerationId !== identity.publicationGenerationId ||
     input.diff.v9Identity.baseInputGenerationId !== identity.baseInputGenerationId ||
     input.diff.v9Identity.factSetDigest !== identity.factSetDigest ||
@@ -739,21 +667,27 @@ function validateSuccessfulState(input: {
     input.diff.v9Identity.evaluationBuildDigest !== identity.evaluationBuildDigest ||
     input.diff.v9Identity.resultDigest !== identity.resultDigest
   ) {
-    throw new Error("Safety Score v9 diff identity does not match its shadow attempt");
+    throw new Error("Safety Score v9 diff identity does not match its selected daily run");
   }
   const referencesByKind = new Map(input.envelope.replayArtifacts.map((reference) => [reference.kind, reference]));
   const artifactsByKind = new Map(input.artifacts.map((artifact) => [artifact.kind, artifact]));
+  const expectedArtifactKeys = [...selected.artifactKeys].sort();
+  const storedArtifactKeys = input.artifacts.map((artifact) => artifact.artifactKey).sort();
+  const referencedArtifactKeys = input.envelope.replayArtifacts.map((artifact) => artifact.artifactRef).sort();
   if (
-    referencesByKind.size !== SafetyScoreV9ReplayArtifactKindSchema.options.length ||
-    artifactsByKind.size !== SafetyScoreV9ReplayArtifactKindSchema.options.length ||
-    input.artifacts.length !== artifactsByKind.size
+    stableJsonStringifyV1(storedArtifactKeys) !== stableJsonStringifyV1(expectedArtifactKeys) ||
+    stableJsonStringifyV1(referencedArtifactKeys) !== stableJsonStringifyV1(expectedArtifactKeys)
   ) {
-    throw new Error("Safety Score v9 successful shadow state requires exactly one artifact of every kind");
+    throw new Error("Safety Score v9 selected replay evidence does not match its daily artifact keys");
   }
-  for (const kind of SafetyScoreV9ReplayArtifactKindSchema.options) {
+  for (const kind of artifactsByKind.keys()) {
     const artifact = artifactsByKind.get(kind);
     const reference = referencesByKind.get(kind);
-    if (!artifact || !reference || stableJsonStringifyV1(artifactReference(artifact)) !== stableJsonStringifyV1(reference)) {
+    if (
+      !artifact ||
+      !reference ||
+      stableJsonStringifyV1(artifactReference(artifact)) !== stableJsonStringifyV1(reference)
+    ) {
       throw new Error(`Safety Score v9 ${kind} replay artifact does not match the candidate envelope`);
     }
   }
@@ -761,11 +695,9 @@ function validateSuccessfulState(input: {
 
 export interface PersistSafetyScoreV9ShadowStateInput {
   artifacts?: readonly SafetyScoreV9StoredReplayArtifact[];
-  attempt: SafetyScoreV9ShadowAttempt;
-  day: SafetyScoreV9ShadowDay;
+  daily: SafetyScoreV9ShadowDaily;
   envelope?: SafetyScoreV9ShadowEnvelope;
   diff?: SafetyScoreV9DiffReport;
-  updatedAtSec?: number;
   signal?: AbortSignal;
 }
 
@@ -775,12 +707,7 @@ export async function persistSafetyScoreV9ShadowState(
 ): Promise<void> {
   throwIfAborted(input.signal);
   const artifacts = (input.artifacts ?? []).map((artifact) => SafetyScoreV9StoredReplayArtifactSchema.parse(artifact));
-  const attempt = SafetyScoreV9ShadowAttemptSchema.parse(input.attempt);
-  const day = SafetyScoreV9ShadowDaySchema.parse(input.day);
-  const dayAttempt = day.attempts.find((candidate) => candidate.attemptId === attempt.attemptId);
-  if (!dayAttempt || stableJsonStringifyV1(dayAttempt) !== stableJsonStringifyV1(attempt)) {
-    throw new Error("Safety Score v9 daily history must contain the exact persisted attempt");
-  }
+  const daily = SafetyScoreV9ShadowDailySchema.parse(input.daily);
   const hasLatest = input.envelope !== undefined || input.diff !== undefined;
   let envelope: SafetyScoreV9ShadowEnvelope | null = null;
   let diff: SafetyScoreV9DiffReport | null = null;
@@ -792,11 +719,14 @@ export async function persistSafetyScoreV9ShadowState(
     }
     envelope = SafetyScoreV9ShadowEnvelopeSchema.parse(input.envelope);
     diff = SafetyScoreV9DiffReportSchema.parse(input.diff);
-    validateSuccessfulState({ artifacts, attempt, envelope, diff });
+    validateSuccessfulState({ artifacts, daily, envelope, diff });
     envelopeJson = serializeCacheValue(envelope, SafetyScoreV9ShadowEnvelopeSchema, "Safety Score v9 shadow envelope");
     diffJson = serializeCacheValue(diff, SafetyScoreV9DiffReportSchema, "Safety Score v9 diff report");
-  } else if (attempt.outcome === "succeeded") {
-    throw new Error("A successful Safety Score v9 shadow attempt must persist its latest envelope and diff");
+  } else if (daily.selectedRun !== null) {
+    const existing = await loadSafetyScoreV9ShadowDaily(db, daily.utcDay, input.signal);
+    if (existing?.selectedRun === null || existing === null) {
+      throw new Error("A newly selected Safety Score v9 daily run must persist its latest envelope and diff");
+    }
   }
   for (const artifact of artifacts) {
     await parseSafetyScoreV9ReplayArtifact(artifact, { signal: input.signal });
@@ -809,9 +739,8 @@ export async function persistSafetyScoreV9ShadowState(
   ) {
     throw new Error("Safety Score v9 state cannot contain duplicate replay artifact keys or identities");
   }
-  const updatedAtSec = UnixSecondsSchema.parse(input.updatedAtSec ?? attempt.recordedAtSec);
-  const dayJson = stableJsonStringifyV1(day);
-  const dayColumns = expectedDayColumns(day);
+  const dailyJson = stableJsonStringifyV1(daily);
+  const dailyColumns = expectedDailyColumns(daily);
   const missingArtifacts: SafetyScoreV9StoredReplayArtifact[] = [];
   for (const artifact of artifacts) {
     const existing = await resolveExistingArtifact(
@@ -821,52 +750,115 @@ export async function persistSafetyScoreV9ShadowState(
     );
     if (!existing) missingArtifacts.push(artifact);
   }
-  const attemptJson = stableJsonStringifyV1(attempt);
-  const existingAttempt = await loadAttemptRow(db, attempt.attemptId, input.signal);
-  if (existingAttempt && stableJsonStringifyV1(existingAttempt) !== attemptJson) {
-    throw new SafetyScoreV9StoreConflictError(`Immutable Safety Score v9 attempt conflict for ${attempt.attemptId}`);
+  const existingDaily = await loadSafetyScoreV9ShadowDaily(db, daily.utcDay, input.signal);
+  if (existingDaily) {
+    const oldAttempts = existingDaily.attemptCounts.successful + existingDaily.attemptCounts.failed;
+    const newAttempts = daily.attemptCounts.successful + daily.attemptCounts.failed;
+    if (newAttempts < oldAttempts || daily.updatedAtSec < existingDaily.updatedAtSec) {
+      throw new SafetyScoreV9StoreConflictError(`Stale Safety Score v9 daily update for ${daily.utcDay}`);
+    }
+    if (
+      existingDaily.selectedRun !== null &&
+      stableJsonStringifyV1(existingDaily.selectedRun) !== stableJsonStringifyV1(daily.selectedRun)
+    ) {
+      throw new SafetyScoreV9StoreConflictError(`Selected Safety Score v9 daily run conflict for ${daily.utcDay}`);
+    }
   }
 
   // Missing immutable rows use plain INSERT inside the same transaction. A
   // concurrent writer therefore aborts the whole batch; a retry can then
   // validate and reuse the winner without partially committing latest state.
-  const statements: D1PreparedStatement[] = missingArtifacts.map((artifact) =>
-    prepareArtifactInsert(db, artifact, ""),
-  );
-  if (!existingAttempt) statements.push(prepareAttemptInsert(db, attempt, attemptJson, ""));
+  const statements: D1PreparedStatement[] = missingArtifacts.map((artifact) => prepareArtifactInsert(db, artifact, ""));
   statements.push(
     db
       .prepare(
-        `INSERT INTO safety_score_v9_shadow_days
-         (utc_day, canonical_attempt_id, qualifying, expected_attempt_count, recorded_attempt_count,
-          policy_digest, evaluation_build_digest, producer_capability_digest, day_json, updated_at_sec)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO safety_score_v9_shadow_daily
+         (utc_day, updated_at_sec, successful_attempt_count, failed_attempt_count, selected_run_at_sec,
+          publication_generation_id, base_input_generation_id, fact_set_digest, policy_digest,
+          evaluation_build_digest, producer_capability_digest, release_coverage_policy_digest,
+          consumer_threshold_registry_digest, result_digest, diff_report_digest,
+          active_asset_count, rateable_count, nr_count, present_active_count, missing_active_count,
+          unexpected_active_count, duplicate_active_count, grade_nr_transition_count,
+          large_score_movement_count, top_cutoff_movement_count, binding_cap_change_count,
+          downstream_crossing_count, unresolved_review_count, qualifying, blockers_json,
+          archive_selection_reasons_json, latest_error_code, latest_error_message, daily_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(utc_day) DO UPDATE SET
-           canonical_attempt_id = excluded.canonical_attempt_id,
-           qualifying = excluded.qualifying,
-           expected_attempt_count = excluded.expected_attempt_count,
-           recorded_attempt_count = excluded.recorded_attempt_count,
+           successful_attempt_count = excluded.successful_attempt_count,
+           failed_attempt_count = excluded.failed_attempt_count,
+           selected_run_at_sec = excluded.selected_run_at_sec,
+           publication_generation_id = excluded.publication_generation_id,
+           base_input_generation_id = excluded.base_input_generation_id,
+           fact_set_digest = excluded.fact_set_digest,
            policy_digest = excluded.policy_digest,
            evaluation_build_digest = excluded.evaluation_build_digest,
            producer_capability_digest = excluded.producer_capability_digest,
-           day_json = excluded.day_json,
+           release_coverage_policy_digest = excluded.release_coverage_policy_digest,
+           consumer_threshold_registry_digest = excluded.consumer_threshold_registry_digest,
+           result_digest = excluded.result_digest,
+           diff_report_digest = excluded.diff_report_digest,
+           active_asset_count = excluded.active_asset_count,
+           rateable_count = excluded.rateable_count,
+           nr_count = excluded.nr_count,
+           present_active_count = excluded.present_active_count,
+           missing_active_count = excluded.missing_active_count,
+           unexpected_active_count = excluded.unexpected_active_count,
+           duplicate_active_count = excluded.duplicate_active_count,
+           grade_nr_transition_count = excluded.grade_nr_transition_count,
+           large_score_movement_count = excluded.large_score_movement_count,
+           top_cutoff_movement_count = excluded.top_cutoff_movement_count,
+           binding_cap_change_count = excluded.binding_cap_change_count,
+           downstream_crossing_count = excluded.downstream_crossing_count,
+           unresolved_review_count = excluded.unresolved_review_count,
+           qualifying = excluded.qualifying,
+           blockers_json = excluded.blockers_json,
+           archive_selection_reasons_json = excluded.archive_selection_reasons_json,
+           latest_error_code = excluded.latest_error_code,
+           latest_error_message = excluded.latest_error_message,
+           daily_json = excluded.daily_json,
            updated_at_sec = CASE
-             WHEN safety_score_v9_shadow_days.updated_at_sec <= excluded.updated_at_sec
+             WHEN safety_score_v9_shadow_daily.successful_attempt_count + safety_score_v9_shadow_daily.failed_attempt_count
+                    <= excluded.successful_attempt_count + excluded.failed_attempt_count
+                  AND safety_score_v9_shadow_daily.updated_at_sec <= excluded.updated_at_sec
                THEN excluded.updated_at_sec
              ELSE -1
            END`,
       )
       .bind(
-        day.utcDay,
-        dayColumns.canonicalAttemptId,
-        dayColumns.qualifying,
-        dayColumns.expectedAttemptCount,
-        dayColumns.recordedAttemptCount,
-        dayColumns.policyDigest,
-        dayColumns.evaluationBuildDigest,
-        dayColumns.producerCapabilityDigest,
-        dayJson,
-        updatedAtSec,
+        daily.utcDay,
+        dailyColumns.updatedAtSec,
+        dailyColumns.successfulAttemptCount,
+        dailyColumns.failedAttemptCount,
+        dailyColumns.selectedRunAtSec,
+        dailyColumns.publicationGenerationId,
+        dailyColumns.baseInputGenerationId,
+        dailyColumns.factSetDigest,
+        dailyColumns.policyDigest,
+        dailyColumns.evaluationBuildDigest,
+        dailyColumns.producerCapabilityDigest,
+        dailyColumns.releaseCoveragePolicyDigest,
+        dailyColumns.consumerThresholdRegistryDigest,
+        dailyColumns.resultDigest,
+        dailyColumns.diffReportDigest,
+        dailyColumns.activeAssetCount,
+        dailyColumns.rateableCount,
+        dailyColumns.nrCount,
+        dailyColumns.presentActiveCount,
+        dailyColumns.missingActiveCount,
+        dailyColumns.unexpectedActiveCount,
+        dailyColumns.duplicateActiveCount,
+        dailyColumns.gradeNrTransitionCount,
+        dailyColumns.largeScoreMovementCount,
+        dailyColumns.topCutoffMovementCount,
+        dailyColumns.bindingCapChangeCount,
+        dailyColumns.downstreamCrossingCount,
+        dailyColumns.unresolvedReviewCount,
+        dailyColumns.qualifying,
+        dailyColumns.blockersJson,
+        dailyColumns.archiveSelectionReasonsJson,
+        dailyColumns.latestErrorCode,
+        dailyColumns.latestErrorMessage,
+        dailyJson,
       ),
   );
   if (envelopeJson !== null && diffJson !== null) {
@@ -877,8 +869,8 @@ export async function persistSafetyScoreV9ShadowState(
          updated_at = excluded.updated_at`,
     );
     statements.push(
-      cacheStatement.bind(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope, envelopeJson, updatedAtSec),
-      cacheStatement.bind(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.diff, diffJson, updatedAtSec),
+      cacheStatement.bind(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope, envelopeJson, daily.updatedAtSec),
+      cacheStatement.bind(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.diff, diffJson, daily.updatedAtSec),
     );
   }
   await executeAtomicBatch(db, statements, { signal: input.signal });
@@ -942,13 +934,11 @@ export interface LoadSafetyScoreV9ShadowHistoryOptions {
 export async function loadSafetyScoreV9ShadowHistory(
   db: D1Database,
   options: LoadSafetyScoreV9ShadowHistoryOptions = {},
-): Promise<SafetyScoreV9ShadowDay[]> {
+): Promise<SafetyScoreV9ShadowDaily[]> {
   throwIfAborted(options.signal);
   const limit = options.limit ?? SAFETY_SCORE_V9_SHADOW_HISTORY_DEFAULT_LIMIT;
   if (!Number.isInteger(limit) || limit <= 0 || limit > SAFETY_SCORE_V9_SHADOW_HISTORY_MAX_LIMIT) {
-    throw new RangeError(
-      `Safety Score v9 shadow history limit must be 1-${SAFETY_SCORE_V9_SHADOW_HISTORY_MAX_LIMIT}`,
-    );
+    throw new RangeError(`Safety Score v9 shadow history limit must be 1-${SAFETY_SCORE_V9_SHADOW_HISTORY_MAX_LIMIT}`);
   }
   const conditions: string[] = [];
   const bindings: unknown[] = [];
@@ -965,19 +955,17 @@ export async function loadSafetyScoreV9ShadowHistory(
     () =>
       db
         .prepare(
-          `SELECT utc_day, canonical_attempt_id, qualifying, expected_attempt_count,
-                  recorded_attempt_count, policy_digest, evaluation_build_digest,
-                  producer_capability_digest, day_json, updated_at_sec
-           FROM safety_score_v9_shadow_days
+          `SELECT ${SAFETY_SCORE_V9_SHADOW_DAILY_SELECT}
+           FROM safety_score_v9_shadow_daily
            ${where}
            ORDER BY utc_day DESC
            LIMIT ?`,
         )
         .bind(...bindings, limit)
-        .all<DayRow>(),
+        .all<DailyRow>(),
     3,
     options.signal,
   );
   throwIfAborted(options.signal);
-  return (rows.results ?? []).map(parseDayRow);
+  return (rows.results ?? []).map(parseDailyRow);
 }

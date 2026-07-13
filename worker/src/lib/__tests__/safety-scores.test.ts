@@ -82,7 +82,18 @@ vi.mock("../report-cards-snapshot", () => ({
 
 import { computeSafetyScoresSnapshot } from "../safety-scores";
 import type { StablecoinsCacheLoadOk } from "../stablecoins-cache";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+
+const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
+
+function v8PublicationIdentity(publicationGenerationId: string) {
+  return buildSafetyScoreV8PublicationIdentity({
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    baseInputGenerationId: BASE_INPUT_GENERATION_ID,
+    publicationGenerationId,
+  });
+}
 
 describe("computeSafetyScoresSnapshot", () => {
   let db: D1Database;
@@ -180,6 +191,7 @@ describe("computeSafetyScoresSnapshot", () => {
           },
           updatedAt,
           methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          safetyScoreIdentity: v8PublicationIdentity(generationId),
           publicationGenerationId: generationId,
           completeness: {
             generationId,
@@ -227,6 +239,7 @@ describe("computeSafetyScoresSnapshot", () => {
           },
           updatedAt,
           methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          safetyScoreIdentity: v8PublicationIdentity(generationId),
           publicationGenerationId: generationId,
           completeness: {
             generationId,
@@ -259,13 +272,13 @@ describe("computeSafetyScoresSnapshot", () => {
   it.each([
     ["missing cache", null, "report-card-cache:missing-cache"],
     [
-      "legacy cache without completeness",
+      "legacy cache without identity",
       {
         scores: { "usdt-tether": { score: 75, grade: "B" } },
         updatedAt: Math.floor(Date.now() / 1000),
         methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       },
-      "report-card-cache:completeness-missing",
+      "report-card-cache:identity-missing",
     ],
   ])("fails closed for %s", async (_label, payload, reason) => {
     if (payload) {
@@ -298,6 +311,43 @@ describe("computeSafetyScoresSnapshot", () => {
     expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
   });
 
+  it("fails closed for a canonical identity without completeness", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const generationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
+    db = mockD1([{
+      match: "FROM cache WHERE key = ?",
+      matchBinds: ["report_card_cache"],
+      rows: [{
+        key: "report_card_cache",
+        value: JSON.stringify({
+          scores: { "usdt-tether": { score: 75, grade: "B" } },
+          updatedAt,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          safetyScoreIdentity: v8PublicationIdentity(generationId),
+          publicationGenerationId: generationId,
+        }),
+        updated_at: updatedAt,
+      }],
+    }]);
+
+    const result = await computeSafetyScoresSnapshot(db, {
+      outputMode: "map",
+      sourceMode: "published-cache",
+    });
+
+    expect(result).toMatchObject({
+      kind: "degraded",
+      source: "report-card-cache",
+      reason: "report-card-cache:completeness-missing",
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      publishedAt: updatedAt,
+      coveredCount: 0,
+      trackedCount: 3,
+    });
+    expect(result.scores.size).toBe(0);
+  });
+
   it("preserves the exact generation while degrading stale report-card inputs", async () => {
     const updatedAt = Math.floor(Date.now() / 1000);
     const generationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
@@ -313,6 +363,7 @@ describe("computeSafetyScoresSnapshot", () => {
           },
           updatedAt,
           methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          safetyScoreIdentity: v8PublicationIdentity(generationId),
           publicationGenerationId: generationId,
           completeness: {
             generationId,

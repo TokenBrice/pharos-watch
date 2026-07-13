@@ -6,6 +6,10 @@ import type { ReportCard } from "@shared/types/report-cards";
 import type { ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
 import type { ReportCardPublicationCompleteness } from "./report-card-publication";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import {
+  SafetyScoreV8PublicationIdentitySchema,
+  type SafetyScoreV8PublicationIdentity,
+} from "@shared/types/safety-score-publication";
 
 export interface ReportCardScoreEntry {
   score: number;
@@ -16,6 +20,7 @@ export interface ReportCardCachePayload {
   scores: Record<string, ReportCardScoreEntry>;
   updatedAt: number;
   methodologyVersion: string;
+  safetyScoreIdentity?: SafetyScoreV8PublicationIdentity;
   publicationGenerationId?: string;
   completeness?: ReportCardPublicationCompleteness;
   degradedInputs?: ReportCardCacheInputStatus;
@@ -45,6 +50,8 @@ export type ReportCardCacheFailureReason =
   | "invalid-envelope"
   | "generation-mismatch"
   | "methodology-mismatch"
+  | "identity-missing"
+  | "identity-mismatch"
   | "completeness-missing"
   | "completeness-mismatch"
   | "stale-cache";
@@ -63,6 +70,7 @@ export interface WriteReportCardCacheOptions {
   redemptionStale?: boolean;
   inputFreshness?: ReportCardsInputFreshness;
   completeness?: ReportCardPublicationCompleteness;
+  safetyScoreIdentity?: SafetyScoreV8PublicationIdentity;
 }
 
 /** Shared max-age budget for report-card-dependent read paths. */
@@ -72,31 +80,35 @@ const REPORT_CARD_CACHE_KEY = "report_card_cache";
 
 function isValidCompleteness(value: unknown): value is ReportCardPublicationCompleteness {
   if (!isRecord(value)) return false;
-  return typeof value.generationId === "string"
-    && value.generationId.length > 0
-    && typeof value.methodologyVersion === "string"
-    && value.methodologyVersion.length > 0
-    && typeof value.expectedCount === "number"
-    && Number.isInteger(value.expectedCount)
-    && value.expectedCount >= 0
-    && typeof value.scoredCount === "number"
-    && Number.isInteger(value.scoredCount)
-    && value.scoredCount >= 0
-    && typeof value.notRatedCount === "number"
-    && Number.isInteger(value.notRatedCount)
-    && value.notRatedCount >= 0
-    && Array.isArray(value.notRatedIds)
-    && value.notRatedIds.every((id) => typeof id === "string")
-    && value.notRatedIds.length === value.notRatedCount
-    && value.expectedCount === value.scoredCount + value.notRatedCount;
+  return (
+    typeof value.generationId === "string" &&
+    value.generationId.length > 0 &&
+    typeof value.methodologyVersion === "string" &&
+    value.methodologyVersion.length > 0 &&
+    typeof value.expectedCount === "number" &&
+    Number.isInteger(value.expectedCount) &&
+    value.expectedCount >= 0 &&
+    typeof value.scoredCount === "number" &&
+    Number.isInteger(value.scoredCount) &&
+    value.scoredCount >= 0 &&
+    typeof value.notRatedCount === "number" &&
+    Number.isInteger(value.notRatedCount) &&
+    value.notRatedCount >= 0 &&
+    Array.isArray(value.notRatedIds) &&
+    value.notRatedIds.every((id) => typeof id === "string") &&
+    value.notRatedIds.length === value.notRatedCount &&
+    value.expectedCount === value.scoredCount + value.notRatedCount
+  );
 }
 
 function isValidReportCardScoreEntry(value: unknown): value is ReportCardScoreEntry {
-  return isRecord(value)
-    && typeof value.score === "number"
-    && Number.isFinite(value.score)
-    && typeof value.grade === "string"
-    && value.grade.length > 0;
+  return (
+    isRecord(value) &&
+    typeof value.score === "number" &&
+    Number.isFinite(value.score) &&
+    typeof value.grade === "string" &&
+    value.grade.length > 0
+  );
 }
 
 function isValidReportCardCachePayload(value: unknown): value is ParsedReportCardCachePayload {
@@ -105,31 +117,26 @@ function isValidReportCardCachePayload(value: unknown): value is ParsedReportCar
     scores?: unknown;
     updatedAt?: unknown;
     methodologyVersion?: unknown;
+    safetyScoreIdentity?: unknown;
     publicationGenerationId?: unknown;
     completeness?: unknown;
     degradedInputs?: unknown;
   };
-  return parsed.scores != null
-    && typeof parsed.scores === "object"
-    && typeof parsed.updatedAt === "number"
-    && Number.isFinite(parsed.updatedAt)
-    && (
-      parsed.methodologyVersion == null
-      || (typeof parsed.methodologyVersion === "string" && parsed.methodologyVersion.length > 0)
-    )
-    && (
-      parsed.publicationGenerationId == null
-      || (typeof parsed.publicationGenerationId === "string" && parsed.publicationGenerationId.length > 0)
-    )
-    && (parsed.completeness == null || isValidCompleteness(parsed.completeness))
-    && (
-      parsed.completeness == null
-      || parsed.publicationGenerationId === parsed.completeness.generationId
-    )
-    && (
-      parsed.degradedInputs == null
-      || isValidReportCardCacheInputStatus(parsed.degradedInputs)
-    );
+  return (
+    parsed.scores != null &&
+    typeof parsed.scores === "object" &&
+    typeof parsed.updatedAt === "number" &&
+    Number.isFinite(parsed.updatedAt) &&
+    (parsed.methodologyVersion == null ||
+      (typeof parsed.methodologyVersion === "string" && parsed.methodologyVersion.length > 0)) &&
+    (parsed.safetyScoreIdentity == null ||
+      SafetyScoreV8PublicationIdentitySchema.safeParse(parsed.safetyScoreIdentity).success) &&
+    (parsed.publicationGenerationId == null ||
+      (typeof parsed.publicationGenerationId === "string" && parsed.publicationGenerationId.length > 0)) &&
+    (parsed.completeness == null || isValidCompleteness(parsed.completeness)) &&
+    (parsed.completeness == null || parsed.publicationGenerationId === parsed.completeness.generationId) &&
+    (parsed.degradedInputs == null || isValidReportCardCacheInputStatus(parsed.degradedInputs))
+  );
 }
 
 function isValidReportCardCacheInputStatus(value: unknown): value is ReportCardCacheInputStatus {
@@ -140,21 +147,32 @@ function isValidReportCardCacheInputStatus(value: unknown): value is ReportCardC
     redemptionStale?: unknown;
     staleInputs?: unknown;
   };
-  return typeof parsed.inputsStale === "boolean"
-    && typeof parsed.liquidityStale === "boolean"
-    && typeof parsed.redemptionStale === "boolean"
-    && Array.isArray(parsed.staleInputs)
-    && parsed.staleInputs.every((entry) => typeof entry === "string");
+  return (
+    typeof parsed.inputsStale === "boolean" &&
+    typeof parsed.liquidityStale === "boolean" &&
+    typeof parsed.redemptionStale === "boolean" &&
+    Array.isArray(parsed.staleInputs) &&
+    parsed.staleInputs.every((entry) => typeof entry === "string")
+  );
 }
 
 function hasExactReportCardCacheCompleteness(payload: ReportCardCachePayload): boolean {
   const completeness = payload.completeness;
   if (!payload.publicationGenerationId || !completeness) return false;
+  const identity = payload.safetyScoreIdentity;
   if (
-    completeness.generationId !== payload.publicationGenerationId
-    || completeness.generationId !== `report-cards:${payload.methodologyVersion}:${payload.updatedAt}`
-    || completeness.methodologyVersion !== payload.methodologyVersion
-    || completeness.expectedCount !== ACTIVE_IDS.size
+    !identity ||
+    identity.model !== "v8" ||
+    identity.methodologyVersion !== payload.methodologyVersion ||
+    identity.publicationGenerationId !== payload.publicationGenerationId
+  ) {
+    return false;
+  }
+  if (
+    completeness.generationId !== payload.publicationGenerationId ||
+    completeness.generationId !== `report-cards:${payload.methodologyVersion}:${payload.updatedAt}` ||
+    completeness.methodologyVersion !== payload.methodologyVersion ||
+    completeness.expectedCount !== ACTIVE_IDS.size
   ) {
     return false;
   }
@@ -163,10 +181,10 @@ function hasExactReportCardCacheCompleteness(payload: ReportCardCachePayload): b
   const notRatedIds = completeness.notRatedIds;
   const notRatedIdSet = new Set(notRatedIds);
   if (
-    scoreIds.length !== completeness.scoredCount
-    || notRatedIds.length !== completeness.notRatedCount
-    || new Set(scoreIds).size !== scoreIds.length
-    || notRatedIdSet.size !== notRatedIds.length
+    scoreIds.length !== completeness.scoredCount ||
+    notRatedIds.length !== completeness.notRatedCount ||
+    new Set(scoreIds).size !== scoreIds.length ||
+    notRatedIdSet.size !== notRatedIds.length
   ) {
     return false;
   }
@@ -176,10 +194,7 @@ function hasExactReportCardCacheCompleteness(payload: ReportCardCachePayload): b
     if (!publishedIds.has(id)) return false;
   }
   for (const [id, score] of Object.entries(payload.scores)) {
-    if (
-      notRatedIdSet.has(id)
-      || !isValidReportCardScoreEntry(score)
-    ) {
+    if (notRatedIdSet.has(id) || !isValidReportCardScoreEntry(score)) {
       return false;
     }
   }
@@ -193,18 +208,18 @@ function isReportCardCacheEnvelope(value: unknown): value is ParsedReportCardCac
     methodologyVersion?: unknown;
     payload?: unknown;
   };
-  return typeof parsed.generation === "number"
-    && Number.isInteger(parsed.generation)
-    && typeof parsed.methodologyVersion === "string"
-    && parsed.methodologyVersion.length > 0
-    && isValidReportCardCachePayload(parsed.payload);
+  return (
+    typeof parsed.generation === "number" &&
+    Number.isInteger(parsed.generation) &&
+    typeof parsed.methodologyVersion === "string" &&
+    parsed.methodologyVersion.length > 0 &&
+    isValidReportCardCachePayload(parsed.payload)
+  );
 }
 
 function normalizeReportCardCacheJson(
   parsed: unknown,
-):
-  | { ok: true; payload: ParsedReportCardCachePayload }
-  | { ok: false; reason: ReportCardCacheFailureReason } {
+): { ok: true; payload: ParsedReportCardCachePayload } | { ok: false; reason: ReportCardCacheFailureReason } {
   if (isRecord(parsed) && "payload" in parsed) {
     if (!isReportCardCacheEnvelope(parsed)) {
       return { ok: false, reason: "invalid-envelope" };
@@ -226,17 +241,9 @@ function normalizeReportCardCacheJson(
     : { ok: false, reason: "invalid-payload" };
 }
 
-function buildReportCardCacheInputStatus(
-  options: WriteReportCardCacheOptions = {},
-): ReportCardCacheInputStatus {
-  const liquidityStale = Boolean(
-    options.liquidityStale
-    || options.inputFreshness?.dexLiquidity.stale,
-  );
-  const redemptionStale = Boolean(
-    options.redemptionStale
-    || options.inputFreshness?.redemptionBackstops.stale,
-  );
+function buildReportCardCacheInputStatus(options: WriteReportCardCacheOptions = {}): ReportCardCacheInputStatus {
+  const liquidityStale = Boolean(options.liquidityStale || options.inputFreshness?.dexLiquidity.stale);
+  const redemptionStale = Boolean(options.redemptionStale || options.inputFreshness?.redemptionBackstops.stale);
   const staleInputs = [
     ...(liquidityStale ? ["dexLiquidity"] : []),
     ...(redemptionStale ? ["redemptionBackstops"] : []),
@@ -275,6 +282,15 @@ export async function loadReportCardCache(
   };
 
   if (options.requireCompleteness) {
+    if (!payload.safetyScoreIdentity) {
+      return { kind: "error", reason: "identity-missing", updatedAt: payload.updatedAt };
+    }
+    if (
+      payload.safetyScoreIdentity.methodologyVersion !== payload.methodologyVersion ||
+      payload.safetyScoreIdentity.publicationGenerationId !== payload.publicationGenerationId
+    ) {
+      return { kind: "error", reason: "identity-mismatch", updatedAt: payload.updatedAt };
+    }
     if (!payload.publicationGenerationId || !payload.completeness) {
       return { kind: "error", reason: "completeness-missing", updatedAt: payload.updatedAt };
     }
@@ -309,13 +325,20 @@ export function buildReportCardCacheEntry(
   updatedAt: number,
   options: WriteReportCardCacheOptions = {},
 ): { key: string; value: string; writtenCount: number } {
-  if (
-    options.completeness
-    && options.completeness.methodologyVersion !== SAFETY_SCORE_METHODOLOGY_VERSION
-  ) {
+  if (options.completeness && options.completeness.methodologyVersion !== SAFETY_SCORE_METHODOLOGY_VERSION) {
     throw new Error(
       `Report-card publication methodology ${options.completeness.methodologyVersion} does not match ${SAFETY_SCORE_METHODOLOGY_VERSION}`,
     );
+  }
+  if (options.completeness && !options.safetyScoreIdentity) {
+    throw new Error("Report-card publication requires a Safety Score identity");
+  }
+  if (
+    options.safetyScoreIdentity &&
+    (options.safetyScoreIdentity.methodologyVersion !== SAFETY_SCORE_METHODOLOGY_VERSION ||
+      options.safetyScoreIdentity.publicationGenerationId !== options.completeness?.generationId)
+  ) {
+    throw new Error("Report-card compact cache identity does not match its publication");
   }
   const scores: ReportCardCachePayload["scores"] = {};
   for (const card of cards) {
@@ -330,6 +353,7 @@ export function buildReportCardCacheEntry(
     scores,
     updatedAt,
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    ...(options.safetyScoreIdentity ? { safetyScoreIdentity: options.safetyScoreIdentity } : {}),
     ...(options.completeness
       ? {
           publicationGenerationId: options.completeness.generationId,

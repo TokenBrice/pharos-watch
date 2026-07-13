@@ -1,8 +1,5 @@
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import {
-  loadV9MethodologyPolicy,
-  V9_CANDIDATE_POLICY_V1,
-} from "@shared/lib/safety-score-v9/policy";
+import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import { SafetyScoreV9ResponseSchema } from "@shared/types/safety-score-v9-public";
@@ -197,9 +194,7 @@ function exactFixedInput(
   });
 }
 
-function reviewedExtension(
-  fixedInput = exactFixedInput("alpha"),
-): SafetyScoreV9FactSetExtensionV2 {
+function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9FactSetExtensionV2 {
   const extension = structuredClone(
     buildSafetyScoreV9BaselineExtension(fixedInput, {
       metaById: new Map([
@@ -334,7 +329,6 @@ describe("Safety Score v9 candidate pipeline", () => {
       fixedInput,
       extension: reviewedExtension(fixedInput),
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 7,
     };
     const left = buildSafetyScoreV9Candidate(input);
     const right = buildSafetyScoreV9Candidate(structuredClone(input));
@@ -357,19 +351,16 @@ describe("Safety Score v9 candidate pipeline", () => {
       fixedInput: baseFixedInput,
       extension,
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 7,
     });
     const changedGeneration = buildSafetyScoreV9Candidate({
       fixedInput: changedFixedInput,
       extension: reviewedExtension(changedFixedInput),
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 7,
     });
     const changedPublication = buildSafetyScoreV9Candidate({
       fixedInput: baseFixedInput,
       extension,
       publishedAtSec: PUBLISHED_AT_SEC + 1,
-      publicationEpoch: 8,
     });
 
     expect(changedGeneration.fixedInput.baseInputGenerationId).not.toBe(base.fixedInput.baseInputGenerationId);
@@ -380,7 +371,6 @@ describe("Safety Score v9 candidate pipeline", () => {
     expect(changedGeneration.producerCapabilityDigest).toBe(base.producerCapabilityDigest);
     expect(changedPublication.candidate.candidateId).toBe(base.candidate.candidateId);
     expect(changedPublication.candidate.publicationGenerationId).not.toBe(base.candidate.publicationGenerationId);
-    expect(changedPublication.candidate.publicationEpoch).toBe(8);
   });
 
   it("changes candidate identity only when the frozen policy, build, or producer capability changes", () => {
@@ -390,7 +380,6 @@ describe("Safety Score v9 candidate pipeline", () => {
       fixedInput,
       extension,
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 1,
     });
     const changedPolicy = structuredClone(V9_CANDIDATE_POLICY_V1.policy);
     changedPolicy.policyId = "safety-score-v9-candidate-v2";
@@ -401,7 +390,6 @@ describe("Safety Score v9 candidate pipeline", () => {
       extension,
       policy: loadV9MethodologyPolicy(changedPolicy),
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 1,
     });
     const changedCapability = structuredClone(extension);
     changedCapability.routeFreshness.dexMaxAgeSec += 1;
@@ -409,11 +397,9 @@ describe("Safety Score v9 candidate pipeline", () => {
       fixedInput,
       extension: changedCapability,
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 1,
     });
-    const alternateBuildDigest = base.candidateIdentity.evaluationBuildDigest === "f".repeat(64)
-      ? "e".repeat(64)
-      : "f".repeat(64);
+    const alternateBuildDigest =
+      base.candidateIdentity.evaluationBuildDigest === "f".repeat(64) ? "e".repeat(64) : "f".repeat(64);
 
     expect(policyResult.candidate.candidateId).not.toBe(base.candidate.candidateId);
     expect(policyResult.candidate.policy.semanticDigest).not.toBe(base.candidate.policy.semanticDigest);
@@ -434,13 +420,11 @@ describe("Safety Score v9 candidate pipeline", () => {
       fixedInput: observed,
       extension: reviewedExtension(observed),
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 1,
     });
     const unobservedResult = buildSafetyScoreV9Candidate({
       fixedInput: unobserved,
       extension: reviewedExtension(unobserved),
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 1,
     });
 
     expect(unobservedResult.fixedInput.baseInputGenerationId).not.toBe(observedResult.fixedInput.baseInputGenerationId);
@@ -457,7 +441,6 @@ describe("Safety Score v9 candidate pipeline", () => {
       fixedInput,
       extension: reviewedExtension(fixedInput),
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 1,
     };
 
     expect(buildSafetyScoreV9Candidate({ ...args, releaseCandidateId: "v9-rc-2" }).candidate.candidateId).toBe(
@@ -470,7 +453,6 @@ describe("Safety Score v9 candidate pipeline", () => {
     const result = buildSafetyScoreV9Candidate({
       fixedInput: exactFixedInput("usdc-circle"),
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 0,
     });
 
     expect(result.extension.assets[0]).toMatchObject({
@@ -503,14 +485,12 @@ describe("Safety Score v9 candidate pipeline", () => {
       fixedInput,
       extension: reviewedExtension(fixedInput),
       publishedAtSec: PUBLISHED_AT_SEC,
-      publicationEpoch: 3,
     });
 
     expect(result.candidate).toMatchObject({
       model: "v9-critical-path",
       lifecycle: "candidate",
       policyVersion: "candidate-v1",
-      publicationEpoch: 3,
       completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     });
     expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 82, grade: "A-" });

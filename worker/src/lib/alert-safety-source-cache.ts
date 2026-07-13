@@ -10,6 +10,10 @@ import { activeDepegCapScore } from "@shared/lib/report-card-active-depeg";
 import { round1, roundScore } from "@shared/lib/math";
 import type { DimensionKey, ReportCard, ReportCardGrade, SafetyAlertSourceState } from "@shared/types";
 import type { ReportCardPublicationCompleteness } from "./report-card-publication";
+import {
+  SafetyScoreV8PublicationIdentitySchema,
+  type SafetyScoreV8PublicationIdentity,
+} from "@shared/types/safety-score-publication";
 
 export const ALERT_SAFETY_SOURCE_CACHE_KEY = "alert:safety-source-cache";
 const ALERT_SAFETY_SOURCE_SCHEMA_VERSION = "1";
@@ -81,6 +85,7 @@ export type AlertSafetySourceSnapshot = Record<string, AlertSafetySourceRow>;
 
 export interface AlertSafetySourceEnvelope {
   generation: string;
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentity;
   publicationGenerationId?: string;
   methodologyVersion: string;
   publishedAt: number;
@@ -90,6 +95,7 @@ export interface AlertSafetySourceEnvelope {
 
 export interface AlertSafetySnapshotEnvelope {
   generation: string;
+  safetyScoreIdentity?: SafetyScoreV8PublicationIdentity;
   snapshot: AlertSafetySourceSnapshot;
 }
 
@@ -262,9 +268,8 @@ function parseRawInputSnapshot(value: unknown): AlertSafetyRawInputSnapshot | nu
     redemptionModelConfidence,
     variantParentId,
   } = parseSharedRawFields(record);
-  const redemptionExclusionReason = record.redemptionExclusionReason === undefined
-    ? null
-    : parseStringOrNull(record.redemptionExclusionReason);
+  const redemptionExclusionReason =
+    record.redemptionExclusionReason === undefined ? null : parseStringOrNull(record.redemptionExclusionReason);
 
   if (
     pegScore === undefined ||
@@ -465,9 +470,7 @@ export function getAlertSafetySourceGeneration(methodologyVersion = SAFETY_SCORE
  * engine used — not to the rounded `card.baseScore`. Returns null when fewer
  * than two non-peg dimensions are rated (mirrors the NR guard there).
  */
-function rawBaseWeightedMean(
-  dimensions: Record<DimensionKey, AlertSafetyDimensionSnapshot>,
-): number | null {
+function rawBaseWeightedMean(dimensions: Record<DimensionKey, AlertSafetyDimensionSnapshot>): number | null {
   let ratedWeight = 0;
   let weightedSum = 0;
   let baseRatedCount = 0;
@@ -499,9 +502,8 @@ function buildAlertSafetyExplainSnapshot(card: ReportCard): AlertSafetyExplainSn
   const baseScore = parseNumberOrNull((card as { baseScore?: unknown }).baseScore);
   const overallScore = parseNumberOrNull((card as { overallScore?: unknown }).overallScore);
   const rawUncappedOverallScore = (card as { uncappedOverallScore?: unknown }).uncappedOverallScore;
-  const uncappedOverallScore = rawUncappedOverallScore === undefined
-    ? null
-    : parseNumberOrNull(rawUncappedOverallScore);
+  const uncappedOverallScore =
+    rawUncappedOverallScore === undefined ? null : parseNumberOrNull(rawUncappedOverallScore);
   if (baseScore === undefined || overallScore === undefined || uncappedOverallScore === undefined) {
     return undefined;
   }
@@ -517,31 +519,30 @@ function buildAlertSafetyExplainSnapshot(card: ReportCard): AlertSafetyExplainSn
 
   if (pegMultiplierBase != null) {
     if (pegScore != null) {
-      postPegScore = pegScore === 0
-        ? 0
-        : pegMultiplierBase * Math.pow(pegScore / 100, PEG_MULTIPLIER_EXPONENT);
+      postPegScore = pegScore === 0 ? 0 : pegMultiplierBase * Math.pow(pegScore / 100, PEG_MULTIPLIER_EXPONENT);
     } else if (rawInputs.navToken) {
       postPegScore = pegMultiplierBase;
     }
   }
 
   const noLiquidityPenaltyApplied = postPegScore != null && liquidityScore === null;
-  const postNoLiquidityPenaltyScore = postPegScore == null
-    ? null
-    : postPegScore * (noLiquidityPenaltyApplied ? NO_LIQUIDITY_PENALTY : 1);
+  const postNoLiquidityPenaltyScore =
+    postPegScore == null ? null : postPegScore * (noLiquidityPenaltyApplied ? NO_LIQUIDITY_PENALTY : 1);
   const capScore = activeDepegCapScore(rawInputs.activeDepegBps);
-  const activeDepegCapApplied = capScore != null &&
-    postNoLiquidityPenaltyScore != null &&
-    postNoLiquidityPenaltyScore > capScore;
-  const postActiveDepegCapScore = postNoLiquidityPenaltyScore == null
-    ? null
-    : capScore == null
-      ? postNoLiquidityPenaltyScore
-      : Math.min(postNoLiquidityPenaltyScore, capScore);
-  const scoreBeforeVariantCap = card.overallCapped === true && uncappedOverallScore != null
-    ? uncappedOverallScore
-    : clampAndRoundFinalScore(postActiveDepegCapScore);
-  const variantCapApplied = card.overallCapped === true &&
+  const activeDepegCapApplied =
+    capScore != null && postNoLiquidityPenaltyScore != null && postNoLiquidityPenaltyScore > capScore;
+  const postActiveDepegCapScore =
+    postNoLiquidityPenaltyScore == null
+      ? null
+      : capScore == null
+        ? postNoLiquidityPenaltyScore
+        : Math.min(postNoLiquidityPenaltyScore, capScore);
+  const scoreBeforeVariantCap =
+    card.overallCapped === true && uncappedOverallScore != null
+      ? uncappedOverallScore
+      : clampAndRoundFinalScore(postActiveDepegCapScore);
+  const variantCapApplied =
+    card.overallCapped === true &&
     scoreBeforeVariantCap != null &&
     overallScore != null &&
     scoreBeforeVariantCap > overallScore;
@@ -565,10 +566,7 @@ function buildAlertSafetyExplainSnapshot(card: ReportCard): AlertSafetyExplainSn
   };
 }
 
-function buildAlertSafetySourceSnapshot(
-  cards: ReportCard[],
-  methodologyVersion: string,
-): AlertSafetySourceSnapshot {
+function buildAlertSafetySourceSnapshot(cards: ReportCard[], methodologyVersion: string): AlertSafetySourceSnapshot {
   const snapshot: AlertSafetySourceSnapshot = {};
 
   for (const card of cards) {
@@ -589,13 +587,23 @@ export function buildAlertSafetySourceEnvelope(
   cards: ReportCard[],
   methodologyVersion: string,
   publishedAt: number,
-  completeness?: ReportCardPublicationCompleteness,
+  completeness: ReportCardPublicationCompleteness,
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentity,
 ): AlertSafetySourceEnvelope {
+  const identity = SafetyScoreV8PublicationIdentitySchema.parse(safetyScoreIdentity);
+  if (
+    identity.methodologyVersion !== methodologyVersion ||
+    identity.publicationGenerationId !== completeness.generationId
+  ) {
+    throw new Error("Alert safety source identity does not match its publication");
+  }
   return {
     generation: getAlertSafetySourceGeneration(methodologyVersion),
-    ...(completeness ? { publicationGenerationId: completeness.generationId, completeness } : {}),
+    safetyScoreIdentity: identity,
+    publicationGenerationId: completeness.generationId,
     methodologyVersion,
     publishedAt,
+    completeness,
     snapshot: buildAlertSafetySourceSnapshot(cards, methodologyVersion),
   };
 }
@@ -609,38 +617,44 @@ function parseAlertSafetySourceEnvelope(
 
   const generation = typeof record.generation === "string" ? record.generation : null;
   const methodologyVersion = typeof record.methodologyVersion === "string" ? record.methodologyVersion : null;
-  const publicationGenerationId = typeof record.publicationGenerationId === "string"
-    ? record.publicationGenerationId
-    : null;
+  const parsedIdentity = SafetyScoreV8PublicationIdentitySchema.safeParse(record.safetyScoreIdentity);
+  const safetyScoreIdentity = parsedIdentity.success ? parsedIdentity.data : null;
+  const publicationGenerationId =
+    typeof record.publicationGenerationId === "string" ? record.publicationGenerationId : null;
   const publishedAt = typeof record.publishedAt === "number" ? record.publishedAt : null;
   const snapshot = parseSnapshot(record.snapshot);
 
   const completenessRecord = asRecord(record.completeness);
-  const completeness = completenessRecord
-    && typeof completenessRecord.generationId === "string"
-    && typeof completenessRecord.methodologyVersion === "string"
-    && typeof completenessRecord.expectedCount === "number"
-    && typeof completenessRecord.scoredCount === "number"
-    && typeof completenessRecord.notRatedCount === "number"
-    && Array.isArray(completenessRecord.notRatedIds)
-    && completenessRecord.notRatedIds.every((id) => typeof id === "string")
-    && completenessRecord.expectedCount === completenessRecord.scoredCount + completenessRecord.notRatedCount
-      ? completenessRecord as unknown as ReportCardPublicationCompleteness
+  const completeness =
+    completenessRecord &&
+    typeof completenessRecord.generationId === "string" &&
+    typeof completenessRecord.methodologyVersion === "string" &&
+    typeof completenessRecord.expectedCount === "number" &&
+    typeof completenessRecord.scoredCount === "number" &&
+    typeof completenessRecord.notRatedCount === "number" &&
+    Array.isArray(completenessRecord.notRatedIds) &&
+    completenessRecord.notRatedIds.every((id) => typeof id === "string") &&
+    completenessRecord.expectedCount === completenessRecord.scoredCount + completenessRecord.notRatedCount
+      ? (completenessRecord as unknown as ReportCardPublicationCompleteness)
       : null;
 
   if (
-    !generation
-    || !methodologyVersion
-    || publishedAt == null
-    || !snapshot
-    || (record.completeness != null && !completeness)
-    || (completeness && publicationGenerationId !== completeness.generationId)
+    !generation ||
+    !methodologyVersion ||
+    !safetyScoreIdentity ||
+    publishedAt == null ||
+    !snapshot ||
+    (record.completeness != null && !completeness) ||
+    (completeness && publicationGenerationId !== completeness.generationId) ||
+    safetyScoreIdentity.methodologyVersion !== methodologyVersion ||
+    safetyScoreIdentity.publicationGenerationId !== publicationGenerationId
   ) {
     return null;
   }
 
   return {
     generation,
+    safetyScoreIdentity,
     ...(publicationGenerationId ? { publicationGenerationId } : {}),
     methodologyVersion,
     publishedAt,
@@ -707,9 +721,11 @@ export function assessAlertSafetySourceCache(
 export function buildAlertSafetySnapshotEnvelope(
   snapshot: AlertSafetySourceSnapshot,
   generation: string,
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentity,
 ): AlertSafetySnapshotEnvelope {
   return {
     generation,
+    safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.parse(safetyScoreIdentity),
     snapshot,
   };
 }
@@ -725,9 +741,11 @@ export function parseAlertSafetySnapshotEnvelope(
     const generation = typeof record.generation === "string" ? record.generation : null;
     const snapshot = parseSnapshot(record.snapshot);
     if (generation == null || snapshot == null) return null;
+    const parsedIdentity = SafetyScoreV8PublicationIdentitySchema.safeParse(record.safetyScoreIdentity);
 
     return {
       generation,
+      ...(parsedIdentity.success ? { safetyScoreIdentity: parsedIdentity.data } : {}),
       snapshot,
     };
   }

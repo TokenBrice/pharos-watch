@@ -108,12 +108,11 @@ describe("dispatchTelegramAlerts", () => {
         { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.08" } },
         "legacy-generation",
       ).value,
-      safetySource: JSON.stringify({
-        generation: "legacy-generation",
-        methodologyVersion: "7.09",
-        publishedAt: now - 60,
-        snapshot: { "usdc-circle": { grade: "C", score: 61, methodologyVersion: "7.09" } },
-      }),
+      safetySource: makeSafetySourceCache(
+        { "usdc-circle": { grade: "C", score: 61, methodologyVersion: "7.09" } },
+        now - 60,
+        "legacy-generation",
+      ).value,
     });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle" }],

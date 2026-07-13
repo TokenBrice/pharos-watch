@@ -4,7 +4,7 @@ import type { V9Grade } from "@shared/types/safety-score-v9";
 
 type AvailableResponse = Extract<SafetyScoreV9AdminResponse, { status: "available" }>;
 type DiffCard = AvailableResponse["diff"]["cards"][number];
-type ShadowAttempt = AvailableResponse["history"][number]["attempts"][number];
+type ShadowDay = AvailableResponse["history"][number];
 
 export interface SafetyScoreV9AssetRow {
   card: SafetyScoreV9Card;
@@ -13,7 +13,7 @@ export interface SafetyScoreV9AssetRow {
 
 export interface SafetyScoreV9WorkspaceModel {
   candidate: SafetyScoreV9Response;
-  currentAttempt: ShadowAttempt | null;
+  currentDay: ShadowDay | null;
   blockers: string[];
   failedCoverageFloors: AvailableResponse["envelope"]["coverage"]["coverageFloors"];
   gradeCounts: Array<{ grade: V9Grade; count: number }>;
@@ -35,24 +35,24 @@ function humanizeToken(value: string): string {
   return value.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function findCurrentAttempt(response: AvailableResponse): ShadowAttempt | null {
+function findCurrentDay(response: AvailableResponse): ShadowDay | null {
   const publicationGenerationId = response.envelope.candidate.publicationGenerationId;
   return (
     response.history
-      .flatMap((day) => day.attempts)
-      .filter((attempt) => attempt.identity?.publicationGenerationId === publicationGenerationId)
-      .sort((left, right) => right.recordedAtSec - left.recordedAtSec)[0] ?? null
+      .filter((day) => day.selectedRun?.identity.publicationGenerationId === publicationGenerationId)
+      .sort((left, right) => (right.selectedRun?.selectedAtSec ?? 0) - (left.selectedRun?.selectedAtSec ?? 0))[0] ??
+    null
   );
 }
 
 export function buildSafetyScoreV9WorkspaceModel(response: AvailableResponse): SafetyScoreV9WorkspaceModel {
   const { candidate } = response.envelope;
-  const currentAttempt = findCurrentAttempt(response);
+  const currentDay = findCurrentDay(response);
   const failedCoverageFloors = response.envelope.coverage.coverageFloors.filter((floor) => floor.status === "fail");
   const blockerSet = new Set<string>();
 
   for (const blocker of response.envelope.coverage.unresolvedReleaseBlockers) blockerSet.add(blocker);
-  for (const blocker of currentAttempt?.qualification?.blockers ?? []) {
+  for (const blocker of currentDay?.selectedRun?.qualification.blockers ?? []) {
     if (blocker === "coverage-floor-failed" && failedCoverageFloors.length > 0) continue;
     blockerSet.add(humanizeToken(blocker));
   }
@@ -63,12 +63,10 @@ export function buildSafetyScoreV9WorkspaceModel(response: AvailableResponse): S
     blockerSet.add(`Unresolved critical movement: ${id}`);
   }
   if (response.envelope.coverage.publicationRegression) blockerSet.add("Candidate publication regression detected");
-  if (currentAttempt === null) blockerSet.add("Current shadow generation has no matching recorded attempt");
-  const movementReviewByKey = new Map(
-    response.movementReviews.map((review) => [review.reviewKey, review] as const),
-  );
+  if (currentDay === null) blockerSet.add("Current shadow generation has no matching retained daily run");
+  const movementReviewByKey = new Map(response.movementReviews.map((review) => [review.reviewKey, review] as const));
   const resolvedDiffCards = response.diff.cards.map((card): DiffCard => {
-    const review = card.review.key === null ? null : movementReviewByKey.get(card.review.key) ?? null;
+    const review = card.review.key === null ? null : (movementReviewByKey.get(card.review.key) ?? null);
     if (review === null) return card;
     return {
       ...card,
@@ -79,9 +77,7 @@ export function buildSafetyScoreV9WorkspaceModel(response: AvailableResponse): S
       },
     };
   });
-  const pendingReviewCount = resolvedDiffCards.filter(
-    (card) => card.review.status === "pending",
-  ).length;
+  const pendingReviewCount = resolvedDiffCards.filter((card) => card.review.status === "pending").length;
   if (pendingReviewCount > 0) {
     blockerSet.add(`${pendingReviewCount} material movement reviews remain pending`);
   }
@@ -113,7 +109,7 @@ export function buildSafetyScoreV9WorkspaceModel(response: AvailableResponse): S
 
   return {
     candidate,
-    currentAttempt,
+    currentDay,
     blockers: [...blockerSet].sort(compareText),
     failedCoverageFloors,
     gradeCounts,
@@ -121,7 +117,7 @@ export function buildSafetyScoreV9WorkspaceModel(response: AvailableResponse): S
     reviewRows,
     pendingReviewCount,
     history: [...response.history].sort((left, right) => compareText(right.utcDay, left.utcDay)),
-    qualifyingDayCount: response.history.filter((day) => day.projection.qualifies).length,
+    qualifyingDayCount: response.history.filter((day) => day.selectedRun?.qualification.qualifies === true).length,
     isNoGo: true,
   };
 }

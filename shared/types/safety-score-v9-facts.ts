@@ -3,9 +3,7 @@ import { DependencyTypeSchema } from "./dependency-types";
 import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from "./safety-score-v9";
 import { V9MechanismRiskReviewSchema } from "./safety-score-v9-backing";
 import {
-  V9FactApplicabilitySchema,
   V9FactStatusV2Schema,
-  V9FailureDomainKindSchema,
   V9FailureDomainRefSchema,
   V9ObservationStateSchema,
   type V9FactApplicability,
@@ -23,11 +21,7 @@ export const V9ResolvedMechanismArchetypeSchema = z.union([
 export type V9ResolvedMechanismArchetype = z.infer<typeof V9ResolvedMechanismArchetypeSchema>;
 
 export {
-  V9FactApplicabilitySchema,
   V9FactStatusV2Schema,
-  V9FailureDomainKindSchema,
-  V9FailureDomainRefSchema,
-  V9ObservationStateSchema,
 };
 export type { V9FactApplicability, V9FactStatusV2, V9FailureDomainKind, V9FailureDomainRef, V9ObservationState };
 
@@ -61,7 +55,7 @@ function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => string) 
 
 const CanonicalStringArraySchema = canonicalArrayBy(CanonicalTextSchema, (value) => value);
 
-export const V9EvidenceFreshnessSchema = z
+const V9EvidenceFreshnessSchema = z
   .object({
     state: z.enum(["current", "stale", "not-assessed"]),
     ageSec: z.number().int().nonnegative(),
@@ -178,7 +172,7 @@ const CanonicalFailureDomainsSchema = canonicalArrayBy(
   (domain) => `${domain.kind}:${domain.key}`,
 );
 
-export const V9EffectiveDependencyEdgeV2Schema = z
+const V9EffectiveDependencyEdgeV2Schema = z
   .object({
     edgeKey: CanonicalTextSchema,
     upstreamAssetId: CanonicalTextSchema,
@@ -201,7 +195,7 @@ export const V9EffectiveDependencyEdgeV2Schema = z
   });
 export type V9EffectiveDependencyEdgeV2 = z.infer<typeof V9EffectiveDependencyEdgeV2Schema>;
 
-export const V9EffectiveDependenciesV2Schema = z
+const V9EffectiveDependenciesV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     sourceGenerationId: CanonicalTextSchema,
@@ -276,7 +270,7 @@ export const V9ReserveAssetClassSchema = z.enum([
   "other",
 ]);
 
-export const V9ReserveExposureFactV2Schema = z
+const V9ReserveExposureFactV2Schema = z
   .object({
     exposureKey: CanonicalTextSchema,
     classificationKey: CanonicalTextSchema,
@@ -310,7 +304,7 @@ export const V9ReserveExposureFactV2Schema = z
   });
 export type V9ReserveExposureFactV2 = z.infer<typeof V9ReserveExposureFactV2Schema>;
 
-export const V9RouteRequestV2Schema = z
+const V9RouteRequestV2Schema = z
   .object({
     requestedNotionalUsd: z.number().finite().positive(),
     maxCostBps: z.number().finite().nonnegative(),
@@ -318,7 +312,7 @@ export const V9RouteRequestV2Schema = z
   })
   .strict();
 
-export const V9RouteCapacityPointV2Schema = z
+const V9RouteCapacityPointV2Schema = z
   .object({
     requestedNotionalUsd: z.number().finite().positive(),
     maxCostBps: z.number().finite().nonnegative(),
@@ -344,7 +338,7 @@ const CanonicalCapacityCurveSchema = canonicalArrayBy(
   (point) => `${String(point.maxCostBps).padStart(20, "0")}:${String(point.requestedNotionalUsd).padStart(30, "0")}`,
 );
 
-export const V9RouteOutputValuationV2Schema = z
+const V9RouteOutputValuationV2Schema = z
   .object({
     basis: z.enum(["price", "nav", "fx", "reviewed-par"]),
     referenceAssetKey: CanonicalTextSchema,
@@ -367,7 +361,7 @@ export const V9RouteOutputValuationV2Schema = z
     }
   });
 
-export const V9RouteOutputV2Schema = z
+const V9RouteOutputV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     kind: z.enum(["tracked-stablecoin", "fiat", "collateral", "basket", "unknown"]),
@@ -407,7 +401,7 @@ export const V9RouteOutputV2Schema = z
     }
   });
 
-export const V9ExitRouteFactV2Schema = z
+const V9ExitRouteFactV2Schema = z
   .object({
     routeKey: CanonicalTextSchema,
     routeId: CanonicalTextSchema,
@@ -529,7 +523,7 @@ export const V9ExitRouteFactV2Schema = z
   });
 export type V9ExitRouteFactV2 = z.infer<typeof V9ExitRouteFactV2Schema>;
 
-export const V9ControlCapabilitySchema = z.enum([
+const V9ControlCapabilitySchema = z.enum([
   "mint",
   "burn",
   "upgrade",
@@ -541,7 +535,7 @@ export const V9ControlCapabilitySchema = z.enum([
   "parameter-change",
 ]);
 
-export const V9DeploymentControlFactV2Schema = z
+const V9DeploymentControlFactV2Schema = z
   .object({
     controlKey: CanonicalTextSchema,
     deploymentKey: CanonicalTextSchema,
@@ -642,7 +636,7 @@ export const V9DeploymentControlFactV2Schema = z
   });
 export type V9DeploymentControlFactV2 = z.infer<typeof V9DeploymentControlFactV2Schema>;
 
-export const V9UpgradeControlReviewV2Schema = z
+const V9UpgradeControlReviewV2Schema = z
   .object({
     state: z.enum(["immutable", "not-applicable", "reviewed", "unknown"]),
     controlKey: CanonicalTextSchema.nullable(),
@@ -654,7 +648,7 @@ export const V9UpgradeControlReviewV2Schema = z
     }
   });
 
-export const V9MintMechanismReviewV2Schema = z
+const V9MintMechanismReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     controlKey: CanonicalTextSchema.nullable(),
@@ -677,7 +671,7 @@ export const V9MintMechanismReviewV2Schema = z
     }
   });
 
-export const V9OracleBranchKindV2Schema = z.enum([
+const V9OracleBranchKindV2Schema = z.enum([
   "feed",
   "collateral-parameter",
   "liquidation",
@@ -685,7 +679,7 @@ export const V9OracleBranchKindV2Schema = z.enum([
   "shutdown-bad-debt",
 ]);
 
-export const V9OracleBranchReviewV2Schema = z
+const V9OracleBranchReviewV2Schema = z
   .object({
     branch: V9OracleBranchKindV2Schema,
     status: V9FactStatusV2Schema,
@@ -695,7 +689,7 @@ export const V9OracleBranchReviewV2Schema = z
   })
   .strict();
 
-export const V9OracleControlReviewV2Schema = z
+const V9OracleControlReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     tier: z
@@ -727,7 +721,7 @@ export const V9OracleControlReviewV2Schema = z
     }
   });
 
-export const V9BridgeRouteControlReviewV2Schema = z
+const V9BridgeRouteControlReviewV2Schema = z
   .object({
     controlKey: CanonicalTextSchema,
     tier: z.enum([
@@ -743,7 +737,7 @@ export const V9BridgeRouteControlReviewV2Schema = z
   })
   .strict();
 
-export const V9BridgeControlReviewV2Schema = z
+const V9BridgeControlReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     routes: canonicalArrayBy(V9BridgeRouteControlReviewV2Schema, (route) => route.controlKey),
@@ -764,7 +758,7 @@ export const V9EconomicControlReviewV2Schema = z
   .strict();
 export type V9EconomicControlReviewV2 = z.infer<typeof V9EconomicControlReviewV2Schema>;
 
-export const V9TransferAccessReviewV2Schema = z
+const V9TransferAccessReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     posture: z.enum(["permissionless", "restrictable", "permissioned"]).nullable(),
@@ -783,7 +777,7 @@ export const V9TransferAccessReviewV2Schema = z
     }
   });
 
-export const V9FreezeAccessReviewV2Schema = z
+const V9FreezeAccessReviewV2Schema = z
   .object({
     reviewKey: CanonicalTextSchema,
     source: z.enum(["blacklist", "freeze", "pause", "upstream"]),
@@ -836,7 +830,7 @@ export const V9AccessReviewV2Schema = z
   });
 export type V9AccessReviewV2 = z.infer<typeof V9AccessReviewV2Schema>;
 
-export const V9PegFactV2Schema = z
+const V9PegFactV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     pegKey: CanonicalTextSchema,
@@ -864,7 +858,7 @@ export const V9PegFactV2Schema = z
   });
 export type V9PegFactV2 = z.infer<typeof V9PegFactV2Schema>;
 
-export const V9BridgeSupplyRouteV2Schema = z
+const V9BridgeSupplyRouteV2Schema = z
   .object({
     deploymentRouteKey: CanonicalTextSchema,
     supplyUsd: NonNegativeUsdSchema,
@@ -873,7 +867,7 @@ export const V9BridgeSupplyRouteV2Schema = z
   })
   .strict();
 
-export const V9SupplyFactV2Schema = z
+const V9SupplyFactV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     sourceGenerationId: CanonicalTextSchema,
@@ -911,7 +905,7 @@ export const V9SupplyFactV2Schema = z
   });
 export type V9SupplyFactV2 = z.infer<typeof V9SupplyFactV2Schema>;
 
-export const V9ImplementationFactV2Schema = z
+const V9ImplementationFactV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     launchedAtSec: UnixSecondsSchema.nullable(),
@@ -923,7 +917,7 @@ export const V9ImplementationFactV2Schema = z
     }
   });
 
-export const V9MechanismRiskReviewFactV2Schema = z
+const V9MechanismRiskReviewFactV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     review: V9MechanismRiskReviewSchema.nullable(),
@@ -946,7 +940,7 @@ export const V9MechanismRiskReviewFactV2Schema = z
   });
 export type V9MechanismRiskReviewFactV2 = z.infer<typeof V9MechanismRiskReviewFactV2Schema>;
 
-export const V9AssetFactsV2Schema = z
+const V9AssetFactsV2Schema = z
   .object({
     assetId: CanonicalTextSchema,
     archetype: V9ResolvedMechanismArchetypeSchema,
@@ -1003,7 +997,7 @@ export const V9AssetFactsV2Schema = z
   });
 export type V9AssetFactsV2 = z.infer<typeof V9AssetFactsV2Schema>;
 
-export const V9FactSourceIdentityV2Schema = z
+const V9FactSourceIdentityV2Schema = z
   .object({
     generationId: CanonicalTextSchema,
     payloadSha256: Sha256Schema,
@@ -1362,7 +1356,7 @@ export const CompiledV9FactSetV2Schema = z
   .superRefine(validateFactSetCore);
 export type CompiledV9FactSetV2 = z.infer<typeof CompiledV9FactSetV2Schema>;
 
-export const V9PublicFactGapV2Schema = z
+const V9PublicFactGapV2Schema = z
   .object({
     gapId: CanonicalTextSchema,
     reasonCode: V9ReasonCodeSchema,
@@ -1373,7 +1367,7 @@ export const V9PublicFactGapV2Schema = z
   })
   .strict();
 
-export const V9PublicAssetFactProjectionV2Schema = z
+const V9PublicAssetFactProjectionV2Schema = z
   .object({
     assetId: CanonicalTextSchema,
     archetype: V9ResolvedMechanismArchetypeSchema,

@@ -11,8 +11,12 @@ export const TARGET_FILES = [
   "shared/lib/format.ts",
   "shared/lib/redemption-backstop-scoring.ts",
   "shared/lib/safety-score-v9-compiler.ts",
+  "shared/lib/safety-score-v9/control.ts",
+  "shared/lib/safety-score-v9/coverage.ts",
   "shared/lib/redemption-backstop-configs/queue-redeem.ts",
   "shared/types/market.ts",
+  "shared/types/safety-score-v9.ts",
+  "shared/types/safety-score-v9-facts.ts",
   "shared/types/stablecoin-meta-schemas.ts",
   "worker/src/api/stablecoin-detail.ts",
   "worker/src/api/feedback.ts",
@@ -67,6 +71,9 @@ export const TARGET_FILES = [
   "worker/src/lib/scheduled-slot-fence.ts",
   "worker/src/lib/status-evaluation.ts",
   "worker/src/lib/status-reliability.ts",
+  "worker/src/lib/safety-score-v9-extension.ts",
+  "worker/src/lib/safety-score-v9-fact-set.ts",
+  "worker/src/lib/safety-score-v9-shadow.ts",
   "worker/src/lib/telegram-usage-analytics.ts",
 ];
 

@@ -23,6 +23,17 @@ const mockRecordOutcome = vi.fn();
 const mockInspectLegacyOverflowBacklog = vi.fn();
 const fixtureSqliteDatabases: DatabaseSync[] = [];
 
+function safetyScoreIdentity(publicationGenerationId: string) {
+  return {
+    model: "v8" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion: "7.10",
+    evaluationBuildDigest: "a".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+    publicationGenerationId,
+  };
+}
+
 vi.mock("../../lib/circuit-breaker", () =>
   mockCircuitBreaker({
     shouldAttemptFetchFn: mockShouldAttemptFetch,
@@ -129,12 +140,25 @@ const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE, TELEGRA
 function makeSafetySourceCache(
   snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
   publishedAt: number,
+  generation = getAlertSafetySourceGeneration(),
 ) {
+  const publicationGenerationId = `report-cards:7.10:${publishedAt}`;
+  const notRatedIds = Object.entries(snapshot).flatMap(([id, row]) => (row.score === null ? [id] : []));
   return {
     value: JSON.stringify({
-      generation: getAlertSafetySourceGeneration(),
+      generation,
+      safetyScoreIdentity: safetyScoreIdentity(publicationGenerationId),
+      publicationGenerationId,
       methodologyVersion: "7.10",
       publishedAt,
+      completeness: {
+        generationId: publicationGenerationId,
+        methodologyVersion: "7.10",
+        expectedCount: Object.keys(snapshot).length,
+        scoredCount: Object.keys(snapshot).length - notRatedIds.length,
+        notRatedCount: notRatedIds.length,
+        notRatedIds,
+      },
       snapshot,
     }),
     updatedAt: publishedAt,
@@ -148,6 +172,7 @@ function makeSafetySnapshotCache(
   return {
     value: JSON.stringify({
       generation,
+      safetyScoreIdentity: safetyScoreIdentity("report-cards:7.10:baseline"),
       snapshot,
     }),
     updatedAt: Math.floor(Date.now() / 1000) - 60,

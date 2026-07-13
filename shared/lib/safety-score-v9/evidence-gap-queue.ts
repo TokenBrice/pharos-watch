@@ -21,8 +21,8 @@ import { stableJsonStringifyV1 } from "../stable-json";
 import { parseCompiledV9FactSetV2 } from "./facts";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 
-export const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN = "safety-score-v9.evidence-gap-queue.v1";
-export const V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN = "safety-score-v9.evidence-gap-key.v1";
+const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN = "safety-score-v9.evidence-gap-queue.v1";
+const V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN = "safety-score-v9.evidence-gap-key.v1";
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -195,7 +195,7 @@ function countBy<T extends string>(values: readonly T[]): Array<{ key: T; count:
     .sort((left, right) => compareText(left.key, right.key));
 }
 
-export function computeV9EvidenceGapQueueDigest(core: V9EvidenceGapQueueCoreV1): string {
+function computeV9EvidenceGapQueueDigest(core: V9EvidenceGapQueueCoreV1): string {
   const parsed = V9EvidenceGapQueueCoreV1Schema.parse(core);
   return sha256Hex(stableJsonStringifyV1({ domain: V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN, queue: parsed }));
 }

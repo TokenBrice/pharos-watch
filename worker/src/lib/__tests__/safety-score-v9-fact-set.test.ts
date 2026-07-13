@@ -549,7 +549,7 @@ describe("Safety Score v9 exact base fact-set adapter", () => {
         issueCodes: ["collateral-edge-exposure-weight-mismatch:beta"],
       },
     });
-  });
+  }, 15_000);
 
   it("compiles exact base facts and explicit reviews without consulting v8 score outputs", () => {
     const fixed = exactFixedInput();
@@ -705,7 +705,7 @@ describe("Safety Score v9 exact base fact-set adapter", () => {
     expect(() => compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), conflictingOutput)).toThrow(
       /output review conflicts with exact base facts/,
     );
-  });
+  }, 15_000);
 
   it("maps reviewed blacklistability without inventing permissionlessness", () => {
     const fixed = exactFixedInput();

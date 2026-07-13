@@ -355,6 +355,16 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/lib/telegram.ts",
       "functions/lib/upstream-proxy.ts",
       "shared/lib/peg-score.ts",
+      "shared/lib/safety-score-v8-publication.ts",
+      "worker/src/api/admin-safety-score-v9.ts",
+      "worker/src/lib/safety-score-history-v2.ts",
+      "worker/src/lib/safety-score-v9-candidate.ts",
+      "worker/src/lib/safety-score-v9-extension.ts",
+      "worker/src/lib/safety-score-v9-fact-set.ts",
+      "worker/src/lib/safety-score-v9-movement-reviews.ts",
+      "worker/src/lib/safety-score-v9-shadow-runner.ts",
+      "worker/src/lib/safety-score-v9-shadow.ts",
+      "worker/src/lib/safety-score-v9-store.ts",
     ]));
     expect(CRITICAL_COVERAGE_WAIVERS).toEqual(expect.objectContaining({
       "worker/src/api/safety-score-history.ts": expect.objectContaining({ disposition: "deferred-ratchet" }),
@@ -385,6 +395,13 @@ describe("critical coverage changed-file detection", () => {
       "shared/lib/__tests__/telegram-adoption-analytics.test.ts",
       "worker/src/lib/__tests__/telegram-adoption-analytics.test.ts",
       "functions/__tests__/pharoswatchbot-adoption.test.ts",
+      "worker/src/api/__tests__/admin-safety-score-v9.test.ts",
+      "worker/src/lib/__tests__/safety-score-history-v2.test.ts",
+      "worker/src/lib/__tests__/safety-score-v9-candidate.test.ts",
+      "worker/src/lib/__tests__/safety-score-v9-fact-set.test.ts",
+      "worker/src/lib/__tests__/safety-score-v9-shadow-runner.test.ts",
+      "worker/src/lib/__tests__/safety-score-v9-shadow.test.ts",
+      "worker/src/lib/__tests__/safety-score-v9-store.test.ts",
     ]));
   });
 

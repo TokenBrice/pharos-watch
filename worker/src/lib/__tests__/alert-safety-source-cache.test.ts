@@ -16,18 +16,75 @@ const DIMENSION_KEYS: readonly DimensionKey[] = [
   "dependencyRisk",
 ];
 
+function sourceEnvelope(
+  snapshot: Record<string, Record<string, unknown>>,
+  methodologyVersion: string,
+  publishedAt: number,
+  generation = getAlertSafetySourceGeneration(methodologyVersion),
+) {
+  const publicationGenerationId = `report-cards:${methodologyVersion}:${publishedAt}`;
+  const notRatedIds = Object.entries(snapshot).flatMap(([id, row]) => (row.score === null ? [id] : []));
+  return {
+    generation,
+    safetyScoreIdentity: {
+      model: "v8" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion,
+      evaluationBuildDigest: "a".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+      publicationGenerationId,
+    },
+    publicationGenerationId,
+    methodologyVersion,
+    publishedAt,
+    completeness: {
+      generationId: publicationGenerationId,
+      methodologyVersion,
+      expectedCount: Object.keys(snapshot).length,
+      scoredCount: Object.keys(snapshot).length - notRatedIds.length,
+      notRatedCount: notRatedIds.length,
+      notRatedIds,
+    },
+    snapshot,
+  };
+}
+
+function buildSource(cards: ReportCard[], methodologyVersion: string, publishedAt: number) {
+  const publicationGenerationId = `report-cards:${methodologyVersion}:${publishedAt}`;
+  const liveCards = cards.filter((card) => !card.isDefunct);
+  const notRatedIds = liveCards.filter((card) => card.overallScore === null).map((card) => card.id);
+  return buildAlertSafetySourceEnvelope(
+    cards,
+    methodologyVersion,
+    publishedAt,
+    {
+      generationId: publicationGenerationId,
+      methodologyVersion,
+      expectedCount: liveCards.length,
+      scoredCount: liveCards.length - notRatedIds.length,
+      notRatedCount: notRatedIds.length,
+      notRatedIds,
+    },
+    sourceEnvelope({}, methodologyVersion, publishedAt).safetyScoreIdentity,
+  );
+}
+
 describe("alert safety source cache", () => {
   it("builds a generation-aware envelope with explain data", () => {
-    const envelope = buildAlertSafetySourceEnvelope([
-      reportCard({
-        id: "usdc-circle",
-        name: "USD Coin",
-        symbol: "USDC",
-        overallGrade: "A",
-        overallScore: 90,
-        baseScore: 90,
-      }),
-    ], "7.09", 1_700_000_000);
+    const envelope = buildSource(
+      [
+        reportCard({
+          id: "usdc-circle",
+          name: "USD Coin",
+          symbol: "USDC",
+          overallGrade: "A",
+          overallScore: 90,
+          baseScore: 90,
+        }),
+      ],
+      "7.09",
+      1_700_000_000,
+    );
 
     expect(envelope.generation).toBe(getAlertSafetySourceGeneration("7.09"));
     expect(envelope.snapshot["usdc-circle"]).toMatchObject({
@@ -62,14 +119,16 @@ describe("alert safety source cache", () => {
   it("marks wrong-generation and stale source snapshots explicitly", () => {
     const wrongGeneration = assessAlertSafetySourceCache(
       {
-        value: JSON.stringify({
-          generation: "legacy-generation",
-          methodologyVersion: "7.09",
-          publishedAt: 1_700_000_000,
-          snapshot: {
-            "usdc-circle": { grade: "A", score: 90, methodologyVersion: "7.09" },
-          },
-        }),
+        value: JSON.stringify(
+          sourceEnvelope(
+            {
+              "usdc-circle": { grade: "A", score: 90, methodologyVersion: "7.09" },
+            },
+            "7.09",
+            1_700_000_000,
+            "legacy-generation",
+          ),
+        ),
         updatedAt: 1_700_000_000,
       },
       {
@@ -82,14 +141,15 @@ describe("alert safety source cache", () => {
 
     const stale = assessAlertSafetySourceCache(
       {
-        value: JSON.stringify({
-          generation: getAlertSafetySourceGeneration("7.09"),
-          methodologyVersion: "7.09",
-          publishedAt: 1_700_000_000,
-          snapshot: {
-            "usdc-circle": { grade: "A", score: 90, methodologyVersion: "7.09" },
-          },
-        }),
+        value: JSON.stringify(
+          sourceEnvelope(
+            {
+              "usdc-circle": { grade: "A", score: 90, methodologyVersion: "7.09" },
+            },
+            "7.09",
+            1_700_000_000,
+          ),
+        ),
         updatedAt: 1_700_000_000,
       },
       {
@@ -148,30 +208,31 @@ describe("alert safety source cache", () => {
   it("sanitizes malformed explain data in source envelopes without corrupting core rows", () => {
     const assessed = assessAlertSafetySourceCache(
       {
-        value: JSON.stringify({
-          generation: getAlertSafetySourceGeneration("7.09"),
-          methodologyVersion: "7.09",
-          publishedAt: 1_700_000_000,
-          snapshot: {
-            malformed: {
-              grade: "B",
-              score: 72,
-              methodologyVersion: "7.09",
-              explain: { schemaVersion: 1, stages: "bad" },
+        value: JSON.stringify(
+          sourceEnvelope(
+            {
+              malformed: {
+                grade: "B",
+                score: 72,
+                methodologyVersion: "7.09",
+                explain: { schemaVersion: 1, stages: "bad" },
+              },
+              future: {
+                grade: "C+",
+                score: 61,
+                methodologyVersion: "7.09",
+                explain: { schemaVersion: 999, stages: {}, dimensions: {}, rawInputs: {} },
+              },
+              corrupt: {
+                grade: "A",
+                score: "90",
+                methodologyVersion: "7.09",
+              },
             },
-            future: {
-              grade: "C+",
-              score: 61,
-              methodologyVersion: "7.09",
-              explain: { schemaVersion: 999, stages: {}, dimensions: {}, rawInputs: {} },
-            },
-            corrupt: {
-              grade: "A",
-              score: "90",
-              methodologyVersion: "7.09",
-            },
-          },
-        }),
+            "7.09",
+            1_700_000_000,
+          ),
+        ),
         updatedAt: 1_700_000_000,
       },
       {
@@ -191,18 +252,19 @@ describe("alert safety source cache", () => {
   it("marks source envelopes corrupt when every core row is invalid", () => {
     const assessed = assessAlertSafetySourceCache(
       {
-        value: JSON.stringify({
-          generation: getAlertSafetySourceGeneration("7.09"),
-          methodologyVersion: "7.09",
-          publishedAt: 1_700_000_000,
-          snapshot: {
-            corrupt: {
-              grade: "A",
-              score: "90",
-              methodologyVersion: "7.09",
+        value: JSON.stringify(
+          sourceEnvelope(
+            {
+              corrupt: {
+                grade: "A",
+                score: "90",
+                methodologyVersion: "7.09",
+              },
             },
-          },
-        }),
+            "7.09",
+            1_700_000_000,
+          ),
+        ),
         updatedAt: 1_700_000_000,
       },
       {
@@ -220,22 +282,26 @@ describe("alert safety source cache", () => {
     // Dimension scores chosen so the weighted mean (60.2778) rounds to a
     // baseScore (60.3) that, after the peg multiplier, would round to a
     // different post-peg stage (55.2) than the engine's actual value (55.1).
-    const envelope = buildAlertSafetySourceEnvelope([
-      reportCard({
-        id: "divergent",
-        overallGrade: "D",
-        overallScore: 55,
-        baseScore: 60.3,
-        dimensions: {
-          pegStability: dimension("C", 80, "Peg detail"),
-          liquidity: dimension("D", 60, "Liquidity detail"),
-          resilience: dimension("D", 60, "Resilience detail"),
-          decentralization: dimension("D", 60, "Decentralization detail"),
-          dependencyRisk: dimension("D", 61, "Dependency detail"),
-        },
-        rawInputs: { ...reportCard().rawInputs, pegScore: 80, liquidityScore: 60 },
-      }),
-    ], "7.09", 1_700_000_000);
+    const envelope = buildSource(
+      [
+        reportCard({
+          id: "divergent",
+          overallGrade: "D",
+          overallScore: 55,
+          baseScore: 60.3,
+          dimensions: {
+            pegStability: dimension("C", 80, "Peg detail"),
+            liquidity: dimension("D", 60, "Liquidity detail"),
+            resilience: dimension("D", 60, "Resilience detail"),
+            decentralization: dimension("D", 60, "Decentralization detail"),
+            dependencyRisk: dimension("D", 61, "Dependency detail"),
+          },
+          rawInputs: { ...reportCard().rawInputs, pegScore: 80, liquidityScore: 60 },
+        }),
+      ],
+      "7.09",
+      1_700_000_000,
+    );
 
     const stages = envelope.snapshot["divergent"].explain?.stages;
     expect(stages?.baseScore).toBe(60.3);
@@ -243,8 +309,12 @@ describe("alert safety source cache", () => {
   });
 
   it("keeps explain data through the source-cache to alert-snapshot envelope path", () => {
-    const source = buildAlertSafetySourceEnvelope([reportCard()], "7.09", 1_700_000_000);
-    const alertSnapshot = buildAlertSafetySnapshotEnvelope(source.snapshot, source.generation);
+    const source = buildSource([reportCard()], "7.09", 1_700_000_000);
+    const alertSnapshot = buildAlertSafetySnapshotEnvelope(
+      source.snapshot,
+      source.generation,
+      source.safetyScoreIdentity,
+    );
     const parsed = parseAlertSafetySnapshotEnvelope({
       value: JSON.stringify(alertSnapshot),
       updatedAt: 1_700_000_000,
@@ -257,19 +327,21 @@ describe("alert safety source cache", () => {
 
   it("keeps the serialized source cache within the D1 row budget", () => {
     const longDetail = "x".repeat(1_000);
-    const cards = Array.from({ length: 401 }, (_, index) => reportCard({
-      id: `coin-${index}`,
-      name: `Coin ${index}`,
-      symbol: `C${index}`,
-      dimensions: {
-        pegStability: dimension("A+", 100, longDetail),
-        liquidity: dimension("A", 90, longDetail),
-        resilience: dimension("A", 90, longDetail),
-        decentralization: dimension("A", 90, longDetail),
-        dependencyRisk: dimension("A", 90, longDetail),
-      },
-    }));
-    const envelope = buildAlertSafetySourceEnvelope(cards, "7.09", 1_700_000_000);
+    const cards = Array.from({ length: 401 }, (_, index) =>
+      reportCard({
+        id: `coin-${index}`,
+        name: `Coin ${index}`,
+        symbol: `C${index}`,
+        dimensions: {
+          pegStability: dimension("A+", 100, longDetail),
+          liquidity: dimension("A", 90, longDetail),
+          resilience: dimension("A", 90, longDetail),
+          decentralization: dimension("A", 90, longDetail),
+          dependencyRisk: dimension("A", 90, longDetail),
+        },
+      }),
+    );
+    const envelope = buildSource(cards, "7.09", 1_700_000_000);
 
     expect(Buffer.byteLength(JSON.stringify(envelope), "utf8")).toBeLessThanOrEqual(1_500_000);
     expect(envelope.snapshot["coin-0"].explain?.dimensions.liquidity.detail?.length).toBeLessThanOrEqual(160);

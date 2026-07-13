@@ -13,9 +13,9 @@ import { describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   buildSafetyScoreV9DiffReport,
-  buildSafetyScoreV9ShadowAttempt,
-  buildSafetyScoreV9ShadowDay,
+  buildSafetyScoreV9ShadowDailySuccess,
   buildSafetyScoreV9ShadowEnvelope,
+  safetyScoreV9UtcDay,
   type SafetyScoreV8ComparableSnapshot,
   type SafetyScoreV9ReplayArtifactKind,
 } from "../../lib/safety-score-v9-shadow";
@@ -26,10 +26,7 @@ import {
   persistSafetyScoreV9ShadowState,
   type SafetyScoreV9StoredReplayArtifact,
 } from "../../lib/safety-score-v9-store";
-import {
-  handleAdminSafetyScoreV9,
-  handleAdminSafetyScoreV9MovementReview,
-} from "../admin-safety-score-v9";
+import { handleAdminSafetyScoreV9, handleAdminSafetyScoreV9MovementReview } from "../admin-safety-score-v9";
 
 const migrationPath = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -79,7 +76,6 @@ function candidate(): SafetyScoreV9Response {
     candidateId: "candidate-v9-admin-test",
     policyVersion: "candidate-v1",
     publicationGenerationId: "v9-shadow:admin-test",
-    publicationEpoch: 1,
     baseInputGenerationId,
     factSetDigest,
     resultDigest,
@@ -150,23 +146,16 @@ async function persistAvailableState(
     downstreamThresholds: [],
     supplyUsdById: {},
   });
-  const attempt = buildSafetyScoreV9ShadowAttempt({
-    attemptId: "scheduled:2023-11-14:admin-test",
-    trigger: "scheduled",
-    retryOfAttemptId: null,
-    scheduledForSec,
-    startedAtSec: scheduledForSec + 1,
-    completedAtSec: scheduledForSec + 23,
-    recordedAtSec: scheduledForSec + 24,
-    outcome: "succeeded",
+  const daily = buildSafetyScoreV9ShadowDailySuccess({
+    utcDay: safetyScoreV9UtcDay(scheduledForSec),
+    selectedAtSec: scheduledForSec + 23,
+    updatedAtSec: scheduledForSec + 24,
     envelope,
+    diff,
+    archiveSelectionReasons: ["first"],
+    artifactKeys: artifacts.map((artifact) => artifact.artifactKey),
   });
-  const day = buildSafetyScoreV9ShadowDay({
-    utcDay: attempt.utcDay,
-    expectedScheduledAttemptIds: [attempt.attemptId],
-    attempts: [attempt],
-  });
-  await persistSafetyScoreV9ShadowState(db, { artifacts, envelope, diff, attempt, day });
+  await persistSafetyScoreV9ShadowState(db, { artifacts, envelope, diff, daily });
   return { envelope, v8, diff, references };
 }
 
@@ -174,10 +163,7 @@ function request() {
   return new Request("https://ops-api.pharos.watch/api/admin-safety-score-v9");
 }
 
-function reviewRequest(
-  body: unknown,
-  options: { idempotencyKey?: string; adminHeader?: boolean } = {},
-) {
+function reviewRequest(body: unknown, options: { idempotencyKey?: string; adminHeader?: boolean } = {}) {
   const headers = new Headers({ "Content-Type": "application/json" });
   if (options.idempotencyKey !== undefined) headers.set("Idempotency-Key", options.idempotencyKey);
   if (options.adminHeader !== false) headers.set("X-Pharos-Admin", "1");
@@ -200,10 +186,20 @@ describe("admin Safety Score v9 candidate", () => {
     expect(body.status).toBe("available");
     if (body.status === "available") {
       expect(body.envelope.candidate.publicationGenerationId).toBe("v9-shadow:admin-test");
+      expect(body.envelope.releaseCoveragePolicyDigest).toMatch(/^[a-f0-9]{64}$/);
+      expect(body.envelope.consumerThresholdRegistryDigest).toMatch(/^[a-f0-9]{64}$/);
       expect(body.diff.v9Identity.publicationGenerationId).toBe("v9-shadow:admin-test");
       expect(body.movementReviews).toEqual([]);
       expect(body.history).toHaveLength(1);
-      expect(body.history[0]?.attempts[0]?.attemptId).toBe("scheduled:2023-11-14:admin-test");
+      expect(body.history[0]?.attemptCounts).toEqual({ successful: 1, failed: 0 });
+      expect(body.history[0]?.selectedRun?.identity.publicationGenerationId).toBe("v9-shadow:admin-test");
+      expect(body.history[0]?.selectedRun?.identity.releaseCoveragePolicyDigest).toBe(
+        body.envelope.releaseCoveragePolicyDigest,
+      );
+      expect(body.history[0]?.selectedRun?.identity.consumerThresholdRegistryDigest).toBe(
+        body.envelope.consumerThresholdRegistryDigest,
+      );
+      expect(body.history[0]?.selectedRun?.archiveSelectionReasons).toEqual(["first"]);
     }
     sqlite.close();
   });
@@ -335,9 +331,9 @@ describe("admin Safety Score v9 movement reviews", () => {
       ...parsed,
       status: "unchanged",
     });
-    expect(
-      sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_movement_reviews").get(),
-    ).toEqual({ count: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_movement_reviews").get()).toEqual({
+      count: 1,
+    });
 
     const dashboard = await handleAdminSafetyScoreV9({ db, request: request(), trustedAdmin: true });
     const dashboardBody = SafetyScoreV9AdminResponseSchema.parse(await dashboard.json());
@@ -353,10 +349,7 @@ describe("admin Safety Score v9 movement reviews", () => {
     const { body } = await reviewableState(db);
     const stale = await handleAdminSafetyScoreV9MovementReview({
       db,
-      request: reviewRequest(
-        { ...body, sourceDiffReportDigest: digest("9") },
-        { idempotencyKey: "review-stale-001" },
-      ),
+      request: reviewRequest({ ...body, sourceDiffReportDigest: digest("9") }, { idempotencyKey: "review-stale-001" }),
       trustedAdmin: true,
     });
     expect(stale.status).toBe(409);
@@ -394,7 +387,7 @@ describe("admin Safety Score v9 movement reviews", () => {
     expect(recorded.status).toBe(201);
     sqlite
       .prepare("UPDATE safety_score_v9_movement_reviews SET review_json = ? WHERE review_key = ?")
-      .run("{\"corrupted\":true}", body.reviewKey);
+      .run('{"corrupted":true}', body.reviewKey);
 
     const dashboard = await handleAdminSafetyScoreV9({ db, request: request(), trustedAdmin: true });
     expect(await dashboard.json()).toEqual({

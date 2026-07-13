@@ -1,5 +1,4 @@
 import {
-  V9_HOLDOUT_NO_GO_REASON_CODES,
   V9HistoricalHoldoutEvaluationInputSchema,
   V9HistoricalHoldoutValidationReportSchema,
   V9HoldoutOutcomeSetCommitmentPayloadSchema,
@@ -15,9 +14,9 @@ import {
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 
-export const V9_RELEASE_CANDIDATE_SEAL_DIGEST_DOMAIN = "safety-score-v9.release-candidate-seal.v1";
-export const V9_HOLDOUT_VALIDATION_REPORT_DIGEST_DOMAIN = "safety-score-v9.holdout-validation-report.v1";
-export const V9_HOLDOUT_OUTCOME_SET_DIGEST_DOMAIN = "safety-score-v9.holdout-outcome-set.v1";
+const V9_RELEASE_CANDIDATE_SEAL_DIGEST_DOMAIN = "safety-score-v9.release-candidate-seal.v1";
+const V9_HOLDOUT_VALIDATION_REPORT_DIGEST_DOMAIN = "safety-score-v9.holdout-validation-report.v1";
+const V9_HOLDOUT_OUTCOME_SET_DIGEST_DOMAIN = "safety-score-v9.holdout-outcome-set.v1";
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -28,7 +27,7 @@ function sealPayload(seal: V9ReleaseCandidateSeal): V9ReleaseCandidateSealPayloa
   return V9ReleaseCandidateSealPayloadSchema.parse(payload);
 }
 
-export function computeV9ReleaseCandidateSealDigest(payload: V9ReleaseCandidateSealPayload): string {
+function computeV9ReleaseCandidateSealDigest(payload: V9ReleaseCandidateSealPayload): string {
   const parsed = V9ReleaseCandidateSealPayloadSchema.parse(payload);
   return sha256Hex(
     stableJsonStringifyV1({ domain: V9_RELEASE_CANDIDATE_SEAL_DIGEST_DOMAIN, releaseCandidate: parsed }),
@@ -325,8 +324,4 @@ export function evaluateV9HistoricalHoldout(
     stableJsonStringifyV1({ domain: V9_HOLDOUT_VALIDATION_REPORT_DIGEST_DOMAIN, report: reportWithoutDigest }),
   );
   return V9HistoricalHoldoutValidationReportSchema.parse({ ...reportWithoutDigest, reportDigest });
-}
-
-export function isV9HoldoutNoGoReason(value: string): value is V9HoldoutNoGoReasonCode {
-  return (V9_HOLDOUT_NO_GO_REASON_CODES as readonly string[]).includes(value);
 }

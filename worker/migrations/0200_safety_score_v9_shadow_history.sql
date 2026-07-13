@@ -1,6 +1,6 @@
 -- rollout-safety: backward-compatible
--- Add immutable Safety Score v9 replay artifacts, complete shadow-attempt
--- accounting, canonical daily summaries, and a fenced model-selection row.
+-- Add selected Safety Score v9 replay artifacts and one compact shadow summary
+-- per UTC day. Attempt-level diagnostics remain in the existing cron ledger.
 
 CREATE TABLE IF NOT EXISTS safety_score_v9_artifacts (
   artifact_key TEXT PRIMARY KEY,
@@ -22,57 +22,105 @@ CREATE TABLE IF NOT EXISTS safety_score_v9_artifacts (
 CREATE INDEX IF NOT EXISTS idx_safety_score_v9_artifacts_created
   ON safety_score_v9_artifacts(created_at_sec DESC);
 
-CREATE TABLE IF NOT EXISTS safety_score_v9_shadow_attempts (
-  attempt_id TEXT PRIMARY KEY,
-  utc_day TEXT NOT NULL,
-  scheduled_for_sec INTEGER NOT NULL CHECK (scheduled_for_sec >= 0),
-  started_at_sec INTEGER,
-  completed_at_sec INTEGER,
-  recorded_at_sec INTEGER NOT NULL CHECK (recorded_at_sec >= 0),
-  outcome TEXT NOT NULL CHECK (outcome IN ('missed', 'aborted', 'failed', 'succeeded')),
-  qualifying INTEGER NOT NULL DEFAULT 0 CHECK (qualifying IN (0, 1)),
+CREATE TABLE IF NOT EXISTS safety_score_v9_shadow_daily (
+  utc_day TEXT PRIMARY KEY,
+  updated_at_sec INTEGER NOT NULL CHECK (updated_at_sec >= 0),
+  successful_attempt_count INTEGER NOT NULL CHECK (successful_attempt_count >= 0),
+  failed_attempt_count INTEGER NOT NULL CHECK (failed_attempt_count >= 0),
+  selected_run_at_sec INTEGER CHECK (selected_run_at_sec >= 0),
   publication_generation_id TEXT,
   base_input_generation_id TEXT,
-  fact_set_digest TEXT,
-  policy_digest TEXT,
-  evaluation_build_digest TEXT,
-  producer_capability_digest TEXT,
-  envelope_digest TEXT,
-  attempt_json TEXT NOT NULL,
-  CHECK (started_at_sec IS NULL OR started_at_sec >= 0),
-  CHECK (completed_at_sec IS NULL OR completed_at_sec >= 0),
-  CHECK (completed_at_sec IS NULL OR started_at_sec IS NULL OR completed_at_sec >= started_at_sec)
-);
-
-CREATE INDEX IF NOT EXISTS idx_safety_score_v9_shadow_attempts_day
-  ON safety_score_v9_shadow_attempts(utc_day, scheduled_for_sec, attempt_id);
-
-CREATE INDEX IF NOT EXISTS idx_safety_score_v9_shadow_attempts_identity
-  ON safety_score_v9_shadow_attempts(policy_digest, evaluation_build_digest, producer_capability_digest, utc_day);
-
-CREATE TABLE IF NOT EXISTS safety_score_v9_shadow_days (
-  utc_day TEXT PRIMARY KEY,
-  canonical_attempt_id TEXT,
-  qualifying INTEGER NOT NULL DEFAULT 0 CHECK (qualifying IN (0, 1)),
-  expected_attempt_count INTEGER NOT NULL CHECK (expected_attempt_count >= 0),
-  recorded_attempt_count INTEGER NOT NULL CHECK (recorded_attempt_count >= 0),
-  policy_digest TEXT,
-  evaluation_build_digest TEXT,
-  producer_capability_digest TEXT,
-  day_json TEXT NOT NULL,
-  updated_at_sec INTEGER NOT NULL CHECK (updated_at_sec >= 0),
-  FOREIGN KEY (canonical_attempt_id) REFERENCES safety_score_v9_shadow_attempts(attempt_id)
-);
-
-CREATE TABLE IF NOT EXISTS safety_score_publication_state (
-  singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),
-  transition_epoch INTEGER NOT NULL CHECK (transition_epoch >= 0),
-  state TEXT NOT NULL CHECK (
-    state IN ('v8-active-v9-shadow', 'v9-active-v8-warm', 'v8-restored-v9-retained')
+  fact_set_digest TEXT CHECK (fact_set_digest IS NULL OR length(fact_set_digest) = 64),
+  policy_digest TEXT CHECK (policy_digest IS NULL OR length(policy_digest) = 64),
+  evaluation_build_digest TEXT CHECK (
+    evaluation_build_digest IS NULL OR length(evaluation_build_digest) = 64
   ),
-  active_model TEXT NOT NULL CHECK (active_model IN ('v8', 'v9')),
-  active_generation_id TEXT NOT NULL,
-  manifest_json TEXT NOT NULL,
-  manifest_sha256 TEXT NOT NULL CHECK (length(manifest_sha256) = 64),
-  updated_at_sec INTEGER NOT NULL CHECK (updated_at_sec >= 0)
+  producer_capability_digest TEXT CHECK (
+    producer_capability_digest IS NULL OR length(producer_capability_digest) = 64
+  ),
+  release_coverage_policy_digest TEXT CHECK (
+    release_coverage_policy_digest IS NULL OR length(release_coverage_policy_digest) = 64
+  ),
+  consumer_threshold_registry_digest TEXT CHECK (
+    consumer_threshold_registry_digest IS NULL OR length(consumer_threshold_registry_digest) = 64
+  ),
+  result_digest TEXT CHECK (result_digest IS NULL OR length(result_digest) = 64),
+  diff_report_digest TEXT CHECK (diff_report_digest IS NULL OR length(diff_report_digest) = 64),
+  active_asset_count INTEGER CHECK (active_asset_count IS NULL OR active_asset_count >= 0),
+  rateable_count INTEGER CHECK (rateable_count IS NULL OR rateable_count >= 0),
+  nr_count INTEGER CHECK (nr_count IS NULL OR nr_count >= 0),
+  present_active_count INTEGER CHECK (present_active_count IS NULL OR present_active_count >= 0),
+  missing_active_count INTEGER CHECK (missing_active_count IS NULL OR missing_active_count >= 0),
+  unexpected_active_count INTEGER CHECK (unexpected_active_count IS NULL OR unexpected_active_count >= 0),
+  duplicate_active_count INTEGER CHECK (duplicate_active_count IS NULL OR duplicate_active_count >= 0),
+  grade_nr_transition_count INTEGER CHECK (
+    grade_nr_transition_count IS NULL OR grade_nr_transition_count >= 0
+  ),
+  large_score_movement_count INTEGER CHECK (
+    large_score_movement_count IS NULL OR large_score_movement_count >= 0
+  ),
+  top_cutoff_movement_count INTEGER CHECK (
+    top_cutoff_movement_count IS NULL OR top_cutoff_movement_count >= 0
+  ),
+  binding_cap_change_count INTEGER CHECK (
+    binding_cap_change_count IS NULL OR binding_cap_change_count >= 0
+  ),
+  downstream_crossing_count INTEGER CHECK (
+    downstream_crossing_count IS NULL OR downstream_crossing_count >= 0
+  ),
+  unresolved_review_count INTEGER CHECK (
+    unresolved_review_count IS NULL OR unresolved_review_count >= 0
+  ),
+  qualifying INTEGER NOT NULL DEFAULT 0 CHECK (qualifying IN (0, 1)),
+  blockers_json TEXT NOT NULL DEFAULT '[]',
+  archive_selection_reasons_json TEXT NOT NULL DEFAULT '[]',
+  latest_error_code TEXT CHECK (latest_error_code IS NULL OR length(latest_error_code) <= 160),
+  latest_error_message TEXT CHECK (latest_error_message IS NULL OR length(latest_error_message) <= 500),
+  daily_json TEXT NOT NULL,
+  CHECK (successful_attempt_count + failed_attempt_count > 0),
+  CHECK (
+    (successful_attempt_count = 0 AND selected_run_at_sec IS NULL) OR
+    (successful_attempt_count > 0 AND selected_run_at_sec IS NOT NULL)
+  ),
+  CHECK (
+    selected_run_at_sec IS NULL OR (
+      publication_generation_id IS NOT NULL AND
+      base_input_generation_id IS NOT NULL AND
+      fact_set_digest IS NOT NULL AND
+      policy_digest IS NOT NULL AND
+      evaluation_build_digest IS NOT NULL AND
+      producer_capability_digest IS NOT NULL AND
+      release_coverage_policy_digest IS NOT NULL AND
+      consumer_threshold_registry_digest IS NOT NULL AND
+      result_digest IS NOT NULL AND
+      diff_report_digest IS NOT NULL AND
+      active_asset_count IS NOT NULL AND
+      rateable_count IS NOT NULL AND
+      nr_count IS NOT NULL AND
+      present_active_count IS NOT NULL AND
+      missing_active_count IS NOT NULL AND
+      unexpected_active_count IS NOT NULL AND
+      duplicate_active_count IS NOT NULL AND
+      grade_nr_transition_count IS NOT NULL AND
+      large_score_movement_count IS NOT NULL AND
+      top_cutoff_movement_count IS NOT NULL AND
+      binding_cap_change_count IS NOT NULL AND
+      downstream_crossing_count IS NOT NULL AND
+      unresolved_review_count IS NOT NULL
+    )
+  ),
+  CHECK (
+    (latest_error_code IS NULL AND latest_error_message IS NULL) OR
+    (latest_error_code IS NOT NULL AND latest_error_message IS NOT NULL)
+  )
 );
+
+CREATE INDEX IF NOT EXISTS idx_safety_score_v9_shadow_daily_identity
+  ON safety_score_v9_shadow_daily(
+    policy_digest,
+    evaluation_build_digest,
+    producer_capability_digest,
+    release_coverage_policy_digest,
+    consumer_threshold_registry_digest,
+    utc_day
+  );

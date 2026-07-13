@@ -1,14 +1,16 @@
 import { ReportCardsResponseSchema, type ReportCardGrade, type ReportCardsResponse } from "@shared/types/report-cards";
 import { throwIfAborted } from "./abort";
-import { getCache } from "./db-cache";
+import { getCaches } from "./db-cache";
 import {
-  validateSafetyScoreModelCacheValue,
-  type SafetyScoreModelIdentity,
-  type SafetyScoreModelFamilyPointer,
-} from "./safety-score-model-publication";
-import { loadSafetyScorePublicationManifest } from "./safety-score-model-publication-store";
-
-export const SAFETY_SCORE_HISTORY_V2_TABLE = "safety_score_history_v2";
+  REPORT_CARDS_SNAPSHOT_CACHE_KEY,
+  parsePublishedReportCardsSnapshotCacheValue,
+} from "./report-cards-snapshot-cache";
+import {
+  REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
+  parseReportCardsFixedInputCacheArtifact,
+} from "./report-cards-fixed-input";
+import { safetyScoreV8PublicationIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
+import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
 
 export type SafetyScoreHistoryV2TransitionKind =
   | "initial-baseline"
@@ -17,16 +19,7 @@ export type SafetyScoreHistoryV2TransitionKind =
   | "rollback-baseline"
   | "restoration-baseline";
 
-export interface SafetyScoreHistoryV8Identity {
-  model: "v8";
-  methodologyVersion: string;
-  policyId: null;
-  policyDigest: null;
-  evaluationBuildDigest: string;
-  baseInputGenerationId: string;
-  modelPublicationGenerationId: string;
-  publicationEpoch: number;
-}
+export type SafetyScoreHistoryV8Identity = SafetyScoreV8PublicationIdentity;
 
 export interface ActiveV8SafetyScoreHistorySource {
   snapshot: ReportCardsResponse;
@@ -43,104 +36,48 @@ export interface SafetyScoreHistoryCompatibilityRow {
   methodology_version: string;
 }
 
-export class SafetyScoreHistoryCutoverNotImplementedError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "SafetyScoreHistoryCutoverNotImplementedError";
-  }
-}
-
-type SafetyScoreV8ModelIdentity = Extract<SafetyScoreModelIdentity, { model: "v8" }>;
-type SafetyScoreV8FamilyPointer = Omit<SafetyScoreModelFamilyPointer, "model" | "identity"> & {
-  model: "v8";
-  identity: SafetyScoreV8ModelIdentity;
-};
-
-function unwrapV8FullPayload(payload: unknown): unknown {
-  if (
-    payload !== null &&
-    typeof payload === "object" &&
-    "payload" in payload &&
-    "generation" in payload &&
-    "methodologyVersion" in payload
-  ) {
-    return (payload as { payload: unknown }).payload;
-  }
-  return payload;
-}
-
-function requireActiveV8Family(
-  activeModel: "v8" | "v9",
-  activeGenerationId: string,
-  family: SafetyScoreModelFamilyPointer | null,
-): SafetyScoreV8FamilyPointer {
-  if (activeModel !== "v8") {
-    throw new SafetyScoreHistoryCutoverNotImplementedError(
-      "Safety Score V9 history cutover is not implemented; activation requires a gated V9 baseline writer",
-    );
-  }
-  if (family === null || family.model !== "v8" || family.identity.model !== "v8") {
-    throw new Error("Active Safety Score publication manifest has no valid V8 family");
-  }
-  if (family.generationId !== activeGenerationId) {
-    throw new Error("Active Safety Score V8 family does not match the manifest generation");
-  }
-  return family as SafetyScoreV8FamilyPointer;
-}
-
 /**
- * Loads the immutable V8 full artifact selected by the publication manifest.
- * V9 is deliberately rejected until the cutover baseline and its authorization
- * gate are implemented.
+ * Loads the canonical V8 snapshot only when its identity exactly matches the
+ * canonical exact fixed-input artifact written in the same publication batch.
  */
 export async function loadActiveV8SafetyScoreHistorySource(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<ActiveV8SafetyScoreHistorySource> {
   throwIfAborted(signal);
-  const manifest = await loadSafetyScorePublicationManifest(db, signal);
-  if (manifest === null) {
-    throw new Error("Safety Score publication state is not initialized");
-  }
-  const family = requireActiveV8Family(
-    manifest.selection.activeModel,
-    manifest.selection.activeGenerationId,
-    manifest.families.v8,
-  );
-  const cached = await getCache(db, family.artifacts.full.cacheKey);
+  const caches = await getCaches(db, [REPORT_CARDS_SNAPSHOT_CACHE_KEY, REPORT_CARDS_FIXED_INPUT_CACHE_KEY]);
   throwIfAborted(signal);
-  if (cached === null) {
-    throw new Error(`Active Safety Score V8 full artifact is missing: ${family.artifacts.full.cacheKey}`);
+  const parsedSnapshot = parsePublishedReportCardsSnapshotCacheValue(
+    caches.get(REPORT_CARDS_SNAPSHOT_CACHE_KEY) ?? null,
+  );
+  if (parsedSnapshot.kind !== "ok") {
+    throw new Error(`Canonical Safety Score V8 snapshot is unavailable: ${parsedSnapshot.reason}`);
   }
-  const validated = validateSafetyScoreModelCacheValue(cached.value, family);
-  if (!validated.ok || validated.envelope.artifactKind !== "full") {
-    throw new Error(
-      `Active Safety Score V8 full artifact is invalid: ${
-        validated.ok ? "artifact kind mismatch" : `${validated.reason}: ${validated.detail}`
-      }`,
-    );
+  const fixedInputCached = caches.get(REPORT_CARDS_FIXED_INPUT_CACHE_KEY);
+  if (!fixedInputCached) {
+    throw new Error("Canonical Safety Score V8 exact fixed-input artifact is missing");
   }
-  const parsedSnapshot = ReportCardsResponseSchema.safeParse(unwrapV8FullPayload(validated.payload));
-  if (!parsedSnapshot.success) {
-    throw new Error(`Active Safety Score V8 snapshot is invalid: ${parsedSnapshot.error.message}`);
+  const fixedInputArtifact = await parseReportCardsFixedInputCacheArtifact(fixedInputCached.value);
+  throwIfAborted(signal);
+  const identity = parsedSnapshot.payload.safetyScoreIdentity;
+  if (!identity || !fixedInputArtifact.safetyScoreIdentity) {
+    throw new Error("Canonical Safety Score V8 artifacts have no publication identity");
   }
-  if (parsedSnapshot.data.publication?.generationId !== family.generationId) {
-    throw new Error("Active Safety Score V8 snapshot generation does not match its family");
+  if (!safetyScoreV8PublicationIdentitiesMatch(identity, fixedInputArtifact.safetyScoreIdentity)) {
+    throw new Error("Canonical Safety Score V8 snapshot and exact fixed-input identities disagree");
+  }
+  if (
+    fixedInputArtifact.input.baseInputGenerationId !== identity.baseInputGenerationId ||
+    fixedInputArtifact.input.sourceGeneration !== identity.publicationGenerationId ||
+    fixedInputArtifact.input.methodologyVersion !== identity.methodologyVersion
+  ) {
+    throw new Error("Canonical Safety Score V8 exact fixed input does not match the active identity");
   }
 
   return {
-    snapshot: parsedSnapshot.data,
-    identity: {
-      model: "v8",
-      methodologyVersion: family.identity.methodologyVersion,
-      policyId: null,
-      policyDigest: null,
-      evaluationBuildDigest: family.identity.evaluationBuildDigest,
-      baseInputGenerationId: family.baseInputGenerationId,
-      modelPublicationGenerationId: family.generationId,
-      publicationEpoch: family.publicationEpoch,
-    },
-    publishedAtSec: family.publishedAtSec,
+    snapshot: ReportCardsResponseSchema.parse(parsedSnapshot.payload),
+    identity,
+    publishedAtSec: parsedSnapshot.payload.updatedAt,
   };
 }
 
@@ -190,21 +127,20 @@ export function prepareV8OrganicSafetyScoreHistoryWrites(
       `INSERT INTO safety_score_history_v2
        (history_id, stablecoin_id, recorded_at, model, methodology_version,
         policy_id, policy_digest, evaluation_build_digest, base_input_generation_id,
-        model_publication_generation_id, publication_epoch, transition_kind,
+        model_publication_generation_id, transition_kind,
         grade, score, prev_grade, prev_score, legacy_recorded_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(history_id) DO UPDATE SET
          created_at = CASE
            WHEN stablecoin_id = excluded.stablecoin_id
             AND recorded_at = excluded.recorded_at
             AND model = excluded.model
             AND methodology_version = excluded.methodology_version
-            AND policy_id IS excluded.policy_id
-            AND policy_digest IS excluded.policy_digest
+            AND policy_id IS NULL
+            AND policy_digest IS NULL
             AND evaluation_build_digest = excluded.evaluation_build_digest
             AND base_input_generation_id = excluded.base_input_generation_id
             AND model_publication_generation_id = excluded.model_publication_generation_id
-            AND publication_epoch = excluded.publication_epoch
             AND transition_kind = excluded.transition_kind
             AND grade = excluded.grade
             AND score IS excluded.score
@@ -221,12 +157,11 @@ export function prepareV8OrganicSafetyScoreHistoryWrites(
       input.recordedAt,
       input.identity.model,
       input.identity.methodologyVersion,
-      input.identity.policyId,
-      input.identity.policyDigest,
+      null,
+      null,
       input.identity.evaluationBuildDigest,
       input.identity.baseInputGenerationId,
-      input.identity.modelPublicationGenerationId,
-      input.identity.publicationEpoch,
+      input.identity.publicationGenerationId,
       input.transitionKind,
       input.grade,
       input.score,

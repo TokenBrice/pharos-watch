@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { loadPublicationHealth } from "../publication-contract";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 const NOW = 1_775_890_000;
+const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
 
 function generationRow(overrides: Record<string, unknown>): Record<string, unknown> {
   return {
@@ -401,6 +403,11 @@ describe("loadPublicationHealth", () => {
     const reportCardsAt = NOW - 180;
     const reportCardIds = [...ACTIVE_IDS].sort();
     const reportCardGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${reportCardsAt}`;
+    const safetyScoreIdentity = buildSafetyScoreV8PublicationIdentity({
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      baseInputGenerationId: BASE_INPUT_GENERATION_ID,
+      publicationGenerationId: reportCardGenerationId,
+    });
     const dewsRows = [
       { stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: "{}", computed_at: dewsAt },
       { stablecoin_id: "usdt-tether", score: 20, band: "WATCH", signals_json: "{}", computed_at: dewsAt },
@@ -440,6 +447,7 @@ describe("loadPublicationHealth", () => {
             key: "report_card_cache",
             value: JSON.stringify({
               scores: Object.fromEntries(reportCardIds.map((id) => [id, { score: 92, grade: "A" }])),
+              safetyScoreIdentity,
               publicationGenerationId: reportCardGenerationId,
               completeness: {
                 generationId: reportCardGenerationId,

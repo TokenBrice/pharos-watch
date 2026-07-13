@@ -9,7 +9,10 @@ import {
   computeV9HoldoutOutcomeSetDigest,
   createV9ReleaseCandidateSeal,
 } from "../../shared/lib/safety-score-v9/validation";
-import { V9ReleaseCoverageReportV1Schema } from "../../shared/types/safety-score-v9-coverage";
+import {
+  V9ReleaseCoverageReportV1Schema,
+  type V9CoverageEvaluationProjectionPayloadV1,
+} from "../../shared/types/safety-score-v9-coverage";
 import { V9EvidenceGapQueueV1Schema } from "../../shared/types/safety-score-v9-evidence-queue";
 import type { V9FactSetCoreV2 } from "../../shared/types/safety-score-v9-facts";
 import {
@@ -216,7 +219,7 @@ function factSetCore(message = "Launch date evidence has not been established.")
 function coverageArtifacts() {
   const policy = loadV9MethodologyPolicy(policyAsset);
   const factSet = compileV9FactSetV2(factSetCore());
-  const evaluationPayload = {
+  const evaluationPayload: V9CoverageEvaluationProjectionPayloadV1 = {
     schemaVersion: 1 as const,
     factSetDigest: factSet.v9FactSetDigest,
     baseInputGenerationId: factSet.baseInputGenerationId,

@@ -22,7 +22,7 @@ function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => string) 
 
 const CanonicalStringArraySchema = canonicalArrayBy(CanonicalTextSchema, (value) => value);
 
-export const V9FactApplicabilitySchema = z.discriminatedUnion("state", [
+const V9FactApplicabilitySchema = z.discriminatedUnion("state", [
   z
     .object({
       state: z.literal("required"),
@@ -87,7 +87,7 @@ export const V9FactStatusV2Schema = z
   });
 export type V9FactStatusV2 = z.infer<typeof V9FactStatusV2Schema>;
 
-export const V9FailureDomainKindSchema = z.enum([
+const V9FailureDomainKindSchema = z.enum([
   "reserve-issuer",
   "reserve-custodian",
   "mint-control",

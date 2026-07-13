@@ -1,6 +1,5 @@
 import {
   CompiledV9FactSetV2Schema,
-  V9AssetFactsV2Schema,
   V9FactSetCoreV2Schema,
   V9PublicFactSetProjectionV2Schema,
   type CompiledV9FactSetV2,
@@ -13,7 +12,7 @@ import type { DependencyType } from "../../types/dependency-types";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 
-export const V9_FACT_SET_DIGEST_DOMAIN = "safety-score-v9.normalized-facts.v2";
+const V9_FACT_SET_DIGEST_DOMAIN = "safety-score-v9.normalized-facts.v2";
 
 export function canonicalV9DependencyEdgeKey(dependencyType: DependencyType, upstreamAssetId: string): string {
   return `${dependencyType}:${upstreamAssetId}`;
@@ -23,15 +22,7 @@ export function canonicalV9RouteKey(lane: "dex" | "redemption", sourceGeneration
   return `${lane}:${sourceGenerationId}:${routeId}`;
 }
 
-export function normalizeV9AssetFactsV2(input: unknown): V9AssetFactsV2 {
-  return V9AssetFactsV2Schema.parse(input);
-}
-
-export function normalizeV9FactSetCoreV2(input: unknown): V9FactSetCoreV2 {
-  return V9FactSetCoreV2Schema.parse(input);
-}
-
-export function projectV9FactSetDigestPayload(input: V9FactSetCoreV2 | CompiledV9FactSetV2) {
+function projectV9FactSetDigestPayload(input: V9FactSetCoreV2 | CompiledV9FactSetV2) {
   const normalized =
     "v9FactSetDigest" in input ? CompiledV9FactSetV2Schema.parse(input) : V9FactSetCoreV2Schema.parse(input);
   return {
@@ -53,7 +44,7 @@ export function computeV9FactSetDigest(input: V9FactSetCoreV2 | CompiledV9FactSe
   );
 }
 
-export function assertV9FactSetDigest(factSet: CompiledV9FactSetV2): void {
+function assertV9FactSetDigest(factSet: CompiledV9FactSetV2): void {
   const expected = computeV9FactSetDigest(factSet);
   if (factSet.v9FactSetDigest !== expected) {
     throw new Error(`Safety Score v9 fact-set digest ${factSet.v9FactSetDigest} does not match ${expected}`);

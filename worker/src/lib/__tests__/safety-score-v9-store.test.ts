@@ -7,8 +7,8 @@ import { describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   buildSafetyScoreV9DiffReport,
-  buildSafetyScoreV9ShadowAttempt,
-  buildSafetyScoreV9ShadowDay,
+  buildSafetyScoreV9ShadowDailyFailure,
+  buildSafetyScoreV9ShadowDailySuccess,
   buildSafetyScoreV9ShadowEnvelope,
   type SafetyScoreV8ComparableSnapshot,
   type SafetyScoreV9ReplayArtifactKind,
@@ -23,7 +23,6 @@ import {
   loadSafetyScoreV9ShadowHistory,
   parseSafetyScoreV9ReplayArtifact,
   persistSafetyScoreV9ReplayArtifact,
-  persistSafetyScoreV9ShadowAttempt,
   persistSafetyScoreV9ShadowState,
   type SafetyScoreV9StoredReplayArtifact,
 } from "../safety-score-v9-store";
@@ -67,7 +66,6 @@ function candidate(): SafetyScoreV9Response {
     candidateId: "candidate-v9-store-test",
     policyVersion: "candidate-v9-store-test",
     publicationGenerationId: "v9-shadow:test-generation",
-    publicationEpoch: 1,
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     factSetDigest: FACT_SET_DIGEST,
     resultDigest: RESULT_DIGEST,
@@ -102,8 +100,8 @@ async function buildArtifactSet(): Promise<SafetyScoreV9StoredReplayArtifact[]> 
   );
 }
 
-async function successfulState() {
-  const artifacts = await buildArtifactSet();
+async function successfulState(archived = false) {
+  const artifacts = archived ? await buildArtifactSet() : [];
   const references = await Promise.all(
     artifacts.map(async (artifact) => (await parseSafetyScoreV9ReplayArtifact(artifact)).reference),
   );
@@ -132,23 +130,16 @@ async function successfulState() {
     downstreamThresholds: [],
     supplyUsdById: {},
   });
-  const attempt = buildSafetyScoreV9ShadowAttempt({
-    attemptId: "scheduled:2023-11-14:test",
-    trigger: "scheduled",
-    retryOfAttemptId: null,
-    scheduledForSec: SCHEDULED_FOR_SEC,
-    startedAtSec: SCHEDULED_FOR_SEC + 1,
-    completedAtSec: SCHEDULED_FOR_SEC + 23,
-    recordedAtSec: SCHEDULED_FOR_SEC + 24,
-    outcome: "succeeded",
+  const daily = buildSafetyScoreV9ShadowDailySuccess({
+    utcDay: "2023-11-14",
+    selectedAtSec: SCHEDULED_FOR_SEC + 23,
+    updatedAtSec: SCHEDULED_FOR_SEC + 24,
     envelope,
+    diff,
+    archiveSelectionReasons: archived ? ["first"] : [],
+    artifactKeys: artifacts.map((artifact) => artifact.artifactKey),
   });
-  const day = buildSafetyScoreV9ShadowDay({
-    utcDay: attempt.utcDay,
-    expectedScheduledAttemptIds: [attempt.attemptId],
-    attempts: [attempt],
-  });
-  return { artifacts, envelope, diff, attempt, day };
+  return { artifacts, envelope, diff, daily };
 }
 
 describe("Safety Score v9 replay artifacts", () => {
@@ -243,43 +234,88 @@ describe("Safety Score v9 replay artifacts", () => {
 });
 
 describe("Safety Score v9 shadow state persistence", () => {
-  it("persists attempts, canonical days, artifacts, and atomic latest cache values", async () => {
+  it("persists one compact daily row and atomic latest cache values without routine artifacts", async () => {
     const { sqlite, db } = createTestDatabase();
     const state = await successfulState();
 
     await persistSafetyScoreV9ShadowState(db, state);
 
-    expect(sqlite.prepare("SELECT outcome, qualifying FROM safety_score_v9_shadow_attempts").get()).toEqual({
-      outcome: "succeeded",
-      qualifying: 1,
-    });
     expect(
       sqlite
         .prepare(
-          "SELECT canonical_attempt_id, qualifying, expected_attempt_count, recorded_attempt_count FROM safety_score_v9_shadow_days",
+          `SELECT successful_attempt_count, failed_attempt_count, qualifying, rateable_count, nr_count,
+                  release_coverage_policy_digest, consumer_threshold_registry_digest
+           FROM safety_score_v9_shadow_daily`,
         )
         .get(),
     ).toEqual({
-      canonical_attempt_id: state.attempt.attemptId,
+      successful_attempt_count: 1,
+      failed_attempt_count: 0,
       qualifying: 1,
-      expected_attempt_count: 1,
-      recorded_attempt_count: 1,
+      rateable_count: 0,
+      nr_count: 0,
+      release_coverage_policy_digest: state.envelope.releaseCoveragePolicyDigest,
+      consumer_threshold_registry_digest: state.envelope.consumerThresholdRegistryDigest,
     });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_artifacts").get()).toEqual({ count: 5 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_artifacts").get()).toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 2 });
     await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(state.envelope);
     await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(state.diff);
-    await expect(loadSafetyScoreV9ShadowHistory(db)).resolves.toEqual([state.day]);
+    await expect(loadSafetyScoreV9ShadowHistory(db)).resolves.toEqual([state.daily]);
+  });
 
-    const conflictingAttempt = { ...state.attempt, recordedAtSec: state.attempt.recordedAtSec + 1 };
-    await expect(persistSafetyScoreV9ShadowAttempt(db, conflictingAttempt)).rejects.toBeInstanceOf(
-      SafetyScoreV9StoreConflictError,
+  it("fails closed when an indexed operational digest diverges from canonical daily JSON", async () => {
+    const { sqlite, db } = createTestDatabase();
+    const state = await successfulState();
+    await persistSafetyScoreV9ShadowState(db, state);
+
+    sqlite
+      .prepare("UPDATE safety_score_v9_shadow_daily SET release_coverage_policy_digest = ? WHERE utc_day = ?")
+      .run(digest("9"), state.daily.utcDay);
+
+    await expect(loadSafetyScoreV9ShadowHistory(db)).rejects.toThrow(
+      `Safety Score v9 shadow daily row projection mismatch for ${state.daily.utcDay}`,
     );
   });
 
-  it("rolls back artifacts, attempt, day, and envelope when the atomic latest write fails", async () => {
+  it("increments a failed daily row on retry and retains selected archives only when requested", async () => {
     const { sqlite, db } = createTestDatabase();
-    const state = await successfulState();
+    const failure = buildSafetyScoreV9ShadowDailyFailure({
+      utcDay: "2023-11-14",
+      updatedAtSec: SCHEDULED_FOR_SEC + 5,
+      failure: {
+        atSec: SCHEDULED_FOR_SEC + 5,
+        stage: "compile",
+        code: "compile-failed",
+        message: "compile failed",
+      },
+    });
+    await persistSafetyScoreV9ShadowState(db, { daily: failure });
+    const state = await successfulState(true);
+    state.daily = buildSafetyScoreV9ShadowDailySuccess({
+      utcDay: "2023-11-14",
+      selectedAtSec: SCHEDULED_FOR_SEC + 23,
+      updatedAtSec: SCHEDULED_FOR_SEC + 24,
+      previous: failure,
+      envelope: state.envelope,
+      diff: state.diff,
+      archiveSelectionReasons: ["first"],
+      artifactKeys: state.artifacts.map((artifact) => artifact.artifactKey),
+    });
+    await persistSafetyScoreV9ShadowState(db, state);
+
+    expect(
+      sqlite.prepare("SELECT successful_attempt_count, failed_attempt_count FROM safety_score_v9_shadow_daily").get(),
+    ).toEqual({
+      successful_attempt_count: 1,
+      failed_attempt_count: 1,
+    });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_artifacts").get()).toEqual({ count: 5 });
+  });
+
+  it("rolls back selected artifacts, daily state, and envelope when the atomic latest write fails", async () => {
+    const { sqlite, db } = createTestDatabase();
+    const state = await successfulState(true);
     sqlite.exec(`
       CREATE TRIGGER reject_v9_diff_cache
       BEFORE INSERT ON cache
@@ -290,12 +326,7 @@ describe("Safety Score v9 shadow state persistence", () => {
     `);
 
     await expect(persistSafetyScoreV9ShadowState(db, state)).rejects.toThrow("injected v9 diff cache failure");
-    for (const table of [
-      "safety_score_v9_artifacts",
-      "safety_score_v9_shadow_attempts",
-      "safety_score_v9_shadow_days",
-      "cache",
-    ]) {
+    for (const table of ["safety_score_v9_artifacts", "safety_score_v9_shadow_daily", "cache"]) {
       expect(sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get(), table).toEqual({ count: 0 });
     }
   });

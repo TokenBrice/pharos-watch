@@ -28,6 +28,9 @@ const MODULE_ALLOWLIST = new Set([
   // Public compatibility shim; current label consumers use the light constants
   // module so they do not pull methodology body data into client bundles.
   "shared/lib/mint-authority-version.ts",
+  // Script-only Safety Score v9 evidence queue producer/parser. The maintenance
+  // CLI and its tests live outside this runtime-only dependency graph.
+  "shared/lib/safety-score-v9/evidence-gap-queue.ts",
   // refreshing-bar.tsx + use-row-cursor.ts are now consumed by the power-user
   // tables (Wave 9: stablecoin-table, screener-table, depeg-tracker-table).
   // Filter summary helpers; per-tracker adoption deferred. (command-palette-verbs.ts
@@ -97,6 +100,18 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/p4-exit-route-capacity.ts::P4_GENERAL_ACTIVATION_POLICY_V1",
   // Consumed by the v9 readiness CLI outside this runtime-only scan.
   "shared/lib/safety-score-v9-compiler.ts::assertExactReportCardIds",
+  // Safety Score v9 operational CLIs run outside this runtime-only graph. Keep
+  // their inputs coupled to the production policy, timing, and envelope schemas.
+  "shared/lib/safety-score-v9-research.ts::loadV9MethodologyPolicy",
+  "shared/lib/safety-score-v9/scenario-evaluator.ts::V9_SCENARIO_QUALITY_PILLARS",
+  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MINIMUM_PRODUCER_CYCLES",
+  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_SCORE_BEARING_PRODUCER_INTERVALS_SEC",
+  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_SLOWEST_SCORE_BEARING_SOURCE_KEYS",
+  "worker/src/lib/safety-score-v9-shadow.ts::SafetyScoreV9ShadowEnvelopeCoreSchema",
+  // Evidence queue entrypoints are consumed by its maintenance CLI and CLI
+  // contract tests, both outside the runtime graph scanned here.
+  "shared/lib/safety-score-v9/evidence-gap-queue.ts::buildV9EvidenceGapQueue",
+  "shared/lib/safety-score-v9/evidence-gap-queue.ts::parseV9EvidenceGapQueue",
   // Consumed by scripts/lib/redemption-backstop-validation.ts (out-of-scan-scope).
   "shared/lib/redemption-backstop-configs/factory.ts::getBackstopRegistrySourceFilePaths",
   "shared/lib/redemption-backstop-configs/policies.ts::REDEMPTION_BACKSTOP_POLICY_ENTRIES",

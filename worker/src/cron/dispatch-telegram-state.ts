@@ -14,6 +14,7 @@ import { getCache, setCache } from "../lib/db-cache";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { loadTelegramDewsCurrentRows } from "../lib/stress-signals-current-rows";
 import type { PendingCapacitySnapshot } from "./telegram-pending";
+import { safetyScoreV8MethodologyIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
 import {
   ALERT_RESERVE_SOURCE_GENERATION,
   assessAlertReserveSourceCache,
@@ -90,7 +91,8 @@ function parseLaunchSnapshotIds(cached: CachedValue): string[] | null {
     const parsed = JSON.parse(cached.value);
     if (!Array.isArray(parsed)) return null;
     return parsed.filter((id): id is string => typeof id === "string");
-  } catch { /* expected: corrupted launch snapshot json */
+  } catch {
+    /* expected: corrupted launch snapshot json */
     return null;
   }
 }
@@ -232,14 +234,10 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
   };
 }
 
-export function buildDispatchSnapshotState(
-  sourceData: DispatchSourceData,
-  nowSec: number,
-): DispatchSnapshotState {
+export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSec: number): DispatchSnapshotState {
   const previousDewsSnapshot = parseSnapshotMap<DewsSnapshot>(sourceData.dewsCache);
   const previousDewsAlertableSnapshot =
-    parseSnapshotMap<DewsSnapshot>(sourceData.dewsAlertableCache) ??
-    filterAlertableBands(previousDewsSnapshot);
+    parseSnapshotMap<DewsSnapshot>(sourceData.dewsAlertableCache) ?? filterAlertableBands(previousDewsSnapshot);
   const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(sourceData.depegCache);
   const safetySourceAssessment = assessAlertSafetySourceCache(sourceData.safetySourceCache, {
     expectedGeneration: getAlertSafetySourceGeneration(),
@@ -253,11 +251,16 @@ export function buildDispatchSnapshotState(
   const previousSafetyEnvelope = parseAlertSafetySnapshotEnvelope(sourceData.safetyCache);
   const previousSafetySnapshot = previousSafetyEnvelope?.snapshot ?? null;
   const safetySnapshotNeedsSeed =
-    currentSafetySnapshot != null && (
-      previousSafetyEnvelope == null ||
+    currentSafetySnapshot != null &&
+    (previousSafetyEnvelope == null ||
       isSnapshotMissingOrStale(sourceData.safetyCache, nowSec) ||
-      previousSafetyEnvelope.generation !== (safetySourceAssessment.generation ?? "")
-    );
+      previousSafetyEnvelope.generation !== (safetySourceAssessment.generation ?? "") ||
+      !previousSafetyEnvelope.safetyScoreIdentity ||
+      !safetySourceAssessment.envelope?.safetyScoreIdentity ||
+      !safetyScoreV8MethodologyIdentitiesMatch(
+        previousSafetyEnvelope.safetyScoreIdentity,
+        safetySourceAssessment.envelope.safetyScoreIdentity,
+      ));
 
   // Augment the current depeg snapshot with the active event id per coin so the
   // close-then-reopen-within-one-window diff in dispatch-telegram-events can tell
@@ -292,19 +295,17 @@ export function buildDispatchSnapshotState(
   const reserveSourceUnavailable = reserveSourceAssessment.state !== "ok";
   const parsedCurrentReserveDriftIds =
     reserveSourceAssessment.state === "ok" || reserveSourceAssessment.state === "recovering"
-      ? reserveSourceAssessment.envelope?.driftIds ?? null
+      ? (reserveSourceAssessment.envelope?.driftIds ?? null)
       : null;
   const previousReserveDispatchedIds = parseLaunchSnapshotIds(sourceData.reserveDispatchedCache);
 
   const mustSeedSnapshots =
     isSnapshotMissingOrStale(sourceData.dewsCache, nowSec) ||
-    (sourceData.dewsAlertableCache != null &&
-      isSnapshotMissingOrStale(sourceData.dewsAlertableCache, nowSec)) ||
+    (sourceData.dewsAlertableCache != null && isSnapshotMissingOrStale(sourceData.dewsAlertableCache, nowSec)) ||
     isSnapshotMissingOrStale(sourceData.depegCache, nowSec) ||
     previousDewsSnapshot == null ||
     previousDepegSnapshot == null;
-  const reserveNeedsColdSeed =
-    reserveSourceAssessment.state === "recovering" && parsedCurrentReserveDriftIds != null;
+  const reserveNeedsColdSeed = reserveSourceAssessment.state === "recovering" && parsedCurrentReserveDriftIds != null;
   const reserveDispatched = reserveNeedsColdSeed
     ? parsedCurrentReserveDriftIds
     : parsedCurrentReserveDriftIds == null
@@ -315,16 +316,14 @@ export function buildDispatchSnapshotState(
 
   const currentSnapshots = {
     dews: buildDewsSnapshot(sourceData.dewsRows),
-    dewsAlertable: buildDewsAlertableSnapshot(
-      sourceData.dewsRows,
-      previousDewsAlertableSnapshot,
-    ),
+    dewsAlertable: buildDewsAlertableSnapshot(sourceData.dewsRows, previousDewsAlertableSnapshot),
     depeg: currentDepegSnapshot,
     safety:
       currentSafetySnapshot != null && safetySourceAssessment.generation != null
         ? buildAlertSafetySnapshotEnvelope(
             currentSafetySnapshot,
             safetySourceAssessment.generation,
+            safetySourceAssessment.envelope!.safetyScoreIdentity,
           )
         : null,
     launch:
@@ -338,9 +337,8 @@ export function buildDispatchSnapshotState(
     : parsedCurrentReserveDriftIds == null
       ? (previousReserveDispatchedIds ?? [])
       : (previousReserveDispatchedIds ?? parsedCurrentReserveDriftIds);
-  const currentReserveDriftIds = parsedCurrentReserveDriftIds == null
-    ? (previousReserveDispatchedIds ?? [])
-    : parsedCurrentReserveDriftIds;
+  const currentReserveDriftIds =
+    parsedCurrentReserveDriftIds == null ? (previousReserveDispatchedIds ?? []) : parsedCurrentReserveDriftIds;
 
   return {
     nowSec,
@@ -364,9 +362,6 @@ export function buildDispatchSnapshotState(
     safeDewsSnapshot: previousDewsSnapshot ?? {},
     safeDewsAlertable: previousDewsAlertableSnapshot ?? {},
     safeDepegSnapshot: previousDepegSnapshot ?? {},
-    safeSafetySnapshot:
-      currentSafetySnapshot != null && !safetySnapshotNeedsSeed
-        ? (previousSafetySnapshot ?? {})
-        : {},
+    safeSafetySnapshot: currentSafetySnapshot != null && !safetySnapshotNeedsSeed ? (previousSafetySnapshot ?? {}) : {},
   };
 }

@@ -7,6 +7,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildReportCardsSnapshot } from "../../lib/report-cards-snapshot";
 import { buildReportCardPublicationPlan } from "../../lib/report-card-publication";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 
 function makeCachedSnapshot(updatedAt = Math.floor(Date.now() / 1000)) {
   return {
@@ -43,19 +44,27 @@ function makeCachedSnapshotEnvelope(snapshot: unknown) {
 }
 
 async function makeExactCachedSnapshot(updatedAt: number) {
-  const assets = ACTIVE_STABLECOINS.map((meta) => makeAsset({
-    id: meta.id,
-    name: meta.name,
-    symbol: meta.symbol,
-  }));
+  const assets = ACTIVE_STABLECOINS.map((meta) =>
+    makeAsset({
+      id: meta.id,
+      name: meta.name,
+      symbol: meta.symbol,
+    }),
+  );
   const snapshot = await buildReportCardsSnapshot(makeReportCardsDb(assets, updatedAt));
+  const publication = buildReportCardPublicationPlan(
+    snapshot.cards,
+    snapshot.methodology.version,
+    snapshot.updatedAt,
+  ).completeness;
   return {
     ...snapshot,
-    publication: buildReportCardPublicationPlan(
-      snapshot.cards,
-      snapshot.methodology.version,
-      snapshot.updatedAt,
-    ).completeness,
+    safetyScoreIdentity: buildSafetyScoreV8PublicationIdentity({
+      methodologyVersion: snapshot.methodology.version,
+      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+      publicationGenerationId: publication.generationId,
+    }),
+    publication,
   };
 }
 
@@ -216,20 +225,14 @@ describe("handleReportCards", () => {
       expect(card).toHaveProperty("overallCapped");
       expect(typeof card.overallCapped).toBe("boolean");
       expect(card).toHaveProperty("uncappedOverallScore");
-      expect(
-        card.uncappedOverallScore === null || typeof card.uncappedOverallScore === "number",
-      ).toBe(true);
+      expect(card.uncappedOverallScore === null || typeof card.uncappedOverallScore === "number").toBe(true);
       expect(card.rawInputs).toBeDefined();
       expect(card.rawInputs).toHaveProperty("variantParentId");
-      expect(
-        card.rawInputs!.variantParentId === null ||
-          typeof card.rawInputs!.variantParentId === "string",
-      ).toBe(true);
+      expect(card.rawInputs!.variantParentId === null || typeof card.rawInputs!.variantParentId === "string").toBe(
+        true,
+      );
       expect(card.rawInputs).toHaveProperty("variantKind");
-      expect(
-        card.rawInputs!.variantKind === null ||
-          typeof card.rawInputs!.variantKind === "string",
-      ).toBe(true);
+      expect(card.rawInputs!.variantKind === null || typeof card.rawInputs!.variantKind === "string").toBe(true);
     }
   });
 
@@ -241,9 +244,7 @@ describe("handleReportCards", () => {
       cards: Array<{ id: string; isDefunct?: boolean }>;
     };
 
-    const defunctIds = body.cards
-      .filter((card) => card.isDefunct === true)
-      .map((card) => card.id);
+    const defunctIds = body.cards.filter((card) => card.isDefunct === true).map((card) => card.id);
 
     expect(defunctIds.length).toBeGreaterThan(0);
     expect(new Set(defunctIds).size).toBe(defunctIds.length);

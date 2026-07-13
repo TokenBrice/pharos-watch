@@ -4,7 +4,14 @@ import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { publishSafetyScoreV8ModelFamily } from "../safety-score-model-publication-store";
+import { buildReportCardsFixedInputCacheEntry, createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { buildPublishedReportCardsSnapshotCacheEntry } from "../report-cards-snapshot-cache";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
+import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
+import type { ReportCard } from "@shared/types/report-cards";
 import {
   SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL,
   fetchSafetyScoreHistoryCompatibilityRows,
@@ -15,13 +22,9 @@ import {
 } from "../safety-score-history-v2";
 
 const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../migrations");
-const V9_PUBLICATION_MIGRATION = readFileSync(
-  resolve(MIGRATIONS_DIR, "0200_safety_score_v9_shadow_history.sql"),
-  "utf8",
-);
 const HISTORY_V2_MIGRATION = readFileSync(resolve(MIGRATIONS_DIR, "0201_safety_score_history_v2.sql"), "utf8");
 const digest = (character: string) => character.repeat(64);
-const METHODOLOGY = "8.17";
+const METHODOLOGY = SAFETY_SCORE_METHODOLOGY_VERSION;
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${digest("a")}`;
 const MODEL_GENERATION_ID = `report-cards:${METHODOLOGY}:200`;
 
@@ -55,47 +58,110 @@ function createHistoryDatabase(): { sqlite: DatabaseSync; db: D1Database } {
 function v8Identity(overrides: Partial<SafetyScoreHistoryV8Identity> = {}): SafetyScoreHistoryV8Identity {
   return {
     model: "v8",
+    schemaVersion: 1,
     methodologyVersion: METHODOLOGY,
-    policyId: null,
-    policyDigest: null,
     evaluationBuildDigest: digest("b"),
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
-    modelPublicationGenerationId: MODEL_GENERATION_ID,
-    publicationEpoch: 0,
+    publicationGenerationId: MODEL_GENERATION_ID,
     ...overrides,
   };
 }
 
-function fullPayload(): string {
-  return JSON.stringify({
-    generation: 3,
-    methodologyVersion: METHODOLOGY,
-    payload: {
-      cards: [],
-      methodology: {
-        version: METHODOLOGY,
-        weights: {
-          pegStability: 0,
-          liquidity: 0.3,
-          resilience: 0.2,
-          decentralization: 0.15,
-          dependencyRisk: 0.25,
-        },
-        pegMultiplierExponent: 0.4,
-        thresholds: [],
-      },
-      dependencyGraph: { edges: [] },
-      updatedAt: 200,
-      publication: {
-        generationId: MODEL_GENERATION_ID,
-        methodologyVersion: METHODOLOGY,
-        expectedCount: 0,
-        scoredCount: 0,
-        notRatedCount: 0,
-        notRatedIds: [],
-      },
+function historyCard(id: string): ReportCard {
+  const dimension = { grade: "A" as const, score: 90, detail: "fixture" };
+  return {
+    id,
+    name: id,
+    symbol: id,
+    overallGrade: "A",
+    overallScore: 90,
+    baseScore: 90,
+    dimensions: {
+      pegStability: dimension,
+      liquidity: dimension,
+      resilience: dimension,
+      decentralization: dimension,
+      dependencyRisk: dimension,
     },
+    ratedDimensions: 5,
+    rawInputs: createReportCardRawInputs(),
+    isDefunct: false,
+  };
+}
+
+async function canonicalCacheValues() {
+  const activeAssetIds = [...ACTIVE_IDS].sort();
+  const dexUpdatedAt = 100;
+  const fixedInput = createReportCardsFixedInput({
+    captureKind: "exact-publication-inputs",
+    activeAssetIds,
+    capturedAt: "1970-01-01T00:03:20.000Z",
+    sourceGeneration: MODEL_GENERATION_ID,
+    dexGenerationId: `dex-liquidity-${dexUpdatedAt}`,
+    redemptionGenerationId: "redemption-backstops-unavailable",
+    registryRevision: "history-test",
+    methodologyVersion: METHODOLOGY,
+    clockSec: 200,
+    updatedAt: 200,
+    liquidityStale: false,
+    redemptionStale: true,
+    inputFreshness: {
+      dexLiquidity: { updatedAt: dexUpdatedAt, ageSeconds: 100, stale: false },
+      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
+    },
+    pegDataById: {},
+    activeDepegPeakBpsById: {},
+    dexLiqMap: Object.fromEntries(
+      activeAssetIds.map((id) => [
+        id,
+        {
+          liquidityScore: 90,
+          concentrationHhi: 0.5,
+          poolCount: 1,
+          chainCount: 1,
+          methodologyVersion: "history-test",
+          updatedAt: dexUpdatedAt,
+        },
+      ]),
+    ),
+    redemptionBackstopMap: {},
+    bluechipMap: {},
+    resolvedBlacklistStatuses: Object.fromEntries(activeAssetIds.map((id) => [id, false])),
+    liveReserveMap: {},
+    liveReserveProvenanceMap: {},
+    chainCirculatingById: {},
+    dexDeploymentSupplyCoverageById: {},
+    collateralDriftCoins: [],
+    liveToFallbackCoins: [],
   });
+  const identity = buildSafetyScoreV8PublicationIdentity({
+    methodologyVersion: METHODOLOGY,
+    baseInputGenerationId: fixedInput.baseInputGenerationId,
+    publicationGenerationId: MODEL_GENERATION_ID,
+  });
+  const publication = {
+    generationId: MODEL_GENERATION_ID,
+    methodologyVersion: METHODOLOGY,
+    expectedCount: activeAssetIds.length,
+    scoredCount: activeAssetIds.length,
+    notRatedCount: 0,
+    notRatedIds: [],
+  };
+  const full = buildPublishedReportCardsSnapshotCacheEntry({
+    safetyScoreIdentity: identity,
+    cards: activeAssetIds.map(historyCard),
+    methodology: {
+      version: METHODOLOGY,
+      weights: { pegStability: 0, liquidity: 0.3, resilience: 0.2, decentralization: 0.15, dependencyRisk: 0.25 },
+      pegMultiplierExponent: 0.4,
+      thresholds: [],
+    },
+    dependencyGraph: { edges: [] },
+    updatedAt: 200,
+    publication,
+  });
+  const fixed = await buildReportCardsFixedInputCacheEntry(fixedInput, identity);
+  return { full, fixed, identity };
 }
 
 describe("Safety Score history V2", () => {
@@ -123,7 +189,7 @@ describe("Safety Score history V2", () => {
         .prepare(
           `SELECT history_id, model, methodology_version, policy_id, policy_digest,
                   evaluation_build_digest, base_input_generation_id,
-                  model_publication_generation_id, publication_epoch, transition_kind,
+                  model_publication_generation_id, transition_kind,
                   prev_grade, prev_score, legacy_recorded_at
              FROM safety_score_history_v2`,
         )
@@ -137,7 +203,6 @@ describe("Safety Score history V2", () => {
       evaluation_build_digest: digest("b"),
       base_input_generation_id: BASE_INPUT_GENERATION_ID,
       model_publication_generation_id: MODEL_GENERATION_ID,
-      publication_epoch: 0,
       transition_kind: "organic-grade-change",
       prev_grade: "B+",
       prev_score: 79,
@@ -194,9 +259,9 @@ describe("Safety Score history V2", () => {
         `INSERT INTO safety_score_history_v2
          (history_id, stablecoin_id, recorded_at, model, methodology_version,
           policy_id, policy_digest, evaluation_build_digest, base_input_generation_id,
-          model_publication_generation_id, publication_epoch, transition_kind,
+          model_publication_generation_id, transition_kind,
           grade, score, prev_grade, prev_score, legacy_recorded_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         "v2-only-organic",
@@ -209,7 +274,6 @@ describe("Safety Score history V2", () => {
         digest("b"),
         BASE_INPUT_GENERATION_ID,
         "report-cards:8.17:300",
-        0,
         "organic-grade-change",
         "A+",
         94,
@@ -223,9 +287,9 @@ describe("Safety Score history V2", () => {
         `INSERT INTO safety_score_history_v2
          (history_id, stablecoin_id, recorded_at, model, methodology_version,
           policy_id, policy_digest, evaluation_build_digest, base_input_generation_id,
-          model_publication_generation_id, publication_epoch, transition_kind,
+          model_publication_generation_id, transition_kind,
           grade, score, prev_grade, prev_score, legacy_recorded_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         "same-day-v9-boundary",
@@ -238,7 +302,6 @@ describe("Safety Score history V2", () => {
         digest("e"),
         BASE_INPUT_GENERATION_ID,
         "safety-score-v9:300",
-        1,
         "methodology-boundary-baseline",
         "A",
         87,
@@ -292,9 +355,9 @@ describe("Safety Score history V2", () => {
       `INSERT INTO safety_score_history_v2
        (history_id, stablecoin_id, recorded_at, model, methodology_version,
         policy_id, policy_digest, evaluation_build_digest, base_input_generation_id,
-        model_publication_generation_id, publication_epoch, transition_kind,
+        model_publication_generation_id, transition_kind,
         grade, score, prev_grade, prev_score, legacy_recorded_at, created_at)
-       VALUES (?, 'usdc-circle', 300, 'v9', '9.0', ?, ?, ?, ?, ?, 1, ?, 'A', 88, ?, ?, NULL, 301)`,
+       VALUES (?, 'usdc-circle', 300, 'v9', '9.0', ?, ?, ?, ?, ?, ?, 'A', 88, ?, ?, NULL, 301)`,
     );
 
     expect(() =>
@@ -325,31 +388,30 @@ describe("Safety Score history V2", () => {
     ).toThrow();
   });
 
-  it("loads the exact immutable V8 family selected by the active manifest", async () => {
+  it("loads the canonical V8 snapshot only when its exact fixed-input identity agrees", async () => {
     const sqlite = new DatabaseSync(":memory:");
     createLegacySchema(sqlite);
-    sqlite.exec(V9_PUBLICATION_MIGRATION);
     sqlite.exec(HISTORY_V2_MIGRATION);
     const db = createSqliteD1(sqlite);
-    await publishSafetyScoreV8ModelFamily({
-      db,
-      generationId: MODEL_GENERATION_ID,
-      baseInputGenerationId: BASE_INPUT_GENERATION_ID,
-      publishedAtSec: 200,
-      methodologyVersion: METHODOLOGY,
-      evaluationBuildDigest: digest("b"),
-      payloads: {
-        full: { key: "report-cards:snapshot", value: fullPayload() },
-        compact: { key: "report_card_cache", value: "{}" },
-        alert: { key: "alert:safety-source-cache", value: "{}" },
-        fixedInput: { key: "report-cards:fixed-input:exact", value: "{}" },
-      },
-    });
+    const artifacts = await canonicalCacheValues();
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, 200)");
+    insert.run(artifacts.full.key, artifacts.full.value);
+    insert.run(artifacts.fixed.key, artifacts.fixed.value);
 
     const source = await loadActiveV8SafetyScoreHistorySource(db);
 
-    expect(source.snapshot.cards).toEqual([]);
-    expect(source.identity).toEqual(v8Identity());
+    expect(source.snapshot.cards).toHaveLength(ACTIVE_IDS.size);
+    expect(source.identity).toEqual(artifacts.identity);
+    expect(source.identity.evaluationBuildDigest).toBe(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST);
     expect(source.publishedAtSec).toBe(200);
+
+    const mismatchedFixed = JSON.parse(artifacts.fixed.value) as {
+      safetyScoreIdentity: { publicationGenerationId: string };
+    };
+    mismatchedFixed.safetyScoreIdentity.publicationGenerationId = "report-cards:8.17:201";
+    sqlite
+      .prepare("UPDATE cache SET value = ? WHERE key = ?")
+      .run(JSON.stringify(mismatchedFixed), artifacts.fixed.key);
+    await expect(loadActiveV8SafetyScoreHistorySource(db)).rejects.toThrow(/identities disagree|identity mismatch/);
   });
 });

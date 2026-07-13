@@ -1,4 +1,12 @@
 import { sha256Hex } from "@shared/lib/sha256";
+import {
+  V9_CONSUMER_SCORE_THRESHOLD_REGISTRY_DIGEST,
+  V9_SHADOW_DIFF_ABSOLUTE_REVIEW_DELTA,
+  V9_SHADOW_DIFF_TOP_CUTOFF_REVIEW_DELTA,
+  V9_SHADOW_MINIMUM_QUALIFYING_DAYS,
+  V9_SHADOW_RELEASE_COVERAGE_POLICY_DIGEST,
+  V9_SHADOW_REQUIRED_COVERAGE_FLOOR_IDS,
+} from "@shared/lib/safety-score-v9/operational-gate";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ReportCardGradeSchema } from "@shared/types/report-cards";
 import { SafetyScoreV9ResponseSchema, type SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
@@ -8,9 +16,11 @@ import {
 } from "@shared/types/safety-score-v9-review";
 import { z } from "zod";
 
-export const SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION = 1;
-export const SAFETY_SCORE_V9_DIFF_ABSOLUTE_REVIEW_DELTA = 5;
-export const SAFETY_SCORE_V9_DIFF_TOP_CUTOFF_REVIEW_DELTA = 2;
+const SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION = 1;
+export const SAFETY_SCORE_V9_SHADOW_MINIMUM_QUALIFYING_DAYS = V9_SHADOW_MINIMUM_QUALIFYING_DAYS;
+export const SAFETY_SCORE_V9_REQUIRED_SHADOW_COVERAGE_FLOOR_IDS = V9_SHADOW_REQUIRED_COVERAGE_FLOOR_IDS;
+const SAFETY_SCORE_V9_DIFF_ABSOLUTE_REVIEW_DELTA = V9_SHADOW_DIFF_ABSOLUTE_REVIEW_DELTA;
+const SAFETY_SCORE_V9_DIFF_TOP_CUTOFF_REVIEW_DELTA = V9_SHADOW_DIFF_TOP_CUTOFF_REVIEW_DELTA;
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const BaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/);
@@ -47,7 +57,7 @@ export function safetyScoreV9UtcDay(timestampSec: number): string {
   return new Date(timestampSec * 1_000).toISOString().slice(0, 10);
 }
 
-export function safetyScoreV9ActiveIdsDigest(ids: readonly string[]): string {
+function safetyScoreV9ActiveIdsDigest(ids: readonly string[]): string {
   const canonicalIds = sortedUnique(ids);
   if (canonicalIds.length !== ids.length || canonicalIds.some((id) => id.length === 0)) {
     throw new Error("Safety Score v9 active IDs must be non-empty and unique");
@@ -120,7 +130,7 @@ export const SafetyScoreV9ReplayArtifactSchema = z
   });
 export type SafetyScoreV9ReplayArtifact = z.infer<typeof SafetyScoreV9ReplayArtifactSchema>;
 
-export const SafetyScoreV9CoverageFloorSchema = z
+const SafetyScoreV9CoverageFloorSchema = z
   .object({
     id: NonEmptyTextSchema,
     status: z.enum(["pass", "fail"]),
@@ -131,7 +141,7 @@ export const SafetyScoreV9CoverageFloorSchema = z
   .strict();
 export type SafetyScoreV9CoverageFloor = z.infer<typeof SafetyScoreV9CoverageFloorSchema>;
 
-export const SafetyScoreV9ShadowCoverageSchema = z
+const SafetyScoreV9ShadowCoverageSchema = z
   .object({
     expectedActiveCount: z.number().int().nonnegative(),
     observedResultCount: z.number().int().nonnegative(),
@@ -188,6 +198,8 @@ export const SafetyScoreV9ShadowEnvelopeSchema = z
     candidate: SafetyScoreV9ResponseSchema,
     compilerFactSchemaDigest: Sha256Schema,
     producerCapabilityDigest: Sha256Schema,
+    releaseCoveragePolicyDigest: Sha256Schema,
+    consumerThresholdRegistryDigest: Sha256Schema,
     coverage: SafetyScoreV9ShadowCoverageSchema,
     replayArtifacts: z.array(SafetyScoreV9ReplayArtifactSchema),
   })
@@ -264,6 +276,8 @@ export const SafetyScoreV9ShadowEnvelopeCoreSchema = z
     schemaVersion: z.literal(SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION),
     compilerFactSchemaDigest: Sha256Schema,
     producerCapabilityDigest: Sha256Schema,
+    releaseCoveragePolicyDigest: Sha256Schema,
+    consumerThresholdRegistryDigest: Sha256Schema,
     coverage: SafetyScoreV9ShadowCoverageSchema,
   })
   .strict();
@@ -277,6 +291,8 @@ export function projectSafetyScoreV9ShadowEnvelopeCore(
     schemaVersion: envelope.schemaVersion,
     compilerFactSchemaDigest: envelope.compilerFactSchemaDigest,
     producerCapabilityDigest: envelope.producerCapabilityDigest,
+    releaseCoveragePolicyDigest: envelope.releaseCoveragePolicyDigest,
+    consumerThresholdRegistryDigest: envelope.consumerThresholdRegistryDigest,
     coverage: envelope.coverage,
   });
 }
@@ -347,6 +363,8 @@ export function buildSafetyScoreV9ShadowEnvelope(
     candidate: canonicalCandidate,
     compilerFactSchemaDigest: input.compilerFactSchemaDigest,
     producerCapabilityDigest: input.producerCapabilityDigest,
+    releaseCoveragePolicyDigest: V9_SHADOW_RELEASE_COVERAGE_POLICY_DIGEST,
+    consumerThresholdRegistryDigest: V9_CONSUMER_SCORE_THRESHOLD_REGISTRY_DIGEST,
     coverage: {
       expectedActiveCount: expectedActiveIds.length,
       observedResultCount: candidate.cards.length,
@@ -369,20 +387,18 @@ export function buildSafetyScoreV9ShadowEnvelope(
   });
 }
 
-export const SafetyScoreV9ShadowQualificationBlockerSchema = z.enum([
+const SafetyScoreV9ShadowQualificationBlockerSchema = z.enum([
   "active-id-bijection-failed",
   "compiler-exception",
   "future-dated-evidence",
   "coverage-floor-failed",
-  "replay-artifact-missing",
-  "replay-artifact-unverified",
   "publication-regression",
   "unresolved-release-blocker",
   "unresolved-critical-movement",
 ]);
 export type SafetyScoreV9ShadowQualificationBlocker = z.infer<typeof SafetyScoreV9ShadowQualificationBlockerSchema>;
 
-export const SafetyScoreV9ShadowQualificationSchema = z
+const SafetyScoreV9ShadowQualificationSchema = z
   .object({
     qualifies: z.boolean(),
     blockers: z.array(SafetyScoreV9ShadowQualificationBlockerSchema),
@@ -419,14 +435,6 @@ export function assessSafetyScoreV9ShadowQualification(
   if (coverage.coverageFloors.some((floor) => floor.status === "fail")) {
     blockers.add("coverage-floor-failed");
   }
-  const requiredArtifactKinds = SafetyScoreV9ReplayArtifactKindSchema.options;
-  const artifactsByKind = new Map(envelope.replayArtifacts.map((artifact) => [artifact.kind, artifact]));
-  if (requiredArtifactKinds.some((kind) => !artifactsByKind.has(kind))) {
-    blockers.add("replay-artifact-missing");
-  }
-  if (requiredArtifactKinds.some((kind) => artifactsByKind.get(kind)?.verification.status !== "verified")) {
-    blockers.add("replay-artifact-unverified");
-  }
   if (coverage.publicationRegression) blockers.add("publication-regression");
   if (coverage.unresolvedReleaseBlockers.length > 0) {
     blockers.add("unresolved-release-blocker");
@@ -442,20 +450,22 @@ export function assessSafetyScoreV9ShadowQualification(
 }
 
 export function computeSafetyScoreV9ShadowEnvelopeDigest(envelope: SafetyScoreV9ShadowEnvelope): string {
+  const parsed = SafetyScoreV9ShadowEnvelopeSchema.parse(envelope);
+  const { replayArtifacts: _replayArtifacts, ...candidateEvidence } = parsed;
+  void _replayArtifacts;
   return sha256Hex(
     stableJsonStringifyV1({
-      domain: "safety-score-v9.shadow-envelope.v1",
-      envelope: SafetyScoreV9ShadowEnvelopeSchema.parse(envelope),
+      domain: "safety-score-v9.shadow-envelope.v2",
+      envelope: candidateEvidence,
     }),
   );
 }
 
-const SafetyScoreV9ShadowAttemptIdentitySchema = z
+const SafetyScoreV9ShadowIdentitySchema = z
   .object({
     candidateId: NonEmptyTextSchema,
     policyVersion: NonEmptyTextSchema,
     publicationGenerationId: NonEmptyTextSchema,
-    publicationEpoch: z.number().int().nonnegative(),
     baseInputGenerationId: BaseInputGenerationIdSchema,
     factSetDigest: Sha256Schema,
     policyId: NonEmptyTextSchema,
@@ -464,351 +474,18 @@ const SafetyScoreV9ShadowAttemptIdentitySchema = z
     resultDigest: Sha256Schema,
     compilerFactSchemaDigest: Sha256Schema,
     producerCapabilityDigest: Sha256Schema,
+    releaseCoveragePolicyDigest: Sha256Schema,
+    consumerThresholdRegistryDigest: Sha256Schema,
     envelopeDigest: Sha256Schema,
     sourceGenerations: z.record(NonEmptyTextSchema, NonEmptyTextSchema),
   })
   .strict();
+export type SafetyScoreV9ShadowIdentity = z.infer<typeof SafetyScoreV9ShadowIdentitySchema>;
 
-const SafetyScoreV9ShadowAttemptFailureSchema = z
-  .object({
-    stage: z.enum([
-      "scheduler",
-      "base-input",
-      "v8-publication",
-      "v9-enrichment",
-      "compile",
-      "score",
-      "serialize",
-      "artifact-retention",
-      "shadow-write",
-      "aborted",
-    ]),
-    code: NonEmptyTextSchema,
-    message: NonEmptyTextSchema,
-  })
-  .strict();
-
-export const SafetyScoreV9ShadowAttemptSchema = z
-  .object({
-    schemaVersion: z.literal(SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION),
-    attemptId: NonEmptyTextSchema,
-    trigger: z.enum(["scheduled", "retry"]),
-    retryOfAttemptId: NonEmptyTextSchema.nullable(),
-    scheduledForSec: UnixSecondsSchema,
-    utcDay: UtcDaySchema,
-    startedAtSec: UnixSecondsSchema.nullable(),
-    completedAtSec: UnixSecondsSchema.nullable(),
-    recordedAtSec: UnixSecondsSchema,
-    outcome: z.enum(["missed", "aborted", "failed", "succeeded"]),
-    identity: SafetyScoreV9ShadowAttemptIdentitySchema.nullable(),
-    qualification: SafetyScoreV9ShadowQualificationSchema.nullable(),
-    failure: SafetyScoreV9ShadowAttemptFailureSchema.nullable(),
-  })
-  .strict()
-  .superRefine((attempt, ctx) => {
-    if (attempt.utcDay !== safetyScoreV9UtcDay(attempt.scheduledForSec)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["utcDay"],
-        message: "Attempt UTC day must derive from its scheduled time",
-      });
-    }
-    if ((attempt.trigger === "retry") !== (attempt.retryOfAttemptId !== null)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["retryOfAttemptId"],
-        message: "Retry attempts require one parent attempt",
-      });
-    }
-    if (
-      attempt.startedAtSec !== null &&
-      attempt.completedAtSec !== null &&
-      attempt.completedAtSec < attempt.startedAtSec
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["completedAtSec"],
-        message: "Attempt completion cannot predate its start",
-      });
-    }
-    if (attempt.completedAtSec !== null && attempt.recordedAtSec < attempt.completedAtSec) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["recordedAtSec"],
-        message: "Attempt record cannot predate completion",
-      });
-    }
-    if (attempt.outcome === "succeeded") {
-      if (
-        attempt.startedAtSec === null ||
-        attempt.completedAtSec === null ||
-        attempt.identity === null ||
-        attempt.qualification === null ||
-        attempt.failure !== null
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["outcome"],
-          message: "Successful attempts require timing, identity, and qualification without failure",
-        });
-      }
-    } else {
-      if (attempt.identity !== null || attempt.qualification !== null || attempt.failure === null) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["outcome"],
-          message: "Non-successful attempts require one failure and no candidate identity",
-        });
-      }
-      if (attempt.outcome === "missed" && (attempt.startedAtSec !== null || attempt.completedAtSec !== null)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["startedAtSec"],
-          message: "Missed attempts cannot claim execution timing",
-        });
-      }
-    }
-  });
-export type SafetyScoreV9ShadowAttempt = z.infer<typeof SafetyScoreV9ShadowAttemptSchema>;
-
-interface SafetyScoreV9ShadowAttemptBaseInput {
-  attemptId: string;
-  trigger: "scheduled" | "retry";
-  retryOfAttemptId: string | null;
-  scheduledForSec: number;
-  recordedAtSec: number;
-}
-
-export type BuildSafetyScoreV9ShadowAttemptInput =
-  | (SafetyScoreV9ShadowAttemptBaseInput & {
-      outcome: "succeeded";
-      startedAtSec: number;
-      completedAtSec: number;
-      envelope: SafetyScoreV9ShadowEnvelope;
-    })
-  | (SafetyScoreV9ShadowAttemptBaseInput & {
-      outcome: "missed" | "aborted" | "failed";
-      startedAtSec: number | null;
-      completedAtSec: number | null;
-      failure: z.infer<typeof SafetyScoreV9ShadowAttemptFailureSchema>;
-    });
-
-export function buildSafetyScoreV9ShadowAttempt(
-  input: BuildSafetyScoreV9ShadowAttemptInput,
-): SafetyScoreV9ShadowAttempt {
-  if (input.outcome === "succeeded") {
-    const envelope = SafetyScoreV9ShadowEnvelopeSchema.parse(input.envelope);
-    const candidate = envelope.candidate;
-    return SafetyScoreV9ShadowAttemptSchema.parse({
-      schemaVersion: SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION,
-      attemptId: input.attemptId,
-      trigger: input.trigger,
-      retryOfAttemptId: input.retryOfAttemptId,
-      scheduledForSec: input.scheduledForSec,
-      utcDay: safetyScoreV9UtcDay(input.scheduledForSec),
-      startedAtSec: input.startedAtSec,
-      completedAtSec: input.completedAtSec,
-      recordedAtSec: input.recordedAtSec,
-      outcome: input.outcome,
-      identity: {
-        candidateId: candidate.candidateId,
-        policyVersion: candidate.policyVersion,
-        publicationGenerationId: candidate.publicationGenerationId,
-        publicationEpoch: candidate.publicationEpoch,
-        baseInputGenerationId: candidate.baseInputGenerationId,
-        factSetDigest: candidate.factSetDigest,
-        policyId: candidate.policy.id,
-        policyDigest: candidate.policy.semanticDigest,
-        evaluationBuildDigest: candidate.evaluationBuildDigest,
-        resultDigest: candidate.resultDigest,
-        compilerFactSchemaDigest: envelope.compilerFactSchemaDigest,
-        producerCapabilityDigest: envelope.producerCapabilityDigest,
-        envelopeDigest: computeSafetyScoreV9ShadowEnvelopeDigest(envelope),
-        sourceGenerations: Object.fromEntries(
-          Object.entries(candidate.sourceGenerations).sort(([left], [right]) => compareText(left, right)),
-        ),
-      },
-      qualification: assessSafetyScoreV9ShadowQualification(envelope),
-      failure: null,
-    });
-  }
-
-  return SafetyScoreV9ShadowAttemptSchema.parse({
-    schemaVersion: SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION,
-    attemptId: input.attemptId,
-    trigger: input.trigger,
-    retryOfAttemptId: input.retryOfAttemptId,
-    scheduledForSec: input.scheduledForSec,
-    utcDay: safetyScoreV9UtcDay(input.scheduledForSec),
-    startedAtSec: input.startedAtSec,
-    completedAtSec: input.completedAtSec,
-    recordedAtSec: input.recordedAtSec,
-    outcome: input.outcome,
-    identity: null,
-    qualification: null,
-    failure: input.failure,
-  });
-}
-
-export const SafetyScoreV9ShadowDayBlockerSchema = z.enum([
-  "expected-scheduled-attempt-missing",
-  "unexpected-scheduled-attempt",
-  "attempt-missed",
-  "attempt-aborted",
-  "attempt-failed",
-  "generation-nonqualifying",
-  "qualifying-generation-missing",
-]);
-
-const SafetyScoreV9ShadowDayProjectionSchema = z
-  .object({
-    expectedScheduledAttemptIds: z.array(NonEmptyTextSchema),
-    missingScheduledAttemptIds: z.array(NonEmptyTextSchema),
-    unexpectedScheduledAttemptIds: z.array(NonEmptyTextSchema),
-    outcomeCounts: z
-      .object({
-        missed: z.number().int().nonnegative(),
-        aborted: z.number().int().nonnegative(),
-        failed: z.number().int().nonnegative(),
-        succeeded: z.number().int().nonnegative(),
-      })
-      .strict(),
-    canonicalQualifyingGenerationId: NonEmptyTextSchema.nullable(),
-    blockingAttemptIds: z.array(NonEmptyTextSchema),
-    blockers: z.array(SafetyScoreV9ShadowDayBlockerSchema),
-    qualifies: z.boolean(),
-  })
-  .strict();
-
-export const SafetyScoreV9ShadowDaySchema = z
-  .object({
-    schemaVersion: z.literal(SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION),
-    utcDay: UtcDaySchema,
-    attempts: z.array(SafetyScoreV9ShadowAttemptSchema),
-    projection: SafetyScoreV9ShadowDayProjectionSchema,
-  })
-  .strict()
-  .superRefine((day, ctx) => {
-    addCanonicalArrayIssue(day.projection.expectedScheduledAttemptIds, ctx, [
-      "projection",
-      "expectedScheduledAttemptIds",
-    ]);
-    const attemptIds = day.attempts.map((attempt) => attempt.attemptId);
-    if (new Set(attemptIds).size !== attemptIds.length) {
-      ctx.addIssue({ code: "custom", path: ["attempts"], message: "Attempt IDs must be unique" });
-    }
-    for (const [index, attempt] of day.attempts.entries()) {
-      if (attempt.utcDay !== day.utcDay) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["attempts", index, "utcDay"],
-          message: "Every attempt must belong to the history UTC day",
-        });
-      }
-      if (attempt.retryOfAttemptId !== null && !attemptIds.includes(attempt.retryOfAttemptId)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["attempts", index, "retryOfAttemptId"],
-          message: "Retry parent must be present in the same daily history",
-        });
-      }
-    }
-    const derived = deriveSafetyScoreV9ShadowDayProjection(day.projection.expectedScheduledAttemptIds, day.attempts);
-    if (stableJsonStringifyV1(day.projection) !== stableJsonStringifyV1(derived)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["projection"],
-        message: "Daily shadow projection does not match its attempts",
-      });
-    }
-  });
-export type SafetyScoreV9ShadowDay = z.infer<typeof SafetyScoreV9ShadowDaySchema>;
-
-function deriveSafetyScoreV9ShadowDayProjection(
-  expectedScheduledAttemptIdsInput: readonly string[],
-  attempts: readonly SafetyScoreV9ShadowAttempt[],
-): z.infer<typeof SafetyScoreV9ShadowDayProjectionSchema> {
-  const expectedScheduledAttemptIds = sortedUnique(expectedScheduledAttemptIdsInput);
-  const expectedSet = new Set(expectedScheduledAttemptIds);
-  const actualScheduledIds = sortedUnique(
-    attempts.filter((attempt) => attempt.trigger === "scheduled").map((attempt) => attempt.attemptId),
-  );
-  const actualSet = new Set(actualScheduledIds);
-  const missingScheduledAttemptIds = expectedScheduledAttemptIds.filter((id) => !actualSet.has(id));
-  const unexpectedScheduledAttemptIds = actualScheduledIds.filter((id) => !expectedSet.has(id));
-  const outcomeCounts = { missed: 0, aborted: 0, failed: 0, succeeded: 0 };
-  const blockers = new Set<z.infer<typeof SafetyScoreV9ShadowDayBlockerSchema>>();
-  const blockingAttemptIds = new Set<string>();
-
-  if (missingScheduledAttemptIds.length > 0) blockers.add("expected-scheduled-attempt-missing");
-  if (unexpectedScheduledAttemptIds.length > 0) blockers.add("unexpected-scheduled-attempt");
-  const qualifyingAttempts: SafetyScoreV9ShadowAttempt[] = [];
-  for (const attempt of attempts) {
-    outcomeCounts[attempt.outcome] += 1;
-    if (attempt.outcome === "succeeded") {
-      if (attempt.qualification?.qualifies) {
-        qualifyingAttempts.push(attempt);
-      } else {
-        blockers.add("generation-nonqualifying");
-        blockingAttemptIds.add(attempt.attemptId);
-      }
-    } else {
-      blockers.add(
-        attempt.outcome === "missed"
-          ? "attempt-missed"
-          : attempt.outcome === "aborted"
-            ? "attempt-aborted"
-            : "attempt-failed",
-      );
-      blockingAttemptIds.add(attempt.attemptId);
-    }
-  }
-  qualifyingAttempts.sort(
-    (left, right) =>
-      (left.completedAtSec ?? Number.MAX_SAFE_INTEGER) - (right.completedAtSec ?? Number.MAX_SAFE_INTEGER) ||
-      compareText(left.identity?.publicationGenerationId ?? "", right.identity?.publicationGenerationId ?? ""),
-  );
-  const canonicalQualifyingGenerationId = qualifyingAttempts[0]?.identity?.publicationGenerationId ?? null;
-  if (canonicalQualifyingGenerationId === null) blockers.add("qualifying-generation-missing");
-  const canonicalBlockers = [...blockers].sort(compareText);
-
-  return {
-    expectedScheduledAttemptIds,
-    missingScheduledAttemptIds,
-    unexpectedScheduledAttemptIds,
-    outcomeCounts,
-    canonicalQualifyingGenerationId,
-    blockingAttemptIds: [...blockingAttemptIds].sort(compareText),
-    blockers: canonicalBlockers,
-    qualifies: canonicalBlockers.length === 0,
-  };
-}
-
-export function buildSafetyScoreV9ShadowDay(input: {
-  utcDay: string;
-  expectedScheduledAttemptIds: readonly string[];
-  attempts: readonly SafetyScoreV9ShadowAttempt[];
-}): SafetyScoreV9ShadowDay {
-  const attempts = input.attempts
-    .map((attempt) => SafetyScoreV9ShadowAttemptSchema.parse(attempt))
-    .sort(
-      (left, right) =>
-        left.scheduledForSec - right.scheduledForSec ||
-        (left.startedAtSec ?? Number.MAX_SAFE_INTEGER) - (right.startedAtSec ?? Number.MAX_SAFE_INTEGER) ||
-        compareText(left.attemptId, right.attemptId),
-    );
-  return SafetyScoreV9ShadowDaySchema.parse({
-    schemaVersion: SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION,
-    utcDay: input.utcDay,
-    attempts,
-    projection: deriveSafetyScoreV9ShadowDayProjection(input.expectedScheduledAttemptIds, attempts),
-  });
-}
-
-export const SafetyScoreV9DiffReviewDispositionSchema = SafetyScoreV9MovementReviewDispositionSchema;
+const SafetyScoreV9DiffReviewDispositionSchema = SafetyScoreV9MovementReviewDispositionSchema;
 export type SafetyScoreV9DiffReviewDisposition = SafetyScoreV9MovementReviewDisposition;
 
-export const SafetyScoreV8ComparableCardSchema = z
+const SafetyScoreV8ComparableCardSchema = z
   .object({
     id: NonEmptyTextSchema,
     score: ScoreSchema.nullable(),
@@ -826,7 +503,7 @@ export const SafetyScoreV8ComparableCardSchema = z
   .strict();
 export type SafetyScoreV8ComparableCard = z.infer<typeof SafetyScoreV8ComparableCardSchema>;
 
-export const SafetyScoreV8ComparableSnapshotSchema = z
+const SafetyScoreV8ComparableSnapshotSchema = z
   .object({
     model: z.literal("v8"),
     publicationGenerationId: NonEmptyTextSchema,
@@ -844,7 +521,7 @@ export const SafetyScoreV8ComparableSnapshotSchema = z
   });
 export type SafetyScoreV8ComparableSnapshot = z.infer<typeof SafetyScoreV8ComparableSnapshotSchema>;
 
-export const SafetyScoreV9DownstreamThresholdSchema = z
+const SafetyScoreV9DownstreamThresholdSchema = z
   .object({
     id: NonEmptyTextSchema,
     label: NonEmptyTextSchema,
@@ -899,7 +576,7 @@ const SafetyScoreV9DiffMovementSchema = z
   .strict();
 type SafetyScoreV9DiffMovement = z.infer<typeof SafetyScoreV9DiffMovementSchema>;
 
-export const SafetyScoreV9DiffCardSchema = SafetyScoreV9DiffMovementSchema.extend({
+const SafetyScoreV9DiffCardSchema = SafetyScoreV9DiffMovementSchema.extend({
   review: z
     .object({
       key: Sha256Schema.nullable(),
@@ -929,7 +606,7 @@ export const SafetyScoreV9DiffCardSchema = SafetyScoreV9DiffMovementSchema.exten
   });
 export type SafetyScoreV9DiffCard = z.infer<typeof SafetyScoreV9DiffCardSchema>;
 
-export function computeSafetyScoreV9DiffReviewKey(input: {
+function computeSafetyScoreV9DiffReviewKey(input: {
   v8Identity: { methodologyVersion: string; evaluationBuildDigest: string };
   v9Identity: {
     candidateId: string;
@@ -953,6 +630,24 @@ export function computeSafetyScoreV9DiffReviewKey(input: {
   );
 }
 
+const SafetyScoreV9DiffSummarySchema = z
+  .object({
+    expectedCount: z.number().int().nonnegative(),
+    comparedCount: z.number().int().nonnegative(),
+    missingInputCount: z.number().int().nonnegative(),
+    gradeOrNrTransitionCount: z.number().int().nonnegative(),
+    bindingCapChangeCount: z.number().int().nonnegative(),
+    largeScoreMovementCount: z.number().int().nonnegative(),
+    topCutoffMovementCount: z.number().int().nonnegative(),
+    downstreamCrossingCount: z.number().int().nonnegative(),
+    requiresReviewCount: z.number().int().nonnegative(),
+    pendingReviewCount: z.number().int().nonnegative(),
+    comparableSupplyUsd: z.number().finite().nonnegative(),
+    supplyWeightedMeanAbsoluteDelta: z.number().finite().nonnegative().nullable(),
+  })
+  .strict();
+export type SafetyScoreV9DiffSummary = z.infer<typeof SafetyScoreV9DiffSummarySchema>;
+
 const SafetyScoreV9DiffReportPayloadSchema = z
   .object({
     schemaVersion: z.literal(SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION),
@@ -966,9 +661,11 @@ const SafetyScoreV9DiffReportPayloadSchema = z
         evaluationBuildDigest: Sha256Schema,
       })
       .strict(),
-    v9Identity: SafetyScoreV9ShadowAttemptIdentitySchema.omit({
+    v9Identity: SafetyScoreV9ShadowIdentitySchema.omit({
       compilerFactSchemaDigest: true,
       producerCapabilityDigest: true,
+      releaseCoveragePolicyDigest: true,
+      consumerThresholdRegistryDigest: true,
       envelopeDigest: true,
       sourceGenerations: true,
     }),
@@ -979,22 +676,7 @@ const SafetyScoreV9DiffReportPayloadSchema = z
         downstream: z.array(SafetyScoreV9DownstreamThresholdSchema),
       })
       .strict(),
-    summary: z
-      .object({
-        expectedCount: z.number().int().nonnegative(),
-        comparedCount: z.number().int().nonnegative(),
-        missingInputCount: z.number().int().nonnegative(),
-        gradeOrNrTransitionCount: z.number().int().nonnegative(),
-        bindingCapChangeCount: z.number().int().nonnegative(),
-        largeScoreMovementCount: z.number().int().nonnegative(),
-        topCutoffMovementCount: z.number().int().nonnegative(),
-        downstreamCrossingCount: z.number().int().nonnegative(),
-        requiresReviewCount: z.number().int().nonnegative(),
-        pendingReviewCount: z.number().int().nonnegative(),
-        comparableSupplyUsd: z.number().finite().nonnegative(),
-        supplyWeightedMeanAbsoluteDelta: z.number().finite().nonnegative().nullable(),
-      })
-      .strict(),
+    summary: SafetyScoreV9DiffSummarySchema,
     topSupplyWeightedMovements: z.array(
       z
         .object({
@@ -1032,7 +714,7 @@ export type SafetyScoreV9DiffReport = z.infer<typeof SafetyScoreV9DiffReportSche
 
 type SafetyScoreV9DiffReportPayload = z.infer<typeof SafetyScoreV9DiffReportPayloadSchema>;
 
-export function computeSafetyScoreV9DiffReportDigest(report: SafetyScoreV9DiffReportPayload): string {
+function computeSafetyScoreV9DiffReportDigest(report: SafetyScoreV9DiffReportPayload): string {
   return sha256Hex(
     stableJsonStringifyV1({
       domain: "safety-score-v9.shadow-diff.v1",
@@ -1238,7 +920,6 @@ export function buildSafetyScoreV9DiffReport(input: BuildSafetyScoreV9DiffReport
       candidateId: v9.candidate.candidateId,
       policyVersion: v9.candidate.policyVersion,
       publicationGenerationId: v9.candidate.publicationGenerationId,
-      publicationEpoch: v9.candidate.publicationEpoch,
       baseInputGenerationId: v9.candidate.baseInputGenerationId,
       factSetDigest: v9.candidate.factSetDigest,
       policyId: v9.candidate.policy.id,
@@ -1272,5 +953,231 @@ export function buildSafetyScoreV9DiffReport(input: BuildSafetyScoreV9DiffReport
   return SafetyScoreV9DiffReportSchema.parse({
     ...payload,
     reportDigest: computeSafetyScoreV9DiffReportDigest(payload),
+  });
+}
+
+const SafetyScoreV9ShadowFailureStageSchema = z.enum([
+  "scheduler",
+  "base-input",
+  "v8-publication",
+  "v9-enrichment",
+  "compile",
+  "score",
+  "serialize",
+  "artifact-retention",
+  "shadow-write",
+  "aborted",
+]);
+export type SafetyScoreV9ShadowFailureStage = z.infer<typeof SafetyScoreV9ShadowFailureStageSchema>;
+
+const SafetyScoreV9ShadowArchiveSelectionReasonSchema = z.enum(["anomaly", "final", "first"]);
+export type SafetyScoreV9ShadowArchiveSelectionReason = z.infer<typeof SafetyScoreV9ShadowArchiveSelectionReasonSchema>;
+
+const SafetyScoreV9ShadowLatestErrorSchema = z
+  .object({
+    atSec: UnixSecondsSchema,
+    stage: SafetyScoreV9ShadowFailureStageSchema,
+    code: NonEmptyTextSchema.max(160),
+    message: NonEmptyTextSchema.max(500),
+  })
+  .strict();
+
+const ReplayArtifactKeySchema = z.string().regex(/^(base-input|evaluation-build|fact-set|policy|result):[a-f0-9]{64}$/);
+
+const SafetyScoreV9ShadowSelectedRunSchema = z
+  .object({
+    selectedAtSec: UnixSecondsSchema,
+    identity: SafetyScoreV9ShadowIdentitySchema,
+    coverage: SafetyScoreV9ShadowCoverageSchema,
+    movement: SafetyScoreV9DiffSummarySchema,
+    qualification: SafetyScoreV9ShadowQualificationSchema,
+    diffReportDigest: Sha256Schema,
+    archiveSelectionReasons: z.array(SafetyScoreV9ShadowArchiveSelectionReasonSchema),
+    artifactKeys: z.array(ReplayArtifactKeySchema),
+  })
+  .strict()
+  .superRefine((selected, ctx) => {
+    addCanonicalArrayIssue(selected.archiveSelectionReasons, ctx, ["archiveSelectionReasons"]);
+    addCanonicalArrayIssue(selected.artifactKeys, ctx, ["artifactKeys"]);
+    if (selected.coverage.expectedActiveCount !== selected.movement.expectedCount) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["movement", "expectedCount"],
+        message: "Movement and coverage active counts must agree",
+      });
+    }
+    const selectedKinds = selected.artifactKeys.map((key) => key.slice(0, key.indexOf(":")));
+    const expectedKinds = [...SafetyScoreV9ReplayArtifactKindSchema.options].sort(compareText);
+    if (selected.archiveSelectionReasons.length === 0) {
+      if (selected.artifactKeys.length !== 0) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["artifactKeys"],
+          message: "Unselected daily runs cannot retain replay artifacts",
+        });
+      }
+    } else if (stableJsonStringifyV1(selectedKinds) !== stableJsonStringifyV1(expectedKinds)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["artifactKeys"],
+        message: "Selected daily runs require one replay artifact of every kind",
+      });
+    }
+  });
+export type SafetyScoreV9ShadowSelectedRun = z.infer<typeof SafetyScoreV9ShadowSelectedRunSchema>;
+
+export const SafetyScoreV9ShadowDailySchema = z
+  .object({
+    schemaVersion: z.literal(SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION),
+    utcDay: UtcDaySchema,
+    updatedAtSec: UnixSecondsSchema,
+    attemptCounts: z
+      .object({
+        successful: z.number().int().nonnegative(),
+        failed: z.number().int().nonnegative(),
+      })
+      .strict(),
+    selectedRun: SafetyScoreV9ShadowSelectedRunSchema.nullable(),
+    latestError: SafetyScoreV9ShadowLatestErrorSchema.nullable(),
+  })
+  .strict()
+  .superRefine((daily, ctx) => {
+    const attemptCount = daily.attemptCounts.successful + daily.attemptCounts.failed;
+    if (attemptCount === 0) {
+      ctx.addIssue({ code: "custom", path: ["attemptCounts"], message: "A daily row requires one attempt" });
+    }
+    if (daily.attemptCounts.successful > 0 !== (daily.selectedRun !== null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["selectedRun"],
+        message: "A successful daily attempt requires one selected run",
+      });
+    }
+    if (daily.selectedRun !== null && daily.selectedRun.selectedAtSec > daily.updatedAtSec) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["selectedRun", "selectedAtSec"],
+        message: "Selected run cannot postdate the daily update",
+      });
+    }
+    if (daily.latestError !== null && daily.latestError.atSec > daily.updatedAtSec) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["latestError", "atSec"],
+        message: "Latest error cannot postdate the daily update",
+      });
+    }
+  });
+export type SafetyScoreV9ShadowDaily = z.infer<typeof SafetyScoreV9ShadowDailySchema>;
+
+function selectedRunIdentity(envelope: SafetyScoreV9ShadowEnvelope): SafetyScoreV9ShadowIdentity {
+  const candidate = envelope.candidate;
+  return SafetyScoreV9ShadowIdentitySchema.parse({
+    candidateId: candidate.candidateId,
+    policyVersion: candidate.policyVersion,
+    publicationGenerationId: candidate.publicationGenerationId,
+    baseInputGenerationId: candidate.baseInputGenerationId,
+    factSetDigest: candidate.factSetDigest,
+    policyId: candidate.policy.id,
+    policyDigest: candidate.policy.semanticDigest,
+    evaluationBuildDigest: candidate.evaluationBuildDigest,
+    resultDigest: candidate.resultDigest,
+    compilerFactSchemaDigest: envelope.compilerFactSchemaDigest,
+    producerCapabilityDigest: envelope.producerCapabilityDigest,
+    releaseCoveragePolicyDigest: envelope.releaseCoveragePolicyDigest,
+    consumerThresholdRegistryDigest: envelope.consumerThresholdRegistryDigest,
+    envelopeDigest: computeSafetyScoreV9ShadowEnvelopeDigest(envelope),
+    sourceGenerations: Object.fromEntries(
+      Object.entries(candidate.sourceGenerations).sort(([left], [right]) => compareText(left, right)),
+    ),
+  });
+}
+
+function assertDailyPredecessor(
+  previous: SafetyScoreV9ShadowDaily | null | undefined,
+  utcDay: string,
+  updatedAtSec: number,
+): SafetyScoreV9ShadowDaily | null {
+  if (previous == null) return null;
+  const parsed = SafetyScoreV9ShadowDailySchema.parse(previous);
+  if (parsed.utcDay !== utcDay) throw new Error("Safety Score v9 daily update cannot cross UTC days");
+  if (updatedAtSec < parsed.updatedAtSec) throw new Error("Safety Score v9 daily update cannot move backward");
+  return parsed;
+}
+
+export function buildSafetyScoreV9ShadowDailySuccess(input: {
+  utcDay: string;
+  selectedAtSec: number;
+  updatedAtSec: number;
+  previous?: SafetyScoreV9ShadowDaily | null;
+  envelope: SafetyScoreV9ShadowEnvelope;
+  diff: SafetyScoreV9DiffReport;
+  archiveSelectionReasons?: readonly SafetyScoreV9ShadowArchiveSelectionReason[];
+  artifactKeys?: readonly string[];
+}): SafetyScoreV9ShadowDaily {
+  const previous = assertDailyPredecessor(input.previous, input.utcDay, input.updatedAtSec);
+  if (previous?.selectedRun !== null && previous?.selectedRun !== undefined) {
+    throw new Error("Safety Score v9 daily history already has a selected successful run");
+  }
+  const envelope = SafetyScoreV9ShadowEnvelopeSchema.parse(input.envelope);
+  const diff = SafetyScoreV9DiffReportSchema.parse(input.diff);
+  const identity = selectedRunIdentity(envelope);
+  if (
+    diff.v9Identity.candidateId !== identity.candidateId ||
+    diff.v9Identity.policyVersion !== identity.policyVersion ||
+    diff.v9Identity.publicationGenerationId !== identity.publicationGenerationId ||
+    diff.v9Identity.baseInputGenerationId !== identity.baseInputGenerationId ||
+    diff.v9Identity.factSetDigest !== identity.factSetDigest ||
+    diff.v9Identity.policyId !== identity.policyId ||
+    diff.v9Identity.policyDigest !== identity.policyDigest ||
+    diff.v9Identity.evaluationBuildDigest !== identity.evaluationBuildDigest ||
+    diff.v9Identity.resultDigest !== identity.resultDigest
+  ) {
+    throw new Error("Safety Score v9 daily diff identity does not match the selected candidate");
+  }
+  return SafetyScoreV9ShadowDailySchema.parse({
+    schemaVersion: SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION,
+    utcDay: input.utcDay,
+    updatedAtSec: input.updatedAtSec,
+    attemptCounts: {
+      successful: (previous?.attemptCounts.successful ?? 0) + 1,
+      failed: previous?.attemptCounts.failed ?? 0,
+    },
+    selectedRun: {
+      selectedAtSec: input.selectedAtSec,
+      identity,
+      coverage: envelope.coverage,
+      movement: diff.summary,
+      qualification: assessSafetyScoreV9ShadowQualification(envelope),
+      diffReportDigest: diff.reportDigest,
+      archiveSelectionReasons: sortedUnique(input.archiveSelectionReasons ?? []),
+      artifactKeys: sortedUnique(input.artifactKeys ?? []),
+    },
+    latestError: previous?.latestError ?? null,
+  });
+}
+
+export function buildSafetyScoreV9ShadowDailyFailure(input: {
+  utcDay: string;
+  updatedAtSec: number;
+  previous?: SafetyScoreV9ShadowDaily | null;
+  failure: {
+    atSec: number;
+    stage: SafetyScoreV9ShadowFailureStage;
+    code: string;
+    message: string;
+  };
+}): SafetyScoreV9ShadowDaily {
+  const previous = assertDailyPredecessor(input.previous, input.utcDay, input.updatedAtSec);
+  return SafetyScoreV9ShadowDailySchema.parse({
+    schemaVersion: SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION,
+    utcDay: input.utcDay,
+    updatedAtSec: input.updatedAtSec,
+    attemptCounts: {
+      successful: previous?.attemptCounts.successful ?? 0,
+      failed: (previous?.attemptCounts.failed ?? 0) + 1,
+    },
+    selectedRun: previous?.selectedRun ?? null,
+    latestError: input.failure,
   });
 }

@@ -1,6 +1,6 @@
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
-import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import { ALERT_SAFETY_SOURCE_CACHE_KEY, buildAlertSafetySourceEnvelope } from "../lib/alert-safety-source-cache";
+import { setCacheMany } from "../lib/db-cache";
 import { buildReportCardCacheEntry } from "../lib/report-card-cache";
 import { buildPublishedReportCardsSnapshotCacheEntry } from "../lib/report-cards-snapshot-cache";
 import type { CronResult } from "../lib/cron-logger";
@@ -9,7 +9,7 @@ import { buildReportCardPublicationPlan } from "../lib/report-card-publication";
 import { buildReportCardsFixedInputCacheEntry } from "../lib/report-cards-fixed-input";
 import { recordCronFailure } from "../lib/cron-logger";
 import { runSafetyScoreV9ShadowAfterV8Publication } from "../lib/safety-score-v9-shadow-runner";
-import { publishSafetyScoreV8ModelFamily } from "../lib/safety-score-model-publication-store";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 
 export async function publishReportCardCache(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
@@ -23,10 +23,6 @@ export async function publishReportCardCache(db: D1Database, signal?: AbortSigna
 
   const publication = buildReportCardPublicationPlan(snapshot.cards, snapshot.methodology.version, snapshot.updatedAt);
   const { fixedInput, ...publicSnapshot } = snapshot;
-  const publishedSnapshot = {
-    ...publicSnapshot,
-    publication: publication.completeness,
-  };
   if (!fixedInput) {
     throw new Error("Report-card publication did not produce its exact fixed-input artifact");
   }
@@ -35,12 +31,23 @@ export async function publishReportCardCache(db: D1Database, signal?: AbortSigna
       `Report-card fixed-input generation ${fixedInput.sourceGeneration} does not match publication ${publication.completeness.generationId}`,
     );
   }
-  const fixedInputEntry = await buildReportCardsFixedInputCacheEntry(fixedInput);
+  const safetyScoreIdentity = buildSafetyScoreV8PublicationIdentity({
+    methodologyVersion: snapshot.methodology.version,
+    baseInputGenerationId: fixedInput.baseInputGenerationId,
+    publicationGenerationId: publication.completeness.generationId,
+  });
+  const publishedSnapshot = {
+    ...publicSnapshot,
+    safetyScoreIdentity,
+    publication: publication.completeness,
+  };
+  const fixedInputEntry = await buildReportCardsFixedInputCacheEntry(fixedInput, safetyScoreIdentity);
   const compactEntry = buildReportCardCacheEntry(publication.activeCards, snapshot.updatedAt, {
     liquidityStale: snapshot.liquidityStale,
     redemptionStale: snapshot.redemptionStale,
     inputFreshness: snapshot.inputFreshness,
     completeness: publication.completeness,
+    safetyScoreIdentity,
   });
   const alertEntry = {
     key: ALERT_SAFETY_SOURCE_CACHE_KEY,
@@ -50,24 +57,15 @@ export async function publishReportCardCache(db: D1Database, signal?: AbortSigna
         snapshot.methodology.version,
         snapshot.updatedAt,
         publication.completeness,
+        safetyScoreIdentity,
       ),
     ),
   };
-  const v8PublicationState = await publishSafetyScoreV8ModelFamily({
+  await setCacheMany(
     db,
-    generationId: publication.completeness.generationId,
-    baseInputGenerationId: fixedInput.baseInputGenerationId,
-    publishedAtSec: snapshot.updatedAt,
-    methodologyVersion: snapshot.methodology.version,
-    evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
-    payloads: {
-      full: buildPublishedReportCardsSnapshotCacheEntry(publishedSnapshot),
-      compact: compactEntry,
-      alert: alertEntry,
-      fixedInput: fixedInputEntry,
-    },
+    [buildPublishedReportCardsSnapshotCacheEntry(publishedSnapshot), compactEntry, alertEntry, fixedInputEntry],
     signal,
-  });
+  );
 
   let v9Shadow: Record<string, unknown>;
   try {
@@ -127,13 +125,7 @@ export async function publishReportCardCache(db: D1Database, signal?: AbortSigna
       redemptionStale: snapshot.redemptionStale,
       fixedInputCacheBytes: fixedInputEntry.storedBytes,
       fixedInputUncompressedBytes: fixedInputEntry.uncompressedBytes,
-      safetyScorePublicationState: {
-        status: v8PublicationState.status,
-        state: v8PublicationState.manifest.selection.state,
-        transitionEpoch: v8PublicationState.manifest.selection.transitionEpoch,
-        activeModel: v8PublicationState.manifest.selection.activeModel,
-        activeAliasesAdvanced: v8PublicationState.activeAliasesAdvanced,
-      },
+      safetyScoreIdentity,
       v9Shadow,
     }),
   };

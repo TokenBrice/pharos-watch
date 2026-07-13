@@ -13,7 +13,6 @@ import type {
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import type { MechanismArchetype } from "../../types/stablecoin-taxonomy";
-export { V9_MECHANISM_QUALITY_LEVELS } from "../../types/safety-score-v9-backing";
 export type { V9MechanismFactV1, V9MechanismQualityLevel } from "../../types/safety-score-v9-backing";
 import type { V9MechanismFactV1 } from "../../types/safety-score-v9-backing";
 import { sha256Hex } from "../sha256";

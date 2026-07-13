@@ -17,11 +17,10 @@ import {
 import type { MechanismArchetype } from "../../types/stablecoin-taxonomy";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
-import type { V9EvaluatedSet } from "./evaluate-set";
 import { parseCompiledV9FactSetV2 } from "./facts";
 
-export const V9_RELEASE_COVERAGE_REPORT_DIGEST_DOMAIN = "safety-score-v9.release-coverage-report.v1";
-export const V9_COVERAGE_EVALUATION_PROJECTION_DIGEST_DOMAIN = "safety-score-v9.coverage-evaluation-projection.v1";
+const V9_RELEASE_COVERAGE_REPORT_DIGEST_DOMAIN = "safety-score-v9.release-coverage-report.v1";
+const V9_COVERAGE_EVALUATION_PROJECTION_DIGEST_DOMAIN = "safety-score-v9.coverage-evaluation-projection.v1";
 
 const SOURCE_KEYS = [
   "registry",
@@ -236,35 +235,6 @@ function blockerSortKey(blocker: V9CoverageBlockerV1): string {
   return `${blocker.code}\u0000${blocker.assetId ?? ""}\u0000${blocker.archetype ?? ""}\u0000${blocker.message}`;
 }
 
-/** Preserve the exact scorer identities while dropping score-bearing private trace detail. */
-function coverageEvaluationProjectionPayload(
-  evaluated: V9EvaluatedSet,
-  producerCapabilityDigest: string,
-): V9CoverageEvaluationProjectionPayloadV1 {
-  return V9CoverageEvaluationProjectionPayloadV1Schema.parse({
-    schemaVersion: 1,
-    factSetDigest: evaluated.factSetDigest,
-    baseInputGenerationId: evaluated.baseInputGenerationId,
-    policyId: evaluated.policyId,
-    policyDigest: evaluated.policyDigest,
-    evaluationBuildDigest: evaluated.evaluationBuildDigest,
-    producerCapabilityDigest,
-    evaluatedSetDigest: evaluated.evaluatedSetDigest,
-    scoreResultDigest: evaluated.scoreResultDigest,
-    asOfSec: evaluated.asOfSec,
-    sourceGenerations: evaluated.sourceGenerations,
-    assets: evaluated.assets.map((asset) => ({
-      assetId: asset.assetId,
-      finalScore: asset.trace.finalScore,
-      nrReasonCodes: sortedUnique(asset.trace.nrReasons.map((reason) => reason.code)),
-      primaryExitRouteKey: asset.exit.primaryRouteKey,
-      includedExitRouteKeys: sortedUnique(
-        asset.exit.routes.filter((route) => route.included).map((route) => route.routeKey),
-      ),
-    })),
-  });
-}
-
 export function computeV9CoverageEvaluationProjectionDigest(
   projection: V9CoverageEvaluationProjectionPayloadV1 | V9CoverageEvaluationSnapshotV1,
 ): string {
@@ -274,28 +244,6 @@ export function computeV9CoverageEvaluationProjectionDigest(
   return sha256Hex(
     stableJsonStringifyV1({ domain: V9_COVERAGE_EVALUATION_PROJECTION_DIGEST_DOMAIN, evaluation: parsed }),
   );
-}
-
-/** Recompute the release projection commitment directly from the retained evaluated set. */
-export function computeV9CoverageEvaluationProjectionDigestFromEvaluatedSet(
-  evaluated: V9EvaluatedSet,
-  producerCapabilityDigest: string,
-): string {
-  return computeV9CoverageEvaluationProjectionDigest(
-    coverageEvaluationProjectionPayload(evaluated, producerCapabilityDigest),
-  );
-}
-
-/** Preserve the exact scorer identities while dropping private trace detail. */
-export function projectV9CoverageEvaluationSnapshot(
-  evaluated: V9EvaluatedSet,
-  producerCapabilityDigest: string,
-): V9CoverageEvaluationSnapshotV1 {
-  const payload = coverageEvaluationProjectionPayload(evaluated, producerCapabilityDigest);
-  return V9CoverageEvaluationSnapshotV1Schema.parse({
-    ...payload,
-    evaluationProjectionDigest: computeV9CoverageEvaluationProjectionDigest(payload),
-  });
 }
 
 function currentCanonicalWeightMatches(

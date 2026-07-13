@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   SAFETY_SCORE_V9_ADMIN_RESPONSE_SCHEMA_VERSION,
   SafetyScoreV9AdminResponseSchema,
+  SafetyScoreV9AdminShadowDaySchema,
 } from "../safety-score-v9-admin";
 
 describe("Safety Score v9 admin response contract", () => {
@@ -20,6 +21,32 @@ describe("Safety Score v9 admin response contract", () => {
         status: "unavailable",
         reason: "shadow-envelope-unavailable",
         partialEnvelope: {},
+      }),
+    ).toThrow();
+  });
+
+  it("accepts a compact failed daily summary and rejects the retired attempt ledger", () => {
+    const daily = {
+      schemaVersion: 1,
+      utcDay: "2026-07-13",
+      updatedAtSec: 1_700_000_100,
+      attemptCounts: { successful: 0, failed: 1 },
+      selectedRun: null,
+      latestError: {
+        atSec: 1_700_000_100,
+        stage: "compile",
+        code: "compiler-failed",
+        message: "Candidate facts did not compile",
+      },
+    } as const;
+
+    expect(SafetyScoreV9AdminShadowDaySchema.parse(daily)).toEqual(daily);
+    expect(() =>
+      SafetyScoreV9AdminShadowDaySchema.parse({
+        schemaVersion: 1,
+        utcDay: "2026-07-13",
+        attempts: [],
+        projection: { qualifies: false },
       }),
     ).toThrow();
   });

@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { V9FactStatusV2Schema, V9FailureDomainRefSchema } from "./safety-score-v9-fact-primitives";
 
-export const V9_MECHANISM_QUALITY_LEVELS = ["strong", "adequate", "limited", "weak", "failed"] as const;
-export const V9MechanismQualityLevelSchema = z.enum(V9_MECHANISM_QUALITY_LEVELS);
+const V9_MECHANISM_QUALITY_LEVELS = ["strong", "adequate", "limited", "weak", "failed"] as const;
+const V9MechanismQualityLevelSchema = z.enum(V9_MECHANISM_QUALITY_LEVELS);
 export type V9MechanismQualityLevel = z.infer<typeof V9MechanismQualityLevelSchema>;
 
 function compareText(left: string, right: string): number {
@@ -19,7 +19,7 @@ const CanonicalFailureDomainsSchema = z
     [...domains].sort((left, right) => compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`)),
   );
 
-export const V9MechanismFactV1Schema = z
+const V9MechanismFactV1Schema = z
   .object({
     status: V9FactStatusV2Schema,
     quality: V9MechanismQualityLevelSchema.nullable(),
@@ -50,7 +50,7 @@ export const V9MechanismFactV1Schema = z
   });
 export type V9MechanismFactV1 = z.infer<typeof V9MechanismFactV1Schema>;
 
-export const V9FiatCashMechanismRiskReviewSchema = z
+const V9FiatCashMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("fiat-cash"),
     claimAndSegregation: V9MechanismFactV1Schema,
@@ -60,7 +60,7 @@ export const V9FiatCashMechanismRiskReviewSchema = z
   .strict();
 export type V9FiatCashMechanismRiskReview = z.infer<typeof V9FiatCashMechanismRiskReviewSchema>;
 
-export const V9TbillMechanismRiskReviewSchema = z
+const V9TbillMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("tbill"),
     fundClaimAndSeniority: V9MechanismFactV1Schema,
@@ -71,7 +71,7 @@ export const V9TbillMechanismRiskReviewSchema = z
   .strict();
 export type V9TbillMechanismRiskReview = z.infer<typeof V9TbillMechanismRiskReviewSchema>;
 
-export const V9CdpMechanismRiskReviewSchema = z
+const V9CdpMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("cdp"),
     collateralizationRatio: z.number().finite().nonnegative(),
@@ -95,7 +95,7 @@ const V9SyntheticVenueShareSchema = z
   .strict();
 export type V9SyntheticVenueShare = z.infer<typeof V9SyntheticVenueShareSchema>;
 
-export const V9SyntheticDeltaNeutralMechanismRiskReviewSchema = z
+const V9SyntheticDeltaNeutralMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("synthetic-delta-neutral"),
     hedgeCoverageRatio: z.number().finite().nonnegative(),
@@ -123,7 +123,7 @@ export type V9SyntheticDeltaNeutralMechanismRiskReview = z.infer<
   typeof V9SyntheticDeltaNeutralMechanismRiskReviewSchema
 >;
 
-export const V9AlgorithmicMechanismRiskReviewSchema = z
+const V9AlgorithmicMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("algorithmic"),
     exogenousBackingShare: z.number().finite().min(0).max(1),
@@ -143,7 +143,7 @@ export const V9AlgorithmicMechanismRiskReviewSchema = z
   });
 export type V9AlgorithmicMechanismRiskReview = z.infer<typeof V9AlgorithmicMechanismRiskReviewSchema>;
 
-export const V9RwaCreditFundMechanismRiskReviewSchema = z
+const V9RwaCreditFundMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("rwa-credit-fund"),
     weightedAverageMaturityDays: z.number().finite().nonnegative(),

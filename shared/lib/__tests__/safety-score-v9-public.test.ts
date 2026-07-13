@@ -166,7 +166,6 @@ describe("Safety Score v9 public projection", () => {
       candidateId: "candidate-v1",
       policyVersion: "candidate-v1",
       publicationGenerationId: "report-cards:v9:candidate:1000",
-      publicationEpoch: 7,
       publishedAtSec: 1_001,
       results: [notRated, dependency, complete, capped],
     });
@@ -226,7 +225,6 @@ describe("Safety Score v9 public projection", () => {
         candidateId: "candidate-v1",
         policyVersion: "candidate-v1",
         publicationGenerationId: "candidate:1",
-        publicationEpoch: 0,
         publishedAtSec: 1_001,
         results: [base, base],
       }),
@@ -239,7 +237,6 @@ describe("Safety Score v9 public projection", () => {
         candidateId: "candidate-v1",
         policyVersion: "candidate-v1",
         publicationGenerationId: "candidate:1",
-        publicationEpoch: 0,
         publishedAtSec: 1_001,
         results: [base, mixed],
       }),

@@ -50,7 +50,7 @@ export const V9_HOLDOUT_VALIDATION_THRESHOLDS = {
   minimumMatchedPairOrderingBps: 8_000,
 } as const;
 
-export const V9HoldoutValidationThresholdsSchema = z
+const V9HoldoutValidationThresholdsSchema = z
   .object({
     minimumCaseCount: z.literal(V9_HOLDOUT_VALIDATION_THRESHOLDS.minimumCaseCount),
     minimumAdverseCount: z.literal(V9_HOLDOUT_VALIDATION_THRESHOLDS.minimumAdverseCount),
@@ -74,10 +74,10 @@ export const V9HoldoutValidationThresholdsSchema = z
   .strict();
 export type V9HoldoutValidationThresholds = z.infer<typeof V9HoldoutValidationThresholdsSchema>;
 
-export const V9ValidationPrerequisiteStatusSchema = z.enum(["passed", "failed", "not-run"]);
+const V9ValidationPrerequisiteStatusSchema = z.enum(["passed", "failed", "not-run"]);
 export type V9ValidationPrerequisiteStatus = z.infer<typeof V9ValidationPrerequisiteStatusSchema>;
 
-export const V9HoldoutCaseManifestEntrySchema = z
+const V9HoldoutCaseManifestEntrySchema = z
   .object({
     caseId: IdentifierSchema,
     archetype: z.enum(MECHANISM_ARCHETYPE_VALUES),
@@ -91,7 +91,7 @@ export const V9HoldoutCaseManifestEntrySchema = z
   .strict();
 export type V9HoldoutCaseManifestEntry = z.infer<typeof V9HoldoutCaseManifestEntrySchema>;
 
-export const V9HoldoutMatchedPairManifestEntrySchema = z
+const V9HoldoutMatchedPairManifestEntrySchema = z
   .object({
     pairId: IdentifierSchema,
     caseIds: z.tuple([IdentifierSchema, IdentifierSchema]),
@@ -237,10 +237,10 @@ export const V9ReleaseCandidateSealSchema = V9ReleaseCandidateSealPayloadBaseSch
   .superRefine(addSealManifestIssues);
 export type V9ReleaseCandidateSeal = z.infer<typeof V9ReleaseCandidateSealSchema>;
 
-export const V9HoldoutOutcomeClassSchema = z.enum(["adverse", "stress-exposed-resilient", "censored"]);
+const V9HoldoutOutcomeClassSchema = z.enum(["adverse", "stress-exposed-resilient", "censored"]);
 export type V9HoldoutOutcomeClass = z.infer<typeof V9HoldoutOutcomeClassSchema>;
 
-export const V9HoldoutCaseEvaluationSchema = z
+const V9HoldoutCaseEvaluationSchema = z
   .object({
     caseId: IdentifierSchema,
     factDigest: Sha256Schema,
@@ -292,7 +292,7 @@ export const V9HoldoutCaseEvaluationSchema = z
 export type V9HoldoutCaseEvaluation = z.infer<typeof V9HoldoutCaseEvaluationSchema>;
 
 /** Exact score/result/outcome payload committed before a sealed holdout is unblinded. */
-export const V9HoldoutOutcomeCommitmentEntrySchema = z
+const V9HoldoutOutcomeCommitmentEntrySchema = z
   .object({
     caseId: IdentifierSchema,
     resultDigest: Sha256Schema,
@@ -322,7 +322,7 @@ export const V9HoldoutOutcomeSetCommitmentPayloadSchema = z
   });
 export type V9HoldoutOutcomeSetCommitmentPayload = z.infer<typeof V9HoldoutOutcomeSetCommitmentPayloadSchema>;
 
-export const V9HoldoutDigestBindingSchema = z
+const V9HoldoutDigestBindingSchema = z
   .object({
     factSetDigest: Sha256Schema,
     sourceArchiveDigest: Sha256Schema,
@@ -333,7 +333,7 @@ export const V9HoldoutDigestBindingSchema = z
   .strict();
 export type V9HoldoutDigestBinding = z.infer<typeof V9HoldoutDigestBindingSchema>;
 
-export const V9HoldoutUnsealEventSchema = z
+const V9HoldoutUnsealEventSchema = z
   .object({
     eventId: IdentifierSchema,
     releaseCandidateId: z.string().regex(/^v9-rc-[1-9][0-9]*$/),
@@ -371,7 +371,7 @@ export const V9HistoricalHoldoutEvaluationInputSchema = z
   });
 export type V9HistoricalHoldoutEvaluationInput = z.infer<typeof V9HistoricalHoldoutEvaluationInputSchema>;
 
-export const V9_HOLDOUT_NO_GO_REASON_CODES = [
+const V9_HOLDOUT_NO_GO_REASON_CODES = [
   "candidate-seal-digest-mismatch",
   "fact-set-digest-mismatch",
   "source-archive-digest-mismatch",
@@ -409,7 +409,7 @@ export const V9_HOLDOUT_NO_GO_REASON_CODES = [
   "matched-pair-outcome-class-mismatch",
   "matched-pair-ordering-below-80-percent",
 ] as const;
-export const V9HoldoutNoGoReasonCodeSchema = z.enum(V9_HOLDOUT_NO_GO_REASON_CODES);
+const V9HoldoutNoGoReasonCodeSchema = z.enum(V9_HOLDOUT_NO_GO_REASON_CODES);
 export type V9HoldoutNoGoReasonCode = z.infer<typeof V9HoldoutNoGoReasonCodeSchema>;
 
 const V9ClassRateabilityMetricsSchema = z

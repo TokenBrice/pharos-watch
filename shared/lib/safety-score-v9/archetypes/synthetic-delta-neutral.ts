@@ -1,7 +1,4 @@
-import type {
-  V9SyntheticDeltaNeutralMechanismRiskReview,
-  V9SyntheticVenueShare,
-} from "../../../types/safety-score-v9-backing";
+import type { V9SyntheticDeltaNeutralMechanismRiskReview } from "../../../types/safety-score-v9-backing";
 import {
   createV9BackingStructuralReason,
   evaluateV9ArchetypeBacking,

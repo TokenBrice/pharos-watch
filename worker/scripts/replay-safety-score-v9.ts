@@ -25,7 +25,6 @@ Options:
   --input <path>                  Exact fixed-input JSON or compressed cache envelope (required)
   --output <path>                 Canonical candidate replay JSON (required)
   --published-at <time>           Fixed ISO timestamp or Unix seconds (required)
-  --publication-epoch <n>         Non-negative publication fencing epoch (required)
   --extension <path>              Optional reviewed V9 fact-extension JSON
   --release-candidate-id <id>     Optional v9-rc-N candidate identity override
   -h, --help                      Show this help`;
@@ -83,7 +82,6 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
   fixedInput: unknown;
   extension?: unknown;
   publishedAtSec: number;
-  publicationEpoch: number;
   releaseCandidateId?: string;
 }): SafetyScoreV9ReplayArtifact {
   return {
@@ -108,7 +106,6 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
       input: { type: "string" },
       output: { type: "string" },
       "published-at": { type: "string" },
-      "publication-epoch": { type: "string" },
       extension: { type: "string" },
       "release-candidate-id": { type: "string" },
     },
@@ -116,13 +113,8 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
   if (writeCliHelpIfRequested(values, USAGE)) return;
   assertCliUsage(typeof values.input === "string", "--input is required");
   assertCliUsage(typeof values.output === "string", "--output is required");
-  assertCliUsage(typeof values["publication-epoch"] === "string", "--publication-epoch is required");
 
   const publishedAtSec = parseSafetyScoreV9PublishedAtSec(values["published-at"]);
-  const publicationEpoch = parseCliInteger(values["publication-epoch"], {
-    name: "--publication-epoch",
-    min: 0,
-  });
   const releaseCandidateId = values["release-candidate-id"];
   assertCliUsage(
     releaseCandidateId === undefined || /^v9-rc-[1-9][0-9]*$/.test(String(releaseCandidateId)),
@@ -135,7 +127,6 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
     fixedInput,
     ...(extension === undefined ? {} : { extension }),
     publishedAtSec,
-    publicationEpoch,
     ...(releaseCandidateId === undefined ? {} : { releaseCandidateId: String(releaseCandidateId) }),
   });
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.

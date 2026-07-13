@@ -16,7 +16,7 @@ import {
   type V9ProductionScoreTrace,
 } from "./score";
 
-export const V9_PUBLIC_STRESS_STATE_DIGEST_DOMAIN = "safety-score-v9.public-stress-state.v1";
+const V9_PUBLIC_STRESS_STATE_DIGEST_DOMAIN = "safety-score-v9.public-stress-state.v1";
 
 export interface V9PublicStressState {
   schemaVersion: 1;
@@ -61,7 +61,7 @@ function normalizedStatePayload(state: Omit<V9PublicStressState, "stateDigest">)
   };
 }
 
-export function computeV9PublicStressStateDigest(state: Omit<V9PublicStressState, "stateDigest">): string {
+function computeV9PublicStressStateDigest(state: Omit<V9PublicStressState, "stateDigest">): string {
   return sha256Hex(
     stableJsonStringifyV1({ domain: V9_PUBLIC_STRESS_STATE_DIGEST_DOMAIN, state: normalizedStatePayload(state) }),
   );

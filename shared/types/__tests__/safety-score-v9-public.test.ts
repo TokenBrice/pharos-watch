@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SafetyScoreModelManifestSchema, SafetyScoreV9ResponseSchema } from "../safety-score-v9-public";
+import { SafetyScoreV9ResponseSchema } from "../safety-score-v9-public";
 
 const DIGEST = "a".repeat(64);
 
@@ -21,7 +21,6 @@ function response() {
     candidateId: "candidate-v1",
     policyVersion: "candidate-v1",
     publicationGenerationId: "safety-score:v9:1",
-    publicationEpoch: 3,
     baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
     factSetDigest: DIGEST,
     resultDigest: "c".repeat(64),
@@ -110,34 +109,5 @@ describe("SafetyScoreV9ResponseSchema", () => {
     const invalidAccess = structuredClone(response());
     Object.assign(invalidAccess.cards[0].accessPosture, { governance: "unknown", unknownFields: [] });
     expect(() => SafetyScoreV9ResponseSchema.parse(invalidAccess)).toThrow(/unknown fields must exactly match/);
-  });
-});
-
-describe("SafetyScoreModelManifestSchema", () => {
-  it("enforces state-authorized active aliases", () => {
-    expect(
-      SafetyScoreModelManifestSchema.parse({
-        schemaVersion: 1,
-        state: "v8-active-v9-shadow",
-        activeModel: "v8",
-        activeGenerationId: "v8:1",
-        v8GenerationId: "v8:1",
-        v9GenerationId: "v9:1",
-        transitionEpoch: 0,
-        updatedAtSec: 1,
-      }).activeModel,
-    ).toBe("v8");
-    expect(() =>
-      SafetyScoreModelManifestSchema.parse({
-        schemaVersion: 1,
-        state: "v8-active-v9-shadow",
-        activeModel: "v9",
-        activeGenerationId: "v9:1",
-        v8GenerationId: "v8:1",
-        v9GenerationId: "v9:1",
-        transitionEpoch: 0,
-        updatedAtSec: 1,
-      }),
-    ).toThrow(/requires v8 active/);
   });
 });

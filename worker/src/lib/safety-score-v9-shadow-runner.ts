@@ -1,28 +1,43 @@
 import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
+import {
+  V9_CONSUMER_SCORE_THRESHOLD_REGISTRY,
+  V9_SHADOW_DAILY_START_OFFSET_SEC,
+  V9_SHADOW_MAX_START_DELAY_SEC,
+} from "@shared/lib/safety-score-v9/operational-gate";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ReportCard } from "@shared/types/report-cards";
 import type { V9Grade } from "@shared/types/safety-score-v9";
-import type { SafetyScoreV9ReplayArtifactKind } from "./safety-score-v9-shadow";
+import { V9_RELEASE_COVERAGE_FLOORS } from "@shared/types/safety-score-v9-coverage";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 import type { ReportCardPublicationCompleteness } from "./report-card-publication";
-import { buildSafetyScoreV9BaselineExtension } from "./safety-score-v9-extension";
+import { throwIfAborted } from "./abort";
 import { buildSafetyScoreV9Candidate, type SafetyScoreV9CandidatePipelineResult } from "./safety-score-v9-candidate";
+import { buildSafetyScoreV9BaselineExtension } from "./safety-score-v9-extension";
+import { loadSafetyScoreV9MovementReviewDispositions } from "./safety-score-v9-movement-reviews";
 import {
+  assessSafetyScoreV9ShadowQualification,
   buildSafetyScoreV9DiffReport,
-  buildSafetyScoreV9ShadowAttempt,
-  buildSafetyScoreV9ShadowDay,
+  buildSafetyScoreV9ShadowDailyFailure,
+  buildSafetyScoreV9ShadowDailySuccess,
   buildSafetyScoreV9ShadowEnvelope,
   projectSafetyScoreV9ShadowEnvelopeCore,
   rebuildSafetyScoreV9ShadowEnvelope,
+  SAFETY_SCORE_V9_REQUIRED_SHADOW_COVERAGE_FLOOR_IDS,
+  SAFETY_SCORE_V9_SHADOW_MINIMUM_QUALIFYING_DAYS,
   safetyScoreV9UtcDay,
   type SafetyScoreV8ComparableSnapshot,
   type SafetyScoreV9CoverageFloor,
   type SafetyScoreV9DownstreamThreshold,
   type SafetyScoreV9ReplayArtifact,
-  type SafetyScoreV9ShadowAttempt,
-  type SafetyScoreV9ShadowDay,
+  type SafetyScoreV9ReplayArtifactKind,
+  type SafetyScoreV9ShadowArchiveSelectionReason,
+  type SafetyScoreV9ShadowDaily,
+  type SafetyScoreV9ShadowEnvelope,
   type SafetyScoreV9ShadowEnvelopeCore,
+  type SafetyScoreV9ShadowFailureStage,
+  type SafetyScoreV9ShadowSelectedRun,
 } from "./safety-score-v9-shadow";
 import {
   buildSafetyScoreV9ReplayArtifact,
@@ -31,11 +46,11 @@ import {
   persistSafetyScoreV9ShadowState,
   type SafetyScoreV9StoredReplayArtifact,
 } from "./safety-score-v9-store";
-import { loadSafetyScoreV9MovementReviewDispositions } from "./safety-score-v9-movement-reviews";
 
-export const SAFETY_SCORE_V9_SHADOW_PUBLICATION_EPOCH = 0;
-export const SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX = "safety-score-v9-shadow:scheduled";
-export const SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC = 60 * 60;
+export const SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX = "safety-score-v9-shadow";
+export const SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC = V9_SHADOW_DAILY_START_OFFSET_SEC;
+export const SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC = V9_SHADOW_MAX_START_DELAY_SEC;
+export const SAFETY_SCORE_V9_SHADOW_TIMEOUT_MS = 2 * 60_000;
 
 export interface RunSafetyScoreV9ShadowInput {
   db: D1Database;
@@ -46,6 +61,7 @@ export interface RunSafetyScoreV9ShadowInput {
   signal?: AbortSignal;
   nowSec?: number;
   releaseCandidateId?: string;
+  archiveSelectionReasons?: readonly Exclude<SafetyScoreV9ShadowArchiveSelectionReason, "first">[];
 }
 
 export type SafetyScoreV9ShadowRunResult =
@@ -58,13 +74,21 @@ export type SafetyScoreV9ShadowRunResult =
       qualifying: boolean;
       qualificationBlockers: string[];
       pendingReviewCount: number;
+      archiveSelectionReasons: SafetyScoreV9ShadowArchiveSelectionReason[];
     }
   | {
       status: "skipped";
       attemptId: string;
       utcDay: string;
-      reason: "attempt-already-recorded";
+      reason: "successful-run-already-selected";
       qualifying: boolean;
+    }
+  | {
+      status: "skipped";
+      attemptId: string;
+      utcDay: string;
+      reason: "waiting-for-score-bearing-producers";
+      scheduledForSec: number;
     }
   | {
       status: "failed";
@@ -75,39 +99,136 @@ export type SafetyScoreV9ShadowRunResult =
       message: string;
     };
 
-type SafetyScoreV9ShadowFailureStage =
-  | "scheduler"
-  | "base-input"
-  | "v8-publication"
-  | "v9-enrichment"
-  | "compile"
-  | "score"
-  | "serialize"
-  | "artifact-retention"
-  | "shadow-write"
-  | "aborted";
-
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
+function sortedUnique<T extends string>(values: readonly T[]): T[] {
+  return [...new Set(values)].sort(compareText);
+}
+
+function fallbackNowSec(): number {
+  return Math.max(0, Math.floor(Date.now() / 1_000));
+}
+
 function nowSecAtLeast(minimum: number, override?: number): number {
-  const value = override ?? Math.floor(Date.now() / 1_000);
+  const value = override ?? fallbackNowSec();
   if (!Number.isInteger(value) || value < 0) throw new Error("Safety Score v9 shadow clock must be epoch seconds");
   return Math.max(minimum, value);
 }
 
 function scheduledForUtcDay(clockSec: number): number {
   const day = safetyScoreV9UtcDay(clockSec);
-  return Math.floor(Date.parse(`${day}T00:00:00.000Z`) / 1_000);
+  return Math.floor(Date.parse(`${day}T00:00:00.000Z`) / 1_000) + SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC;
 }
 
-function scheduledAttemptId(utcDay: string): string {
-  return `${SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX}:${utcDay}`;
+function adjacentUtcDay(utcDay: string, offsetDays: number): string {
+  const timestamp = Date.parse(`${utcDay}T00:00:00.000Z`);
+  if (!Number.isFinite(timestamp)) throw new Error(`Invalid Safety Score v9 UTC day: ${utcDay}`);
+  return new Date(timestamp + offsetDays * 86_400_000).toISOString().slice(0, 10);
 }
 
-function sortedUnique(values: readonly string[]): string[] {
-  return [...new Set(values)].sort(compareText);
+function sameFrozenShadowIdentity(
+  left: SafetyScoreV9ShadowSelectedRun,
+  right: SafetyScoreV9ShadowSelectedRun,
+): boolean {
+  return (
+    left.identity.candidateId === right.identity.candidateId &&
+    left.identity.policyId === right.identity.policyId &&
+    left.identity.policyVersion === right.identity.policyVersion &&
+    left.identity.policyDigest === right.identity.policyDigest &&
+    left.identity.evaluationBuildDigest === right.identity.evaluationBuildDigest &&
+    left.identity.compilerFactSchemaDigest === right.identity.compilerFactSchemaDigest &&
+    left.identity.producerCapabilityDigest === right.identity.producerCapabilityDigest &&
+    left.identity.releaseCoveragePolicyDigest === right.identity.releaseCoveragePolicyDigest &&
+    left.identity.consumerThresholdRegistryDigest === right.identity.consumerThresholdRegistryDigest
+  );
+}
+
+function anomalyFingerprint(run: SafetyScoreV9ShadowSelectedRun): string {
+  return stableJsonStringifyV1({
+    qualificationBlockers: run.qualification.blockers,
+    failedCoverageFloorIds: run.coverage.coverageFloors
+      .filter((floor) => floor.status === "fail")
+      .map((floor) => floor.id),
+    missingIds: run.coverage.missingIds,
+    unexpectedIds: run.coverage.unexpectedIds,
+    duplicateIds: run.coverage.duplicateIds,
+    compilerExceptions: run.coverage.compilerExceptions,
+    futureDatedEvidenceIds: run.coverage.futureDatedEvidenceIds,
+    publicationRegression: run.coverage.publicationRegression,
+    unresolvedReleaseBlockers: run.coverage.unresolvedReleaseBlockers,
+    unresolvedCriticalMovementIds: run.coverage.unresolvedCriticalMovementIds,
+    movement: {
+      gradeOrNrTransitionCount: run.movement.gradeOrNrTransitionCount,
+      bindingCapChangeCount: run.movement.bindingCapChangeCount,
+      largeScoreMovementCount: run.movement.largeScoreMovementCount,
+      topCutoffMovementCount: run.movement.topCutoffMovementCount,
+      downstreamCrossingCount: run.movement.downstreamCrossingCount,
+      pendingReviewCount: run.movement.pendingReviewCount,
+    },
+  });
+}
+
+/** Selects the bounded replay set without creating an online release authority. */
+export function selectSafetyScoreV9ShadowArchiveReasons(input: {
+  history: readonly SafetyScoreV9ShadowDaily[];
+  current: SafetyScoreV9ShadowDaily;
+  requested?: readonly Exclude<SafetyScoreV9ShadowArchiveSelectionReason, "first">[];
+}): SafetyScoreV9ShadowArchiveSelectionReason[] {
+  const currentRun = input.current.selectedRun;
+  if (currentRun === null) throw new Error("Safety Score v9 archive selection requires a successful current run");
+  const historyByDay = new Map(input.history.map((day) => [day.utcDay, day]));
+  const previousRun = historyByDay.get(adjacentUtcDay(input.current.utcDay, -1))?.selectedRun ?? null;
+  const startsQualifyingWindow =
+    currentRun.qualification.qualifies &&
+    (previousRun === null ||
+      !previousRun.qualification.qualifies ||
+      !sameFrozenShadowIdentity(previousRun, currentRun));
+
+  let qualifyingStreakDays = currentRun.qualification.qualifies ? 1 : 0;
+  if (currentRun.qualification.qualifies) {
+    for (let offset = -1; qualifyingStreakDays < SAFETY_SCORE_V9_SHADOW_MINIMUM_QUALIFYING_DAYS; offset -= 1) {
+      const run = historyByDay.get(adjacentUtcDay(input.current.utcDay, offset))?.selectedRun ?? null;
+      if (run === null || !run.qualification.qualifies || !sameFrozenShadowIdentity(run, currentRun)) break;
+      qualifyingStreakDays += 1;
+    }
+  }
+  const currentStreakStart = adjacentUtcDay(input.current.utcDay, 1 - qualifyingStreakDays);
+  const currentStreakHasFinal = input.history.some(
+    (day) =>
+      day.utcDay >= currentStreakStart &&
+      day.utcDay < input.current.utcDay &&
+      day.selectedRun !== null &&
+      sameFrozenShadowIdentity(day.selectedRun, currentRun) &&
+      day.selectedRun.archiveSelectionReasons.includes("final"),
+  );
+  const completesQualifyingWindow =
+    currentRun.qualification.qualifies &&
+    qualifyingStreakDays >= SAFETY_SCORE_V9_SHADOW_MINIMUM_QUALIFYING_DAYS &&
+    !currentStreakHasFinal;
+
+  const startsDistinctAnomaly =
+    !currentRun.qualification.qualifies &&
+    (previousRun === null ||
+      previousRun.qualification.qualifies ||
+      !sameFrozenShadowIdentity(previousRun, currentRun) ||
+      anomalyFingerprint(previousRun) !== anomalyFingerprint(currentRun));
+  const requested = input.requested ?? [];
+  if (requested.includes("final") && !currentRun.qualification.qualifies) {
+    throw new Error("Final Safety Score v9 replay evidence must be selected from a qualifying run");
+  }
+  return sortedUnique<SafetyScoreV9ShadowArchiveSelectionReason>([
+    ...requested,
+    ...(startsQualifyingWindow ? (["first"] as const) : []),
+    ...(completesQualifyingWindow ? (["final"] as const) : []),
+    ...(startsDistinctAnomaly ? (["anomaly"] as const) : []),
+  ]);
+}
+
+function attemptId(utcDay: string, previous: SafetyScoreV9ShadowDaily | null): string {
+  const sequence = (previous?.attemptCounts.successful ?? 0) + (previous?.attemptCounts.failed ?? 0) + 1;
+  return `${SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX}:${utcDay}:${sequence}`;
 }
 
 function v8ReasonCodes(card: ReportCard): string[] {
@@ -155,12 +276,13 @@ function buildV8ComparableSnapshot(args: {
 function releaseCoverageFloors(
   observedCount: number,
   expectedCount: number,
+  rateableCount: number,
   scheduledForSec: number,
   startedAtSec: number,
 ): SafetyScoreV9CoverageFloor[] {
   const exactCount = observedCount === expectedCount;
   const startDelaySec = Math.max(0, startedAtSec - scheduledForSec);
-  const floors: SafetyScoreV9CoverageFloor[] = [
+  const floors = [
     {
       id: "active-result-count",
       status: exactCount ? "pass" : "fail",
@@ -171,21 +293,44 @@ function releaseCoverageFloors(
         : "The V9 candidate result count does not match the active v8 publication",
     },
     {
+      id: "minimum-rateable-assets",
+      status: rateableCount >= V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets ? "pass" : "fail",
+      observed: rateableCount,
+      required: `>= ${V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets}`,
+      detail:
+        rateableCount >= V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets
+          ? "The V9 candidate meets the ratified active-asset rateability floor"
+          : "The V9 candidate is below the ratified active-asset rateability floor",
+    },
+    {
+      id: "ratified-release-coverage",
+      status: "fail",
+      observed: 0,
+      required: "a gate-passed V9-9 release coverage report bound to this exact candidate",
+      detail: "No frozen V9-9 release cohort and passing coverage report is wired into the shadow candidate",
+    },
+    {
       id: "scheduled-start-latency",
       status: startDelaySec <= SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC ? "pass" : "fail",
       observed: startDelaySec,
-      required: `<= ${SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC} seconds after the UTC daily boundary`,
+      required: `<= ${SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC} seconds after the scheduled daily selection point`,
       detail:
         startDelaySec <= SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC
           ? "The daily shadow attempt began inside the preregistered start window"
           : "The daily shadow attempt began too late to represent a complete prospective UTC day",
     },
-  ];
-  return floors.sort((left, right) => compareText(left.id, right.id));
+  ].sort((left, right) => compareText(left.id, right.id)) as SafetyScoreV9CoverageFloor[];
+  if (
+    stableJsonStringifyV1(floors.map((floor) => floor.id)) !==
+    stableJsonStringifyV1(SAFETY_SCORE_V9_REQUIRED_SHADOW_COVERAGE_FLOOR_IDS)
+  ) {
+    throw new Error("Safety Score v9 shadow coverage-floor registry is incomplete");
+  }
+  return floors;
 }
 
-function gradeThresholds(): SafetyScoreV9DownstreamThreshold[] {
-  return V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds
+function downstreamThresholds(): SafetyScoreV9DownstreamThreshold[] {
+  const gradeThresholds = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds
     .filter((threshold) => threshold.minScore > 0)
     .map((threshold: { grade: Exclude<V9Grade, "NR">; minScore: number }) => ({
       id: `grade-minimum:${threshold.grade}`,
@@ -193,6 +338,9 @@ function gradeThresholds(): SafetyScoreV9DownstreamThreshold[] {
       score: threshold.minScore,
       comparison: "at-least" as const,
     }));
+  return [...gradeThresholds, ...V9_CONSUMER_SCORE_THRESHOLD_REGISTRY].sort((left, right) =>
+    compareText(left.id, right.id),
+  );
 }
 
 function supplyProjection(pipeline: SafetyScoreV9CandidatePipelineResult): {
@@ -215,34 +363,23 @@ async function buildReplayArtifacts(
   signal?: AbortSignal,
 ): Promise<{ stored: SafetyScoreV9StoredReplayArtifact[]; references: SafetyScoreV9ReplayArtifact[] }> {
   const values: readonly { kind: SafetyScoreV9ReplayArtifactKind; identity: string; value: unknown }[] = [
-    {
-      kind: "base-input",
-      identity: pipeline.candidate.baseInputGenerationId,
-      value: pipeline.fixedInput,
-    },
+    { kind: "base-input", identity: pipeline.candidate.baseInputGenerationId, value: pipeline.fixedInput },
     {
       kind: "fact-set",
       identity: pipeline.candidate.factSetDigest,
       value: { schemaVersion: 1, extension: pipeline.extension, compiledFacts: pipeline.compiledFacts },
     },
-    {
-      kind: "policy",
-      identity: pipeline.candidate.policy.semanticDigest,
-      value: V9_CANDIDATE_POLICY_V1,
-    },
+    { kind: "policy", identity: pipeline.candidate.policy.semanticDigest, value: V9_CANDIDATE_POLICY_V1 },
     {
       kind: "evaluation-build",
       identity: pipeline.candidate.evaluationBuildDigest,
-      value: {
-        manifest: SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST,
-        compilerFactSchemaIdentity: pipeline.compilerFactSchemaIdentity,
-        producerCapabilityIdentity: pipeline.producerCapabilityIdentity,
-      },
+      value: { manifest: SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST },
     },
   ];
   const stored: SafetyScoreV9StoredReplayArtifact[] = [];
   const references: SafetyScoreV9ReplayArtifact[] = [];
   for (const value of values) {
+    throwIfAborted(signal);
     const artifact = await buildSafetyScoreV9ReplayArtifact(
       { ...value, createdAtSec, verifiedAtSec: createdAtSec },
       { signal },
@@ -287,15 +424,6 @@ async function buildResultReplayArtifact(
   return { stored, reference: parsed.reference };
 }
 
-function mergeAttempt(day: SafetyScoreV9ShadowDay | null, attempt: SafetyScoreV9ShadowAttempt): SafetyScoreV9ShadowDay {
-  const attempts = [...(day?.attempts ?? []).filter((entry) => entry.attemptId !== attempt.attemptId), attempt];
-  return buildSafetyScoreV9ShadowDay({
-    utcDay: attempt.utcDay,
-    expectedScheduledAttemptIds: [scheduledAttemptId(attempt.utcDay)],
-    attempts,
-  });
-}
-
 function safeFailure(error: unknown, stage: SafetyScoreV9ShadowFailureStage): { code: string; message: string } {
   const name = error instanceof Error && error.name ? error.name : "Error";
   const rawMessage = error instanceof Error ? error.message : String(error);
@@ -305,70 +433,107 @@ function safeFailure(error: unknown, stage: SafetyScoreV9ShadowFailureStage): { 
   };
 }
 
+function combinedShadowSignal(signal?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(SAFETY_SCORE_V9_SHADOW_TIMEOUT_MS);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
+async function persistFailure(args: {
+  db: D1Database;
+  utcDay: string;
+  atSec: number;
+  previous: SafetyScoreV9ShadowDaily | null;
+  stage: SafetyScoreV9ShadowFailureStage;
+  failure: { code: string; message: string };
+  signal?: AbortSignal;
+}): Promise<void> {
+  const daily = buildSafetyScoreV9ShadowDailyFailure({
+    utcDay: args.utcDay,
+    updatedAtSec: args.atSec,
+    previous: args.previous,
+    failure: { atSec: args.atSec, stage: args.stage, ...args.failure },
+  });
+  await persistSafetyScoreV9ShadowState(args.db, { daily, signal: args.signal });
+}
+
 /**
- * Runs one candidate-only V9 shadow generation after the exact v8 publication
- * has committed. Every error is converted into shadow history and returned to
- * the caller; this function never authorizes or mutates the active model.
+ * Runs V9 only after the authoritative V8 commit. The boundary always returns
+ * a shadow result: calculation, timeout, and persistence failures never unwind
+ * the completed V8 publication.
  */
 export async function runSafetyScoreV9ShadowAfterV8Publication(
   input: RunSafetyScoreV9ShadowInput,
 ): Promise<SafetyScoreV9ShadowRunResult> {
-  const fixedInput = normalizeFixedInput(input.fixedInput);
-  const scheduledForSec = scheduledForUtcDay(fixedInput.clockSec);
-  const utcDay = safetyScoreV9UtcDay(scheduledForSec);
-  const attemptId = scheduledAttemptId(utcDay);
-  const existingDay =
-    (
-      await loadSafetyScoreV9ShadowHistory(input.db, {
-        fromUtcDay: utcDay,
-        toUtcDay: utcDay,
-        limit: 1,
-        signal: input.signal,
-      })
-    )[0] ?? null;
-  const existingAttempt = existingDay?.attempts.find((attempt) => attempt.attemptId === attemptId);
-  if (existingAttempt) {
-    return {
-      status: "skipped",
-      attemptId,
-      utcDay,
-      reason: "attempt-already-recorded",
-      qualifying: existingAttempt.qualification?.qualifies ?? false,
-    };
-  }
+  const fallbackAtSec = fallbackNowSec();
+  let utcDay = safetyScoreV9UtcDay(fallbackAtSec);
+  let currentAttemptId = `${SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX}:${utcDay}:1`;
+  let previous: SafetyScoreV9ShadowDaily | null = null;
+  let startedAtSec = fallbackAtSec;
+  let stage: SafetyScoreV9ShadowFailureStage = "base-input";
+  const shadowSignal = combinedShadowSignal(input.signal);
 
-  const startedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
-  let stage: SafetyScoreV9ShadowFailureStage = "v9-enrichment";
   try {
+    if (input.nowSec !== undefined && (!Number.isInteger(input.nowSec) || input.nowSec < 0)) {
+      throw new Error("Safety Score v9 shadow clock must be epoch seconds");
+    }
+    const fixedInput = normalizeFixedInput(input.fixedInput);
+    const scheduledForSec = scheduledForUtcDay(fixedInput.clockSec);
+    utcDay = safetyScoreV9UtcDay(scheduledForSec);
+
+    stage = "scheduler";
+    const history = await loadSafetyScoreV9ShadowHistory(input.db, {
+      toUtcDay: utcDay,
+      limit: 400,
+      signal: shadowSignal,
+    });
+    previous = history.find((daily) => daily.utcDay === utcDay) ?? null;
+    currentAttemptId = attemptId(utcDay, previous);
+    if (previous?.selectedRun !== null && previous?.selectedRun !== undefined) {
+      return {
+        status: "skipped",
+        attemptId: currentAttemptId,
+        utcDay,
+        reason: "successful-run-already-selected",
+        qualifying: previous.selectedRun.qualification.qualifies,
+      };
+    }
+    if (fixedInput.clockSec < scheduledForSec) {
+      return {
+        status: "skipped",
+        attemptId: currentAttemptId,
+        utcDay,
+        reason: "waiting-for-score-bearing-producers",
+        scheduledForSec,
+      };
+    }
+
+    startedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
+    stage = "v9-enrichment";
     const extension = buildSafetyScoreV9BaselineExtension(fixedInput);
     stage = "compile";
     const pipeline = buildSafetyScoreV9Candidate({
       fixedInput,
       extension,
       publishedAtSec: fixedInput.clockSec,
-      publicationEpoch: SAFETY_SCORE_V9_SHADOW_PUBLICATION_EPOCH,
       releaseCandidateId: input.releaseCandidateId,
     });
 
-    stage = "artifact-retention";
     const completedAtSec = nowSecAtLeast(startedAtSec, input.nowSec);
-    const artifacts = await buildReplayArtifacts(pipeline, completedAtSec, input.signal);
     const expectedActiveIds = [...fixedInput.activeAssetIds].sort(compareText);
     const floors = releaseCoverageFloors(
       pipeline.candidate.cards.length,
       expectedActiveIds.length,
+      pipeline.candidate.completeness.ratedCount,
       scheduledForSec,
       startedAtSec,
     );
-    const releaseBlockers: string[] = [];
-    const provisionalEnvelope = buildSafetyScoreV9ShadowEnvelope({
+    const baseEnvelope = buildSafetyScoreV9ShadowEnvelope({
       candidate: pipeline.candidate,
       expectedActiveIds,
       compilerFactSchemaDigest: pipeline.compilerFactSchemaDigest,
       producerCapabilityDigest: pipeline.producerCapabilityDigest,
       coverageFloors: floors,
-      unresolvedReleaseBlockers: releaseBlockers,
-      replayArtifacts: artifacts.references,
+      unresolvedReleaseBlockers: ["ratified-release-coverage-unavailable"],
     });
     const supply = supplyProjection(pipeline);
     const v8 = buildV8ComparableSnapshot({
@@ -377,32 +542,33 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       publication: input.v8Publication,
       methodologyVersion: input.v8MethodologyVersion,
     });
+
+    stage = "serialize";
     const pendingDiff = buildSafetyScoreV9DiffReport({
       generatedAtSec: completedAtSec,
       expectedActiveIds,
       v8,
-      v9: provisionalEnvelope,
+      v9: baseEnvelope,
       topCutoffIds: supply.topCutoffIds,
-      downstreamThresholds: gradeThresholds(),
+      downstreamThresholds: downstreamThresholds(),
       supplyUsdById: supply.supplyUsdById,
     });
-    const persistedReviewDispositions = await loadSafetyScoreV9MovementReviewDispositions(
+    const reviewDispositionsByKey = await loadSafetyScoreV9MovementReviewDispositions(
       input.db,
       pendingDiff.cards.flatMap((card) => (card.review.key === null ? [] : [card.review.key])),
-      input.signal,
+      shadowSignal,
     );
-    const reviewDispositionsByKey = persistedReviewDispositions;
-    const provisionalDiff = buildSafetyScoreV9DiffReport({
+    const reviewedDiff = buildSafetyScoreV9DiffReport({
       generatedAtSec: completedAtSec,
       expectedActiveIds,
       v8,
-      v9: provisionalEnvelope,
+      v9: baseEnvelope,
       topCutoffIds: supply.topCutoffIds,
-      downstreamThresholds: gradeThresholds(),
+      downstreamThresholds: downstreamThresholds(),
       supplyUsdById: supply.supplyUsdById,
       reviewDispositionsByKey,
     });
-    const unresolvedCriticalMovementIds = provisionalDiff.cards
+    const unresolvedCriticalMovementIds = reviewedDiff.cards
       .filter(
         (card) =>
           card.review.status === "pending" ||
@@ -410,98 +576,118 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
           card.review.disposition === "defect",
       )
       .map((card) => card.id);
-    const envelopeWithoutResult = buildSafetyScoreV9ShadowEnvelope({
+    let envelope: SafetyScoreV9ShadowEnvelope = buildSafetyScoreV9ShadowEnvelope({
       candidate: pipeline.candidate,
       expectedActiveIds,
       compilerFactSchemaDigest: pipeline.compilerFactSchemaDigest,
       producerCapabilityDigest: pipeline.producerCapabilityDigest,
       coverageFloors: floors,
-      unresolvedReleaseBlockers: releaseBlockers,
+      unresolvedReleaseBlockers: ["ratified-release-coverage-unavailable"],
       unresolvedCriticalMovementIds,
-      replayArtifacts: artifacts.references,
     });
-    const envelopeCore = projectSafetyScoreV9ShadowEnvelopeCore(envelopeWithoutResult);
-    const resultArtifact = await buildResultReplayArtifact(
-      pipeline,
-      envelopeCore,
-      completedAtSec,
-      input.signal,
-    );
-    artifacts.stored.push(resultArtifact.stored);
-    artifacts.references.push(resultArtifact.reference);
-    const envelope = rebuildSafetyScoreV9ShadowEnvelope({
-      candidate: pipeline.candidate,
-      core: envelopeCore,
-      replayArtifacts: artifacts.references,
-    });
-    const diff = buildSafetyScoreV9DiffReport({
+    let diff = buildSafetyScoreV9DiffReport({
       generatedAtSec: completedAtSec,
       expectedActiveIds,
       v8,
       v9: envelope,
       topCutoffIds: supply.topCutoffIds,
-      downstreamThresholds: gradeThresholds(),
+      downstreamThresholds: downstreamThresholds(),
       supplyUsdById: supply.supplyUsdById,
       reviewDispositionsByKey,
     });
-    const attempt = buildSafetyScoreV9ShadowAttempt({
-      attemptId,
-      trigger: "scheduled",
-      retryOfAttemptId: null,
-      scheduledForSec,
-      startedAtSec,
-      completedAtSec,
-      recordedAtSec: completedAtSec,
-      outcome: "succeeded",
-      envelope,
-    });
-    const day = mergeAttempt(existingDay, attempt);
-
-    stage = "shadow-write";
-    await persistSafetyScoreV9ShadowState(input.db, {
-      artifacts: artifacts.stored,
-      attempt,
-      day,
+    const qualification = assessSafetyScoreV9ShadowQualification(envelope);
+    let daily = buildSafetyScoreV9ShadowDailySuccess({
+      utcDay,
+      selectedAtSec: completedAtSec,
+      updatedAtSec: completedAtSec,
+      previous,
       envelope,
       diff,
-      updatedAtSec: completedAtSec,
-      signal: input.signal,
+    });
+    const archiveSelectionReasons = selectSafetyScoreV9ShadowArchiveReasons({
+      history,
+      current: daily,
+      requested: input.archiveSelectionReasons,
+    });
+
+    const artifacts: SafetyScoreV9StoredReplayArtifact[] = [];
+    if (archiveSelectionReasons.length > 0) {
+      stage = "artifact-retention";
+      const replay = await buildReplayArtifacts(pipeline, completedAtSec, shadowSignal);
+      const envelopeCore = projectSafetyScoreV9ShadowEnvelopeCore(envelope);
+      const resultArtifact = await buildResultReplayArtifact(pipeline, envelopeCore, completedAtSec, shadowSignal);
+      replay.stored.push(resultArtifact.stored);
+      replay.references.push(resultArtifact.reference);
+      artifacts.push(...replay.stored);
+      envelope = rebuildSafetyScoreV9ShadowEnvelope({
+        candidate: pipeline.candidate,
+        core: envelopeCore,
+        replayArtifacts: replay.references,
+      });
+      diff = buildSafetyScoreV9DiffReport({
+        generatedAtSec: completedAtSec,
+        expectedActiveIds,
+        v8,
+        v9: envelope,
+        topCutoffIds: supply.topCutoffIds,
+        downstreamThresholds: downstreamThresholds(),
+        supplyUsdById: supply.supplyUsdById,
+        reviewDispositionsByKey,
+      });
+    }
+
+    if (archiveSelectionReasons.length > 0) {
+      daily = buildSafetyScoreV9ShadowDailySuccess({
+        utcDay,
+        selectedAtSec: completedAtSec,
+        updatedAtSec: completedAtSec,
+        previous,
+        envelope,
+        diff,
+        archiveSelectionReasons,
+        artifactKeys: artifacts.map((artifact) => artifact.artifactKey),
+      });
+    }
+    stage = "shadow-write";
+    await persistSafetyScoreV9ShadowState(input.db, {
+      artifacts,
+      daily,
+      envelope,
+      diff,
+      signal: shadowSignal,
     });
     return {
       status: "published",
-      attemptId,
+      attemptId: currentAttemptId,
       utcDay,
       publicationGenerationId: pipeline.candidate.publicationGenerationId,
       candidateId: pipeline.candidate.candidateId,
-      qualifying: attempt.qualification?.qualifies ?? false,
-      qualificationBlockers: attempt.qualification?.blockers ?? [],
+      qualifying: qualification.qualifies,
+      qualificationBlockers: qualification.blockers,
       pendingReviewCount: diff.summary.pendingReviewCount,
+      archiveSelectionReasons,
     };
   } catch (error) {
-    const recordedAtSec = nowSecAtLeast(startedAtSec, input.nowSec);
-    const failure = safeFailure(error, stage);
-    const attempt = buildSafetyScoreV9ShadowAttempt({
-      attemptId,
-      trigger: "scheduled",
-      retryOfAttemptId: null,
-      scheduledForSec,
-      startedAtSec,
-      completedAtSec: recordedAtSec,
-      recordedAtSec,
-      outcome: "failed",
-      failure: { stage, ...failure },
-    });
+    const failureStage: SafetyScoreV9ShadowFailureStage = shadowSignal.aborted ? "aborted" : stage;
+    const recordedAtSec =
+      input.nowSec !== undefined && Number.isInteger(input.nowSec) && input.nowSec >= 0
+        ? Math.max(startedAtSec, input.nowSec)
+        : Math.max(startedAtSec, fallbackNowSec());
+    const failure = safeFailure(error, failureStage);
     try {
-      await persistSafetyScoreV9ShadowState(input.db, {
-        attempt,
-        day: mergeAttempt(existingDay, attempt),
-        updatedAtSec: recordedAtSec,
-        signal: input.signal,
+      await persistFailure({
+        db: input.db,
+        utcDay,
+        atSec: recordedAtSec,
+        previous,
+        stage: failureStage,
+        failure,
+        signal: input.signal?.aborted ? undefined : input.signal,
       });
     } catch {
-      // The active v8 publication has already committed. A shadow-store
-      // failure is returned for cron diagnostics and must never unwind v8.
+      // V8 has already committed. Shadow retention remains best effort and
+      // must not turn the active publication into a failure.
     }
-    return { status: "failed", attemptId, utcDay, stage, ...failure };
+    return { status: "failed", attemptId: currentAttemptId, utcDay, stage: failureStage, ...failure };
   }
 }

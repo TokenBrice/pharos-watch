@@ -14,7 +14,7 @@ import {
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 
-export const V9_POLICY_DIGEST_DOMAIN = "safety-score-v9.methodology-policy.v1";
+const V9_POLICY_DIGEST_DOMAIN = "safety-score-v9.methodology-policy.v1";
 
 const validatedPolicyEnvelopes = new WeakSet<object>();
 
@@ -87,7 +87,7 @@ function deepFreeze<T>(value: T): Readonly<T> {
   return value;
 }
 
-export function computeV9PolicySemanticDigest(policy: V9MethodologyPolicy): string {
+function computeV9PolicySemanticDigest(policy: V9MethodologyPolicy): string {
   return sha256Hex(
     stableJsonStringifyV1({
       domain: V9_POLICY_DIGEST_DOMAIN,

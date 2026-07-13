@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   SafetyScoreV9DiffReportSchema,
   SafetyScoreV9ReplayArtifactSchema,
-  SafetyScoreV9ShadowAttemptSchema,
+  SafetyScoreV9ShadowDailySchema,
   assessSafetyScoreV9ShadowQualification,
   buildSafetyScoreV9DiffReport,
-  buildSafetyScoreV9ShadowAttempt,
-  buildSafetyScoreV9ShadowDay,
+  buildSafetyScoreV9ShadowDailyFailure,
+  buildSafetyScoreV9ShadowDailySuccess,
   buildSafetyScoreV9ShadowEnvelope,
   computeSafetyScoreV9ShadowEnvelopeDigest,
   safetyScoreV9UtcDay,
@@ -14,6 +14,7 @@ import {
   type SafetyScoreV9CoverageFloor,
   type SafetyScoreV9ReplayArtifact,
   type SafetyScoreV9ReplayArtifactKind,
+  type SafetyScoreV9ShadowDaily,
   type SafetyScoreV9ShadowEnvelope,
 } from "../safety-score-v9-shadow";
 import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
@@ -100,7 +101,6 @@ function candidate(
     candidateId: "candidate-v1",
     policyVersion: "candidate-v1",
     publicationGenerationId: "v9-shadow-generation-1",
-    publicationEpoch: 1,
     baseInputGenerationId: BASE_GENERATION,
     factSetDigest: FACT_DIGEST,
     resultDigest: RESULT_DIGEST,
@@ -254,8 +254,8 @@ describe("Safety Score V9 shadow envelope", () => {
     expect(() => envelope(undefined, { replayArtifacts: artifacts })).toThrow("Replay artifact identity");
   });
 
-  it("qualifies only an exact, covered, replay-verified generation", () => {
-    expect(assessSafetyScoreV9ShadowQualification(envelope())).toEqual({
+  it("qualifies an exact covered generation without requiring retained artifacts", () => {
+    expect(assessSafetyScoreV9ShadowQualification(envelope(undefined, { replayArtifacts: [] }))).toEqual({
       qualifies: true,
       blockers: [],
     });
@@ -283,23 +283,21 @@ describe("Safety Score V9 shadow envelope", () => {
         "coverage-floor-failed",
         "future-dated-evidence",
         "publication-regression",
-        "replay-artifact-missing",
-        "replay-artifact-unverified",
         "unresolved-critical-movement",
         "unresolved-release-blocker",
       ],
     });
   });
 
-  it("treats a retained checksum mismatch as non-qualifying evidence", () => {
+  it("keeps replay verification separate from runtime qualification", () => {
     const candidateInput = candidate([v9Card("alpha", 90, "A")]);
     const artifacts = replayArtifacts(candidateInput);
     artifacts[2] = replayArtifact("policy", candidateInput, "checksum-mismatch");
     const result = envelope(candidateInput.cards, { replayArtifacts: artifacts });
 
     expect(assessSafetyScoreV9ShadowQualification(result)).toEqual({
-      qualifies: false,
-      blockers: ["replay-artifact-unverified"],
+      qualifies: true,
+      blockers: [],
     });
   });
 
@@ -321,6 +319,14 @@ describe("Safety Score V9 shadow envelope", () => {
     });
 
     expect(computeSafetyScoreV9ShadowEnvelopeDigest(first)).toBe(computeSafetyScoreV9ShadowEnvelopeDigest(second));
+    expect(computeSafetyScoreV9ShadowEnvelopeDigest(first)).toBe(
+      computeSafetyScoreV9ShadowEnvelopeDigest(
+        envelope(cards, {
+          replayArtifacts: [],
+          coverageFloors: [PASSING_FLOOR, { ...PASSING_FLOOR, id: "route-coverage", detail: "Route coverage passes" }],
+        }),
+      ),
+    );
   });
 
   it("uses canonical UTC day boundaries", () => {
@@ -332,160 +338,107 @@ describe("Safety Score V9 shadow envelope", () => {
 
 const SCHEDULED_FOR = Date.parse("2026-07-13T04:00:00Z") / 1_000;
 
-function successfulAttempt(
-  attemptId: string,
-  shadowEnvelope: SafetyScoreV9ShadowEnvelope = envelope(),
-  options: { trigger?: "scheduled" | "retry"; retryOfAttemptId?: string | null; completedAtSec?: number } = {},
-) {
-  return buildSafetyScoreV9ShadowAttempt({
-    attemptId,
-    trigger: options.trigger ?? "scheduled",
-    retryOfAttemptId: options.retryOfAttemptId ?? null,
-    scheduledForSec: SCHEDULED_FOR,
-    startedAtSec: SCHEDULED_FOR + 5,
-    completedAtSec: options.completedAtSec ?? SCHEDULED_FOR + 15,
-    recordedAtSec: Math.max(SCHEDULED_FOR + 20, (options.completedAtSec ?? SCHEDULED_FOR + 15) + 1),
-    outcome: "succeeded",
-    envelope: shadowEnvelope,
+function dailyDiff(shadow: SafetyScoreV9ShadowEnvelope) {
+  return buildSafetyScoreV9DiffReport({
+    generatedAtSec: SCHEDULED_FOR + 15,
+    expectedActiveIds: ["alpha"],
+    v8: v8Snapshot([{ id: "alpha", score: 90, grade: "A", bindingCap: null, reasonCodes: [] }]),
+    v9: shadow,
+    topCutoffIds: new Set(),
+    downstreamThresholds: [],
+    supplyUsdById: { alpha: 1_000 },
   });
 }
 
-function failedAttempt(attemptId: string) {
-  return buildSafetyScoreV9ShadowAttempt({
-    attemptId,
-    trigger: "scheduled",
-    retryOfAttemptId: null,
-    scheduledForSec: SCHEDULED_FOR,
-    startedAtSec: SCHEDULED_FOR + 5,
-    completedAtSec: SCHEDULED_FOR + 10,
-    recordedAtSec: SCHEDULED_FOR + 11,
-    outcome: "failed",
-    failure: { stage: "compile", code: "compile-failed", message: "Fact compilation failed" },
+function successfulDaily(previous: SafetyScoreV9ShadowDaily | null = null) {
+  const shadow = envelope(undefined, { replayArtifacts: [] });
+  return buildSafetyScoreV9ShadowDailySuccess({
+    utcDay: "2026-07-13",
+    selectedAtSec: SCHEDULED_FOR + 15,
+    updatedAtSec: SCHEDULED_FOR + 20,
+    previous,
+    envelope: shadow,
+    diff: dailyDiff(shadow),
   });
 }
 
-describe("Safety Score V9 shadow attempt and daily history", () => {
-  it("records successful identities and qualifying state without retaining the full envelope", () => {
-    const attempt = successfulAttempt("scheduled-1");
-    expect(attempt).toMatchObject({
-      outcome: "succeeded",
+describe("Safety Score V9 compact daily history", () => {
+  it("records one selected identity and compact qualification summaries", () => {
+    const daily = successfulDaily();
+    expect(daily).toMatchObject({
       utcDay: "2026-07-13",
-      identity: {
-        publicationGenerationId: "v9-shadow-generation-1",
-        baseInputGenerationId: BASE_GENERATION,
-        factSetDigest: FACT_DIGEST,
-        policyDigest: POLICY_DIGEST,
-        evaluationBuildDigest: BUILD_DIGEST,
-        resultDigest: RESULT_DIGEST,
-        compilerFactSchemaDigest: COMPILER_SCHEMA_DIGEST,
-        producerCapabilityDigest: PRODUCER_CAPABILITY_DIGEST,
+      attemptCounts: { successful: 1, failed: 0 },
+      selectedRun: {
+        identity: {
+          publicationGenerationId: "v9-shadow-generation-1",
+          baseInputGenerationId: BASE_GENERATION,
+          factSetDigest: FACT_DIGEST,
+          policyDigest: POLICY_DIGEST,
+          evaluationBuildDigest: BUILD_DIGEST,
+          resultDigest: RESULT_DIGEST,
+          compilerFactSchemaDigest: COMPILER_SCHEMA_DIGEST,
+          producerCapabilityDigest: PRODUCER_CAPABILITY_DIGEST,
+        },
+        coverage: { expectedActiveCount: 1, ratedResultCount: 1, notRatedResultCount: 0 },
+        movement: { expectedCount: 1, pendingReviewCount: 0 },
+        qualification: { qualifies: true, blockers: [] },
+        archiveSelectionReasons: [],
+        artifactKeys: [],
       },
-      qualification: { qualifies: true, blockers: [] },
-      failure: null,
+      latestError: null,
     });
   });
 
-  it("records missed, aborted, and failed outcomes without candidate identities", () => {
-    const missed = buildSafetyScoreV9ShadowAttempt({
-      attemptId: "scheduled-missed",
-      trigger: "scheduled",
-      retryOfAttemptId: null,
-      scheduledForSec: SCHEDULED_FOR,
-      startedAtSec: null,
-      completedAtSec: null,
-      recordedAtSec: SCHEDULED_FOR + 3_600,
-      outcome: "missed",
-      failure: { stage: "scheduler", code: "trigger-missed", message: "Scheduled trigger did not run" },
+  it("keeps failures retryable and preserves the bounded latest error after success", () => {
+    const failed = buildSafetyScoreV9ShadowDailyFailure({
+      utcDay: "2026-07-13",
+      updatedAtSec: SCHEDULED_FOR + 11,
+      failure: {
+        atSec: SCHEDULED_FOR + 11,
+        stage: "compile",
+        code: "compile-failed",
+        message: "Fact compilation failed",
+      },
     });
-    expect(missed).toMatchObject({ outcome: "missed", identity: null, qualification: null });
-    expect(failedAttempt("scheduled-failed")).toMatchObject({
-      outcome: "failed",
-      failure: { stage: "compile" },
-    });
+    const recovered = successfulDaily(failed);
+    expect(recovered.attemptCounts).toEqual({ successful: 1, failed: 1 });
+    expect(recovered.selectedRun?.qualification.qualifies).toBe(true);
+    expect(recovered.latestError).toMatchObject({ stage: "compile", code: "compile-failed" });
   });
 
-  it("rejects retries without a named parent", () => {
-    const attempt = successfulAttempt("retry-1");
+  it("requires all five artifact keys only when a run is selected for archive", () => {
+    const shadow = envelope(undefined, { replayArtifacts: [] });
+    const diff = dailyDiff(shadow);
     expect(() =>
-      SafetyScoreV9ShadowAttemptSchema.parse({
-        ...attempt,
-        trigger: "retry",
-        retryOfAttemptId: null,
+      buildSafetyScoreV9ShadowDailySuccess({
+        utcDay: "2026-07-13",
+        selectedAtSec: SCHEDULED_FOR + 15,
+        updatedAtSec: SCHEDULED_FOR + 20,
+        envelope: shadow,
+        diff,
+        archiveSelectionReasons: ["anomaly"],
       }),
-    ).toThrow("Retry attempts require");
-  });
+    ).toThrow("one replay artifact of every kind");
 
-  it("selects one canonical qualifying generation while retaining every successful attempt", () => {
-    const scheduled = successfulAttempt("scheduled-1", envelope(), { completedAtSec: SCHEDULED_FOR + 20 });
-    const retryEnvelope = envelope(undefined, {
-      candidateOverrides: { publicationGenerationId: "v9-shadow-generation-2" },
-    });
-    const retry = successfulAttempt("retry-1", retryEnvelope, {
-      trigger: "retry",
-      retryOfAttemptId: "scheduled-1",
-      completedAtSec: SCHEDULED_FOR + 30,
-    });
-    const day = buildSafetyScoreV9ShadowDay({
-      utcDay: "2026-07-13",
-      expectedScheduledAttemptIds: ["scheduled-1"],
-      attempts: [retry, scheduled],
-    });
-
-    expect(day.attempts).toHaveLength(2);
-    expect(day.projection).toEqual({
-      expectedScheduledAttemptIds: ["scheduled-1"],
-      missingScheduledAttemptIds: [],
-      unexpectedScheduledAttemptIds: [],
-      outcomeCounts: { missed: 0, aborted: 0, failed: 0, succeeded: 2 },
-      canonicalQualifyingGenerationId: "v9-shadow-generation-1",
-      blockingAttemptIds: [],
-      blockers: [],
-      qualifies: true,
-    });
-  });
-
-  it("does not let a successful retry hide an earlier failed score-path attempt", () => {
-    const failed = failedAttempt("scheduled-1");
-    const retry = successfulAttempt(
-      "retry-1",
-      envelope(undefined, {
-        candidateOverrides: { publicationGenerationId: "v9-shadow-generation-retry" },
-      }),
-      { trigger: "retry", retryOfAttemptId: "scheduled-1" },
+    const artifactKeys = (["base-input", "evaluation-build", "fact-set", "policy", "result"] as const).map(
+      (kind, index) => `${kind}:${digest(String(index + 2))}`,
     );
-    const day = buildSafetyScoreV9ShadowDay({
+    const archived = buildSafetyScoreV9ShadowDailySuccess({
       utcDay: "2026-07-13",
-      expectedScheduledAttemptIds: ["scheduled-1"],
-      attempts: [retry, failed],
+      selectedAtSec: SCHEDULED_FOR + 15,
+      updatedAtSec: SCHEDULED_FOR + 20,
+      envelope: shadow,
+      diff,
+      archiveSelectionReasons: ["anomaly"],
+      artifactKeys,
     });
-
-    expect(day.projection).toMatchObject({
-      canonicalQualifyingGenerationId: "v9-shadow-generation-retry",
-      blockingAttemptIds: ["scheduled-1"],
-      blockers: ["attempt-failed"],
-      qualifies: false,
-    });
+    expect(archived.selectedRun).toMatchObject({ archiveSelectionReasons: ["anomaly"], artifactKeys });
   });
 
-  it("keeps non-qualifying successes and missing scheduled attempts visible", () => {
-    const nonqualifying = successfulAttempt("unexpected-scheduled", envelope(undefined, { replayArtifacts: [] }));
-    const day = buildSafetyScoreV9ShadowDay({
-      utcDay: "2026-07-13",
-      expectedScheduledAttemptIds: ["expected-scheduled"],
-      attempts: [nonqualifying],
-    });
-    expect(day.projection).toMatchObject({
-      missingScheduledAttemptIds: ["expected-scheduled"],
-      unexpectedScheduledAttemptIds: ["unexpected-scheduled"],
-      blockingAttemptIds: ["unexpected-scheduled"],
-      blockers: [
-        "expected-scheduled-attempt-missing",
-        "generation-nonqualifying",
-        "qualifying-generation-missing",
-        "unexpected-scheduled-attempt",
-      ],
-      qualifies: false,
-    });
+  it("rejects a second selected success for the same UTC day", () => {
+    const daily = successfulDaily();
+    expect(() => successfulDaily(daily)).toThrow("already has a selected successful run");
+    expect(SafetyScoreV9ShadowDailySchema.parse(daily)).toEqual(daily);
   });
 });
 
@@ -655,7 +608,6 @@ describe("Safety Score V8/V9 shadow diff", () => {
     const nextPublication = envelope([v9Card("asset", 84, "B+")], {
       candidateOverrides: {
         publicationGenerationId: "v9-shadow-generation-2",
-        publicationEpoch: 2,
         factSetDigest: digest("8"),
         resultDigest: digest("9"),
       },

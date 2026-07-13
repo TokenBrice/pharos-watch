@@ -36,7 +36,7 @@ import {
 import { createV9PublicStressState, type V9PublicStressState } from "./stress";
 import { computeV9ResultDigest, projectCompactV9ScoreTrace, type V9CompactScoreTrace } from "./trace";
 
-export const V9_EVALUATED_SET_DIGEST_DOMAIN = "safety-score-v9.evaluated-set.v1";
+const V9_EVALUATED_SET_DIGEST_DOMAIN = "safety-score-v9.evaluated-set.v1";
 
 export interface V9EvaluatedAsset {
   assetId: string;

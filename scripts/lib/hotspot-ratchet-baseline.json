@@ -19,6 +19,16 @@
     "maxFunctionLines": 337,
     "branchCount": 147
   },
+  "shared/lib/safety-score-v9/control.ts": {
+    "fileLines": 744,
+    "maxFunctionLines": 453,
+    "branchCount": 101
+  },
+  "shared/lib/safety-score-v9/coverage.ts": {
+    "fileLines": 980,
+    "maxFunctionLines": 643,
+    "branchCount": 48
+  },
   "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
     "fileLines": 859,
     "maxFunctionLines": 44,
@@ -28,6 +38,16 @@
     "fileLines": 923,
     "maxFunctionLines": 32,
     "branchCount": 13
+  },
+  "shared/types/safety-score-v9.ts": {
+    "fileLines": 1446,
+    "maxFunctionLines": 357,
+    "branchCount": 67
+  },
+  "shared/types/safety-score-v9-facts.ts": {
+    "fileLines": 1437,
+    "maxFunctionLines": 147,
+    "branchCount": 149
   },
   "shared/types/stablecoin-meta-schemas.ts": {
     "fileLines": 1277,
@@ -298,6 +318,21 @@
     "fileLines": 28,
     "maxFunctionLines": 0,
     "branchCount": 0
+  },
+  "worker/src/lib/safety-score-v9-extension.ts": {
+    "fileLines": 925,
+    "maxFunctionLines": 146,
+    "branchCount": 119
+  },
+  "worker/src/lib/safety-score-v9-fact-set.ts": {
+    "fileLines": 2122,
+    "maxFunctionLines": 224,
+    "branchCount": 141
+  },
+  "worker/src/lib/safety-score-v9-shadow.ts": {
+    "fileLines": 1189,
+    "maxFunctionLines": 175,
+    "branchCount": 74
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
     "fileLines": 604,

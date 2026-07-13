@@ -11,7 +11,6 @@ import {
 import {
   scoreV9Input,
   scoreV9InputWithScenarioCaps,
-  type V9NRReason,
   type V9ScoreTrace,
   type V9StructuralCap,
 } from "./safety-score-v9/formula";
@@ -19,9 +18,6 @@ import { assertV9ValidatedPolicyEnvelope } from "./safety-score-v9/policy";
 
 export {
   V9_CANDIDATE_POLICY_V1,
-  assertV9ReasonCodesRegistered,
-  assertV9ValidatedPolicyEnvelope,
-  computeV9PolicySemanticDigest,
   loadV9MethodologyPolicy,
 } from "./safety-score-v9/policy";
 export {
@@ -30,10 +26,7 @@ export {
   scoreV9Input,
   type V9CapTrace,
   type V9NRReason,
-  type V9NRReasonCode,
-  type V9ReserveLossFacts,
   type V9ScoreTrace,
-  type V9StructuralCap,
 } from "./safety-score-v9/formula";
 
 const V9_QUALITY_PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];

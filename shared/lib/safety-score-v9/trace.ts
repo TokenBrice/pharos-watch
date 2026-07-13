@@ -3,7 +3,7 @@ import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import type { V9ProductionScoreTrace } from "./score";
 
-export const V9_RESULT_DIGEST_DOMAIN = "safety-score-v9.result.v1";
+const V9_RESULT_DIGEST_DOMAIN = "safety-score-v9.result.v1";
 
 export interface V9CompactScoreTrace {
   assetId: string;
