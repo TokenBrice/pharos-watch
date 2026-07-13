@@ -51,8 +51,9 @@ Hook behavior:
 1. Pushes that update `refs/heads/main`: runs `npm run test:merge-gate` against the exact `remote_sha...local_sha` range Git sends to the hook, matching the `github.event.before...github.sha` range used by `.github/workflows/deploy-cloudflare.yml`. Pages smoke is on by default; override with `MERGE_GATE_PAGES_SMOKE=0`.
 2. A new remote `main` push, where Git has no previous remote SHA, forces the full local deploy validate path.
 3. Other pushes skip the full local gate by default because they cannot deploy production. Set `PHAROS_PRE_PUSH_GATE=all` to opt into exact-range gating for branch pushes.
-4. A successful manual gate writes a 24-hour receipt only for a clean committed state. The hook reuses it when the base/head commits, gate implementation, lockfile, Node major, origin, worktree, and validation environment profile still match.
-5. Push is blocked on failure. Receipt mismatches fail closed and run the gate normally.
+4. Before and after running or reusing the gate, the hook requires the checked-out `HEAD` to equal the pushed local SHA and the worktree to remain clean, so the proof cannot drift from the commit Git is sending.
+5. A successful manual gate writes a 24-hour receipt only for a clean committed state. The hook reuses it when the base/head commits, gate implementation, lockfile, Node major, origin, worktree, and validation environment profile still match.
+6. Push is blocked on failure. Receipt mismatches fail closed and run the gate normally.
 
 ## What `test:merge-gate` Does
 
@@ -142,20 +143,20 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
 1. `detect-changes`
    - diffs `github.event.before...github.sha` on `push` (three-dot, merge-base-resolved; identical to two-dot on push-to-main but robust if the base is ever not a strict ancestor)
-   - emits `deploy_required`, `worker_changed`, `worker_promotion_required`, `pages_changed`, and `pages_ui_changed`
+   - emits `deploy_required`, `worker_changed`, `worker_promotion_required`, `pages_changed`, `pages_deploy_required`, and `pages_ui_changed`
    - decides separately whether Worker validation, Worker production promotion, and Pages deploy work are actually required for that push
    - treats Pages release workflow changes (`.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`) as Pages-impacting so workflow-only changes still rehearse the Pages path
    - keeps `worker_changed=true` broad for Worker validation/guardrail coverage, but classifies `shared/` by subpath so known Pages-only helpers skip Worker validation; only sets `worker_promotion_required=true` for deployed Worker runtime/config, D1 migrations, Worker assets, shared runtime files, and root package/lock changes that can change the production Worker bundle
-   - keeps `pages_ui_changed=true` narrower than `pages_changed`; it only flips on for likely frontend/runtime-impacting surfaces (`src/`, `public/`, `shared/`, `functions/`, `data/`, root package/lock, and `next.config.ts`) so strict mobile smoke can be skipped on deploy-infra-only Pages diffs
+   - keeps `pages_changed=true` broad enough to validate Pages tests and tooling, while `pages_deploy_required=true` excludes test-only diffs and includes Markdown sources rendered by the public docs route; `pages_ui_changed=true` is narrower still so strict mobile smoke can be skipped on deploy-infra-only Pages diffs
    - defaults to the full deploy path on `workflow_dispatch`; manual production dispatch must target the `main` ref
 2. `validate`
    - runs only when `deploy_required=true`
    - always includes `npm run audit:deps`, `npm run audit:pricing-providers`, `npm run check:provider-resilience`, lint, policy/guardrail checks (including verified-doc link and env-contract validation), `npm run test:noncritical`, and `npm run coverage:critical`
-   - includes `npm run build`, `npm run test:a11y`, `npm run check:feature-flag-inlining`, `npm run seo:check`, `npm run check:phishing-signatures`, `npm run check:classifier-sensitive-copy`, `npm run check:build-size`, and `npm run check:build-attribution` only when `pages_changed=true` (pull-request validation only; the push/manual production deploy path runs Pages build/SEO/static-export guardrails inside `pages-release`, not the validate gate)
-   - includes `npm run typecheck:worker` and `npm run validate:worker-scheduled-smoke` only when `worker_changed=true`
+   - includes `npm run build`, `npm run test:a11y`, `npm run check:feature-flag-inlining`, `npm run seo:check`, `npm run check:phishing-signatures`, `npm run check:classifier-sensitive-copy`, `npm run check:build-size`, and `npm run check:build-attribution` only for pull requests with `pages_deploy_required=true`; the push/manual production deploy path runs Pages build/SEO/static-export guardrails inside `pages-release`, not the validate gate
+   - includes `npm run typecheck:worker` only when `worker_changed=true`; the scheduled Worker entrypoint suite is already owned by critical coverage
    - CI runs `validate-prebuild`, `pages-build`, `test-noncritical`, `coverage-critical`, and `typecheck-worker` as independent parallel GitHub jobs, with the aggregate `validate` job waiting on all of them. `pages-build` invokes the fixed `validate:pages` phase and `typecheck-worker` invokes `validate:worker`; both read their ordered commands from `scripts/lib/validation-lanes.mjs`. The local merge gate consumes those same lane-owned leaf lists through `buildCommandPlan`, retaining per-command environment/timing and serial execution by default; set `MERGE_GATE_PARALLEL=1` to opt into local fan-out.
    - installs Node 24.16.0 through the shared workspace setup action, matching the primary repo baseline; pull-request checks also run a non-blocking Node 26 proof lane because the engine range allows Node 26
-   - pull requests call the same reusable workflow with diff-derived `pages_changed` and `worker_changed` inputs, so PR Pages build/SEO and Worker validation coverage follows the deploy-surface classifier while the shared non-deploy guardrails and tests still run on every PR
+   - internal-docs-only pull requests run the focused verified-link, source-path, sync, and count checks; other pull requests call the reusable workflow with diff-derived Pages validation, Pages publish, and Worker inputs
 3. `no-deploy-required`
    - runs only when `deploy_required=false`
    - records an explicit no-op outcome for docs-only or other non-deploy pushes to `main`
@@ -170,7 +171,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - skipped on Pages-only, validation-only, or non-deploy `push` events where `detect-changes` reports `worker_promotion_required=false`
 5. `pages-release`
    - production deploy job in `.github/workflows/deploy-cloudflare.yml`
-   - runs only when `detect-changes` reports `pages_changed=true`
+   - runs only when `detect-changes` reports `pages_deploy_required=true`; test-only Pages changes still receive validation but do not publish
    - starts after Pages changes are detected and the aggregate `validate / validate` job succeeds (no hard dependency on `upload-worker-version`)
    - uses the configured target API base (`vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`) for digest sync, depeg-event sync, public dataset generation, and local `/_site-data/*` proxying
    - executes the Pages build/local-smoke/publish path in one job:
@@ -181,7 +182,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - uses `SMOKE_UI_BROWSER_CHANNEL=chrome`, deploy-lane canary `SMOKE_UI_OVERFLOW_ROUTES`, and `SMOKE_UI_OVERFLOW_WORKERS=6` for local smoke to keep representative overflow coverage while reducing release critical-path time
    - runs `test:smoke-pages-assets` locally and after publish. It derives the current top 25 Yield ranking IDs, adds fixed native, linked-wrapper, lending, rate-derived, and structured canaries, checks every HTML-referenced first-party script for HTTP/MIME integrity, and rejects first-party script/style/font failures, `ChunkLoadError`, hydration errors, or the stablecoin error boundary. USDC and USDT receive a second warm-cache browser pass.
    - runs `test:smoke-ui:mobile` only when `pages_ui_changed=true`, and uses a canary scope in production deploys (`SMOKE_MOBILE_UI_ROUTES` limited route list, two mobile viewports, desktop pass disabled, `SMOKE_MOBILE_UI_WORKERS=3`, adaptive settle capped by `SMOKE_MOBILE_UI_WAIT_MS=1500`) to keep strict mobile coverage while reducing release critical-path runtime
-   - waits for the aggregate `validate / validate` job before Cloudflare Pages production publish, and on combined Worker + Pages deploys also waits for `deploy-worker` to finish successfully before publishing Pages. When that worker-promotion gate is enabled, `pages-release` reruns local artifact `smoke-ui` against the same served `out/` export after the Worker has been promoted and before `deploy-pages`.
+   - starts only after the aggregate `validate / validate` job succeeds. On combined Worker + Pages deploys, static checks can run while Worker promotion is in flight, then the workflow waits for `deploy-worker` before running the local artifact UI, asset, and mobile checks once against the promoted Worker and publishing Pages.
    - writes a Pages release summary after `check:build-size` with the total output file count, static export size, and depeg-event static page count, then captures the current Cloudflare Pages production deployment id as the required rollback target; if that id cannot be captured, the job fails before publishing so a broken deploy cannot be left live without an automated rollback target. With rollback armed, it publishes the already verified local artifact through Wrangler with the existing retry loop, and runs live public UI, Yield asset, ops, and transport smokes concurrently in one post-publish step while still emitting per-smoke status outputs in the summary; the live public UI check keeps the broad overflow sweep on the exact local artifact before publish, then runs homepage data-state, the Live Tape `/_site-data/events` contract, and a narrow live `/depeg/` canary for the default-on DDR/DDRQ data contract
    - requires ten consecutive target-SHA release-marker responses per public/ops host before live smoke, resetting the convergence counter on any regression, then retries the complete live Yield asset-coherence suite up to ten times with nine 30-second intervals (a four-and-a-half-minute bounded convergence window). This accommodates custom-domain edges that continue serving older deep-route HTML after the marker has converged, before every referenced immutable chunk is available. Every attempt retains the full HTTP, MIME, hydration, and runtime assertions, and persistent failure remains fatal
    - calls `scripts/maintenance/rollback-pages-deployment.mjs` when `deploy-pages` succeeded but any fatal post-publish smoke (live public UI, Yield asset coherence after its bounded retries, ops, or transport) failed; the overall workflow still surfaces as failed so the incident is visible
@@ -281,6 +282,8 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 
 Schedule: `10 8 * * *` and `25 8 * * *` UTC. The first slot follows the 08:05 UTC daily digest cron closely; the second is a catch-up for slower digest generation or a missed GitHub schedule tick.
 
+The 08:25 fallback skips its full release only when the live marker points to the current commit and the GitHub Actions API confirms that marker came from a successful same-day scheduled `Rebuild Pages` run after the 08:05 data refresh. Missing, stale, ordinary deploy, manual, or failed-run markers all fail closed into the full fallback release.
+
 1. `pages-release`
    - reuses the same consolidated `.github/workflows/pages-release.yml` job as push/manual production deploys
    - fetches data, builds, runs `test:a11y`, local SEO/UI/mobile smoke, hydrated a11y, publishes, and runs post-publish live public-host, ops, and transport smokes in that one reusable job
@@ -307,7 +310,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 ### Validate Lane Fan-out and Deploy Ordering
 
 - The Node 24.16.0 validate lane starts `validate:prebuild`, non-critical-test shards, critical coverage, and conditional Worker validation as independent jobs, then uses the aggregate `validate / validate` job to require every needed result. The pull-request Node 26 proof lane is separate and non-blocking; failures there should be triaged before widening Node-dependent behavior.
-- Worker candidate upload waits for the aggregate `validate / validate` result before any Cloudflare-secret-bearing preparation. The `pages-release` job also has a `needs: validate` edge in `.github/workflows/deploy-cloudflare.yml`; the reusable workflow still keeps its internal "Wait for validation gate" step (`wait_for_validate_job`) as defense in depth for manual or non-standard callers before anything publishes.
+- Worker candidate upload waits for the aggregate `validate / validate` result before any Cloudflare-secret-bearing preparation. The `pages-release` job has the same authoritative `needs: validate` edge in `.github/workflows/deploy-cloudflare.yml`, avoiding a second API polling gate inside the reusable workflow.
 - Production D1 mutation and Worker promotion remain behind the aggregate `validate / validate` result; Pages publish also waits for validation and, on combined deploys, successful Worker promotion.
 
 ### Pages Path Behavior
@@ -321,8 +324,8 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 ### Skip Rules
 
 - On `push`, Worker deploy and API smoke are skipped entirely when the diff does not touch deployed Worker runtime/config, D1 migrations, Worker assets, Worker-consumed shared runtime files, or root package/lock entries that can affect the Worker bundle, even if broader Worker validation still runs for package/tooling changes. Known Pages-only shared helpers are excluded from Worker validation and promotion by `scripts/lib/automation-registry.mjs`.
-- Pages build/deploy are skipped entirely when the diff does not touch Pages-impacting paths (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, shared validate/guardrail infrastructure, or Pages/deploy workflow files).
-- Even when `pages_changed=true`, strict local mobile canary smoke is skipped when `pages_ui_changed=false` (for example deploy-workflow-only or other non-UI Pages-surface diffs).
+- Pages build/deploy are skipped when the diff does not touch publishable Pages paths. Test-only Pages diffs still receive Pages-aware validation without a redundant build or production publish; Markdown sources rendered by the public docs route remain publishable inputs.
+- Even when `pages_deploy_required=true`, strict local mobile canary smoke is skipped when `pages_ui_changed=false` (for example deploy-workflow-only or other non-UI Pages-surface diffs).
 
 ### Concurrency and Rollback Scope
 
@@ -336,7 +339,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 
 When reviewing deploy runtime after optimization work, separate queue time from job execution time because the shared `production-deploy` concurrency group can make a healthy run appear slow while it waits for another production-changing workflow. Compare like-for-like paths: combined worker + Pages deploys, worker-only deploys, Pages-only deploys, and scheduled Pages rebuilds have different expected critical paths.
 
-For combined deploys, `pages-release` starts after the aggregate validation result, then waits for successful Worker promotion before publishing Pages when `wait_for_worker_promotion` is enabled. This keeps both Pages build/smoke scripts and Cloudflare publish actions behind validation while preserving Worker/Pages coordination; the consolidated Pages job reruns local artifact `smoke-ui` after worker promotion and before publishing Pages.
+For combined deploys, `pages-release` starts after the aggregate validation result and runs its static checks while Worker promotion is in flight. When `wait_for_worker_promotion` is enabled, it waits before running the local artifact UI, asset, and mobile checks once against the promoted Worker, then publishes Pages.
 
 Tooling cache restores are best-effort acceleration for `.next/cache`, `.cache/eslint`, and TypeScript build info. Cold-cache runs should remain valid and may be slower; investigate cache behavior only when repeated warm-cache deploys fail to reuse unchanged build, lint, or typecheck work. Only jobs that produce new tooling state upload a fresh cache (`tooling-cache-save: "true"` on validate-prebuild, pages-build, and pages-release); restore-only jobs use a deterministic key whose exact hit suppresses the post-job save, protecting the repo's 10 GB cache quota from per-run churn. The pages-release Chromium install runs without `--with-deps` (the binary restores from cache and GitHub's Ubuntu runners carry the system libraries); if a runner-image change ever drops a library, the browser launch fails loudly before anything publishes — re-add the flag then.
 

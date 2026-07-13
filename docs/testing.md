@@ -58,8 +58,8 @@ For deployment/worktree operating procedure, secrets, rollback, and local merge-
 
 CI shape:
 
-1. Pull requests run the reusable validate workflow through `.github/workflows/pull-request-checks.yml`. The deploy-impact classifier in `scripts/ci/classify-deploy-changes.mjs` decides whether PR validation also needs Pages build/SEO work and Worker typecheck coverage.
-2. `validate` runs the source-owned ten-lane validation plan from `scripts/lib/validation-lanes.mjs`, non-critical Vitest shards, `coverage:critical`, optional Worker runtime typecheck, and optional Pages build/a11y/SEO/static-artifact checks. The reusable workflow invokes the fixed `validate:pages` and `validate:worker` phase entrypoints instead of copying either command sequence into YAML.
+1. Pull requests run through `.github/workflows/pull-request-checks.yml`. Internal-docs-only diffs run verified-link, source-path, doc-sync, agent-doc-sync, and doc-count checks; other diffs run the reusable validate workflow. The deploy-impact classifier decides whether validation also needs a Pages build, Worker typechecking, or neither. Test-only Pages diffs still run the shared tests but do not request a Pages build or production publish.
+2. `validate` runs the source-owned ten-lane validation plan from `scripts/lib/validation-lanes.mjs`, non-critical Vitest shards, `coverage:critical`, optional Worker runtime typecheck, and optional Pages build/a11y/SEO/static-artifact checks. The reusable workflow invokes the fixed `validate:pages` and `validate:worker` phase entrypoints instead of copying either command sequence into YAML. The scheduled Worker entrypoint suite remains in critical coverage rather than being rerun by `validate:worker`.
 3. Push/manual production deploys reuse the same validate result before mutating D1, promoting Workers, or publishing Pages. Pages build/publish/live-smoke details live in [Deployment Process](./deployment-process.md).
 4. `npm run test:merge-gate` mirrors the deploy-impact validation-lane plan locally and skips cleanly for non-deploy-impacting diffs. Use `MERGE_GATE_DRY_RUN=1` to print the plan without requiring a fresh install.
 5. `npm run test:merge-gate:discover` mirrors the same local command plan for large failure-discovery passes. It keeps prebuild and independent postbuild lanes running after failures, skips smoke by default, and is diagnostic only; the pre-push hook owns the final exact-range release gate.
@@ -142,7 +142,7 @@ export default defineConfig({
 });
 ```
 
-The config also includes a `wasmStubPlugin()` Vite plugin that stubs `.wasm` imports for Node compatibility and resolve aliases for `satori/standalone`, `satori/yoga.wasm`, `@cf-wasm/resvg/workerd`, and `@resvg/resvg-wasm`. The supported test baseline is Node 24 LTS; the `nodeMajor >= 25` branch keeps jsdom as the source of `localStorage` / `sessionStorage` under the wider engine range, and pull-request CI runs a non-blocking Node 26 typecheck proof lane.
+The config also includes a `wasmStubPlugin()` Vite plugin that stubs `.wasm` imports for Node compatibility and resolve aliases for `satori/standalone`, `satori/yoga.wasm`, `@cf-wasm/resvg/workerd`, and `@resvg/resvg-wasm`. The supported test baseline is Node 24 LTS; the `nodeMajor >= 25` branch keeps jsdom as the source of `localStorage` / `sessionStorage` under the wider engine range, and pull-request CI runs a non-blocking Node 26 typecheck proof lane only when code or toolchain inputs change.
 
 The suite is split into four `test.projects` (all `extends: true` from the root config):
 
