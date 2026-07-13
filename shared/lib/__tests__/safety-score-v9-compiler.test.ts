@@ -477,10 +477,235 @@ describe("production-to-v9 research compiler", () => {
         expect.objectContaining({
           kind: "centralized-mint",
           severity: "moderate",
-          failureDomainKeys: ["operator:shared-mint"],
+          failureDomainKeys: ["reviewed:operator:shared-mint"],
         }),
       );
     }
+  });
+
+  it("compiles shared upgrade, bridge, and oracle identities into deduplicated common-control signals", () => {
+    const address = (digit: string) => `0x${digit.padStart(40, "0")}`;
+    const sharedUpgrade = address("1");
+    const sharedBridge = address("2");
+    const sharedOracle = address("3");
+    const withControlDomains = (id: string): StablecoinMeta => ({
+      ...meta,
+      id,
+      contracts: [
+        { chain: "ethereum", address: address("10"), decimals: 18 },
+        { chain: "base", address: address("11"), decimals: 18 },
+      ],
+      mintAuthority: {
+        ...meta.mintAuthority!,
+        mintPath: "permissioned-minter",
+        authorityPosture: "bounded-admin",
+        upgradeability: {
+          model: "transparent-proxy",
+          canChangeMintLogic: true,
+          controlRef: "Upgrade admin",
+          sources: [{ label: "Proxy", url: "https://example.com/proxy" }],
+        },
+        controls: [
+          {
+            chain: "ethereum",
+            address: sharedUpgrade,
+            label: "Upgrade admin",
+            role: "proxy-admin",
+            authorityType: "multisig",
+            directMintAbility: "upgrade-only",
+          },
+        ],
+      },
+      oracleRisk: {
+        ...meta.oracleRisk!,
+        branchModel: "multi-branch",
+        branchApplicability: {
+          disposition: "branches-required",
+          reviewedAt: "2026-06-01",
+          reviewer: "research",
+          rationale: "The market has an independently configured collateral branch.",
+          sources: [{ label: "Oracle docs", url: "https://example.com/oracle" }],
+        },
+        branches: [
+          {
+            id: "primary-market",
+            label: "Primary market",
+            tier: "redundant-with-failover",
+            summary: "Reviewed oracle and liquidation path.",
+            feeds: [
+              {
+                provider: "Test oracle",
+                path: "USD feed",
+                chain: "ethereum",
+                address: sharedOracle,
+              },
+            ],
+            collateralParameters: [{ asset: "ETH", maximumLtvPct: 70 }],
+            liquidationMechanism: "Permissionless auction",
+            shutdownOrBadDebtBehavior: "Protocol shutdown socializes residual bad debt.",
+          },
+        ],
+      },
+      bridgeRouteRisk: {
+        tier: "canonical-rollup-bridge",
+        summary: "Reviewed canonical route.",
+        reviewedAt: "2026-06-01",
+        reviewer: "research",
+        confidence: "verified",
+        sources: [{ label: "Bridge docs", url: "https://example.com/bridge" }],
+        routes: [
+          {
+            id: "ethereum:base:canonical",
+            sourceChain: "ethereum",
+            destinationChain: "base",
+            contractAddress: address("11"),
+            protocol: "Canonical bridge",
+            issuanceModel: "bridge-representation",
+            routeClass: "canonical",
+            riskTier: "canonical-rollup-bridge",
+            semantics: "lock-mint",
+            scope: "canonical",
+            reviewDisposition: "reviewed",
+            controllerChain: "ethereum",
+            controllerAddress: sharedBridge,
+          },
+        ],
+      },
+    });
+    const controlCard = (id: string): ReportCard => ({
+      ...card,
+      id,
+      rawInputs: {
+        ...card.rawInputs,
+        bridgeRouteMaterialityStatus: "complete",
+        bridgeRouteSelectedRouteId: "ethereum:base:canonical",
+        bridgeRouteMatchedSupplyRatio: 1,
+        bridgeRouteUnknownSupplyRatio: 0,
+      },
+    });
+    const compiled = compileReportCardSetToV9Inputs(
+      [withControlDomains("a-asset"), withControlDomains("b-asset")],
+      [controlCard("a-asset"), controlCard("b-asset")],
+      options,
+    );
+    const expectedDomains = [sharedUpgrade, sharedBridge, sharedOracle].map(
+      (controller) => `address:ethereum:${controller}`,
+    );
+
+    for (const input of compiled) {
+      for (const key of expectedDomains) {
+        expect(
+          input.structuralSignals.filter(
+            (signal) => signal.kind === "critical-dependency" && signal.failureDomainKeys.includes(key),
+          ),
+        ).toHaveLength(1);
+      }
+      expect(input.pillars.control.signals).toContain(
+        `common-control:address:ethereum:${sharedUpgrade}:assets=2:paths=mint+upgrade`,
+      );
+      expect(input.pillars.control.signals).toContain(
+        `common-control:address:ethereum:${sharedBridge}:assets=2:paths=bridge`,
+      );
+      expect(input.pillars.control.signals).toContain(
+        `common-control:address:ethereum:${sharedOracle}:assets=2:paths=oracle`,
+      );
+    }
+  });
+
+  it("leaves isolated bridge and oracle identities inert and does not apply a shared-mint signal locally", () => {
+    const address = (digit: string) => `0x${digit.padStart(40, "0")}`;
+    const upgradeAddress = address("4");
+    const bridgeAddress = address("5");
+    const oracleAddress = address("6");
+    const isolatedMeta: StablecoinMeta = {
+      ...meta,
+      id: "isolated",
+      mintAuthority: {
+        ...meta.mintAuthority!,
+        mintPath: "permissioned-minter",
+        authorityPosture: "bounded-admin",
+        upgradeability: {
+          model: "uups",
+          canChangeMintLogic: true,
+          controlRef: "Local admin",
+          sources: [{ label: "Proxy", url: "https://example.com/local-proxy" }],
+        },
+        controls: [
+          {
+            chain: "ethereum",
+            address: upgradeAddress,
+            label: "Local admin",
+            role: "proxy-admin",
+            authorityType: "multisig",
+            directMintAbility: "upgrade-only",
+          },
+        ],
+      },
+      oracleRisk: {
+        ...meta.oracleRisk!,
+        branchModel: "multi-branch",
+        branchApplicability: {
+          disposition: "branches-required",
+          reviewedAt: "2026-06-01",
+          reviewer: "research",
+          rationale: "The market has a branch-specific oracle path.",
+          sources: [{ label: "Oracle docs", url: "https://example.com/oracle" }],
+        },
+        branches: [
+          {
+            id: "local-market",
+            label: "Local market",
+            tier: "redundant-with-failover",
+            summary: "Reviewed local oracle path.",
+            feeds: [
+              {
+                provider: "Local oracle",
+                path: "USD feed",
+                chain: "ethereum",
+                address: oracleAddress,
+              },
+            ],
+            collateralParameters: [{ asset: "ETH", maximumLtvPct: 70 }],
+            liquidationMechanism: "Permissionless auction",
+            shutdownOrBadDebtBehavior: "Protocol shutdown socializes residual bad debt.",
+          },
+        ],
+      },
+      bridgeRouteRisk: {
+        tier: "canonical-rollup-bridge",
+        summary: "Reviewed local bridge route.",
+        reviewedAt: "2026-06-01",
+        reviewer: "research",
+        confidence: "verified",
+        routes: [
+          {
+            id: "local-route",
+            destinationChain: "base",
+            contractAddress: address("7"),
+            protocol: "Local bridge",
+            issuanceModel: "bridge-representation",
+            routeClass: "canonical",
+            riskTier: "canonical-rollup-bridge",
+            semantics: "lock-mint",
+            scope: "canonical",
+            reviewDisposition: "reviewed",
+            controllerChain: "ethereum",
+            controllerAddress: bridgeAddress,
+          },
+        ],
+      },
+    };
+    const [compiled] = compileReportCardSetToV9Inputs([isolatedMeta], [{ ...card, id: isolatedMeta.id }], options);
+    const structuralKeys = compiled.structuralSignals.flatMap((signal) => signal.failureDomainKeys);
+
+    expect(structuralKeys).not.toContain(`address:ethereum:${bridgeAddress}`);
+    expect(structuralKeys).not.toContain(`address:ethereum:${oracleAddress}`);
+    expect(compiled.structuralSignals).not.toContainEqual(
+      expect.objectContaining({ kind: "centralized-mint", failureDomainKeys: [`address:ethereum:${upgradeAddress}`] }),
+    );
+    expect(compiled.pillars.control.signals).toContain(
+      `common-control:address:ethereum:${upgradeAddress}:assets=1:paths=mint+upgrade`,
+    );
   });
 
   it("fails closed on per-asset ID mismatches", () => {

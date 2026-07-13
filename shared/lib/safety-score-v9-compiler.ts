@@ -20,6 +20,12 @@ import type { StablecoinLink, StablecoinMeta } from "../types/core";
 import type { ExitRouteObservation } from "../types/exit-route";
 import { isDexExitRouteCoverageComplete } from "./p4-exit-route-capacity";
 import { isExitRouteObservationScoreEligible } from "./redemption-backstop-scoring";
+import { collectCriticalControlIdentities, type CriticalControlIdentityOccurrence } from "./control-identities";
+
+export interface V9CommonControlDomain {
+  assetIds: readonly string[];
+  paths: readonly CriticalControlIdentityOccurrence["path"][];
+}
 
 export interface CompileV9AssetOptions {
   asOf: string;
@@ -31,7 +37,7 @@ export interface CompileV9AssetOptions {
   exitRouteObservationsById?: ReadonlyMap<string, readonly ExitRouteObservation[]>;
   dexExitObservationMaxAgeSec?: number | null;
   liveRedemptionExitObservationMaxAgeSec?: number | null;
-  controlFailureDomainCounts?: ReadonlyMap<string, number>;
+  commonControlDomains?: ReadonlyMap<string, V9CommonControlDomain>;
 }
 
 function unresolved(code: string, reason: string, critical: boolean, path?: string): V9UnresolvedFact {
@@ -946,19 +952,6 @@ function compileControlPillar(
         );
       }
     }
-
-    const localDomains = new Set((mint.controls ?? []).flatMap((control) => control.failureDomainKeys ?? []));
-    for (const domain of [...localDomains].sort()) {
-      const count = options.controlFailureDomainCounts?.get(domain) ?? 1;
-      if (count < 2) continue;
-      structuralSignals.push({
-        kind: "centralized-mint",
-        severity: "moderate",
-        reason: `Mint-critical control domain ${domain} is shared by ${count} active assets.`,
-        failureDomainKeys: [domain],
-        evidence: mintEvidence,
-      });
-    }
   }
 
   const oracleApplicable = archetype === "cdp";
@@ -1091,6 +1084,8 @@ function compileControlPillar(
     }
   }
 
+  appendCommonControlSignals({ meta, options, evidence, signals, structuralSignals });
+
   return pillarEvidence({
     score: gaps.some((fact) => fact.critical) || pathScores.length === 0 ? null : Math.min(...pathScores),
     evidenceLevel:
@@ -1105,25 +1100,138 @@ function compileControlPillar(
   });
 }
 
-function collectControlFailureDomainCounts(
+function isReviewedByAsOf(value: string | undefined, asOf: string): boolean {
+  const reviewedAt = parseTimestamp(value);
+  return reviewedAt !== null && reviewedAt.getTime() <= Date.parse(asOf);
+}
+
+function isObservedByAsOf(value: string | undefined, asOf: string): boolean {
+  const observedAt = parseTimestamp(value);
+  return observedAt === null || observedAt.getTime() <= Date.parse(asOf);
+}
+
+function collectCriticalControlIdentitiesAsOf(meta: StablecoinMeta, asOf: string): CriticalControlIdentityOccurrence[] {
+  const mint = meta.mintAuthority;
+  const mintAuthority =
+    mint && isReviewedByAsOf(mint.review.reviewedAt, asOf)
+      ? {
+          ...mint,
+          controls: mint.controls?.filter((control) => isObservedByAsOf(control.observedAt, asOf)),
+          upgradeability:
+            mint.upgradeability && isObservedByAsOf(mint.upgradeability.observedAt, asOf)
+              ? mint.upgradeability
+              : undefined,
+        }
+      : undefined;
+  const bridge = meta.bridgeRouteRisk;
+  const bridgeRouteRisk =
+    bridge && isReviewedByAsOf(bridge.reviewedAt, asOf)
+      ? {
+          ...bridge,
+          routes: bridge.routes?.filter((route) => isObservedByAsOf(route.observedAt, asOf)),
+        }
+      : undefined;
+  const oracle = meta.oracleRisk;
+  const oracleRisk =
+    oracle &&
+    isReviewedByAsOf(oracle.reviewedAt, asOf) &&
+    (!oracle.branchApplicability || isReviewedByAsOf(oracle.branchApplicability.reviewedAt, asOf))
+      ? {
+          ...oracle,
+          branches: oracle.branches
+            ?.filter((branch) => isObservedByAsOf(branch.observedAt, asOf))
+            .map((branch) => ({
+              ...branch,
+              feeds: branch.feeds?.filter((feed) => isObservedByAsOf(feed.observedAt, asOf)),
+            })),
+        }
+      : undefined;
+
+  return collectCriticalControlIdentities({
+    ...meta,
+    mintAuthority,
+    bridgeRouteRisk,
+    oracleRisk,
+  });
+}
+
+function collectCommonControlDomains(
   metadata: readonly StablecoinMeta[],
   asOf: string,
-): ReadonlyMap<string, number> {
-  const counts = new Map<string, number>();
+): ReadonlyMap<string, V9CommonControlDomain> {
+  const domains = new Map<
+    string,
+    {
+      assetIds: Set<string>;
+      paths: Set<CriticalControlIdentityOccurrence["path"]>;
+    }
+  >();
   for (const meta of metadata) {
-    const reviewDate = parseTimestamp(meta.mintAuthority?.review.reviewedAt);
-    if (reviewDate && reviewDate.getTime() > Date.parse(asOf)) continue;
-    const domains = new Set(
-      (meta.mintAuthority?.controls ?? [])
-        .filter((control) => {
-          const observedAt = parseTimestamp(control.observedAt);
-          return observedAt === null || observedAt.getTime() <= Date.parse(asOf);
-        })
-        .flatMap((control) => control.failureDomainKeys ?? []),
-    );
-    for (const domain of domains) counts.set(domain, (counts.get(domain) ?? 0) + 1);
+    for (const occurrence of collectCriticalControlIdentitiesAsOf(meta, asOf)) {
+      const domain = domains.get(occurrence.key) ?? {
+        assetIds: new Set<string>(),
+        paths: new Set<CriticalControlIdentityOccurrence["path"]>(),
+      };
+      domain.assetIds.add(meta.id);
+      domain.paths.add(occurrence.path);
+      domains.set(occurrence.key, domain);
+    }
   }
-  return counts;
+  return new Map(
+    [...domains.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, domain]) => [
+        key,
+        {
+          assetIds: [...domain.assetIds].sort(),
+          paths: [...domain.paths].sort(),
+        },
+      ]),
+  );
+}
+
+function appendCommonControlSignals(args: {
+  meta: StablecoinMeta;
+  options: CompileV9AssetOptions;
+  evidence: readonly V9EvidenceReference[];
+  signals: string[];
+  structuralSignals: V9StructuralSignal[];
+}): void {
+  const { meta, options, evidence, signals, structuralSignals } = args;
+  const localByKey = new Map<string, Set<CriticalControlIdentityOccurrence["path"]>>();
+  for (const occurrence of collectCriticalControlIdentitiesAsOf(meta, options.asOf)) {
+    const paths = localByKey.get(occurrence.key) ?? new Set<CriticalControlIdentityOccurrence["path"]>();
+    paths.add(occurrence.path);
+    localByKey.set(occurrence.key, paths);
+  }
+
+  for (const [key, localPathSet] of [...localByKey.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+    const localPaths = [...localPathSet].sort();
+    const domain = options.commonControlDomains?.get(key) ?? { assetIds: [meta.id], paths: localPaths };
+    if (domain.assetIds.length < 2 && domain.paths.length < 2) continue;
+
+    const paths = [...domain.paths].sort();
+    signals.push(`common-control:${key}:assets=${domain.assetIds.length}:paths=${paths.join("+")}`);
+    structuralSignals.push({
+      kind: "critical-dependency",
+      severity: "moderate",
+      reason: `Critical control identity ${key} is reused across ${domain.assetIds.length} active asset${
+        domain.assetIds.length === 1 ? "" : "s"
+      } and ${paths.join(", ")} paths.`,
+      failureDomainKeys: [key],
+      evidence: uniqueEvidence(evidence),
+    });
+
+    if (localPathSet.has("mint") && domain.assetIds.length >= 2) {
+      structuralSignals.push({
+        kind: "centralized-mint",
+        severity: "moderate",
+        reason: `Mint-critical control identity ${key} is shared by ${domain.assetIds.length} active assets.`,
+        failureDomainKeys: [key],
+        evidence: uniqueEvidence(evidence),
+      });
+    }
+  }
 }
 
 /** Compile production metadata and runtime observations into an expectation-free v9 research input. */
@@ -1271,7 +1379,7 @@ export function assertExactReportCardIds(
 export function compileReportCardSetToV9Inputs(
   metadata: readonly StablecoinMeta[],
   cards: readonly ReportCard[],
-  options: Omit<CompileV9AssetOptions, "metaById" | "controlFailureDomainCounts">,
+  options: Omit<CompileV9AssetOptions, "metaById" | "commonControlDomains">,
 ): CompiledV9AssetInput[] {
   assertExactReportCardIds(
     metadata.map((meta) => meta.id),
@@ -1279,14 +1387,14 @@ export function compileReportCardSetToV9Inputs(
   );
   const metaById = new Map(metadata.map((meta) => [meta.id, meta]));
   const cardsById = new Map(cards.map((card) => [card.id, card]));
-  const controlFailureDomainCounts = collectControlFailureDomainCounts(metadata, options.asOf);
+  const commonControlDomains = collectCommonControlDomains(metadata, options.asOf);
   return [...metadata]
     .sort((left, right) => left.id.localeCompare(right.id))
     .map((meta) =>
       compileReportCardToV9Input(meta, cardsById.get(meta.id)!, {
         ...options,
         metaById,
-        controlFailureDomainCounts,
+        commonControlDomains,
       }),
     );
 }
