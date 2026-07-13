@@ -45,6 +45,13 @@ import {
 import { THREAT_BAND_HEX } from "../../../shared/lib/classification";
 import { CRON_SCHEDULES } from "../../../shared/lib/cron-jobs";
 import {
+  BLACKLIST_TRACKER_METHODOLOGY_VERSION,
+  DEPEG_DEWS_METHODOLOGY_VERSION,
+  PSI_METHODOLOGY_VERSION,
+  SAFETY_SCORE_METHODOLOGY_VERSION,
+  YIELD_METHODOLOGY_VERSION,
+} from "../../../shared/lib/methodology-versions/constants";
+import {
   DIMENSION_WEIGHTS,
   GRADE_THRESHOLDS,
   NO_LIQUIDITY_PENALTY,
@@ -354,6 +361,80 @@ function checkChainsApiDoc(failures: Failure[], doc: string): void {
   );
 }
 
+function checkApiMethodologyExamples(failures: Failure[], doc: string): void {
+  const file = "docs/api-reference.md";
+  const checks = [
+    {
+      route: "GET /api/blacklist",
+      markers: [
+        `"currentVersion": "${BLACKLIST_TRACKER_METHODOLOGY_VERSION}"`,
+        `"currentVersionLabel": "v${BLACKLIST_TRACKER_METHODOLOGY_VERSION}"`,
+      ],
+    },
+    {
+      route: "GET /api/depeg-events",
+      markers: [`"currentVersion": "${DEPEG_DEWS_METHODOLOGY_VERSION}"`],
+    },
+    {
+      route: "GET /api/peg-summary",
+      markers: [`"currentVersion": "${DEPEG_DEWS_METHODOLOGY_VERSION}"`],
+    },
+    {
+      route: "GET /api/stability-index",
+      markers: [`"currentVersion": "${PSI_METHODOLOGY_VERSION}"`, `"methodologyVersion": "${PSI_METHODOLOGY_VERSION}"`],
+    },
+    {
+      route: "GET /api/report-cards",
+      markers: [
+        `"version": "${SAFETY_SCORE_METHODOLOGY_VERSION}"`,
+        `"methodologyVersion": "${SAFETY_SCORE_METHODOLOGY_VERSION}"`,
+      ],
+    },
+    {
+      route: "GET /api/yield-rankings",
+      markers: [
+        `"currentVersion": "${YIELD_METHODOLOGY_VERSION}"`,
+        `"methodologyVersion": "${SAFETY_SCORE_METHODOLOGY_VERSION}"`,
+      ],
+    },
+    {
+      route: "GET /api/yield-adapter-manifest",
+      markers: [`"methodologyVersion": "v${YIELD_METHODOLOGY_VERSION}"`],
+    },
+    {
+      route: "GET /api/yield-history",
+      markers: [
+        `"currentVersion": "${YIELD_METHODOLOGY_VERSION}"`,
+        `"methodologyVersion": "${YIELD_METHODOLOGY_VERSION}"`,
+      ],
+    },
+    {
+      route: "GET /api/stress-signals",
+      markers: [
+        `"currentVersion": "${DEPEG_DEWS_METHODOLOGY_VERSION}"`,
+        `"methodologyVersion": "${DEPEG_DEWS_METHODOLOGY_VERSION}"`,
+      ],
+    },
+  ] as const;
+
+  for (const check of checks) {
+    const heading = `### \`${check.route}\``;
+    const start = doc.indexOf(heading);
+    const end = start < 0 ? -1 : doc.indexOf("\n---", start);
+    const section = start < 0 ? "" : doc.slice(start, end < 0 ? undefined : end);
+    for (const marker of check.markers) {
+      if (!section.includes(marker)) {
+        failures.push({
+          file,
+          label: `${check.route} current methodology example`,
+          expected: marker,
+          found: start < 0 ? "route section missing" : "marker missing",
+        });
+      }
+    }
+  }
+}
+
 function getCacheExampleNumber(doc: string, cacheKey: string, field: string): number | null {
   const cacheIndex = doc.indexOf(`"${cacheKey}"`);
   if (cacheIndex < 0) return null;
@@ -515,6 +596,7 @@ export function runDocSyncChecks(): Failure[] {
   checkApiFreshnessDoc(failures, apiReferenceDoc);
   checkStatusDashboardDoc(failures);
   checkChainsApiDoc(failures, apiReferenceDoc);
+  checkApiMethodologyExamples(failures, apiReferenceDoc);
   checkChainsPageDoc(failures);
   checkRedemptionBackstopsDoc(failures);
 
