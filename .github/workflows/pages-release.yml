@@ -13,11 +13,6 @@ on:
         required: false
         default: true
         type: boolean
-      wait_for_validate_job:
-        description: Whether the release should wait for validate / validate before publishing.
-        required: false
-        default: false
-        type: boolean
       wait_for_worker_promotion:
         description: Whether the release should wait for deploy-worker before publishing.
         required: false
@@ -209,7 +204,27 @@ jobs:
           done
           cat /tmp/pages-smoke-server.log
           exit 1
-      - name: Run local pre-publish checks with bounded browser concurrency
+      - name: Run local static pre-publish checks
+        run: |
+          npm run seo:check
+
+          # a11y runs on its own bare static-export server (port 4174) so it keeps the
+          # exact conditions of the former standalone step (no API hydration).
+          # Keep one worker and a 60s ceiling here; standalone validation and the
+          # local gate retain the stricter config default on otherwise idle runners.
+          STATIC_EXPORT_PORT=4174 npm run test:a11y -- --workers=1 --timeout=60000
+      - name: Wait for worker promotion gate
+        if: ${{ inputs.wait_for_worker_promotion }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node .github/scripts/wait-for-workflow-job.mjs
+          --job "deploy-worker"
+          --attempts 180
+          --sleep-sec 5
+          --stop-message "stopping production Pages deployment."
+          --timeout-message "Timed out waiting for deploy-worker to finish."
+      - name: Run local artifact checks with bounded browser concurrency
         env:
           PAGES_UI_CHANGED: ${{ inputs.pages_ui_changed }}
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
@@ -226,14 +241,6 @@ jobs:
           SMOKE_MOBILE_UI_WORKERS: "3"
           SMOKE_MOBILE_UI_WAIT_MS: "1500"
         run: |
-          npm run seo:check
-
-          # a11y runs on its own bare static-export server (port 4174) so it keeps the
-          # exact conditions of the former standalone step (no API hydration).
-          # Keep one worker and a 60s ceiling here; standalone validation and the
-          # local gate retain the stricter config default on otherwise idle runners.
-          STATIC_EXPORT_PORT=4174 npm run test:a11y -- --workers=1 --timeout=60000
-
           # These browser suites intentionally run one after another. Running UI,
           # asset, mobile, and axe workers together oversubscribed the 4-core release
           # runner and produced navigation timeouts and aborted warm-cache assets.
@@ -254,36 +261,6 @@ jobs:
           STATIC_EXPORT_PORT: "4173"
           PLAYWRIGHT_REUSE_SERVER: "1"
         run: npm run test:a11y:hydrated
-      - name: Wait for validation gate
-        if: ${{ inputs.wait_for_validate_job }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          node .github/scripts/wait-for-workflow-job.mjs
-          --job "validate / validate"
-          --attempts 120
-          --sleep-sec 5
-          --stop-message "stopping production Pages deployment."
-          --timeout-message "Timed out waiting for validate / validate to finish."
-      - name: Wait for worker promotion gate
-        if: ${{ inputs.wait_for_worker_promotion }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          node .github/scripts/wait-for-workflow-job.mjs
-          --job "deploy-worker"
-          --attempts 180
-          --sleep-sec 5
-          --stop-message "stopping production Pages deployment."
-          --timeout-message "Timed out waiting for deploy-worker to finish."
-      - name: Run local artifact smoke against promoted worker
-        if: ${{ inputs.wait_for_worker_promotion }}
-        env:
-          SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
-          SMOKE_UI_BROWSER_CHANNEL: chrome
-          SMOKE_UI_OVERFLOW_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/
-          SMOKE_UI_OVERFLOW_WORKERS: "6"
-        run: npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
       - name: Dump local export smoke server log
         if: failure()
         run: cat /tmp/pages-smoke-server.log

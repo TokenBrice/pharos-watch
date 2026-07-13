@@ -42,9 +42,10 @@ export function parseReleaseMarkerArgs(argv, env = process.env) {
     attempts: parsePositiveInt(env.PHAROS_RELEASE_MARKER_ATTEMPTS, DEFAULT_ATTEMPTS),
     delayMs: parsePositiveInt(env.PHAROS_RELEASE_MARKER_DELAY_MS, DEFAULT_DELAY_MS),
     help: values.help === true,
-    markerPath: typeof values.marker === "string"
-      ? values.marker
-      : env.PHAROS_RELEASE_MARKER_PATH ?? "out/__pharos_release.json",
+    markerPath:
+      typeof values.marker === "string"
+        ? values.marker
+        : (env.PHAROS_RELEASE_MARKER_PATH ?? "out/__pharos_release.json"),
     stableCount: parsePositiveInt(env.PHAROS_RELEASE_MARKER_STABLE_COUNT, DEFAULT_STABLE_COUNT),
     timeoutMs: parsePositiveInt(env.PHAROS_RELEASE_MARKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
     urls: Array.isArray(values.url) ? values.url : [],
@@ -133,9 +134,7 @@ async function waitForUrl(url, expectedCommit, options) {
       lastDetail = error instanceof Error ? error.message : String(error);
     }
 
-    console.log(
-      `[release-marker] waiting for ${url} (${attempt}/${options.attempts}): ${lastDetail}`,
-    );
+    console.log(`[release-marker] waiting for ${url} (${attempt}/${options.attempts}): ${lastDetail}`);
     if (attempt < options.attempts) {
       await sleep(options.delayMs);
     }
@@ -149,16 +148,11 @@ export async function run(argv = process.argv.slice(2)) {
   if (writeCliHelpIfRequested(args, USAGE)) return;
   const urls = args.urls.map((url) => url.trim()).filter(Boolean);
   assertCliUsage(urls.length > 0, "at least one --url is required");
-  assertCliUsage(
-    args.attempts >= args.stableCount,
-    "--attempts must be greater than or equal to --stable-count",
-  );
+  assertCliUsage(args.attempts >= args.stableCount, "--attempts must be greater than or equal to --stable-count");
 
   const expected = await loadExpectedMarker(args.markerPath);
   const headers = buildAccessHeaders();
-  for (const url of urls) {
-    await waitForUrl(url, expected.commit, { ...args, headers });
-  }
+  await Promise.all(urls.map((url) => waitForUrl(url, expected.commit, { ...args, headers })));
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {

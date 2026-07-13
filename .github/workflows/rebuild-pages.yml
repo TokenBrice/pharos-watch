@@ -26,8 +26,91 @@ jobs:
             exit 1
           fi
 
+  plan-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      release_required: ${{ steps.plan.outputs.release_required }}
+    steps:
+      - id: plan
+        name: Decide whether the fallback rebuild is needed
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+          SCHEDULE: ${{ github.event.schedule }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          if [ "${EVENT_NAME}" != "schedule" ] || [ "${SCHEDULE}" != "25 8 * * *" ]; then
+            echo "release_required=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          marker="$(curl --fail --silent --show-error --max-time 15 \
+            https://pharos.watch/__pharos_release.json || true)"
+          marker_run_id="$(MARKER_JSON="$marker" node -e '
+            try {
+              const marker = JSON.parse(process.env.MARKER_JSON || "null");
+              if (/^[0-9]+$/.test(String(marker?.runId ?? ""))) process.stdout.write(String(marker.runId));
+            } catch {}
+          ')"
+          run=""
+          if [[ "$marker_run_id" =~ ^[0-9]+$ ]]; then
+            run="$(curl --fail --silent --show-error --max-time 15 \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header "Accept: application/vnd.github+json" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${marker_run_id}" || true)"
+          fi
+
+          if MARKER_JSON="$marker" RUN_JSON="$run" node <<'NODE'
+          const parseJson = (value) => {
+            try {
+              return JSON.parse(value || "null");
+            } catch {
+              return null;
+            }
+          };
+          const marker = parseJson(process.env.MARKER_JSON);
+          const run = parseJson(process.env.RUN_JSON);
+          const now = new Date();
+          const primaryWindowStart = Date.UTC(
+            now.getUTCFullYear(),
+            now.getUTCMonth(),
+            now.getUTCDate(),
+            8,
+            5,
+          );
+          const markerCreatedAt = Date.parse(marker?.createdAt ?? "");
+          const runCreatedAt = Date.parse(run?.created_at ?? "");
+          const valid =
+            marker?.commit === process.env.TARGET_SHA &&
+            String(marker?.runId ?? "") === String(run?.id ?? "") &&
+            String(marker?.runAttempt ?? "") === String(run?.run_attempt ?? "") &&
+            String(run?.id ?? "") !== process.env.GITHUB_RUN_ID &&
+            run?.event === "schedule" &&
+            run?.status === "completed" &&
+            run?.conclusion === "success" &&
+            run?.head_sha === process.env.TARGET_SHA &&
+            String(run?.path ?? "").startsWith(".github/workflows/rebuild-pages.yml") &&
+            Number.isFinite(markerCreatedAt) &&
+            Number.isFinite(runCreatedAt) &&
+            markerCreatedAt >= primaryWindowStart &&
+            runCreatedAt >= primaryWindowStart &&
+            markerCreatedAt <= now.getTime();
+          process.exit(valid ? 0 : 1);
+          NODE
+          then
+            echo "release_required=false" >> "$GITHUB_OUTPUT"
+            echo "The primary daily rebuild already published the current commit; skipping fallback."
+          else
+            echo "release_required=true" >> "$GITHUB_OUTPUT"
+            echo "The primary daily rebuild is missing or stale; running the full fallback release."
+          fi
+
   pages-release:
-    needs: guard-production-ref
+    needs:
+      - guard-production-ref
+      - plan-release
+    if: ${{ needs.plan-release.outputs.release_required == 'true' }}
     uses: ./.github/workflows/pages-release.yml
     secrets:
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}

@@ -481,7 +481,7 @@ describe("validate-ci parity", () => {
     expect(deployWorkerJob).toContain(
       "runs-on: ${{ vars.CI_WORKER_DEPLOY_RUNNER != '' && vars.CI_WORKER_DEPLOY_RUNNER || vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}",
     );
-    expect(deployWorkerJob).toContain("Wait for validation gate");
+    expect(deployWorkerJob).not.toContain("Wait for validation gate");
     expect(deployWorkerJob).toContain("Rehearse D1 migrations locally");
     expect(deployWorkerJob).toContain("Capture previous worker trigger config for rollback");
     expect(deployWorkerJob).toContain("Require previous worker version for automatic rollback");
@@ -501,6 +501,8 @@ describe("validate-ci parity", () => {
     expect(deployWorkerJob).toContain("cd worker && npx --no-install wrangler deploy");
     expect(deployWorkerJob).toContain('SMOKE_API_SCOPE: "canary"');
     expect(deployWorkerJob).toContain("Run worker-only live smokes");
+    expect(deployWorkerJob).toContain("needs.detect-changes.outputs.pages_deploy_required != 'true'");
+    expect(deployWorkerJob).not.toContain("needs.detect-changes.outputs.pages_changed != 'true'");
     expect(deployWorkerJob).toContain("id: worker-only-live-smokes");
     expect(deployWorkerJob).toContain("continue-on-error: true");
     expect(deployWorkerJob).toContain("SMOKE_UI_OVERFLOW_ROUTES: /depeg/");
@@ -511,15 +513,15 @@ describe("validate-ci parity", () => {
     const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
     expect(pagesReleaseJob).toContain("needs:");
     expect(pagesReleaseJob).toContain("- detect-changes");
-    // The secret-bearing Pages release job must not start until validation
-    // succeeds; the reusable workflow's internal wait remains defense in depth.
+    // The secret-bearing Pages release job must not start until validation succeeds.
     expect(pagesReleaseJob).toContain("- validate");
     expect(pagesReleaseJob).not.toContain("- upload-worker-version");
     expect(pagesReleaseJob).toContain("uses: ./.github/workflows/pages-release.yml");
     expect(pagesReleaseJob).toContain(
       "pages_ui_changed: ${{ needs.detect-changes.outputs.pages_ui_changed == 'true' }}",
     );
-    expect(pagesReleaseJob).toContain("wait_for_validate_job: true");
+    expect(pagesReleaseJob).toContain("if: ${{ needs.detect-changes.outputs.pages_deploy_required == 'true' }}");
+    expect(pagesReleaseJob).not.toContain("wait_for_validate_job");
     expect(pagesReleaseJob).toContain(
       "wait_for_worker_promotion: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}",
     );
@@ -537,7 +539,8 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
     expect(consolidatedPagesReleaseJob).toContain("Start local export smoke server");
-    expect(consolidatedPagesReleaseJob).toContain("Run local pre-publish checks with bounded browser concurrency");
+    expect(consolidatedPagesReleaseJob).toContain("Run local static pre-publish checks");
+    expect(consolidatedPagesReleaseJob).toContain("Run local artifact checks with bounded browser concurrency");
     expect(consolidatedPagesReleaseJob).toContain("PAGES_UI_CHANGED: ${{ inputs.pages_ui_changed }}");
     expect(consolidatedPagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "4"');
     expect(consolidatedPagesReleaseJob).toContain('SMOKE_PAGES_ASSET_WORKERS: "3"');
@@ -547,11 +550,14 @@ describe("validate-ci parity", () => {
       "npm run test:smoke-pages-assets -- --url http://127.0.0.1:4173 --mode local",
     );
     expect(consolidatedPagesReleaseJob).toContain("npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173");
-    expect(consolidatedPagesReleaseJob).toContain("Wait for validation gate");
-    expect(consolidatedPagesReleaseJob).toContain("if: ${{ inputs.wait_for_validate_job }}");
+    expect(consolidatedPagesReleaseJob).not.toContain("Wait for validation gate");
+    expect(consolidatedPagesReleaseJob).not.toContain("wait_for_validate_job");
     expect(consolidatedPagesReleaseJob).toContain("Wait for worker promotion gate");
     expect(consolidatedPagesReleaseJob).toContain("if: ${{ inputs.wait_for_worker_promotion }}");
-    expect(consolidatedPagesReleaseJob).toContain("Run local artifact smoke against promoted worker");
+    expect(consolidatedPagesReleaseJob).not.toContain("Run local artifact smoke against promoted worker");
+    expect(
+      consolidatedPagesReleaseJob.match(/npm run test:smoke-ui -- --url http:\/\/127\.0\.0\.1:4173 --mode local/g),
+    ).toHaveLength(1);
     expect(consolidatedPagesReleaseJob).toContain("Deploy Pages with retry");
     expect(consolidatedPagesReleaseJob).toContain("Capture Pages release metrics");
     expect(consolidatedPagesReleaseJob).toContain("Fail because automated Pages rollback is not armed");
@@ -590,15 +596,14 @@ describe("validate-ci parity", () => {
       "Capture current production Pages deployment id",
       "Fail because automated Pages rollback is not armed",
       "Start local export smoke server",
-      "Run local pre-publish checks with bounded browser concurrency",
+      "Run local static pre-publish checks",
       "npm run seo:check",
       "npm run test:a11y",
+      "Wait for worker promotion gate",
+      "Run local artifact checks with bounded browser concurrency",
       "npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local",
       "npm run test:smoke-pages-assets -- --url http://127.0.0.1:4173 --mode local",
       "npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173",
-      "Wait for validation gate",
-      "Wait for worker promotion gate",
-      "Run local artifact smoke against promoted worker",
       "Deploy Pages with retry",
     ]);
     expect(deployWorkflow).not.toContain("  smoke-api:");
@@ -633,21 +638,39 @@ describe("validate-ci parity", () => {
       "Capture current production Pages deployment id",
       "Fail because automated Pages rollback is not armed",
       "Start local export smoke server",
-      "Run local pre-publish checks with bounded browser concurrency",
+      "Run local static pre-publish checks",
       "npm run seo:check",
       "npm run test:a11y",
+      "Wait for worker promotion gate",
+      "Run local artifact checks with bounded browser concurrency",
     ]);
   });
 
   it("forwards dedicated Pages data-sync secrets through the scheduled rebuild workflow", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/rebuild-pages.yml"), "utf8");
-    const guardJob = extractJobBlock(workflow, "guard-production-ref", "pages-release");
+    const guardJob = extractJobBlock(workflow, "guard-production-ref", "plan-release");
+    const planJob = extractJobBlock(workflow, "plan-release", "pages-release");
     const pagesReleaseJob = extractJobBlock(workflow, "pages-release");
 
     expect(guardJob).toContain('if [ "${GITHUB_REF}" != "refs/heads/main" ]; then');
-    expect(pagesReleaseJob).toContain("needs: guard-production-ref");
+    expect(planJob).toContain('if [ "${EVENT_NAME}" != "schedule" ] || [ "${SCHEDULE}" != "25 8 * * *" ]; then');
+    expect(planJob).toContain("https://pharos.watch/__pharos_release.json");
+    expect(planJob).toContain("${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${marker_run_id}");
+    expect(planJob).toContain('run?.event === "schedule"');
+    expect(planJob).toContain('run?.conclusion === "success"');
+    expect(planJob).toContain('String(run?.path ?? "").startsWith(".github/workflows/rebuild-pages.yml")');
+    expect(planJob).toContain("runCreatedAt >= primaryWindowStart");
+    expect(pagesReleaseJob).toContain("- guard-production-ref");
+    expect(pagesReleaseJob).toContain("- plan-release");
+    expect(pagesReleaseJob).toContain("needs.plan-release.outputs.release_required == 'true'");
     expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_KEY:");
     expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_KEY:");
+
+    const markerWaiter = readFileSync(
+      resolve(process.cwd(), "scripts/maintenance/wait-pages-release-marker.mjs"),
+      "utf8",
+    );
+    expect(markerWaiter).toContain("await Promise.all(urls.map");
   });
 
   it("keeps the critical coverage baseline aligned with the ratchet target list", () => {

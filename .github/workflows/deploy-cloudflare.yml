@@ -31,6 +31,7 @@ jobs:
     outputs:
       deploy_required: ${{ steps.classify.outputs.deploy_required }}
       pages_changed: ${{ steps.classify.outputs.pages_changed }}
+      pages_deploy_required: ${{ steps.classify.outputs.pages_deploy_required }}
       pages_ui_changed: ${{ steps.classify.outputs.pages_ui_changed }}
       worker_changed: ${{ steps.classify.outputs.worker_changed }}
       worker_promotion_required: ${{ steps.classify.outputs.worker_promotion_required }}
@@ -163,16 +164,6 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
-      - name: Wait for validation gate
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          node .github/scripts/wait-for-workflow-job.mjs
-          --job "validate / validate"
-          --attempts 120
-          --sleep-sec 5
-          --stop-message "stopping production Worker deployment."
-          --timeout-message "Timed out waiting for validate / validate to finish."
       - name: Rehearse D1 migrations locally
         env:
           PHAROS_MIGRATION_SCHEMA_FINGERPRINT_PATH: ${{ runner.temp }}/worker-migration-schema-fingerprint.json
@@ -258,7 +249,7 @@ jobs:
       - name: Run worker-only live smokes
         if: >-
           ${{
-            needs.detect-changes.outputs.pages_changed != 'true'
+            needs.detect-changes.outputs.pages_deploy_required != 'true'
             && steps.sync-worker-triggers.outcome == 'success'
             && steps.production-smoke-api.outcome == 'success'
           }}
@@ -335,19 +326,16 @@ jobs:
         run: exit 1
 
   pages-release:
-    # Keep the secret-bearing Pages release job behind the validate job. The
-    # reusable workflow still has an internal pre-publish validation wait for
-    # defense in depth/manual callers, but repository-controlled build and
-    # smoke scripts must not run with production secrets before validation
-    # succeeds.
+    # Keep the secret-bearing Pages release job behind the validate job so
+    # repository-controlled build and smoke scripts do not run with production
+    # secrets before validation succeeds.
     needs:
       - detect-changes
       - validate
-    if: ${{ needs.detect-changes.outputs.pages_changed == 'true' }}
+    if: ${{ needs.detect-changes.outputs.pages_deploy_required == 'true' }}
     uses: ./.github/workflows/pages-release.yml
     with:
       pages_ui_changed: ${{ needs.detect-changes.outputs.pages_ui_changed == 'true' }}
-      wait_for_validate_job: true
       wait_for_worker_promotion: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}
     secrets:
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
