@@ -9,7 +9,10 @@ import { parseSourceFile } from "./ts-ast.mjs";
 export const TARGET_FILES = [
   "shared/lib/report-cards.ts",
   "shared/lib/format.ts",
+  "shared/lib/redemption-backstop-scoring.ts",
   "shared/lib/redemption-backstop-configs/queue-redeem.ts",
+  "shared/types/market.ts",
+  "shared/types/stablecoin-meta-schemas.ts",
   "worker/src/api/stablecoin-detail.ts",
   "worker/src/api/feedback.ts",
   "worker/src/handlers/http/request-dispatch.ts",

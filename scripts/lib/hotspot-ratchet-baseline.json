@@ -9,10 +9,25 @@
     "maxFunctionLines": 32,
     "branchCount": 87
   },
+  "shared/lib/redemption-backstop-scoring.ts": {
+    "fileLines": 967,
+    "maxFunctionLines": 106,
+    "branchCount": 88
+  },
   "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
     "fileLines": 859,
     "maxFunctionLines": 44,
     "branchCount": 5
+  },
+  "shared/types/market.ts": {
+    "fileLines": 992,
+    "maxFunctionLines": 32,
+    "branchCount": 12
+  },
+  "shared/types/stablecoin-meta-schemas.ts": {
+    "fileLines": 1192,
+    "maxFunctionLines": 179,
+    "branchCount": 62
   },
   "worker/src/api/stablecoin-detail.ts": {
     "fileLines": 152,
@@ -20,9 +35,9 @@
     "branchCount": 6
   },
   "worker/src/api/feedback.ts": {
-    "fileLines": 27,
-    "maxFunctionLines": 15,
-    "branchCount": 3
+    "fileLines": 8,
+    "maxFunctionLines": 0,
+    "branchCount": 0
   },
   "worker/src/handlers/http/request-dispatch.ts": {
     "fileLines": 146,
@@ -50,7 +65,7 @@
     "branchCount": 6
   },
   "src/app/yield/client.tsx": {
-    "fileLines": 667,
+    "fileLines": 635,
     "maxFunctionLines": 438,
     "branchCount": 55
   },
@@ -170,12 +185,12 @@
     "branchCount": 9
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
-    "fileLines": 478,
-    "maxFunctionLines": 173,
+    "fileLines": 498,
+    "maxFunctionLines": 176,
     "branchCount": 40
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 837,
+    "fileLines": 838,
     "maxFunctionLines": 165,
     "branchCount": 21
   },
