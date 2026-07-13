@@ -342,6 +342,26 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "USDT is issuer-minted by Tether; on Ethereum the token owner is a 3/6 legacy multisig-style owner set with direct supply authority.",
+    "upgradeability": {
+      "model": "custom",
+      "adminAddresses": [
+        "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Ethereum USDT token owner multisig",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25591279,
+      "sources": [
+        {
+          "label": "TetherToken verified source with owner-only deprecate(address) logic migration",
+          "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
+        },
+        {
+          "label": "deprecated() == false and owner() == 0xC6CD...a828 at block 25591279",
+          "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#readContract"
+        }
+      ]
+    },
     "mintIncidents": [
       {
         "date": "2019-07-13",
