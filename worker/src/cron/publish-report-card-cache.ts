@@ -61,11 +61,8 @@ export async function publishReportCardCache(db: D1Database, signal?: AbortSigna
       ),
     ),
   };
-  await setCacheMany(
-    db,
-    [buildPublishedReportCardsSnapshotCacheEntry(publishedSnapshot), compactEntry, alertEntry, fixedInputEntry],
-    signal,
-  );
+  const snapshotEntry = await buildPublishedReportCardsSnapshotCacheEntry(publishedSnapshot);
+  await setCacheMany(db, [snapshotEntry, compactEntry, alertEntry, fixedInputEntry], signal);
 
   let v9Shadow: Record<string, unknown>;
   try {
@@ -123,6 +120,8 @@ export async function publishReportCardCache(db: D1Database, signal?: AbortSigna
       publicationGenerationId: publication.completeness.generationId,
       liquidityStale: snapshot.liquidityStale,
       redemptionStale: snapshot.redemptionStale,
+      snapshotCacheBytes: snapshotEntry.storedBytes,
+      snapshotCacheUncompressedBytes: snapshotEntry.uncompressedBytes,
       fixedInputCacheBytes: fixedInputEntry.storedBytes,
       fixedInputUncompressedBytes: fixedInputEntry.uncompressedBytes,
       safetyScoreIdentity,

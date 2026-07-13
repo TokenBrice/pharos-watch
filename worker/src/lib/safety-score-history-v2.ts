@@ -47,7 +47,7 @@ export async function loadActiveV8SafetyScoreHistorySource(
   throwIfAborted(signal);
   const caches = await getCaches(db, [REPORT_CARDS_SNAPSHOT_CACHE_KEY, REPORT_CARDS_FIXED_INPUT_CACHE_KEY]);
   throwIfAborted(signal);
-  const parsedSnapshot = parsePublishedReportCardsSnapshotCacheValue(
+  const parsedSnapshot = await parsePublishedReportCardsSnapshotCacheValue(
     caches.get(REPORT_CARDS_SNAPSHOT_CACHE_KEY) ?? null,
   );
   if (parsedSnapshot.kind !== "ok") {

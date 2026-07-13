@@ -29,6 +29,51 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
 }));
 
 const { publishReportCardCache } = await import("../publish-report-card-cache");
+const { parsePublishedReportCardsSnapshotCacheValue } = await import("../../lib/report-cards-snapshot-cache");
+
+function validSnapshot() {
+  const dimension = { grade: "A" as const, score: 91, detail: "test" };
+  return {
+    cards: [
+      {
+        id: "usdc-circle",
+        name: "USD Coin",
+        symbol: "USDC",
+        overallGrade: "A",
+        overallScore: 91,
+        baseScore: 91,
+        dimensions: {
+          pegStability: dimension,
+          liquidity: dimension,
+          resilience: dimension,
+          decentralization: dimension,
+          dependencyRisk: dimension,
+        },
+        ratedDimensions: 5,
+        rawInputs: createReportCardRawInputs({ canBeBlacklisted: true }),
+        isDefunct: false,
+      },
+    ],
+    methodology: {
+      version: METHODOLOGY_VERSION,
+      weights: DIMENSION_WEIGHTS,
+      pegMultiplierExponent: PEG_MULTIPLIER_EXPONENT,
+      thresholds: GRADE_THRESHOLDS,
+    },
+    dependencyGraph: { edges: [] },
+    updatedAt: 1_700_000_000,
+    liquidityStale: false,
+    redemptionStale: false,
+    inputFreshness: {
+      dexLiquidity: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
+      redemptionBackstops: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
+    },
+    fixedInput: {
+      sourceGeneration: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
+      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+    },
+  };
+}
 
 describe("publishReportCardCache", () => {
   beforeEach(() => {
@@ -56,47 +101,7 @@ describe("publishReportCardCache", () => {
   });
 
   it("writes a generation-aware alert safety source cache from the live cards", async () => {
-    const dimension = { grade: "A" as const, score: 91, detail: "test" };
-    mockBuildReportCardsSnapshot.mockResolvedValue({
-      cards: [
-        {
-          id: "usdc-circle",
-          name: "USD Coin",
-          symbol: "USDC",
-          overallGrade: "A",
-          overallScore: 91,
-          baseScore: 91,
-          dimensions: {
-            pegStability: dimension,
-            liquidity: dimension,
-            resilience: dimension,
-            decentralization: dimension,
-            dependencyRisk: dimension,
-          },
-          ratedDimensions: 5,
-          rawInputs: createReportCardRawInputs({ canBeBlacklisted: true }),
-          isDefunct: false,
-        },
-      ],
-      methodology: {
-        version: METHODOLOGY_VERSION,
-        weights: DIMENSION_WEIGHTS,
-        pegMultiplierExponent: PEG_MULTIPLIER_EXPONENT,
-        thresholds: GRADE_THRESHOLDS,
-      },
-      dependencyGraph: { edges: [] },
-      updatedAt: 1_700_000_000,
-      liquidityStale: false,
-      redemptionStale: false,
-      inputFreshness: {
-        dexLiquidity: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
-        redemptionBackstops: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
-      },
-      fixedInput: {
-        sourceGeneration: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
-        baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
-      },
-    });
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
     const result = await publishReportCardCache({} as D1Database);
 
     expect(result.itemCount).toBe(1);
@@ -119,25 +124,36 @@ describe("publishReportCardCache", () => {
       "report-cards:fixed-input:exact",
     ]);
     const parsed = entries.map((entry) => JSON.parse(entry.value));
-    expect(parsed[0].payload.publication.generationId).toBe(`report-cards:${METHODOLOGY_VERSION}:1700000000`);
-    expect(parsed[1].payload.publicationGenerationId).toBe(parsed[0].payload.publication.generationId);
-    expect(parsed[2].publicationGenerationId).toBe(parsed[0].payload.publication.generationId);
-    expect(parsed[0].payload.safetyScoreIdentity).toEqual(parsed[1].payload.safetyScoreIdentity);
+    const snapshot = await parsePublishedReportCardsSnapshotCacheValue({
+      value: entries[0]!.value,
+      updatedAt: 1_700_000_000,
+    });
+    expect(snapshot.kind).toBe("ok");
+    if (snapshot.kind !== "ok") throw new Error(`Snapshot parse failed: ${snapshot.reason}`);
+    expect(parsed[0]).toMatchObject({
+      encoding: "gzip-base64",
+      model: "v8",
+      publicationGenerationId: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
+    });
+    expect(snapshot.payload.publication?.generationId).toBe(`report-cards:${METHODOLOGY_VERSION}:1700000000`);
+    expect(parsed[1].payload.publicationGenerationId).toBe(snapshot.payload.publication?.generationId);
+    expect(parsed[2].publicationGenerationId).toBe(snapshot.payload.publication?.generationId);
+    expect(snapshot.payload.safetyScoreIdentity).toEqual(parsed[1].payload.safetyScoreIdentity);
     expect(parsed[1].payload.safetyScoreIdentity).toEqual(parsed[2].safetyScoreIdentity);
-    expect(parsed[3].safetyScoreIdentity).toEqual(parsed[0].payload.safetyScoreIdentity);
-    expect(parsed[0].payload.safetyScoreIdentity).toMatchObject({
+    expect(parsed[3].safetyScoreIdentity).toEqual(snapshot.payload.safetyScoreIdentity);
+    expect(snapshot.payload.safetyScoreIdentity).toMatchObject({
       model: "v8",
       schemaVersion: 1,
       baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
     });
-    expect(parsed[0].payload.publication).toMatchObject({
+    expect(snapshot.payload.publication).toMatchObject({
       expectedCount: 1,
       scoredCount: 1,
       notRatedCount: 0,
     });
     expect(entries[2]?.value).toContain('"usdc-circle"');
     expect(parsed[3]).toMatchObject({ fixed: "input-envelope" });
-    expect(parsed[0].payload.fixedInput).toBeUndefined();
+    expect(snapshot.payload).not.toHaveProperty("fixedInput");
     expect(JSON.parse(result.metadata!)).toMatchObject({
       v9Shadow: {
         status: "published",
@@ -146,44 +162,18 @@ describe("publishReportCardCache", () => {
     });
   });
 
+  it("does not start V9 shadow when the canonical V8 publication batch is rejected", async () => {
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
+    mockSetCacheMany.mockRejectedValueOnce(new Error("D1 publication batch rejected"));
+
+    await expect(publishReportCardCache({} as D1Database)).rejects.toThrow("D1 publication batch rejected");
+
+    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
+    expect(mockRunSafetyScoreV9Shadow).not.toHaveBeenCalled();
+  });
+
   it("keeps the committed v8 publication authoritative when the V9 shadow runner fails", async () => {
-    const dimension = { grade: "A" as const, score: 91, detail: "test" };
-    mockBuildReportCardsSnapshot.mockResolvedValue({
-      cards: [
-        {
-          id: "usdc-circle",
-          name: "USD Coin",
-          symbol: "USDC",
-          overallGrade: "A",
-          overallScore: 91,
-          baseScore: 91,
-          dimensions: {
-            pegStability: dimension,
-            liquidity: dimension,
-            resilience: dimension,
-            decentralization: dimension,
-            dependencyRisk: dimension,
-          },
-          ratedDimensions: 5,
-          rawInputs: createReportCardRawInputs({ canBeBlacklisted: true }),
-          isDefunct: false,
-        },
-      ],
-      methodology: {
-        version: METHODOLOGY_VERSION,
-        weights: DIMENSION_WEIGHTS,
-        pegMultiplierExponent: PEG_MULTIPLIER_EXPONENT,
-        thresholds: GRADE_THRESHOLDS,
-      },
-      dependencyGraph: { edges: [] },
-      updatedAt: 1_700_000_000,
-      liquidityStale: false,
-      redemptionStale: false,
-      fixedInput: {
-        sourceGeneration: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
-        baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
-      },
-    });
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
     mockRunSafetyScoreV9Shadow.mockRejectedValue(new Error("shadow D1 unavailable"));
 
     const result = await publishReportCardCache({} as D1Database);

@@ -147,7 +147,7 @@ async function canonicalCacheValues() {
     notRatedCount: 0,
     notRatedIds: [],
   };
-  const full = buildPublishedReportCardsSnapshotCacheEntry({
+  const full = await buildPublishedReportCardsSnapshotCacheEntry({
     safetyScoreIdentity: identity,
     cards: activeAssetIds.map(historyCard),
     methodology: {
