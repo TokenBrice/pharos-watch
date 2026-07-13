@@ -99,6 +99,43 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "BRLm is minted via the Mento Broker (0x777A...) which is the sole authorized minter (broker() getter confirmed). The Broker's proxy admin and the BRLm token owner and proxy admin all resolve to the Mento Timelock (0x890DB...) with a 2-day delay.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xe8537a3d056da446677b9e9d6c5db704eaab4787",
+        "0x777a8255ca72412f0d706dc03c9d1987306b4cad"
+      ],
+      "implementationAddresses": [
+        "0x434563b0604be100f04b7ae485bcafe3c9d8850e",
+        "0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
+      ],
+      "adminAddresses": [
+        "0x890db8a597940165901372dd7db61c9f246e2147"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Mento Timelock — BRLm token owner and proxy admin",
+      "observedAt": "2026-07-13",
+      "observedBlock": 72084007,
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "BRLm token on Celo Blockscout",
+          "url": "https://celo.blockscout.com/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
+        },
+        {
+          "label": "Mento Broker on Celo Blockscout",
+          "url": "https://celo.blockscout.com/address/0x777a8255ca72412f0d706dc03c9d1987306b4cad"
+        },
+        {
+          "label": "Celo PublicNode RPC",
+          "url": "https://celo-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "celo",
