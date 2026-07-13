@@ -61,8 +61,8 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   const dlProtocolsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_PROTOCOLS);
 
   // Fetch DL first, consume bodies immediately to release connections before Curve batch.
-  // Jobs on this trigger run sequentially; consume early to stay within the 6-connection
-  // pool budget during the Curve parallel phase that follows.
+  // Jobs on this trigger run sequentially; consume early to stay within the
+  // repo's six-request budget during the Curve parallel phase that follows.
   const [llamaResult, protocolsResult] = await Promise.all([
     dlYieldsAllowed
       ? fetchJsonWithRetry<DefiLlamaYieldsPayload>(

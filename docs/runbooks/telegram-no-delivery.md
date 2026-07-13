@@ -51,7 +51,7 @@ Detection signals:
 ## Cross-References
 
 - [`docs/telegram-alerts.md`](../telegram-alerts.md) — full subsystem behavior, snapshot semantics, dispatch cron contract.
-- [`docs/worker-and-api-limits.md`](../worker-and-api-limits.md) — per-trigger 6-connection cap and rate-limit context.
+- [`docs/worker-and-api-limits.md`](../worker-and-api-limits.md) — trigger-wide connection budget and rate-limit context.
 - [`docs/architecture.md`](../architecture.md) — Worker/D1 topology.
 - [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md) — when the backlog is growing fast.
 - [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md) — when pending age approaches its alert-family TTL.

@@ -78,7 +78,7 @@ export interface CronJobDefinition {
   intervalSec: number;
   scheduleKey: CronScheduleKey;
   triggerMode: CronTriggerMode;
-  /** Maximum outbound fetch connections this job may use (of the 6-per-trigger pool). */
+  /** Maximum simultaneous outbound fetches under the repo's six-per-trigger budget. */
   maxConnections?: number;
   /** Jobs with the same trigger and concurrency group are chained, so their peak is max(), not sum(). */
   connectionGroup?: string;
@@ -93,7 +93,7 @@ export interface CronConnectionBudgetDefinition {
   job: string;
   label: string;
   scheduleKey: CronScheduleKey;
-  /** Maximum outbound fetch connections this scheduled work may use (of the 6-per-trigger pool). */
+  /** Maximum simultaneous outbound fetches under the repo's six-per-trigger budget. */
   maxConnections: number;
   /** Work with the same trigger and connection group is chained, so its peak is max(), not sum(). */
   connectionGroup?: string;
@@ -349,7 +349,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "half-hourly",
     scheduleKey: "halfHourlyOffset",
     triggerMode: "isolated",
-    maxConnections: 5, // Direct API phase can nest to a 5-connection static peak; still below Cloudflare's 6-connection ceiling.
+    maxConnections: 5, // Nested direct-API peak; below the platform header-wait ceiling and repo budget.
   },
   {
     job: "sync-yield-data",

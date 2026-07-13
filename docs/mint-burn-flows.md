@@ -78,9 +78,7 @@ Token identity now resolves from the shared stablecoin registry in `shared/lib/s
 
 ### Representative Stablecoins
 
-Current scope: **136 contract configs** across **136 stablecoin IDs** (7 critical + 129 extended).
-
-March 24, 2026 expansion: an additional 40 transfer-only configs were added for tracked assets that already had shared contract metadata but were not yet wired into the mint/burn registry. That wave initially included USDai on Ethereum, but canonical USDai issuance tracking now runs on native Arbitrum after LayerZero bridge-transfer filtering work. GYD was later removed when the asset moved to the cemetery. The broader active wave includes `U`, `A7A5`, `USDA` (Avalon), `BRZ`, `KAG`, `satUSD`, `rwaUSDi`, `FPI`, `AEUR`, `USDQ`, `USDX`, `MIM`, `USA₮`, `ZeUSD`, `GGBR`, `XSGD`, `IDRT`, `TRYB`, `EURS`, `pUSD` (Plume), `USBD`, `DGLD`, `AxCNH`, `EURQ`, `GYEN`, `USDU Finance`, `ZARP`, `USDp`, `PHT`, `VCHF`, `USSD`, `CADC`, `VEUR`, `dUSD` (dTRINITY), `USDaf`, `EURAU`, `DUSD` (Alto), and `ebUSD`.
+Current scope: **134 contract configs** across **134 stablecoin IDs** (7 implicit critical + 127 extended).
 
 The table below is representative, not exhaustive. The complete active registry is `MINT_BURN_CONFIGS` in `worker/src/lib/mint-burn-contracts.ts`.
 
@@ -402,239 +400,67 @@ Detects simultaneous outflows from risky stablecoins and inflows to safe havens.
 
 ## Database Schema
 
+Exact columns, constraints, and indexes live in `worker/migrations/0000_baseline.sql`, the follow-on migrations named below, and `worker/migrations/MANIFEST.md`. This section owns the table roles and flow semantics, not a second DDL copy.
+
 ### mint_burn_events (current excerpt; baseline plus later indexes)
 
-```sql
-CREATE TABLE mint_burn_events (
-  id TEXT PRIMARY KEY,                 -- "{chainId}-{txHash}-{logIndex}"
-  stablecoin_id TEXT NOT NULL,
-  symbol TEXT NOT NULL,
-  chain_id TEXT NOT NULL,
-  direction TEXT NOT NULL,             -- "mint" or "burn"
-  amount REAL NOT NULL,                -- Token-native amount
-  amount_usd REAL,                     -- NULL if price unavailable at sync time
-  price_used REAL,                     -- Price at resolution time
-  price_timestamp INTEGER,             -- When the price was sourced (cache update time), NOT the event's block timestamp
-  price_source TEXT,                   -- Runtime source or exact historical repair source
-  price_repair_status TEXT,            -- NULL, "pending_aggregate", "recovered", or "irreducible"
-  price_repair_reason TEXT,            -- Terminal no-source reason or retryable provider diagnostic
-  price_repair_attempted_at INTEGER,   -- Latest bounded historical repair attempt
-  price_repair_run_id TEXT,            -- Operator Idempotency-Key for the last mutation attempt
-  price_repair_bookmark TEXT,          -- Pre-run D1 Time Travel bookmark
-  burn_type TEXT,                      -- "effective_burn", "bridge_burn", or "review_required" when classified
-  burn_review_reason TEXT,             -- reason code when burn classification needs review
-  flow_type TEXT DEFAULT 'standard',   -- "standard", "bridge_transfer", or "atomic_roundtrip"
-  counterparty TEXT,                   -- Address that received/sent tokens
-  tx_hash TEXT NOT NULL,
-  block_number INTEGER NOT NULL,
-  timestamp INTEGER NOT NULL,          -- Unix seconds
-  explorer_tx_url TEXT NOT NULL
-);
+`mint_burn_events` is the append-only, transaction-addressable event ledger. It preserves token-native amount, optional event valuation and its source timestamp, chain/transaction provenance, counterparty, burn classification, and economic-flow classification. `standard`, `bridge_transfer`, and `atomic_roundtrip` semantics decide whether a row contributes to aggregates; burn rows additionally distinguish effective burns, bridge burns, and review-required evidence.
 
-CREATE INDEX idx_mbe2_ts ON mint_burn_events(timestamp DESC);
-CREATE INDEX idx_mbe2_coin ON mint_burn_events(stablecoin_id, timestamp DESC);
-CREATE INDEX idx_mbe2_chain ON mint_burn_events(chain_id, timestamp DESC);
-CREATE INDEX idx_mbe2_burn_type ON mint_burn_events(burn_type, timestamp DESC);
-CREATE INDEX idx_mbe_coin_chain_ts ON mint_burn_events(stablecoin_id, chain_id, timestamp DESC);
-CREATE INDEX idx_mbe_symbol_ts ON mint_burn_events(symbol, timestamp DESC);
-CREATE INDEX idx_mbe_null_price_ts ON mint_burn_events(timestamp DESC) WHERE amount_usd IS NULL;
-
--- migration 0178: bounded historical debt selection and aggregate-resume state
-CREATE INDEX idx_mbe_historical_price_repair_backlog
-  ON mint_burn_events(price_repair_status, price_repair_attempted_at ASC, timestamp ASC, id ASC)
-  WHERE amount_usd IS NULL OR price_repair_status = 'pending_aggregate';
-
--- migration 0097: composite index to speed roundtrip sweep and future flow_type-filtered queries
-CREATE INDEX idx_mbe_flow_type_ts ON mint_burn_events(flow_type, timestamp DESC);
-```
+Migration `0178_historical_data_debt_closure.sql` owns bounded historical price-repair state and its backlog index. Repair provenance distinguishes retryable unclassified debt, aggregate rebuild pending, recovered rows, and irreducible exact-day gaps; it also binds mutation attempts to their operator run and pre-run Time Travel bookmark. Migration `0097_mbe_flow_type_ts_index.sql` owns flow-classification query support. Exact index membership stays in the migrations.
 
 ### mint_burn_hourly (baseline `0000_baseline.sql`)
 
-Pre-aggregated hourly flow buckets. Written by cron after each scan; also recalculated by the backfill admin endpoint.
-
-```sql
-CREATE TABLE mint_burn_hourly (
-  stablecoin_id TEXT NOT NULL,
-  chain_id TEXT NOT NULL,
-  hour_ts INTEGER NOT NULL,            -- Unix seconds, truncated to hour: (timestamp / 3600) * 3600
-  mint_count INTEGER NOT NULL DEFAULT 0,
-  burn_count INTEGER NOT NULL DEFAULT 0,
-  mint_volume_usd REAL NOT NULL DEFAULT 0,
-  burn_volume_usd REAL NOT NULL DEFAULT 0,
-  net_flow_usd REAL NOT NULL DEFAULT 0, -- mint_volume - burn_volume (positive = net mint)
-  PRIMARY KEY (stablecoin_id, chain_id, hour_ts)
-);
-
-CREATE INDEX idx_mbh_ts ON mint_burn_hourly(hour_ts DESC);
-CREATE INDEX idx_mbh_coin ON mint_burn_hourly(stablecoin_id, hour_ts DESC);
-```
+Pre-aggregated stablecoin/chain/hour buckets store counted mint and burn volume, event counts, and signed net flow. The cron rebuilds affected buckets after ingestion; repair and reclassification paths recalculate the same canonical buckets before declaring completion.
 
 ### mint_burn_sync_state (baseline `0000_baseline.sql`)
 
-Incremental block tracking (same pattern as `blacklist_sync_state`).
-
-```sql
-CREATE TABLE mint_burn_sync_state (
-  config_key TEXT PRIMARY KEY,         -- "{chainId}-{contractAddress}"
-  last_block INTEGER NOT NULL DEFAULT 0
-);
-```
+This table owns the monotonic last-processed block for each chain/contract configuration. Cron and backfill ingestion share it, and partial backfills must never regress the stored frontier.
 
 ### mint_burn_config_deferral (migration 0096)
 
-Per-config deferral log. Configs that exit a run with `apiErrors > 5` AND `coverage < 0.8` are inserted here with `deferred_until = now + 3600s`. The next cron run skips any config whose `deferred_until` is still in the future, so chronically failing configs cannot starve healthy ones of subrequest budget.
+Per-config deferral state prevents a chronically failing configuration from exhausting the shared request budget. A run with more than five API errors and less than 80% coverage defers that configuration for one hour; later runs skip it until the deadline and continue healthy work.
 
-```sql
-CREATE TABLE mint_burn_config_deferral (
-  config_key TEXT PRIMARY KEY,
-  deferred_until INTEGER NOT NULL,
-  reason TEXT NOT NULL,
-  api_errors INTEGER NOT NULL DEFAULT 0,
-  coverage REAL,
-  created_at INTEGER NOT NULL
-);
-
-CREATE INDEX idx_mbcd_until ON mint_burn_config_deferral(deferred_until);
-```
-
-**Migration history:** The earlier per-step mint/burn migrations were squashed into the baseline; the `mint_burn_events`, `mint_burn_hourly`, and `mint_burn_sync_state` tables (v2 layout) now live in `0000_baseline.sql`. Migration 0096 adds `mint_burn_config_deferral`; migration 0097 adds the `(flow_type, timestamp)` composite index on `mint_burn_events`; migration 0159 purges Re Protocol reUSD rows and resets the old vault plus canonical token cursors so the canonical `Transfer` source rebuilds history without stale vault rows.
+**Migration history:** The earlier per-step mint/burn migrations were squashed into the baseline; the `mint_burn_events`, `mint_burn_hourly`, and `mint_burn_sync_state` tables now live in `0000_baseline.sql`. Migration 0096 adds per-config deferral, migration 0097 adds flow-classification query support, migration 0159 purges Re Protocol reUSD rows and resets the obsolete vault/canonical-token cursors, and migration 0178 adds historical valuation repair provenance and resumable aggregate verification. `worker/migrations/MANIFEST.md` is the lineage authority.
 
 ---
+
 
 ## API Endpoints
 
+These headings remain stable for feature-document navigation. The exhaustive HTTP contract is owned by the linked endpoint sections in `docs/api-reference.md`.
+
 ### GET /api/mint-burn-flows
 
-Two modes depending on whether `stablecoin` is provided.
+The endpoint serves an aggregate market gauge or one tracked stablecoin's chain breakdown. In aggregate mode, the requested chart window changes only the hourly series; per-coin raw volumes, counts, `netFlow24hUsd`, and pressure state remain fixed to the canonical 24-hour interpretation window.
 
-**Aggregate mode** (no `stablecoin` param):
-
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `hours` | int | 24 | Time window, 1–720 (up to 30 days) |
-
-Returns:
-
-- `gauge` — composite Bank Run Gauge: `{ score, band, flightToQuality, flightIntensity, trackedCoins, trackedMcapUsd }`
-- `coins[]` — per-coin summaries: fixed 24h raw net flow, canonical `pressureShiftScore`, derived interpretation fields, baseline context, coverage metadata, and largest USD-valued event
-- `hourly[]` — aggregate hourly timeseries: `{ hourTs, netFlowUsd, mintVolumeUsd, burnVolumeUsd }`
-- `updatedAt` — Unix seconds of latest hourly bucket
-- `windowHours` — requested chart window for `hourly[]`
-- `scope` — current ingestion scope (for example `Configured issuance chains`, or `Arbitrum-only` on per-coin USDai views)
-- `sync` — latest critical-lane freshness and warning state
-
-**Per-coin mode** (`stablecoin` param provided):
-
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `stablecoin` | string | — | Stablecoin ID (required) |
-| `hours` | int | 24 | Time window, 1–720 |
-
-Returns:
-
-- `stablecoinId`, `symbol`
-- `mintVolumeUsd`, `burnVolumeUsd`, `netFlowUsd`, `mintCount`, `burnCount`
-- `chains[]` — per-chain breakdown
-- `hourly[]` — hourly timeseries
-- `updatedAt`
-- `windowHours`, `scope`, `sync`
-
-Returns 404 if the stablecoin ID is not in the tracked set.
-
-Contract note: aggregate `hours` only changes `hourly[]`. Coin-level `netFlow24hUsd`, mint/burn 24h volumes, counts, and pressure state remain fixed to the canonical 24-hour window.
-
-**Cache:** `CACHE_PROFILES.standard` (~30-minute freshness keyed to successful critical-lane syncs)
+Parameters, response fields, cache/freshness behavior, and errors are canonical in [API Reference: `GET /api/mint-burn-flows`](./api-reference.md#get-apimint-burn-flows).
 
 ### GET /api/mint-burn-events
 
-Paginated event feed for a single stablecoin.
+The event feed exposes the classified, valuation-aware ledger for one stablecoin. The detail-page history deliberately uses the counted view so bridge transfers, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `stablecoin` | string | — | Stablecoin ID (required) |
-| `direction` | string | — | Filter: `"mint"` or `"burn"` |
-| `chain` | string | — | Filter by chain ID within the stablecoin's tracked issuance scope (for example `ethereum` for most coins, `arbitrum` for USDai) |
-| `burnType` | string | — | Burn-only filter: `"effective_burn"`, `"bridge_burn"`, or `"review_required"` |
-| `scope` | string | `"all"` | `"all"` returns the classified raw event stream; `"counted"` returns only rows that contribute to economic-flow aggregates (`flow_type='standard'` and mint/effective-burn semantics) |
-| `minAmount` | number | — | Minimum USD amount; rows with `amount_usd IS NULL` are excluded when this filter is used |
-| `limit` | int | 50 | Page size, 1–500 |
-| `offset` | int | 0 | Pagination offset |
-
-Returns: `{ events[], total }`. Events sorted by `timestamp DESC`.
-
-Each event row includes valuation provenance fields (`priceUsed`, `priceTimestamp`, `priceSource`), `flowType`, plus burn classification fields (`burnType`, `burnReviewReason`).
-
-Product note: stablecoin detail-page "Mint & Burn Flow History" uses the counted view so bridge transfers, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
-
-**Cache:** `CACHE_PROFILES.producerBacked` (~5-min CDN edge freshness with a 5-min stale-while-revalidate window)
+Filters, cursor/offset pagination, ordering, response fields, cache/freshness behavior, and errors are canonical in [API Reference: `GET /api/mint-burn-events`](./api-reference.md#get-apimint-burn-events).
 
 ### POST /api/backfill-mint-burn-prices (admin)
 
-Repairs historical `amount_usd IS NULL` debt. Requires Access service-token headers on `ops-api.pharos.watch`. The route is bounded to `1..500` rows (`limit=100` by default) and defaults to dry-run even though it is a `POST` action.
+The recent cron path auto-heals bounded NULL-price debt; this operator path handles older history. It accepts only exact UTC event-day evidence from stored history or bounded historical providers, never current spot, peg par, or another day's price. Definitive no-source results become irreducible, transient provider failures remain retryable, and recovered rows stay `pending_aggregate` until every affected hourly bucket is rebuilt and verified. An interrupted run resumes aggregate verification before selecting new valuation work.
 
-Note: cron now auto-heals recent NULL-price events (48h lookback). This endpoint remains the operator tool for broader historical backfills.
-
-1. Selects the oldest bounded batch of unclassified NULL-USD events, optionally scoped with `stablecoin=<id>`.
-2. Prefers an exact UTC event-day `supply_history` price. If absent, it fetches a bounded event-day CoinGecko market-chart range, then DefiLlama CoinGecko-identity and exact contract-chart ranges. DefiLlama ranges are fetched sequentially in at most eight 800-day windows per identity and merged before exact-day resolution; a larger range or any unavailable window remains retryable instead of being misclassified as definitive absence. Each accepted price records its source and source timestamp.
-3. It never uses the current `price_cache` or another day's price for historical repair. A definitive search with no valid event-day point becomes `price_repair_status = "irreducible"`; transient provider failures remain unclassified and retryable with a diagnostic reason.
-4. Recovered rows first enter `pending_aggregate`. The operator rebuilds all hourly buckets for each affected coin, verifies every bucket against `mint_burn_events`, and only then marks the rows `recovered`. A failed/interrupted rebuild resumes before new valuation work on the next call.
-5. The response includes the remaining unclassified, irreducible, pending-aggregate, and total NULL-USD counts, so closure means `unclassified = 0` and `pendingAggregate = 0` rather than pretending irreducible rows were valued.
-
-Preview one batch:
-
-```text
-POST /api/backfill-mint-burn-prices?dry-run=true&limit=100
-```
-
-After taking a D1 Time Travel bookmark and reviewing the preview, execute the identical scope with an idempotency key of 1 to 128 trimmed characters:
-
-```text
-POST /api/backfill-mint-burn-prices?dry-run=false&confirm=historical-mint-prices&bookmark=<fresh-d1-bookmark>&limit=100
-```
-
-`retry-irreducible=true` explicitly reopens terminal classifications when a new historical source becomes available. Do not use it as the normal drain mode.
-
-Returns: `{ dryRun, limit, selected, recovered, classifiedIrreducible, deferredForRetry, aggregateCoinsRebuilt, aggregateVerificationPassed, dispositions, backlog }`.
+Auth, dry-run/confirmation/bookmark/idempotency requirements, parameters, dispositions, response fields, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn-prices`](./api-reference.md#post-apibackfill-mint-burn-prices). The operational sequence remains in [Worker Structural Hardening Rollout](./process/worker-hardening-rollout.md#historical-data-debt-closure).
 
 ### POST /api/backfill-mint-burn (admin)
 
-Controlled ingestion backfill by explicit config/range/chunk, or by automatic config selection when `configKey` is omitted.
+This controlled ingestion path uses the same parsing, classification, transaction-context, persistence, and hourly-aggregation helpers as cron ingestion. It can select the most urgent lagging configuration automatically, processes bounded chunks, and advances shared sync state monotonically so a partial backfill cannot regress the live cursor.
 
-- Auth: Access service-token headers
-- Idempotency: `Idempotency-Key` supported via admin idempotency middleware
-- Parameters: `configKey`, `fromBlock`, `toBlock`, `chunkSize`, `maxChunks`
-- Behavior:
-  - If `configKey` is omitted, the worker auto-selects one tracked config using a critical-first / major-symbol-first / most-behind ordering and returns `selectionMode="auto"` plus the chosen `configKey`.
-  - Uses the same shared parse/classification/context/persistence helpers as cron ingestion.
-  - Advances `mint_burn_sync_state` with monotonic max semantics (never regresses on partial backfills).
-  - Returns `done=false` with `nextFromBlock` when additional calls are needed.
-- Response includes a `reclassified` object exposing reclassification deltas for observability:
-  - `reclassified.flowTypeChanges` — rows where `flow_type` flipped during this call (e.g. `standard → bridge_transfer` once the classifier saw a previously-unknown bridge signal).
-  - `reclassified.burnTypeChanges` — rows where `burn_type` flipped (e.g. `review_required → bridge_burn`).
-  - `rowsReclassified` — legacy scalar retained for backward compatibility; the exact count of unique rows whose classification columns were rewritten during this chunk. Prefer the nested `reclassified.*` fields for per-column accounting.
+Auth/idempotency, selection and range parameters, progression fields, reclassification counters, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn`](./api-reference.md#post-apibackfill-mint-burn).
 
 ### POST /api/reclassify-atomic-roundtrips (admin)
 
-Retroactive cleanup endpoint for historical rows that predate shared roundtrip detection, were ingested before both sides of a transaction were visible to the detector, or were tagged atomic before the 0.5% amount-tolerance rule shipped.
+This bounded repair applies the shared 0.5% same-transaction amount-tolerance rule in both directions: newly recognized mint/burn pairs become atomic roundtrips, while old atomic tags that fail the tolerance return to standard flow. Every affected hourly bucket is recalculated before a batch reports completion.
 
-- Auth: Access service-token headers
-- Idempotency: `Idempotency-Key` supported via admin idempotency middleware
-- Parameters: `since` (unix seconds; default `now - 90 days` via `DEFAULT_SINCE_LOOKBACK_SEC`; pass `since=0` to sweep the whole table at D1 CPU-budget risk), `stablecoinId` (optional; narrows both passes to one coin's rows).
-- Behavior:
-  - **Forward pass** — scans up to `1000` `(tx_hash, stablecoin_id, chain_id)` groups per call where `flow_type='standard'` but both mint and burn directions exist, and flips all matching rows in each group to `flow_type='atomic_roundtrip'`.
-  - **Reverse pass (new).** Scans up to `1000` groups currently tagged `flow_type='atomic_roundtrip'` that fail the 0.5% tolerance (`|mint_amt - burn_amt| > 0.005 × max(mint_amt, burn_amt)`) and flips them back to `flow_type='standard'`. The SQL mirrors `ROUNDTRIP_AMOUNT_TOLERANCE` in `worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts`.
-  - Recalculates the affected hourly buckets so downstream flow aggregates pick up both directions of reclassification immediately.
-  - Returns `done=true` only when BOTH forward and reverse passes returned fewer than `BATCH_SIZE` groups.
-- Response fields:
-  - `since` — echoed effective lookback cutoff (unix seconds).
-  - `stablecoinId` — echoed coin filter, or null.
-  - `toRoundtrip` — forward-pass count (`standard → atomic_roundtrip`).
-  - `toStandard` — reverse-pass count (`atomic_roundtrip → standard`).
-  - `updated` — legacy scalar kept for backward compat: `toRoundtrip + toStandard`.
-  - `hoursRecalculated` — number of distinct `(stablecoinId, chainId, hourTs)` buckets re-aggregated.
-  - `batchSize`, `done`.
+Auth/idempotency, scope parameters, batch progression, counters, and errors are canonical in [API Reference: `POST /api/reclassify-atomic-roundtrips`](./api-reference.md#post-apireclassify-atomic-roundtrips).
 
 ---
+
 
 ## Cron Metadata Fields
 

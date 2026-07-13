@@ -507,7 +507,7 @@ export async function schedulePerChatBatches<T extends { chatId: string }>(
 
 /**
  * Send messages serially within each chat and concurrently across distinct
- * chats. Concurrency must stay <= 6 to respect the Workers connection limit.
+ * chats. Concurrency stays <= 6 to match the repo's conservative outbound-request budget.
  * Individual send failures are caught by `sendToChat`; one failed chat does
  * not abort other chat queues. Results retain the original input order.
  */
@@ -555,8 +555,8 @@ function isNotModifiedDescription(description: unknown): boolean {
  * Edit a previously sent message in place. Used by inline-keyboard flows
  * (e.g. /settings) so a tap mutates the visible message rather than appending
  * a fresh reply. Returns `true` on success, `false` on any Telegram error so
- * the caller can fall back to `sendToChat`. Body is drained to respect the
- * per-trigger 6-connection cap.
+ * the caller can fall back to `sendToChat`. The body is drained so response
+ * bytes and transport cleanup stay bounded.
  */
 export async function editMessage(
   chatId: string,
@@ -594,8 +594,8 @@ export async function editMessage(
 
 /**
  * Answer a Telegram callback_query. Required to dismiss the spinner on the
- * user's tapped button within a few seconds. Body is drained to stay under the
- * Workers 6-connection cap.
+ * user's tapped button within a few seconds. The body is drained so response
+ * bytes and transport cleanup stay bounded.
  */
 export async function answerCallbackQuery(
   callbackQueryId: string,

@@ -126,10 +126,9 @@ export async function computeRawStatus(db: D1Database, now: number, options: Sta
     return buildDbUnavailableRawStatus();
   }
 
-  // Independent status loads run in parallel. D1's per-request concurrency is
-  // effectively unconstrained up to the Worker CPU budget; the 6-connection
-  // ctx.waitUntil pool documented in CLAUDE.md does not apply here because
-  // none of these calls are scheduled via waitUntil.
+  // Independent status loads run in parallel. The repo's six-request outbound
+  // budget applies to fetch phases, not these D1 reads; none is scheduled via
+  // waitUntil.
   const workerJobLedgerMode = resolveWorkerJobLedgerMode(options);
   const [cronHealth, budgetOnlySurfaceResult, dataQuality, supplements, transitionsLast24h] = await Promise.all([
     loadCronHealth(db, now, workerJobLedgerMode, options.workerJobLedgerAllowlist),

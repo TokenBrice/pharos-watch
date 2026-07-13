@@ -183,7 +183,7 @@ This is the dominant cost, not the code.
 
 - **Sources of truth:** ESMA register of authorized entities; EBA registers of EMT/ART issuers; national authority registers (ACPR REGAFI, BaFin, DNB/AFM, MFSA, CBI, Bank of Lithuania).
 - **Mapping is manual:** token → issuer entity → authorization is not cleanly API-able. Treat like the existing `reserve-research` / `resilience-classify` editorial workflows.
-- **Backfill scope:** ~30–60 coins warrant real research (the EUR coins + major EU-traded USD coins). Forty tracked coins currently carry structured `mica` metadata: 16 `authorized`, 18 `non-compliant`, 2 `pending`, and 4 explicitly reviewed `out-of-scope` rows. The other 369 tracked coins are unassessed, not implicitly out of scope. Start refreshes from the coins already mentioning MiCA and the 9 with `"EMI (MiCA)"` licenses.
+- **Backfill scope:** ~30–60 coins warrant real research (the EUR coins + major EU-traded USD coins). Forty tracked coins currently carry structured `mica` metadata: 16 `authorized`, 18 `non-compliant`, 2 `pending`, and 4 explicitly reviewed `out-of-scope` rows. The other 371 tracked coins are unassessed, not implicitly out of scope. Start refreshes from the coins already mentioning MiCA and the 9 with `"EMI (MiCA)"` licenses.
 - **Maintenance:** statuses change as authorizations are granted/refused and venues delist. Recommend a `mica-research` skill (modeled on `reserve-research`) for periodic refresh against the registers.
 
 ### Worked reference examples (verify before entry)

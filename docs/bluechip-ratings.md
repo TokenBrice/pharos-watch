@@ -18,15 +18,12 @@ This subsystem is a reference-data sync, not a Pharos-owned scoring model. There
 
 ## Coverage
 
-Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`.
+Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`; do not copy its volatile roster or count into this document.
 
-- `BLUECHIP_SLUG_MAP` contains 19 Bluechip slugs mapped to canonical Pharos IDs.
+- `BLUECHIP_SLUG_MAP` maps supported Bluechip slugs to canonical Pharos IDs.
 - Only coins present in both systems are fetched.
 - The daily sync applies `excludeFrozenIds()` before fetching, so any mapped asset that later becomes frozen is skipped at runtime instead of being refreshed into the active ratings cache.
 - Missing or unrated Bluechip rows are skipped rather than synthesized.
-
-Current map covers:
-- `usdc`, `usdt`, `dai`, `lusd`, `bold`, `pyusd`, `paxg`, `xaut`, `gusd`, `usdp`, `eurc`, `fdusd`, `frax`, `gho`, `tusd`, `rlusd`, `xsgd`, `ousd`, `cetes`
 
 ---
 
@@ -35,7 +32,7 @@ Current map covers:
 `syncBluechip()` in `worker/src/cron/sync-bluechip.ts`:
 
 1. Skips work when the `bluechip-ratings` cache is newer than 6 hours.
-2. Iterates the 19 slug mappings in batches of 3, with a 500ms inter-batch delay.
+2. Iterates the configured slug mappings in batches of 3, with a 500ms inter-batch delay.
 3. Fetches `backend.bluechip.org/coin-data/{slug}` with the shared Worker `USER_AGENT`.
 4. Discards 404s, empty payloads, and rows without a `grade`.
 5. Normalizes each successful row into `BluechipRating`, accepting Bluechip category blocks that are omitted or explicitly `null`.

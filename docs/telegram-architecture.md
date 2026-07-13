@@ -1,10 +1,10 @@
 # Telegram Architecture Seams
 
-Status: post-freeze structural baseline; the internal-reorganization freeze ended on **2026-06-13** (see [Historical freeze period](#historical-freeze-period)).
+Status: current structural ownership baseline.
 
 This is the load-bearing structural doc for PharosWatchBot's worker-side code. It names each seam, declares ownership and allowed dependencies, and lists the symptoms that should trigger a re-evaluation. For *what the bot does* (commands, alert types, schema, runbooks) see [`telegram-alerts.md`](./telegram-alerts.md).
 
-The Telegram subsystem has been decomposed three times in the last 30 days. Each pass moved code without naming the boundaries it was creating, so the next pass reopened the same questions. This doc fixes the boundaries; future changes either stay inside a seam or get an explicit revision of this doc.
+This document makes the subsystem boundaries explicit. Future changes either stay inside a named seam or revise the ownership and dependency rules here.
 
 ---
 
@@ -170,7 +170,7 @@ Admin recovery paths preserve the same effect and queue boundaries. Chat diagnos
 
 **Burst-summary collapse (C128).** `collapseBurstChats` runs between routing and the plan/format phase, so it executes *before* `formatConsolidatedMessage` and therefore also bounds CPU (its C102 dependency). For a chat matching `BURST_EVENT_THRESHOLD`+ distinct coins with global the dominant source (`globalCount > specificCount`, tracked per-entry in `AlertsByChatEntry`), it replaces the chat's `ConsolidatedAlerts` with a single `burst` summary covering only delta coins versus a per-chat marker (`cache["telegram:burst-markers"]`), removing the chat entirely when the delta is empty. Markers prune on read at `BURST_MARKER_TTL_SEC` (anchored to first entry), the shared marker cache row is deleted when no live markers remain, and `/forget` removes the chat's nested marker entry. The threshold ships effectively off; `burstCollapsedChats`/`burstDeltaSuppressed` surface in dispatch metadata.
 
-**Reserve-drift producer/consumer seam (C123).** The reserve-drift family is the one event source whose state is *not* computed inside the dispatch trigger. `checkCollateralDrift` does live reserve-adapter network I/O (`loadFreshIndependentLiveReserveMap`), so calling it from the 5-minute dispatch trigger would consume the per-trigger 6-connection pool. Instead the four-hourly reserve slot (`worker/src/handlers/scheduled/hourly-live-reserves.ts`) persists a versioned source envelope (`generation`, `publishedAt`, `continuous`, `driftIds`) to `alert:reserve-snapshot` after its own `checkCollateralDrift` call, and dispatch only *diffs* an alertable set against its own baseline `alert:reserve-dispatched-snapshot`. Dispatch never opens a reserve-adapter connection. Coins that fall back to curated reserves are omitted from the producer set so a transient live-fetch failure cannot read as a drift change; the family fires entering-drift only. `worker/src/lib/alert-reserve-source-cache.ts` derives the freshness ceiling from two `sync-live-reserves` intervals (8 hours), rejects missing/corrupt/future/wrong-generation state, and marks the first publish after a continuity gap as `recovering`. That recovery publish cold-seeds the dispatch baseline; only the next continuous expected-generation publish can create reserve transitions.
+**Reserve-drift producer/consumer seam (C123).** The reserve-drift family is the one event source whose state is *not* computed inside the dispatch trigger. `checkCollateralDrift` does live reserve-adapter network I/O (`loadFreshIndependentLiveReserveMap`), so calling it from the 5-minute dispatch trigger would consume the repo's six-request trigger budget. Instead the four-hourly reserve slot (`worker/src/handlers/scheduled/hourly-live-reserves.ts`) persists a versioned source envelope (`generation`, `publishedAt`, `continuous`, `driftIds`) to `alert:reserve-snapshot` after its own `checkCollateralDrift` call, and dispatch only *diffs* an alertable set against its own baseline `alert:reserve-dispatched-snapshot`. Dispatch never opens a reserve-adapter connection. Coins that fall back to curated reserves are omitted from the producer set so a transient live-fetch failure cannot read as a drift change; the family fires entering-drift only. `worker/src/lib/alert-reserve-source-cache.ts` derives the freshness ceiling from two `sync-live-reserves` intervals (8 hours), rejects missing/corrupt/future/wrong-generation state, and marks the first publish after a continuity gap as `recovering`. That recovery publish cold-seeds the dispatch baseline; only the next continuous expected-generation publish can create reserve transitions.
 
 **Freeze-event producer/consumer seam.** Freeze is the sixth public family but does not enter the legacy five-family target-plan table. The dedicated outbox reads immutable `freeze.*` Tape rows only while `project-tape` is fresh, owns `cache["alert:freeze-tape-cursor"]`, and cold-seeds without history. Each event transactionally captures and closes one direct/global cohort in `telegram_freeze_alert_targets`, then creates the canonical generic source/job/job-target/item lineage and atomically hands chunks to `telegram_pending_alerts`. Resumes page only the frozen targets and retain the original two-hour expiry; the general snapshot baseline never reads or writes the freeze cursor.
 
@@ -214,7 +214,7 @@ Admin recovery paths preserve the same effect and queue boundaries. Chat diagnos
 - Inline subscriber-query SQL into the entrypoint. Add new fan-out paths in `dispatch-telegram-alerts-fanout.ts` or one of the existing helper modules.
 - Duplicate admin-broadcast target selection SQL. Broadcast scopes call the Dispatch-owned `loadBroadcastTargetChatIds(db, scope)` helper so global/per-coin/preset watcher predicates evolve in one place.
 - Import API action-handler modules for alert context. Dispatch-owned context and reason helpers live under `worker/src/cron/`.
-- Open new connections beyond Cloudflare's 6-per-trigger pool. Consume response bodies (`drainResponseBody`) before opening more fetches.
+- Exceed the repo's six-connection trigger budget. Consume response bodies (`drainResponseBody`) before later fetch phases so cleanup and byte use stay bounded.
 
 ---
 
@@ -297,7 +297,7 @@ The provenance correction required no D1 migration because these two tables and 
 
 ## 8. Outbound transport
 
-**Responsibility.** The single place that hits `https://api.telegram.org/bot<token>/…`. Owns HTTP timeouts, the `link_preview_options` shape, the response-body drain (required under the Cloudflare 6-connection cap), Bot API error classification, and the auditing wrapper that updates per-chat reply diagnostics.
+**Responsibility.** The single place that hits `https://api.telegram.org/bot<token>/…`. Owns HTTP timeouts, the `link_preview_options` shape, bounded response-body cleanup, Bot API error classification, and the auditing wrapper that updates per-chat reply diagnostics.
 
 **Owned files.**
 - `worker/src/lib/telegram.ts` (`postTelegramBotApi`, `sendToChat`, `sendBatch`, `postTelegramMessage`, `answerCallbackQuery`, `editMessage`, `escapeHtml`, link-preview helpers, send-error classification)
@@ -377,49 +377,20 @@ Files any seam may import:
 
 ---
 
-## What changed in the recent refactors
+## Structural change policy
 
-Three commits decomposed Telegram code in 30 days. Knowing which seam each touched helps a future maintainer pick up where the structure is "current".
+The named seams are the current baseline. Behavioral work should stay inside them; structural changes should update this document before moving code.
 
-- **2026-04-17 — `feat(telegram): callback_query router + snooze buttons backend` (cb202d93b)** — created the **Callback routing** seam. Split `handleCallbackQuery` into its own file (`telegram-webhook-callbacks.ts`), added the `action:arg` parser, and added the first action (`snooze:1h|4h|24h`). Same-day follow-up `refactor(telegram): simplify pass after audit remediation` (6cd53dd0e) collapsed `upsertSubscriberRow + UPDATE` into one `INSERT ... ON CONFLICT` and parallelized `/status` D1 reads.
+Routine changes that do not reopen the seam model include bug fixes, new command or callback handlers, tests, fields on existing helpers/types, and hardening inside an existing owner.
 
-- **2026-05-11 — `P1-M1: decompose telegram-webhook.ts dispatch into per-command modules` (58695ef1e)** — created the **Action handlers** seam. Cut `telegram-webhook.ts` from ~1,221 to ~428 code lines (1,363 to 499 total), moved each `/command` into `worker/src/api/webhook-commands/<command>.ts`, replaced two parallel switch statements (the pending-active branch and the fresh-command branch) with one `COMMAND_HANDLERS` table plus explicit pending passthrough/clear sets. Extracted the shared subscribe/unsubscribe/set machinery into `webhook-commands/action-runner.ts`. Behavior and exports unchanged.
+Treat these as doc-first structural changes:
 
-- **2026-05-14 — `refactor(telegram): extract callback and queue helpers` (d6f4fec8e)** — split **Dispatch / fan-out** further (`dispatch-telegram-alerts-fanout.ts`), restructured `telegram-webhook-callbacks.ts` for explicit per-action handlers, and grew `worker/src/cron/telegram-pending/index.ts` to absorb claim-based draining. This commit was the immediate motivation for this doc.
+- extracting, splitting, renaming, or moving modules across seams
+- adding top-level Telegram directories or layered abstractions
+- reorganizing `COMMAND_HANDLERS` or `CALLBACK_ACTIONS` for style alone
+- generalizing command handlers behind a new pipeline or framework
 
-- **2026-05-14 — PharosWatchBot audit closeout** — the P0/P1/P2 remediation pass and implemented P3 closeout became the current frozen baseline: callback write paths were aligned with store/settings helpers, `loadPendingDisambiguation()` replaced duplicate SELECTs, `telegram-alerts.ts` became a parser/formatter compatibility barrel, registration/chat-member Bot API calls were centralized through outbound transport, `why_`/`coverage_` Mini App payloads gained in-app views, read-only command handler tests were added, and `telegram-pending/index.ts` became a compatibility barrel over `worker/src/cron/telegram-pending/*`.
-
-Several `harden` and `fix` commits between those reshaped behavior inside the seams (group-admin hard gate, per-coin snooze, dedupe-key stability, two-strike block rule, claim-based pending drain). Behavioral changes inside an existing seam are not seam changes — they should not move files.
-
----
-
-## Historical freeze period
-
-The 30-day Telegram internal-reorganization freeze ran until **2026-06-13** (30 days from 2026-05-14). As of 2026-06-18, it is historical context, not an active blanket freeze.
-
-The implemented PharosWatchBot audit closeout on 2026-05-14 remains the structural baseline. Do not use those already-landed refactors as precedent for casual file moves, helper extraction, or seam changes. Future structural Telegram changes should update this doc first, then move code in a separate, clearly motivated change.
-
-Still acceptable without reopening the seam model:
-- Bug fixes that change behavior.
-- New commands or callbacks (add a handler file in `webhook-commands/`, add to `CALLBACK_ACTIONS`, etc.).
-- New tests, new docs.
-- Adding fields to existing helpers or types.
-- Behavioral hardening (rate limits, retry rules, threshold tuning, idempotency improvements) inside an existing seam.
-
-Treat these as doc-first structural changes, unless a real bug forces them and the fix narrative is in the commit message:
-- "Extract helpers" / "split file" / "rename module" / "move type" refactors.
-- New seams, new top-level Telegram directories, new layered abstractions.
-- Reorganizing the `COMMAND_HANDLERS` table or the `CALLBACK_ACTIONS` allowlist for stylistic reasons.
-- Generalizing per-command handlers behind a new "pipeline" or "framework".
-
-If you think the current layout is wrong, do not refactor in place — propose the rename / split in a PR that updates this doc *first*, then move code in a second PR.
-
----
-
-## Tell-tale signs the seams are wrong
-
-If two or more of these happen, re-evaluate the seams (revise this doc, then refactor — not the other way around):
-
+When the current layout is wrong, document the new ownership and dependency direction in the same change that moves the code.
 1. **Two consecutive "extract helper" commits to Telegram code in 7 days** — the seams aren't holding; whatever was extracted is still entangled.
 2. **A bug fix touches more than 2 seams** — a single change rippling through Ingress + Action handlers + State means the boundary between them is wrong, not the code inside them.
 3. **A callback handler imports from 4+ seams** — the callback layer already sits at the edge: the per-action files in `webhook-callbacks/` reach into Action handlers' builders, State helpers (via store/settings-mutations), Common, and the setup state machine; if a new callback needs a 5th, the callback layer is doing too much.

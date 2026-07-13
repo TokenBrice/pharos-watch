@@ -27,4 +27,4 @@ The script reads the public DDRR response contract, validates it with `DdrrRespo
 - Treat no-calls, missed locks, publication failures, and data-quality gaps as coverage or input debt before changing terminality thresholds.
 - Before treating `missed_lock_terminal` rows as live lock debt, verify whether the incident was rollout-active and whether reliable terminal evidence predates the DDRv2 public prediction contract. Those rows should classify as `terminal_before_prediction` under reviewer v3.
 - Treat factor labels as explanatory text. Raw K5, reserve, and mint-authority inputs require a D1/sealed-payload/registry join before making a methodology change.
-- Promote a report to `docs/process/` or `docs/process/archive/` only after it supports a reviewed methodology decision; otherwise leave it in `agents/`.
+- Keep point-in-time reports in `agents/`. When a report supports a reviewed methodology decision, record the durable rule in `docs/depeg-resolver.md` and the versioned change in its timeline instead of committing the report itself.

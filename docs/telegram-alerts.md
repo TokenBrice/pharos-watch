@@ -639,7 +639,7 @@ If a depeg closes with a recovery reason and reopens for the same coin between t
 
 - Messages are HTML-formatted via `formatConsolidatedMessage()`.
 - Long messages are split with `splitMessage(html, 4000)`.
-- `sendBatch()` posts in parallel batches of 4 (staying under Workers 6-connection limit).
+- `sendBatch()` posts in parallel batches of 4, leaving headroom in the repo's six-request trigger budget.
 - Hard cap: `3,600 Telegram message attempts per dispatch run`.
 - `dispatch-telegram-alerts` has a 14-minute app-level hard timeout and 30-second lease heartbeats; pending-drain and fresh-send loops stop starting Telegram batches after a 4-minute soft deadline, releasing unattempted pending claims or queueing the untouched fresh tail so slow Bot API runs yield the next 5-minute trigger interval.
 - Detection first inserts an immutable `telegram_alert_source_events` row. Dynamic preset followers are resolved in normalized cursor pages; completed pages are reused and only pending pages are queried on recovery.
@@ -946,7 +946,7 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 - `npx tsx scripts/maintenance/register-telegram.ts --action webhook`, `npx tsx scripts/maintenance/register-telegram.ts --action commands`, and `npx tsx scripts/maintenance/register-telegram.ts --action profile` remain manual recovery tools when an operator needs to force Bot API state outside the Worker reconciliation loop. Command, profile, and allowed-update payloads are shared with Worker reconciliation through `shared/lib/telegram-bot-registration.ts`.
 - The webhook intentionally returns `200` on most malformed or unauthorized cases so Telegram does not keep retrying noisy payloads.
 - The dedicated 5-minute Telegram trigger runs subscriber dispatch (when a bot token exists), watchdog, disambiguation cleanup, and pulse publication first; it then runs all four registration checks. Without the bot token, dispatch is recorded as skipped and registration as an error while the token-independent watchdog, cleanup, and pulse work continue.
-- The dispatcher consumes Bot API response bodies before returning, which matters under the Workers per-trigger connection cap.
+- The dispatcher consumes Bot API response bodies before returning so transport cleanup and response-byte use remain bounded.
 
 ## Runbooks
 

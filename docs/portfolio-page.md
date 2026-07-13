@@ -7,7 +7,10 @@ Route contract for `/portfolio/`, the noindex personal stablecoin risk workspace
 ## Route Shape
 
 - **Server shell:** `src/app/portfolio/page.tsx`
-- **Client implementation:** `src/app/portfolio/client.tsx`
+- **Client orchestration:** `src/app/portfolio/client.tsx`
+- **Page presentation:** `src/app/portfolio/components.tsx`
+- **Page model/helpers:** `src/app/portfolio/model.ts`
+- **Preset registry:** `src/app/portfolio/presets.ts`
 - **Portfolio state hook:** `src/hooks/use-portfolio.ts`
 - **Persistence helpers:** `src/lib/portfolio-codec.ts`, `src/lib/portfolio-analysis.ts`
 - **Shared scoring source:** `docs/report-cards.md`
@@ -40,15 +43,12 @@ There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-
 
 ## UI Responsibilities
 
-`src/app/portfolio/client.tsx` owns:
+`src/app/portfolio/client.tsx` coordinates hooks, URL state, persistence actions, and the page-level workflow. The route-local modules split the remaining ownership:
 
-- holdings entry and removal
-- mobile holdings entry as stacked holding rows with one add selector, while wider screens keep compact rows
-- preset loading (`CeFi Core`, `Treasury Heavy`, `DeFi Native`, `Barbell Mix`)
-- aggregate portfolio grade and radar chart
-- upstream exposure view (grouped or detailed)
-- share link generation
-- empty-state onboarding via `src/components/portfolio-empty-state.tsx`
+- `components.tsx` renders the holdings editor, summary, exposure, and supporting sections.
+- `model.ts` owns route-local projections and presentation helpers.
+- `presets.ts` owns the curated preset definitions.
+- `src/components/portfolio-empty-state.tsx` owns preset-first empty-state onboarding.
 
 The page uses `CLIENT_ACTIVE_STABLECOINS` for `PORTFOLIO_COIN_OPTIONS`, excluding pre-launch and frozen assets. It does not filter against `DEAD_STABLECOINS`.
 
@@ -70,7 +70,10 @@ When changing portfolio behavior, update this doc alongside the relevant runtime
 | File | Role |
 |------|------|
 | `src/app/portfolio/page.tsx` | Static route shell, metadata, breadcrumb/shell config |
-| `src/app/portfolio/client.tsx` | Interactive holdings editor, presets, grade/exposure presentation |
+| `src/app/portfolio/client.tsx` | Client orchestration, hooks, actions, and URL workflow |
+| `src/app/portfolio/components.tsx` | Route-local holdings, summary, and exposure presentation |
+| `src/app/portfolio/model.ts` | Route-local projections and display helpers |
+| `src/app/portfolio/presets.ts` | Curated portfolio preset definitions |
 | `src/hooks/use-portfolio.ts` | Browser persistence, share-link helpers, portfolio score derivation |
 | `src/lib/portfolio-codec.ts` | Query/localStorage encoding + canonical-only validation |
 | `src/lib/portfolio-analysis.ts` | Upstream exposure grouping and collateral categorization |

@@ -205,7 +205,7 @@ export function buildCalibrationReport(rankings: RankingWithRisk[], generatedAt:
     "## Implementation Notes",
     "",
     "- Feed this script a saved `/api/yield-rankings` response; if the payload predates public `sourceRisk.*` fields, treat null-rate coverage as a production baseline rather than final v8 source-risk calibration.",
-    "- Keep scratch calibration reports under `/agents/`; committed rollout evidence belongs under `docs/process/`.",
+    "- Keep point-in-time calibration reports under `/agents/`; record reviewed methodology decisions in `docs/yield-intelligence.md` and its timeline.",
     "- Pair production-snapshot reports with golden-fixture evidence when live payloads do not yet include populated source-risk fields.",
     "",
   ].join("\n");

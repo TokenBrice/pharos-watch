@@ -21,7 +21,7 @@ The route shell is owned directly by `src/app/about/page.tsx`.
 
 - `metadata` sets the canonical path `/about/` plus route-specific title/description/Open Graph fields
 - the page renders through `FeaturePageShell` with `breadcrumbName="About Pharos"`, `path="/about/"`, title `About Pharos`, and two lead paragraphs
-- the page opens on a modest signature hero (rendered as the shell's first child, not a title replacement): a frost-blue "One Beam" figure lighting `TRACKED_STABLECOIN_COUNT` (`Stablecoins tracked`, `.pharos-numeric text-frost-blue`), the editorial lede + byline, and a neutral `.pharos-numeric` stat strip (active / retired / pre-launch / sources). The former on-page `AboutReferenceModule` reference-card block was removed (2026-07-01) so the frost signature leads directly under the intro; the Reference group stays reachable through the top-nav `Reference` dropdown.
+- the page opens on a modest signature hero: a frost-blue tracked-stablecoin figure, the editorial lede and byline, and a neutral stat strip for active, frozen, pre-launch, and source counts
 - the shell's `preface` injects `AboutPage` JSON-LD (its `mentions` cover the API/data catalog, coverage matrix, data pipeline, methodology, principles, and funding); the FAQ (`FAQPage`) JSON-LD is emitted separately by `FaqSection` (`includeJsonLd`)
 - the same FAQ items render visibly near the bottom of the page, before the disclaimer, so the `FAQPage` JSON-LD matches user-visible Q&A content
 - the public trust material lives inline on `/about/`: `#principles` states the editorial/product principles, `#editorial-ai-policy` states the AI-content policy, and `#corrections-policy` states the corrections path.
@@ -49,18 +49,18 @@ The page is organized into these sections, in order:
 - The dedicated `Who Is Building Pharos?` section uses `lg:grid-cols-[auto_minmax(0,1fr)]` to place the contributor/logo strip beside the copy on `lg+`, stacking vertically below `lg` so the text column does not get crushed.
 - `What Pharos Tracks` and `What Pharos Computes` use full-row links instead of small linked headings. This preserves larger touch targets on mobile and reduces the repeated tile-grid feel.
 - CTA buttons keep `min-h-11` on mobile so the tap target does not collapse below the 44px floor.
-- Section cards stay flat with no per-section accent color (colored left-stripe accents were retired repo-wide); `frost-blue` is reserved for the brand hero numeral and inline link-hover states.
+- Section cards stay flat with no per-section accent color; `frost-blue` is reserved for the brand hero numeral and inline link-hover states.
 - The data pipeline section should stay flat. Use a source-group list plus a 3-step flow summary rather than nested card grids.
 
 ## Navigation Contract
 
 - `/about/` remains a top-level route in the `Reference` group (the `NAV_GROUPS` entry keyed `"reference"`).
-- `/about/` is the reference hub for low-frequency reference surfaces. `Funding`, `Methodology`, and `Coverage` sit beside it in the top-nav `Reference` dropdown (the former on-page reference-card module was retired 2026-07-01). Learn surfaces such as Mechanisms stay in the Learn navigation group; API Access, Changelog, and System Status stay in the lighthouse overflow menu; `Start Here` remains the conditional bottom-nav shortcut.
+- `/about/` is the reference hub for low-frequency reference surfaces. `Funding`, `Methodology`, and `Coverage` sit beside it in the top-nav `Reference` group. Learn surfaces stay in the Learn group; API Access, Changelog, and System Status stay in the lighthouse menu.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Contagion Map` must link to `/dependency-map/`
 - `Systemic Risk Scoreboard` remains linked to `/safety-scores/` because the stress-panel scoreboard lives on that route
-- `Methodology`, broadcast, Telegram, GitHub, and profile links are surfaced as explicit CTAs rather than buried inline links; `Funding` is now an inline prose link in the copy (its dedicated CTA card was retired with the reference module, 2026-07-01)
-- Standalone `/about/principles/`, `/about/editorial/`, and `/about/style/` routes were retired; link to `/about/#principles`, `/about/#editorial-ai-policy`, or `/about/#corrections-policy` when a trust-policy anchor is needed.
+- `Methodology`, broadcast, Telegram, GitHub, and profile links are explicit CTAs; `Funding` is an inline prose link.
+- Trust-policy links use `/about/#principles`, `/about/#editorial-ai-policy`, and `/about/#corrections-policy`.
 
 ## Content Notes
 

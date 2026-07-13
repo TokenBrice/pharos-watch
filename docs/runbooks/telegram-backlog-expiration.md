@@ -36,7 +36,7 @@ The script reports estimated drain time and D1 operation counts for 500, 1,000, 
 ## Remediation
 
 1. **Pause low-priority sends.** Do not run admin broadcasts, broad manual resends, or non-urgent operator notices while risk-alert rows are close to expiry.
-2. **Let healthy drain continue.** If `pendingDeliveries` is decreasing and no rows are expired, wait one or two cycles. A circuit-open state only gates the fresh subscriber fan-out; the pending drain keeps running (`executeCircuitOpenQueuePath` still calls `drainPendingQueue`), and there is no supported admin action to open the `telegram-api` circuit anyway. To actually pause both delivery and drain, use the dispatcher-pause step in [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
+2. **Let healthy drain continue.** If `pendingDeliveries` is decreasing and no rows are expired, wait one or two cycles. Circuit state and operator pauses are separate controls. If continued delivery is worsening the incident, use [`telegram-bot-wide-outage.md`](./telegram-bot-wide-outage.md) to pause `pending`; pause `fresh` separately when new risk sends must also stop. Do not reset the transport circuit to simulate a pause.
 3. **Preview expired-row cleanup.**
 
    ```bash
@@ -68,4 +68,5 @@ The script reports estimated drain time and D1 operation counts for 500, 1,000, 
 - [`docs/worker-and-api-limits.md`](../worker-and-api-limits.md) for sender budget assumptions.
 - [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md) for 429-dominated incidents.
 - [`telegram-no-delivery.md`](./telegram-no-delivery.md) for zero-send incidents.
+- [`telegram-bot-wide-outage.md`](./telegram-bot-wide-outage.md) for generation-fenced delivery pauses and recovery.
 - [`telegram-operator-queries.md`](./telegram-operator-queries.md) for D1 diagnostics during delivery incidents.

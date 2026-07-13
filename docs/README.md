@@ -39,23 +39,29 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 
 - [process/boundary-waivers.md](./process/boundary-waivers.md) - worker import-boundary waiver inventory with retirement rationale
 - [process/cron-trigger-policy.md](./process/cron-trigger-policy.md) - governance for adding new cron trigger expressions to the Worker
-- [process/d1-baseline-squash-plan.md](./process/d1-baseline-squash-plan.md) - planning doc for the second D1 baseline squash cadence and procedure
+- [process/d1-baseline-squash-plan.md](./process/d1-baseline-squash-plan.md) - durable D1 baseline squash scheduling, rehearsal, rollout, and recovery policy
 - [process/ddrr-calibration.md](./process/ddrr-calibration.md) - advisory DDRR calibration report process for evidence-gated DDR refinements
-- [process/feature-flags.md](./process/feature-flags.md) - `NEXT_PUBLIC_PHAROS_*` feature flag inventory and default-state rules
-- [process/pages-env-rollout.md](./process/pages-env-rollout.md) - rollout procedure for flipping `NEXT_PUBLIC_PHAROS_*` flags on production Pages
+- [process/feature-flags.md](./process/feature-flags.md) - `NEXT_PUBLIC_PHAROS_*` inventory, readiness gates, production rollout, and rollback
+- [process/safety-score-v9-readiness.md](./process/safety-score-v9-readiness.md) - candidate evidence, calibration baseline, and current V9 activation blockers
 - [process/safety-score-v9-rollout.md](./process/safety-score-v9-rollout.md) - single-publisher V9 shadow, activation, rollback, observation, and retirement contract
 - [process/safety-score-v9-consumer-ledger.md](./process/safety-score-v9-consumer-ledger.md) - first-party V8-to-V9 consumer mappings, mismatch behavior, tests, and activation blockers
+- [process/worker-hardening-rollout.md](./process/worker-hardening-rollout.md) - active Worker hardening modes, rollout gates, observation, and rollback
 
 ## Runbooks
 
 - [runbooks/blacklist-sync.md](./runbooks/blacklist-sync.md) - blacklist sync incidents, stale windows, and remediation entrypoints
 - [runbooks/d1-telemetry-kill-switch.md](./runbooks/d1-telemetry-kill-switch.md) - D1 route/source telemetry kill-switch order and degraded-mode controls
+- [runbooks/d1-capacity-and-runtime-experiments.md](./runbooks/d1-capacity-and-runtime-experiments.md) - controlled D1 capacity/runtime experiments and evidence capture
 - [runbooks/db-connectivity.md](./runbooks/db-connectivity.md) - D1/connectivity outage triage and recovery checks
 - [runbooks/mint-burn-integrity.md](./runbooks/mint-burn-integrity.md) - mint/burn divergence, stale coverage, and repair actions
 - [runbooks/stablecoins-cache.md](./runbooks/stablecoins-cache.md) - stablecoins cache availability, provider breaker, and lease recovery
 - [runbooks/telegram-admin-broadcast-safety.md](./runbooks/telegram-admin-broadcast-safety.md) - admin broadcast safety controls and dry-run pre-flight
+- [runbooks/telegram-adoption-report.md](./runbooks/telegram-adoption-report.md) - aggregate adoption reporting queries and interpretation
 - [runbooks/telegram-backlog-expiration.md](./runbooks/telegram-backlog-expiration.md) - Telegram pending backlog expiration triage and replay window recovery
+- [runbooks/telegram-bot-wide-outage.md](./runbooks/telegram-bot-wide-outage.md) - bot-wide transport outage triage and recovery
+- [runbooks/telegram-digest-outbox.md](./runbooks/telegram-digest-outbox.md) - exact-payload digest outbox backlog and retry handling
 - [runbooks/telegram-group-admin-gating-rollback.md](./runbooks/telegram-group-admin-gating-rollback.md) - rollback the group-admin hard gate through a code-level mode change and Worker redeploy
+- [runbooks/telegram-ingress-abuse-controls.md](./runbooks/telegram-ingress-abuse-controls.md) - webhook and Mini App ingress abuse-control operation
 - [runbooks/telegram-mini-app-auth-failures.md](./runbooks/telegram-mini-app-auth-failures.md) - diagnose `mini_app_session_invalid` spikes (token rotation, replay, stale clients)
 - [runbooks/telegram-mini-app-botfather.md](./runbooks/telegram-mini-app-botfather.md) - capture BotFather Mini App configuration and post-deploy smoke tests
 - [runbooks/telegram-no-delivery.md](./runbooks/telegram-no-delivery.md) - Telegram dispatcher reports events but no messages; triage and recovery
@@ -65,6 +71,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [runbooks/telegram-secret-rotation.md](./runbooks/telegram-secret-rotation.md) - rotate Telegram webhook secret and bot token with overlap windows
 - [runbooks/telegram-setup-wizard-stuck.md](./runbooks/telegram-setup-wizard-stuck.md) - clear stale `setup-step` rows in `telegram_pending_disambiguation`
 - [runbooks/telegram-webhook-retry-dedupe.md](./runbooks/telegram-webhook-retry-dedupe.md) - Telegram webhook retry/dedupe incidents, stuck processing rows, and recovery
+- [runbooks/telegram-webhook-ingress.md](./runbooks/telegram-webhook-ingress.md) - webhook ingress authentication, pre-auth limits, and incident checks
 - [runbooks/yield-benchmark-fallback-stale.md](./runbooks/yield-benchmark-fallback-stale.md) - yield benchmark fallback, retained-rate, and stale benchmark triage
 - [runbooks/yield-deterministic-cooldown.md](./runbooks/yield-deterministic-cooldown.md) - deterministic on-chain all-fail and cooldown triage
 - [runbooks/yield-health.md](./runbooks/yield-health.md) - admin yield health summary thresholds and remediation
@@ -95,6 +102,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [funding-page.md](./funding-page.md) - `/funding/` public funding ledger contract and static JSON data model
 - [portfolio-page.md](./portfolio-page.md) - `/portfolio/` route shell, local persistence, and report-card dependency contract
 - [privacy-page.md](./privacy-page.md) - `/privacy/` longform policy surface, metadata, and footer integration
+- [screener-page.md](./screener-page.md) - `/screener/` URL filters, data/freshness, sorting, export, and Picker handoff
 - [status-dashboard.md](./status-dashboard.md) - `/status/` public health surface plus `/admin/` operator dashboard contract
 - [tape-page.md](./tape-page.md) - `/timeline/` cross-class event feed route, URL filter contract, digest grouping, projector pipeline, and homepage marquee integration
 - [compliance-page.md](./compliance-page.md) - `/compliance/` combined MiCA authorization and GENIUS implementation-watch route contract
@@ -147,11 +155,11 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/learn/mechanisms/[archetype]/`                | [learn-mechanisms-page.md](./learn-mechanisms-page.md), [classification.md](./classification.md)                                                      |
 | `/liquidity/`                                   | [dex-liquidity.md](./dex-liquidity.md)                                                                                                                |
 | `/methodology/`                                 | [methodology-page.md](./methodology-page.md)                                                                                                          |
-| `/compliance/`                                  | [compliance-page.md](./compliance-page.md), [mica-tracker.md](./mica-tracker.md)                                                                       |
+| `/compliance/`                                  | [compliance-page.md](./compliance-page.md), [mica-tracker.md](./mica-tracker.md), [genius-tracker.md](./genius-tracker.md)                            |
 | `/portfolio/`                                   | [portfolio-page.md](./portfolio-page.md)                                                                                                              |
 | `/privacy/`                                     | [privacy-page.md](./privacy-page.md)                                                                                                                  |
 | `/safety-scores/`                               | [report-cards.md](./report-cards.md)                                                                                                                  |
-| `/screener/`                                    | [architecture.md](./architecture.md), [homepage.md](./homepage.md), [classification.md](./classification.md), [dews.md](./dews.md), [dex-liquidity.md](./dex-liquidity.md), [mint-authority-scoring.md](./mint-authority-scoring.md), [report-cards.md](./report-cards.md) |
+| `/screener/`                                    | [screener-page.md](./screener-page.md)                                                                                                                |
 | `/screener/picker/`                             | [screener-picker-page.md](./screener-picker-page.md)                                                                                                  |
 | `/sitemap-tree/`                                | [architecture.md](./architecture.md)                                                                                                                  |
 | `/stablecoin/[id]/`                             | [stablecoin-detail-page.md](./stablecoin-detail-page.md)                                                                                              |
@@ -179,7 +187,7 @@ These routes are not public product surfaces, but they are part of the maintaine
 
 | Route     | Primary doc(s)                                                                                                                                                 |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/admin/`     | [status-dashboard.md](./status-dashboard.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints) |
+| `/admin/*`    | [status-dashboard.md](./status-dashboard.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints) — all App Router admin pages are noindex |
 | `/admin-api/` | [api-page.md](./api-page.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints)                 |
 | `/api/admin/*` | [api-page.md](./api-page.md), [operator-origin-access.md](./operator-origin-access.md), [api-reference.md](./api-reference.md#admin-endpoints)                 |
 

@@ -93,33 +93,9 @@ Default sort is `totalUsd desc`.
 
 ## Chain Health Score
 
-Current live methodology version is `1.4`.
+The route displays the Chain Health composite and its factor detail from `GET /api/chains`. Formula, factors, weights, coverage gates, evidence precedence, bands, and current methodology version are owned by [chain-health.md](./chain-health.md) and `shared/lib/chain-health.ts`. Do not duplicate those volatile values here.
 
-`shared/lib/chain-health.ts` computes the composite as:
-
-```text
-0.30 × quality
-+ 0.20 × chainEnvironment
-+ 0.20 × concentration
-+ 0.20 × pegStability
-+ 0.10 × backingDiversity
-```
-
-Factors:
-
-- `quality`: supply-weighted Safety Score average; unrated coins default to `40`, but the factor returns `null` if rated supply is below 50% of chain supply
-- `chainEnvironment`: L2BEAT snapshot first for matched scaling projects, scored from stage plus Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure; unmatched chains fall back to the resilience tier mapping from `shared/lib/chains/health.ts` (`CHAIN_ENVIRONMENT_SCORES`, re-exported via `shared/lib/chain-health.ts`: `1 -> 100`, `2 -> 60`, `3 -> 20`). The API also returns `chainEnvironmentEvidence` so clients can distinguish L2BEAT-backed rows from fallback-tier rows and show the snapshot date.
-- `concentration`: `100 * (1 - HHI)`
-- `pegStability`: supply-weighted peg proximity; missing prices contribute a neutral `50`
-- `backingDiversity`: normalized Shannon entropy across the two active backing cohorts, `rwa-backed` and `crypto-backed`. Coins without backing metadata are excluded from the distribution (not defaulted to `rwa-backed`). Weight constants are exported from `chain-health.ts`.
-
-Bands:
-
-- `robust`: 80-100
-- `healthy`: 60-79
-- `mixed`: 40-59
-- `fragile`: 20-39
-- `concentrated`: 0-19
+The page contract is limited to presentation: the leaderboard exposes the composite for comparison, and chain profiles show factor/evidence detail when the coordinated API snapshot provides it.
 
 ---
 

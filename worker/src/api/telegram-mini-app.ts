@@ -246,8 +246,8 @@ function toUsageEventInput(input: {
 /**
  * Batch several Mini App telemetry events into one D1 round-trip. The session
  * response path emits up to two independent writes (session_valid plus an
- * optional group_readonly); batching avoids sequential awaited inserts while
- * respecting the shared 6-connection pool (db.batch, never Promise.all).
+ * optional group_readonly); `db.batch` keeps those writes in one bounded D1
+ * round-trip instead of fanning them out with `Promise.all`.
  */
 async function recordMiniAppEvents(
   db: D1Database,

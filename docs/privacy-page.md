@@ -1,155 +1,94 @@
 # Privacy Page
 
-Route contract for `/privacy/`, the longform privacy-policy surface linked from the site footer.
-
----
+Route contract for `/privacy/`, the public privacy-policy surface linked from the footer.
 
 ## Route Shape
 
-- **Route file:** `src/app/privacy/page.tsx`
-- **Shared shell:** `src/components/feature-page-shell.tsx`
-- **Primary navigation surface:** `src/components/footer.tsx`
+- Route: `src/app/privacy/page.tsx`
+- Shared shell: `src/components/feature-page-shell.tsx`
+- Footer link: `src/components/footer.tsx`
+- Sitemap owner: `src/app/sitemap.ts`
 
-The route is static and frontend-only. It does not call worker APIs.
+The route is statically rendered and does not fetch private data. Its copy describes storage and processing performed elsewhere in the product.
 
----
+## Metadata
 
-## Metadata Contract
+`src/app/privacy/page.tsx` owns the title, description, canonical `/privacy/`, social image, and visible `Last updated` date. Keep the date in step with substantive policy changes.
 
-`src/app/privacy/page.tsx` defines:
+The page uses the longform shell with a constrained reading measure. It remains public, indexable, and linked from the footer.
 
-- title: `Pharos Privacy Policy: Analytics, API & Telegram Data`
-- description: `Pharos privacy policy for analytics, feedback, API access requests, Telegram alert subscriptions, portfolio-local storage, and selector share links.`
-- canonical: `/privacy/`
-- Open Graph image: `/og-card.png`
+## Data Categories
 
-The page renders through `FeaturePageShell` with:
+Keep the visible policy organized around user-understandable categories rather than copying a table-by-table database inventory.
 
-- `breadcrumbName = "Privacy Policy"`
-- `path = "/privacy/"`
-- `variant = "longform"`
-- `containerClassName = "max-w-2xl"`
-- lead copy: `Last updated: July 2026`
+### Website analytics
 
----
+Analytics loads only when `NEXT_PUBLIC_GA_ID` is configured. The embedded Telegram Mini App route and its descendants are excluded from GA4 and Web Vitals collection. The page explains cookies, retention, hosting providers, and the typed event catalog without promising telemetry that the runtime does not collect.
 
-## Content Contract
+Authoritative sources:
 
-The current policy copy covers:
+- `src/app/layout.tsx`
+- `src/components/google-analytics.tsx`
+- `src/components/web-vitals-reporter.tsx`
+- `src/lib/analytics.ts`
+- `shared/lib/site-csp.ts`
 
-1. optional GA4-based anonymized analytics when `NEXT_PUBLIC_GA_ID` is configured at build time, excluding the embedded `/pharoswatchbot/app` route
-2. no website accounts or wallet connections
-3. GA4 cookies only, and only when analytics is enabled
-4. 14-month GA4 retention when GA4 is enabled
-5. Cloudflare Pages / Workers hosting and Google Analytics as third-party services
-6. support contact via `@PharosWatch` and the About page
-7. optional Telegram/X handles submitted through the feedback form appear publicly on the GitHub issue created for your submission
-8. Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state, and short-lived pending-command or pending-alert metadata; the optional private Daily Recap stores its enabled state, local delivery hour, consumed window, and bounded aggregate delivery outcome; subscriber rows with no follows, recap preference, or pending state and no Telegram activity for 180 days are automatically purged on a weekly cleanup
-9. the full enumeration of Telegram-owned D1 tables and their retention windows (see below)
-10. the Mini App privacy boundary: `initData` is never persisted; the embedded route loads no GA4 and reports no Web Vitals; after signed auth, first-party low-cardinality adoption, outcome, and error counters contain no chat ID
-11. Telegram custom Worker logs use a closed low-cardinality schema with no chat/user/update/callback identifiers, message content, URLs, tokens, or `initData`; Cloudflare processes the sampled records under account permissions, while authenticated D1 diagnostics retain per-chat incident correlation
-12. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
-13. homepage saved shortcuts store only a browser-local ordered list of route hrefs in `pharos-shortcuts`
-14. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; API key issuance records stay in private operator storage and structured Worker logs rather than public GitHub Issues
+### Browser-local preferences
 
-Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also notes that any delegated feedback contact handle will be visible in the GitHub issues that Pharos creates.
+Pharos has no website account or wallet connection. Browser-local functional state includes:
 
-### Homepage shortcut storage
+- homepage shortcut hrefs in `localStorage` under `pharos-shortcuts`
+- portfolio holdings in `localStorage` under `pharos:portfolio`
+- Picker callout dismissal in `localStorage` under `pharos.selector.callout.v1`
+- optional live Picker result recovery in `sessionStorage` under `pharos.selector.sessionResult.v1`
 
-The homepage saved-shortcuts module writes a browser-local ordered list of route hrefs to `localStorage` under
-`pharos-shortcuts`. It does not store an IP address, account identifier, wallet address, route history, or browser
-fingerprint, and the preference is not sent to the API. Resetting the shortcuts or clearing site data removes it.
+Portfolio and shortcut state is not sent to the API. Picker snapshot sharing is a separate server-side feature described below.
 
-### Stablecoin Picker storage
+### Feedback and API access
 
-The Stablecoin Picker at `/screener/picker/` uses browser-local storage only for functional UI recovery and dismissal state:
+Feedback contact handles may be included in the public GitHub issue created from a submission. Self-serve API access requests use private operator storage for verified email and optional request metadata; verification mail is delivered through Resend. Request-abuse controls use salted or keyed pseudonymous values rather than storing raw IP addresses in the application tables.
 
-- `pharos.selector.callout.v1` (`localStorage`) — Screener-page callout dismissal state. It survives reloads and clears when the user clears site data.
-- `pharos.selector.sessionResult.v1` (`sessionStorage`) — optional last-successful live result recovery after accidental navigation. It clears when the tab/session closes and is not written after explicit reset/clear.
+Authoritative sources:
 
-This is functional storage. It does not contain an IP address, a user identifier, or a cross-site beacon. The Picker must not create long-lived localStorage output history.
+- `worker/src/api/feedback.ts`
+- `worker/src/api/api-key-requests.ts`
+- `worker/src/api/api-key-requests/`
+- relevant migrations in `worker/migrations/`
 
-Snapshot share links (`/screener/picker/?sid={sid}`) reference a server-side KV-backed JSON projection that Pharos recomputes from the submitted Picker answers and canonical site-data sources. It contains form answers, tracked stablecoin identities, shortlist/diagnostic fields, methodology versions, a dataset hash, and `pharos-verified` provenance with a dataset/engine binding; it does not contain an IP, browser fingerprint, wallet address, or account identifier. Historical snapshots created before server recomputation remain explicitly `client-unverified`. Snapshot identifiers are **content-addressed** — two users whose server recomputations produce identical normalized output receive the same identifier, and anyone with the link can view the frozen artifact. KV entries start with a 90-day TTL; the first read returns the artifact only after confirming the full five-year retention extension.
+### Stablecoin Picker snapshots
 
-Snapshot write throttling separately derives a truncated HMAC-SHA-256 key from `CF-Connecting-IP` using the dedicated `SELECTOR_SNAPSHOT_IP_HASH_SECRET`. The volatile minute limiter and D1 `selector_snapshot_daily_quota` table use that pseudonymous key; neither raw IPs nor enumerable unsalted hashes are stored. D1 quota rows are pruned after two days by `prune-cron-history`. Because the share payload has no account linkage, Pharos cannot identify a specific sid as belonging to a requester for self-service deletion.
+Picker share links point to Pages KV snapshots recomputed from submitted answers and canonical site data. The artifact contains the normalized input, stablecoin output fields, methodology/version binding, dataset hash, and provenance; it does not contain an account, wallet address, raw IP address, or browser fingerprint. Anyone with the URL can view it.
 
-### Telegram D1 Tables
+Snapshot write quotas use a keyed IP-derived value in the short-lived limiter and D1 quota table. The Pages Function, shared snapshot schema, and migration are authoritative for payload, expiry, and quota behavior:
 
-The visible policy must enumerate every Telegram-owned D1 table, its purpose, and its retention. Canonical schema descriptions live in [`telegram-alerts.md` § D1 Schema](./telegram-alerts.md#d1-schema); retention sources are `worker/src/cron/telegram-retention-cleanup.ts`, `worker/src/cron/telegram-inactive-cleanup.ts`, `worker/src/lib/telegram-constants.ts`, and `worker/src/api/telegram-webhook-store.ts`.
+- `functions/selector-snapshot/[[path]].ts`
+- `functions/lib/selector-canonical-snapshot.ts`
+- `shared/lib/selector/snapshot.ts`
+- `worker/migrations/`
+- [screener-picker-page.md](./screener-picker-page.md)
 
-| Table                                                | Purpose                                                                                           | Retention                                                                                                               |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `telegram_subscribers`                               | Per-chat state (chat ID, optional username, default flags, quiet hours, snooze, `last_active_at`) | 180-day inactive prune only after meaningful alert and pending state is absent; weekly cleanup is gated to once per 7 days |
-| `telegram_subscriptions`                             | Per-chat per-coin alert preferences                                                               | Live settings and explicit overrides are retained; only inert rows are removed with an eligible inactive subscriber      |
-| `telegram_preset_subscriptions`                      | Persistent dynamic preset follows resolved at dispatch                                            | Kept while followed; cleared by `/unsubscribe all` or `/forget`, not expired for inactivity                              |
-| `telegram_pending_disambiguation`                    | Short-lived state for ambiguous ticker replies, setup wizard, bulk confirms                       | 5-minute TTL (`DISAMBIGUATION_TTL_SEC`); swept ≥10 min after expiry                                                     |
-| `telegram_pending_alerts`                            | Overflow and retry delivery queue                                                                 | Severity-based TTL: 2 h for depeg/dews/safety/reserve/freeze/legacy, 90 min for launch, 45 min for admin broadcasts     |
-| `telegram_recap_preferences`                         | Private opt-in daily recap schedule and consumed fact window                                    | Retained while configured; removed immediately by `/forget`                                                             |
-| `telegram_recap_targets`                             | Per-chat/local-date recap planning and terminal outcome aggregates                               | 30 days for sent/no-change/paused/stale outcomes; 90 days for cancelled, expired, execution-unknown, and permanent-failure evidence; `/forget` removes the chat's rows immediately |
-| `telegram_alert_jobs` / `telegram_alert_job_targets` | Durable discovery manifests and per-target delivery audit                                         | 90-day audit retention; `/forget` removes that chat's target rows and chat-prefixed item lineage while aggregate manifests remain                     |
-| `telegram_freeze_alert_events` / `telegram_freeze_alert_targets` | Immutable Tape/blacklist event provenance and one-time opt-in recipient cohort | 90-day audit retention; `/forget` removes that chat's target rows immediately while source events remain until normal prune |
-| `telegram_alert_planning_subscribers` / `telegram_alert_target_plans` / `telegram_alert_target_plan_items` | Durable subscriber snapshots and rendered delivery plans | 90-day audit retention; `/forget` removes chat-owned snapshots, plans, and plan items immediately |
-| `telegram_transport_failure_observations`            | Per-chat evidence used by the bot-wide transport circuit                                          | Operational retention; `/forget` removes that chat's observations immediately                                          |
-| `telegram_alert_dead_letters`                        | Expired or permanently failed pending-send audit trail                                            | 90-day audit retention; `/forget` removes that chat's rows immediately                                                  |
-| `telegram_processed_updates`                         | Retry-safe webhook idempotency claims (`update_id`, status, error class)                          | 7-day prune                                                                                                             |
-| `telegram_usage_daily`                               | Privacy-preserving daily command/setup/action aggregates; no `chat_id` is stored                  | 400-day aggregate retention                                                                                             |
-| `telegram_adoption_daily`                            | Allowlisted CTA/start/setup/follow/Mini App funnel counts; no `chat_id` is stored                  | 400-day aggregate retention                                                                                             |
-| `telegram_adoption_retention_daily`                  | Aggregate D7/D30 first-follow cohorts by surviving active-follow feature; no cohort members stored | 400-day aggregate retention                                                                                             |
-| `telegram_adoption_ingress_quota`                    | Identifier-free global minute quota for public CTA count writes                                   | Two-day operational retention                                                                                           |
-| `telegram_adoption_client_quota`                     | Dedicated-pepper HMAC-IP minute quota for public CTA count writes; no raw IP stored               | Two-day operational retention                                                                                           |
-| `telegram_watcher_lifecycle_daily`                   | Daily active-watcher snapshots for public pulse history                                           | Aggregate (no per-chat detail); 400-day prune via `telegram-retention-cleanup` (same window as `telegram_usage_daily`)  |
-| `telegram_chat_delivery_diagnostics`                 | Per-chat delivery diagnostics used by `/health`                                                   | Kept while subscriber exists; 90-day stale prune                                                                        |
+### Telegram alerts and Mini App
 
-Telegram also uses the shared D1 `cache` table for short-lived chat-scoped bot state. `/forget` clears the caller's command cooldown/flood, chat-member/admin, group-welcome, Mini App adoption-session, and legacy re-engagement-warning cache keys immediately, along with that chat's planning snapshot, rendered target plan, freeze target, recap preference/targets and recap pending/dead-letter rows, alert-job target (including chat-prefixed item lineage), transport observation, and dead-letter rows. Aggregate alert-job manifests, aggregate adoption rows, freeze source events, and processed-update idempotency claims remain until their normal prune; aggregate rows and source events cannot be attributed as a live subscription for one caller. The daily `telegram-retention-cleanup` job also removes stale chat-scoped cache keys in capped batches: 30 minutes for the consumed-on-first-mutation Mini App adoption session, 7 days for command cooldown/flood, chat-member/admin, and group-welcome keys, and 30 days for legacy re-engagement-warning markers. Recap target rows are pruned by status and age under the 30/90-day windows above. The inactive cleanup no longer creates those warning markers; live follows and enabled recap preferences remain retained regardless of inactivity, while an empty profile can be recreated by interacting with the bot after its 180-day prune.
+Telegram processing includes subscriber identity and settings, followed coins and presets, quiet hours and snooze state, short-lived command state, queued delivery work, delivery/audit outcomes, personalized recap preferences and targets, authenticated diagnostics, and identifier-free aggregate adoption/usage counters.
 
-### Mini App `initData`
+Do not maintain an allegedly exhaustive Telegram table roster here. The schema and retention model evolves through migrations and owning runtime modules. Use these authoritative sources:
 
-The `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate` endpoints validate signed Telegram `initData` but never persist it — neither the raw `initData` nor its hash is written to the `cache` table or any other store. Mutation requests are bounded by a short freshness window plus a per-user mutation cooldown rather than a one-shot replay claim: Telegram exposes a single `initData` value per launch, so reusing it across several edits inside the window is expected. The mutation freshness window is 5 minutes (`TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC`); session and read-only portability operations accept `auth_date` within the last 24 hours (`TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC`). Exported `pw3` watchlist tokens and pasted import tokens are returned or decoded request-locally and are not written as token blobs to D1, cache, analytics, or logs. Import confirmation persists only the resulting direct/preset preferences and normal mutation proof.
+- `worker/migrations/0000_baseline.sql` plus later `worker/migrations/*.sql`
+- [telegram-alerts.md](./telegram-alerts.md) for the maintained schema and user-facing behavior
+- [telegram-architecture.md](./telegram-architecture.md) for storage and dispatch ownership
+- `worker/src/cron/telegram-retention-cleanup.ts`
+- `worker/src/cron/telegram-inactive-cleanup.ts`
+- `worker/src/api/telegram-store/forget.ts`
+- `shared/lib/telegram-recap-policy.ts`
 
-Inline-mode queries are answered from public tracked-coin status data. Pharos records only allowlisted aggregate query/chosen-result counters; it does not persist the query text, inline query id, chosen result id, chat id, or user id in D1 or custom Worker logs.
+Durable follows and enabled recap preferences remain while configured; empty inactive profiles can be pruned under the runtime policy. Short-lived state and operational/audit records use category-specific retention. Personalized recap pending deliveries expire after the shared six-hour `TELEGRAM_RECAP_TTL_SEC`; recap target outcomes have their own retention windows.
 
-### Telegram Worker logs
+Telegram Mini App endpoints validate signed `initData` but do not persist the raw value or a hash. Mutation freshness, read/session portability, cooldown, and aggregate telemetry rules live in the endpoint/auth modules and [telegram-mini-app.md](./telegram-mini-app.md). The visible policy must remain aligned with those sources.
 
-`worker/src/lib/telegram-log.ts` is a privacy boundary, not an open metadata bag. Its compile-time type and independent runtime allowlist admit only operation/module labels, bounded counts, booleans, status codes, retry timing, and fixed error categories. Raw chat/user/update/callback/pending/source-event identifiers, callback or message content, arrays/objects, URLs, arbitrary errors, bot tokens, webhook secrets, and Mini App `initData` are not emitted. Allowed strings are bounded and defensively scrub numeric Telegram IDs, UUIDs, opaque hashes/tokens, secret assignments, and URLs.
-
-The checked-in Worker config enables Cloudflare Workers Logs and invocation logs with `head_sampling_rate = 0.1`. Cloudflare writes sampled records to the Pharos Cloudflare account and exposes them through its account tooling; access therefore follows Cloudflare account permissions. This repository configures neither a separate Workers Logpush archive nor a Telegram-specific/provider log-retention duration, so the policy does not promise one. Operators correlate a specific chat through the Access-authenticated admin diagnostics and retained D1 target/delivery rows, never through a raw or pseudonymous general-log identifier.
-
-### Telemetry Contract
-
-- `src/app/layout.tsx` renders the telemetry clients only when `NEXT_PUBLIC_GA_ID` is set. `src/components/google-analytics.tsx`, `src/components/web-vitals-reporter.tsx`, and `src/lib/analytics.ts` all exclude `/pharoswatchbot/app` and its descendants while leaving the public `/pharoswatchbot` page unchanged. When the env var is unset, Pharos does not load Google Analytics anywhere.
-- `shared/lib/site-csp.ts` removes Google script, image, and connection origins from the Mini App policy. `npm run check:site-csp-sync` keeps the exact and descendant route entries in `public/_headers` aligned with that policy.
-- Mini App adoption and error measurement remains first-party: the Worker writes allowlisted low-cardinality `telegram_usage_daily` and `telegram_adoption_daily` counters only after signed Telegram authentication. The public product page writes CTA clicks through a same-origin Pages Function with a strict catalog schema, 512-byte body cap, per-client HMAC-IP minute quota, and identifier-free global minute quota. It does not store raw IP addresses, User-Agent, referrer, cookies, request IDs, or chat IDs. CTA and Telegram counts are not joined users; directional rates may exceed 100% and carry that quality warning.
-- `src/lib/analytics.ts` is the typed event catalog for custom telemetry. Current events cover feature adoption (`stress_test_run`, `comparison_*`), engagement (`search_performed`, `filter_applied`, `time_range_changed`, `sort_changed`, `contract_copied`), portfolio actions, UI toggles (`theme_toggled`, `panel_toggled`), and Web Vitals (`web_vital` — CLS, FCP, INP, LCP, TTFB, FID, and Next.js render metrics).
-- The policy page is static and frontend-only, but its analytics claims must stay aligned with both `src/app/layout.tsx` and `src/lib/analytics.ts`.
-
----
-
-## Navigation And Discoverability
-
-- The footer renders a single `/privacy/` link (`src/components/footer.tsx`) that is visible at all breakpoints.
-- The route is included in `src/app/sitemap.ts`.
-- The design-language doc treats this page as a constrained longform layout (`max-w-2xl`).
-
----
+Custom Telegram Worker logs use the allowlisted low-cardinality boundary in `worker/src/lib/telegram-log.ts`. Chat-specific investigation belongs in authenticated D1/admin diagnostics rather than raw identifiers in general logs.
 
 ## Update Rules
 
-When editing privacy-policy copy, keep these surfaces aligned:
+Update `src/app/privacy/page.tsx` and this contract together when data handling changes. Also update the closest feature doc when the change belongs to Telegram, Picker snapshots, portfolio, feedback, or API access.
 
-1. `src/app/privacy/page.tsx` for the visible policy text and metadata
-2. this document for route-level behavior and integration notes
-3. any footer-navigation changes in `src/components/footer.tsx`
-
-If the policy date changes, update the visible `Last updated:` line in the page component in the same change.
-
----
-
-## File Index
-
-| File                                    | Role                                                 |
-| --------------------------------------- | ---------------------------------------------------- |
-| `src/app/privacy/page.tsx`              | Longform privacy policy route and metadata           |
-| `src/components/feature-page-shell.tsx` | Shared longform shell used by the route              |
-| `src/components/footer.tsx`             | Footer links to `/privacy/`                          |
-| `src/app/sitemap.ts`                    | Includes `/privacy/` in sitemap output               |
-| `docs/design-language.md`               | Layout token reference for the page width constraint |
+For database details, cite the owning migration and runtime cleanup/store module instead of copying an exhaustive roster into this page. Run the verified-doc link and source-path checks after changing references.

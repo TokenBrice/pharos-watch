@@ -501,7 +501,7 @@ export async function collectPrimaryProviderQuotes(params: {
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
   // Push thunks (not started promises) so the bounded `mapWithConcurrency`
   // run below actually caps in-flight outbound requests against the
-  // Cloudflare 6-connection-per-trigger pool.
+  // repo's conservative six-request trigger budget.
   const fetches: Array<() => Promise<void>> = [];
 
   if (navPriceIds.length > 0) {
@@ -698,9 +698,8 @@ export async function collectPrimaryProviderQuotes(params: {
     );
   }
 
-  // Cloudflare Workers cap each cron trigger at 6 outbound subrequests
-  // in flight. Cap primary-provider fetches at 4 to leave headroom for
-  // sidecar work (alerts, audit writes, address-provider follow-ups).
+  // Cap primary-provider fetches at 4 inside the repo's six-request trigger
+  // budget, leaving headroom for alerts, audit writes, and provider follow-ups.
   await mapWithConcurrency(fetches, 4, (run) => run());
   throwIfAborted(signal);
 

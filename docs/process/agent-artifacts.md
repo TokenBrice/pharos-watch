@@ -6,7 +6,7 @@ Guidance for where agent-produced material belongs now that historical planning 
 
 Application source-of-truth documentation lives in `/docs/` and `README.md`. Put durable maintenance guidance in the closest existing verified doc, or create a focused page under `/docs/` when the guidance is repeatable and worth preserving.
 
-Historical plans, one-off audits, exploratory research, screenshots, and handoff notes are not product documentation. Keep them out of the repository unless the user explicitly asks to preserve them. If a historical note becomes useful long term, distill the durable rule or decision into `/docs/` rather than carrying the full artifact forward.
+Historical plans, one-off audits, exploratory research, point-in-time calibration reports, screenshots, and handoff notes are not product documentation. Keep them in the ignored `/agents/` scratch area unless the user explicitly asks to preserve them. If a historical note becomes useful long term, distill the durable rule or decision into `/docs/` rather than carrying the full artifact forward.
 
 ## Where To Put Durable Material
 
@@ -21,7 +21,7 @@ Historical plans, one-off audits, exploratory research, screenshots, and handoff
 
 Before deleting a historical artifact, check whether any verified doc, test, source comment, or user-facing changelog still references it. Migrate only the durable content needed by current maintainers, then update the reference to the new `/docs/` page or remove it if the note was historical context only.
 
-Do not create new committed planning-archive material. Temporary investigation output should stay local, untracked, or in an explicitly ignored scratch location.
+Do not create new committed planning-archive or calibration-snapshot material. Temporary investigation output should stay local, untracked, or in `/agents/`. Reviewed methodology decisions belong in the owning feature document and its timeline; the evidence report remains scratch output.
 
 ## Agent Skills
 

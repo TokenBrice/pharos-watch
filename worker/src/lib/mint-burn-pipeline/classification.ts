@@ -22,8 +22,8 @@ import type {
   MintBurnRow,
 } from "./types";
 
-// Keep <= half of CF's 6-connection-per-trigger pool so other
-// ctx.waitUntil() work in the same cron trigger has headroom.
+// Keep <= half of the repo's six-request trigger budget so other
+// ctx.waitUntil() work in the same cron invocation has headroom.
 const TX_CONTEXT_BATCH_SIZE = 20;
 const TX_CONTEXT_BATCH_CONCURRENCY = 3;
 const TX_CONTEXT_MIN_REMAINING_MS = 2_000;

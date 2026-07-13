@@ -1,7 +1,8 @@
 // Bounded-concurrency primitives for Worker code paths that fan out fetches.
-// Cloudflare Workers cap each trigger at 6 concurrent outbound subrequests, so
-// callers must declare an explicit ceiling that leaves headroom for sidecar
-// work (alerts, audit writes, etc.). No defaults — pick a number on purpose.
+// Cloudflare counts outbound requests while they wait for response headers.
+// Pharos deliberately applies a stricter six-request trigger-wide budget, so
+// callers must declare a ceiling that leaves headroom for sidecar work. No
+// defaults: pick a number on purpose.
 
 function normalizeCap(maxInFlight: number, label: string): number {
   if (!Number.isFinite(maxInFlight) || Math.floor(maxInFlight) !== maxInFlight || maxInFlight < 1) {

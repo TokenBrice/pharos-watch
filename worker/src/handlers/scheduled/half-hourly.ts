@@ -6,7 +6,7 @@
  * scheduled invocation budget to itself. DEWS and PSI stay on the separate
  * dews-psi trigger so a platform-level DEX-liquidity CPU kill still cannot
  * starve downstream DB-only availability jobs.
- * Connection budget: 5/6 peak (nested direct-API phase; still under Cloudflare's 6-connection ceiling)
+ * Connection budget: 5/6 peak (nested direct-API phase; still within the repo policy)
  */
 import { syncDexLiquidity } from "../../cron/dex-liquidity/orchestrator";
 import type { ScheduledRuntimeContext } from "./context";

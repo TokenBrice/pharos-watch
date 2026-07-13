@@ -24,7 +24,7 @@ The root `RegimeBar` is a deliberate global-shell exception: `useStabilityIndexL
 ## Implementation Checklist
 
 1. Add or update a path helper in `shared/lib/api-endpoints/paths.ts`.
-2. Add an endpoint definition in `shared/lib/api-endpoints/definitions.ts` with the correct base metadata: method set, `adminRequired`, `mutatingAdmin`, `cacheBypass`, probe metadata, dependency hints, and status-page action metadata. `publicApiAccess` and `siteDataAccess` default from that base metadata: non-admin routes are public-API protected, admin routes are public-API exempt, and non-admin `GET` routes are allowed on the website-data lane. Set `publicApiAccess` or `siteDataAccess` on the endpoint definition only when an endpoint needs to override those defaults.
+2. Add an endpoint definition in `shared/lib/api-endpoints/definitions.ts` with the correct base metadata: method set, `adminRequired`, `mutatingAdmin`, `cacheBypass`, probe metadata, dependency hints, and status-page action metadata. Factory defaults differ by surface: public `GET` routes are public-API protected and website-data allowed; public `POST` routes are public-API exempt, website-data denied, and cache-bypassed; admin routes are public-API exempt and website-data denied. Set `publicApiAccess` or `siteDataAccess` only when the endpoint deliberately overrides its factory default.
 3. Bind the endpoint key to a handler in the appropriate `worker/src/routes/*-routes.ts` file, or add a dynamic route only when the path family cannot be represented as a static endpoint.
 4. Keep handler code under `worker/src/api/` and return through shared response helpers (`jsonResponse`, `errorResponse`, cache helpers) so status codes, CORS, and freshness behavior remain consistent.
 5. If the endpoint reads cache data, decide whether it should emit `_meta`, `X-Data-Age`, and `Warning` through `createCacheHandler()` or route-specific freshness injection.
@@ -48,6 +48,7 @@ Run the focused checks for route metadata changes:
 npm run check:doc-sync
 npm run check:doc-source-paths
 npm run check:verified-doc-links
+npm run check:generated-artifacts
 npm run test:critical-contracts
 ```
 

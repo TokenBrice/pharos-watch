@@ -6,6 +6,8 @@ Pharos serves six classes of Open Graph / Twitter preview images. They have diff
 
 Captured by `scripts/maintenance/screenshot-og.mjs` via Playwright Chromium against the live site. Each capture is 1200×628. The script injects CSS to hide chrome (header, aside, footer, overlays) and force the `#main-content` region to fill the frame.
 
+This table is the screenshot capture roster, not proof that a route selects the captured filename in runtime metadata. Route metadata in `src/app/**/page.tsx` and the helpers in `src/lib/page-metadata.ts` are authoritative for social selection.
+
 | Image | Page |
 | --- | --- |
 | `og-card.png` | `/` (also the default fallback in `src/lib/page-metadata.ts`) |
@@ -37,6 +39,8 @@ Captured by `scripts/maintenance/screenshot-og.mjs` via Playwright Chromium agai
 | `og-default.png` | `/screener` |
 
 `screenshot-og.mjs` first tries `waitUntil: "networkidle"` with a 20 s timeout, then falls back to `waitUntil: "load"` for pages with persistent polling (e.g. `/digest`).
+
+Eight captured files are currently not selected by their corresponding route metadata: `og-about.png`, `og-cemetery.png`, `og-depeg.png`, `og-learn-mechanisms.png`, `og-safety-scores.png`, `og-stability-index.png`, `og-digest.png`, and `og-methodology.png`. Those routes select editorial or dynamic cards instead. Treat the files as capture outputs, not runtime metadata inventory, unless the route metadata is changed explicitly.
 
 ### How to renew
 

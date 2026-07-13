@@ -28,7 +28,7 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 
 The visible top fold is split across three independently composed surfaces:
 
-- `CoreTopRail`, rendered directly under the global header chrome. It now contains only the recent-events tape: the former centered core submenu was retired and wayfinding is owned by the grouped top nav. On desktop the tape renders on every standard page and sticks below the fixed top nav (`top: 3.5rem` on `/`, `calc(3px + 3.5rem)` elsewhere). On mobile it renders only on the homepage so interior pages keep their first viewport focused on local content.
+- `CoreTopRail`, rendered directly under the global header chrome, contains the recent-events tape while the grouped top nav owns wayfinding. On desktop the tape renders on every standard page and sticks below the fixed top nav (`top: 3.5rem` on `/`, `calc(3px + 3.5rem)` elsewhere). On mobile it renders only on the homepage so interior pages keep their first viewport focused on local content.
 - `HomeAltHero`, which owns the page `h1`; its text/summary shell is server-rendered from the static public dataset snapshot while the live historical chart mounts through a viewport gate
 - `HomeAltMiniCardGrid`, mounted through a viewport gate so mobile first paint does not pay for signal-card queries before the grid enters view
 
@@ -151,8 +151,12 @@ The `Mint Score` column reads `coin.mintAuthoritySummary` from the slim client r
 The heavier homepage sections are client-only dynamic imports in `src/components/home-alt-client.tsx`:
 
 - `HomeAltMiniCardGrid`, which owns the below-hero signal cards
-- `DailyDigest`
 - `HomeAltRankingsSection`, which owns `PegBrowseStrip`, `StablecoinTable`, pinned stablecoin state, and the table view model
+- `HomeAltDdrOverview`
+- `HomeAltYieldOverview`
+- `HomeAltStatusTelegram`
+
+`DailyDigest` is imported statically inside the dynamically loaded `HomeAltMiniCardGrid`; it is not a separate dynamic import.
 
 Each dynamic module uses a shape-matched skeleton rather than blocking the full page render.
 

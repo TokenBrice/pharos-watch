@@ -6,7 +6,7 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png` for known image routes, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
 
-> **Agent navigation** — this reference is ~5,200 lines; never read it wholesale. Grep the heading you need: Surface Split · Public API Auth · Stablecoin IDs · Response Headers · Response Body Freshness (`_meta`) · Cache-Control Profiles · Polling Guidance · Rate Limits · Error Response Conventions · Method Gating Policy · Admin Auth And Idempotency · Public Endpoints (the generated quick-reference table lists every route) · Pages Function endpoints · Admin Endpoints. For one route, grep its path (e.g. `/api/stablecoins`).
+> **Agent navigation** — this reference is intentionally large; never read it wholesale. Grep the heading you need: Surface Split · Public API Auth · Stablecoin IDs · Response Headers · Response Body Freshness (`_meta`) · Cache-Control Profiles · Polling Guidance · Rate Limits · Error Response Conventions · Method Gating Policy · Admin Auth And Idempotency · Public Endpoints (the generated quick-reference table lists every route) · Pages Function endpoints · Admin Endpoints. For one route, grep its path (e.g. `/api/stablecoins`).
 
 ## Surface Split
 
@@ -800,8 +800,8 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
   "methodology": {
     "version": "3.99",
     "versionLabel": "v3.99",
-    "currentVersion": "3.997",
-    "currentVersionLabel": "v3.997",
+    "currentVersion": "3.9972",
+    "currentVersionLabel": "v3.9972",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1776729600,
     "isCurrent": false
@@ -1035,10 +1035,10 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
   "totalExact": true,
   "nextCursor": "eyJ2IjoxLCJ2YWx1ZXMiOlsxNzcyNjA2NDAwLDQwODBdfQ",
   "methodology": {
-    "version": "6.08",
-    "versionLabel": "v6.08",
-    "currentVersion": "6.08",
-    "currentVersionLabel": "v6.08",
+    "version": "6.096",
+    "versionLabel": "v6.096",
+    "currentVersion": "6.096",
+    "currentVersionLabel": "v6.096",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1243,10 +1243,10 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "6.08",
-    "versionLabel": "v6.08",
-    "currentVersion": "6.08",
-    "currentVersionLabel": "v6.08",
+    "version": "6.096",
+    "versionLabel": "v6.096",
+    "currentVersion": "6.096",
+    "currentVersionLabel": "v6.096",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -2264,14 +2264,14 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
     "band": "STEADY",
     "components": { "severity": 4.59, "breadth": 15, "stressBreadth": 1.8, "trend": 0.65 },
     "computedAt": 1771977600,
-    "methodologyVersion": "3.4"
+    "methodologyVersion": "3.5"
   },
   "history": [{ "date": 1771891200, "score": 81.0, "band": "STEADY", "methodologyVersion": "2.1" }],
   "methodology": {
-    "version": "3.4",
-    "versionLabel": "v3.4",
-    "currentVersion": "3.4",
-    "currentVersionLabel": "v3.4",
+    "version": "3.5",
+    "versionLabel": "v3.5",
+    "currentVersion": "3.5",
+    "currentVersionLabel": "v3.5",
     "changelogPath": "/methodology/stability-index-changelog/",
     "asOf": 1771977600,
     "isCurrent": true
@@ -2343,17 +2343,17 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
   "safetyScoreIdentity": {
     "model": "v8",
     "schemaVersion": 1,
-    "methodologyVersion": "8.11",
+    "methodologyVersion": "8.17",
     "evaluationBuildDigest": "<64-character SHA-256>",
     "baseInputGenerationId": "report-cards-input:v1:<64-character SHA-256>",
-    "publicationGenerationId": "report-cards:8.11:1771977600"
+    "publicationGenerationId": "report-cards:8.17:1771977600"
   },
   "cards": [ReportCard, ...],
   "dependencyGraph": {
     "edges": [{ "from": "usdc-circle", "to": "usde-ethena", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "8.11",
+    "version": "8.17",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.4,
     "activeDepegSeveritySource": "open-event-peak",
@@ -2372,10 +2372,10 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
   "collateralDriftCoins": [{ "id": "jupusd-jupiter", "liveScore": 80, "curatedScore": 65, "delta": 15 }],
   "liveToFallbackCoins": ["usdaf-asymmetry"],
   "publication": {
-    "generationId": "report-cards:8.11:1771977600",
-    "methodologyVersion": "8.11",
-    "expectedCount": 364,
-    "scoredCount": 308,
+    "generationId": "report-cards:8.17:1771977600",
+    "methodologyVersion": "8.17",
+    "expectedCount": 361,
+    "scoredCount": 305,
     "notRatedCount": 56,
     "notRatedIds": ["example-not-rated-id"]
   },
@@ -2751,13 +2751,13 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
     "dlPools": { "mode": "dex-cache", "ageSeconds": 240, "poolCount": 812 },
     "safetySnapshot": {
       "kind": "ok",
-      "coverageRatio": 0.8462,
+      "coverageRatio": 0.8532,
       "coveredCount": 308,
-      "trackedCount": 364,
+      "trackedCount": 361,
       "reason": null,
       "source": "report-card-cache",
-      "publicationGenerationId": "report-cards:8.13:1771999800",
-      "methodologyVersion": "8.13",
+      "publicationGenerationId": "report-cards:8.17:1771999800",
+      "methodologyVersion": "8.17",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2767,8 +2767,8 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "trackedCount": 65,
       "reason": null,
       "source": "report-cards:snapshot",
-      "publicationGenerationId": "report-cards:8.13:1772000700",
-      "methodologyVersion": "8.13",
+      "publicationGenerationId": "report-cards:8.17:1772000700",
+      "methodologyVersion": "8.17",
       "publishedAt": 1772000700
     }
   },
@@ -2781,8 +2781,8 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
     "status": "published"
   },
   "methodology": {
-    "version": "8.31",
-    "currentVersion": "8.31",
+    "version": "8.34",
+    "currentVersion": "8.34",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2945,7 +2945,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
 
 ```text
 {
-  "methodologyVersion": "v8.299",
+  "methodologyVersion": "v8.34",
   "updatedAt": 1779210000,
   "entries": [
     {
@@ -2959,7 +2959,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
       "project": null,
       "lifecycle": "active",
       "quarantineReason": null,
-      "methodologyVersion": "v8.299",
+      "methodologyVersion": "v8.34",
       "updatedAt": 1779210000
     }
   ]
@@ -3011,8 +3011,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
     "status": "published"
   },
   "methodology": {
-    "version": "8.31",
-    "currentVersion": "8.31",
+    "version": "8.34",
+    "currentVersion": "8.34",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -3048,7 +3048,7 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
   "pysAtPublish": 42.7,
   "pysInputsAtPublish": {
     "schemaVersion": 1,
-    "methodologyVersion": "8.31",
+    "methodologyVersion": "8.34",
     "apy30d": 12.1,
     "safetyScore": 81,
     "varianceScore": 0.18,
@@ -3305,17 +3305,17 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       },
       "amplifiers": { "psi": 1, "contagion": 1 },
       "computedAt": 1740000000,
-      "methodologyVersion": "6.08"
+      "methodologyVersion": "6.096"
     }
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "6.08",
-    "versionLabel": "v6.08",
-    "currentVersion": "6.08",
-    "currentVersionLabel": "v6.08",
+    "version": "6.096",
+    "versionLabel": "v6.096",
+    "currentVersion": "6.096",
+    "currentVersionLabel": "v6.096",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -3336,7 +3336,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
     },
     "amplifiers": { "psi": 1, "contagion": 1 },
     "computedAt": 1740000000,
-    "methodologyVersion": "6.08"
+    "methodologyVersion": "6.096"
   },
   "history": [
     {
@@ -3353,10 +3353,10 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "6.08",
-    "versionLabel": "v6.08",
-    "currentVersion": "6.08",
-    "currentVersionLabel": "v6.08",
+    "version": "6.096",
+    "versionLabel": "v6.096",
+    "currentVersion": "6.096",
+    "currentVersionLabel": "v6.096",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -3675,9 +3675,9 @@ Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dyn
 
 ## Pages Function endpoints
 
-These endpoints are served by Cloudflare Pages Functions from the website host (`pharos.watch`), not by the Worker API host (`api.pharos.watch`). They are out of scope for the public `X-API-Key` regime: no API key is required, they do not appear in the OpenAPI artifact, and they do not honor `Idempotency-Key`.
+These endpoints are served by Cloudflare Pages Functions from the website hosts, not by the Worker API host (`api.pharos.watch`). They are out of scope for the public `X-API-Key` regime: no API key is required and they do not appear in the OpenAPI artifact. Header behavior is function-specific; notably, the `/api/admin/*` operator proxy forwards and reflects the Worker's idempotency contract.
 
-Same-origin only. Browser CORS blocks cross-origin POST before the function executes; foreign-origin requests receive `404`. Documented for completeness and for external tooling that reads share URLs. These endpoints are the website UI's server-recomputed snapshot surface, not a public integration API.
+Each function enforces the host, origin, and Access policy appropriate to its surface. Mutating Picker, adoption, and operator-proxy requests are same-origin gated; foreign-origin requests are rejected before their action runs. These website runtime/support endpoints are documented for completeness, not as a public integration API.
 
 Pages Function inventory:
 
@@ -3687,7 +3687,10 @@ Pages Function inventory:
 | `/api/admin/*`                                           | `functions/api/admin/[[path]].ts`                                | Same-origin operator proxy from `ops.pharos.watch` to `ops-api.pharos.watch`.      |
 | `GET /admin/*`, `GET /admin-api/*`                       | `functions/admin/[[path]].ts`, `functions/admin-api/[[path]].ts` | Operator-host asset gates for Access-protected admin surfaces.                     |
 | `GET /stablecoin/:legacy-id`                             | `functions/stablecoin/[[path]].ts`                               | Redirect shim for legacy numeric stablecoin URLs.                                  |
+| `POST /pharoswatchbot-adoption`                          | `functions/pharoswatchbot-adoption.ts`                           | Aggregate-only same-origin PharosWatchBot CTA telemetry.                           |
 | `GET /selector-snapshot/:sid`, `POST /selector-snapshot` | `functions/selector-snapshot/[[path]].ts`                        | Stablecoin Picker frozen snapshot read and canonical server-recomputation surface. |
+
+The `/api/admin/*` proxy forwards browser `Idempotency-Key` request headers and reflects upstream `Idempotency-Key`, `X-Idempotent-Replay`, and `X-Execution-Certainty` response headers. Request bodies are capped incrementally at 128 KiB; an oversized body returns `413`. Upstream responses are fully buffered with a 16 MiB cap before being returned; an oversized or unreadable upstream response returns `502`.
 
 ### `GET /selector-snapshot/:sid`
 

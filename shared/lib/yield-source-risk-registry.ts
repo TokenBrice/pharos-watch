@@ -535,7 +535,7 @@ export function resolveReviewedYieldRiskConfig(venueProtocol: string | null | un
  * e.g. a vault whose strategy legs all sit behind one governance ecosystem, the
  * single risk Yearn's own yvUSDC report flags as dominant. Not auto-derived:
  * only set where the concentration is documented, so missing entries stay
- * neutral. See `agents/yearn-risk-pys-plan.md` §3.3.
+ * neutral. See the source-risk section of `docs/yield-intelligence.md`.
  */
 const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentration> = {
   // Penalty-worthy: a LOW venue tier (yearn-finance) hides a real single-ecosystem

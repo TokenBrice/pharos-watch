@@ -1,6 +1,6 @@
 # D1 Capacity And Runtime Experiments
 
-Use this runbook for D1 storage pressure, the measured hot-query rollout, a Workers compatibility-date advance, or a D1 read-replication experiment. Compatibility and replication experiments are separate releases. Neither is bundled with schema, methodology, recovery, or data-repair changes.
+Use this runbook for D1 storage pressure, a Workers compatibility-date advance, or a D1 read-replication experiment. Compatibility and replication experiments are separate releases. Neither is bundled with schema, methodology, recovery, or data-repair changes.
 
 ## Capacity Signals
 
@@ -15,42 +15,9 @@ Cloudflare's paid-plan limit is 10 GB per D1 database and cannot be raised. Phar
 
 `d1_capacity_observations` retains at most one observation per UTC hour. The calculation uses linear regression over the latest 30 days only after at least three samples span 24 hours. Until then, or when the measured slope is flat/negative, `exhaustionAt` remains null. A D1 `DELETE` reducing reported file size is evidence for that run only, not a general compaction guarantee.
 
-The scheduled `status-self-check` lane refreshes the Cloudflare control-plane size observation. A 60% crossing opens a warning watch, 75% makes public/admin health degraded, and 90% makes capacity health stale. A control-plane failure is logged and returned as a monitoring error without replacing the last cached assessment. `/api/health.d1Capacity` and `/api/status.d1Usage.capacity` expose the latest assessment; old Workers and an uninitialized observation cache remain compatible because both fields are additive/optional.
+The scheduled `status-self-check` lane refreshes the Cloudflare control-plane size observation. A 60% crossing opens a warning watch, 75% makes public/admin health degraded, and 90% makes capacity health stale. A control-plane failure is logged and returned as a monitoring error without replacing the last cached assessment. Public `/api/health` exposes only the resulting status and machine-readable warnings; admin `/api/status.d1Usage.capacity` exposes the detailed assessment. An uninitialized observation cache remains compatible because the admin field is nullable.
 
-## Hot-Query Rollout
-
-Migration `0179_measured_hot_query_indexes.sql` is additive. It covers only query families justified by the July 2026 D1 Insights capture:
-
-- global time-bounded `cron_runs` reads;
-- public blacklist pages filtered by `chain_id`;
-- time-ordered `yield_source_decisions` scans.
-
-The code rollout separately:
-
-- uses the existing DDR first-publication partial index by requiring `first_published = 1`;
-- trusts `stress_signals_latest` only when every row matches the completed publication generation, otherwise preserving the canonical-history merge;
-- replaces Tape DEWS predecessor grouping with bounded per-coin index seeks;
-- forces time-bounded mint/burn aggregates through `idx_mbh_ts` and replaces full-table first-hour grouping with bounded `(chain_id, stablecoin_id, hour_ts)` seeks;
-- pins blacklist page queries to the matching public pagination index so SQLite cannot prefer the low-selectivity suppression index.
-
-Before applying the index migration:
-
-1. Capture `cd worker && npx wrangler d1 time-travel info stablecoin-db` and retain the bookmark in the release record.
-2. Run `npm run ops:d1-insights -- --period 7d --period 30d --sort-by reads --sort-by time`.
-3. Record `cd worker && npx wrangler d1 info stablecoin-db --json` for the pre-index file size.
-4. Save `EXPLAIN QUERY PLAN` output for each indexed query family.
-
-After deployment and at least two producer cycles:
-
-1. Repeat the plans, D1 Insights capture, and D1 info snapshot.
-2. Verify DDR first-publication probes are near the first-publication row count rather than retained snapshot-row count.
-3. Verify no legacy stress query runs for a current, exact latest generation.
-4. Verify the Tape predecessor path reads fewer than 1,000 rows and stays below 5 seconds at p95.
-5. Record index storage delta separately from retained-data growth.
-
-Confirm the next `status-self-check` metadata contains `d1CapacityMonitoring`, and verify the `d1:capacity-threshold` broker condition is recovered below 60% or active at the expected threshold. Do not force a production threshold by writing synthetic size observations.
-
-Rollback the Worker for a query-shape regression. Keep additive indexes in place during the immediate rollback so the previous Worker remains compatible. If an index has unacceptable storage/write cost, remove it only in a later coordinated cleanup migration after capturing a new Time Travel bookmark.
+For current capacity verification, confirm the latest `status-self-check` metadata contains `d1CapacityMonitoring`, then inspect `/api/health` status/warnings and `/api/status.d1Usage.capacity`. Do not force a production threshold by writing synthetic size observations. Historical index-rollout evidence belongs in release records and D1 Insights captures, not this current-operations runbook.
 
 ## Compatibility-Date Experiment
 
@@ -77,7 +44,7 @@ D1 read replication is currently beta. It only serves reads from replicas when c
 
 Prerequisites:
 
-1. Complete and soak correctness and hot-query changes first.
+1. Confirm the current production query shapes have completed their soak without correctness or p95 regressions.
 2. Capture a Time Travel bookmark and current D1 info/Insights baselines.
 3. Use a short-lived API token with `D1:Edit`; never write the token to a report or shell history.
 

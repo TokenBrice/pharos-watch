@@ -55,28 +55,7 @@ satisfied. See [Safety Score V9 Rollout](./process/safety-score-v9-rollout.md).
 
 ## Scheduling Backbone
 
-Cron schedules are declared in `worker/wrangler.toml`, mirrored in `shared/lib/cron-jobs.ts`, and orchestrated by `worker/src/handlers/scheduled.ts`. `docs/worker-infrastructure.md` is the maintained schedule reference; this section is a compact flow map.
-
-- `*/15 * * * *`: sync-fx-rates (one scheduled 30-minute cadence bucket, with failed buckets retryable) first, then sync-stablecoins (including exact active-universe coverage, depeg detection, and pending confirmation), then exact-set-safe snapshot-supply retry / snapshot-chain-supply / report-card cache publish / DDRv2 incident lock/publication projection and DDRR review snapshot
-- `9,24,39,54 * * * *`: cron-slot-sweeper stale slot reconciliation, then isolated status self-check, then data-invariant canary checks, then cron-staleness-watchdog freshness alerting
-- `3 */6 * * *`: blacklist event scans first (fair typed-cursor admission and contiguous safe-head frontiers), then bounded amount/ledger maintenance (every 6h)
-- `4,34 * * * *`: mint/burn critical lane (every 30 minutes)
-- `6 */2 * * *`: DEX discovery staging (every 2h)
-- `13,43 * * * *`: mint/burn extended lane (every 30 minutes, resuming at the first capacity-deferred config with a two-cycle attempt SLO)
-- `10,40 * * * *`: DEX liquidity scoring
-- `16,46 * * * *`: stablecoin charts (30-minute trigger, one scheduled hourly cadence bucket with failed-bucket retry)
-- `26,56 * * * *`: DEWS, then PSI, then tape projection on the DB-only decoupled lane
-- `20 * * * *`: core yield publication
-- `25 */4 * * *`: supplemental yield-source refresh
-- `11 */4 * * *`: live reserve sync, then redemption backstop sync, then Kinesis supply sync, then named reserve-post-sync-watchdog drift/cache/stale-source checks and alerts (every 4h)
-- `1,6,11,16,21,26,31,36,41,46,51,56 * * * *`: isolated reserve checkpoint reconciliation and unfinished-suffix/sidecar recovery after an interrupted four-hour reserve slot
-- `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram command/profile/menu/webhook reconciliation, subscriber alerts (DEWS, depeg, safety, launch promotions, reserve, and opt-in freeze Tape events), DB-only personalized recap planning, degradation watchdog, expired disambiguation cleanup, and Telegram pulse snapshot publication
-- `*/5 * * * *`: exact-payload Telegram digest outbox drain, then manual digest trigger poll (`POST /api/trigger-digest` flag consumer)
-- `0 3 * * *`: status-probe TTL prune + cron-history TTL prune + read-only repair-debt monitor + detail-cache prune + Telegram inactive cleanup + Telegram retention cleanup + mint/burn growth watchdog + cron-duration watchdog (daily housekeeping)
-- `0 8 * * *`: snapshot-supply fallback plus safety-grade snapshot, PSI daily snapshot, and snapshot-public-dataset; safety history reads the immutable active V8 publication family and dual-writes legacy plus identity-rich V2 organic rows, while the write-once supply/public dataset artifacts require a stablecoins cache written at or after the 08:00 slot start and the public dataset waits/reloads boundedly for that cache before also freshness-gating report-card and PSI inputs; plus T-bill rate then USDS status
-- `5 8 * * *`: bluechip sync and daily digest
-- `10 8 * * *`: discovery scan and independently budgeted weekly recap (both Monday-only)
-- `0 6 1 * *`: monthly yield coverage audit
+Cron expressions are deployed from `worker/wrangler.toml`; `shared/lib/cron-jobs.ts` owns the canonical schedule/job metadata and `shared/lib/scheduled-runner-registry.ts` owns expression-to-runner dispatch. The current runtime has 49 status-tracked jobs across 19 job-bearing expressions, plus one budget-only digest-poll expression for 20 total. Use [Worker Infrastructure: Cron Scheduling](./worker-infrastructure.md#cron-scheduling) for execution details and `npm run check:cron-sync` / `npm run check:cron-connections` for the authoritative live inventory and connection-budget report.
 
 ## Freshness Contract (Frontend)
 

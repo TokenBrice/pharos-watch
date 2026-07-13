@@ -196,7 +196,7 @@
     {
       "name": "feature-flags",
       "sources": ["src/lib/feature-flags.ts", "scripts/ci/check-feature-flag-inlining.mjs", "scripts/ci/check-stale-flags.mjs", ".github/workflows/validate-ci.yml", ".github/workflows/pages-release.yml", ".github/workflows/deploy-cloudflare.yml"],
-      "docs": ["docs/process/feature-flags.md", "docs/process/pages-env-rollout.md", "docs/testing.md", "docs/deployment-process.md"],
+      "docs": ["docs/process/feature-flags.md", "docs/testing.md", "docs/deployment-process.md"],
       "notes": ["NEXT_PUBLIC_PHAROS_* flags are build-time values. Keep workflow env propagation, stale-flag checks, and inlining checks aligned."]
     },
     {

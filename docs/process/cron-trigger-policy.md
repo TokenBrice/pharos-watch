@@ -6,7 +6,7 @@ This policy governs the addition of new cron trigger expressions to `worker/wran
 
 The worker declares **20 cron expressions** in `worker/wrangler.toml`. Each expression maps to one Cloudflare scheduled-trigger invocation, dispatched in `worker/src/handlers/scheduled.ts` to the jobs configured for that slot in `shared/lib/scheduled-runner-registry.ts`.
 
-Cloudflare Workers enforce a **6 concurrent `fetch()` connection** limit per cron trigger invocation. Every job dispatched within a single trigger slot competes for that shared pool. The constraint is documented in:
+Cloudflare Workers enforce a limit of **6 simultaneous outbound requests waiting for response headers** per invocation. Pharos applies a conservative six-connection budget across every job dispatched within a trigger slot, even though Cloudflare releases the header-wait slot when headers arrive. The repo policy is documented in:
 
 - `docs/worker-and-api-limits.md` — see "Connection-budget operating assumption"
 - `docs/worker-infrastructure.md` — section "Cron Scheduling", subsection "Cron Slot Capacity and Connection Pool Budget"
@@ -30,7 +30,7 @@ When proposing a new cron job:
 ## Why this matters
 
 - Adding triggers without auditing inflates the Workers cron surface and increases the chance of one slot's failure mode interfering with another.
-- The connection pool is per-invocation, not per-worker, so the constraint is enforced on every scheduled tick — slot starvation manifests as queued or failed `fetch()` calls, not as a worker-level alert.
+- The platform limit is per invocation, not per Worker, so every scheduled tick needs its own bounded fetch plan. The repo's stricter trigger-wide model prevents nested phases from producing queued or failed `fetch()` calls at the platform ceiling.
 - Re-architecting batched dispatch (one trigger fanning out to many logical jobs via the slot plans in `shared/lib/scheduled-runner-registry.ts`) is the supported path past 20 cron expressions; bespoke new triggers should be the exception.
 
 ## Enforcement

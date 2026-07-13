@@ -98,8 +98,8 @@ For the deceptive-content category specifically, build a mental model of what a 
 
 1. Commit the hardening with a clear `refactor(security):` or `fix(security):` prefix referencing the incident date.
 2. Push to `main`. The pre-push merge-gate runs `validate:prebuild` + the Pages build/validation stage (which now includes `check:phishing-signatures`, run against the built `out/` HTML) + SEO check.
-3. Wait 90s for Cloudflare Pages deploy to propagate.
-4. Verify the new HTML is live:
+3. Wait for the target-SHA Pages release to succeed and for the release-marker convergence check to confirm that production hosts are serving that commit. A fixed sleep is not release evidence; see [Deployment Process](../deployment-process.md) for the standard release and post-publish gates.
+4. Verify the target-SHA HTML is live:
    ```bash
    curl -sS https://pharos.watch/<flagged-path>/ -o /tmp/h.html
    wc -c /tmp/h.html

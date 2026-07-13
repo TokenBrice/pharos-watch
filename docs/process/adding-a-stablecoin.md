@@ -228,35 +228,16 @@ These skills do not replace review — they are research scaffolding. Always ver
 
 ## Phase 3 - Classify It Correctly
 
-### Current enum surface
+### Schema-owned values
 
-| Field                                                 | Current values                                                                                                                                                                                                                                                                                                     |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `flags.backing`                                       | `rwa-backed` \| `crypto-backed` \| `algorithmic`                                                                                                                                                                                                                                                                   |
-| `flags.governance`                                    | `centralized` \| `centralized-dependent` \| `decentralized`                                                                                                                                                                                                                                                        |
-| `chainTier`                                           | `ethereum` \| `stage1-l2` \| `mature-alt-l1` \| `established-alt-l1` \| `unproven`                                                                                                                                                                                                                                 |
-| `deploymentModel`                                     | `single-chain` \| `canonical-bridge` \| `third-party-bridge` \| `native-multichain`                                                                                                                                                                                                                                |
-| `collateralQuality`                                   | `native` \| `rwa` \| `eth-lst` \| `alt-lst-bridged-or-mixed` \| `exotic`                                                                                                                                                                                                                                           |
-| `custodyModel`                                        | `onchain` \| `institutional-top` \| `institutional-regulated` \| `institutional-unregulated` \| `institutional-sanctioned` \| `cex`                                                                                                                                                                                |
-| `governanceQuality`                                   | `immutable-code` \| `dao-governance` \| `multisig` \| `regulated-entity` \| `single-entity` \| `wrapper`                                                                                                                                                                                                           |
-| `dependencies[].type`                                 | `wrapper` \| `mechanism` \| `collateral`                                                                                                                                                                                                                                                                           |
-| `variantKind`                                         | `savings-passthrough` \| `strategy-vault` \| `risk-absorption` \| `bond-maturity`                                                                                                                                                                                                                                  |
-| `yieldConfig.yieldType`                               | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity` \| `fixed-yield` \| `structured-tranche`                                                                                                                                           |
-| `infrastructures[]`                                   | `liquity-v1` \| `liquity-v2` \| `m0`                                                                                                                                                                                                                                                                               |
-| `mechanismArchetype`                                  | `fiat-cash` \| `tbill` \| `cdp` \| `synthetic-delta-neutral` \| `algorithmic` \| `rwa-credit-fund`                                                                                                                                                                                                                 |
-| `proofOfReserves.attestorTier`                        | `big4` \| `regional` \| `niche` \| `self` \| `none`                                                                                                                                                                                                                                                                |
-| `proofOfReserves.cadence`                             | `daily-nav` \| `real-time` \| `daily` \| `weekly` \| `monthly` \| `semi-monthly` \| `quarterly` \| `semi-annual` \| `annual` \| `ad-hoc` \| `none`                                                                                                                                                                 |
-| `mintAuthority.mintPath`                              | `immutable-user-collateralized` \| `user-collateralized-governed` \| `issuer-direct-mint` \| `permissioned-minter` \| `offchain-attested-minter` \| `facilitator-bucket-mint` \| `amo-or-custodian-hybrid` \| `bridge-or-oft-synthetic` \| `m0-permissioned-minter` \| `wrapped-or-variant-inherited` \| `unknown` |
-| `mintAuthority.authorityPosture`                      | `none-resolved` \| `bounded-admin` \| `partially-bounded-admin` \| `concentrated-admin` \| `unbounded-or-compromised` \| `unknown`                                                                                                                                                                                 |
-| `mintAuthority.confidence`                            | `verified` \| `probable` \| `manual-review` \| `unknown`                                                                                                                                                                                                                                                           |
-| `mintAuthority.controls[].role`                       | `direct-minter` \| `minter-admin` \| `facilitator` \| `bucket-admin` \| `cap-admin` \| `proxy-admin` \| `bridge-admin` \| `timelock` \| `governor` \| `backend-signer` \| `custodian` \| `wrapper` \| `other` \| `unknown`                                                                                         |
-| `mintAuthority.controls[].authorityType`              | `safe` \| `multisig` \| `eoa` \| `timelock` \| `dao-governor` \| `contract` \| `issuer-backend` \| `bridge` \| `custodian` \| `none` \| `unknown`                                                                                                                                                                  |
-| `mintAuthority.controls[].directMintAbility`          | `direct` \| `cap-limited` \| `can-authorize` \| `upgrade-only` \| `parameter-only` \| `none` \| `unknown`                                                                                                                                                                                                          |
-| `mintAuthority.controls[].modulesOrGuardsStatus`      | `none-detected` \| `present` \| `unknown` \| `not-applicable`                                                                                                                                                                                                                                                      |
-| `mintAuthority.controls[].canRaiseCap`                | `true` \| `false` \| `unknown`                                                                                                                                                                                                                                                                                     |
-| `mintAuthority.controls[].keyCustodyAttestation.kind` | `mpc` \| `hsm`                                                                                                                                                                                                                                                                                                     |
-| `mintAuthority.mintIncidents`                         | `[{ date, summary, sources[] }]` for privileged-mint or unbacked-supply incidents (one entry per incident)                                                                                                                                                                                                         |
-| `launchPhase`                                         | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon`                                                                                                                                                                                                                                               |
+Do not copy enum inventories into this process. Read the current values from the owning schemas before editing:
+
+- `shared/types/stablecoin-meta-schemas.ts` for catalog metadata and research profiles
+- `shared/types/core.ts` for shared stablecoin classifications
+- `shared/types/live-reserves.ts` for live-reserve adapter and semantic keys
+- `shared/lib/stablecoins/schema.ts` for the assembled registry contract
+
+Use a nearby coin only as a structural example. The schemas and `npm run check:stablecoin-data` decide which values are valid.
 
 ### Classification rules that are easy to get wrong
 
@@ -823,101 +804,6 @@ Do not hardcode branch or PR creation into the process. Follow the repo's curren
 
 ---
 
-## Quick Reference
+## Source Reference
 
-### Current infrastructure values
-
-- `liquity-v1`
-- `liquity-v2`
-- `m0`
-
-### Current dependency types
-
-- `wrapper`
-- `mechanism`
-- `collateral`
-
-### Current detail providers
-
-- `defillama`
-- `coingecko`
-- `commodity`
-
-### Current proof-of-reserves types
-
-- `independent-audit`
-- `real-time`
-- `self-reported`
-
-### Current proof-of-reserves attestor tiers
-
-- `big4`
-- `regional`
-- `niche`
-- `self`
-- `none`
-
-### Current proof-of-reserves cadences
-
-- `daily-nav`
-- `real-time`
-- `daily`
-- `weekly`
-- `monthly`
-- `semi-monthly`
-- `quarterly`
-- `semi-annual`
-- `annual`
-- `ad-hoc`
-- `none`
-
-### Current mechanism archetypes
-
-- `fiat-cash`
-- `tbill`
-- `cdp`
-- `synthetic-delta-neutral`
-- `algorithmic`
-- `rwa-credit-fund`
-
-### Current Mint Authority mint paths
-
-- `immutable-user-collateralized`
-- `user-collateralized-governed`
-- `issuer-direct-mint`
-- `permissioned-minter`
-- `offchain-attested-minter`
-- `facilitator-bucket-mint`
-- `amo-or-custodian-hybrid`
-- `bridge-or-oft-synthetic`
-- `m0-permissioned-minter`
-- `wrapped-or-variant-inherited`
-- `unknown`
-
-### Current Mint Authority postures
-
-- `none-resolved`
-- `bounded-admin`
-- `partially-bounded-admin`
-- `concentrated-admin`
-- `unbounded-or-compromised`
-- `unknown`
-
-### Current Mint Authority confidence values
-
-- `verified`
-- `probable`
-- `manual-review`
-- `unknown`
-
-### Current live-reserve semantics
-
-- `collateral-mix`
-- `protocol-reserve`
-- `attestation-mix`
-- `single-asset`
-
-### Current reminder on active backing classification
-
-- New active tracked assets should almost always be `rwa-backed` or `crypto-backed`
-- Treat `algorithmic` as an exceptional legacy/historical category, not the default place to put unstable designs
+The editable catalog, sidecar ownership rules, generated projections, and validation commands are maintained in [../stablecoin-data.md](../stablecoin-data.md). For current enum values, use the schema-owned sources listed in Phase 3; do not maintain a second quick-reference inventory here.

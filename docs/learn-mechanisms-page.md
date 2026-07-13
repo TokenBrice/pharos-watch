@@ -2,12 +2,12 @@
 
 Contract for the educational explainer surfaces:
 
-- `/learn/mechanisms/` — hub listing all six archetypes
+- `/learn/mechanisms/` — hub listing every configured archetype
 - `/learn/mechanisms/[archetype]/` — per-archetype deep explainer
 
 The broader `/learn/case-studies/` and `/learn/glossary/` surfaces are documented in [learn-page.md](./learn-page.md). Mechanisms are one section of the Learn namespace, not the only `/learn/*` route family.
 
-Each tracked stablecoin carries a `mechanismArchetype` field. The six values (`fiat-cash`, `tbill`, `cdp`, `synthetic-delta-neutral`, `algorithmic`, `rwa-credit-fund`) each get a dedicated educational page that walks through the design, its failure modes, and which Pharos signals are most informative for that archetype.
+Each configured `mechanismArchetype` gets a dedicated educational page covering the design, failure modes, and relevant Pharos signals. `MECHANISM_ARCHETYPE_VALUES` in `shared/types/core.ts` is the canonical roster.
 
 ---
 
@@ -33,14 +33,14 @@ The hub is a static route with no client-only state. The archetype route is stat
 
 ## Visual Identity
 
-These pages deliberately depart from the standard `pharos-card-shell + border-l-[3px]` dashboard chrome. Cards-with-accent-stripes were used in the v1 ship and replaced after the editorial critique — the dashboard treatment dilutes accent identity and reads as templated when repeated 6–7 times per page.
+These pages use an editorial, divider-led composition instead of repeating dashboard cards for every section.
 
 Current treatment:
 
-- **Display title:** the `<h1>` uses `.pharos-page-title` — the homepage Bricolage Grotesque display face at the fixed `text-3xl/sm:text-4xl` scale (aligned 2026-07-01; previously a bespoke Geist Sans clamp). Section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale so the page title stays the largest type on the page.
+- **Display title:** the `<h1>` uses `.pharos-page-title`; section/list headings use `.pharos-display` at a smaller fixed scale.
 - **Section dividers:** hairline borders (`border-border/40`, `border-border/60`) between rows in lists and definition lists — no card chrome.
 - **Diagram hero:** the mechanism diagram floats freely against the page background, no wrapping card, no kicker label. The diagram is the single editorial focal point per page.
-- **Per-archetype accent:** collapsed to neutral per the 2026-07-02 owner ruling — `ARCHETYPE_VISUALS[archetype].kickerClass` is an empty string for all six archetypes, so `.pharos-kicker`'s muted treatment applies uniformly. The visual differentiation between archetypes lives entirely in the diagram itself (return arc for fiat-cash redeem and cdp, dashed reflexive arc for algorithmic, quarterly-redemption arc for rwa-credit-fund, split spot+perp legs for synthetic; tbill is the plain forward three-step flow).
+- **Per-archetype identity:** `ARCHETYPE_VISUALS` and the mechanism diagrams own any differentiation; the shared page chrome stays neutral.
 
 ---
 
@@ -60,7 +60,7 @@ Each `/learn/mechanisms/[archetype]/` page renders, top-to-bottom:
 10. **"Case studies"** (`MechanismCaseStudies`) (optional, only when a study in `CASE_STUDY_LIST` is tagged with this archetype) — kicker + `<h2>` ("When this mechanism met a stress test") + `<ul>` of matching case studies in canonical list order. Each row: mono eyebrow + title + outcome chip (`CASE_STUDY_OUTCOME_CHIPS`/`_LABELS`), linking to `/learn/case-studies/<slug>/`. Server-rendered.
 11. **"Continue reading"** — section above a top border. 2-column grid of color-on-hover row links (text + bottom border turn `frost-blue` on hover), with `ArrowUpRight` glyph.
 
-The hub at `/learn/mechanisms/` renders the same shell with a different headline (`Six ways a stablecoin holds its peg`), a `LearnHero` header band (frost active-coin One-Beam + an active-coins-by-mechanism distribution bar; see `docs/design-language.md` → Learn-group hero calls), a server-rendered "Start Here" cluster for high-signal collateral/failure-mode paths, a `MechanismComparisonMatrix`, and an editorial vertical `<ol>` table of contents. The matrix links each mechanism label directly to its archetype explainer so the first comparison surface is also a crawlable deep-link hub. Each table-of-contents row: numbered index (`01`–`06`) + tracked/upcoming/frozen/dead count context from mechanism lifecycle helpers (mono kicker) + archetype label (fixed `.pharos-display`) + one-liner + "Read the explainer →" + the mechanism diagram on the right at `lg+`. Hairline dividers between rows.
+The hub at `/learn/mechanisms/` renders the same shell with its own headline, a `LearnHero` summary band, a server-rendered Start Here cluster, a `MechanismComparisonMatrix`, and an editorial ordered table of contents. The matrix and each list row link to the archetype explainer. Lifecycle helpers supply tracked, upcoming, frozen, and decommissioned context; `MECHANISM_ARCHETYPE_VALUES` determines the row count and order.
 
 ---
 
@@ -103,7 +103,7 @@ No footer entry. The hub is the only deep-link from `Mechanisms`-related surface
 
 1. Add the slug to `MECHANISM_ARCHETYPE_VALUES` in `shared/types/core.ts`.
 2. Add the label + one-liner entries to `MECHANISM_ARCHETYPE_LABELS` and `MECHANISM_ARCHETYPE_ONE_LINERS` in `shared/lib/classification/mechanism-archetypes.ts`. The typechecker enforces exhaustiveness.
-3. Add a `{ kickerClass: "" }` entry to `ARCHETYPE_VISUALS` in `src/app/learn/mechanisms/content/types.ts` (kept empty per the 2026-07-02 neutral-hue ruling; do not add a color unless that ruling is revisited).
+3. Add the corresponding `ARCHETYPE_VISUALS` entry in `src/app/learn/mechanisms/content/types.ts`, preserving the route's neutral shared chrome unless the design contract changes.
 4. Author a new content module under `src/app/learn/mechanisms/content/<slug>.ts` and register it in `src/app/learn/mechanisms/content/index.ts`.
 5. Add a `TITLE_BY_ARCHETYPE` and `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
 6. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does).

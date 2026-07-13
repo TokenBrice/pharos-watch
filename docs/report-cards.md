@@ -30,8 +30,8 @@ with archetype-specific Backing, Exit, and Economic Control pillars bounded by
 the weakest material failure path, structural ceilings, evidence sufficiency,
 dependencies, peg behavior, and stress propagation. Candidate failures cannot
 affect V8 publication; exact candidate state is available only to the admin
-workspace. The current all-active candidate remains `0/361` rateable because
-critical reviewed facts are incomplete. Independent holdout validation,
+workspace. The current all-active candidate remains unrateable because critical
+reviewed facts are incomplete. Independent holdout validation,
 release-cohort coverage, a frozen release candidate, and at least 14
 consecutive verified shadow days plus two elapsed cycles of the four-hour
 slowest score-bearing producer are still mandatory before any public or
@@ -49,7 +49,7 @@ Any future use of yield source-risk that affects Safety Score, Resilience, Depen
 
 ## Mint Authority Boundary
 
-Mint Authority review produces the Mint Authority Score (MAS methodology `v1.2`) from reviewed mint path, weakest mint-capable controller, quantitative bounds, authority posture, evidence confidence, inheritance, and time-decayed incident caps. Detail pages may show the score, band, component breakdown, primary controls, source links, and incident callouts when compact review data exists; pages without reviewed data omit the section or show `NR` where aggregate surfaces require a value. The homepage table and `/screener/` may sort, display, export, or filter the same standalone score and review buckets so users can inspect who can create or route durable supply.
+Mint Authority review produces the Mint Authority Score (MAS methodology `v1.2`) from reviewed mint path, weakest mint-capable controller, quantitative bounds, authority posture, evidence confidence, inheritance, and time-decayed incident caps. Detail pages always show the Mint Authority section: reviewed assets expose the score, band, component breakdown, controls, sources, and incident callouts, while missing reviews render an explicit `NR` state. The homepage table and `/screener/` may sort, display, export, or filter the same standalone score and review buckets so users can inspect who can create or route durable supply.
 
 As of Safety Score v8.0 the Mint Authority Score feeds the **Decentralization** dimension through a penalty-only blend (see Decentralization Details) and is exposed in report-card raw inputs as `mintAuthorityScore`. The remaining boundary is still strict: the score does not create selector exclusions, does not feed Resilience, Liquidity, Peg Stability, or Dependency Risk, and does not change any default ranking outside what the Decentralization dimension propagates. A missing or unresolved review (`NR`) never penalizes any Safety Score surface. Any further expansion of mint-authority data into other dimensions requires a new Safety Score methodology/version change and timeline entry.
 

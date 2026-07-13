@@ -13,10 +13,10 @@ Public ledger of Pharos's running costs, donations, and sustainability path. The
 
 ## Layout
 
-Aligned to the redesigned-homepage canon (owner-settled 2026-07-01) while keeping the honest, prose-forward register:
+The page keeps an honest, prose-forward register:
 
 - The KPI card opens on a full-width hero strip whose frost-blue "One Beam" lights the monthly running cost (`costs.json` total). Coverage % stays **neutral** — it is a directional funding-progress figure and is never recolored frost.
-- Cards are flat: the `ui/card` primitive's resting `shadow-sm` was removed directly, and `pharos-card-shell` (`box-shadow: var(--card-shadow)`, none at rest) sets the flat surface at the usage level.
+- Cards use the shared flat `pharos-card-shell` treatment.
 - Previous-month coverage chips use the pill control visual; the prominent dollar/percent figures use `.pharos-numeric`.
 - The only sanctioned frost surface beyond the One Beam is the progress-bar fill (existing owner choice). See `docs/design-language.md` → Reference-group hero calls.
 
@@ -37,7 +37,7 @@ Row shape for donations is defined in `shared/lib/funding/types.ts` (`Donation`)
 - **No ENS resolver module.** ENS reverse + forward-verify runs once per new address during the skill's run; results are frozen into `display` on the row.
 - **No spam filter module.** Unknown-token pricing requires a manual USD value from the user, which naturally gates out spoofed-ticker spam.
 
-If donation volume grows to the point where hand-curation becomes painful, promote the skill to a worker cron (daily Alchemy scan -> D1 -> proposed `/api/funding-summary` endpoint). Everything the page renders is already derivable from what the skill writes, so the frontend does not need to change.
+Automation is intentionally deferred while the review volume remains small. Any future runtime pipeline would require its own API, operations, and privacy contracts rather than being implied by this page doc.
 
 ## Ownership & cadence
 
@@ -54,4 +54,4 @@ Match `/about`: honest, plain, concrete. No urgency, no banners, no modals. Keep
 - Sections: `src/components/funding/funding-page-sections.tsx`
 - Helpers + types: `shared/lib/funding/`
 - Data: `shared/data/funding/`
-- Skill: `.claude/skills/funding-update/SKILL.md`
+- Skill: `.codex/skills/funding-update/SKILL.md`

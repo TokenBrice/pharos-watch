@@ -72,7 +72,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 
 **Honeypot:** a hidden `website` input (off-screen, `tabIndex=-1`, `aria-hidden`) is sent as an empty string. If the worker receives a non-empty `website` value, the submission is silently accepted but discarded.
 
-**Submission:** `POST buildApiUrl("/api/feedback")` with `Content-Type: application/json`. On Pharos production and Pages preview hosts this resolves to `https://api.pharos.watch/api/feedback`; local proxy and explicit `NEXT_PUBLIC_API_BASE` setups follow the frontend runtime API rules in `src/lib/api.ts`. Optional contact handles are echoed publicly in the created GitHub issue. On success the modal transitions to a thank-you screen. On error the server's error message is displayed inline.
+**Submission:** `POST buildApiUrl("/api/feedback")` with `Content-Type: application/json` and a collision-resistant `Idempotency-Key`. The modal retains the same key when retrying the same serialized payload and creates a new key after the payload changes. On Pharos production and Pages preview hosts the request resolves to `https://api.pharos.watch/api/feedback`; local proxy and explicit `NEXT_PUBLIC_API_BASE` setups follow the frontend runtime API rules in `src/lib/api.ts`. Optional contact handles are echoed publicly in the created GitHub issue. On success the modal transitions to a thank-you screen. On error the server's error message is displayed inline.
 
 ---
 
@@ -80,40 +80,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 
 ### `POST /api/feedback`
 
-**Auth:** none (public endpoint)
-**CORS:** standard Pharos headers (`Access-Control-Allow-Origin` = Worker `CORS_ORIGIN`, checked-in production allowlist `https://pharos.watch,https://ops.pharos.watch`)
-**Caching:** not cached (bypasses edge cache)
-
-#### Request body
-
-```typescript
-{
-  type: "bug" | "data-correction" | "feature-request";
-  title?: string;               // required for bug + feature-request
-  description: string;          // 10–2000 characters
-  expectedValue?: string;       // data-correction only; optional
-  stablecoinId?: string;        // Pharos ID, used for auto-verification
-  stablecoinName?: string;      // display name, appended to issue title
-  pageUrl: string;              // single-slash internal path, e.g. "/stablecoin/usdc-circle/"
-  pegValue?: string;            // current displayed peg value
-  contactHandle?: string;       // optional Telegram/X handle shown on GitHub
-  website?: string;             // honeypot — must be empty
-}
-```
-
-#### Validation
-
-| Field | Rule |
-|-------|------|
-| `type` | Must be one of the three valid values |
-| `description` | 10–2000 characters (raw length; not trimmed) |
-| `title` | 3–100 characters after trim; required for `bug` / `feature-request` |
-| `expectedValue` | Optional; server accepts up to 500 characters after trim (`data-correction` only in the browser UI) |
-| `pageUrl` | Must be a single-slash internal app path such as `"/stablecoin/usdc-circle/"`; protocol-relative `"//..."` values are rejected |
-| `contactHandle` | Optional; server accepts up to 100 characters after trim. The browser form also enforces a 2-character minimum before submission. |
-| `stablecoinName` / `pegValue` | Optional context fields, capped at 100 characters each |
-| `stablecoinId` | Checked with `resolveStablecoinId(...)`; unknown values return `400 Invalid stablecoinId` |
-| `website` | Non-empty → silent 200 OK, no GitHub call |
+The authoritative request, validation, idempotency, response-header, and error contract lives in [API Reference: `POST /api/feedback`](./api-reference.md#post-apifeedback). In particular, otherwise-valid submissions require an `Idempotency-Key`; conflicting or in-flight reuse can return `409`, while an ambiguous GitHub execution outcome returns `503` with `X-Execution-Certainty: unknown`. Retrying that outcome with the same key replays the unknown result without invoking GitHub again; reconcile it before submitting a new key. This document owns the UI and internal processing flow, not a second HTTP contract copy.
 
 #### Rate limiting
 
@@ -218,21 +185,6 @@ User-supplied strings are normalized before the GitHub write:
 - `stablecoinName` and `pageUrl` have newlines stripped and length caps applied in `worker/src/api/feedback/format.ts`
 - issue titles are length-validated by the request schema / handler rules
 - `description` and `expectedValue` are trimmed, CRLF/NUL-normalized, `@` mentions are defanged as `@ `, and long backtick runs are escaped before the values are placed in fenced text blocks
-
-#### Responses
-
-| Status | Body | Condition |
-|--------|------|-----------|
-| `200` | `{"ok": true}` | Accepted (including honeypot trap) |
-| `400` | `{"error": "<message>"}` | Validation failure |
-| `413` | `{"error": "Request body too large"}` | Request body exceeds 16 KB |
-| `429` | `{"error": "Too many submissions. Please wait a few minutes."}` | Rate limit exceeded |
-| `500` | `{"error": "Failed to submit feedback. Please try again."}` | GitHub API error |
-| `503` | `{"error": "Service misconfigured"}` | `FEEDBACK_IP_SALT` missing |
-| `503` | `{"error": "Feedback service temporarily unavailable"}` | `GITHUB_PAT` not configured |
-| `503` | `{"error": "Feedback service temporarily unavailable. Please try again."}` (with a `Retry-After: 60` response header) | Rate-limit dependency / D1 unavailable |
-
----
 
 ## Environment Variables
 

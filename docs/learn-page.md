@@ -10,7 +10,7 @@ Mechanism explainers remain documented in [learn-mechanisms-page.md](./learn-mec
 
 ---
 
-## Hero & Title Treatment (2026-07-01 homepage alignment)
+## Hero And Title Treatment
 
 All `/learn/*` hub pages carry the homepage design grammar in their Category-C "light editorial" register (canonical record: `docs/design-language.md` → Feature-Page Hero → Learn-group hero calls):
 
@@ -40,7 +40,7 @@ The case-study detail route is static-exported through `generateStaticParams()` 
 
 `CASE_STUDY_LIST` in `src/app/learn/case-studies/content/index.ts` is the canonical display, sitemap, and static-param order. The hub first renders a small server-rendered "Start Here" cluster for evergreen studies, then renders the remaining archive rows with an outcome chip (`survived`, `wounded`, `died`) and archetype accent from `ARCHETYPE_VISUALS`. Priority studies are excluded from the archive rows so the hub does not repeat the same article twice.
 
-The current archive contains 27 studies. The `tbill` archetype is covered by BUIDL (survived) and USYC (wounded), while USDR fills the `rwa-credit-fund` died cell.
+`CASE_STUDY_LIST` owns the case-study roster and archetype/outcome coverage. Do not copy its volatile count into this document.
 
 Each detail page renders:
 

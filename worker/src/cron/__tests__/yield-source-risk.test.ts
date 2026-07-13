@@ -236,7 +236,8 @@ describe("yield source-risk registry", () => {
     // Yearn's own report scores yvUSDC 1.3/5 "Minimal". Its funded legs are
     // spark-savings (sUSDS) + sparklend; both must derive to `low` so our tiering
     // neither over- nor under-penalizes the vault vs Yearn's external assessment.
-    // See docs/process/yield-venue-risk-yearn-calibration-2026-06.md
+    // Reviewed evidence is owned by the source-risk metadata; change history is
+    // recorded in docs/yield-intelligence-timeline.md.
     for (const venue of ["spark-savings", "sparklend"] as const) {
       const config = resolveReviewedYieldRiskConfig(venue);
       expect(config, venue).not.toBeNull();

@@ -21,7 +21,7 @@ Stablecoin metadata is the checked-in source of truth for the asset universe. Us
 
 `ACTIVE_STABLECOINS` excludes pre-launch and frozen entries. `READABLE_STABLECOINS` keeps active + frozen assets for archive/readback surfaces. PSI-only shadow assets are intentionally outside the public tracked registry and exist only for historical PSI replay. Canonical ID resolution is split by scope in `shared/lib/stablecoin-id-registry.ts`: tracked helpers include pre-launch and frozen tracked IDs, readable helpers include only active + frozen tracked IDs, and PSI-inclusive helpers include active tracked IDs + shadow IDs.
 
-The editable stablecoin catalog primarily lives in per-coin files under `shared/data/stablecoins/coins/*.json`. Some large domain-specific fields can be migrated into sidecars under `shared/data/stablecoins/domains/<domain>/<id>.json`; the catalog loader validates each sidecar, merges it into the base coin, and then validates the merged record with the normal `StablecoinMeta` schema. `shared/data/stablecoins/coins.generated.json` is a gitignored runtime aggregate produced from that merged catalog; do not edit it by hand. Regenerate the aggregate and its dependent projections after catalog edits with:
+The editable stablecoin catalog primarily lives in per-coin files under `shared/data/stablecoins/coins/*.json`. Research-heavy fields can be migrated into sidecars under `shared/data/stablecoins/domains/<domain>/<id>.json`; the catalog loader validates each sidecar, merges it into the base coin, and then validates the merged record with the normal `StablecoinMeta` schema. [Stablecoin Research Sidecars](./process/stablecoin-research-sidecars.md) owns the supported domains, migration rules, and generator contract. `shared/data/stablecoins/coins.generated.json` is a gitignored runtime aggregate produced from that merged catalog; do not edit it by hand. Regenerate the aggregate and its dependent projections after catalog edits with:
 
 ```bash
 npm run bootstrap:generated
@@ -36,9 +36,9 @@ The client, compliance, prevalidated runtime, and legacy redirect projections ar
 - Keep IDs canonical and stable: lowercase `ticker-issuer` format, aligned with `shared/lib/stablecoin-id-registry.ts`.
 - Add or update exactly one base file under `shared/data/stablecoins/coins/*.json`, then update `canonical-order.json`.
 - The base file name and the JSON `id` must match exactly; `foo-issuer.json` must contain `"id": "foo-issuer"`.
-- For fields already migrated to a sidecar, edit the sidecar instead of duplicating the field in the base coin. The first migrated domain is reserve composition: edit `shared/data/stablecoins/domains/reserves/<id>.json` for the selected migrated coins (`usdc-circle`, `usdt-tether`, `pyusd-paypal`, `usde-ethena`, and `usds-sky`).
+- For fields already migrated to a sidecar, edit the sidecar instead of duplicating the field in the base coin. Follow [Stablecoin Research Sidecars](./process/stablecoin-research-sidecars.md); the domain directories are the current ownership inventory.
 - Sidecars are strict and must use the same `id` as the base coin. A field may exist in the base coin or in a sidecar, not both; duplicate fields fail catalog loading.
-- Run `npm run bootstrap:generated` after per-coin or sidecar edits to refresh the full, client, prevalidated runtime, and legacy redirect projections.
+- Run `npm run bootstrap:generated` after per-coin or sidecar edits to refresh the full, client, compliance, prevalidated runtime, and legacy redirect projections.
 - Preserve existing supply policy. Primary supply comes from DefiLlama through the existing fallback path; do not add manual, on-chain, CMC, or DEX supply overrides.
 - Contract metadata belongs under each coin's `contracts` array. Use verified chain IDs and decimals from source metadata or explorers before adding them.
 - `marketAvailability` is descriptive editorial metadata, not a runtime price/supply source. It can record whether a stablecoin is market-traded, limited-trading, non-traded-utility, or legacy-or-wind-down when a coverage source exposes that distinction.

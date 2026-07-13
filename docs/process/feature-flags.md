@@ -71,6 +71,33 @@ What must be true before turning each flag on in production:
 - [x] `/depeg/` renders DDRR below DDR (past the DEWS band, the Outlook Posture module, and the "Live forecasts above · graded below" divider) with prominent Recovery and Duration headline tiles.
 - [ ] Production snapshot has at least one stored DDR assessment after launch; until then the module shows the empty review state.
 
+## Production Rollout
+
+`NEXT_PUBLIC_PHAROS_*` values are non-sensitive GitHub repository Variables.
+`.github/workflows/validate-ci.yml` and `.github/workflows/pages-release.yml`
+pass them to the Next.js build; changing a Cloudflare Pages runtime variable
+does not change the static bundle.
+
+Set or roll back one flag at a time, then trigger the manual `Rebuild Pages`
+workflow so the new value is built, checked, and published:
+
+```bash
+gh variable set NEXT_PUBLIC_PHAROS_<NAME> --body true
+gh workflow run "Rebuild Pages" --ref main
+gh run watch
+```
+
+Default-off flags return off when the variable is deleted or set to the exact
+lowercase value `false`. Default-on flags require an explicit `false`; deleting
+their variable enables them again. A variable change alone does not start a
+build.
+
+After release, verify the relevant UI and the `Rebuild Pages` result. The
+release path runs `check:feature-flag-inlining` against the built bundle.
+Adding, renaming, or removing a flag also requires updating
+`src/lib/feature-flags.ts`, both build workflows, this inventory, and the
+inlining/stale-flag checks as applicable.
+
 ## Spec source
 
 The flag table above is the durable reference. Runtime defaults live in `src/lib/feature-flags.ts`; build-workflow propagation lives in `.github/workflows/validate-ci.yml` and `.github/workflows/pages-release.yml` (the production deploy workflow calls `pages-release.yml` for Pages builds).

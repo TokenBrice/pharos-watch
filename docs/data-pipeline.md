@@ -1,6 +1,6 @@
 # Data Pipeline — Price Enrichment, Integrity Guardrails & Blacklist Sync
 
-> **Agent navigation** — ~52 KB; Grep the heading you need instead of reading wholesale: Supply Pipeline · Price Enrichment Pipeline · Data Integrity Guardrails · Gold & Silver Spot Prices · Stability Index (PSI) Computation · Pending Depeg Confirmation · Stale Data Monitoring (Frontend) · Blacklist Sync State Semantics · Coverage Discovery.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Supply Pipeline · Price Enrichment Pipeline · Data Integrity Guardrails · Gold & Silver Spot Prices · Stability Index (PSI) Computation · Pending Depeg Confirmation · Stale Data Monitoring (Frontend) · Blacklist Sync State Semantics · Coverage Discovery.
 
 ## Supply Pipeline
 

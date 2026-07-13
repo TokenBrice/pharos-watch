@@ -109,14 +109,16 @@ The current proxy now fails closed on its own trust boundary:
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`.
 - The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. After signature-verifying the UI Access JWT and normalizing its email claim, it injects that verified value as `Cf-Access-Authenticated-User-Email` for durable audit attribution; a browser-supplied actor header is ignored. It also adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself, so browser callers never supply server-to-server credentials.
 - The proxy reflects only `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, and `X-Idempotent-Replay` back to the browser. This preserves replay/certainty semantics without opening arbitrary upstream headers. A final policy decorator forces `private, no-store`, both CDN-specific no-store headers, `noindex`, and response security headers on every early or upstream return. Upstream `public` cache directives cannot survive the operator boundary.
+- Request bodies are capped incrementally at 128 KiB, including when `Content-Length` is absent or understated; oversized requests return `413`. Upstream responses are buffered under the shared 16 MiB proxy cap before returning to the browser; oversized or unreadable upstream responses return `502`.
 - Failure policy is explicit:
   - `404` for non-ops origins or non-allowlisted paths
   - `401` for missing or invalid UI JWT
   - `403` for mutating requests without same-origin `Origin`
   - `405` for method mismatch
+  - `413` when the request body exceeds 128 KiB
   - `500` when the Pages-side service token pair or UI JWT verification bindings are not configured
   - `504` when the upstream fetch hits the proxy timeout budget
-  - `502` when the upstream fetch fails or Cloudflare Access responds with an auth redirect from `ops-api`
+  - `502` when the upstream fetch fails, its buffered response exceeds 16 MiB, or Cloudflare Access responds with an auth redirect from `ops-api`
 
 ### Pages project bindings needed now
 
@@ -144,39 +146,19 @@ Set the required Pages bindings before deploying the ops-host frontend, otherwis
 
 ---
 
-## Cloudflare Account Setup
+## Cloudflare Account Setup And Recovery
 
-The remaining steps are account-bound. Wrangler can deploy the Worker route, but the Pages custom domain and Zero Trust Access applications still need to be created in Cloudflare.
+These steps are for fresh provisioning or recovery of account-bound configuration. Existing production releases use the standard [deployment process](./deployment-process.md); do not replay raw Wrangler upload/promotion commands from this runbook.
 
-### 1. Deploy the Worker route update
+### 1. Confirm the standard Worker deployment
 
-From the repo root:
-
-```bash
-cd worker
-npx --no-install wrangler versions upload --tag operator-origin-update
-# Smoke the uploaded version's preview URL before promotion.
-cd ..
-WORKER_NAME=stablecoin-api WORKER_VERSION_ID="$VERSION_ID" \
-  node .github/scripts/deploy-worker-version.mjs --message "Operator origin route update"
-cd worker
-npx --no-install wrangler triggers deploy
-```
-
-Expected result:
+Run the normal main-branch release flow in [Deployment Process](./deployment-process.md). After a successful Worker promotion, confirm:
 
 - `api.pharos.watch` continues to serve the current Worker
+- `site-api.pharos.watch` remains attached to the same Worker script
 - `ops-api.pharos.watch` is attached to the same Worker script
 
-Observed during the initial rollout on 2026-03-13:
-
-- the Worker deploy accepted the `ops-api.pharos.watch` route declaration
-- `api.pharos.watch` immediately reflected the new CORS allowlist
-- `ops-api.pharos.watch` still did not resolve publicly afterward
-
-Interpretation:
-
-- the repo-side route declaration is necessary, but the hostname still needs the zone/custom-domain side finished in Cloudflare before it becomes reachable
+If `ops-api.pharos.watch` does not resolve on a fresh account or after accidental zone removal, restore the Worker custom-domain/DNS configuration in Cloudflare, then rerun the standard release and verification below.
 
 ### 2. Add the operator Pages custom domain
 
@@ -462,14 +444,6 @@ Expected:
 
 ---
 
-## Rollback
+## Recovery
 
-If the operator-origin setup causes issues:
-
-1. remove `ops-api.pharos.watch` from `worker/wrangler.toml`
-2. revert `CORS_ORIGIN` to `https://pharos.watch`
-3. redeploy the Worker
-4. remove or disable the `ops.pharos.watch` Pages custom domain if needed
-5. disable the Access apps
-
-Because the public hostnames remain unchanged, rollback risk is low as long as Access is only attached to the operator origins.
+Treat the operator host split as permanent infrastructure. For a code or artifact regression, use the standard Worker or Pages rollback path in [Deployment Process](./deployment-process.md) and preserve the `ops.pharos.watch` / `ops-api.pharos.watch` host, CORS, and Access boundaries. For an account-configuration failure, restore the affected custom domain, Access application, policy, or service token using the provisioning and rotation steps above, then rerun the operator smoke checks.

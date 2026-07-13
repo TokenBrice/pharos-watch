@@ -109,7 +109,7 @@ async function loadLiquidityRows(
  * Reads cached 24h net mint/burn flow for the mint-burn-tracked subset of the requested ids
  * (no recompute) as one bounded Promise.all. Stale/missing/malformed entries are omitted so the
  * Context line only carries fresh, meaningful flow. D1 cache reads are not subject to the
- * 6-connection outbound fetch pool, and the set is bounded to tracked coins.
+ * repo-defined six-request outbound budget, and the set is bounded to tracked coins.
  */
 async function loadFlowRows(
   db: D1Database,

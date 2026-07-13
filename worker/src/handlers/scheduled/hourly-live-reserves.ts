@@ -127,7 +127,7 @@ async function runReservePostSyncWatchdog(runtime: ScheduledRuntimeContext, sign
     // family (C123). The four-hourly reserve slot is the producer; the dispatch
     // cron only diffs prior-vs-current from this snapshot and never recomputes
     // drift, keeping reserve-adapter network I/O out of the dispatch trigger's
-    // 6-connection pool. fallbackCoins (failed live fetch) are intentionally
+    // repo-defined six-request budget. fallbackCoins (failed live fetch) are intentionally
     // omitted so a transient fetch failure never reads as a drift change.
     const reservePublishedAt = Math.floor(Date.now() / 1000);
     const previousReserveSource = await getCache(runtime.db, SNAPSHOT_KEYS.reserve);

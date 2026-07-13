@@ -19,9 +19,9 @@ const MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO = 0.75;
 const CLASSIC_ZOD_CHUNK_MARKER = "_zod.traits";
 
 const DEFAULT_BUDGETS = {
-  // Cloudflare Pages direct uploads cap Wrangler deployments at 20,000 files.
-  // Next App Router static exports emit multiple RSC helper files per route,
-  // so track file count explicitly instead of discovering this at deploy time.
+  // Keep a conservative 20,000-file repo budget. Cloudflare's current paid
+  // Pages limit can be higher, but Free and legacy Wrangler paths use 20,000.
+  // App Router emits multiple RSC helper files per route, so check before deploy.
   totalOutFiles: 20_000,
   // Bumped from 12 MB after Council-13 W2-C split. The client registry now
   // includes reserve and portfolio exposure fields, while several static
