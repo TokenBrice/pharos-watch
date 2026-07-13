@@ -19,7 +19,6 @@ import type { DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import type { DimensionKey, ReportCard, ReportCardGrade } from "@shared/types/report-cards";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import {
   computeReportCardsRegistryFingerprint,
@@ -77,14 +76,6 @@ interface DexPublicationRow {
   updated_at: number | null;
 }
 
-interface RedemptionPublicationRow {
-  run_id: string;
-  expected_count: number;
-  written_count: number;
-  min_updated_at: number | null;
-  max_updated_at: number | null;
-}
-
 export function resolveExactDexPublicationGeneration(
   rows: readonly DexPublicationRow[],
   activeIds: readonly string[] = ACTIVE_STABLECOINS.map((coin) => coin.id),
@@ -128,38 +119,34 @@ async function loadExactDexPublicationGeneration(db: D1Database): Promise<{
   return resolveExactDexPublicationGeneration(rows.results ?? []);
 }
 
-async function loadExactRedemptionPublicationGeneration(
-  db: D1Database,
-  updatedAt: number | null,
-  rowCount: number,
-): Promise<string> {
-  if (updatedAt == null && rowCount === 0) return "redemption-backstops-unavailable";
-  if (updatedAt == null || rowCount === 0) {
+export function resolveExactRedemptionPublicationGeneration(args: {
+  entries: readonly { updatedAt: number; methodologyVersion: string }[];
+  freshnessUpdatedAt: number | null;
+  stale: boolean;
+  runId: string | null;
+  methodologyVersion: string | null;
+}): string {
+  if (args.entries.length === 0) {
+    if (!args.stale) {
+      throw new Error("Exact fixed-input capture has no redemption rows but marks redemption current");
+    }
+    return "redemption-backstops-unavailable";
+  }
+  if (args.stale || args.freshnessUpdatedAt == null) {
     throw new Error("Exact fixed-input redemption generation has inconsistent freshness and row coverage");
   }
-  const rows = await db
-    .prepare(
-      `SELECT run_id, expected_count, written_count, min_updated_at, max_updated_at
-         FROM redemption_backstop_runs
-        WHERE status = 'completed' AND max_updated_at = ?
-        ORDER BY completed_at DESC
-        LIMIT 2`,
-    )
-    .bind(updatedAt)
-    .all<RedemptionPublicationRow>();
-  const matching = (rows.results ?? []).filter(
-    (row) =>
-      row.expected_count === rowCount &&
-      row.written_count === rowCount &&
-      row.min_updated_at === updatedAt &&
-      row.max_updated_at === updatedAt,
-  );
-  if (matching.length !== 1 || !matching[0]!.run_id) {
-    throw new Error(
-      `Exact fixed-input capture could not bind ${rowCount} redemption rows at ${updatedAt} to one completed run`,
-    );
+  if (!args.runId?.startsWith("redemption:") || !args.methodologyVersion) {
+    throw new Error("Exact fixed-input redemption rows are not bound to a completed producer run");
   }
-  return matching[0]!.run_id;
+  const timestamps = new Set(args.entries.map((entry) => entry.updatedAt));
+  if (timestamps.size !== 1 || !timestamps.has(args.freshnessUpdatedAt)) {
+    throw new Error("Exact fixed-input redemption rows do not match producer freshness");
+  }
+  const methodologyVersions = new Set(args.entries.map((entry) => entry.methodologyVersion));
+  if (methodologyVersions.size !== 1 || !methodologyVersions.has(args.methodologyVersion)) {
+    throw new Error("Exact fixed-input redemption rows do not match producer methodology");
+  }
+  return args.runId;
 }
 
 function freshnessAtClock(entry: ReportCardsInputFreshness["dexLiquidity"], clockSec: number) {
@@ -183,6 +170,7 @@ export async function buildReportCardsSnapshot(
     bluechipCached,
     dexLiquiditySnapshot,
     redemptionBackstopMap,
+    redemptionSnapshotProvenance,
     liveReserveMap,
     liveReserveProvenanceMap,
     liquidityStale,
@@ -295,35 +283,37 @@ export async function buildReportCardsSnapshot(
     );
   }
   const dexLiqMap: Record<string, FixedDexLiquidityRow> = {};
+  const dexMethodologyVersions = new Set<string>();
   const dexDeploymentSupplyCoverageById: ReportCardsFixedInput["dexDeploymentSupplyCoverageById"] = {};
   for (const coin of ACTIVE_STABLECOINS) {
     const row = dexLiquiditySnapshot.map[coin.id];
     if (!row) throw new Error(`Exact fixed-input capture has no in-memory DEX row for ${coin.id}`);
+    const methodologyVersion = (row as typeof row & { methodologyVersion?: string }).methodologyVersion?.trim();
+    if (!methodologyVersion) {
+      throw new Error(`Exact fixed-input capture has no persisted DEX methodology for ${coin.id}`);
+    }
+    dexMethodologyVersions.add(methodologyVersion);
     dexLiqMap[coin.id] = {
       ...row,
-      methodologyVersion: LIQUIDITY_METHODOLOGY_VERSION,
+      methodologyVersion,
       updatedAt: dexPublication.updatedAt,
     };
     const coverage = (row as typeof row & { deploymentSupplyCoverage?: DexDeploymentSupplyCoverage })
       .deploymentSupplyCoverage;
     if (coverage) dexDeploymentSupplyCoverageById[coin.id] = coverage;
   }
+  if (dexMethodologyVersions.size !== 1) {
+    throw new Error(`Exact fixed-input capture spans ${dexMethodologyVersions.size} DEX methodologies`);
+  }
 
-  const redemptionTimestamps = [...new Set(Object.values(redemptionBackstopMap).map((row) => row.updatedAt))];
-  if (redemptionTimestamps.length > 1) {
-    throw new Error(`Exact fixed-input capture spans ${redemptionTimestamps.length} redemption timestamps`);
-  }
   const redemptionUpdatedAt = scoringInputFreshness.redemptionBackstops.updatedAt;
-  if (redemptionTimestamps.length === 1 && redemptionTimestamps[0] !== redemptionUpdatedAt) {
-    throw new Error(
-      `Exact fixed-input redemption freshness ${redemptionUpdatedAt} does not match row timestamp ${redemptionTimestamps[0]}`,
-    );
-  }
-  const redemptionGenerationId = await loadExactRedemptionPublicationGeneration(
-    db,
-    redemptionUpdatedAt,
-    Object.keys(redemptionBackstopMap).length,
-  );
+  const redemptionGenerationId = resolveExactRedemptionPublicationGeneration({
+    entries: Object.values(redemptionBackstopMap),
+    freshnessUpdatedAt: redemptionUpdatedAt,
+    stale: redemptionStale,
+    runId: redemptionSnapshotProvenance.runId,
+    methodologyVersion: redemptionSnapshotProvenance.methodologyVersion,
+  });
   const registryFingerprint = computeReportCardsRegistryFingerprint();
   const fixedInput = createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",

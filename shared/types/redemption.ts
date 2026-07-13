@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ExitRouteObservationSchema } from "./exit-route";
+import { ExitRouteObservationSchema, RedemptionExitRouteObservationSchema } from "./exit-route";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "./validators";
 
@@ -164,6 +164,17 @@ export type RedemptionLiveFreshnessKind = z.infer<typeof RedemptionLiveFreshness
 const ScoreSchema = z.number().finite().min(0).max(100);
 const RatioSchema = z.number().finite().min(0).max(1);
 
+const RedemptionExitRouteObservationsSchema = z
+  .array(ExitRouteObservationSchema)
+  .max(16)
+  .superRefine((observations, ctx) => {
+    observations.forEach((observation, index) => {
+      if (!RedemptionExitRouteObservationSchema.safeParse(observation).success) {
+        ctx.addIssue({ code: "custom", path: [index], message: "invalid redemption exit-route observation" });
+      }
+    });
+  });
+
 export const RedemptionDocSourceSchema = z.object({
   label: z.string(),
   url: HttpUrlSchema,
@@ -193,7 +204,7 @@ export const RedemptionCapacityProfileSchema = z.object({
    * details/history JSON envelope so old rows remain valid and no parallel
    * redemption store is required.
    */
-  exitRouteObservations: z.array(ExitRouteObservationSchema).max(16).optional(),
+  exitRouteObservations: RedemptionExitRouteObservationsSchema.optional(),
 });
 export type RedemptionCapacityProfile = z.infer<typeof RedemptionCapacityProfileSchema>;
 

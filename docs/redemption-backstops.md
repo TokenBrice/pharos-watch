@@ -111,6 +111,8 @@ An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 
 The redemption-backstop cron materializes raw `effectiveExitScore` on every resolved row using the last-known DEX liquidity input, even when that input is stale relative to the `CRON_INTERVALS["sync-dex-liquidity"] * 2` freshness budget. Stale or missing DEX input still marks the cron run `degraded` and flips `metadata.liquidityStale = true` for operational visibility. Report cards then apply their own confidence and availability gating on top, so stale redemption snapshots and low-confidence redemption routes stay visible on redemption surfaces but do not uplift Safety Score liquidity. In v4, eventual-only routes expose `eventualRedeemabilityScore` for route-quality context but do not create redemption-only Safety liquidity uplift without current executable capacity. Documented offchain issuer eventual routes can contribute only a DEX-gated primary-market bonus, using `eventualRedeemabilityScore` as the route-quality ceiling while requiring a current DEX liquidity floor.
 
+The shadow P4 same-notional envelope is stricter than the legacy blend. Redemption observations accept only `issuer-redemption` and `protocol-redemption` as potentially scoreable families; `eventual-redemption` must be diagnostic-only. Explicit active replay rejects future observations and live redemption evidence older than twice the 4-hour producer interval (8 hours). Reviewed `documented-terms` evidence uses a separate one-year review window. Missing modeled request, fixed clock, or eligible modeled-request observations returns an active `null` diagnostic instead of restoring legacy scores. Curated `same-stablecoin-pool-backing`, `same-protocol-liquidity`, `wrapper-to-parent-dependency`, and `unknown` correlation states veto the diversification bonus; `independent-issuer-rail` only allows the structural output and failure-domain checks to decide independence.
+
 Severe active downside depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row is directionally below peg with `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. Severe upside events do not automatically impair a route whose redemption still clears at par into a non-impaired output asset. For configured tracked wrappers, downside impairment now also propagates from the parent stablecoin (the coin's `variantOf`, or its `pegReferenceId` when set) as output-asset impairment when that parent has an open severe-depeg row. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
 
 The effective exit model parameters are surfaced by the `methodology.effectiveExitModel` field on `GET /api/redemption-backstops` and reused by report cards.
@@ -378,21 +380,21 @@ There is currently no dedicated list page or standalone public methodology secti
 
 ## File Index
 
-| File                                                            | Role                                                               |
-| --------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `shared/lib/redemption-backstops.ts`                            | Canonical public import facade for the config registry             |
-| `shared/lib/redemption-backstop-configs/*`                      | Route-family config modules plus shared config helpers             |
-| `shared/lib/redemption-backstop-scoring.ts`                     | Component scores, route caps, and effective-exit blend             |
-| `shared/lib/redemption-backstop-version.ts`                     | Methodology version metadata                                       |
-| `shared/types/redemption.ts`                                    | Shared API schemas and TypeScript contracts                        |
-| `worker/src/cron/sync-redemption-backstops.ts`                  | 4-hourly snapshot sync                                             |
-| `worker/src/lib/redemption-backstop-sources.ts`                 | Runtime resolver for capacity, costs, docs, and scoring inputs     |
-| `worker/src/lib/redemption-backstops-store.ts`                  | D1 storage helpers and API payload builder                         |
-| `worker/src/api/redemption-backstops.ts`                        | Public API handler                                                 |
-| `worker/migrations/0000_baseline.sql`                           | Baseline current + history table schema                            |
-| `src/hooks/api-hooks.ts`                                        | `useRedemptionBackstops()`                                         |
-| `src/hooks/use-stablecoin-detail-view-model.ts`                 | Detail-page query wiring                                           |
-| `src/lib/stablecoin-detail-view-model.ts`                       | Public detail view-model facade                                      |
-| `src/lib/stablecoin-detail-query-view-model.ts`                 | Detail-page redemption freshness and availability tracking           |
-| `src/lib/coverage/redemption.ts`                                | Coverage-page redemption state mapping                             |
-| `src/components/stablecoin-detail/redemption-backstop-card.tsx` | Detail-page redemption card UI                                     |
+| File                                                            | Role                                                           |
+| --------------------------------------------------------------- | -------------------------------------------------------------- |
+| `shared/lib/redemption-backstops.ts`                            | Canonical public import facade for the config registry         |
+| `shared/lib/redemption-backstop-configs/*`                      | Route-family config modules plus shared config helpers         |
+| `shared/lib/redemption-backstop-scoring.ts`                     | Component scores, route caps, and effective-exit blend         |
+| `shared/lib/redemption-backstop-version.ts`                     | Methodology version metadata                                   |
+| `shared/types/redemption.ts`                                    | Shared API schemas and TypeScript contracts                    |
+| `worker/src/cron/sync-redemption-backstops.ts`                  | 4-hourly snapshot sync                                         |
+| `worker/src/lib/redemption-backstop-sources.ts`                 | Runtime resolver for capacity, costs, docs, and scoring inputs |
+| `worker/src/lib/redemption-backstops-store.ts`                  | D1 storage helpers and API payload builder                     |
+| `worker/src/api/redemption-backstops.ts`                        | Public API handler                                             |
+| `worker/migrations/0000_baseline.sql`                           | Baseline current + history table schema                        |
+| `src/hooks/api-hooks.ts`                                        | `useRedemptionBackstops()`                                     |
+| `src/hooks/use-stablecoin-detail-view-model.ts`                 | Detail-page query wiring                                       |
+| `src/lib/stablecoin-detail-view-model.ts`                       | Public detail view-model facade                                |
+| `src/lib/stablecoin-detail-query-view-model.ts`                 | Detail-page redemption freshness and availability tracking     |
+| `src/lib/coverage/redemption.ts`                                | Coverage-page redemption state mapping                         |
+| `src/components/stablecoin-detail/redemption-backstop-card.tsx` | Detail-page redemption card UI                                 |

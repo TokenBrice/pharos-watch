@@ -7,11 +7,13 @@ import {
   computeCapacityScore,
   computeModeledExitSizeUsd,
   computeRedemptionBackstopScore,
+  evaluateExitRouteObservationEligibility,
   isStrongLiveDirectRoute,
   REDEMPTION_EFFECTIVE_EXIT_MODEL,
   SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY,
 } from "../redemption-backstop-scoring";
 import type { ExitRouteObservation } from "../../types/market";
+import { DexExitRouteObservationSchema, RedemptionExitRouteObservationSchema } from "../../types/exit-route";
 import { RedemptionCapacityProfileSchema } from "../../types/redemption";
 
 function exitRoute(overrides: Partial<ExitRouteObservation> = {}): ExitRouteObservation {
@@ -219,9 +221,38 @@ describe("computeEffectiveExitScore", () => {
         modeledExitSizeUsd: 1_000_000,
         dexExitRouteObservations: [dex],
         exitObservationAsOfSec: 1_100,
-        maxExitObservationAgeSec: 1_000,
+        dexExitObservationMaxAgeSec: 1_000,
       }),
     ).toBe(80);
+  });
+
+  it("fails closed in explicit active mode instead of restoring legacy values", () => {
+    expect(computeEffectiveExitScoreDiagnostics(80, 90, { sameNotionalScoringMode: "active" })).toMatchObject({
+      score: null,
+      scoringMode: "active",
+      correlationReason: "missing-modeled-exit-size",
+    });
+    expect(
+      computeEffectiveExitScoreDiagnostics(80, 90, {
+        sameNotionalScoringMode: "active",
+        modeledExitSizeUsd: 1_000_000,
+      }),
+    ).toMatchObject({
+      score: null,
+      scoringMode: "active",
+      correlationReason: "missing-observation-clock",
+    });
+    expect(
+      computeEffectiveExitScoreDiagnostics(80, 90, {
+        sameNotionalScoringMode: "active",
+        modeledExitSizeUsd: 1_000_000,
+        exitObservationAsOfSec: 1_000,
+      }),
+    ).toMatchObject({
+      score: null,
+      scoringMode: "active",
+      correlationReason: "no-route-observations",
+    });
   });
 
   it("lets a strong same-notional redemption route carry thin DEX capacity", () => {
@@ -243,16 +274,52 @@ describe("computeEffectiveExitScore", () => {
       modeledExitSizeUsd: 1_000_000,
       dexExitRouteObservations: [dex],
       redemptionExitRouteObservations: [redemption],
+      routeExitCorrelation: "independent-issuer-rail",
       modelConfidence: "high",
       sameNotionalScoringMode: "active",
       exitObservationAsOfSec: 1_100,
-      maxExitObservationAgeSec: 1_000,
+      dexExitObservationMaxAgeSec: 1_000,
+      liveRedemptionExitObservationMaxAgeSec: 1_000,
     });
 
     expect(result.score).toBe(91);
     expect(result.dexRouteScore).toBe(8);
     expect(result.redemptionRouteScore).toBe(90);
     expect(result.diversificationBonusApplied).toBe(true);
+  });
+
+  it("preserves the aggregate DEX floor only for partial populated coverage", () => {
+    const redemption = exitRoute({
+      routeId: "redeem:only",
+      executableUsd: 500_000,
+      completionRatio: 0.5,
+      output: { kind: "fiat", currency: "USD" },
+      commonModeKeys: ["issuer:example"],
+    });
+    const sharedOptions = {
+      modeledExitSizeUsd: 1_000_000,
+      redemptionExitRouteObservations: [redemption],
+      sameNotionalScoringMode: "active" as const,
+      exitObservationAsOfSec: 1_100,
+      liveRedemptionExitObservationMaxAgeSec: 1_000,
+      modelConfidence: "high" as const,
+      dexExitRouteCoverageComplete: false,
+    };
+
+    expect(
+      computeEffectiveExitScoreDiagnostics(80, 40, {
+        ...sharedOptions,
+        dexExitRouteCoverageStatus: "populated",
+        dexExitRouteRetainedPoolCount: 2,
+      }),
+    ).toMatchObject({ score: 80, correlationReason: "incomplete-dex-route-coverage-legacy-floor" });
+    expect(
+      computeEffectiveExitScoreDiagnostics(80, 40, {
+        ...sharedOptions,
+        dexExitRouteCoverageStatus: "unknown",
+        dexExitRouteRetainedPoolCount: 0,
+      }),
+    ).toMatchObject({ score: 20, dexRouteScore: null, correlationReason: "single-observed-route" });
   });
 
   it("does not let a weaker optional route lower the strong route", () => {
@@ -275,7 +342,8 @@ describe("computeEffectiveExitScore", () => {
       dexExitRouteObservations: [dex],
       sameNotionalScoringMode: "active" as const,
       exitObservationAsOfSec: 1_100,
-      maxExitObservationAgeSec: 1_000,
+      dexExitObservationMaxAgeSec: 1_000,
+      liveRedemptionExitObservationMaxAgeSec: 1_000,
       modelConfidence: "high" as const,
     };
 
@@ -305,13 +373,13 @@ describe("computeEffectiveExitScore", () => {
       dexExitRouteObservations: [dex],
       sameNotionalScoringMode: "active",
       exitObservationAsOfSec: 1_100,
-      maxExitObservationAgeSec: 1_000,
+      dexExitObservationMaxAgeSec: 1_000,
     });
 
     expect(result.score).toBe(16);
   });
 
-  it("keeps diagnostic-only and stale observations out of active scoring", () => {
+  it("fails active scoring closed when every observation is diagnostic-only or stale", () => {
     const diagnostic = exitRoute({
       routeId: "dex:diagnostic",
       routeFamily: "dex-orderbook",
@@ -325,14 +393,39 @@ describe("computeEffectiveExitScore", () => {
       observedAt: 100,
     });
     expect(
-      computeEffectiveExitScore(80, null, {
+      computeEffectiveExitScoreDiagnostics(80, null, {
         modeledExitSizeUsd: 1_000_000,
         dexExitRouteObservations: [diagnostic, stale],
         sameNotionalScoringMode: "active",
         exitObservationAsOfSec: 2_000,
-        maxExitObservationAgeSec: 500,
+        dexExitObservationMaxAgeSec: 500,
       }),
-    ).toBe(80);
+    ).toMatchObject({
+      score: null,
+      scoringMode: "active",
+      dexRouteScore: null,
+      correlationReason: "no-eligible-route-observations",
+    });
+  });
+
+  it("uses separate live producer ages and rejects future observations", () => {
+    const dex = exitRoute({
+      routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      observedAt: 900,
+    });
+    const redemption = exitRoute({ observedAt: 700 });
+    const options = {
+      exitObservationAsOfSec: 1_000,
+      dexExitObservationMaxAgeSec: 60,
+      liveRedemptionExitObservationMaxAgeSec: 400,
+    };
+
+    expect(evaluateExitRouteObservationEligibility(dex, "dex", options)).toBe("stale-observation");
+    expect(evaluateExitRouteObservationEligibility(redemption, "redemption", options)).toBe("eligible");
+    expect(evaluateExitRouteObservationEligibility({ ...dex, observedAt: 1_001 }, "dex", options)).toBe(
+      "future-observation",
+    );
   });
 
   it("uses the reviewed-terms horizon instead of the live producer freshness window", () => {
@@ -358,7 +451,8 @@ describe("computeEffectiveExitScore", () => {
       dexExitRouteObservations: [dex],
       sameNotionalScoringMode: "active" as const,
       exitObservationAsOfSec: asOfSec,
-      maxExitObservationAgeSec: 3_600,
+      dexExitObservationMaxAgeSec: 3_600,
+      liveRedemptionExitObservationMaxAgeSec: 3_600,
       modelConfidence: "high" as const,
     };
 
@@ -451,6 +545,79 @@ describe("computeEffectiveExitScore", () => {
       ).reason,
     ).toContain("impaired-output");
   });
+
+  it("treats curated non-independent correlation as a veto and independent as structural permission", () => {
+    const dex = exitRoute({
+      routeId: "dex",
+      routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+      commonModeKeys: ["chain:ethereum", "protocol:dex"],
+    });
+    const redemption = exitRoute({
+      routeId: "redemption",
+      output: { kind: "fiat", currency: "USD" },
+      commonModeKeys: ["issuer:example"],
+    });
+
+    expect(classifyExitRouteCorrelation(dex, redemption, "unknown")).toEqual({
+      independent: false,
+      reason: "curated-correlation-veto:unknown",
+    });
+    expect(classifyExitRouteCorrelation(dex, redemption)).toEqual({
+      independent: false,
+      reason: "missing-curated-correlation",
+    });
+    expect(classifyExitRouteCorrelation(dex, redemption, "independent-issuer-rail").independent).toBe(true);
+    expect(
+      classifyExitRouteCorrelation(
+        dex,
+        { ...redemption, commonModeKeys: ["chain:ethereum", "issuer:example"] },
+        "independent-issuer-rail",
+      ).independent,
+    ).toBe(false);
+  });
+
+  it("reports the matching winning pair and resolves score ties by route-id tuple", () => {
+    const highCorrelatedDex = exitRoute({
+      routeId: "dex:high",
+      routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      executableUsd: 1_000_000,
+      completionRatio: 1,
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+      commonModeKeys: ["issuer:example"],
+    });
+    const lowerIndependentDexZ = exitRoute({
+      ...highCorrelatedDex,
+      routeId: "dex:z",
+      executableUsd: 900_000,
+      completionRatio: 0.9,
+      commonModeKeys: ["protocol:dex-z"],
+    });
+    const lowerIndependentDexA = exitRoute({ ...lowerIndependentDexZ, routeId: "dex:a" });
+    const redemption = exitRoute({
+      routeId: "redemption:best",
+      output: { kind: "fiat", currency: "USD" },
+      commonModeKeys: ["issuer:example"],
+    });
+    const result = computeEffectiveExitScoreDiagnostics(80, 80, {
+      modeledExitSizeUsd: 1_000_000,
+      dexExitRouteObservations: [highCorrelatedDex, lowerIndependentDexZ, lowerIndependentDexA],
+      redemptionExitRouteObservations: [redemption],
+      routeExitCorrelation: "independent-issuer-rail",
+      sameNotionalScoringMode: "active",
+      exitObservationAsOfSec: 1_100,
+      dexExitObservationMaxAgeSec: 1_000,
+      liveRedemptionExitObservationMaxAgeSec: 1_000,
+      modelConfidence: "high",
+    });
+
+    expect(result.score).toBe(87);
+    expect(result.comparedRouteIds).toEqual({ dex: "dex:a", redemption: "redemption:best" });
+    expect(result.dexRouteScore).toBe(72);
+    expect(result.redemptionRouteScore).toBe(80);
+  });
 });
 
 describe("redemption exit route observation envelope", () => {
@@ -468,6 +635,33 @@ describe("redemption exit route observation envelope", () => {
         exitRouteObservations: [exitRoute()],
       }).exitRouteObservations,
     ).toHaveLength(1);
+  });
+
+  it("enforces lane families and keeps eventual routes diagnostic-only", () => {
+    const dex = exitRoute({
+      routeFamily: "dex-orderbook",
+      evidenceKind: "direct-orderbook-depth",
+    });
+    const redemption = exitRoute();
+    const eventual = exitRoute({
+      routeFamily: "eventual-redemption",
+      evidenceKind: "documented-terms",
+      scoreEligible: false,
+    });
+
+    expect(DexExitRouteObservationSchema.safeParse(dex).success).toBe(true);
+    expect(DexExitRouteObservationSchema.safeParse(redemption).success).toBe(false);
+    expect(RedemptionExitRouteObservationSchema.safeParse(redemption).success).toBe(true);
+    expect(RedemptionExitRouteObservationSchema.safeParse(dex).success).toBe(false);
+    expect(RedemptionExitRouteObservationSchema.safeParse(eventual).success).toBe(true);
+    expect(RedemptionExitRouteObservationSchema.safeParse({ ...eventual, scoreEligible: true }).success).toBe(false);
+    expect(
+      RedemptionCapacityProfileSchema.safeParse({
+        scoringHorizon: "immediate",
+        capacityProfileConfidence: "live-direct",
+        exitRouteObservations: [dex],
+      }).success,
+    ).toBe(false);
   });
 });
 

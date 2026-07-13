@@ -8,6 +8,31 @@ function dexLiquidity(liquidityScore: number): DexLiquidityInput {
   return { liquidityScore, concentrationHhi: 0.04, poolCount: 100, chainCount: 10 };
 }
 
+function sameNotionalDexObservation(): NonNullable<DexLiquidityInput["exitRouteObservations"]>[number] {
+  return {
+    routeId: "dex:test",
+    routeFamily: "dex-amm",
+    scope: {
+      kind: "chain-contract",
+      chain: "ethereum",
+      contractOrPoolId: "pool:test",
+      protocol: "test-dex",
+    },
+    requestedNotionalUsd: 1_000_000,
+    settlementHorizonSec: 300,
+    maxCostBps: 200,
+    executableUsd: 1_000_000,
+    completionRatio: 1,
+    output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
+    evidenceKind: "measured-executable-depth",
+    confidence: "high",
+    scoreEligible: true,
+    observedAt: 1_000,
+    freshnessSeconds: 0,
+    commonModeKeys: ["chain:ethereum", "protocol:test-dex"],
+  };
+}
+
 function documentedOffchainEventualRoute(overrides: Partial<RedemptionLiquidityInput> = {}): RedemptionLiquidityInput {
   return {
     score: null,
@@ -457,6 +482,7 @@ describe("scoreLiquidity", () => {
   it("keeps supply-weighted deployment materiality behind explicit activation", () => {
     const liq: DexLiquidityInput = {
       ...dexLiquidity(95),
+      exitRouteObservations: [sameNotionalDexObservation()],
       deploymentSupplyCoverage: {
         totalSupplyUsd: 100_000_000,
         observedSupplyUsd: 80_000_000,
@@ -472,7 +498,12 @@ describe("scoreLiquidity", () => {
     };
 
     expect(scoreLiquidity(liq).score).toBe(95);
-    const active = scoreLiquidity(liq, undefined, { sameNotionalScoringMode: "active" });
+    const active = scoreLiquidity(liq, undefined, {
+      sameNotionalScoringMode: "active",
+      circulatingSupplyUsd: 20_000_000,
+      exitObservationAsOfSec: 1_100,
+      dexExitObservationMaxAgeSec: 1_000,
+    });
     expect(active.score).toBe(85);
     expect(active.detail).toContain("20.0% of supply uncovered");
   });
@@ -481,6 +512,7 @@ describe("scoreLiquidity", () => {
     const result = scoreLiquidity(
       {
         ...dexLiquidity(95),
+        exitRouteObservations: [sameNotionalDexObservation()],
         deploymentSupplyCoverage: {
           totalSupplyUsd: 100_000_000,
           observedSupplyUsd: 95_000_000,
@@ -495,7 +527,12 @@ describe("scoreLiquidity", () => {
         },
       },
       undefined,
-      { sameNotionalScoringMode: "active" },
+      {
+        sameNotionalScoringMode: "active",
+        circulatingSupplyUsd: 20_000_000,
+        exitObservationAsOfSec: 1_100,
+        dexExitObservationMaxAgeSec: 1_000,
+      },
     );
 
     expect(result.score).toBe(95);

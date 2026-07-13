@@ -271,6 +271,29 @@ describe("fixed report-card input replay", () => {
     });
   });
 
+  it("rejects redemption-family observations from fixed DEX inputs", () => {
+    const current = fixedInput({ coin: dexRow([]) });
+    const misrouted = {
+      ...route("redeem:misrouted", ["issuer:test"], []),
+      routeFamily: "issuer-redemption",
+      scope: { kind: "issuer", issuerId: "issuer" },
+      output: { kind: "fiat", currency: "USD" },
+      evidenceKind: "documented-terms",
+    };
+
+    expect(() =>
+      normalizeFixedInput({
+        ...current,
+        dexLiqMap: {
+          coin: {
+            ...current.dexLiqMap.coin,
+            exitRouteObservations: [misrouted],
+          },
+        },
+      }),
+    ).toThrow();
+  });
+
   it("rejects incomplete or mixed-generation exact active DEX rows", () => {
     const complete = exactFixedInput();
     const [removedId] = complete.activeAssetIds;

@@ -12,6 +12,7 @@ import {
   type EffectiveExitScoreDiagnostics,
   type SameNotionalExitScoringMode,
 } from "./redemption-backstop-scoring";
+import { isDexExitRouteCoverageComplete } from "./p4-exit-route-capacity";
 import { ACTIVE_DEPEG_CAP_F_BPS } from "./report-card-active-depeg";
 import { formatCompactUsdShort } from "./format";
 import { scoreToGrade } from "./report-card-core";
@@ -159,6 +160,7 @@ export interface DexDeploymentSupplyCoverage {
 type LiquidityInput = Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> &
   Omit<ReportCardDexEvidenceInput, "liquidityScore"> & {
     exitRouteObservations?: DexLiquidityData["exitRouteObservations"];
+    exitRouteObservationCoverage?: DexLiquidityData["exitRouteObservationCoverage"];
     deploymentSupplyCoverage?: DexDeploymentSupplyCoverage | null;
   };
 
@@ -167,7 +169,8 @@ export interface LiquidityScoreOptions {
   circulatingSupplyUsd?: number | null;
   sameNotionalScoringMode?: SameNotionalExitScoringMode;
   exitObservationAsOfSec?: number | null;
-  maxExitObservationAgeSec?: number | null;
+  dexExitObservationMaxAgeSec?: number | null;
+  liveRedemptionExitObservationMaxAgeSec?: number | null;
   impairedOutputAssetIds?: readonly string[];
 }
 
@@ -317,18 +320,26 @@ function buildLiquidityScoringFacts(
           routeExitCorrelation: redemption.routeExitCorrelation,
           modelConfidence: redemption.modelConfidence,
           dexExitRouteObservations: liq?.exitRouteObservations,
+          dexExitRouteCoverageComplete: isDexExitRouteCoverageComplete(liq?.exitRouteObservationCoverage),
+          dexExitRouteCoverageStatus: liq?.exitRouteObservationCoverage?.status,
+          dexExitRouteRetainedPoolCount: liq?.exitRouteObservationCoverage?.retainedPoolCount,
           redemptionExitRouteObservations: redemption.capacityProfile?.exitRouteObservations,
           sameNotionalScoringMode: options?.sameNotionalScoringMode,
           exitObservationAsOfSec: options?.exitObservationAsOfSec,
-          maxExitObservationAgeSec: options?.maxExitObservationAgeSec,
+          dexExitObservationMaxAgeSec: options?.dexExitObservationMaxAgeSec,
+          liveRedemptionExitObservationMaxAgeSec: options?.liveRedemptionExitObservationMaxAgeSec,
           impairedOutputAssetIds: options?.impairedOutputAssetIds,
         }
       : {
           circulatingSupplyUsd: options?.circulatingSupplyUsd ?? liq?.deploymentSupplyCoverage?.totalSupplyUsd,
           dexExitRouteObservations: liq?.exitRouteObservations,
+          dexExitRouteCoverageComplete: isDexExitRouteCoverageComplete(liq?.exitRouteObservationCoverage),
+          dexExitRouteCoverageStatus: liq?.exitRouteObservationCoverage?.status,
+          dexExitRouteRetainedPoolCount: liq?.exitRouteObservationCoverage?.retainedPoolCount,
           sameNotionalScoringMode: options?.sameNotionalScoringMode,
           exitObservationAsOfSec: options?.exitObservationAsOfSec,
-          maxExitObservationAgeSec: options?.maxExitObservationAgeSec,
+          dexExitObservationMaxAgeSec: options?.dexExitObservationMaxAgeSec,
+          liveRedemptionExitObservationMaxAgeSec: options?.liveRedemptionExitObservationMaxAgeSec,
           impairedOutputAssetIds: options?.impairedOutputAssetIds,
         },
   );

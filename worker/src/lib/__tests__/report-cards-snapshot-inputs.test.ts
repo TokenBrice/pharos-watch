@@ -108,6 +108,38 @@ describe("report-card DEX deployment supply join", () => {
     });
   });
 
+  it("supersedes an older lowercase non-EVM deployment outcome after identity correction", () => {
+    const solanaMint = "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1";
+    const coverage = computeDexDeploymentSupplyCoverage(
+      {
+        chainCirculating: { Solana: supplyPoint(10_000_000) },
+        contracts: [{ chain: "solana", address: solanaMint, decimals: 6 }],
+      },
+      [
+        {
+          chain: "solana",
+          contractAddress: solanaMint.toLowerCase(),
+          outcome: "verified_no_pools",
+          observedAt: 1_000,
+        },
+        {
+          chain: "Solana",
+          contractAddress: solanaMint,
+          outcome: "observed_pools",
+          observedAt: 2_000,
+        },
+      ],
+      new Map([["solana", 1_000_000]]),
+      { asOfSec: 2_100, maxOutcomeAgeSec: 10_000 },
+    );
+
+    expect(coverage).toMatchObject({
+      observedSupplyUsd: 10_000_000,
+      unknownSupplyUsd: 0,
+      unknownChains: [],
+    });
+  });
+
   it("distinguishes verified empty supply from provider-inaccessible supply", () => {
     const coverage = computeDexDeploymentSupplyCoverage(
       {

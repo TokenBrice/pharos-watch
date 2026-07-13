@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeAsset, makeReportCardsDb } from "../../test-helpers/__shared/fixtures";
 import { handleReportCards } from "../../api/report-cards";
-import { buildReportCardsSnapshot, ReportCardsSnapshotUnavailableError } from "../report-cards-snapshot";
+import {
+  buildReportCardsSnapshot,
+  ReportCardsSnapshotUnavailableError,
+  resolveExactRedemptionPublicationGeneration,
+} from "../report-cards-snapshot";
 import { RedemptionBackstopSnapshotUnavailableError } from "../redemption-backstops-store";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { PegSummaryCoin } from "@shared/types/market";
@@ -247,6 +251,41 @@ describe("buildReportCardsSnapshot", () => {
     vi.useRealTimers();
   });
 
+  it("binds exact redemption inputs to loader provenance and represents stale suppression as unavailable", () => {
+    const entry = makeRedemptionEntry({ updatedAt: nowSec, methodologyVersion: "4.08" });
+    expect(
+      resolveExactRedemptionPublicationGeneration({
+        entries: [entry],
+        freshnessUpdatedAt: nowSec,
+        stale: false,
+        runId: "redemption:fixture-run",
+        methodologyVersion: "4.08",
+      }),
+    ).toBe("redemption:fixture-run");
+    expect(
+      resolveExactRedemptionPublicationGeneration({
+        entries: [],
+        freshnessUpdatedAt: nowSec - 100_000,
+        stale: true,
+        runId: "redemption:stale-run",
+        methodologyVersion: "4.08",
+      }),
+    ).toBe("redemption-backstops-unavailable");
+  });
+
+  it("rejects exact redemption rows whose producer methodology does not match", () => {
+    const entry = makeRedemptionEntry({ updatedAt: nowSec, methodologyVersion: "4.07" });
+    expect(() =>
+      resolveExactRedemptionPublicationGeneration({
+        entries: [entry],
+        freshnessUpdatedAt: nowSec,
+        stale: false,
+        runId: "redemption:fixture-run",
+        methodologyVersion: "4.08",
+      }),
+    ).toThrow("producer methodology");
+  });
+
   it("throws when stablecoins cache is missing", async () => {
     await expect(buildReportCardsSnapshot(mockD1())).rejects.toBeInstanceOf(ReportCardsSnapshotUnavailableError);
   });
@@ -268,15 +307,18 @@ describe("buildReportCardsSnapshot", () => {
       },
       updatedAt: nowSec,
     };
-    const db = mockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["bluechip-ratings"],
-        rows: [],
-        first: { value: "{}", updated_at: nowSec },
-      },
-      { match: "dex_liquidity", rows: [] },
-    ], { requireMatch: true });
+    const db = mockD1(
+      [
+        {
+          match: "SELECT value, updated_at FROM cache WHERE key = ?",
+          matchBinds: ["bluechip-ratings"],
+          rows: [],
+          first: { value: "{}", updated_at: nowSec },
+        },
+        { match: "dex_liquidity", rows: [] },
+      ],
+      { requireMatch: true },
+    );
 
     const snapshot = await buildReportCardsSnapshot(db, { preloadedStablecoinsCache });
 
@@ -380,9 +422,7 @@ describe("buildReportCardsSnapshot", () => {
     expect(liveCard?.dimensions.resilience.score).not.toBe(curatedCard?.dimensions.resilience.score);
     expect(liveCard?.dimensions.resilience.score).toBeLessThan(curatedCard?.dimensions.resilience.score ?? 0);
     expect(liveCard?.rawInputs.dependencyFromLive).toBe(true);
-    expect(liveCard?.rawInputs.dependencies).toEqual([
-      { id: "usdt-tether", weight: 0.4, type: "mechanism" },
-    ]);
+    expect(liveCard?.rawInputs.dependencies).toEqual([{ id: "usdt-tether", weight: 0.4, type: "mechanism" }]);
     expect(liveSnapshot.dependencyGraph.edges).toContainEqual({
       from: "usdt-tether",
       to: "dai-makerdao",
@@ -402,7 +442,7 @@ describe("buildReportCardsSnapshot", () => {
     expect(response.status).toBe(200);
 
     const body = await response.json();
-    expect(body).toEqual(snapshot);
+    expect(body).toEqual(JSON.parse(JSON.stringify(snapshot)));
   });
 
   it("orders rated live cards before defunct cards and defunct cards before unrated live cards", async () => {

@@ -71,7 +71,7 @@ export interface ComputeCardInput {
     string,
     Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> &
       Omit<ReportCardDexEvidenceInput, "liquidityScore"> &
-      Partial<Pick<DexLiquidityData, "exitRouteObservations">> & {
+      Partial<Pick<DexLiquidityData, "exitRouteObservations" | "exitRouteObservationCoverage">> & {
         deploymentSupplyCoverage?: DexDeploymentSupplyCoverage | null;
       }
   >;
@@ -90,7 +90,8 @@ export interface ComputeCardInput {
   bridgeRouteMateriality: BridgeRouteMaterialityResult;
   sameNotionalScoringMode?: SameNotionalExitScoringMode;
   exitObservationAsOfSec?: number;
-  maxExitObservationAgeSec?: number;
+  dexExitObservationMaxAgeSec?: number;
+  liveRedemptionExitObservationMaxAgeSec?: number;
   circulatingSupplyUsd?: number | null;
   impairedOutputAssetIds?: readonly string[];
 }
@@ -107,7 +108,8 @@ export interface BuildLiveReportCardsInput {
   chainCirculatingById?: ReadonlyMap<string, BridgeChainCirculating>;
   sameNotionalScoringMode?: SameNotionalExitScoringMode;
   exitObservationAsOfSec?: number;
-  maxExitObservationAgeSec?: number;
+  dexExitObservationMaxAgeSec?: number;
+  liveRedemptionExitObservationMaxAgeSec?: number;
 }
 
 export interface BuildLiveReportCardsResult {
@@ -394,7 +396,8 @@ function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMint
       circulatingSupplyUsd: input.circulatingSupplyUsd,
       sameNotionalScoringMode: input.sameNotionalScoringMode,
       exitObservationAsOfSec: input.exitObservationAsOfSec,
-      maxExitObservationAgeSec: input.maxExitObservationAgeSec,
+      dexExitObservationMaxAgeSec: input.dexExitObservationMaxAgeSec,
+      liveRedemptionExitObservationMaxAgeSec: input.liveRedemptionExitObservationMaxAgeSec,
       impairedOutputAssetIds: input.impairedOutputAssetIds,
     }),
     resilience: scoreResilience(meta, blacklistStatus, liveSlices),
@@ -621,7 +624,8 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
       bridgeRouteMateriality: resolveBridgeRouteMateriality(meta, input.chainCirculatingById?.get(meta.id)),
       sameNotionalScoringMode: input.sameNotionalScoringMode,
       exitObservationAsOfSec: input.exitObservationAsOfSec,
-      maxExitObservationAgeSec: input.maxExitObservationAgeSec,
+      dexExitObservationMaxAgeSec: input.dexExitObservationMaxAgeSec,
+      liveRedemptionExitObservationMaxAgeSec: input.liveRedemptionExitObservationMaxAgeSec,
       circulatingSupplyUsd: Object.values(input.chainCirculatingById?.get(meta.id) ?? {}).reduce((sum, point) => {
         const current = point?.current;
         return sum + (typeof current === "number" && Number.isFinite(current) && current >= 0 ? current : 0);

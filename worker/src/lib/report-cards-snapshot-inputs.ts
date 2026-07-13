@@ -15,7 +15,7 @@ import {
   type StablecoinsCacheLoadResult,
 } from "./stablecoins-cache";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { resolveChainId } from "@shared/lib/chains";
+import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import type { ReserveSlice } from "@shared/types/core";
 import type { StablecoinData } from "@shared/types/market";
@@ -35,6 +35,11 @@ export interface ReportCardsSnapshotInputs {
   bluechipCached: Awaited<ReturnType<typeof getCache>> | null;
   dexLiquiditySnapshot: DexLiquidityLoadResult;
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
+  redemptionSnapshotProvenance: {
+    runId: string | null;
+    methodologyVersion: string | null;
+    latestUpdatedAt: number | null;
+  };
   liveReserveMap: Map<string, ReserveSlice[]>;
   liveReserveProvenanceMap: ReadonlyMap<string, LiveReserveSnapshotProvenance>;
   liquidityStale: boolean;
@@ -104,6 +109,28 @@ function canonicalChain(value: string): string {
 function canonicalContractAddress(value: string): string {
   const trimmed = value.trim();
   return /^0x[0-9a-f]+$/i.test(trimmed) ? trimmed.toLowerCase() : trimmed;
+}
+
+function supersedeLegacyLowercaseDeploymentRows(
+  rows: readonly DexDeploymentSupplyJoinRow[],
+): DexDeploymentSupplyJoinRow[] {
+  const correctedObservedAtByKey = new Map<string, number>();
+  const keyFor = (row: DexDeploymentSupplyJoinRow) => {
+    const chain = canonicalChain(row.chain);
+    if (CHAIN_META[chain]?.type === "evm") return null;
+    return `${chain}\u0000${row.contractAddress.trim().toLowerCase()}`;
+  };
+  for (const row of rows) {
+    const key = keyFor(row);
+    if (!key || row.contractAddress === row.contractAddress.toLowerCase() || row.observedAt == null) continue;
+    correctedObservedAtByKey.set(key, Math.max(correctedObservedAtByKey.get(key) ?? 0, row.observedAt));
+  }
+
+  return rows.filter((row) => {
+    const key = keyFor(row);
+    if (!key || row.contractAddress !== row.contractAddress.toLowerCase() || row.observedAt == null) return true;
+    return (correctedObservedAtByKey.get(key) ?? 0) <= row.observedAt;
+  });
 }
 
 function addFiniteSupply(current: number, value: unknown): number {
@@ -181,7 +208,7 @@ export function computeDexDeploymentSupplyCoverage(
     contractsByChain.set(chain, [...(contractsByChain.get(chain) ?? []), canonicalContractAddress(contract.address)]);
   }
   const outcomesByChain = new Map<string, DexDeploymentSupplyJoinRow[]>();
-  for (const row of deploymentRows) {
+  for (const row of supersedeLegacyLowercaseDeploymentRows(deploymentRows)) {
     const chain = canonicalChain(row.chain);
     outcomesByChain.set(chain, [...(outcomesByChain.get(chain) ?? []), row]);
   }
@@ -407,6 +434,11 @@ export async function loadReportCardsSnapshotInputs(
     bluechipCached,
     dexLiquiditySnapshot,
     redemptionBackstopMap,
+    redemptionSnapshotProvenance: {
+      runId: redemptionBackstopSnapshot.runId ?? null,
+      methodologyVersion: redemptionBackstopSnapshot.methodologyVersion ?? null,
+      latestUpdatedAt: redemptionBackstopSnapshot.latestUpdatedAt,
+    },
     liveReserveMap,
     liveReserveProvenanceMap,
     liquidityStale,

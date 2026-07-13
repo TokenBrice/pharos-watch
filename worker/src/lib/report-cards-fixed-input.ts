@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { BluechipRatingsMapSchema } from "@shared/types/bluechip";
 import {
+  DexExitRouteObservationSchema,
   DexLiquidityMapSchema,
   ExitRouteObservationCoverageSchema,
-  ExitRouteObservationSchema,
   PegSummaryCoinSchema,
   type ExitRouteObservation,
 } from "@shared/types/market";
@@ -23,6 +23,7 @@ import {
   buildReportCardsSnapshotEnvelope,
   sortReportCards,
 } from "./report-cards-snapshot-finalize";
+import { parseJson } from "./json-parse";
 
 const FreshnessEntrySchema = z.object({
   updatedAt: z.number().finite().nonnegative().nullable(),
@@ -45,34 +46,55 @@ const DexDeploymentSupplyCoverageSchema: z.ZodType<DexDeploymentSupplyCoverage> 
   unknownChains: z.array(z.string().min(1)),
 });
 
-const FixedDexLiquidityRowSchema = z.object({
-  liquidityScore: z.number().min(0).max(100).nullable(),
-  concentrationHhi: z.number().min(0).max(1).nullable(),
-  poolCount: z.number().int().nonnegative(),
-  chainCount: z.number().int().nonnegative(),
-  coverageClass: z.enum(["primary", "mixed", "fallback", "legacy", "unobserved"]).nullable().optional(),
-  coverageConfidence: z.number().min(0).max(1).nullable().optional(),
-  liquidityEvidenceClass: z
-    .enum(["unobserved", "measured", "partial_measured", "observed_unmeasured"])
-    .nullable()
-    .optional(),
-  hasMeasuredLiquidityEvidence: z.boolean().nullable().optional(),
-  effectiveTvlUsd: z.number().finite().nonnegative().nullable().optional(),
-  balanceMeasuredTvlUsd: z.number().finite().nonnegative().nullable().optional(),
-  organicMeasuredTvlUsd: z.number().finite().nonnegative().nullable().optional(),
-  deploymentCoverage: z
-    .object({
-      observedPools: z.number().int().nonnegative(),
-      verifiedNoPools: z.number().int().nonnegative(),
-      providerInaccessible: z.number().int().nonnegative(),
-    })
-    .nullable()
-    .optional(),
-  exitRouteObservations: z.array(ExitRouteObservationSchema).nullable().optional(),
-  exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-  methodologyVersion: z.string().min(1).optional(),
-  updatedAt: z.number().int().nonnegative(),
-});
+const FixedDexLiquidityRowSchema = z
+  .object({
+    liquidityScore: z.number().min(0).max(100).nullable(),
+    concentrationHhi: z.number().min(0).max(1).nullable(),
+    poolCount: z.number().int().nonnegative(),
+    chainCount: z.number().int().nonnegative(),
+    coverageClass: z.enum(["primary", "mixed", "fallback", "legacy", "unobserved"]).nullable().optional(),
+    coverageConfidence: z.number().min(0).max(1).nullable().optional(),
+    liquidityEvidenceClass: z
+      .enum(["unobserved", "measured", "partial_measured", "observed_unmeasured"])
+      .nullable()
+      .optional(),
+    hasMeasuredLiquidityEvidence: z.boolean().nullable().optional(),
+    effectiveTvlUsd: z.number().finite().nonnegative().nullable().optional(),
+    balanceMeasuredTvlUsd: z.number().finite().nonnegative().nullable().optional(),
+    organicMeasuredTvlUsd: z.number().finite().nonnegative().nullable().optional(),
+    deploymentCoverage: z
+      .object({
+        observedPools: z.number().int().nonnegative(),
+        verifiedNoPools: z.number().int().nonnegative(),
+        providerInaccessible: z.number().int().nonnegative(),
+      })
+      .nullable()
+      .optional(),
+    exitRouteObservations: z.array(DexExitRouteObservationSchema).nullable().optional(),
+    exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
+    methodologyVersion: z.string().min(1).optional(),
+    updatedAt: z.number().int().nonnegative(),
+  })
+  .superRefine((row, ctx) => {
+    if (!row.exitRouteObservations || !row.exitRouteObservationCoverage) return;
+    const eligibleObservationCount = row.exitRouteObservations.filter(
+      (observation) => observation.scoreEligible,
+    ).length;
+    if (row.exitRouteObservationCoverage.observationCount !== row.exitRouteObservations.length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["exitRouteObservationCoverage", "observationCount"],
+        message: "coverage observation count does not match DEX observations",
+      });
+    }
+    if (row.exitRouteObservationCoverage.scoreEligibleObservationCount !== eligibleObservationCount) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["exitRouteObservationCoverage", "scoreEligibleObservationCount"],
+        message: "coverage eligible-observation count does not match DEX observations",
+      });
+    }
+  });
 
 export type FixedDexLiquidityRow = z.infer<typeof FixedDexLiquidityRowSchema>;
 
@@ -292,7 +314,7 @@ export function computeDexLiquidityPayloadFingerprint(
   );
 }
 
-export function computeRedemptionPayloadFingerprint(
+function computeRedemptionPayloadFingerprint(
   redemptionBackstopMap: ReportCardsFixedInput["redemptionBackstopMap"],
   redemptionGenerationId: string,
 ): string {
@@ -305,8 +327,8 @@ export function computeRedemptionPayloadFingerprint(
   );
 }
 
-export const REPORT_CARDS_FIXED_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
-export const REPORT_CARDS_FIXED_INPUT_CACHE_MAX_BYTES = 1_900_000;
+const REPORT_CARDS_FIXED_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
+const REPORT_CARDS_FIXED_INPUT_CACHE_MAX_BYTES = 1_900_000;
 
 const FixedInputCacheEnvelopeSchema = z.object({
   schemaVersion: z.literal(1),
@@ -377,7 +399,11 @@ export async function buildReportCardsFixedInputCacheEntry(
 }
 
 export async function parseReportCardsFixedInputCacheValue(value: unknown): Promise<ReportCardsFixedInput> {
-  const raw = typeof value === "string" ? JSON.parse(value) : value;
+  const parsedEnvelope = typeof value === "string" ? parseJson(value) : null;
+  if (parsedEnvelope && !parsedEnvelope.ok) {
+    throw new Error(`Malformed exact report-card fixed input cache envelope: ${parsedEnvelope.message}`);
+  }
+  const raw = parsedEnvelope?.ok ? parsedEnvelope.value : value;
   const envelope = FixedInputCacheEnvelopeSchema.parse(raw);
   const payload = await gunzipText(base64ToBytes(envelope.payload));
   if (new TextEncoder().encode(payload).byteLength !== envelope.uncompressedBytes) {
@@ -386,7 +412,11 @@ export async function parseReportCardsFixedInputCacheValue(value: unknown): Prom
   if (sha256Hex(payload) !== envelope.payloadSha256) {
     throw new Error("Exact report-card fixed input cache artifact checksum mismatch");
   }
-  const input = normalizeFixedInput(JSON.parse(payload));
+  const parsedPayload = parseJson(payload);
+  if (!parsedPayload.ok) {
+    throw new Error(`Malformed exact report-card fixed input cache payload: ${parsedPayload.message}`);
+  }
+  const input = normalizeFixedInput(parsedPayload.value);
   if (input.captureKind !== "exact-publication-inputs") {
     throw new Error("Cached report-card fixed input is not publication-exact");
   }
