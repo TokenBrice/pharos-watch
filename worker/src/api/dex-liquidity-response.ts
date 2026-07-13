@@ -1,6 +1,12 @@
 import { safeJsonParse } from "../lib/api-utils";
 import { DexLiquidityCronMetadataSchema } from "../lib/schemas";
-import type { LiquidityPoolSourceFamily } from "@shared/types/market";
+import {
+  ExitRouteObservationCoverageSchema,
+  ExitRouteObservationSchema,
+  type ExitRouteObservation,
+  type ExitRouteObservationCoverage,
+  type LiquidityPoolSourceFamily,
+} from "@shared/types/market";
 import { toErrorMessage } from "../lib/error-utils";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
@@ -74,13 +80,68 @@ export interface DexDeploymentOutcomeRow {
   waiver_expires_at: number | null;
 }
 
+export interface NormalizedDexScoreDetails {
+  scoreComponents: unknown;
+  exitRouteObservations: ExitRouteObservation[] | null;
+  exitRouteObservationCoverage: ExitRouteObservationCoverage;
+}
+
+const UNKNOWN_EXIT_ROUTE_COVERAGE: ExitRouteObservationCoverage = {
+  status: "unknown",
+  capabilityMatrixVersion: "unknown",
+  retainedPoolCount: 0,
+  observationCount: 0,
+  scoreEligibleObservationCount: 0,
+  unsupportedPoolCount: 0,
+  evidenceCounts: {},
+  unsupportedReasons: { producerEnvelopeAbsent: 1 },
+};
+
+const SCORE_COMPONENT_KEYS = ["tvlDepth", "volumeActivity", "poolQuality", "durability", "pairDiversity"] as const;
+
+function projectLegacyScoreComponents(details: Record<string, unknown>): Record<string, number> | null {
+  const projected: Record<string, number> = {};
+  for (const key of SCORE_COMPONENT_KEYS) {
+    const value = details[key];
+    if (typeof value !== "number" || !Number.isFinite(value)) return null;
+    projected[key] = value;
+  }
+  return projected;
+}
+
+export function normalizeDexScoreDetails(
+  json: string | null,
+  context = "dex-liquidity-response:score_components_json",
+): NormalizedDexScoreDetails {
+  const parsed = safeJsonParse<unknown>(json, null, context);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return {
+      scoreComponents: parsed,
+      exitRouteObservations: null,
+      exitRouteObservationCoverage: UNKNOWN_EXIT_ROUTE_COVERAGE,
+    };
+  }
+
+  const details = parsed as Record<string, unknown>;
+  const observations = ExitRouteObservationSchema.array().safeParse(details.exitRouteObservations);
+  const coverage = ExitRouteObservationCoverageSchema.safeParse(details.exitRouteObservationCoverage);
+  return {
+    scoreComponents: projectLegacyScoreComponents(details),
+    exitRouteObservations: observations.success ? observations.data : null,
+    exitRouteObservationCoverage: coverage.success ? coverage.data : UNKNOWN_EXIT_ROUTE_COVERAGE,
+  };
+}
+
 export function buildDexDeploymentCoverage(rows: readonly DexDeploymentOutcomeRow[], nowSec: number) {
-  const byStablecoin = new Map<string, {
-    observedPools: number;
-    verifiedNoPools: number;
-    providerInaccessible: number;
-    deployments: Array<Record<string, unknown>>;
-  }>();
+  const byStablecoin = new Map<
+    string,
+    {
+      observedPools: number;
+      verifiedNoPools: number;
+      providerInaccessible: number;
+      deployments: Array<Record<string, unknown>>;
+    }
+  >();
   for (const row of rows) {
     const coverage = byStablecoin.get(row.stablecoin_id) ?? {
       observedPools: 0,
@@ -104,11 +165,13 @@ export function buildDexDeploymentCoverage(rows: readonly DexDeploymentOutcomeRo
       reason: row.reason,
       observedPoolCount: row.observed_pool_count,
       observedAt: row.observed_at,
-      waiver: waiverActive ? {
-        owner: row.waiver_owner,
-        reason: row.waiver_reason,
-        expiresAt: row.waiver_expires_at,
-      } : null,
+      waiver: waiverActive
+        ? {
+            owner: row.waiver_owner,
+            reason: row.waiver_reason,
+            expiresAt: row.waiver_expires_at,
+          }
+        : null,
     });
     byStablecoin.set(row.stablecoin_id, coverage);
   }
@@ -146,13 +209,32 @@ function pickAllowedKeys(obj: Record<string, unknown>, allowed: Set<string>): Re
 }
 
 const ALLOWED_POOL_KEYS = new Set<string>([
-  "project", "chain", "symbol", "poolType", "tvlUsd", "volumeUsd1d", "price", "source",
+  "project",
+  "chain",
+  "symbol",
+  "poolType",
+  "tvlUsd",
+  "volumeUsd1d",
+  "price",
+  "source",
 ]);
 const ALLOWED_EXTRA_KEYS = new Set<string>([
-  "amplificationCoefficient", "balanceRatio", "feeTier", "organicFraction",
-  "pairQuality", "stressIndex", "maturityDays", "balanceDetails", "measurement",
-  "effectiveTvl", "isMetaPool", "registryId", "lockedLiquidityPct",
-  "orderbookDepthUsd", "orderbookDepthUpUsd", "orderbookTvlBasis",
+  "amplificationCoefficient",
+  "balanceRatio",
+  "feeTier",
+  "organicFraction",
+  "pairQuality",
+  "stressIndex",
+  "maturityDays",
+  "balanceDetails",
+  "measurement",
+  "effectiveTvl",
+  "isMetaPool",
+  "registryId",
+  "lockedLiquidityPct",
+  "orderbookDepthUsd",
+  "orderbookDepthUpUsd",
+  "orderbookTvlBasis",
 ]);
 
 export function normalizeTopPools(

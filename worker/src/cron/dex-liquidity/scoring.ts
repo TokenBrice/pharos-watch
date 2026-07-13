@@ -1,15 +1,13 @@
 import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
+import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
+import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute } from "../../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import type {
-  LiquidityMetrics,
-  FullScoreResult,
-  GlobalAgg,
-} from "./types";
+import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { computeDurabilityScore, computeLiquidityScore } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
@@ -28,7 +26,8 @@ import {
 const HISTORY_CONFIDENCE_MIN = 0.75;
 const MIN_STABILITY_SAMPLES = 7;
 const PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO = 2.5;
-const DISPLAY_PRICE_RATIO_MIN = 0.5, DISPLAY_PRICE_RATIO_MAX = 2.0;
+const DISPLAY_PRICE_RATIO_MIN = 0.5,
+  DISPLAY_PRICE_RATIO_MAX = 2.0;
 
 interface ProtocolCapDiagnostics {
   cappedPoolCount: number;
@@ -39,6 +38,11 @@ interface ProtocolCapDiagnostics {
 interface ScoreDiagnostics {
   protocolCapReductions: ProtocolCapDiagnostics;
 }
+
+type P4aFullScoreResult = FullScoreResult & {
+  exitRouteObservations: ExitRouteObservation[];
+  exitRouteObservationCoverage: ExitRouteObservationCoverage;
+};
 
 /** @internal Exported for testing only. */
 export function computeSeriesStability(values: number[]): number | null {
@@ -69,7 +73,7 @@ async function loadConfidentHistoryStability(db: D1Database): Promise<{
       `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, coverage_confidence
        FROM dex_liquidity_history
        WHERE snapshot_date >= ?
-       ORDER BY stablecoin_id, snapshot_date`
+       ORDER BY stablecoin_id, snapshot_date`,
     )
     .bind(thirtyDaysAgo)
     .all<{
@@ -110,13 +114,13 @@ async function loadConfidentHistoryStability(db: D1Database): Promise<{
   return { tvlStabilityMap, volumeStabilityMap };
 }
 
-
 /** Compute HHI, durability, and 6-component composite score per stablecoin. */
 export async function computeStablecoinScores(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
   protocolTvlCaps: Map<string, number>,
   mcapById?: Map<string, number>,
+  routeObservedAtSec = Math.floor(Date.now() / 1000),
 ): Promise<{
   scores: Map<string, FullScoreResult>;
   globalAgg: GlobalAgg;
@@ -134,6 +138,7 @@ export async function computeStablecoinScores(
 
   const results = new Map<string, FullScoreResult>();
   const retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>();
+  const routeObservedAt = Math.max(0, Math.floor(routeObservedAtSec));
 
   // Global dedup accumulators — accumulated per-coin BEFORE top-10 truncation
   const seenPoolTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; proto: string; chain: string }>();
@@ -155,15 +160,28 @@ export async function computeStablecoinScores(
     protocolCapDiagnostics.reducedTvlUsd += capResult.reducedTvlUsd;
 
     const retainedPools = [...m.topPools];
-    retainedPoolsByStablecoin.set(id, retainedPools.map((pool) => ({
-      ...pool,
-      extra: pool.extra ? { ...pool.extra } : undefined,
-    })));
+    retainedPoolsByStablecoin.set(
+      id,
+      retainedPools.map((pool) => ({
+        ...pool,
+        extra: pool.extra ? { ...pool.extra } : undefined,
+      })),
+    );
     const rebuilt = rebuildMetricsFromPools(retainedPools);
+    const routeObservationResult = buildP4DexExitRouteObservations({
+      stablecoinId: id,
+      retainedPools,
+      observedAt: routeObservedAt,
+    });
 
     applyRebuiltMetrics(m, rebuilt);
     const globalDelta = accumulateGlobalAggregate(
-      retainedPools, globalProtocolTvl, globalChainTvl, globalProtoChainTvl, globalChains, seenPoolTvl,
+      retainedPools,
+      globalProtocolTvl,
+      globalChainTvl,
+      globalProtoChainTvl,
+      globalChains,
+      seenPoolTvl,
     );
     globalTotalTvl += globalDelta.totalTvl;
     globalTotalVol24h += globalDelta.totalVol24h;
@@ -197,7 +215,7 @@ export async function computeStablecoinScores(
       measuredPriceTvlUsd: rebuilt.measuredPriceTvlUsd,
     });
 
-    results.set(id, {
+    const fullScoreResult: P4aFullScoreResult = {
       tvl: m.totalTvlUsd,
       effectiveTvl: m.effectiveTvl,
       vol24h: m.totalVolume24hUsd,
@@ -214,7 +232,10 @@ export async function computeStablecoinScores(
       sourceMix: rebuilt.sourceMix,
       balanceMeasuredTvlUsd: m.totalTvlForBalance,
       organicMeasuredTvlUsd: m.totalTvlForOrganic,
-    });
+      exitRouteObservations: routeObservationResult.observations,
+      exitRouteObservationCoverage: routeObservationResult.coverage,
+    };
+    results.set(id, fullScoreResult);
   }
 
   // Global protocol-level TVL cap: when reducing excess, chain TVLs are
@@ -284,11 +305,13 @@ export async function computeDepthStability(
 
     const stabilityStmts: D1PreparedStatement[] = [];
     stabilityStmts.push(
-      db.prepare(`UPDATE dex_liquidity SET depth_stability = NULL WHERE stablecoin_id != '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`)
+      db.prepare(
+        `UPDATE dex_liquidity SET depth_stability = NULL WHERE stablecoin_id != '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
+      ),
     );
     for (const [id, stability] of tvlStabilityMap) {
       stabilityStmts.push(
-        db.prepare("UPDATE dex_liquidity SET depth_stability = ? WHERE stablecoin_id = ?").bind(stability, id)
+        db.prepare("UPDATE dex_liquidity SET depth_stability = ? WHERE stablecoin_id = ?").bind(stability, id),
       );
     }
     if (stabilityStmts.length > 0) {
@@ -311,9 +334,7 @@ export async function computeDexPrices(
 ): Promise<void> {
   throwIfAborted(signal);
   const priceObservations = buildDexPriceObservationsFromRetainedPools(retainedPoolsByStablecoin);
-  const existingRows = await db
-    .prepare("SELECT stablecoin_id FROM dex_prices")
-    .all<{ stablecoin_id: string }>();
+  const existingRows = await db.prepare("SELECT stablecoin_id FROM dex_prices").all<{ stablecoin_id: string }>();
   const existingIds = new Set((existingRows.results ?? []).map((row) => row.stablecoin_id));
   throwIfAborted(signal);
 
@@ -321,7 +342,7 @@ export async function computeDexPrices(
     if (existingIds.size === 0) return;
 
     const retireStmts = Array.from(existingIds, (stablecoinId) =>
-      db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(stablecoinId)
+      db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(stablecoinId),
     );
     await batchExecute(db, retireStmts, { signal });
     console.log(`[dex-liquidity] Retired ${retireStmts.length} DEX price rows with no current observations`);
@@ -368,8 +389,9 @@ export async function computeDexPrices(
     if (primaryPrice != null && primaryPrice > 0 && collapsedObservations.length >= 3) {
       const nearPrimary = collapsedObservations.filter((o) => {
         const ratio = o.price / primaryPrice;
-        return ratio >= (1 / PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO) &&
-          ratio <= PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO;
+        return (
+          ratio >= 1 / PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO && ratio <= PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO
+        );
       });
       if (nearPrimary.length >= 2 && nearPrimary.length > collapsedObservations.length / 2) {
         medianInputObs = nearPrimary;
@@ -400,7 +422,7 @@ export async function computeDexPrices(
     const totalTvl = collapsedObservations.reduce((s, o) => s + o.tvl, 0);
     let deviationBps: number | null = null;
     if (primaryPrice != null && primaryPrice > 0) {
-      deviationBps = Math.round(((medianPrice / primaryPrice) - 1) * 10000);
+      deviationBps = Math.round((medianPrice / primaryPrice - 1) * 10000);
     }
 
     // Guard against retained pools whose prices are off-peg for the tracked stablecoin.
@@ -438,7 +460,7 @@ export async function computeDexPrices(
             primary_price_at_calc = excluded.primary_price_at_calc,
             price_sources_json = excluded.price_sources_json,
             updated_at = excluded.updated_at
-          WHERE dex_prices.updated_at <= excluded.updated_at`
+          WHERE dex_prices.updated_at <= excluded.updated_at`,
         )
         .bind(
           id,
@@ -449,8 +471,8 @@ export async function computeDexPrices(
           deviationBps,
           primaryPrice ?? null,
           JSON.stringify(protocolSources),
-          nowSec
-        )
+          nowSec,
+        ),
     );
   }
 
@@ -458,9 +480,7 @@ export async function computeDexPrices(
   for (const existingId of existingIds) {
     throwIfAborted(signal);
     if (observedIds.has(existingId)) continue;
-    priceStmts.push(
-      db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(existingId)
-    );
+    priceStmts.push(db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(existingId));
     retiredCount++;
   }
 
@@ -468,10 +488,10 @@ export async function computeDexPrices(
     await batchExecute(db, priceStmts, { signal });
     console.log(
       `[dex-liquidity] Wrote ${observedIds.size} DEX price observations to dex_prices` +
-      (collapsedDuplicateGroups > 0
-        ? ` after collapsing ${collapsedDuplicateObservations} duplicate observations across ${collapsedDuplicateGroups} pool group(s)`
-        : "") +
-      (retiredCount > 0 ? ` and retired ${retiredCount} stale rows` : ""),
+        (collapsedDuplicateGroups > 0
+          ? ` after collapsing ${collapsedDuplicateObservations} duplicate observations across ${collapsedDuplicateGroups} pool group(s)`
+          : "") +
+        (retiredCount > 0 ? ` and retired ${retiredCount} stale rows` : ""),
     );
   }
 }

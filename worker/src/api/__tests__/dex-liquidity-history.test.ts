@@ -8,7 +8,10 @@ describe("handleDexLiquidityHistory", () => {
 
   it("returns 200 with history array", async () => {
     const db = mockD1([{ match: "dex_liquidity_history", rows: [row] }]);
-    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
+    const res = await handleDexLiquidityHistory(
+      db,
+      new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"),
+    );
     expect(res.status).toBe(200);
     const body = (await res.json()) as Array<{
       tvl: number;
@@ -32,9 +35,58 @@ describe("handleDexLiquidityHistory", () => {
     expect(body[0]).toHaveProperty("methodologyVersion");
   });
 
+  it("returns validated prospective route summaries and ignores legacy absence", async () => {
+    const withSummary = makeDexLiquidityHistoryRow({
+      exit_route_summary_json: JSON.stringify({
+        observations: [
+          {
+            routeId: "dex:test",
+            routeFamily: "dex-orderbook",
+            scope: { kind: "venue", venue: "test", protocol: "test" },
+            requestedNotionalUsd: 1_000_000,
+            settlementHorizonSec: 300,
+            maxCostBps: 200,
+            executableUsd: 100_000,
+            completionRatio: 0.1,
+            output: { kind: "fiat", currency: "USD" },
+            evidenceKind: "direct-orderbook-depth",
+            confidence: "medium",
+            scoreEligible: false,
+            observedAt: 1_700_000_000,
+            freshnessSeconds: 0,
+            commonModeKeys: ["venue:test"],
+          },
+        ],
+        coverage: {
+          status: "populated",
+          capabilityMatrixVersion: "test",
+          retainedPoolCount: 1,
+          observationCount: 1,
+          scoreEligibleObservationCount: 0,
+          unsupportedPoolCount: 0,
+          evidenceCounts: { "direct-orderbook-depth": 1 },
+          unsupportedReasons: {},
+        },
+      }),
+    });
+    const db = mockD1([{ match: "dex_liquidity_history", rows: [withSummary] }]);
+    const res = await handleDexLiquidityHistory(
+      db,
+      new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"),
+    );
+    const body = (await res.json()) as Array<Record<string, unknown>>;
+    expect(body[0]).toMatchObject({
+      exitRouteObservations: [{ routeId: "dex:test", scoreEligible: false }],
+      exitRouteObservationCoverage: { capabilityMatrixVersion: "test" },
+    });
+  });
+
   it("returns 200 with empty array when no data", async () => {
     const db = mockD1([{ match: "dex_liquidity_history", rows: [] }]);
-    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
+    const res = await handleDexLiquidityHistory(
+      db,
+      new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"),
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual([]);
@@ -56,7 +108,10 @@ describe("handleDexLiquidityHistory", () => {
 
   it("maps snake_case columns to camelCase", async () => {
     const db = mockD1([{ match: "dex_liquidity_history", rows: [row] }]);
-    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
+    const res = await handleDexLiquidityHistory(
+      db,
+      new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"),
+    );
     const body = (await res.json()) as Array<Record<string, unknown>>;
     expect(body[0]).not.toHaveProperty("total_tvl_usd");
     expect(body[0]).not.toHaveProperty("total_volume_24h_usd");
@@ -72,20 +127,30 @@ describe("handleDexLiquidityHistory", () => {
       methodology_version: null,
     };
     const db = mockD1([{ match: "dex_liquidity_history", rows: [legacyRow] }]);
-    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
+    const res = await handleDexLiquidityHistory(
+      db,
+      new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"),
+    );
     const body = (await res.json()) as Array<{ methodologyVersion: string }>;
     expect(body[0]?.methodologyVersion).toBe("2.2");
   });
 
   it("marks low-confidence snapshots as informational rather than trendworthy", async () => {
-    const db = mockD1([{
-      match: "dex_liquidity_history",
-      rows: [makeDexLiquidityHistoryRow({
-        coverage_class: "fallback",
-        coverage_confidence: 0.5,
-      })],
-    }]);
-    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
+    const db = mockD1([
+      {
+        match: "dex_liquidity_history",
+        rows: [
+          makeDexLiquidityHistoryRow({
+            coverage_class: "fallback",
+            coverage_confidence: 0.5,
+          }),
+        ],
+      },
+    ]);
+    const res = await handleDexLiquidityHistory(
+      db,
+      new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"),
+    );
     const body = (await res.json()) as Array<{
       liquidityEvidenceClass: string;
       hasMeasuredLiquidityEvidence: boolean;

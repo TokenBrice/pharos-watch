@@ -1,6 +1,11 @@
-import type { DexLiquidityData } from "@shared/types/market";
+import {
+  ExitRouteObservationCoverageSchema,
+  ExitRouteObservationSchema,
+  type DexLiquidityData,
+  type LiquidityCoverageClass,
+} from "@shared/types/market";
 import { classifyLiquidityEvidence } from "@shared/lib/dex-liquidity-evidence";
-import type { LiquidityCoverageClass } from "@shared/types/market";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
 interface DexLiquidityRow {
   stablecoin_id: string;
@@ -14,17 +19,14 @@ interface DexLiquidityRow {
   coverage_confidence: number | null;
   balance_measured_tvl_usd: number | null;
   organic_measured_tvl_usd: number | null;
-  deployment_total: number;
-  deployment_observed_pools: number;
-  deployment_verified_no_pools: number;
-  deployment_provider_inaccessible: number;
+  score_components_json: string | null;
+  deployment_chain: string | null;
+  deployment_contract_address: string | null;
+  deployment_outcome: "observed_pools" | "verified_no_pools" | "provider_inaccessible" | null;
   updated_at: number | null;
 }
 
-type DexLiquiditySnapshot = Pick<
-  DexLiquidityData,
-  "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"
-> &
+type DexLiquiditySnapshot = Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> &
   Partial<
     Pick<
       DexLiquidityData,
@@ -35,6 +37,8 @@ type DexLiquiditySnapshot = Pick<
       | "hasMeasuredLiquidityEvidence"
       | "balanceMeasuredTvlUsd"
       | "organicMeasuredTvlUsd"
+      | "exitRouteObservations"
+      | "exitRouteObservationCoverage"
     >
   > & {
     deploymentCoverage?: {
@@ -54,7 +58,22 @@ export interface DexLiquidityLoadResult {
   latestUpdatedAt: number | null;
 }
 
-function parseCoverageClass(value: string | null): LiquidityCoverageClass | null {
+type DeploymentCoverage = NonNullable<DexLiquiditySnapshot["deploymentCoverage"]>;
+
+function deploymentKey(stablecoinId: string, chain: string, address: string): string {
+  return `${stablecoinId}\u0000${chain}\u0000${address.toLowerCase()}`;
+}
+
+const CURRENT_DEPLOYMENT_KEYS = new Set(
+  ACTIVE_STABLECOINS.flatMap((meta) =>
+    [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])].map((deployment) =>
+      deploymentKey(meta.id, deployment.chain, deployment.address),
+    ),
+  ),
+);
+
+function parseCoverageClass(value: string | null, stablecoinId: string): LiquidityCoverageClass | null {
+  if (value === null) return null;
   switch (value) {
     case "primary":
     case "mixed":
@@ -63,82 +82,123 @@ function parseCoverageClass(value: string | null): LiquidityCoverageClass | null
     case "unobserved":
       return value;
     default:
-      return null;
+      throw new Error(`Invalid dex_liquidity coverage_class for ${stablecoinId}: ${value}`);
   }
 }
 
-export async function loadDexLiquiditySnapshot(
-  db: D1Database,
-): Promise<DexLiquidityLoadResult> {
+function parseCoverageConfidence(value: number | null, stablecoinId: string): number | null {
+  if (value === null) return null;
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error(`Invalid dex_liquidity coverage_confidence for ${stablecoinId}: ${value}`);
+  }
+  return value;
+}
+
+function parseExitRouteDetails(
+  json: string | null,
+): Pick<DexLiquiditySnapshot, "exitRouteObservations" | "exitRouteObservationCoverage"> {
+  if (json == null) return {};
+  try {
+    const raw = JSON.parse(json) as Record<string, unknown>;
+    const observations = ExitRouteObservationSchema.array().safeParse(raw.exitRouteObservations);
+    const coverage = ExitRouteObservationCoverageSchema.safeParse(raw.exitRouteObservationCoverage);
+    return {
+      ...(observations.success ? { exitRouteObservations: observations.data } : {}),
+      ...(coverage.success ? { exitRouteObservationCoverage: coverage.data } : {}),
+    };
+  } catch {
+    return {};
+  }
+}
+
+export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiquidityLoadResult> {
   const rows = await db
     .prepare(
       `SELECT dl.stablecoin_id, dl.liquidity_score, dl.concentration_hhi,
               dl.pool_count, dl.chain_count, dl.total_tvl_usd, dl.effective_tvl_usd,
               dl.coverage_class, dl.coverage_confidence, dl.balance_measured_tvl_usd,
-              dl.organic_measured_tvl_usd, dl.updated_at,
-              COALESCE(dc.deployment_total, 0) AS deployment_total,
-              COALESCE(dc.observed_pools, 0) AS deployment_observed_pools,
-              COALESCE(dc.verified_no_pools, 0) AS deployment_verified_no_pools,
-              COALESCE(dc.provider_inaccessible, 0) AS deployment_provider_inaccessible
+              dl.organic_measured_tvl_usd, dl.score_components_json, dl.updated_at,
+              dco.chain AS deployment_chain,
+              dco.contract_address AS deployment_contract_address,
+              dco.outcome AS deployment_outcome
        FROM dex_liquidity dl
-       LEFT JOIN (
-         SELECT stablecoin_id,
-                COUNT(*) AS deployment_total,
-                SUM(CASE WHEN outcome = 'observed_pools' THEN 1 ELSE 0 END) AS observed_pools,
-                SUM(CASE WHEN outcome = 'verified_no_pools' THEN 1 ELSE 0 END) AS verified_no_pools,
-                SUM(CASE WHEN outcome = 'provider_inaccessible' THEN 1 ELSE 0 END) AS provider_inaccessible
-         FROM dex_deployment_outcomes
-         GROUP BY stablecoin_id
-       ) dc ON dc.stablecoin_id = dl.stablecoin_id
+       LEFT JOIN dex_deployment_outcomes dco ON dco.stablecoin_id = dl.stablecoin_id
        WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER.replaceAll("publication_generation_id", "dl.publication_generation_id")}`,
     )
     .all<DexLiquidityRow>();
 
   const map: DexLiquidityDbMap = {};
+  const processedStablecoinIds = new Set<string>();
+  const deploymentCoverageById = new Map<string, DeploymentCoverage>();
   let latestUpdatedAt: number | null = null;
   for (const row of rows.results ?? []) {
-    const coverageClass = parseCoverageClass(row.coverage_class);
-    const hasRepublishedEvidence = coverageClass != null && row.coverage_confidence != null;
-    const evidence = hasRepublishedEvidence
-      ? classifyLiquidityEvidence(row.total_tvl_usd, coverageClass, row.coverage_confidence)
-      : null;
+    if (
+      row.deployment_chain != null &&
+      row.deployment_contract_address != null &&
+      row.deployment_outcome != null &&
+      CURRENT_DEPLOYMENT_KEYS.has(
+        deploymentKey(row.stablecoin_id, row.deployment_chain, row.deployment_contract_address),
+      )
+    ) {
+      const coverage = deploymentCoverageById.get(row.stablecoin_id) ?? {
+        observedPools: 0,
+        verifiedNoPools: 0,
+        providerInaccessible: 0,
+      };
+      if (row.deployment_outcome === "observed_pools") coverage.observedPools += 1;
+      else if (row.deployment_outcome === "verified_no_pools") coverage.verifiedNoPools += 1;
+      else coverage.providerInaccessible += 1;
+      deploymentCoverageById.set(row.stablecoin_id, coverage);
+    }
+
+    if (processedStablecoinIds.has(row.stablecoin_id)) continue;
+    processedStablecoinIds.add(row.stablecoin_id);
+    let coverageClass: LiquidityCoverageClass | null;
+    let coverageConfidence: number | null;
+    try {
+      coverageClass = parseCoverageClass(row.coverage_class, row.stablecoin_id);
+      coverageConfidence = parseCoverageConfidence(row.coverage_confidence, row.stablecoin_id);
+      if ((coverageClass === null) !== (coverageConfidence === null)) {
+        throw new Error(`Incomplete dex_liquidity coverage evidence for ${row.stablecoin_id}`);
+      }
+    } catch (error) {
+      console.error(`[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
+      continue;
+    }
+    const evidence =
+      coverageClass != null && coverageConfidence != null
+        ? classifyLiquidityEvidence(row.total_tvl_usd, coverageClass, coverageConfidence)
+        : null;
     const snapshot: DexLiquiditySnapshot = {
       liquidityScore: row.liquidity_score,
       concentrationHhi: row.concentration_hhi,
       poolCount: row.pool_count,
       chainCount: row.chain_count,
+      ...parseExitRouteDetails(row.score_components_json),
     };
-    if (hasRepublishedEvidence && evidence != null) {
+    if (coverageClass != null && coverageConfidence != null && evidence != null) {
       snapshot.coverageClass = coverageClass;
-      snapshot.coverageConfidence = row.coverage_confidence!;
+      snapshot.coverageConfidence = coverageConfidence;
       snapshot.liquidityEvidenceClass = evidence.liquidityEvidenceClass;
       snapshot.hasMeasuredLiquidityEvidence = evidence.hasMeasuredLiquidityEvidence;
       snapshot.effectiveTvlUsd = row.effective_tvl_usd ?? 0;
       snapshot.balanceMeasuredTvlUsd = row.balance_measured_tvl_usd ?? 0;
       snapshot.organicMeasuredTvlUsd = row.organic_measured_tvl_usd ?? 0;
     }
-    if (row.deployment_total > 0) {
-      snapshot.deploymentCoverage = {
-        observedPools: row.deployment_observed_pools,
-        verifiedNoPools: row.deployment_verified_no_pools,
-        providerInaccessible: row.deployment_provider_inaccessible,
-      };
-    }
     map[row.stablecoin_id] = snapshot;
-    if (
-      row.updated_at != null &&
-      (latestUpdatedAt == null || row.updated_at > latestUpdatedAt)
-    ) {
+    if (row.updated_at != null && (latestUpdatedAt == null || row.updated_at > latestUpdatedAt)) {
       latestUpdatedAt = row.updated_at;
     }
+  }
+
+  for (const [stablecoinId, deploymentCoverage] of deploymentCoverageById) {
+    if (map[stablecoinId]) map[stablecoinId].deploymentCoverage = deploymentCoverage;
   }
 
   return { map, latestUpdatedAt };
 }
 
-export async function loadDexLiquidityMap(
-  db: D1Database,
-): Promise<DexLiquidityDbMap> {
+export async function loadDexLiquidityMap(db: D1Database): Promise<DexLiquidityDbMap> {
   const { map } = await loadDexLiquiditySnapshot(db);
   return map;
 }

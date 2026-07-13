@@ -584,6 +584,7 @@ async function scoreDexLiquidityPoolState(
     poolState.metrics,
     sourceState.dataSources.protocolTvlCaps,
     sourceState.stablecoinMcapById,
+    ctx.syncStartSec,
   );
   const analysis = await analyzeDexLiquidityPostScoring({
     db: ctx.db,

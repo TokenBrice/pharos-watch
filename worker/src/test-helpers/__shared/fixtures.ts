@@ -29,6 +29,7 @@ type BlacklistRow = {
   block_number: number;
   timestamp: number;
   methodology_version: string | null;
+  exit_route_summary_json?: string | null;
   contract_address: string | null;
   config_key: string | null;
   event_signature: string | null;
@@ -116,6 +117,7 @@ type DexLiquidityHistoryRow = {
   coverage_class: string | null;
   coverage_confidence: number | null;
   methodology_version: string | null;
+  exit_route_summary_json?: string | null;
 };
 
 type DigestRow = {
@@ -350,6 +352,7 @@ export function makeDexLiquidityHistoryRow(overrides: Partial<DexLiquidityHistor
     coverage_class: "primary",
     coverage_confidence: 1,
     methodology_version: "3.2",
+    exit_route_summary_json: null,
   };
   return { ...defaults, ...overrides };
 }

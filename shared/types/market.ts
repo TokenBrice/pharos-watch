@@ -175,6 +175,9 @@ const DexLiquidityPoolSchema = z.object({
       isMetaPool: z.boolean().optional(),
       maturityDays: z.number().optional(),
       registryId: z.string().optional(),
+      orderbookDepthUsd: z.number().nonnegative().optional(),
+      orderbookDepthUpUsd: z.number().nonnegative().optional(),
+      orderbookTvlBasis: z.enum(["volume-derived", "coingecko-depth-2pct-capped-by-volume"]).optional(),
       balanceDetails: z
         .array(
           z.object({
@@ -226,31 +229,139 @@ export const DexExitEvidenceKindSchema = z.enum([
 ]);
 export type DexExitEvidenceKind = z.infer<typeof DexExitEvidenceKindSchema>;
 
-export const DexDeploymentOutcomeSchema = z.enum([
-  "observed_pools",
-  "verified_no_pools",
-  "provider_inaccessible",
+export const ExitRouteFamilySchema = z.enum([
+  "dex-amm",
+  "dex-orderbook",
+  "issuer-redemption",
+  "protocol-redemption",
+  "eventual-redemption",
 ]);
+export type ExitRouteFamily = z.infer<typeof ExitRouteFamilySchema>;
+
+export const ExitRouteEvidenceKindSchema = z.union([
+  DexExitEvidenceKindSchema,
+  z.enum(["documented-terms", "live-reserve-state", "onchain-contract-state", "manual-review"]),
+]);
+export type ExitRouteEvidenceKind = z.infer<typeof ExitRouteEvidenceKindSchema>;
+
+export const ExitRouteConfidenceSchema = z.enum(["high", "medium", "low", "unknown"]);
+export type ExitRouteConfidence = z.infer<typeof ExitRouteConfidenceSchema>;
+
+export const ExitRouteScopeSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("chain-contract"),
+    chain: z.string().min(1),
+    contractOrPoolId: z.string().min(1),
+    protocol: z.string().min(1),
+  }),
+  z.object({
+    kind: z.literal("venue"),
+    venue: z.string().min(1),
+    protocol: z.string().min(1),
+  }),
+  z.object({
+    kind: z.literal("issuer"),
+    issuerId: z.string().min(1),
+  }),
+  z.object({
+    kind: z.literal("protocol"),
+    protocol: z.string().min(1),
+    chain: z.string().min(1).optional(),
+  }),
+]);
+export type ExitRouteScope = z.infer<typeof ExitRouteScopeSchema>;
+
+export const ExitRouteOutputKindSchema = z.enum([
+  "tracked-stablecoin",
+  "fiat",
+  "collateral",
+  "unresolved-asset",
+  "unresolved-basket",
+  "unknown",
+]);
+export type ExitRouteOutputKind = z.infer<typeof ExitRouteOutputKindSchema>;
+
+export const ExitRouteOutputSchema = z.object({
+  kind: ExitRouteOutputKindSchema,
+  currency: z.string().min(1).optional(),
+  trackedAssetIds: z.array(z.string().min(1)).optional(),
+  basketWeights: z
+    .array(
+      z.object({
+        assetId: z.string().min(1).optional(),
+        symbol: z.string().min(1).optional(),
+        weight: z.number().finite().min(0).max(1),
+      }),
+    )
+    .optional(),
+});
+export type ExitRouteOutput = z.infer<typeof ExitRouteOutputSchema>;
+
+export const ExitRouteCapacityPointSchema = z.object({
+  requestedNotionalUsd: z.number().finite().positive(),
+  maxCostBps: z.number().finite().nonnegative(),
+  executableUsd: z.number().finite().nonnegative(),
+  completionRatio: z.number().finite().min(0).max(1),
+});
+export type ExitRouteCapacityPoint = z.infer<typeof ExitRouteCapacityPointSchema>;
+
+export const ExitRouteObservationSchema = z.object({
+  routeId: z.string().min(1),
+  routeFamily: ExitRouteFamilySchema,
+  scope: ExitRouteScopeSchema,
+  requestedNotionalUsd: z.number().finite().positive(),
+  settlementHorizonSec: z.number().int().positive(),
+  maxCostBps: z.number().finite().nonnegative(),
+  executableUsd: z.number().finite().nonnegative(),
+  completionRatio: z.number().finite().min(0).max(1),
+  output: ExitRouteOutputSchema,
+  evidenceKind: ExitRouteEvidenceKindSchema,
+  confidence: ExitRouteConfidenceSchema,
+  scoreEligible: z.boolean(),
+  observedAt: z.number().int().nonnegative(),
+  freshnessSeconds: z.number().int().nonnegative(),
+  commonModeKeys: z.array(z.string().min(1)),
+  capacityCurve: z.array(ExitRouteCapacityPointSchema).min(1).max(16).optional(),
+});
+export type ExitRouteObservation = z.infer<typeof ExitRouteObservationSchema>;
+
+export const ExitRouteObservationCoverageSchema = z.object({
+  status: z.enum(["populated", "unsupported", "unknown"]),
+  capabilityMatrixVersion: z.string().min(1),
+  retainedPoolCount: z.number().int().nonnegative(),
+  observationCount: z.number().int().nonnegative(),
+  scoreEligibleObservationCount: z.number().int().nonnegative(),
+  unsupportedPoolCount: z.number().int().nonnegative(),
+  evidenceCounts: z.record(z.string(), z.number().int().nonnegative()),
+  unsupportedReasons: z.record(z.string(), z.number().int().nonnegative()),
+});
+export type ExitRouteObservationCoverage = z.infer<typeof ExitRouteObservationCoverageSchema>;
+
+export const DexDeploymentOutcomeSchema = z.enum(["observed_pools", "verified_no_pools", "provider_inaccessible"]);
 export type DexDeploymentOutcome = z.infer<typeof DexDeploymentOutcomeSchema>;
 
 const DexDeploymentCoverageSchema = z.object({
   observedPools: z.number().int().nonnegative(),
   verifiedNoPools: z.number().int().nonnegative(),
   providerInaccessible: z.number().int().nonnegative(),
-  deployments: z.array(z.object({
-    chain: z.string(),
-    contractAddress: z.string(),
-    outcome: DexDeploymentOutcomeSchema,
-    providers: z.array(z.string()),
-    reason: z.string(),
-    observedPoolCount: z.number().int().nonnegative(),
-    observedAt: z.number(),
-    waiver: z.object({
-      owner: z.string(),
-      reason: z.string().nullable(),
-      expiresAt: z.number(),
-    }).nullable(),
-  })),
+  deployments: z.array(
+    z.object({
+      chain: z.string(),
+      contractAddress: z.string(),
+      outcome: DexDeploymentOutcomeSchema,
+      providers: z.array(z.string()),
+      reason: z.string(),
+      observedPoolCount: z.number().int().nonnegative(),
+      observedAt: z.number(),
+      waiver: z
+        .object({
+          owner: z.string(),
+          reason: z.string().nullable(),
+          expiresAt: z.number(),
+        })
+        .nullable(),
+    }),
+  ),
 });
 
 const DexLiquidityDataSchema = z.object({
@@ -299,6 +410,8 @@ const DexLiquidityDataSchema = z.object({
   lockedLiquidityPct: z.number().nullable(),
   methodologyVersion: z.string(),
   deploymentCoverage: DexDeploymentCoverageSchema.nullable().optional(),
+  exitRouteObservations: z.array(ExitRouteObservationSchema).nullable().optional(),
+  exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
 });
 export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;
 
@@ -313,6 +426,8 @@ export const DexLiquidityHistoryPointSchema = z.object({
   hasMeasuredLiquidityEvidence: z.boolean(),
   trendworthy: z.boolean(),
   methodologyVersion: z.string(),
+  exitRouteObservations: z.array(ExitRouteObservationSchema).optional(),
+  exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
 });
 export type DexLiquidityHistoryPoint = z.infer<typeof DexLiquidityHistoryPointSchema>;
 
@@ -630,10 +745,7 @@ const BlacklistSummaryStatsSchema = z.object({
   // — still parse. Optional with `{}` default covers the missing-field case;
   // the detail-page banner hook does `record[symbol] ?? zero-counts` for the
   // missing-coin case at runtime.
-  perCoinRecentEventTypes: z
-    .record(z.string(), BlacklistRecentEventTypeCountsSchema)
-    .optional()
-    .default({}),
+  perCoinRecentEventTypes: z.record(z.string(), BlacklistRecentEventTypeCountsSchema).optional().default({}),
 });
 
 const BlacklistChainOptionSchema = z.object({
@@ -760,12 +872,7 @@ const AmplifiersSchema = z.object({
   contagion: z.number(),
 });
 
-export const StressSignalAgeClassificationSchema = z.enum([
-  "fresh",
-  "lagging",
-  "stale",
-  "retainedLastValid",
-]);
+export const StressSignalAgeClassificationSchema = z.enum(["fresh", "lagging", "stale", "retainedLastValid"]);
 export type StressSignalAgeClassification = z.infer<typeof StressSignalAgeClassificationSchema>;
 
 export const StressSignalDataStatusSchema = z.enum(["ok", "degraded", "unavailable"]);
@@ -830,8 +937,10 @@ export const StressSignalDetailResponseSchema = z.object({
 
 export type StressSignalDetailResponse = z.infer<typeof StressSignalDetailResponseSchema>;
 
-export const StablecoinChartResponseSchema = z.array(z.object({
-  date: z.number(),
-  totalCirculatingUSD: z.record(z.string(), z.number()),
-}));
+export const StablecoinChartResponseSchema = z.array(
+  z.object({
+    date: z.number(),
+    totalCirculatingUSD: z.record(z.string(), z.number()),
+  }),
+);
 export type StablecoinChartPoint = z.infer<typeof StablecoinChartResponseSchema>[number];

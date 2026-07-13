@@ -1,9 +1,4 @@
-import {
-  withErrorHandler,
-  safeJsonParse,
-  addFreshnessHeaders,
-  jsonResponse,
-} from "../lib/api-utils";
+import { withErrorHandler, safeJsonParse, addFreshnessHeaders, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { isMissingTableError } from "../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
@@ -12,6 +7,7 @@ import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-ve
 import {
   buildDexLiquidityWarning,
   getDexLiquidityTrendTolerances,
+  normalizeDexScoreDetails,
   normalizeTopPools,
   selectTrendBaseline,
   buildDexDeploymentCoverage,
@@ -39,34 +35,42 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
         `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?
-         ORDER BY stablecoin_id, snapshot_date DESC`
+         ORDER BY stablecoin_id, snapshot_date DESC`,
       )
       .bind(Math.floor(Date.now() / 1000) - 8 * 86_400) // 8 days back covers 7d comparison
       .all<DexHistoryRow>(),
-    db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, price_sources_json, updated_at FROM dex_prices").all<DexPriceRow>().catch((err) => {
-      const msg = toErrorMessage(err);
-      if (isMissingTableError(err)) {
-        return { results: [] as DexPriceRow[] };
-      }
-      console.error("[dex-liquidity] Unexpected error loading dex_prices:", msg);
-      throw err;
-    }),
-    db.prepare(
-      `SELECT stablecoin_id, chain, contract_address, outcome, provider_set_json, reason,
+    db
+      .prepare(
+        "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, price_sources_json, updated_at FROM dex_prices",
+      )
+      .all<DexPriceRow>()
+      .catch((err) => {
+        const msg = toErrorMessage(err);
+        if (isMissingTableError(err)) {
+          return { results: [] as DexPriceRow[] };
+        }
+        console.error("[dex-liquidity] Unexpected error loading dex_prices:", msg);
+        throw err;
+      }),
+    db
+      .prepare(
+        `SELECT stablecoin_id, chain, contract_address, outcome, provider_set_json, reason,
               observed_pool_count, observed_at, waiver_owner, waiver_reason, waiver_expires_at
          FROM dex_deployment_outcomes
         ORDER BY stablecoin_id, chain, contract_address`,
-    ).all<DexDeploymentOutcomeRow>().catch((err) => {
-      if (isMissingTableError(err)) return { results: [] as DexDeploymentOutcomeRow[] };
-      throw err;
-    }),
+      )
+      .all<DexDeploymentOutcomeRow>()
+      .catch((err) => {
+        if (isMissingTableError(err)) return { results: [] as DexDeploymentOutcomeRow[] };
+        throw err;
+      }),
     db
       .prepare(
         `SELECT status, metadata
          FROM cron_runs
          WHERE job = 'sync-dex-liquidity'
          ORDER BY started_at DESC
-         LIMIT 1`
+         LIMIT 1`,
       )
       .first<DexLiquidityCronRow>()
       .catch(() => null),
@@ -75,7 +79,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
         `SELECT MAX(started_at) AS started_at
          FROM cron_runs
          WHERE job = 'sync-dex-liquidity'
-           AND status = 'ok'`
+           AND status = 'ok'`,
       )
       .first<{ started_at: number | null }>()
       .catch(() => null),
@@ -110,7 +114,9 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
     const history = histByCoin.get(id) ?? [];
     const baseline24h = selectTrendBaseline(history, oneDayAgo, trend24hToleranceSec);
     const baseline7d = selectTrendBaseline(history, sevenDaysAgo, trend7dToleranceSec);
-    const tvlChange24h = baseline24h ? ((currentTvl - baseline24h.total_tvl_usd) / baseline24h.total_tvl_usd) * 100 : null;
+    const tvlChange24h = baseline24h
+      ? ((currentTvl - baseline24h.total_tvl_usd) / baseline24h.total_tvl_usd) * 100
+      : null;
     const tvlChange7d = baseline7d ? ((currentTvl - baseline7d.total_tvl_usd) / baseline7d.total_tvl_usd) * 100 : null;
 
     // Merge DEX price data if available
@@ -123,6 +129,10 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       coverageConfidence,
     );
     const balanceMeasuredTvlUsd = row.balance_measured_tvl_usd ?? 0;
+    const scoreDetails = normalizeDexScoreDetails(
+      row.score_components_json,
+      `dex-liquidity:${id}:score_components_json`,
+    );
 
     map[id] = {
       totalTvlUsd: currentTvl,
@@ -131,7 +141,11 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       poolCount: row.pool_count,
       pairCount: row.pair_count,
       chainCount: row.chain_count,
-      protocolTvl: safeJsonParse<Record<string, number>>(row.protocol_tvl_json, {}, `dex-liquidity:${id}:protocol_tvl_json`),
+      protocolTvl: safeJsonParse<Record<string, number>>(
+        row.protocol_tvl_json,
+        {},
+        `dex-liquidity:${id}:protocol_tvl_json`,
+      ),
       chainTvl: safeJsonParse<Record<string, number>>(row.chain_tvl_json, {}, `dex-liquidity:${id}:chain_tvl_json`),
       topPools: normalizeTopPools(row.top_pools_json, `dex-liquidity:${id}:top_pools_json`),
       liquidityScore: row.liquidity_score,
@@ -144,7 +158,11 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       dexDeviationBps: dexPrice?.deviation_from_primary_bps ?? null,
       priceSourceCount: dexPrice?.source_pool_count ?? null,
       priceSourceTvl: dexPrice?.source_total_tvl ?? null,
-      priceSources: safeJsonParse<unknown[] | null>(dexPrice?.price_sources_json, null, `dex-liquidity:${id}:price_sources_json`),
+      priceSources: safeJsonParse<unknown[] | null>(
+        dexPrice?.price_sources_json,
+        null,
+        `dex-liquidity:${id}:price_sources_json`,
+      ),
       // v2 fields
       effectiveTvlUsd: row.effective_tvl_usd ?? 0,
       avgPoolStress: row.avg_pool_stress ?? null,
@@ -156,25 +174,34 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       liquidityEvidenceClass,
       hasMeasuredLiquidityEvidence,
       trendworthy,
-      sourceMix: safeJsonParse<Record<string, { poolCount: number; tvlUsd: number }>>(row.source_mix_json, {}, `dex-liquidity:${id}:source_mix_json`),
+      sourceMix: safeJsonParse<Record<string, { poolCount: number; tvlUsd: number }>>(
+        row.source_mix_json,
+        {},
+        `dex-liquidity:${id}:source_mix_json`,
+      ),
       balanceMeasuredTvlUsd,
       organicMeasuredTvlUsd: row.organic_measured_tvl_usd ?? 0,
-      scoreComponents: safeJsonParse<unknown>(row.score_components_json, null, `dex-liquidity:${id}:score_components_json`),
+      scoreComponents: scoreDetails.scoreComponents,
       lockedLiquidityPct: row.locked_liquidity_pct ?? null,
       methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.updated_at),
       deploymentCoverage: deploymentCoverageById.get(id) ?? null,
+      exitRouteObservations: scoreDetails.exitRouteObservations,
+      exitRouteObservationCoverage: scoreDetails.exitRouteObservationCoverage,
     };
   }
 
   const rows = result.results ?? [];
-  const latestRowUpdate = rows.length > 0
-    ? rows.reduce((m, r) => Math.max(m, r.updated_at), 0)
-    : Math.floor(Date.now() / 1000);
+  const latestRowUpdate =
+    rows.length > 0 ? rows.reduce((m, r) => Math.max(m, r.updated_at), 0) : Math.floor(Date.now() / 1000);
   const freshnessTs = latestSuccessfulCron?.started_at ?? latestRowUpdate;
 
-  const headers = addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.custom,
-  }, freshnessTs, API_FRESHNESS_MAX_AGE_SEC.dexLiquidity);
+  const headers = addFreshnessHeaders(
+    {
+      "Cache-Control": CACHE_PROFILES.custom,
+    },
+    freshnessTs,
+    API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
+  );
   const degradedWarning = buildDexLiquidityWarning(latestCron);
   if (degradedWarning) {
     headers.Warning = headers.Warning ? `${headers.Warning}, ${degradedWarning}` : degradedWarning;

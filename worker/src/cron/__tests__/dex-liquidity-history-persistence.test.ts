@@ -28,6 +28,7 @@ function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
       coverage_class TEXT NOT NULL DEFAULT 'unobserved',
       coverage_confidence REAL NOT NULL DEFAULT 0,
       source_mix_json TEXT
+      , exit_route_summary_json TEXT
     );
   `);
   return { sqlite, db: createSqliteD1(sqlite) };
@@ -60,11 +61,42 @@ function makeScore(score = 80): FullScoreResult {
   };
 }
 
-function insertSnapshotRows(
-  sqlite: DatabaseSync,
-  ids: readonly string[],
-  scoredIds: ReadonlySet<string>,
-): void {
+function makeScoreWithRouteEvidence(): FullScoreResult {
+  return {
+    ...makeScore(),
+    exitRouteObservations: [
+      {
+        routeId: "dex:test",
+        routeFamily: "dex-orderbook",
+        scope: { kind: "venue", venue: "test", protocol: "test" },
+        requestedNotionalUsd: 1_000_000,
+        settlementHorizonSec: 300,
+        maxCostBps: 200,
+        executableUsd: 500_000,
+        completionRatio: 0.5,
+        output: { kind: "fiat", currency: "USD" },
+        evidenceKind: "direct-orderbook-depth",
+        confidence: "medium",
+        scoreEligible: false,
+        observedAt: NOW_SEC,
+        freshnessSeconds: 0,
+        commonModeKeys: ["venue:test"],
+      },
+    ],
+    exitRouteObservationCoverage: {
+      status: "populated",
+      capabilityMatrixVersion: "test",
+      retainedPoolCount: 1,
+      observationCount: 1,
+      scoreEligibleObservationCount: 0,
+      unsupportedPoolCount: 0,
+      evidenceCounts: { "direct-orderbook-depth": 1 },
+      unsupportedReasons: {},
+    },
+  } as FullScoreResult;
+}
+
+function insertSnapshotRows(sqlite: DatabaseSync, ids: readonly string[], scoredIds: ReadonlySet<string>): void {
   const insert = sqlite.prepare(
     `INSERT INTO dex_liquidity_history (
        stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
@@ -73,7 +105,15 @@ function insertSnapshotRows(
   );
   for (const id of ids) {
     const scored = scoredIds.has(id);
-    insert.run(id, scored ? 100 : 0, scored ? 10 : 0, scored ? 50 : null, SNAPSHOT_DATE, scored ? "primary" : "unobserved", scored ? 1 : 0);
+    insert.run(
+      id,
+      scored ? 100 : 0,
+      scored ? 10 : 0,
+      scored ? 50 : null,
+      SNAPSHOT_DATE,
+      scored ? "primary" : "unobserved",
+      scored ? 1 : 0,
+    );
   }
 }
 
@@ -112,12 +152,7 @@ describe("DEX liquidity history atomic identity replacement", () => {
     insertSnapshotRows(sqlite, [...ACTIVE_ID_LIST.slice(0, -1), staleId], new Set([scoredId]));
     const batchSpy = vi.spyOn(fixture.db, "batch");
 
-    const result = await writeHistoricalSnapshots(
-      fixture.db,
-      new Map([[scoredId, makeScore()]]),
-      undefined,
-      NOW_SEC,
-    );
+    const result = await writeHistoricalSnapshots(fixture.db, new Map([[scoredId, makeScore()]]), undefined, NOW_SEC);
 
     expect(result).toMatchObject({
       snapshotRowsWritten: ACTIVE_ID_LIST.length,
@@ -132,6 +167,29 @@ describe("DEX liquidity history atomic identity replacement", () => {
     expect(rows.some((row) => row.stablecoin_id === missingActiveId)).toBe(true);
   });
 
+  it("retains bounded same-notional route evidence prospectively", async () => {
+    const fixture = createHarness();
+    sqlite = fixture.sqlite;
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const scoredId = ACTIVE_ID_LIST[0]!;
+
+    const result = await writeHistoricalSnapshots(
+      fixture.db,
+      new Map([[scoredId, makeScoreWithRouteEvidence()]]),
+      undefined,
+      NOW_SEC,
+    );
+
+    expect(result.writeFailed).toBe(false);
+    const stored = sqlite
+      .prepare("SELECT exit_route_summary_json FROM dex_liquidity_history WHERE stablecoin_id = ?")
+      .get(scoredId) as { exit_route_summary_json: string };
+    expect(JSON.parse(stored.exit_route_summary_json)).toMatchObject({
+      observations: [{ routeId: "dex:test", scoreEligible: false }],
+      coverage: { capabilityMatrixVersion: "test" },
+    });
+  });
+
   it("removes surplus and inactive scored IDs after an active-universe shrink", async () => {
     const fixture = createHarness();
     sqlite = fixture.sqlite;
@@ -139,11 +197,7 @@ describe("DEX liquidity history atomic identity replacement", () => {
     const activeScoredId = ACTIVE_ID_LIST[0]!;
     const retainedScoredId = ACTIVE_ID_LIST[1]!;
     const staleId = "formerly-active-stablecoin";
-    insertSnapshotRows(
-      sqlite,
-      [...ACTIVE_ID_LIST, staleId],
-      new Set([activeScoredId, retainedScoredId, staleId]),
-    );
+    insertSnapshotRows(sqlite, [...ACTIVE_ID_LIST, staleId], new Set([activeScoredId, retainedScoredId, staleId]));
 
     const result = await writeHistoricalSnapshots(
       fixture.db,
@@ -236,12 +290,7 @@ describe("DEX liquidity history atomic identity replacement", () => {
     insertSnapshotRows(sqlite, ACTIVE_ID_LIST.slice(0, 10), new Set([scoredId]));
     insertSnapshotRows(sqlite, [scoredId, scoredId], new Set([scoredId]));
 
-    const result = await writeHistoricalSnapshots(
-      fixture.db,
-      new Map([[scoredId, makeScore()]]),
-      undefined,
-      NOW_SEC,
-    );
+    const result = await writeHistoricalSnapshots(fixture.db, new Map([[scoredId, makeScore()]]), undefined, NOW_SEC);
 
     expect(result.writeFailed).toBe(false);
     const rows = loadSnapshotIdentity(sqlite);
@@ -266,12 +315,7 @@ describe("DEX liquidity history atomic identity replacement", () => {
       END;
     `);
 
-    const result = await writeHistoricalSnapshots(
-      fixture.db,
-      new Map([[scoredId, makeScore()]]),
-      undefined,
-      NOW_SEC,
-    );
+    const result = await writeHistoricalSnapshots(fixture.db, new Map([[scoredId, makeScore()]]), undefined, NOW_SEC);
 
     expect(result).toEqual({
       snapshotRowsWritten: 0,

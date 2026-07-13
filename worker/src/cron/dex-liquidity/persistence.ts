@@ -1,6 +1,7 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
@@ -14,7 +15,8 @@ const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 7 * DAY_SECONDS;
 const DEX_LIQUIDITY_HISTORY_RETENTION_SEC = 365 * DAY_SECONDS;
 const DEX_LIQUIDITY_HISTORY_INSERT_SQL = `INSERT INTO dex_liquidity_history
   (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
-   coverage_class, coverage_confidence, source_mix_json, methodology_version)`;
+   coverage_class, coverage_confidence, source_mix_json, methodology_version,
+   exit_route_summary_json)`;
 
 const DEX_LIQUIDITY_ROW_COLUMNS = [
   "stablecoin_id",
@@ -48,12 +50,28 @@ const DEX_LIQUIDITY_ROW_COLUMNS = [
 
 const DEX_LIQUIDITY_ROW_COLUMN_SQL = DEX_LIQUIDITY_ROW_COLUMNS.join(", ");
 const DEX_LIQUIDITY_ROW_VALUE_PLACEHOLDERS = DEX_LIQUIDITY_ROW_COLUMNS.map(() => "?").join(", ");
-const DEX_LIQUIDITY_PUBLISH_CURRENT_SET_SQL = DEX_LIQUIDITY_ROW_COLUMNS
-  .filter((column) => column !== "stablecoin_id")
+const DEX_LIQUIDITY_PUBLISH_CURRENT_SET_SQL = DEX_LIQUIDITY_ROW_COLUMNS.filter((column) => column !== "stablecoin_id")
   .map((column) => `${column} = excluded.${column}`)
   .join(",\n  ");
 const DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER =
   "(publication_generation_id IS NULL OR publication_generation_id IN (SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'))";
+
+type P4aFullScoreResult = FullScoreResult & {
+  exitRouteObservations?: ExitRouteObservation[];
+  exitRouteObservationCoverage?: ExitRouteObservationCoverage;
+};
+
+/** @internal Exported for focused persistence tests. */
+export function buildDexScoreDetailsJson(scoreResult: FullScoreResult): string {
+  const p4aResult = scoreResult as P4aFullScoreResult;
+  return JSON.stringify({
+    ...scoreResult.components,
+    ...(p4aResult.exitRouteObservations != null ? { exitRouteObservations: p4aResult.exitRouteObservations } : {}),
+    ...(p4aResult.exitRouteObservationCoverage != null
+      ? { exitRouteObservationCoverage: p4aResult.exitRouteObservationCoverage }
+      : {}),
+  });
+}
 
 /**
  * Compute the set of stablecoin ids whose DEX rows should be deleted.
@@ -61,10 +79,7 @@ const DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER =
  * `__global__` aggregate sentinel. Only orphaned ids that no longer
  * exist in the registry get pruned.
  */
-export function computeDexPruneSet(
-  allDbIds: Set<string>,
-  trackedIds: ReadonlySet<string> = TRACKED_IDS,
-): Set<string> {
+export function computeDexPruneSet(allDbIds: Set<string>, trackedIds: ReadonlySet<string> = TRACKED_IDS): Set<string> {
   const prune = new Set<string>();
   for (const id of allDbIds) {
     if (trackedIds.has(id)) continue;
@@ -132,6 +147,19 @@ interface HistoricalSnapshotRow {
   coverage_confidence: number;
   source_mix_json: string | null;
   methodology_version: string;
+  exit_route_summary_json: string | null;
+}
+
+/** @internal Exported for focused prospective-history tests. */
+export function buildDexExitRouteHistoryJson(scoreResult: FullScoreResult): string | null {
+  const p4aResult = scoreResult as P4aFullScoreResult;
+  if (p4aResult.exitRouteObservations == null && p4aResult.exitRouteObservationCoverage == null) {
+    return null;
+  }
+  return JSON.stringify({
+    observations: p4aResult.exitRouteObservations ?? [],
+    coverage: p4aResult.exitRouteObservationCoverage ?? null,
+  });
 }
 
 function setsEqual(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
@@ -150,11 +178,7 @@ function canReuseHistoricalSnapshot(
   const activeIds = new Set(rows.map((row) => row.stablecoin_id));
   if (activeIds.size !== rows.length || !setsEqual(activeIds, expectedActiveIds)) return false;
 
-  const scoredIds = new Set(
-    rows
-      .filter((row) => row.liquidity_score != null)
-      .map((row) => row.stablecoin_id),
-  );
+  const scoredIds = new Set(rows.filter((row) => row.liquidity_score != null).map((row) => row.stablecoin_id));
   return setsEqual(scoredIds, expectedScoredIds);
 }
 
@@ -289,10 +313,7 @@ async function loadCandidateGenerationCoverage(
   };
 }
 
-function assertCandidateGenerationComplete(
-  coverage: CandidateGenerationCoverage,
-  expectedRowCount: number,
-): void {
+function assertCandidateGenerationComplete(coverage: CandidateGenerationCoverage, expectedRowCount: number): void {
   if (
     coverage.rowCount !== expectedRowCount ||
     coverage.activeAssetRows !== ACTIVE_STABLECOINS.length ||
@@ -344,11 +365,13 @@ async function publishDexLiquidityGeneration(
 ): Promise<number> {
   await ensureNoNewerCurrentDexRows(db, params.generationId, params.nowSec, params.signal);
   throwIfAborted(params.signal);
-  await batchExecute(db, [
-    db.prepare(DEX_LIQUIDITY_PUBLISH_CURRENT_SQL).bind(params.generationId),
-    db
-      .prepare(
-        `UPDATE dex_liquidity_publication_generations
+  await batchExecute(
+    db,
+    [
+      db.prepare(DEX_LIQUIDITY_PUBLISH_CURRENT_SQL).bind(params.generationId),
+      db
+        .prepare(
+          `UPDATE dex_liquidity_publication_generations
          SET state = 'published',
              published_at = ?,
              failed_at = NULL,
@@ -361,9 +384,11 @@ async function publishDexLiquidityGeneration(
                WHERE publication_generation_id = ? AND publication_state = 'published'
              )
          WHERE generation_id = ?`,
-      )
-      .bind(params.nowSec, params.generationId, params.generationId, params.generationId),
-  ], { signal: params.signal });
+        )
+        .bind(params.nowSec, params.generationId, params.generationId, params.generationId),
+    ],
+    { signal: params.signal },
+  );
   throwIfAborted(params.signal);
 
   const current = await runWithOverloadRetry(
@@ -389,16 +414,14 @@ async function publishDexLiquidityGeneration(
   return currentRows;
 }
 
-async function pruneOldDexLiquidityGenerations(
-  db: D1Database,
-  nowSec: number,
-  signal?: AbortSignal,
-): Promise<void> {
+async function pruneOldDexLiquidityGenerations(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<void> {
   const cutoff = nowSec - DEX_LIQUIDITY_GENERATION_RETENTION_SEC;
-  await batchExecute(db, [
-    db
-      .prepare(
-        `DELETE FROM dex_liquidity_run_rows
+  await batchExecute(
+    db,
+    [
+      db
+        .prepare(
+          `DELETE FROM dex_liquidity_run_rows
          WHERE generation_id IN (
            SELECT generation_id
            FROM dex_liquidity_publication_generations
@@ -409,27 +432,25 @@ async function pruneOldDexLiquidityGenerations(
                WHERE publication_generation_id IS NOT NULL
              )
          )`,
-      )
-      .bind(cutoff),
-    db
-      .prepare(
-        `DELETE FROM dex_liquidity_publication_generations
+        )
+        .bind(cutoff),
+      db
+        .prepare(
+          `DELETE FROM dex_liquidity_publication_generations
          WHERE started_at < ?
            AND generation_id NOT IN (
              SELECT publication_generation_id
              FROM dex_liquidity
              WHERE publication_generation_id IS NOT NULL
            )`,
-      )
-      .bind(cutoff),
-  ], { signal });
+        )
+        .bind(cutoff),
+    ],
+    { signal },
+  );
 }
 
-async function pruneOldDexLiquidityHistory(
-  db: D1Database,
-  nowSec: number,
-  signal?: AbortSignal,
-): Promise<number> {
+async function pruneOldDexLiquidityHistory(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<number> {
   throwIfAborted(signal);
   const cutoff = nowSec - DEX_LIQUIDITY_HISTORY_RETENTION_SEC;
   const result = await runWithOverloadRetry(
@@ -508,7 +529,7 @@ export async function persistScores(
           sr.organicFrac,
           Math.round(m.effectiveTvl),
           sr.durability,
-          JSON.stringify(sr.components),
+          buildDexScoreDetailsJson(sr),
           sr.lockedLiqPct,
           sr.coverageClass,
           sr.coverageConfidence,
@@ -602,11 +623,7 @@ export async function persistScores(
   // Clean up orphaned rows from stablecoins no longer in the tracked set.
   // Preserve TRACKED (active + frozen) plus the `__global__` aggregate so
   // frozen coins keep their historical DEX rows.
-  const DEX_LIQUIDITY_TABLES = [
-    "dex_liquidity",
-    "dex_liquidity_history",
-    "dex_discovery_meta",
-  ] as const;
+  const DEX_LIQUIDITY_TABLES = ["dex_liquidity", "dex_liquidity_history", "dex_discovery_meta"] as const;
   try {
     for (const table of DEX_LIQUIDITY_TABLES) {
       throwIfAborted(signal);
@@ -656,12 +673,7 @@ export async function persistScores(
   } catch (err) {
     if (!signal?.aborted) {
       try {
-        await markDexLiquidityPublicationGenerationFailed(
-          db,
-          generationId,
-          nowSec,
-          toErrorMessage(err),
-        );
+        await markDexLiquidityPublicationGenerationFailed(db, generationId, nowSec, toErrorMessage(err));
       } catch {
         // Best-effort diagnostics only; preserve the original publication error.
       }
@@ -723,10 +735,10 @@ export async function writeHistoricalSnapshots(
       .prepare(
         `SELECT id, stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score,
                 snapshot_date, coverage_class, coverage_confidence, source_mix_json,
-                methodology_version
+                methodology_version, exit_route_summary_json
          FROM dex_liquidity_history
          WHERE snapshot_date = ?
-         ORDER BY stablecoin_id, id`
+         ORDER BY stablecoin_id, id`,
       )
       .bind(todayMidnight)
       .all<HistoricalSnapshotRow>();
@@ -759,41 +771,35 @@ export async function writeHistoricalSnapshots(
     for (const meta of ACTIVE_STABLECOINS) {
       const data = activeScoreMap.get(meta.id);
       const existingData = existingScoredRows.get(meta.id);
-      snapshotRows.push(data
-        ? [
-            meta.id,
-            data.tvl,
-            data.vol24h,
-            data.score,
-            todayMidnight,
-            data.coverageClass,
-            data.coverageConfidence,
-            JSON.stringify(data.sourceMix),
-            LIQUIDITY_METHODOLOGY_VERSION,
-          ]
-        : existingData
+      snapshotRows.push(
+        data
           ? [
               meta.id,
-              existingData.total_tvl_usd,
-              existingData.total_volume_24h_usd,
-              existingData.liquidity_score,
+              data.tvl,
+              data.vol24h,
+              data.score,
               todayMidnight,
-              existingData.coverage_class,
-              existingData.coverage_confidence,
-              existingData.source_mix_json,
-              existingData.methodology_version,
+              data.coverageClass,
+              data.coverageConfidence,
+              JSON.stringify(data.sourceMix),
+              LIQUIDITY_METHODOLOGY_VERSION,
+              buildDexExitRouteHistoryJson(data),
             ]
-        : [
-            meta.id,
-            0,
-            0,
-            null,
-            todayMidnight,
-            "unobserved",
-            0,
-            null,
-            LIQUIDITY_METHODOLOGY_VERSION,
-          ]);
+          : existingData
+            ? [
+                meta.id,
+                existingData.total_tvl_usd,
+                existingData.total_volume_24h_usd,
+                existingData.liquidity_score,
+                todayMidnight,
+                existingData.coverage_class,
+                existingData.coverage_confidence,
+                existingData.source_mix_json,
+                existingData.methodology_version,
+                existingData.exit_route_summary_json,
+              ]
+            : [meta.id, 0, 0, null, todayMidnight, "unobserved", 0, null, LIQUIDITY_METHODOLOGY_VERSION, null],
+      );
     }
 
     const replacementStatements = [
