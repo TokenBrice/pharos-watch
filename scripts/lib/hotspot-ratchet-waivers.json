@@ -71,14 +71,6 @@
     "reviewAfter": "2026-09-23",
     "nextAction": "Extract Morpho V1/V2 liquidity telemetry helpers from the ERC-4626 reserve adapter while preserving the existing adapter contract and tests."
   },
-  "worker/src/cron/reserve-adapters/crvusd.ts": {
-    "disposition": "queued-p4",
-    "notes": "The crvUSD reserve adapter combines Curve controller discovery, collateral bucketing, AMM health, vault mint/debt state, and fallback reserve projection in one source-owned adapter. Keep it waived for this gate and split market fetch/parsing from reserve composition in a dedicated adapter cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-07-03",
-    "reviewAfter": "2026-10-01",
-    "nextAction": "Extract Curve market fetch/parsing and AMM-health projection helpers from the crvUSD reserve adapter while preserving the adapter result contract."
-  },
   "worker/src/cron/weekly-recap.ts": {
     "disposition": "queued-p4",
     "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules.",
@@ -110,14 +102,6 @@
     "createdAt": "2026-07-11",
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract stale-send reconciliation and claim/retry state transitions from the queue-drain coordinator behind the existing pending-delivery contracts."
-  },
-  "worker/src/lib/telegram-watchlist-token.ts": {
-    "disposition": "queued-p4",
-    "notes": "The portable watchlist codec now keeps v1 and pw2 reads compatible while pw3 preserves six-family direct rows, preset policy, catalog fingerprints, compression, and integrity checks. This compatibility surface is branch-heavy and should be decomposed without altering emitted tokens.",
-    "owner": "telegram-delivery",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Split version-specific encode/decode codecs from catalog validation and collision mapping behind the existing watchlist-token API and golden-vector tests."
   },
   "src/lib/status-dashboard-model.ts": {
     "disposition": "queued-p4",
@@ -166,14 +150,6 @@
     "createdAt": "2026-07-11",
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract API-key query/mutation state and dialog orchestration into focused hooks, leaving ApiKeysPanel responsible for composition."
-  },
-  "worker/src/api/yield-rankings-cache.ts": {
-    "disposition": "queued-p4",
-    "notes": "The yield rankings cache handler combines cache freshness, row decoding, filter and qualification policy, ranking projection, and response publication. Its branch count warrants separating cache access from ranking assembly.",
-    "owner": "yield-intelligence",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Extract cached-row decoding and ranking/filter projection from handleYieldRankings while preserving response and cache semantics."
   },
   "src/lib/pipeline-workspace-model.ts": {
     "disposition": "queued-p4",

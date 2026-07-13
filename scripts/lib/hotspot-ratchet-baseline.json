@@ -10,9 +10,14 @@
     "branchCount": 87
   },
   "shared/lib/redemption-backstop-scoring.ts": {
-    "fileLines": 967,
-    "maxFunctionLines": 106,
-    "branchCount": 88
+    "fileLines": 1109,
+    "maxFunctionLines": 124,
+    "branchCount": 113
+  },
+  "shared/lib/safety-score-v9-compiler.ts": {
+    "fileLines": 1280,
+    "maxFunctionLines": 399,
+    "branchCount": 141
   },
   "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
     "fileLines": 859,
@@ -20,14 +25,14 @@
     "branchCount": 5
   },
   "shared/types/market.ts": {
-    "fileLines": 992,
+    "fileLines": 923,
     "maxFunctionLines": 32,
-    "branchCount": 12
+    "branchCount": 13
   },
   "shared/types/stablecoin-meta-schemas.ts": {
-    "fileLines": 1192,
+    "fileLines": 1252,
     "maxFunctionLines": 179,
-    "branchCount": 62
+    "branchCount": 69
   },
   "worker/src/api/stablecoin-detail.ts": {
     "fileLines": 152,
@@ -200,9 +205,9 @@
     "branchCount": 45
   },
   "worker/src/cron/dex-liquidity/staging-merge.ts": {
-    "fileLines": 607,
-    "maxFunctionLines": 368,
-    "branchCount": 65
+    "fileLines": 647,
+    "maxFunctionLines": 370,
+    "branchCount": 70
   },
   "worker/src/cron/sync-mint-burn.ts": {
     "fileLines": 364,

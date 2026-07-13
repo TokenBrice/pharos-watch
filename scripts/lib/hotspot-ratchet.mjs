@@ -10,6 +10,7 @@ export const TARGET_FILES = [
   "shared/lib/report-cards.ts",
   "shared/lib/format.ts",
   "shared/lib/redemption-backstop-scoring.ts",
+  "shared/lib/safety-score-v9-compiler.ts",
   "shared/lib/redemption-backstop-configs/queue-redeem.ts",
   "shared/types/market.ts",
   "shared/types/stablecoin-meta-schemas.ts",
@@ -140,7 +141,11 @@ export function collectHotspotCandidateRows(repoMetrics = collectAllRepoHotspotM
   const rows = Object.entries(repoMetrics).map(([file, metrics]) => ({ file, ...metrics }));
   const candidateMap = new Map();
   const byFileLines = [...rows]
-    .filter((row) => row.maxFunctionLines >= HOTSPOT_FILELINE_MIN_FUNCTION_LINES || row.branchCount >= HOTSPOT_FILELINE_MIN_BRANCH_COUNT)
+    .filter(
+      (row) =>
+        row.maxFunctionLines >= HOTSPOT_FILELINE_MIN_FUNCTION_LINES ||
+        row.branchCount >= HOTSPOT_FILELINE_MIN_BRANCH_COUNT,
+    )
     .sort((left, right) => right.fileLines - left.fileLines)
     .slice(0, HOTSPOT_CANDIDATE_TOP_N);
   const byFunctionLines = [...rows]
@@ -162,11 +167,12 @@ export function collectHotspotCandidateRows(repoMetrics = collectAllRepoHotspotM
     }
   }
 
-  return [...candidateMap.values()].sort((left, right) =>
-    right.fileLines - left.fileLines ||
-    right.maxFunctionLines - left.maxFunctionLines ||
-    right.branchCount - left.branchCount ||
-    left.file.localeCompare(right.file),
+  return [...candidateMap.values()].sort(
+    (left, right) =>
+      right.fileLines - left.fileLines ||
+      right.maxFunctionLines - left.maxFunctionLines ||
+      right.branchCount - left.branchCount ||
+      left.file.localeCompare(right.file),
   );
 }
 
@@ -294,7 +300,11 @@ export function validateHotspotWaiverMetadata(waivers, candidateFiles) {
     if (!isValidDateOnly(waiver.reviewAfter)) {
       errors.push(`${file}: missing or invalid waiver reviewAfter`);
     }
-    if (isValidDateOnly(waiver.createdAt) && isValidDateOnly(waiver.reviewAfter) && waiver.reviewAfter < waiver.createdAt) {
+    if (
+      isValidDateOnly(waiver.createdAt) &&
+      isValidDateOnly(waiver.reviewAfter) &&
+      waiver.reviewAfter < waiver.createdAt
+    ) {
       errors.push(`${file}: waiver reviewAfter must be on or after createdAt`);
     }
     if (typeof waiver.nextAction !== "string" || waiver.nextAction.trim().length === 0) {
@@ -305,10 +315,7 @@ export function validateHotspotWaiverMetadata(waivers, candidateFiles) {
   return errors;
 }
 
-export function collectHotspotWaiverReviewQueue(
-  waivers,
-  { today = new Date(), lookaheadDays = 14 } = {},
-) {
+export function collectHotspotWaiverReviewQueue(waivers, { today = new Date(), lookaheadDays = 14 } = {}) {
   const todayString = toUtcDateOnly(today);
   const lookahead = new Date(`${todayString}T00:00:00.000Z`);
   lookahead.setUTCDate(lookahead.getUTCDate() + lookaheadDays);

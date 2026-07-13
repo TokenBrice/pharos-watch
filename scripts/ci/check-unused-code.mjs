@@ -91,6 +91,10 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/pricing-pipeline-version.ts::PRICING_PIPELINE_VERSION",
   "shared/lib/pricing-pipeline-version.ts::getPricingPipelineVersionAt",
   "shared/lib/redemption-backstop-scoring.ts::REDEMPTION_EXECUTION_LABELS",
+  // Consumed by the report-card calibration CLI outside this runtime-only scan.
+  "shared/lib/redemption-backstop-scoring.ts::isExitRouteObservationScoreEligible",
+  // Consumed by the v9 readiness CLI outside this runtime-only scan.
+  "shared/lib/safety-score-v9-compiler.ts::assertExactReportCardIds",
   // Consumed by scripts/lib/redemption-backstop-validation.ts (out-of-scan-scope).
   "shared/lib/redemption-backstop-configs/factory.ts::getBackstopRegistrySourceFilePaths",
   "shared/lib/redemption-backstop-configs/policies.ts::REDEMPTION_BACKSTOP_POLICY_ENTRIES",
@@ -215,6 +219,8 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/lib/dex-api-common.ts::DIRECT_API_MAX_POOL_TVL_USD",
   "worker/src/lib/external-api-schemas.ts::TronEventResultSchema",
   "worker/src/lib/external-api-schemas.ts::TronEventSchema",
+  // Consumed by worker/scripts calibration tests outside this runtime-only scan.
+  "worker/src/lib/report-cards-fixed-input.ts::computeDexLiquidityPayloadFingerprint",
   "shared/lib/env-contract.ts::ENV_BINDINGS",
   "shared/lib/env-contract.ts::getAllEnvBindingKeys",
   "worker/src/lib/live-reserves-store.ts::getConfiguredLiveReserveCoins",
@@ -269,9 +275,7 @@ const EXPORT_ALLOWLIST = new Set([
 
 const files = collectSourceFiles();
 const fileSet = new Set(files);
-const moduleInfo = new Map(
-  files.map((file) => [file, analyzeModule(file)]),
-);
+const moduleInfo = new Map(files.map((file) => [file, analyzeModule(file)]));
 
 const runtimeInbound = new Map(files.map((file) => [file, new Set()]));
 const namedExportUsage = new Map(files.map((file) => [file, new Set()]));
@@ -303,7 +307,8 @@ for (const file of files) {
   if ((runtimeInbound.get(file)?.size ?? 0) === 0 && !MODULE_ALLOWLIST.has(rel)) {
     deadModules.push({
       file: rel,
-      reason: info.exports.size === 0 && info.hasSideEffectsOnly ? "unreferenced module" : "unreferenced module or dead shim",
+      reason:
+        info.exports.size === 0 && info.hasSideEffectsOnly ? "unreferenced module" : "unreferenced module or dead shim",
     });
     continue;
   }
@@ -379,8 +384,9 @@ process.exit(1);
 function collectSourceFiles() {
   const excludedDirs = new Set(["node_modules", ".next", "out"]);
   const results = SOURCE_DIRS.flatMap((dir) =>
-    collectSourceFilesUnderRoot(dir, ROOT, { extensions: SOURCE_EXTENSIONS, excludedDirs })
-      .filter((f) => !f.endsWith(".d.ts")),
+    collectSourceFilesUnderRoot(dir, ROOT, { extensions: SOURCE_EXTENSIONS, excludedDirs }).filter(
+      (f) => !f.endsWith(".d.ts"),
+    ),
   );
   return results.sort();
 }
@@ -505,11 +511,7 @@ function collectImportDependencies(node, resolved) {
 }
 
 function collectExportedNames(node, exports) {
-  if (
-    ts.isFunctionDeclaration(node) ||
-    ts.isClassDeclaration(node) ||
-    ts.isEnumDeclaration(node)
-  ) {
+  if (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isEnumDeclaration(node)) {
     if (node.name) exports.add(node.name.text);
     return;
   }
