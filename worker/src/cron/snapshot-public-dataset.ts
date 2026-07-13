@@ -106,7 +106,7 @@ function isoDateUtc(now: Date): string {
 
 
 async function gzipBytes(input: Uint8Array): Promise<Uint8Array> {
-  const stream = new Response(input).body!.pipeThrough(new CompressionStream("gzip"));
+  const stream = new Response(Uint8Array.from(input)).body!.pipeThrough(new CompressionStream("gzip"));
   const buffer = await new Response(stream).arrayBuffer();
   return new Uint8Array(buffer);
 }

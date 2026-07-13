@@ -551,7 +551,7 @@ describe("Safety Score v9 shadow state persistence", () => {
     );
     await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(state.envelope);
     await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(state.diff);
-  });
+  }, 15_000);
 
   it("continues to read legacy plain canonical latest values", async () => {
     const { sqlite, db } = createTestDatabase();

@@ -49,7 +49,7 @@ export async function gzipCanonicalJson(
   const hash = createHash("sha256");
   let offset = 0;
   let uncompressedBytes = 0;
-  const source = new ReadableStream<Uint8Array>({
+  const source = new ReadableStream<BufferSource>({
     pull(controller) {
       throwIfAborted(signal);
       if (offset >= canonicalJson.length) {

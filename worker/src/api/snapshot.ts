@@ -44,7 +44,7 @@ function toUint8Array(value: ArrayBuffer | Uint8Array | number[] | unknown): Uin
 }
 
 async function gunzipToString(bytes: Uint8Array): Promise<string> {
-  const stream = new Response(bytes).body!.pipeThrough(new DecompressionStream("gzip"));
+  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new DecompressionStream("gzip"));
   return await new Response(stream).text();
 }
 

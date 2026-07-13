@@ -59,8 +59,8 @@ export async function yieldToEventLoop(signal?: AbortSignal): Promise<void> {
 
   await new Promise<void>((resolve, reject) => {
     let channel: {
-      port1: { close: () => void; onmessage: (() => void) | null };
-      port2: { close: () => void; postMessage: (value: unknown) => void };
+      port1: { close: () => void };
+      port2: { close: () => void };
     } | null = null;
     let settled = false;
 

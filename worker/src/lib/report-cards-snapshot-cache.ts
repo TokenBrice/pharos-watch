@@ -166,12 +166,12 @@ function base64ToBytes(value: string): Uint8Array {
 }
 
 async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Response(bytes).body!.pipeThrough(new CompressionStream("gzip"));
+  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new CompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 async function gunzipBytesBounded(compressed: Uint8Array, maximumBytes: number): Promise<Uint8Array> {
-  const stream = new Response(compressed).body!.pipeThrough(new DecompressionStream("gzip"));
+  const stream = new Response(Uint8Array.from(compressed)).body!.pipeThrough(new DecompressionStream("gzip"));
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
   let byteLength = 0;

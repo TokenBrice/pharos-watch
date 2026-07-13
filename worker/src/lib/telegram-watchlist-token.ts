@@ -252,12 +252,12 @@ function cleanToken(raw: string): string {
 }
 
 async function gzip(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Response(bytes).body!.pipeThrough(new CompressionStream("gzip"));
+  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new CompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 async function gunzipBounded(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Response(bytes).body!.pipeThrough(new DecompressionStream("gzip"));
+  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new DecompressionStream("gzip"));
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
   let length = 0;
@@ -281,7 +281,7 @@ async function gunzipBounded(bytes: Uint8Array): Promise<Uint8Array> {
 }
 
 async function digest96(bytes: Uint8Array): Promise<Uint8Array> {
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", Uint8Array.from(bytes)));
   return digest.slice(0, V2_DIGEST_BYTES);
 }
 

@@ -118,7 +118,7 @@ async function gunzipBytesBounded(
   label: string,
 ): Promise<Uint8Array> {
   throwIfAborted(signal);
-  const stream = new Response(compressed).body!.pipeThrough(new DecompressionStream("gzip"));
+  const stream = new Response(Uint8Array.from(compressed)).body!.pipeThrough(new DecompressionStream("gzip"));
   const reader = stream.getReader();
   const output = new Uint8Array(maximumBytes);
   let byteLength = 0;

@@ -12,7 +12,9 @@ export interface RequestJsonSchemaOptions {
 export const DEFAULT_REQUEST_JSON_MAX_BYTES = 128 * 1024;
 export const DEFAULT_ADMIN_REQUEST_JSON_MAX_BYTES = DEFAULT_REQUEST_JSON_MAX_BYTES;
 
-function contentLengthExceedsCap(request: Request, maxBytes: number): boolean {
+type RequestBodySource = Pick<Request, "body" | "headers">;
+
+function contentLengthExceedsCap(request: RequestBodySource, maxBytes: number): boolean {
   const contentLength = request.headers.get("content-length");
   if (contentLength == null) return false;
   const length = Number(contentLength);
@@ -20,7 +22,7 @@ function contentLengthExceedsCap(request: Request, maxBytes: number): boolean {
 }
 
 export async function readRequestTextBounded(
-  request: Request,
+  request: RequestBodySource,
   maxBytes: number,
   options: Pick<RequestJsonSchemaOptions, "invalidJsonMessage" | "bodyTooLargeMessage" | "responseOptions"> = {},
 ): Promise<string | Response> {

@@ -45,7 +45,9 @@ const KNOWN_MINI_APP_CHAT_TYPES = new Set(["private", "sender", "group", "superg
 const warnedNovelMiniAppChatTypes = new Set<string>();
 
 async function hmacSha256(keyBytes: Uint8Array, value: string): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await crypto.subtle.importKey("raw", Uint8Array.from(keyBytes), { name: "HMAC", hash: "SHA-256" }, false, [
+    "sign",
+  ]);
   return new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(value)));
 }
 

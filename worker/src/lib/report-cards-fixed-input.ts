@@ -200,12 +200,12 @@ function base64ToBytes(value: string): Uint8Array {
 }
 
 async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Response(bytes).body!.pipeThrough(new CompressionStream("gzip"));
+  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new CompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 async function gunzipText(bytes: Uint8Array): Promise<string> {
-  const stream = new Response(bytes).body!.pipeThrough(new DecompressionStream("gzip"));
+  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new DecompressionStream("gzip"));
   return new Response(stream).text();
 }
 
