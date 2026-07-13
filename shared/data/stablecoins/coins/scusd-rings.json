@@ -84,6 +84,34 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "scUSD is a Veda BoringVault receipt token on both Ethereum and Sonic. Both chains share the same contract address (0xd3dce716) with authority() pointing to RolesAuthority 0x7d5f61, owned by TimelockController 0xFb6ec7 (86400s min delay), controlled by a 4/6 Veda/Paladin governance Safe.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526164,
+      "sources": [
+        {
+          "label": "Veda BoringVault source",
+          "url": "https://github.com/Veda-Labs/boring-vault/blob/f5ab09de989adb5d682312c7f205d928b67d57f2/src/base/BoringVault.sol"
+        },
+        {
+          "label": "scUSD Ethereum BoringVault verified source",
+          "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
+        },
+        {
+          "label": "scUSD Sonic BoringVault verified source",
+          "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
+        },
+        {
+          "label": "scUSD Ethereum LayerZeroTeller verified source",
+          "url": "https://etherscan.io/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+        },
+        {
+          "label": "scUSD Sonic LayerZeroTeller verified source",
+          "url": "https://sonicscan.org/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Veda/Paladin governance Safe (4/6, TimelockController proposer)",
