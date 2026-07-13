@@ -25,7 +25,7 @@
     "branchCount": 101
   },
   "shared/lib/safety-score-v9/coverage.ts": {
-    "fileLines": 980,
+    "fileLines": 928,
     "maxFunctionLines": 643,
     "branchCount": 48
   },
@@ -40,12 +40,12 @@
     "branchCount": 13
   },
   "shared/types/safety-score-v9.ts": {
-    "fileLines": 1446,
+    "fileLines": 1447,
     "maxFunctionLines": 357,
     "branchCount": 67
   },
   "shared/types/safety-score-v9-facts.ts": {
-    "fileLines": 1437,
+    "fileLines": 1431,
     "maxFunctionLines": 147,
     "branchCount": 149
   },
@@ -310,8 +310,8 @@
     "branchCount": 45
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 253,
-    "maxFunctionLines": 130,
+    "fileLines": 252,
+    "maxFunctionLines": 129,
     "branchCount": 2
   },
   "worker/src/lib/status-reliability.ts": {
@@ -320,17 +320,17 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 925,
-    "maxFunctionLines": 146,
-    "branchCount": 119
+    "fileLines": 1039,
+    "maxFunctionLines": 160,
+    "branchCount": 138
   },
   "worker/src/lib/safety-score-v9-fact-set.ts": {
-    "fileLines": 2122,
+    "fileLines": 2115,
     "maxFunctionLines": 224,
     "branchCount": 141
   },
   "worker/src/lib/safety-score-v9-shadow.ts": {
-    "fileLines": 1189,
+    "fileLines": 1184,
     "maxFunctionLines": 175,
     "branchCount": 74
   },
