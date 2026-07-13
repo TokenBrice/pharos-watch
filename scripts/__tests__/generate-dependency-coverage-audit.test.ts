@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "../../shared/types";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "../../shared/types/live-reserves";
@@ -63,7 +66,12 @@ const activeCoins: StablecoinMeta[] = [
       confidence: "verified",
       sources: [{ label: "Docs", url: "https://example.test/manual" }],
       rationale: "Fixture manual dependency review.",
-      relationships: [{ id: "usdt-tether", type: "mechanism", reason: "Fixture mechanism dependency." }],
+      relationships: [{
+        id: "usdt-tether",
+        type: "mechanism",
+        weight: 0.5,
+        reason: "Fixture mechanism dependency.",
+      }],
     },
   }),
   coin({
@@ -162,6 +170,7 @@ describe("generate-dependency-coverage-audit", () => {
       activeCoins,
       stablecoins: stablecoinsPayload,
       reportCards: {
+        cards: [],
         dependencyGraph: {
           edges: [{ from: "usdc-circle", to: "wrap-usdc", weight: 1, type: "collateral" }],
         },
@@ -182,6 +191,93 @@ describe("generate-dependency-coverage-audit", () => {
       "manual-usdt",
       "usdt-tether",
     ]);
+  });
+
+  it("rejects malformed or duplicate report-card cards, dependencies, diagnostics, and edges", () => {
+    const validEdge = { from: "upstream", to: "dependent", weight: 0.5, type: "collateral" };
+    const validCard = { id: "dependent", overallScore: 70 };
+    const payload = (cards: unknown, edges: unknown) => ({ cards, dependencyGraph: { edges } });
+    const malformedCases: Array<{ label: string; value: unknown; path: string }> = [
+      { label: "non-array cards", value: payload({}, []), path: "cards" },
+      { label: "non-object card", value: payload([null], []), path: "cards[0]" },
+      {
+        label: "duplicate card IDs",
+        value: payload([validCard, validCard], []),
+        path: "duplicate card ID dependent",
+      },
+      {
+        label: "invalid card score",
+        value: payload([{ ...validCard, overallScore: "70" }], []),
+        path: "cards[0].overallScore",
+      },
+      {
+        label: "invalid dependency type",
+        value: payload([{
+          ...validCard,
+          rawInputs: { dependencies: [{ id: "upstream", weight: 0.5, type: "unknown" }] },
+        }], []),
+        path: "cards[0].rawInputs.dependencies[0].type",
+      },
+      {
+        label: "invalid dependency weight",
+        value: payload([{
+          ...validCard,
+          rawInputs: { dependencies: [{ id: "upstream", weight: 0, type: "collateral" }] },
+        }], []),
+        path: "cards[0].rawInputs.dependencies[0].weight",
+      },
+      {
+        label: "duplicate dependencies",
+        value: payload([{
+          ...validCard,
+          rawInputs: {
+            dependencies: [
+              { id: "upstream", weight: 0.25 },
+              { id: "upstream", weight: 0.5, type: "collateral" },
+            ],
+          },
+        }], []),
+        path: "duplicate dependency upstream::collateral",
+      },
+      {
+        label: "invalid diagnostic contribution",
+        value: payload([{
+          ...validCard,
+          dimensions: {
+            dependencyRisk: {
+              dependencyDiagnostics: {
+                contributions: [{ id: "upstream", type: "collateral", available: "yes" }],
+              },
+            },
+          },
+        }], []),
+        path: "contributions[0].available",
+      },
+      { label: "non-array edges", value: payload([], {}), path: "dependencyGraph.edges" },
+      { label: "non-object edge", value: payload([], [null]), path: "dependencyGraph.edges[0]" },
+      {
+        label: "invalid edge type",
+        value: payload([], [{ ...validEdge, type: "unknown" }]),
+        path: "dependencyGraph.edges[0].type",
+      },
+      {
+        label: "invalid edge weight",
+        value: payload([], [{ ...validEdge, weight: 1.1 }]),
+        path: "dependencyGraph.edges[0].weight",
+      },
+      {
+        label: "duplicate edges",
+        value: payload([], [validEdge, { ...validEdge, weight: 0.25 }]),
+        path: "duplicate dependency edge upstream->dependent::collateral",
+      },
+    ];
+
+    for (const testCase of malformedCases) {
+      expect(
+        () => buildDependencyCoverageAudit({ activeCoins: [], reportCards: testCase.value }),
+        testCase.label,
+      ).toThrow(testCase.path);
+    }
   });
 
   it("finds raw-suppressed self edges, effective duplicates, SCCs, authored repeats, and true overweight sets", () => {
@@ -389,10 +485,12 @@ describe("generate-dependency-coverage-audit", () => {
         compositionBasis: "Fixture reserve report",
         scope: "selected-slices",
         knownUnknownExposure: "The basket is not split.",
+        knownUnknownExposurePct: 20,
         nonLinkDispositions: [
           {
             reserveIndex: 0,
             reserveName: "USDC vault",
+            pct: 20,
             disposition: "insufficient-evidence",
             rationale: "The label alone is not enough to prove the upstream claim.",
             candidateCoinIds: ["usdc-circle", "usdc-other"],
@@ -400,12 +498,14 @@ describe("generate-dependency-coverage-audit", () => {
           {
             reserveIndex: 6,
             reserveName: "Old USDC slice",
+            pct: 10,
             disposition: "not-applicable",
             rationale: "This fingerprint is intentionally stale for the audit fixture.",
           },
           {
             reserveIndex: 0,
             reserveName: "USDC vault",
+            pct: 20,
             disposition: "not-applicable",
             rationale: "This duplicate fingerprint is intentionally stale for the audit fixture.",
           },
@@ -457,7 +557,7 @@ describe("generate-dependency-coverage-audit", () => {
         confidence: "verified",
         sources: [{ label: "Docs", url: "https://example.test/manual" }],
         rationale: "Fixture review with an outdated relationship.",
-        relationships: [{ id: "different", type: "collateral", reason: "Stale fixture row." }],
+        relationships: [{ id: "different", type: "collateral", weight: 1, reason: "Stale fixture row." }],
       },
     });
     const audit = buildDependencyCoverageAudit({
@@ -551,6 +651,7 @@ describe("generate-dependency-coverage-audit", () => {
       activeCoins: [coin({ id: "upstream", symbol: "UP" }), coin({ id: "dependent", symbol: "DEP" })],
     });
     const baseline = {
+      reserveSlicesMissingCoinId: 0,
       unresolvedMaterialReserveSlices: 0,
       manualDependencyReviewGaps: 0,
       staleReserveDispositions: 0,
@@ -572,6 +673,7 @@ describe("generate-dependency-coverage-audit", () => {
     });
     expect(evaluateDependencyCoverageBaseline(linkageFailure, baseline)).toEqual([
       "depType without coinId invariant failed with 1 finding",
+      "reserve slices missing coinId increased from 0 to 1",
       "unresolved material reserve slices increased from 0 to 1",
     ]);
   });
@@ -607,12 +709,57 @@ describe("generate-dependency-coverage-audit", () => {
     ).rejects.toThrow("--stablecoins file not found");
   });
 
+  it("requires an existing exact-shape baseline in check mode", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "dependency-coverage-baseline-"));
+    const baselinePath = join(cwd, "baseline.json");
+    const completeBaseline = {
+      reserveSlicesMissingCoinId: 10_000,
+      unresolvedMaterialReserveSlices: 10_000,
+      manualDependencyReviewGaps: 10_000,
+      staleReserveDispositions: 10_000,
+      unavailableTargetDispositionGaps: 10_000,
+      targetDispositionValidationIssues: 10_000,
+      adapterMappingReviewGaps: 10_000,
+    };
+
+    try {
+      await expect(runCli(["--check", "--baseline", "missing.json"], cwd)).rejects.toThrow(
+        "Dependency coverage baseline file not found",
+      );
+
+      const partial = { ...completeBaseline } as Record<string, number>;
+      delete partial.reserveSlicesMissingCoinId;
+      const malformed = [
+        { value: partial, message: "missing: reserveSlicesMissingCoinId" },
+        { value: { ...completeBaseline, staticEdgeCount: 1 }, message: "unknown: staticEdgeCount" },
+        {
+          value: { ...completeBaseline, reserveSlicesMissingCoinId: -1 },
+          message: "reserveSlicesMissingCoinId must be a nonnegative integer",
+        },
+      ];
+      for (const testCase of malformed) {
+        writeFileSync(baselinePath, `${JSON.stringify(testCase.value)}\n`, "utf8");
+        await expect(runCli(["--check", "--baseline", "baseline.json"], cwd)).rejects.toThrow(testCase.message);
+      }
+
+      writeFileSync(baselinePath, `${JSON.stringify(completeBaseline)}\n`, "utf8");
+      const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+      try {
+        await expect(runCli(["--check", "--baseline", "baseline.json", "--json"], cwd)).resolves.toBe(0);
+      } finally {
+        stdout.mockRestore();
+      }
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("sends site-origin headers when fetching prod site-data", async () => {
     const fetchMock = vi.fn<typeof fetch>(async (url) => {
       const href = String(url);
       return new Response(
         JSON.stringify(href.includes("report-cards")
-          ? { dependencyGraph: { edges: [] } }
+          ? { cards: [], dependencyGraph: { edges: [] } }
           : { peggedAssets: [] }),
         { status: 200 },
       );
