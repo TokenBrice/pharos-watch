@@ -68,6 +68,29 @@ describe("v9 research handoff contracts", () => {
     expect(trace.nrReasons).toContainEqual(expect.objectContaining({ code: "missing-pillar" }));
   });
 
+  it("gives an active depeg precedence over an equal structural cap", () => {
+    const trace = scoreV9Input({
+      assetId: "active-depeg-tie",
+      pillars: { backing: 90, exit: 90, control: 90 },
+      pegScore: 100,
+      pegApplicable: true,
+      evidenceLevel: "strong",
+      trackRecordMonths: 48,
+      activeDepegBps: 2_500,
+      parentRequired: false,
+      parentScore: null,
+      structuralCaps: [{ kind: "structural:f", limit: 39, reason: "Independent structural F cap." }],
+      structuralSignals: [],
+      unresolved: [],
+    });
+
+    expect(trace.bindingCap).toMatchObject({
+      source: "active-depeg",
+      kind: "active-depeg:f",
+      limit: 39,
+    });
+  });
+
   it("resolves fact-shaped signals to caps outside compiled metadata", () => {
     const input = compiled("unsafe");
     input.structuralSignals = [

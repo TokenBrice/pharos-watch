@@ -66,7 +66,8 @@ describe("separate matched v9 invariant corpus", () => {
       modeledExitSizeUsd: 1_000_000,
       sameNotionalScoringMode: "active" as const,
       exitObservationAsOfSec: AS_OF,
-      maxExitObservationAgeSec: 60,
+      dexExitObservationMaxAgeSec: 60,
+      liveRedemptionExitObservationMaxAgeSec: 60,
     };
     const thinOnly = computeEffectiveExitScoreDiagnostics(80, null, {
       ...shared,

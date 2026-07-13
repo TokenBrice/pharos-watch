@@ -1,15 +1,23 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
+  assertExactReportCardIds,
   compileHistoricalFixtureToV9Input,
   compileReportCardSetToV9Inputs,
 } from "@shared/lib/safety-score-v9-compiler";
 import { scoreCompiledAsset, scoreCompiledAssetSet } from "@shared/lib/safety-score-v9-research";
-import { DexLiquidityMapSchema } from "@shared/types/market";
+import { DexLiquidityMapSchema, type DexLiquidityMap } from "@shared/types/market";
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
-import { HistoricalV9FixtureCorpusSchema } from "@shared/types/safety-score-v9";
+import {
+  HistoricalV9FixtureCorpusSchema,
+  type CompiledV9AssetInput,
+  type V9UnresolvedFact,
+} from "@shared/types/safety-score-v9";
 import historicalFixtureAsset from "../../shared/data/safety-score-v9/historical-fixtures-v1.json";
 import calibrationCohortAsset from "../../shared/data/safety-score-v9/calibration-cohort-v1.json";
+import exitRouteCalibrationAsset from "../../shared/data/safety-score-v9/exit-route-calibration-v1.json";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/generate-safety-score-v9-readiness.ts [options]
@@ -32,21 +40,146 @@ function increment(record: Record<string, number>, key: string): void {
 }
 
 function classifyManualInput(code: string): "missing-data" | "unresolved-methodology" | "unsupported-design" {
-  if (code.includes("archetype") || code.includes("implementation") || code.includes("unreviewed")) {
-    return "missing-data";
+  if (code.includes("unsupported")) return "unsupported-design";
+  if (code.includes("incomparable") || code.includes("correlated")) return "unresolved-methodology";
+  return "missing-data";
+}
+
+export interface ManualInputAuditItem {
+  assetId: string;
+  pillar: "global" | "peg" | "backing" | "exit" | "control";
+  code: string;
+  classification: "missing-data" | "unresolved-methodology" | "unsupported-design";
+  critical: boolean;
+  path: string | null;
+  reason: string;
+}
+
+function inputFacts(
+  input: CompiledV9AssetInput,
+): Array<{ pillar: ManualInputAuditItem["pillar"]; fact: V9UnresolvedFact }> {
+  return [
+    ...input.unresolved.map((fact) => ({ pillar: "global" as const, fact })),
+    ...input.peg.unresolved.map((fact) => ({ pillar: "peg" as const, fact })),
+    ...(["backing", "exit", "control"] as const).flatMap((pillar) =>
+      input.pillars[pillar].unresolved.map((fact) => ({ pillar, fact })),
+    ),
+  ];
+}
+
+export function buildManualInputAudit(compiled: readonly CompiledV9AssetInput[]) {
+  const items = compiled
+    .flatMap((input) =>
+      inputFacts(input).map(({ pillar, fact }): ManualInputAuditItem => ({
+        assetId: input.assetId,
+        pillar,
+        code: fact.code,
+        classification: classifyManualInput(fact.code),
+        critical: fact.critical,
+        path: fact.path ?? null,
+        reason: fact.reason,
+      })),
+    )
+    .sort(
+      (left, right) =>
+        left.assetId.localeCompare(right.assetId) ||
+        left.pillar.localeCompare(right.pillar) ||
+        left.code.localeCompare(right.code) ||
+        left.reason.localeCompare(right.reason),
+    );
+  const byClass: Record<ManualInputAuditItem["classification"], number> = {
+    "missing-data": 0,
+    "unresolved-methodology": 0,
+    "unsupported-design": 0,
+  };
+  const byCriticality = { critical: 0, noncritical: 0 };
+  for (const item of items) {
+    byClass[item.classification] += 1;
+    byCriticality[item.critical ? "critical" : "noncritical"] += 1;
   }
-  if (code.includes("same-notional") || code.includes("branch")) return "unresolved-methodology";
-  return "unsupported-design";
+  return { total: items.length, byClass, byCriticality, items };
+}
+
+export function summarizeRouteObservationCoverage(dexMap: DexLiquidityMap, activeIds: ReadonlySet<string>) {
+  return Object.entries(dexMap)
+    .filter(([id]) => id !== "__global__" && activeIds.has(id))
+    .reduce(
+      (summary, [, row]) => {
+        const coverage = row.exitRouteObservationCoverage;
+        increment(summary.statuses, coverage?.status ?? "unknown");
+        if ((coverage?.retainedPoolCount ?? 0) > 0) summary.retainedPoolAssets += 1;
+        summary.retainedPools += coverage?.retainedPoolCount ?? 0;
+        summary.observations += row.exitRouteObservations?.length ?? 0;
+        const eligible =
+          row.exitRouteObservations?.filter((observation) => observation.scoreEligible && observation.executableUsd > 0)
+            .length ?? 0;
+        summary.scoreEligibleObservations += eligible;
+        if (eligible > 0) summary.dexEligibleAssets += 1;
+        return summary;
+      },
+      {
+        assets: Object.keys(dexMap).filter((id) => id !== "__global__" && activeIds.has(id)).length,
+        statuses: {} as Record<string, number>,
+        retainedPoolAssets: 0,
+        retainedPools: 0,
+        observations: 0,
+        scoreEligibleObservations: 0,
+        dexEligibleAssets: 0,
+      },
+    );
+}
+
+export function applyCalibratedDexEligibility<
+  T extends { dexEligibleAssets: number; scoreEligibleObservations: number },
+>(coverage: T, calibrated: { eligibleAssets: number; eligibleObservations: number }) {
+  return {
+    ...coverage,
+    rawPositiveObservationAssets: coverage.dexEligibleAssets,
+    rawScoreEligibleObservations: coverage.scoreEligibleObservations,
+    dexEligibleAssets: calibrated.eligibleAssets,
+    scoreEligibleObservations: calibrated.eligibleObservations,
+  };
+}
+
+export function evaluateP4CoverageBlockers(args: {
+  dexEligibleAssets: number;
+  redemptionEligibleAssets: number;
+  minimumDexEligibleAssets: number;
+  minimumRedemptionEligibleAssets: number;
+}): string[] {
+  return [
+    ...(args.dexEligibleAssets < args.minimumDexEligibleAssets
+      ? [
+          `DEX same-notional coverage is ${args.dexEligibleAssets} eligible assets; calibrated floor is ${args.minimumDexEligibleAssets}`,
+        ]
+      : []),
+    ...(args.redemptionEligibleAssets < args.minimumRedemptionEligibleAssets
+      ? [
+          `Redemption same-notional coverage is ${args.redemptionEligibleAssets} eligible assets; calibrated floor is ${args.minimumRedemptionEligibleAssets}`,
+        ]
+      : []),
+  ];
+}
+
+export function selectExactActiveReportCards<T extends { id: string; isDefunct: boolean }>(
+  cards: readonly T[],
+  activeIds: readonly string[],
+): T[] {
+  const activeCards = cards.filter((card) => !card.isDefunct);
+  assertExactReportCardIds(activeIds, activeCards);
+  return activeCards;
 }
 
 export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiquidity?: unknown; generatedAt: string }) {
   const reportCards = ReportCardsResponseSchema.parse(args.reportCards);
+  const dexMap = args.dexLiquidity === undefined ? null : DexLiquidityMapSchema.parse(args.dexLiquidity);
   const historical = HistoricalV9FixtureCorpusSchema.parse(historicalFixtureAsset);
   const cohort = calibrationCohortAsset as CalibrationCohortAsset;
   const generatedAtMs = Date.parse(args.generatedAt);
   if (!Number.isFinite(generatedAtMs)) throw new Error("--generated-at must be an ISO timestamp");
 
-  const activeIds = new Set(ACTIVE_STABLECOINS.map((meta) => meta.id));
+  const activeRegistryIds = ACTIVE_STABLECOINS.map((meta) => meta.id);
+  const activeIds = new Set(activeRegistryIds);
   const cohortMissingIds = cohort.assets
     .map((entry) => entry.assetId)
     .filter((id) => !activeIds.has(id))
@@ -55,13 +188,29 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
     throw new Error(`Calibration cohort references inactive or missing assets: ${cohortMissingIds.join(", ")}`);
   }
 
-  const activeCards = reportCards.cards.filter((card) => activeIds.has(card.id) && !card.isDefunct);
-  const asOf = new Date(reportCards.updatedAt * 1_000).toISOString();
-  if (generatedAtMs < Date.parse(asOf)) throw new Error("generatedAt cannot be earlier than report-card asOf");
+  const activeCards = selectExactActiveReportCards(reportCards.cards, activeRegistryIds);
+  const runtimeEvidenceTimes = dexMap
+    ? Object.entries(dexMap)
+        .filter(([id]) => id !== "__global__" && activeIds.has(id))
+        .flatMap(([, row]) => [
+          row.updatedAt,
+          ...(row.exitRouteObservations ?? []).map((observation) => observation.observedAt),
+        ])
+    : [];
+  const asOf = new Date(Math.max(reportCards.updatedAt, ...runtimeEvidenceTimes) * 1_000).toISOString();
+  if (generatedAtMs < Date.parse(asOf)) throw new Error("generatedAt cannot be earlier than compiler evidence asOf");
   const compiled = compileReportCardSetToV9Inputs(ACTIVE_STABLECOINS, activeCards, {
     asOf,
     compiledAt: args.generatedAt,
     methodologyVersion: reportCards.methodology.version,
+    reportCardObservedAt: new Date(reportCards.updatedAt * 1_000).toISOString(),
+    dexExitObservationMaxAgeSec: CRON_INTERVALS["sync-dex-liquidity"] * 2,
+    liveRedemptionExitObservationMaxAgeSec: CRON_INTERVALS["sync-redemption-backstops"] * 2,
+    ...(dexMap
+      ? {
+          dexLiquidityById: new Map(Object.entries(dexMap).filter(([id]) => id !== "__global__" && activeIds.has(id))),
+        }
+      : {}),
   });
   const evaluated = scoreCompiledAssetSet(compiled);
   const cardsById = new Map(activeCards.map((card) => [card.id, card]));
@@ -74,7 +223,6 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
     exit: {},
     control: {},
   };
-  const manualInputClasses: Record<string, number> = {};
   for (const input of compiled) {
     increment(archetypes, input.archetype ?? "unresolved");
     for (const pillar of ["backing", "exit", "control"] as const) {
@@ -87,9 +235,9 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
     ]) {
       increment(unresolvedByCode, fact.code);
       if (fact.critical) increment(criticalUnresolvedByCode, fact.code);
-      increment(manualInputClasses, classifyManualInput(fact.code));
     }
   }
+  const manualInputAudit = buildManualInputAudit(compiled);
 
   const gradeDistribution: Record<string, number> = {};
   const bindingReasons: Record<string, number> = {};
@@ -114,34 +262,26 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
     .slice(0, 25);
   const gradeChanges = movements.filter((movement) => movement.currentGrade !== movement.candidateGrade);
 
-  const dexMap = args.dexLiquidity === undefined ? null : DexLiquidityMapSchema.parse(args.dexLiquidity);
   const routeCoverage = dexMap
-    ? Object.entries(dexMap)
-        .filter(([id]) => id !== "__global__" && activeIds.has(id))
-        .reduce(
-          (summary, [, row]) => {
-            const coverage = row.exitRouteObservationCoverage;
-            increment(summary.statuses, coverage?.status ?? "unknown");
-            summary.observations += row.exitRouteObservations?.length ?? 0;
-            summary.scoreEligibleObservations +=
-              row.exitRouteObservations?.filter(
-                (observation) => observation.scoreEligible && observation.executableUsd > 0,
-              ).length ?? 0;
-            return summary;
-          },
-          {
-            assets: Object.keys(dexMap).filter((id) => id !== "__global__" && activeIds.has(id)).length,
-            statuses: {} as Record<string, number>,
-            observations: 0,
-            scoreEligibleObservations: 0,
-          },
-        )
+    ? summarizeRouteObservationCoverage(dexMap, activeIds)
     : {
         assets: 0,
         statuses: { unavailable: ACTIVE_STABLECOINS.length },
+        retainedPoolAssets: 0,
+        retainedPools: 0,
         observations: 0,
         scoreEligibleObservations: 0,
+        dexEligibleAssets: 0,
       };
+  const redemptionEligibleAssets = exitRouteCalibrationAsset.coverage.redemption.eligibleAssets;
+  const calibratedDexEligibleAssets = exitRouteCalibrationAsset.coverage.dex.eligibleAssets;
+  const minimumCoveragePolicy = exitRouteCalibrationAsset.activationDecision.minimumCoveragePolicy;
+  const p4CoverageBlockers = evaluateP4CoverageBlockers({
+    dexEligibleAssets: calibratedDexEligibleAssets,
+    redemptionEligibleAssets,
+    minimumDexEligibleAssets: minimumCoveragePolicy.dexEligibleAssets,
+    minimumRedemptionEligibleAssets: minimumCoveragePolicy.redemptionEligibleAssets,
+  });
 
   const adverse = historical.fixtures.filter((fixture) => fixture.outcome.classification === "adverse");
   const resilient = historical.fixtures.filter((fixture) => fixture.outcome.classification === "resilient");
@@ -176,16 +316,39 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
   const blockers = [
     ...(nrCount > 0 ? [`${nrCount} active assets compile to reason-coded NR`] : []),
     ...(criticalUnresolvedCount > 0 ? [`${criticalUnresolvedCount} critical facts remain unresolved`] : []),
-    ...(routeCoverage.scoreEligibleObservations === 0
-      ? ["No audited score-eligible same-notional DEX observation is available"]
-      : []),
+    ...p4CoverageBlockers,
   ];
+  const traceById = new Map(evaluated.traces.map((trace) => [trace.assetId, trace]));
+  const compiledById = new Map(compiled.map((input) => [input.assetId, input]));
+  const cohortDispositions = cohort.assets
+    .map((entry) => {
+      const input = compiledById.get(entry.assetId)!;
+      const trace = traceById.get(entry.assetId)!;
+      const criticalFacts = inputFacts(input)
+        .filter(({ fact }) => fact.critical)
+        .map(({ pillar, fact }) => ({ pillar, code: fact.code, path: fact.path ?? null, reason: fact.reason }))
+        .sort(
+          (left, right) =>
+            left.pillar.localeCompare(right.pillar) ||
+            left.code.localeCompare(right.code) ||
+            left.reason.localeCompare(right.reason),
+        );
+      return {
+        assetId: entry.assetId,
+        cohorts: entry.cohorts,
+        disposition: criticalFacts.length === 0 ? "critical-inputs-complete" : "reason-coded-critical-unresolved",
+        candidateGrade: trace.finalGrade,
+        criticalFacts,
+      };
+    })
+    .sort((left, right) => left.assetId.localeCompare(right.assetId));
 
   return {
     schemaVersion: 1,
     generatedAt: args.generatedAt,
     input: {
-      reportCardsAsOf: asOf,
+      reportCardsAsOf: new Date(reportCards.updatedAt * 1_000).toISOString(),
+      compilerEvidenceAsOf: asOf,
       currentMethodologyVersion: reportCards.methodology.version,
       activeRegistryCount: ACTIVE_STABLECOINS.length,
       activeReportCardCount: activeCards.length,
@@ -199,6 +362,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
           increment(result, name);
           return result;
         }, {}),
+      dispositions: cohortDispositions,
     },
     historicalCalibration: {
       corpusVersion: historical.schemaVersion,
@@ -229,7 +393,20 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
       unexplainedManualPillarValueCount: 0,
       scenarioSuppliedCapCount: 0,
     },
-    routeObservationCoverage: routeCoverage,
+    routeObservationCoverage: {
+      ...applyCalibratedDexEligibility(routeCoverage, {
+        eligibleAssets: calibratedDexEligibleAssets,
+        eligibleObservations: exitRouteCalibrationAsset.coverage.dex.eligibleObservations,
+      }),
+      redemptionEligibleAssets,
+      calibratedCoverageSource: `exit-route-calibration:${exitRouteCalibrationAsset.generationId}`,
+      calibratedMinimumEligibleAssets: {
+        dex: minimumCoveragePolicy.dexEligibleAssets,
+        redemption: minimumCoveragePolicy.redemptionEligibleAssets,
+      },
+      calibratedFloorMet: p4CoverageBlockers.length === 0,
+      blockers: p4CoverageBlockers,
+    },
     shadowEvaluation: {
       gradeDistribution,
       bindingReasons,
@@ -238,7 +415,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
         .length,
       largestMovements,
     },
-    remainingManualInputs: manualInputClasses,
+    remainingManualInputs: manualInputAudit,
     recommendation: {
       decision: blockers.length === 0 ? "go" : "no-go",
       blockers,
@@ -280,4 +457,6 @@ async function main(): Promise<void> {
   writeFileSync(values.output, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
 
-void runCliEntrypoint(main, { label: "safety-score-v9:readiness", usage: USAGE });
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  void runCliEntrypoint(main, { label: "safety-score-v9:readiness", usage: USAGE });
+}
