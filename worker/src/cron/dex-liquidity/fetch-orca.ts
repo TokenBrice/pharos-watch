@@ -27,6 +27,16 @@ const ORCA_RATE_LIMIT_BACKOFF_MS = 1_000;
 const ORCA_PAGES_PER_RUN = 4;
 const ORCA_SOURCE_KEY = "orca:solana";
 
+function buildOrcaPoolsUrl(cursor?: string | null): string {
+  const url = new URL(ORCA_API);
+  url.searchParams.set("sortBy", "tvl");
+  url.searchParams.set("sortDirection", "desc");
+  url.searchParams.set("minTvl", String(DIRECT_API_POOL_MIN_TVL_USD));
+  url.searchParams.set("size", "200");
+  if (cursor) url.searchParams.set("next", cursor);
+  return url.toString();
+}
+
 interface OrcaPool {
   address: string;
   price: string;
@@ -83,7 +93,7 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
   const warnings: string[] = [];
   let successfulPages = 0;
   let degraded = false;
-  let url: string | null = `${ORCA_API}?sortBy=tvl&sortDirection=desc&minTvl=${DIRECT_API_POOL_MIN_TVL_USD}&size=200`;
+  let url: string | null = buildOrcaPoolsUrl();
   const nowSec = Math.floor(Date.now() / 1000);
   const paginationState = await readDexSourcePaginationState(db, ORCA_SOURCE_KEY);
   const storedTailCursor = paginationState.cursor;
@@ -223,7 +233,7 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
     if (page === 1) {
       refreshedHeadCursor = nextCursor;
       resumeCursor = nextCursor ? (storedTailCursor ?? nextCursor) : null;
-      url = resumeCursor ? `${ORCA_API}?next=${encodeURIComponent(resumeCursor)}&size=200` : null;
+      url = resumeCursor ? buildOrcaPoolsUrl(resumeCursor) : null;
       if (!url) cycleCompleted = true;
       continue;
     }
@@ -238,7 +248,7 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
       warnings.push(`pagination partial; resumeFromCursor=${nextCursor}`);
       break;
     }
-    url = nextCursor ? `${ORCA_API}?next=${encodeURIComponent(nextCursor)}&size=200` : null;
+    url = nextCursor ? buildOrcaPoolsUrl(nextCursor) : null;
   }
 
   if (successfulPages > 0) {

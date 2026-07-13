@@ -147,7 +147,7 @@ describe("runDirectApiFetchPhase", () => {
     expect(result.results[0]?.result.warnings).toEqual(["retained pool enrichment failed"]);
   });
 
-  it("marks mixed warning and failure direct API results as failed", async () => {
+  it("keeps partially usable direct API results out of failed sources", async () => {
     const fetchers = [
       makeFetcher("mixed", async () =>
         makeDexApiFetchResult([], {
@@ -161,10 +161,31 @@ describe("runDirectApiFetchPhase", () => {
 
     const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
 
-    expect(result.failedSources).toEqual(["mixed-circuit"]);
+    expect(result.failedSources).toEqual([]);
     expect(result.fallbackSignals).toEqual(["mixed-circuit-partial"]);
-    expect(result.sourceWarnings).toEqual(["mixed-circuit: page 1 skipped 1 malformed pool rows"]);
+    expect(result.sourceWarnings).toEqual([
+      "mixed-circuit: page 1 skipped 1 malformed pool rows",
+      "mixed-circuit: page 2 returned 503",
+    ]);
     expect(result.results[0]?.result.errors).toEqual(["page 2 returned 503"]);
     expect(result.results[0]?.result.warnings).toEqual(["page 1 skipped 1 malformed pool rows"]);
+  });
+
+  it("marks an unavailable direct API result as failed", async () => {
+    const fetchers = [
+      makeFetcher("unavailable", async () =>
+        makeDexApiFetchResult([], {
+          ok: false,
+          degraded: true,
+          errors: ["all pages returned 503"],
+        }),
+      ),
+    ];
+
+    const result = await runDirectApiFetchPhase({} as D1Database, fetchers);
+
+    expect(result.failedSources).toEqual(["unavailable-circuit"]);
+    expect(result.fallbackSignals).toEqual(["unavailable-circuit-unavailable"]);
+    expect(result.sourceWarnings).toEqual(["unavailable-circuit: all pages returned 503"]);
   });
 });

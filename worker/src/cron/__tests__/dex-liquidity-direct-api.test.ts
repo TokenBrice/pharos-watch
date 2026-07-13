@@ -1111,6 +1111,9 @@ describe("fetchOrcaPools", () => {
     // Second call should include the cursor
     const secondCallUrl = mockFetch.mock.calls[1][0] as string;
     expect(secondCallUrl).toContain("next=cursor123");
+    expect(secondCallUrl).toContain("sortBy=tvl");
+    expect(secondCallUrl).toContain("sortDirection=desc");
+    expect(secondCallUrl).toContain("minTvl=10000");
   });
 
   it("refreshes the Orca head before resuming a durable tail cursor", async () => {
@@ -1159,6 +1162,7 @@ describe("fetchOrcaPools", () => {
 
     expect(String(mockFetch.mock.calls[0][0])).toContain("sortBy=tvl");
     expect(String(mockFetch.mock.calls[1][0])).toContain("next=stored-cursor");
+    expect(String(mockFetch.mock.calls[1][0])).toContain("minTvl=10000");
     expect(result.pools.map((pool) => pool.poolAddress)).toEqual(["head", "stored-tail"]);
     expect(result.pagination).toMatchObject({ state: "complete", headRefreshed: true, cycleCompleted: true });
     expect(writes[0]?.[1]).toBe("fresh-head-tail");

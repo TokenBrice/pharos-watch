@@ -17,7 +17,7 @@ Cron result status semantics:
 - `degraded`: one or more critical non-fatal source families failed (for example DeFiLlama yields/protocol coverage), or coverage falls near the guardrail band.
 - throw/error: catastrophic source failure (for example DL+Curve hard failure) still aborts the run.
 
-Direct protocol-native API outages are tracked in `failedSources` / `fallbackMode`, but they do not by themselves flip the cron to `degraded` when the published coverage and value guardrails stay healthy. That keeps the run-level status tied to material data loss rather than optional-source turbulence.
+Direct protocol-native API outages are tracked in `failedSources` / `fallbackMode`, but they do not by themselves flip the cron to `degraded` when the published coverage and value guardrails stay healthy. `failedSources` is reserved for providers that return no usable response; a provider with partial errors and usable output records a `*-partial` fallback signal plus source-warning diagnostics instead. That keeps the run-level status tied to material data loss rather than optional-source turbulence.
 
 When DeFiLlama Protocols is unavailable, protocol TVL caps cannot be computed reliably. The cron still computes diagnostics and returns `degraded`, but it preserves the last source-complete public dataset instead of publishing capless secondary-source liquidity. Value guard comparisons use the latest source-complete guard baseline from cron metadata when the persisted `__global__` row came from a source-incomplete run, so a recovered source-complete run does not fail merely because it returns from a capless degraded baseline to the normal capped range.
 

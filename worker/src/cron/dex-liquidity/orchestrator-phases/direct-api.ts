@@ -224,7 +224,10 @@ export async function runDirectApiFetchPhase(
       const event = directApiCircuitEventFromOutcome(circuitKey, execution.circuitOutcome);
       if (event) circuitEvents.push(event);
       sourceWarnings.push(...(result.warnings ?? []).map((warning) => `${circuitKey}: ${warning}`));
-      if (!result.ok || result.degraded) {
+      if (result.degraded) {
+        sourceWarnings.push(...result.errors.map((error) => `${circuitKey}: ${error}`));
+      }
+      if (!result.ok) {
         failedSources.push(circuitKey);
       }
       if (!result.ok) {
