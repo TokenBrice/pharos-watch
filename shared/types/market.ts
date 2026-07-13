@@ -154,6 +154,49 @@ export type LiquiditySourceMixEntry = z.infer<typeof LiquiditySourceMixEntrySche
 export const LiquiditySourceMixSchema = z.record(z.string(), LiquiditySourceMixEntrySchema);
 export type LiquiditySourceMix = Record<string, LiquiditySourceMixEntry>;
 
+export const DexAmmExecutionTokenSchema = z.object({
+  address: z.string().min(1),
+  symbol: z.string().min(1),
+  decimals: z.number().int().min(0).max(255),
+  balance: z.number().finite().positive(),
+  referencePriceUsd: z.number().finite().positive(),
+  referencePriceSource: z.enum(["source-token-usd", "tracked-market", "peg-reference"]),
+  trackedAssetId: z.string().min(1).optional(),
+  weight: z.number().finite().positive().max(1).optional(),
+});
+export type DexAmmExecutionToken = z.infer<typeof DexAmmExecutionTokenSchema>;
+
+export const DexAmmExecutionModelSchema = z.object({
+  source: z.enum(["raydium", "balancer"]),
+  invariant: z.enum(["constant-product", "weighted-constant-mean"]),
+  trackedTokenIndex: z.number().int().nonnegative(),
+  feeRate: z.number().finite().min(0).lt(1),
+  tokens: z.array(DexAmmExecutionTokenSchema).min(2).max(8),
+}).superRefine((model, ctx) => {
+  if (model.trackedTokenIndex >= model.tokens.length) {
+    ctx.addIssue({ code: "custom", path: ["trackedTokenIndex"], message: "tracked token index is out of range" });
+  }
+  if (model.invariant === "constant-product") {
+    if (model.source !== "raydium" || model.tokens.length !== 2) {
+      ctx.addIssue({ code: "custom", path: ["invariant"], message: "invalid constant-product model" });
+    }
+    return;
+  }
+  if (model.source !== "balancer") {
+    ctx.addIssue({ code: "custom", path: ["source"], message: "weighted models require Balancer source" });
+  }
+  const weights = model.tokens.map((token) => token.weight);
+  if (weights.some((weight) => weight == null)) {
+    ctx.addIssue({ code: "custom", path: ["tokens"], message: "weighted models require every token weight" });
+    return;
+  }
+  const weightSum = (weights as number[]).reduce((sum, weight) => sum + weight, 0);
+  if (Math.abs(weightSum - 1) > 0.0001) {
+    ctx.addIssue({ code: "custom", path: ["tokens"], message: "weighted model token weights must sum to one" });
+  }
+});
+export type DexAmmExecutionModel = z.infer<typeof DexAmmExecutionModelSchema>;
+
 const DexLiquidityPoolSchema = z.object({
   project: z.string(),
   chain: z.string(),
@@ -199,6 +242,7 @@ const DexLiquidityPoolSchema = z.object({
           capped: z.boolean().optional(),
         })
         .optional(),
+      ammExecutionModel: DexAmmExecutionModelSchema.optional(),
     })
     .optional(),
 });
@@ -285,6 +329,7 @@ export const ExitRouteOutputSchema = z.object({
   kind: ExitRouteOutputKindSchema,
   currency: z.string().min(1).optional(),
   trackedAssetIds: z.array(z.string().min(1)).optional(),
+  assetKeys: z.array(z.string().min(1)).min(1).max(16).optional(),
   basketWeights: z
     .array(
       z.object({

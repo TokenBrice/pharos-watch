@@ -28,6 +28,7 @@ export interface DexApiPool {
   volume24hUsd: number;
   feeRate: number | null;
   balances: number[] | null;
+  /** True only when balances are normalized native-token amounts rather than integer base units. */
   balancesNormalized?: boolean;
   /** Optional per-token raw 24h volumes in native token units. */
   tokenVolumes24h?: number[] | null;

@@ -246,6 +246,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         volume24hUsd: Number.isFinite(volume24h) ? volume24h : 0,
         feeRate: Number.isFinite(swapFee) ? swapFee : null,
         balances: balances.length === pool.poolTokens.length ? balances : null,
+        balancesNormalized: true,
       });
     }
     if (malformedRows > 0) {

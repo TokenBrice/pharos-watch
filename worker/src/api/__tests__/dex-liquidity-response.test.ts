@@ -58,6 +58,48 @@ describe("normalizeTopPools", () => {
     expect(result[0]).not.toHaveProperty("extra");
   });
 
+  it("preserves the optional exact AMM execution model", () => {
+    const ammExecutionModel = {
+      source: "raydium",
+      invariant: "constant-product",
+      trackedTokenIndex: 0,
+      feeRate: 0.0025,
+      tokens: [
+        {
+          address: "UsdcMint",
+          symbol: "USDC",
+          decimals: 6,
+          balance: 2_000_000,
+          referencePriceUsd: 1,
+          referencePriceSource: "tracked-market",
+          trackedAssetId: "usdc-circle",
+        },
+        {
+          address: "UsdtMint",
+          symbol: "USDT",
+          decimals: 6,
+          balance: 2_000_000,
+          referencePriceUsd: 1,
+          referencePriceSource: "tracked-market",
+          trackedAssetId: "usdt-tether",
+        },
+      ],
+    };
+
+    const result = normalizeTopPools(JSON.stringify([{
+      project: "raydium",
+      chain: "Solana",
+      symbol: "USDC / USDT",
+      poolType: "raydium-amm",
+      tvlUsd: 4_000_000,
+      volumeUsd1d: 100_000,
+      source: "direct_api",
+      extra: { ammExecutionModel },
+    }]));
+
+    expect((result[0]?.extra as Record<string, unknown>).ammExecutionModel).toEqual(ammExecutionModel);
+  });
+
   it("returns an empty array for non-array JSON payloads", () => {
     expect(normalizeTopPools("{}")).toEqual([]);
     expect(normalizeTopPools("null")).toEqual([]);

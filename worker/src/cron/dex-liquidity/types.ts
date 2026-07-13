@@ -71,6 +71,7 @@ export interface LiquidityMetrics {
 }
 
 import type {
+  DexAmmExecutionModel,
   LiquidityPoolSourceFamily,
   LiquiditySourceMixEntry,
   LiquidityCoverageClass,
@@ -116,6 +117,8 @@ export interface PoolEntry {
       isTracked: boolean;
     }[];
     measurement?: PoolMeasurementFlags;
+    /** Exact direct-API inputs retained for supported AMM execution simulation. */
+    ammExecutionModel?: DexAmmExecutionModel;
   };
 }
 
@@ -294,6 +297,8 @@ export interface GtNewPool {
   pairQualityOverride?: number | null;
   /** Measurement/provenance flags for downstream confidence accounting. */
   measurement?: PoolMeasurementFlags;
+  /** Exact direct-API inputs retained only for supported AMM invariant families. */
+  ammExecutionModel?: DexAmmExecutionModel;
   /** CoinGecko 2% downside orderbook depth when available. */
   orderbookDepthUsd?: number | null;
   /** CoinGecko 2% upside orderbook depth when available. */

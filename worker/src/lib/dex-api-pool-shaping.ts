@@ -4,6 +4,7 @@ import { QUALITY_MULTIPLIERS, normalizeDexSymbol } from "./dex-cron-constants";
 import { buildPoolIdentity } from "../cron/dex-liquidity/pool-identity";
 import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sanity";
 import type { PriceValidationReferences } from "./price-validation";
+import type { DexAmmExecutionModel, DexAmmExecutionToken } from "@shared/types/market";
 import type { DexApiFetchResult, DexApiPool, DexApiPoolToken } from "./dex-api-types";
 import {
   derivePoolVolume24hUsd,
@@ -126,7 +127,7 @@ export function normalizeDexApiPoolsForMerge(pools: DexApiPool[]): DexApiPoolNor
       price: toPositiveFiniteNumberOrNull(pool.price),
       tvlUsd,
       volume24hUsd: toNonNegativeFiniteNumberOrNull(pool.volume24hUsd) ?? 0,
-      feeRate: toPositiveFiniteNumberOrNull(pool.feeRate),
+      feeRate: toNonNegativeFiniteNumberOrNull(pool.feeRate),
       balances,
       ...(tokenVolumes24h ? { tokenVolumes24h } : { tokenVolumes24h: null }),
     });
@@ -210,6 +211,118 @@ function derivePoolFeeTierBps(feeRate: number | null): number | null {
   const bps = feeRate * 10_000;
   if (!Number.isFinite(bps) || bps <= 0) return null;
   return Math.round(bps * 100) / 100;
+}
+
+function resolveExecutionToken(
+  pool: DexApiPool,
+  token: DexApiPoolToken,
+  balance: number,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+  validationReferences?: PriceValidationReferences,
+  trackedStablecoinPrices?: Map<string, number>,
+): DexAmmExecutionToken | null {
+  const address = token.address.trim();
+  const symbol = normalizeDexSymbol(token.symbol);
+  if (!address || !symbol || !Number.isFinite(token.decimals) || token.decimals < 0 || token.decimals > 255) {
+    return null;
+  }
+  if (!Number.isFinite(balance) || balance <= 0) return null;
+
+  const trackedAssetId = resolveStablecoinIdForDexApiToken(
+    pool.chain,
+    token,
+    chainAddressToId,
+    symbolToChainScopedIds,
+  );
+  const sourcePrice = toPositiveFiniteNumberOrNull(token.priceUsd);
+  const trackedPrice = trackedAssetId == null
+    ? null
+    : toPositiveFiniteNumberOrNull(trackedStablecoinPrices?.get(trackedAssetId));
+  const referencePriceUsd = sourcePrice ?? trackedPrice ?? getTokenReferenceUsdPrice(
+    token,
+    pool.chain,
+    chainAddressToId,
+    symbolToChainScopedIds,
+    validationReferences,
+    trackedStablecoinPrices,
+  );
+  if (referencePriceUsd == null || !Number.isFinite(referencePriceUsd) || referencePriceUsd <= 0) return null;
+
+  const weight = toPositiveFiniteNumberOrNull(token.weight);
+  return {
+    address,
+    symbol,
+    decimals: token.decimals,
+    balance,
+    referencePriceUsd,
+    referencePriceSource: sourcePrice != null
+      ? "source-token-usd"
+      : trackedPrice != null
+        ? "tracked-market"
+        : "peg-reference",
+    ...(trackedAssetId ? { trackedAssetId } : {}),
+    ...(weight != null ? { weight } : {}),
+  };
+}
+
+function buildAmmExecutionModel(
+  pool: DexApiPool,
+  trackedTokenIndex: number,
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+  validationReferences?: PriceValidationReferences,
+  trackedStablecoinPrices?: Map<string, number>,
+): DexAmmExecutionModel | null {
+  if (
+    pool.balancesNormalized !== true ||
+    pool.balances == null ||
+    pool.balances.length !== pool.tokens.length ||
+    trackedTokenIndex < 0 ||
+    trackedTokenIndex >= pool.tokens.length ||
+    pool.feeRate == null ||
+    !Number.isFinite(pool.feeRate) ||
+    pool.feeRate < 0 ||
+    pool.feeRate >= 1
+  ) {
+    return null;
+  }
+
+  const invariant = pool.source === "raydium" && pool.poolType === "raydium-amm" && pool.tokens.length === 2
+    ? "constant-product"
+    : pool.source === "balancer" && pool.poolType === "balancer-weighted"
+      ? "weighted-constant-mean"
+      : null;
+  if (invariant == null) return null;
+
+  const tokens = pool.tokens.map((token, index) => resolveExecutionToken(
+    pool,
+    token,
+    pool.balances![index]!,
+    chainAddressToId,
+    symbolToChainScopedIds,
+    validationReferences,
+    trackedStablecoinPrices,
+  ));
+  if (tokens.some((token) => token == null)) return null;
+  const exactTokens = tokens as DexAmmExecutionToken[];
+  const identityKeys = exactTokens.map((token) => token.address.toLowerCase());
+  if (new Set(identityKeys).size !== identityKeys.length) return null;
+
+  if (invariant === "weighted-constant-mean") {
+    const weights = exactTokens.map((token) => token.weight);
+    if (weights.some((weight) => weight == null)) return null;
+    const weightSum = (weights as number[]).reduce((sum, weight) => sum + weight, 0);
+    if (!Number.isFinite(weightSum) || Math.abs(weightSum - 1) > 0.0001) return null;
+  }
+
+  return {
+    source: invariant === "constant-product" ? "raydium" : "balancer",
+    invariant,
+    trackedTokenIndex,
+    feeRate: pool.feeRate,
+    tokens: exactTokens,
+  };
 }
 
 function derivePoolBalanceMetrics(
@@ -344,6 +457,14 @@ export function convertToGtNewPools(
         validationReferences,
         trackedStablecoinPrices,
       );
+      const ammExecutionModel = buildAmmExecutionModel(
+        pool,
+        i,
+        chainAddressToId,
+        symbolToChainScopedIds,
+        validationReferences,
+        trackedStablecoinPrices,
+      );
 
       const gtPool: GtNewPool = {
         address: pool.poolAddress,
@@ -363,6 +484,7 @@ export function convertToGtNewPools(
           balanceDetails: balanceMetrics.balanceDetails,
         } : {}),
         ...(feeTierBps != null ? { feeTierBps } : {}),
+        ...(ammExecutionModel ? { ammExecutionModel } : {}),
         measurement: {
           tvlMeasured: true,
           volumeMeasured: pool.tokenVolumes24h != null || (Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0),

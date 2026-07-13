@@ -1,4 +1,6 @@
 import type {
+  DexAmmExecutionModel,
+  DexAmmExecutionToken,
   ExitRouteCapacityPoint,
   ExitRouteConfidence,
   ExitRouteEvidenceKind,
@@ -8,7 +10,7 @@ import type {
   LiquidityPoolSourceFamily,
 } from "@shared/types/market";
 
-export const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.1";
+export const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.2";
 
 const DEFAULT_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 const REFERENCE_NOTIONAL_USD = 1_000_000;
@@ -20,7 +22,13 @@ type CapabilityLevel = "exact" | "partial" | "symbol-only" | "aggregate-only" | 
 export interface DexRouteSourceCapability {
   id: string;
   sourceFamilies: readonly LiquidityPoolSourceFamily[];
-  model: "direct-orderbook" | "curve-stableswap-retained" | "amm-tvl-proxy" | "synthetic-fallback";
+  model:
+    | "direct-orderbook"
+    | "constant-product"
+    | "weighted-constant-mean"
+    | "curve-stableswap-retained"
+    | "amm-tvl-proxy"
+    | "synthetic-fallback";
   tokenIdentity: CapabilityLevel;
   exactBalancesOrReserves: CapabilityLevel;
   poolInvariantParameters: CapabilityLevel;
@@ -40,6 +48,40 @@ export interface DexRouteSourceCapability {
  * This intentionally describes retained evidence, not upstream capabilities.
  */
 export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] = [
+  {
+    id: "raydium-constant-product-exact",
+    sourceFamilies: ["direct_api"],
+    model: "constant-product",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "exact",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "producer-run",
+    outputEvidenceKind: "reserve-based-amm-simulation",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin", "collateral"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: ["Supports only Raydium standard constant-product pools with complete retained inputs."],
+  },
+  {
+    id: "balancer-weighted-constant-mean-exact",
+    sourceFamilies: ["direct_api"],
+    model: "weighted-constant-mean",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "exact",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "producer-run",
+    outputEvidenceKind: "reserve-based-amm-simulation",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin", "collateral"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: ["Requires complete positive normalized weights and supports direct token-to-token swaps only."],
+  },
   {
     id: "cg-tickers-orderbook-depth-2pct",
     sourceFamilies: ["cg_tickers"],
@@ -169,6 +211,7 @@ export interface P4DexRoutePoolInput {
     measurement?: {
       synthetic?: boolean;
     };
+    ammExecutionModel?: DexAmmExecutionModel;
   };
 }
 
@@ -200,6 +243,12 @@ function outputFromPool(pool: P4DexRoutePoolInput): ExitRouteOutput {
   return { kind: "unknown" };
 }
 
+function capabilityById(id: string): DexRouteSourceCapability {
+  const capability = DEX_ROUTE_SOURCE_CAPABILITIES.find((entry) => entry.id === id);
+  if (!capability) throw new Error(`Missing DEX route capability: ${id}`);
+  return capability;
+}
+
 function capabilityForPool(pool: P4DexRoutePoolInput): DexRouteSourceCapability {
   if (
     pool.poolType === "orderbook" &&
@@ -207,10 +256,16 @@ function capabilityForPool(pool: P4DexRoutePoolInput): DexRouteSourceCapability 
     pool.extra?.orderbookDepthUsd != null &&
     pool.extra.orderbookDepthUsd > 0
   ) {
-    return DEX_ROUTE_SOURCE_CAPABILITIES[0]!;
+    return capabilityById("cg-tickers-orderbook-depth-2pct");
+  }
+  if (pool.extra?.ammExecutionModel?.invariant === "constant-product") {
+    return capabilityById("raydium-constant-product-exact");
+  }
+  if (pool.extra?.ammExecutionModel?.invariant === "weighted-constant-mean") {
+    return capabilityById("balancer-weighted-constant-mean-exact");
   }
   if (pool.extra?.measurement?.synthetic === true) {
-    return DEX_ROUTE_SOURCE_CAPABILITIES[5]!;
+    return capabilityById("synthetic-or-fallback-shaped");
   }
   if (
     pool.source === "dl" &&
@@ -218,11 +273,11 @@ function capabilityForPool(pool: P4DexRoutePoolInput): DexRouteSourceCapability 
     pool.extra?.amplificationCoefficient != null &&
     (pool.extra.balanceDetails?.length ?? 0) > 1
   ) {
-    return DEX_ROUTE_SOURCE_CAPABILITIES[1]!;
+    return capabilityById("curve-stableswap-shaped");
   }
-  if (pool.source === "direct_api") return DEX_ROUTE_SOURCE_CAPABILITIES[2]!;
-  if (pool.source === "dl") return DEX_ROUTE_SOURCE_CAPABILITIES[3]!;
-  return DEX_ROUTE_SOURCE_CAPABILITIES[4]!;
+  if (pool.source === "direct_api") return capabilityById("direct-api-amm-shaped");
+  if (pool.source === "dl") return capabilityById("defillama-pool-shaped");
+  return capabilityById("discovery-pool-shaped");
 }
 
 function buildCapacityPoint(
@@ -248,6 +303,125 @@ function buildCapacityCurve(
     return DEFAULT_NOTIONALS_USD.map((notional) => buildCapacityPoint(notional, REFERENCE_COST_BPS, capacityUsd));
   }
   return null;
+}
+
+function canonicalAssetKey(chain: string, address: string): string {
+  const normalizedAddress = /^0x[0-9a-f]{40}$/i.test(address.trim())
+    ? address.trim().toLowerCase()
+    : address.trim();
+  return `${normalizedKey(chain)}:${normalizedAddress}`;
+}
+
+function validateAmmExecutionModel(model: DexAmmExecutionModel): string[] {
+  const issues: string[] = [];
+  if (!Number.isInteger(model.trackedTokenIndex) || model.trackedTokenIndex < 0 || model.trackedTokenIndex >= model.tokens.length) {
+    issues.push("invalid-tracked-token-index");
+  }
+  if (!Number.isFinite(model.feeRate) || model.feeRate < 0 || model.feeRate >= 1) issues.push("invalid-fee");
+  if (model.tokens.length < 2 || model.tokens.length > 8) issues.push("invalid-token-count");
+  const identities = new Set<string>();
+  for (const token of model.tokens) {
+    if (!token.address?.trim() || !token.symbol?.trim()) issues.push("missing-token-identity");
+    const identity = token.address.trim().toLowerCase();
+    if (identities.has(identity)) issues.push("duplicate-token-identity");
+    identities.add(identity);
+    if (!Number.isInteger(token.decimals) || token.decimals < 0 || token.decimals > 255) issues.push("invalid-decimals");
+    if (!Number.isFinite(token.balance) || token.balance <= 0) issues.push("invalid-balance");
+    if (!Number.isFinite(token.referencePriceUsd) || token.referencePriceUsd <= 0) issues.push("invalid-reference-price");
+  }
+  if (model.invariant === "constant-product") {
+    if (model.source !== "raydium" || model.tokens.length !== 2) issues.push("invalid-constant-product-model");
+  } else {
+    if (model.source !== "balancer") issues.push("invalid-weighted-model-source");
+    const weights = model.tokens.map((token) => token.weight);
+    if (weights.some((weight) => weight == null || !Number.isFinite(weight) || weight <= 0)) {
+      issues.push("invalid-weights");
+    } else {
+      const sum = (weights as number[]).reduce((total, weight) => total + weight, 0);
+      if (Math.abs(sum - 1) > 0.0001) issues.push("invalid-weight-sum");
+    }
+  }
+  return [...new Set(issues)];
+}
+
+function simulateAmmOutput(
+  model: DexAmmExecutionModel,
+  outputTokenIndex: number,
+  inputAmount: number,
+): number {
+  const input = model.tokens[model.trackedTokenIndex]!;
+  const output = model.tokens[outputTokenIndex]!;
+  const effectiveInput = inputAmount * (1 - model.feeRate);
+  if (!Number.isFinite(effectiveInput) || effectiveInput <= 0) return 0;
+
+  if (model.invariant === "constant-product") {
+    return output.balance * effectiveInput / (input.balance + effectiveInput);
+  }
+
+  const inputWeight = input.weight!;
+  const outputWeight = output.weight!;
+  const balanceRatio = input.balance / (input.balance + effectiveInput);
+  return output.balance * (1 - balanceRatio ** (inputWeight / outputWeight));
+}
+
+function executableAmmInputUsd(
+  model: DexAmmExecutionModel,
+  outputTokenIndex: number,
+  requestedNotionalUsd: number,
+  maxCostBps: number,
+): number {
+  const input = model.tokens[model.trackedTokenIndex]!;
+  const output = model.tokens[outputTokenIndex]!;
+  const minimumOutputRatio = Math.max(0, 1 - maxCostBps / 10_000);
+  const marginalOutputRatio = model.invariant === "constant-product"
+    ? (output.balance / input.balance) * (1 - model.feeRate) * output.referencePriceUsd / input.referencePriceUsd
+    : (output.balance / input.balance) * (input.weight! / output.weight!) *
+      (1 - model.feeRate) * output.referencePriceUsd / input.referencePriceUsd;
+  if (!Number.isFinite(marginalOutputRatio) || marginalOutputRatio + 1e-12 < minimumOutputRatio) return 0;
+
+  const qualifies = (inputUsd: number): boolean => {
+    if (inputUsd <= 0) return true;
+    const inputAmount = inputUsd / input.referencePriceUsd;
+    const outputUsd = simulateAmmOutput(model, outputTokenIndex, inputAmount) * output.referencePriceUsd;
+    return Number.isFinite(outputUsd) && outputUsd + 0.000001 >= inputUsd * minimumOutputRatio;
+  };
+  if (qualifies(requestedNotionalUsd)) return requestedNotionalUsd;
+
+  let lower = 0;
+  let upper = requestedNotionalUsd;
+  for (let iteration = 0; iteration < 64; iteration++) {
+    const midpoint = (lower + upper) / 2;
+    if (qualifies(midpoint)) lower = midpoint;
+    else upper = midpoint;
+  }
+  return lower;
+}
+
+function buildAmmCapacityCurve(
+  model: DexAmmExecutionModel,
+  outputTokenIndex: number,
+): ExitRouteCapacityPoint[] {
+  return DEFAULT_NOTIONALS_USD.map((notional) => buildCapacityPoint(
+    notional,
+    REFERENCE_COST_BPS,
+    executableAmmInputUsd(model, outputTokenIndex, notional, REFERENCE_COST_BPS),
+  ));
+}
+
+function outputFromAmmToken(chain: string, token: DexAmmExecutionToken): ExitRouteOutput {
+  const assetKey = canonicalAssetKey(chain, token.address);
+  if (token.trackedAssetId) {
+    return {
+      kind: "tracked-stablecoin",
+      trackedAssetIds: [token.trackedAssetId],
+      assetKeys: [assetKey],
+    };
+  }
+  return {
+    kind: "collateral",
+    assetKeys: [assetKey],
+    basketWeights: [{ symbol: token.symbol, weight: 1 }],
+  };
 }
 
 export function validateExitRouteCapacityCurve(points: readonly ExitRouteCapacityPoint[]): string[] {
@@ -304,6 +478,7 @@ function commonModeKeys(pool: P4DexRoutePoolInput, output: ExitRouteOutput): str
   else keys.add(`chain:${normalizedKey(pool.chain)}`);
   if (output.currency) keys.add(`fiat:${normalizedKey(output.currency)}`);
   for (const assetId of output.trackedAssetIds ?? []) keys.add(`asset:${normalizedKey(assetId)}`);
+  for (const assetKey of output.assetKeys ?? []) keys.add(`token:${assetKey}`);
   for (const item of output.basketWeights ?? []) {
     if (item.assetId) keys.add(`asset:${normalizedKey(item.assetId)}`);
     else if (item.symbol) keys.add(`asset-symbol:${normalizedKey(item.symbol)}`);
@@ -328,6 +503,68 @@ export function buildP4DexExitRouteObservations(params: {
       continue;
     }
     const capability = capabilityForPool(pool);
+    const ammModel = pool.extra?.ammExecutionModel;
+    if (ammModel != null) {
+      const modelIssues = validateAmmExecutionModel(ammModel);
+      if (modelIssues.length > 0) {
+        unsupportedPoolCount++;
+        for (const issue of modelIssues) {
+          const reason = `invalidExecutionModel:${issue}`;
+          unsupportedReasons[reason] = (unsupportedReasons[reason] ?? 0) + 1;
+        }
+        continue;
+      }
+
+      let emittedForPool = 0;
+      for (let outputTokenIndex = 0; outputTokenIndex < ammModel.tokens.length; outputTokenIndex++) {
+        if (outputTokenIndex === ammModel.trackedTokenIndex) continue;
+        const outputToken = ammModel.tokens[outputTokenIndex]!;
+        const curve = buildAmmCapacityCurve(ammModel, outputTokenIndex);
+        if (validateExitRouteCapacityCurve(curve).length > 0) continue;
+        const referencePoint = curve.find(
+          (point) => point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD &&
+            point.maxCostBps === REFERENCE_COST_BPS,
+        );
+        if (!referencePoint) continue;
+
+        const output = outputFromAmmToken(pool.chain, outputToken);
+        const outputIdentity = canonicalAssetKey(pool.chain, outputToken.address);
+        observations.push({
+          routeId:
+            `dex:${normalizedKey(params.stablecoinId)}:${normalizedKey(pool.source)}:` +
+            `${normalizedKey(pool.poolId)}:${normalizedKey(outputIdentity)}`,
+          routeFamily: "dex-amm",
+          scope: {
+            kind: "chain-contract",
+            chain: pool.chain,
+            contractOrPoolId: pool.poolId,
+            protocol: pool.project,
+          },
+          requestedNotionalUsd: referencePoint.requestedNotionalUsd,
+          settlementHorizonSec: IMMEDIATE_SETTLEMENT_HORIZON_SEC,
+          maxCostBps: referencePoint.maxCostBps,
+          executableUsd: referencePoint.executableUsd,
+          completionRatio: referencePoint.completionRatio,
+          output,
+          evidenceKind: capability.outputEvidenceKind,
+          confidence: capability.confidence,
+          scoreEligible: capability.scoreEligible,
+          observedAt: params.observedAt,
+          freshnessSeconds: 0,
+          commonModeKeys: commonModeKeys(pool, output),
+          capacityCurve: curve,
+        });
+        evidenceCounts[capability.outputEvidenceKind] =
+          (evidenceCounts[capability.outputEvidenceKind] ?? 0) + 1;
+        emittedForPool++;
+      }
+      if (emittedForPool === 0) {
+        unsupportedPoolCount++;
+        unsupportedReasons.noExecutableCounterAsset = (unsupportedReasons.noExecutableCounterAsset ?? 0) + 1;
+      }
+      continue;
+    }
+
     const curve = buildCapacityCurve(pool, capability);
     if (curve == null) {
       unsupportedPoolCount++;

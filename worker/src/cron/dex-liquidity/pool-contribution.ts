@@ -28,7 +28,14 @@ export function addSecondaryPoolContribution(
   }
 
   const incomingPoolId = `${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`;
-  if (m.topPools.some((existing) => existing.poolId === incomingPoolId)) {
+  const existingPool = m.topPools.find((existing) => existing.poolId === incomingPoolId);
+  if (existingPool) {
+    if (pool.ammExecutionModel) {
+      existingPool.extra = {
+        ...(existingPool.extra ?? {}),
+        ammExecutionModel: pool.ammExecutionModel,
+      };
+    }
     return;
   }
 
@@ -110,6 +117,7 @@ export function addSecondaryPoolContribution(
       ...(pool.orderbookDepthUpUsd != null ? { orderbookDepthUpUsd: Math.round(pool.orderbookDepthUpUsd) } : {}),
       ...(pool.orderbookTvlBasis ? { orderbookTvlBasis: pool.orderbookTvlBasis } : {}),
       ...(measurement ? { measurement } : {}),
+      ...(pool.ammExecutionModel ? { ammExecutionModel: pool.ammExecutionModel } : {}),
     },
   });
 }

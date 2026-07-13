@@ -99,6 +99,7 @@ async function fetchPoolType(
         balances: [pool.mintAmountA, pool.mintAmountB].every(Number.isFinite)
           ? [pool.mintAmountA, pool.mintAmountB]
           : null,
+        balancesNormalized: true,
       };
     },
     afterPage: ({ warnings, page, rawRows }) => {

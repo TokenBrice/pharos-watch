@@ -325,6 +325,109 @@ describe("convertToGtNewPools", () => {
     expect(gtPool.feeTierBps).toBe(30);
   });
 
+  it("retains a complete Raydium constant-product execution model", () => {
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      source: "raydium",
+      chain: "solana",
+      poolType: "raydium-amm",
+      balances: [2_000_000, 2_000_000],
+      balancesNormalized: true,
+      feeRate: 0.0025,
+      tokens: [
+        { address: "UsdcMint", symbol: "USDC", decimals: 6 },
+        { address: "UsdtMint", symbol: "USDT", decimals: 6 },
+      ],
+    };
+    const addressToId = new Map([
+      ["UsdcMint", "usdc-circle"],
+      ["UsdtMint", "usdt-tether"],
+    ]);
+
+    const result = convertToGtNewPools([pool], addressToId, new Map());
+
+    expect(result.get("usdc-circle")![0].ammExecutionModel).toEqual({
+      source: "raydium",
+      invariant: "constant-product",
+      trackedTokenIndex: 0,
+      feeRate: 0.0025,
+      tokens: [
+        expect.objectContaining({
+          address: "UsdcMint",
+          balance: 2_000_000,
+          referencePriceUsd: 1,
+          referencePriceSource: "tracked-market",
+          trackedAssetId: "usdc-circle",
+        }),
+        expect.objectContaining({
+          address: "UsdtMint",
+          balance: 2_000_000,
+          referencePriceUsd: 1,
+          referencePriceSource: "tracked-market",
+          trackedAssetId: "usdt-tether",
+        }),
+      ],
+    });
+    expect(result.get("usdt-tether")![0].ammExecutionModel?.trackedTokenIndex).toBe(1);
+  });
+
+  it("retains complete Balancer weights and source token reference prices", () => {
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      source: "balancer",
+      poolType: "balancer-weighted",
+      balances: [8_000_000, 2_000],
+      balancesNormalized: true,
+      feeRate: 0.003,
+      price: null,
+      tokens: [
+        { address: "0xusdc", symbol: "USDC", decimals: 6, priceUsd: 1, weight: 0.8 },
+        { address: "0xweth", symbol: "WETH", decimals: 18, priceUsd: 1_000, weight: 0.2 },
+      ],
+    };
+
+    const result = convertToGtNewPools([pool], new Map([["0xusdc", "usdc-circle"]]), new Map());
+    const model = result.get("usdc-circle")![0].ammExecutionModel;
+
+    expect(model).toMatchObject({
+      source: "balancer",
+      invariant: "weighted-constant-mean",
+      feeRate: 0.003,
+      tokens: [
+        { weight: 0.8, referencePriceUsd: 1, referencePriceSource: "source-token-usd" },
+        { weight: 0.2, referencePriceUsd: 1_000, referencePriceSource: "source-token-usd" },
+      ],
+    });
+  });
+
+  it("does not construct execution models for CLMMs or incomplete weighted pools", () => {
+    const tracked = new Map([["0xusdc", "usdc-circle"]]);
+    const clmm: DexApiPool = {
+      ...MOCK_POOL,
+      source: "raydium",
+      poolType: "raydium-clmm",
+      balancesNormalized: true,
+      tokens: [
+        { address: "0xusdc", symbol: "USDC", decimals: 6 },
+        { address: "0xusdt", symbol: "USDT", decimals: 6 },
+      ],
+    };
+    const incompleteWeighted: DexApiPool = {
+      ...clmm,
+      source: "balancer",
+      poolType: "balancer-weighted",
+      tokens: [
+        { address: "0xusdc", symbol: "USDC", decimals: 6, priceUsd: 1, weight: 0.8 },
+        { address: "0xweth", symbol: "WETH", decimals: 18, priceUsd: 1_000 },
+      ],
+    };
+
+    expect(convertToGtNewPools([clmm], tracked, new Map()).get("usdc-circle")![0].ammExecutionModel).toBeUndefined();
+    expect(
+      convertToGtNewPools([incompleteWeighted], tracked, new Map()).get("usdc-circle")![0].ammExecutionModel,
+    ).toBeUndefined();
+  });
+
   it("normalizes per-token Fluid volumes into one-sided USD volume", () => {
     const pool: DexApiPool = {
       ...MOCK_POOL,
