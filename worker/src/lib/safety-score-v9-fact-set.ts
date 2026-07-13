@@ -665,11 +665,12 @@ function normalizeMechanismReview(
       componentEvidenceIds.add(evidenceId);
       continue;
     }
+    const bounded = original.observationState === "stale" || original.observationState === "bounded-unknown";
     const gapId = addGap(
       context,
       createV9FactGap({
         gapId: `${context.asset.assetId}:gap:mechanism-review:${componentKey}`,
-        reasonCode: "missing-pillar-evidence",
+        reasonCode: bounded ? "bounded-mechanism-review" : "missing-pillar-evidence",
         ownerDomain: "backing",
         policyRuleId: original.applicability.policyRuleId,
         observationState: original.observationState,
@@ -1880,7 +1881,9 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     referenceKey: reference?.referenceKey ?? `unresolved:${context.asset.assetId}`,
     methodologyVersion: peg.methodologyVersion,
     pegScore: complete ? peg.pegScore : null,
-    currentDeviationBps: complete ? peg.currentDeviationBps : null,
+    // The v8 peg summary reports signed deviation; the v9 peg fact carries the
+    // magnitude per its nonnegative schema contract.
+    currentDeviationBps: complete && peg.currentDeviationBps !== null ? Math.abs(peg.currentDeviationBps) : null,
     activeDepeg: complete ? peg.activeDepeg : null,
     activeDepegBps: complete && peg.activeDepeg ? activeDepegBps : null,
     trackingSpanDays: peg.trackingSpanDays,

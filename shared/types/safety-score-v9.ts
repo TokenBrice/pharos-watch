@@ -11,6 +11,7 @@ export const V9GradeSchema = z.enum(["A+", "A", "A-", "B+", "B", "B-", "C+", "C"
 export type V9Grade = z.infer<typeof V9GradeSchema>;
 
 export const V9_REASON_CODES = [
+  "bounded-mechanism-review",
   "bounded-unknown-reserve-exposure",
   "correlated-exit-routes",
   "critical-unresolved",

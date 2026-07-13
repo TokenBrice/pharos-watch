@@ -164,7 +164,11 @@ describe("evaluateV9Exit", () => {
       V9_CANDIDATE_POLICY_V1,
     );
     expect(result.score).not.toBeNull();
-    expect(result.reasons).toContain("unresolved-exit-output");
+    // A scored route carries the exit claim, so the excluded optional route's
+    // diagnostic stays on its per-route trace rather than the top-level reasons.
+    expect(result.reasons).not.toContain("unresolved-exit-output");
+    const unresolvedTrace = result.routes.find((trace) => trace.routeKey === "dex:unknown-output");
+    expect(unresolvedTrace?.exclusionReason).toBe("unresolved-exit-output");
   });
 
   it("applies output-value loss to capacity and route quality", () => {

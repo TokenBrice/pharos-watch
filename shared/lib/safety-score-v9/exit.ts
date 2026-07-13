@@ -548,8 +548,10 @@ export function evaluateV9Exit(
     primaryRouteKey: primary.route.routeKey,
     diversificationRouteKey: independent?.route.routeKey ?? null,
     diversificationBonus: roundTraceScore(diversificationBonus),
+    // Excluded optional routes stay visible on their per-route traces; a weak
+    // or unreviewed alternative cannot impose a critical reason once a
+    // score-eligible route carries the exit claim.
     reasons: sortedUnique([
-      ...diagnosticReasons,
       ...(hasOtherIncludedRoute && !independent ? ["correlated-exit-routes"] : []),
     ]) as V9ReasonCode[],
     routes: traces,
