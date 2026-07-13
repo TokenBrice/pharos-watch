@@ -12,7 +12,6 @@ import {
   buildGeneratedArtifactPhases,
   deriveWorkerRuntimePackageClosure,
   findDuplicateDeployImpactExactPaths,
-  getNoncriticalTestGeneratedPrerequisites,
   DEPLOY_IMPACT_REGISTRY,
 } from "../lib/automation-registry.mjs";
 import {
@@ -152,6 +151,13 @@ describe("validate-ci parity", () => {
     expect(packageJson.scripts["validate:worker-scheduled-smoke"]).toBe(
       "vitest run worker/src/__tests__/index.scheduled.test.ts",
     );
+
+    const noncriticalRunner = readFileSync(
+      resolve(process.cwd(), "scripts/maintenance/run-noncritical-tests.mjs"),
+      "utf8",
+    );
+    expect(noncriticalRunner).not.toContain("automation-registry");
+    expect(noncriticalRunner).not.toContain('spawnSync("bash"');
   });
 
   it("keeps generated artifacts dependency-aware, reproducible, and bootstrap-scoped", () => {
@@ -263,10 +269,6 @@ describe("validate-ci parity", () => {
     );
     expect(buildGeneratedArtifactCommands()).toEqual(expectedCommands);
     expect(buildGeneratedArtifactCommands({ check: true })).toEqual(expectedCheckCommands);
-    expect(getNoncriticalTestGeneratedPrerequisites()).toEqual([
-      "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
-      "tsx scripts/maintenance/generate-docs-metadata.ts --check",
-    ]);
     expect(buildGeneratedArtifactExecutionUnits().map((unit) => unit.commands)).toEqual(
       expectedCommands.map((cmd) => [cmd]),
     );

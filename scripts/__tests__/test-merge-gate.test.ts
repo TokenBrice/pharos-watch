@@ -462,7 +462,6 @@ describe("buildCommandPlan", () => {
         ["npm run test:noncritical -- --shard=2/2"],
         ["npm run coverage:critical"],
         ["npm run typecheck:worker"],
-        ["npm run validate:worker-scheduled-smoke"],
       ],
     ]);
   });
@@ -517,7 +516,6 @@ describe("buildCommandPlan", () => {
       "npm run test:noncritical -- --shard=2/2",
       "npm run coverage:critical",
       "npm run typecheck:worker",
-      "npm run validate:worker-scheduled-smoke",
     ]);
   });
 
@@ -541,7 +539,6 @@ describe("buildCommandPlan", () => {
       ["npm run test:noncritical -- --shard=2/2"],
       ["npm run coverage:critical"],
       ["npm run typecheck:worker"],
-      ["npm run validate:worker-scheduled-smoke"],
     ]);
     expect(groups.smokeUnits).toEqual([]);
   });
@@ -688,9 +685,11 @@ describe("pre-push hook", () => {
     expect(hook).toContain('branch_gate_mode="${PHAROS_PRE_PUSH_GATE:-main}"');
     expect(hook).toContain('remote_ref" != "refs/heads/main"');
     expect(hook).toContain(
-      'MERGE_GATE_FULL_DEPLOY=0 MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha" run_gate',
+      'MERGE_GATE_FULL_DEPLOY=0 MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"',
     );
-    expect(hook).toContain('MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha" run_gate');
+    expect(hook).toContain('MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"');
+    expect(hook).toContain('verify_push_snapshot "$expected_sha" "before merge gate"');
+    expect(hook).toContain('verify_push_snapshot "$expected_sha" "after merge gate"');
     expect(hook).toContain("check-merge-gate-receipt.mjs");
     expect(hook).toContain("npm run test:merge-gate");
   });
@@ -754,7 +753,6 @@ describe("opt-in smoke wiring", () => {
         ["npm run test:noncritical -- --shard=2/2"],
         ["npm run coverage:critical"],
         ["npm run typecheck:worker"],
-        ["npm run validate:worker-scheduled-smoke"],
       ],
       [["npm run validate:pages-smoke"], ["npm run validate:worker-smoke"]],
     ]);
@@ -932,7 +930,6 @@ describe("runMergeGate fetch and node_modules wiring", () => {
         "npm run test:noncritical -- --shard=2/2",
         "npm run coverage:critical",
         "npm run typecheck:worker",
-        "npm run validate:worker-scheduled-smoke",
         "npm run test:a11y",
         "npm run check:feature-flag-inlining",
         "npm run seo:check",

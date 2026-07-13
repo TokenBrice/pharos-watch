@@ -1,7 +1,7 @@
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, resolve } from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { checkMergeGateReceipt, writeMergeGateReceipt } from "../lib/merge-gate-receipt.mjs";
@@ -28,16 +28,43 @@ function mockGit({ dirty = false, head = "head-sha" } = {}) {
 function runHook(input: string, extraEnv: Record<string, string> = {}) {
   const directory = temporaryDirectory();
   const logPath = resolve(directory, "npm.log");
+  const gitPath = resolve(directory, "git");
   const npmPath = resolve(directory, "npm");
   writeFileSync(logPath, "");
+  writeFileSync(
+    gitPath,
+    "#!/usr/bin/env bash\n" +
+      "set -euo pipefail\n" +
+      'case "$1" in\n' +
+      "  rev-parse)\n" +
+      '    if [[ -n "${HOOK_HEAD_AFTER_GATE:-}" && -s "$HOOK_LOG" ]]; then\n' +
+      "      printf '%s\\n' \"$HOOK_HEAD_AFTER_GATE\"\n" +
+      "    else\n" +
+      "      printf '%s\\n' \"${HOOK_HEAD_SHA:-local-sha}\"\n" +
+      "    fi\n" +
+      "    ;;\n" +
+      "  status)\n" +
+      '    if [[ -n "${HOOK_DIRTY_AFTER_GATE:-}" && -s "$HOOK_LOG" ]]; then\n' +
+      "      printf '%s\\n' \"$HOOK_DIRTY_AFTER_GATE\"\n" +
+      '    elif [[ -n "${HOOK_STATUS_OUTPUT:-}" ]]; then\n' +
+      "      printf '%s\\n' \"$HOOK_STATUS_OUTPUT\"\n" +
+      "    fi\n" +
+      "    ;;\n" +
+      "  *)\n" +
+      "    printf 'unexpected git command: %s\\n' \"$*\" >&2\n" +
+      "    exit 2\n" +
+      "    ;;\n" +
+      "esac\n",
+  );
   writeFileSync(
     npmPath,
     "#!/usr/bin/env bash\n" +
       'printf \'%s|%s|%s|%s\\n\' "${MERGE_GATE_BASE_REF:-}" "${MERGE_GATE_HEAD_REF:-}" "${MERGE_GATE_FULL_DEPLOY:-}" "$*" >> "$HOOK_LOG"\n',
   );
+  chmodSync(gitPath, 0o755);
   chmodSync(npmPath, 0o755);
 
-  const output = execFileSync("bash", [resolve(process.cwd(), ".githooks/pre-push")], {
+  const result = spawnSync("bash", [resolve(process.cwd(), ".githooks/pre-push")], {
     cwd: process.cwd(),
     encoding: "utf8",
     env: {
@@ -52,7 +79,8 @@ function runHook(input: string, extraEnv: Record<string, string> = {}) {
 
   return {
     calls: readFileSync(logPath, "utf8").trim().split("\n").filter(Boolean),
-    output,
+    output: `${result.stdout}${result.stderr}`,
+    status: result.status,
   };
 }
 
@@ -127,11 +155,44 @@ describe("merge-gate receipt", () => {
 describe("pre-push hook execution", () => {
   it("gates an exact main update once", () => {
     const result = runHook("refs/heads/main local-sha refs/heads/main remote-sha\n");
+    expect(result.status).toBe(0);
     expect(result.calls).toEqual(["remote-sha|local-sha|0|run test:merge-gate"]);
+  });
+
+  it("rejects a dirty worktree before running the gate", () => {
+    const result = runHook("refs/heads/main local-sha refs/heads/main remote-sha\n", {
+      HOOK_STATUS_OUTPUT: " M src/app/page.tsx",
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.calls).toEqual([]);
+    expect(result.output).toContain("worktree must stay clean");
+    expect(result.output).toContain("before merge gate");
+  });
+
+  it("rejects a checkout that does not match the pushed commit", () => {
+    const result = runHook("refs/heads/main local-sha refs/heads/main remote-sha\n", {
+      HOOK_HEAD_SHA: "other-sha",
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.calls).toEqual([]);
+    expect(result.output).toContain("does not match pushed commit local-sha");
+  });
+
+  it("rejects worktree mutation during the gate", () => {
+    const result = runHook("refs/heads/main local-sha refs/heads/main remote-sha\n", {
+      HOOK_DIRTY_AFTER_GATE: " M scripts/lib/validation-lanes.mjs",
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.calls).toEqual(["remote-sha|local-sha|0|run test:merge-gate"]);
+    expect(result.output).toContain("after merge gate");
   });
 
   it("skips non-main pushes by default", () => {
     const result = runHook("refs/heads/topic local-sha refs/heads/topic remote-sha\n");
+    expect(result.status).toBe(0);
     expect(result.calls).toEqual([]);
     expect(result.output).toContain("full local gate skipped");
   });
@@ -140,6 +201,7 @@ describe("pre-push hook execution", () => {
     const result = runHook("refs/heads/topic local-sha refs/heads/topic remote-sha\n", {
       PHAROS_PRE_PUSH_GATE: "all",
     });
+    expect(result.status).toBe(0);
     expect(result.calls).toEqual(["remote-sha|local-sha|0|run test:merge-gate"]);
   });
 });

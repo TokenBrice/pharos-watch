@@ -60,7 +60,6 @@ export const VALIDATION_LANES = [
         "scripts/lib/json-parse-ratchet-baseline.json",
         "scripts/ci/check-worker-migrations.mjs",
         "scripts/ci/check-sql-interpolation-safety.mjs",
-        "worker/src/__tests__/index.scheduled.test.ts",
       ],
     }),
     leaves: [
@@ -72,7 +71,6 @@ export const VALIDATION_LANES = [
       prebuild("npm run check:json-parse-ratchet", 15, ["full", "worker"]),
       prebuild("npm run check:migrations", 27, ["full", "worker"]),
       prebuild("npm run check:sql-safety", 33, ["full", "worker"]),
-      ordered("npm run validate:worker-scheduled-smoke", "worker", 2, ["full", "worker"]),
     ],
   },
   {
@@ -354,14 +352,14 @@ export function validateValidationLanes(lanes = VALIDATION_LANES) {
     throw new Error("The terminal prebuild barrier must be npm run check:generated-artifacts");
   }
 
-  if (commands.size !== 59) throw new Error(`Expected exactly 59 unique validation leaves; received ${commands.size}`);
+  if (commands.size !== 58) throw new Error(`Expected exactly 58 unique validation leaves; received ${commands.size}`);
   const phaseLeaves = (phase) => leaves.filter((leaf) => leaf.phase === phase);
   validateContiguousOrder(phaseLeaves("prebuild"), "prebuild", 42);
   if (phaseLeaves("manual-advisory").length !== 2) {
     throw new Error("Expected exactly 2 manual-advisory leaves");
   }
   validateContiguousOrder(phaseLeaves("pages"), "pages", 8);
-  validateContiguousOrder(phaseLeaves("worker"), "worker", 2);
+  validateContiguousOrder(phaseLeaves("worker"), "worker", 1);
   validateContiguousOrder(phaseLeaves("smoke"), "smoke", 2);
 
   const orchestrationLeaves = leaves.filter((leaf) => leaf.phase === "orchestration");

@@ -7,14 +7,39 @@ pages_smoke_flag="${MERGE_GATE_PAGES_SMOKE:-1}"
 branch_gate_mode="${PHAROS_PRE_PUSH_GATE:-main}"
 branch_updates=()
 
+verify_push_snapshot() {
+  local expected_sha="$1"
+  local checkpoint="$2"
+  local head_sha
+  local worktree_status
+
+  head_sha="$(git rev-parse --verify 'HEAD^{commit}')"
+  if [[ "$head_sha" != "$expected_sha" ]]; then
+    echo "[pre-push] Refusing push: checked-out HEAD ${head_sha} does not match pushed commit ${expected_sha} (${checkpoint})." >&2
+    return 1
+  fi
+
+  worktree_status="$(git status --porcelain=v1 --untracked-files=all)"
+  if [[ -n "$worktree_status" ]]; then
+    echo "[pre-push] Refusing push: worktree must stay clean so validation matches ${expected_sha} (${checkpoint})." >&2
+    printf '%s\n' "$worktree_status" >&2
+    return 1
+  fi
+}
+
 run_gate() {
+  local expected_sha="$1"
+
+  verify_push_snapshot "$expected_sha" "before merge gate"
+
   if [[ "${PHAROS_PRE_PUSH_SKIP_RECEIPT:-0}" != "1" ]] &&
     node scripts/maintenance/check-merge-gate-receipt.mjs; then
     echo "[pre-push] Reusing the matching clean-state merge-gate receipt."
-    return 0
+  else
+    npm run test:merge-gate
   fi
 
-  npm run test:merge-gate
+  verify_push_snapshot "$expected_sha" "after merge gate"
 }
 
 while read -r local_ref local_sha remote_ref remote_sha; do
@@ -36,9 +61,9 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 
   echo "[pre-push] Running merge gate for main push range ${remote_sha}...${local_sha}..."
   if [[ "$remote_sha" =~ $zero_sha_re ]]; then
-    MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha" run_gate
+    MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"
   else
-    MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=0 MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha" run_gate
+    MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=0 MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"
   fi
 done
 
@@ -61,9 +86,9 @@ if [[ "$main_update_seen" -eq 0 ]]; then
 
     echo "[pre-push] Opt-in branch gate for ${remote_ref}."
     if [[ "$remote_sha" =~ $zero_sha_re ]]; then
-      MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha" run_gate
+      MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"
     else
-      MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=0 MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha" run_gate
+      MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=0 MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"
     fi
   done
 fi

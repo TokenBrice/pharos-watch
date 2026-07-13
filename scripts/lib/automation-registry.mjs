@@ -175,7 +175,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "sitemap-dates",
     checkCommand: "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
     command: "tsx scripts/maintenance/generate-sitemap-dates.ts",
-    noncriticalTestPrerequisite: true,
     phase: 0,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-sitemap-dates.ts",
@@ -193,7 +192,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "docs-metadata",
     checkCommand: "tsx scripts/maintenance/generate-docs-metadata.ts --check",
     command: "tsx scripts/maintenance/generate-docs-metadata.ts",
-    noncriticalTestPrerequisite: true,
     phase: 0,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-docs-metadata.ts",
@@ -392,10 +390,4 @@ export function buildGeneratedArtifactPhases({ bootstrap = false, check = false,
   return [...phases.entries()]
     .sort(([left], [right]) => left - right)
     .map(([phase, artifacts]) => ({ phase, artifacts }));
-}
-
-export function getNoncriticalTestGeneratedPrerequisites() {
-  return GENERATED_ARTIFACT_REGISTRY.filter((artifact) => artifact.noncriticalTestPrerequisite === true).map(
-    (artifact) => artifact.checkCommand,
-  );
 }

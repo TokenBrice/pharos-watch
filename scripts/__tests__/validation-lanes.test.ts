@@ -13,7 +13,10 @@ import {
   WORKER_SMOKE_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validation-lanes.mjs";
+import { CRITICAL_TEST_FILES } from "../lib/critical-test-files.mjs";
 import { getValidationPhaseCommands, runValidationPhase } from "../maintenance/run-validation-phase.mjs";
+
+const WORKER_SCHEDULED_TEST = "worker/src/__tests__/index.scheduled.test.ts";
 
 const EXPECTED_PREBUILD_COMMANDS = [
   "npm run audit:deps",
@@ -77,7 +80,7 @@ describe("validation lane authority", () => {
       "deploy-promotion-and-rollback",
     ]);
 
-    expect(VALIDATION_LANES.flatMap((lane) => lane.leaves)).toHaveLength(59);
+    expect(VALIDATION_LANES.flatMap((lane) => lane.leaves)).toHaveLength(58);
   });
 
   it("keeps the exact prebuild command order and surface selection", () => {
@@ -115,7 +118,9 @@ describe("validation lane authority", () => {
       "npm run test:noncritical -- --shard=2/2",
       "npm run coverage:critical",
     ]);
-    expect(WORKER_VALIDATE_COMMANDS).toEqual(["npm run typecheck:worker", "npm run validate:worker-scheduled-smoke"]);
+    expect(WORKER_VALIDATE_COMMANDS).toEqual(["npm run typecheck:worker"]);
+    expect(CRITICAL_TEST_FILES).toContain(WORKER_SCHEDULED_TEST);
+    expect(WORKER_VALIDATE_COMMANDS).not.toContain("npm run validate:worker-scheduled-smoke");
     expect(PAGES_SMOKE_VALIDATE_COMMANDS).toEqual(["npm run validate:pages-smoke"]);
     expect(WORKER_SMOKE_VALIDATE_COMMANDS).toEqual(["npm run validate:worker-smoke"]);
     expect(buildNoncriticalTestShardCommands()).toEqual(COMMON_VALIDATE_POSTBUILD_COMMANDS.slice(0, 2));
@@ -125,7 +130,7 @@ describe("validation lane authority", () => {
     expect(VALIDATION_IMPACT_PATHS.full).toHaveLength(37);
     expect(VALIDATION_IMPACT_PATHS["validation-only"]).toHaveLength(19);
     expect(VALIDATION_IMPACT_PATHS.pages).toHaveLength(11);
-    expect(VALIDATION_IMPACT_PATHS.worker).toHaveLength(9);
+    expect(VALIDATION_IMPACT_PATHS.worker).toHaveLength(8);
     expect(VALIDATION_IMPACT_PATHS.full).toEqual(flattenValidationImpactPaths("full"));
     expect(VALIDATION_IMPACT_PATHS.full).toEqual(
       expect.arrayContaining([
@@ -169,7 +174,7 @@ describe("validation lane authority", () => {
       },
     });
 
-    expect(commands).toEqual(["npm run typecheck:worker", "npm run validate:worker-scheduled-smoke"]);
+    expect(commands).toEqual(["npm run typecheck:worker"]);
   });
 
   it("fails fast when a phase command fails", async () => {
@@ -208,7 +213,7 @@ describe("validation lane authority", () => {
   it("rejects missing leaves, duplicate or gapped prebuild orders, invalid phases, and bad surfaces", () => {
     const missingLeaf = structuredClone(VALIDATION_LANES);
     missingLeaf[0].leaves.pop();
-    expect(() => validateValidationLanes(missingLeaf)).toThrow("Expected exactly 59 unique validation leaves");
+    expect(() => validateValidationLanes(missingLeaf)).toThrow("Expected exactly 58 unique validation leaves");
 
     const duplicateLane = structuredClone(VALIDATION_LANES);
     duplicateLane[1].id = duplicateLane[0].id;
