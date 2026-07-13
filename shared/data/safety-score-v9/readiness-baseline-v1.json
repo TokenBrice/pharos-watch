@@ -6,7 +6,16 @@
     "compilerEvidenceAsOf": "2026-07-13T01:10:29.000Z",
     "currentMethodologyVersion": "8.16",
     "activeRegistryCount": 360,
-    "activeReportCardCount": 360
+    "activeReportCardCount": 360,
+    "fixedInput": {
+      "schemaVersion": 1,
+      "captureKind": "legacy-unverified",
+      "capturedAt": "2026-07-13T01:15:00.000Z",
+      "exactPublicationInputs": false,
+      "blockers": [
+        "Fixed replay input is schema v1 legacy-unverified, not schema v3 exact-publication-inputs"
+      ]
+    }
   },
   "calibrationCohort": {
     "version": 1,
@@ -145,12 +154,6 @@
             "code": "runtime-bridge-materiality-unavailable",
             "path": "rawInputs.bridgeRouteMaterialityStatus",
             "reason": "Runtime bridge materiality is partial."
-          },
-          {
-            "pillar": "exit",
-            "code": "unsupported-same-notional-route",
-            "path": "exitRouteObservations",
-            "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
           }
         ]
       },
@@ -319,9 +322,21 @@
           },
           {
             "pillar": "exit",
+            "code": "incomparable-route-requests",
+            "path": "exitRouteObservations",
+            "reason": "Eligible observations do not share a common notional, cost bound, and settlement horizon."
+          },
+          {
+            "pillar": "exit",
             "code": "incomplete-dex-route-coverage",
             "path": "exitRouteObservationCoverage",
             "reason": "Retained DEX pools do not all have score-eligible exact route-capacity observations."
+          },
+          {
+            "pillar": "exit",
+            "code": "unresolved-exit-output",
+            "path": "exitRouteObservations.output",
+            "reason": "An otherwise eligible route exits into an unresolved asset or basket."
           }
         ]
       },
@@ -479,9 +494,9 @@
           },
           {
             "pillar": "exit",
-            "code": "unsupported-same-notional-route",
-            "path": "exitRouteObservations",
-            "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+            "code": "unresolved-exit-output",
+            "path": "exitRouteObservations.output",
+            "reason": "An otherwise eligible route exits into an unresolved asset or basket."
           }
         ]
       },
@@ -582,12 +597,6 @@
             "code": "unresolved-oracle-branch-applicability",
             "path": "oracleRisk.branchApplicability",
             "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
-          },
-          {
-            "pillar": "exit",
-            "code": "unsupported-same-notional-route",
-            "path": "exitRouteObservations",
-            "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
           }
         ]
       },
@@ -962,9 +971,9 @@
           },
           {
             "pillar": "exit",
-            "code": "missing-same-notional-route",
-            "path": "exitRouteObservations",
-            "reason": "No fresh score-eligible same-notional route observation is available."
+            "code": "unresolved-exit-output",
+            "path": "exitRouteObservations.output",
+            "reason": "An otherwise eligible route exits into an unresolved asset or basket."
           }
         ]
       },
@@ -1192,9 +1201,9 @@
           },
           {
             "pillar": "exit",
-            "code": "unsupported-same-notional-route",
-            "path": "exitRouteObservations",
-            "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+            "code": "unresolved-exit-output",
+            "path": "exitRouteObservations.output",
+            "reason": "An otherwise eligible route exits into an unresolved asset or basket."
           }
         ]
       },
@@ -1818,7 +1827,8 @@
         "adequate": 1
       },
       "exit": {
-        "insufficient": 360
+        "insufficient": 351,
+        "strong": 9
       },
       "control": {
         "insufficient": 356,
@@ -1828,24 +1838,26 @@
     "unresolvedByCode": {
       "unreviewed-reserve-envelope": 340,
       "material-reserve-slice-unstructured": 544,
-      "unsupported-same-notional-route": 173,
+      "unsupported-same-notional-route": 150,
       "unknown-control-cap-authority": 373,
       "unresolved-control-identity": 209,
       "missing-upgradeability-review": 329,
       "runtime-bridge-materiality-unavailable": 145,
       "missing-custody-profile": 125,
       "missing-latest-assurance-report": 127,
-      "missing-same-notional-route": 180,
+      "missing-same-notional-route": 173,
       "mint-control-question": 76,
       "partial-reserve-review": 12,
       "material-unknown-reserve-exposure": 16,
       "unresolved-oracle-branch-applicability": 81,
       "selected-bridge-route-unresolved": 95,
       "missing-peg-input": 55,
+      "unresolved-exit-output": 22,
       "material-bridge-supply-unmatched": 3,
       "missing-implementation-date": 36,
       "nonmaterial-dependency-unavailable": 1,
       "incomplete-dex-route-coverage": 7,
+      "incomparable-route-requests": 1,
       "material-dependency-unavailable": 6,
       "unresolved-mint-authority": 1,
       "bounded-unknown-reserve-exposure": 1,
@@ -1858,22 +1870,24 @@
     "criticalUnresolvedByCode": {
       "unreviewed-reserve-envelope": 340,
       "material-reserve-slice-unstructured": 544,
-      "unsupported-same-notional-route": 173,
+      "unsupported-same-notional-route": 150,
       "unknown-control-cap-authority": 373,
       "unresolved-control-identity": 209,
       "missing-upgradeability-review": 329,
       "runtime-bridge-materiality-unavailable": 145,
       "missing-custody-profile": 125,
-      "missing-same-notional-route": 180,
+      "missing-same-notional-route": 173,
       "mint-control-question": 76,
       "partial-reserve-review": 12,
       "material-unknown-reserve-exposure": 16,
       "unresolved-oracle-branch-applicability": 81,
       "selected-bridge-route-unresolved": 95,
       "missing-peg-input": 55,
+      "unresolved-exit-output": 22,
       "material-bridge-supply-unmatched": 3,
       "missing-implementation-date": 36,
       "incomplete-dex-route-coverage": 7,
+      "incomparable-route-requests": 1,
       "material-dependency-unavailable": 6,
       "unresolved-mint-authority": 1,
       "missing-archetype": 3,
@@ -1899,6 +1913,12 @@
     "rawPositiveObservationAssets": 7,
     "rawScoreEligibleObservations": 18,
     "redemptionEligibleAssets": 31,
+    "redemptionObservations": {
+      "assets": 108,
+      "observations": 108,
+      "scoreEligibleObservations": 31,
+      "scoreEligibleAssets": 31
+    },
     "calibratedCoverageSource": "exit-route-calibration:dex-liquidity-1783905029",
     "calibratedMinimumEligibleAssets": {
       "dex": 45,
@@ -1921,14 +1941,14 @@
     "largestMovements": []
   },
   "remainingManualInputs": {
-    "total": 2947,
+    "total": 2940,
     "byClass": {
-      "missing-data": 2773,
-      "unresolved-methodology": 1,
-      "unsupported-design": 173
+      "missing-data": 2788,
+      "unresolved-methodology": 2,
+      "unsupported-design": 150
     },
     "byCriticality": {
-      "critical": 2817,
+      "critical": 2810,
       "noncritical": 130
     },
     "items": [
@@ -2943,11 +2963,11 @@
       {
         "assetId": "audm-mento",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "audm-mento",
@@ -3940,15 +3960,6 @@
         "reason": "Runtime bridge materiality is partial."
       },
       {
-        "assetId": "bold-liquity",
-        "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
-        "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
-      },
-      {
         "assetId": "brl1-brl1",
         "pillar": "backing",
         "code": "material-reserve-slice-unstructured",
@@ -4167,11 +4178,11 @@
       {
         "assetId": "brlm-mento",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "brlm-mento",
@@ -4527,11 +4538,11 @@
       {
         "assetId": "buck-bucket-protocol",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "buidl-blackrock",
@@ -4860,11 +4871,11 @@
       {
         "assetId": "cadm-mento",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "cadm-mento",
@@ -5018,15 +5029,6 @@
         "critical": true,
         "path": "oracleRisk.branchApplicability",
         "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
-      },
-      {
-        "assetId": "cdp-enosys",
-        "pillar": "exit",
-        "code": "missing-same-notional-route",
-        "classification": "missing-data",
-        "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "No fresh score-eligible same-notional route observation is available."
       },
       {
         "assetId": "cdxusd-cod3x",
@@ -5225,15 +5227,6 @@
         "critical": true,
         "path": "mintAuthority.controls.1.canRaiseCap",
         "reason": "Mento EURm token owner Safe has unresolved authority to raise its mint cap."
-      },
-      {
-        "assetId": "ceur-celo",
-        "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
-        "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
       },
       {
         "assetId": "cgo-comtech",
@@ -5706,11 +5699,11 @@
       {
         "assetId": "copm-mento",
         "pillar": "exit",
-        "code": "missing-same-notional-route",
+        "code": "unresolved-exit-output",
         "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "No fresh score-eligible same-notional route observation is available."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "copm-mento",
@@ -5976,11 +5969,11 @@
       {
         "assetId": "cusd-cap",
         "pillar": "exit",
-        "code": "missing-same-notional-route",
+        "code": "unresolved-exit-output",
         "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "No fresh score-eligible same-notional route observation is available."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "cusd-celo",
@@ -6053,15 +6046,6 @@
         "critical": true,
         "path": "mintAuthority.controls.0.canRaiseCap",
         "reason": "Mento USDm token owner Safe (Celo + Monad) has unresolved authority to raise its mint cap."
-      },
-      {
-        "assetId": "cusd-celo",
-        "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
-        "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
       },
       {
         "assetId": "cusdo-openeden",
@@ -6228,11 +6212,29 @@
       {
         "assetId": "dai-makerdao",
         "pillar": "exit",
+        "code": "incomparable-route-requests",
+        "classification": "unresolved-methodology",
+        "critical": true,
+        "path": "exitRouteObservations",
+        "reason": "Eligible observations do not share a common notional, cost bound, and settlement horizon."
+      },
+      {
+        "assetId": "dai-makerdao",
+        "pillar": "exit",
         "code": "incomplete-dex-route-coverage",
         "classification": "missing-data",
         "critical": true,
         "path": "exitRouteObservationCoverage",
         "reason": "Retained DEX pools do not all have score-eligible exact route-capacity observations."
+      },
+      {
+        "assetId": "dai-makerdao",
+        "pillar": "exit",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "deuro-deuro",
@@ -6705,11 +6707,11 @@
       {
         "assetId": "dola-inverse-finance",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "dusd-alto",
@@ -7196,15 +7198,6 @@
         "critical": true,
         "path": "oracleRisk.branchApplicability",
         "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
-      },
-      {
-        "assetId": "ebusd-ebisu",
-        "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
-        "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
       },
       {
         "assetId": "eearn-ember",
@@ -8773,15 +8766,6 @@
         "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
-        "assetId": "feusd-felix",
-        "pillar": "exit",
-        "code": "missing-same-notional-route",
-        "classification": "missing-data",
-        "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "No fresh score-eligible same-notional route observation is available."
-      },
-      {
         "assetId": "fidd-fidelity",
         "pillar": "backing",
         "code": "material-reserve-slice-unstructured",
@@ -9657,11 +9641,11 @@
       {
         "assetId": "gbpm-mento",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "gbpm-mento",
@@ -9909,11 +9893,11 @@
       {
         "assetId": "gho-aave",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "ghsm-mento",
@@ -9954,11 +9938,11 @@
       {
         "assetId": "ghsm-mento",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "ghsm-mento",
@@ -12537,11 +12521,11 @@
       {
         "assetId": "jupusd-jupiter",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "jusd-juicedollar",
@@ -12861,11 +12845,11 @@
       {
         "assetId": "kesm-mento",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "kesm-mento",
@@ -13246,15 +13230,6 @@
         "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
       },
       {
-        "assetId": "lusd-liquity",
-        "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
-        "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
-      },
-      {
         "assetId": "lvusd-leverup",
         "pillar": "backing",
         "code": "material-reserve-slice-unstructured",
@@ -13577,15 +13552,6 @@
         "critical": true,
         "path": "oracleRisk.branchApplicability",
         "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
-      },
-      {
-        "assetId": "meusd-mezo",
-        "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
-        "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
       },
       {
         "assetId": "mf-one-midas",
@@ -15264,11 +15230,11 @@
       {
         "assetId": "ousd-origin-protocol",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "ousg-ondo-finance",
@@ -15921,11 +15887,11 @@
       {
         "assetId": "phpm-mento",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "phpm-mento",
@@ -16209,11 +16175,11 @@
       {
         "assetId": "pusd-polymarket",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "pyusd-paypal",
@@ -17672,15 +17638,6 @@
         "critical": true,
         "path": "oracleRisk.branchApplicability",
         "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
-      },
-      {
-        "assetId": "sgho-aave",
-        "pillar": "exit",
-        "code": "missing-same-notional-route",
-        "classification": "missing-data",
-        "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "No fresh score-eligible same-notional route observation is available."
       },
       {
         "assetId": "silk-shade-protocol",
@@ -21060,11 +21017,11 @@
       {
         "assetId": "usdd-tron-dao-reserve",
         "pillar": "exit",
-        "code": "missing-same-notional-route",
+        "code": "unresolved-exit-output",
         "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "No fresh score-eligible same-notional route observation is available."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "usde-ethena",
@@ -22995,11 +22952,11 @@
       {
         "assetId": "usds-sky",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "usdsc-startale",
@@ -23049,11 +23006,11 @@
       {
         "assetId": "usdsc-startale",
         "pillar": "exit",
-        "code": "missing-same-notional-route",
+        "code": "unresolved-exit-output",
         "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "No fresh score-eligible same-notional route observation is available."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "usdsui-sui",
@@ -25956,11 +25913,11 @@
       {
         "assetId": "wm-m0",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "wmxn-ripio",
@@ -27981,11 +27938,11 @@
       {
         "assetId": "zarm-mento",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "zarm-mento",
@@ -28170,11 +28127,11 @@
       {
         "assetId": "zchf-frankencoin",
         "pillar": "exit",
-        "code": "unsupported-same-notional-route",
-        "classification": "unsupported-design",
+        "code": "unresolved-exit-output",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
+        "path": "exitRouteObservations.output",
+        "reason": "An otherwise eligible route exits into an unresolved asset or basket."
       },
       {
         "assetId": "zeusd-zoth",
@@ -28460,8 +28417,9 @@
   "recommendation": {
     "decision": "no-go",
     "blockers": [
+      "Fixed replay input is schema v1 legacy-unverified, not schema v3 exact-publication-inputs",
       "360 active assets compile to reason-coded NR",
-      "2817 critical facts remain unresolved",
+      "2810 critical facts remain unresolved",
       "DEX same-notional coverage is 0 eligible assets; calibrated floor is 45",
       "26 historical sources are mutable and unarchived",
       "26 historical fixtures lack independently verified outcome blinding",

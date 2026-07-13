@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { z } from "zod";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
@@ -8,7 +9,8 @@ import {
   compileReportCardSetToV9Inputs,
 } from "@shared/lib/safety-score-v9-compiler";
 import { scoreCompiledAsset, scoreCompiledAssetSet } from "@shared/lib/safety-score-v9-research";
-import { DexLiquidityMapSchema, type DexLiquidityMap } from "@shared/types/market";
+import { DexLiquidityMapSchema, type DexLiquidityMap, type ExitRouteObservation } from "@shared/types/market";
+import { RedemptionBackstopMapSchema, type RedemptionBackstopMap } from "@shared/types/redemption";
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import {
   HistoricalV9FixtureCorpusSchema,
@@ -26,6 +28,7 @@ const USAGE = `Usage: npx tsx scripts/maintenance/generate-safety-score-v9-readi
 
 Options:
   --report-cards <path>   Fixed-input report-card replay JSON (required)
+  --fixed-input <path>    Fixed publication input used by that replay (required)
   --dex-liquidity <path>  Optional P4a DEX API JSON from the same generation
   --output <path>         Readiness report JSON (required)
   --generated-at <iso>    Fixed report generation timestamp (required)
@@ -35,6 +38,82 @@ interface CalibrationCohortAsset {
   version: number;
   asOf: string;
   assets: Array<{ assetId: string; cohorts: string[] }>;
+}
+
+const FixedPublicationInputSchema = z.discriminatedUnion("schemaVersion", [
+  z
+    .object({
+      schemaVersion: z.literal(1),
+      capturedAt: z.string().datetime(),
+      redemptionBackstopMap: RedemptionBackstopMapSchema,
+    })
+    .passthrough(),
+  z
+    .object({
+      schemaVersion: z.literal(2),
+      capturedAt: z.string().datetime(),
+      redemptionBackstopMap: RedemptionBackstopMapSchema,
+    })
+    .passthrough(),
+  z
+    .object({
+      schemaVersion: z.literal(3),
+      captureKind: z.enum(["exact-publication-inputs", "public-reconstruction"]),
+      capturedAt: z.string().datetime(),
+      redemptionBackstopMap: RedemptionBackstopMapSchema,
+    })
+    .passthrough(),
+]);
+
+type FixedPublicationInput = z.infer<typeof FixedPublicationInputSchema>;
+
+export function assessFixedInputProvenance(input: FixedPublicationInput) {
+  const captureKind = input.schemaVersion === 3 ? input.captureKind : "legacy-unverified";
+  const exactPublicationInputs = input.schemaVersion === 3 && input.captureKind === "exact-publication-inputs";
+  return {
+    schemaVersion: input.schemaVersion,
+    captureKind,
+    capturedAt: input.capturedAt,
+    exactPublicationInputs,
+    blockers: exactPublicationInputs
+      ? []
+      : [`Fixed replay input is schema v${input.schemaVersion} ${captureKind}, not schema v3 exact-publication-inputs`],
+  };
+}
+
+export function buildExitRouteObservationMap(
+  dexMap: DexLiquidityMap | null,
+  redemptionMap: RedemptionBackstopMap,
+  activeIds: ReadonlySet<string>,
+): ReadonlyMap<string, readonly ExitRouteObservation[]> {
+  const result = new Map<string, readonly ExitRouteObservation[]>();
+  for (const assetId of [...activeIds].sort()) {
+    const dexObservations = dexMap?.[assetId]?.exitRouteObservations ?? [];
+    const redemptionObservations = redemptionMap[assetId]?.capacityProfile?.exitRouteObservations ?? [];
+    const observations = [...dexObservations, ...redemptionObservations];
+    if (observations.length > 0) result.set(assetId, observations);
+  }
+  return result;
+}
+
+export function summarizeRedemptionObservationCoverage(
+  redemptionMap: RedemptionBackstopMap,
+  activeIds: ReadonlySet<string>,
+) {
+  let assets = 0;
+  let observations = 0;
+  let scoreEligibleObservations = 0;
+  let scoreEligibleAssets = 0;
+  for (const assetId of activeIds) {
+    const routes = redemptionMap[assetId]?.capacityProfile?.exitRouteObservations ?? [];
+    if (routes.length === 0) continue;
+    assets += 1;
+    observations += routes.length;
+    const eligible = routes.filter((route) => route.scoreEligible && route.executableUsd > 0).length;
+    scoreEligibleObservations += eligible;
+    if (eligible > 0) scoreEligibleAssets += 1;
+  }
+  return { assets, observations, scoreEligibleObservations, scoreEligibleAssets };
 }
 
 function increment(record: Record<string, number>, key: string): void {
@@ -217,8 +296,15 @@ export function selectExactActiveReportCards<T extends { id: string; isDefunct: 
   return activeCards;
 }
 
-export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiquidity?: unknown; generatedAt: string }) {
+export function generateV9ReadinessReport(args: {
+  reportCards: unknown;
+  fixedInput: unknown;
+  dexLiquidity?: unknown;
+  generatedAt: string;
+}) {
   const reportCards = ReportCardsResponseSchema.parse(args.reportCards);
+  const fixedInput = FixedPublicationInputSchema.parse(args.fixedInput);
+  const fixedInputProvenance = assessFixedInputProvenance(fixedInput);
   const dexMap = args.dexLiquidity === undefined ? null : DexLiquidityMapSchema.parse(args.dexLiquidity);
   const historical = HistoricalV9FixtureCorpusSchema.parse(historicalFixtureAsset);
   const cohort = calibrationCohortAsset as CalibrationCohortAsset;
@@ -236,14 +322,17 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
   }
 
   const activeCards = selectExactActiveReportCards(reportCards.cards, activeRegistryIds);
-  const runtimeEvidenceTimes = dexMap
-    ? Object.entries(dexMap)
-        .filter(([id]) => id !== "__global__" && activeIds.has(id))
-        .flatMap(([, row]) => [
-          row.updatedAt,
-          ...(row.exitRouteObservations ?? []).map((observation) => observation.observedAt),
-        ])
-    : [];
+  const exitRouteObservationsById = buildExitRouteObservationMap(dexMap, fixedInput.redemptionBackstopMap, activeIds);
+  const runtimeEvidenceTimes = [
+    ...(dexMap
+      ? Object.entries(dexMap)
+          .filter(([id]) => id !== "__global__" && activeIds.has(id))
+          .map(([, row]) => row.updatedAt)
+      : []),
+    ...[...exitRouteObservationsById.values()].flatMap((observations) =>
+      observations.map((observation) => observation.observedAt),
+    ),
+  ];
   const asOf = new Date(Math.max(reportCards.updatedAt, ...runtimeEvidenceTimes) * 1_000).toISOString();
   if (generatedAtMs < Date.parse(asOf)) throw new Error("generatedAt cannot be earlier than compiler evidence asOf");
   const compiled = compileReportCardSetToV9Inputs(ACTIVE_STABLECOINS, activeCards, {
@@ -253,6 +342,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
     reportCardObservedAt: new Date(reportCards.updatedAt * 1_000).toISOString(),
     dexExitObservationMaxAgeSec: CRON_INTERVALS["sync-dex-liquidity"] * 2,
     liveRedemptionExitObservationMaxAgeSec: CRON_INTERVALS["sync-redemption-backstops"] * 2,
+    exitRouteObservationsById,
     ...(dexMap
       ? {
           dexLiquidityById: new Map(Object.entries(dexMap).filter(([id]) => id !== "__global__" && activeIds.has(id))),
@@ -321,6 +411,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
         dexEligibleAssets: 0,
       };
   const redemptionEligibleAssets = exitRouteCalibrationAsset.coverage.redemption.eligibleAssets;
+  const redemptionRouteCoverage = summarizeRedemptionObservationCoverage(fixedInput.redemptionBackstopMap, activeIds);
   const calibratedDexEligibleAssets = exitRouteCalibrationAsset.coverage.dex.eligibleAssets;
   const minimumCoveragePolicy = exitRouteCalibrationAsset.activationDecision.minimumCoveragePolicy;
   const p4CoverageBlockers = evaluateP4CoverageBlockers({
@@ -362,6 +453,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
   const nrCount = evaluated.traces.filter((trace) => trace.finalGrade === "NR").length;
   const criticalUnresolvedCount = Object.values(criticalUnresolvedByCode).reduce((sum, value) => sum + value, 0);
   const blockers = [
+    ...fixedInputProvenance.blockers,
     ...(nrCount > 0 ? [`${nrCount} active assets compile to reason-coded NR`] : []),
     ...(criticalUnresolvedCount > 0 ? [`${criticalUnresolvedCount} critical facts remain unresolved`] : []),
     ...p4CoverageBlockers,
@@ -401,6 +493,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
       currentMethodologyVersion: reportCards.methodology.version,
       activeRegistryCount: ACTIVE_STABLECOINS.length,
       activeReportCardCount: activeCards.length,
+      fixedInput: fixedInputProvenance,
     },
     calibrationCohort: {
       version: cohort.version,
@@ -449,6 +542,7 @@ export function generateV9ReadinessReport(args: { reportCards: unknown; dexLiqui
         eligibleObservations: exitRouteCalibrationAsset.coverage.dex.eligibleObservations,
       }),
       redemptionEligibleAssets,
+      redemptionObservations: redemptionRouteCoverage,
       calibratedCoverageSource: `exit-route-calibration:${exitRouteCalibrationAsset.generationId}`,
       calibratedMinimumEligibleAssets: {
         dex: minimumCoveragePolicy.dexEligibleAssets,
@@ -487,6 +581,7 @@ async function main(): Promise<void> {
   const { values } = parseStrictCliArgs(process.argv.slice(2), {
     options: {
       "report-cards": { type: "string" },
+      "fixed-input": { type: "string" },
       "dex-liquidity": { type: "string" },
       output: { type: "string" },
       "generated-at": { type: "string" },
@@ -494,11 +589,13 @@ async function main(): Promise<void> {
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
   if (typeof values["report-cards"] !== "string") throw new Error("--report-cards is required");
+  if (typeof values["fixed-input"] !== "string") throw new Error("--fixed-input is required");
   if (typeof values.output !== "string") throw new Error("--output is required");
   if (typeof values["generated-at"] !== "string") throw new Error("--generated-at is required");
 
   const report = generateV9ReadinessReport({
     reportCards: JSON.parse(readFileSync(values["report-cards"], "utf8")) as unknown,
+    fixedInput: JSON.parse(readFileSync(values["fixed-input"], "utf8")) as unknown,
     ...(typeof values["dex-liquidity"] === "string"
       ? { dexLiquidity: JSON.parse(readFileSync(values["dex-liquidity"], "utf8")) as unknown }
       : {}),

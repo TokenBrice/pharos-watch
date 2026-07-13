@@ -4,15 +4,80 @@ import type { CompiledV9AssetInput } from "@shared/types/safety-score-v9";
 import { HistoricalV9FixtureCorpusSchema } from "@shared/types/safety-score-v9";
 import historicalFixtures from "@shared/data/safety-score-v9/historical-fixtures-v1.json";
 import {
+  assessFixedInputProvenance,
   assessHistoricalEvidenceIntegrity,
   applyCalibratedDexEligibility,
+  buildExitRouteObservationMap,
   buildManualInputAudit,
   evaluateP4CoverageBlockers,
   selectExactActiveReportCards,
+  summarizeRedemptionObservationCoverage,
   summarizeRouteObservationCoverage,
 } from "../maintenance/generate-safety-score-v9-readiness";
 
 describe("v9 readiness audit helpers", () => {
+  it("fails closed unless the replay input is a schema-v3 exact publication capture", () => {
+    const fixed = (value: unknown) => value as Parameters<typeof assessFixedInputProvenance>[0];
+
+    expect(
+      assessFixedInputProvenance(
+        fixed({ schemaVersion: 1, capturedAt: "2026-07-13T01:00:00.000Z", redemptionBackstopMap: {} }),
+      ),
+    ).toMatchObject({
+      schemaVersion: 1,
+      captureKind: "legacy-unverified",
+      exactPublicationInputs: false,
+      blockers: ["Fixed replay input is schema v1 legacy-unverified, not schema v3 exact-publication-inputs"],
+    });
+    expect(
+      assessFixedInputProvenance(
+        fixed({
+          schemaVersion: 3,
+          captureKind: "public-reconstruction",
+          capturedAt: "2026-07-13T01:00:00.000Z",
+          redemptionBackstopMap: {},
+        }),
+      ).blockers,
+    ).toHaveLength(1);
+    expect(
+      assessFixedInputProvenance(
+        fixed({
+          schemaVersion: 3,
+          captureKind: "exact-publication-inputs",
+          capturedAt: "2026-07-13T01:00:00.000Z",
+          redemptionBackstopMap: {},
+        }),
+      ),
+    ).toMatchObject({ exactPublicationInputs: true, blockers: [] });
+  });
+
+  it("combines DEX and redemption observations for the live compiler boundary", () => {
+    const dexObservation = { routeId: "dex:a", scoreEligible: true, executableUsd: 1_000 };
+    const redemptionObservation = { routeId: "redeem:a", scoreEligible: true, executableUsd: 2_000 };
+    const dexMap = {
+      asset: { exitRouteObservations: [dexObservation] },
+      inactive: { exitRouteObservations: [{ ...dexObservation, routeId: "dex:inactive" }] },
+    } as unknown as DexLiquidityMap;
+    const redemptionMap = {
+      asset: { capacityProfile: { exitRouteObservations: [redemptionObservation] } },
+      redemptionOnly: {
+        capacityProfile: { exitRouteObservations: [{ ...redemptionObservation, routeId: "redeem:b" }] },
+      },
+    } as unknown as Parameters<typeof buildExitRouteObservationMap>[1];
+    const activeIds = new Set(["asset", "redemptionOnly"]);
+
+    const combined = buildExitRouteObservationMap(dexMap, redemptionMap, activeIds);
+    expect(combined.get("asset")?.map((observation) => observation.routeId)).toEqual(["dex:a", "redeem:a"]);
+    expect(combined.get("redemptionOnly")?.map((observation) => observation.routeId)).toEqual(["redeem:b"]);
+    expect(combined.has("inactive")).toBe(false);
+    expect(summarizeRedemptionObservationCoverage(redemptionMap, activeIds)).toEqual({
+      assets: 2,
+      observations: 2,
+      scoreEligibleObservations: 2,
+      scoreEligibleAssets: 2,
+    });
+  });
+
   it("reports mutable sources and unverified historical authoring as no-go evidence blockers", () => {
     const corpus = HistoricalV9FixtureCorpusSchema.parse(historicalFixtures);
     const integrity = assessHistoricalEvidenceIntegrity(corpus.fixtures);

@@ -12,7 +12,7 @@ This document describes the pre-v9 compiler, calibration corpus, and current act
 
 ## Compiler Boundary
 
-`shared/lib/safety-score-v9-compiler.ts` converts the exact active `StablecoinMeta` and fixed report-card sets into `CompiledV9AssetInput` records. Compilation fails on duplicate, missing, or unexpected report-card IDs. The readiness generator keeps the report-card observation time separate and sets `compilerEvidenceAsOf` to the latest accepted report-card, DEX-row, or exact-route observation time; `generatedAt` may not precede that evidence clock.
+`shared/lib/safety-score-v9-compiler.ts` converts the exact active `StablecoinMeta` and fixed report-card sets into `CompiledV9AssetInput` records. Compilation fails on duplicate, missing, or unexpected report-card IDs. The readiness generator combines DEX observations with redemption observations from the fixed publication input before compiling exit evidence. It keeps the report-card observation time separate and sets `compilerEvidenceAsOf` to the latest accepted report-card, DEX-row, or exact-route observation time; `generatedAt` may not precede that evidence clock. The generator also records the fixed-input schema and capture kind and blocks readiness unless it is schema v3 `exact-publication-inputs`.
 
 The compiler may carry structured pillar, peg, parent, evidence, implementation-age, failure-domain, and unresolved facts. The historical compiler accepts `HistoricalV9FactsInput`, a strict facts-only projection that excludes outcome labels and outcome annotation provenance at the type and runtime schema boundary. It must not accept or store:
 
@@ -27,33 +27,36 @@ Missing critical facts produce reason-coded `NR`. Every unresolved fact is emitt
 
 ## Current Result
 
-Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `2026-07-13T01:00:16.000Z`; the latest compiler evidence is `2026-07-13T01:10:29.000Z`. The inputs use the fixed v8.16 legacy replay and complete P4a generation `dex-liquidity-1783905029`.
+Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `2026-07-13T01:00:16.000Z`; the latest compiler evidence is `2026-07-13T01:10:29.000Z`. The inputs use the fixed v8.16 legacy replay and complete P4a generation `dex-liquidity-1783905029`. The available fixed input is schema v1 `legacy-unverified`, not a publication-exact schema v3 capture, so provenance independently blocks readiness.
 
-| Gate                                                      |               Result |
-| --------------------------------------------------------- | -------------------: |
-| Active registry / active report cards                     |            360 / 360 |
-| Compiler exceptions / silent omissions                    |                0 / 0 |
-| Candidate rateable / reason-coded `NR`                    |              0 / 360 |
-| Manual audit items, critical / noncritical                |          2,817 / 130 |
-| Manual audit classes, missing / methodology / unsupported |      2,773 / 1 / 173 |
-| Calibration cohort, critical-complete / unresolved `NR`   |               0 / 24 |
-| Historical adverse / resilient fixtures                   |              12 / 14 |
-| Historical rateable / `NR` fixtures                       |               8 / 18 |
-| Historical false negatives / false positives              |                0 / 9 |
-| Historical timestamp chronology validation                |               passed |
-| Historical source immutability / authoring blinding       |              blocked |
-| P4 DEX populated / unsupported / unknown assets           |        7 / 173 / 180 |
-| Retained-pool assets / retained pools                     |          180 / 4,641 |
-| Exact observations / score-eligible observations          |               21 / 0 |
-| Raw positive-observation / calibrated DEX-eligible assets |                7 / 0 |
-| Calibrated DEX / redemption eligible assets               |               0 / 31 |
-| Calibrated DEX / redemption floors                        |              45 / 27 |
-| Calibrated coverage floor met                             |                   no |
-| Shadow candidate grades / grade changes / new `NR`        | 360 `NR` / 305 / 305 |
-| P4 activation decision                                    |                 hold |
-| V9 readiness decision                                     |                no-go |
+| Gate                                                      |                 Result |
+| --------------------------------------------------------- | ---------------------: |
+| Active registry / active report cards                     |              360 / 360 |
+| Fixed input schema / capture kind                         | v1 / legacy-unverified |
+| Compiler exceptions / silent omissions                    |                  0 / 0 |
+| Candidate rateable / reason-coded `NR`                    |                0 / 360 |
+| Manual audit items, critical / noncritical                |            2,810 / 130 |
+| Manual audit classes, missing / methodology / unsupported |        2,788 / 2 / 150 |
+| Calibration cohort, critical-complete / unresolved `NR`   |                 0 / 24 |
+| Historical adverse / resilient fixtures                   |                12 / 14 |
+| Historical rateable / `NR` fixtures                       |                 8 / 18 |
+| Historical false negatives / false positives              |                  0 / 9 |
+| Historical timestamp chronology validation                |                 passed |
+| Historical source immutability / authoring blinding       |                blocked |
+| P4 DEX populated / unsupported / unknown assets           |          7 / 173 / 180 |
+| Retained-pool assets / retained pools                     |            180 / 4,641 |
+| DEX observations / score-eligible observations            |                 21 / 0 |
+| Redemption observation assets / observations              |              108 / 108 |
+| Redemption score-eligible assets / observations           |                31 / 31 |
+| Raw positive-observation / calibrated DEX-eligible assets |                  7 / 0 |
+| Calibrated DEX / redemption eligible assets               |                 0 / 31 |
+| Calibrated DEX / redemption floors                        |                45 / 27 |
+| Calibrated coverage floor met                             |                     no |
+| Shadow candidate grades / grade changes / new `NR`        |   360 `NR` / 305 / 305 |
+| P4 activation decision                                    |                   hold |
+| V9 readiness decision                                     |                  no-go |
 
-The manual-evidence audit contains 2,947 itemized records: 2,773 `missing-data`, 173 `unsupported-design`, and 1 `unresolved-methodology`; 2,817 are critical. The largest reason-coded queues are 544 material reserve slices without structured evidence, 373 unknown control-cap authorities, 340 unreviewed reserve envelopes, 329 missing upgradeability reviews, 209 unresolved control identities, 180 missing and 173 unsupported same-notional routes, 145 unavailable runtime bridge-materiality facts, 125 missing custody profiles, 95 unresolved selected bridge routes, 81 CDP oracle branch-applicability decisions, 76 mint-control questions, 55 missing peg inputs, 36 missing implementation dates, 7 incomplete DEX route-coverage records, and 3 unresolved archetypes. Another 127 missing latest assurance reports are noncritical. These are work queues, not implied defaults.
+The manual-evidence audit contains 2,940 itemized records: 2,788 `missing-data`, 150 `unsupported-design`, and 2 `unresolved-methodology`; 2,810 are critical. The largest reason-coded queues are 544 material reserve slices without structured evidence, 373 unknown control-cap authorities, 340 unreviewed reserve envelopes, 329 missing upgradeability reviews, 209 unresolved control identities, 173 missing and 150 unsupported same-notional routes, 145 unavailable runtime bridge-materiality facts, 125 missing custody profiles, 95 unresolved selected bridge routes, 81 CDP oracle branch-applicability decisions, 76 mint-control questions, 55 missing peg inputs, 36 missing implementation dates, 22 unresolved exit outputs, 7 incomplete DEX route-coverage records, and 3 unresolved archetypes. Another 127 missing latest assurance reports are noncritical. These are work queues, not implied defaults.
 
 The separate static P7 audit has exact route rows for all 218 applicable multi-deployment profiles, but only 9 profiles are semantically complete. The other 209 profiles contain unresolved rows: 1,124 of 1,216 total routes remain unresolved, while 92 are reviewed. The 95 unresolved selected bridge routes above are only the runtime-selected scoring subset of that larger static research queue.
 
@@ -88,11 +91,12 @@ npm run report-cards:calibrate-exit-routes -- \
 
 npm run safety-score-v9:readiness -- \
   --report-cards agents/safety-score-v9/artifacts/replay-v8.16-p4-legacy.json \
+  --fixed-input agents/safety-score-v9/artifacts/fixed-v8.16-p4-calibration.json \
   --dex-liquidity agents/safety-score-v9/artifacts/dex-liquidity-p4a.json \
   --output shared/data/safety-score-v9/readiness-baseline-v1.json \
   --generated-at 2026-07-13T01:30:00.000Z
 ```
 
-The exact-cache export may be either the raw private cache envelope or Wrangler's D1 JSON query result. The public endpoint reconstruction mode instead requires `--baseline-output`, `--captured-at`, `--registry-revision`, and `--dex-generation-id`; it is not exact release-calibration evidence. The committed calibration was conservatively rebuilt as a historical drift record from the pre-exact public reconstruction and therefore cannot authorize activation. Replay offers `--allow-methodology-mismatch` but intentionally has no registry-mismatch bypass. Calibration separately offers `--allow-methodology-mismatch` and `--allow-registry-mismatch`; use either only for an explicitly labeled drift study, never for activation evidence. The `p4b-activation-v1` policy defaults to, and refuses any override below, 45 eligible DEX assets and 27 eligible redemption assets. An `activate` request throws instead of writing a contradictory report whenever producer or coverage blockers remain.
+The exact-cache export may be either the raw private cache envelope or Wrangler's D1 JSON query result. No such publication-exact artifact is currently available in the research corpus. The public endpoint reconstruction mode instead requires `--baseline-output`, `--captured-at`, `--registry-revision`, and `--dex-generation-id`; it is not exact release-calibration evidence. The committed calibration was conservatively rebuilt as a historical drift record from the pre-exact public reconstruction and therefore cannot authorize activation. Replay offers `--allow-methodology-mismatch` but intentionally has no registry-mismatch bypass. Calibration separately offers `--allow-methodology-mismatch` and `--allow-registry-mismatch`; use either only for an explicitly labeled drift study, never for activation evidence. The `p4b-activation-v1` policy defaults to, and refuses any override below, 45 eligible DEX assets and 27 eligible redemption assets. An `activate` request throws instead of writing a contradictory report whenever producer or coverage blockers remain.
 
 Files under `agents/` are ignored fixed-input/research working artifacts. The committed exit-route calibration and readiness baseline are the durable decision records. Production remains on v8.17, P4 remains shadow-only, and no v9 activation is authorized while the recorded dispositions are `hold` and `no-go`.
