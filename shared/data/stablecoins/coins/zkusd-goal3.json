@@ -83,7 +83,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "zkUSD is issued only through the Goal3 Portal on ZKsync Era; the token's owner() is EOA 0x49a67aff9d3807351b8bb450f37ffc98af9def4d, which calls the portal contract (0x8d123a2a…) to trigger mints — no permissionless route.",
+    "summary": "zkUSD is issued through Goal3's lockdrop portal on ZKsync Era. The token and minting portal are UUPS proxies owned by EOA 0x49a67aff9d3807351b8bb450f37ffc98af9def4d, with no permissionless mint route or upgrade delay.",
     "controls": [
       {
         "label": "Goal3 owner EOA",
@@ -93,13 +93,46 @@
         "chain": "zksync",
         "address": "0x49a67aff9d3807351b8bb450f37ffc98af9def4d",
         "canRaiseCap": true,
-        "evidence": "At zkSync Era block 70747617, owner() on 0xfc7e56298657b002b3e656400e746b7212912757 returned 0x49a67aff9d3807351b8bb450f37ffc98af9def4d. eth_getCode on that address returns no bytecode (EOA). All observed Transfer-from-zero events are triggered by this EOA calling Goal3 portal contract 0x8d123a2a0a7c98555931ceda6917b865b7345164. No proxy admin slot set on the token contract."
+        "evidence": "At zkSync Era block 71160345, owner() on both the zkUSD token and Goal3 portal returned 0x49a67aff9d3807351b8bb450f37ffc98af9def4d; eth_getCode on that address returned empty bytecode. The portal retained MINTER_ROLE on the token. Verified portal source calls returnToken.mint() in the lock path, and verified token source restricts mint() to MINTER_ROLE."
       }
     ],
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xfc7e56298657b002b3e656400e746b7212912757",
+        "0x8d123a2a0a7c98555931ceda6917b865b7345164"
+      ],
+      "implementationAddresses": [
+        "0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b",
+        "0xd3227d2b5c616dcf566ace0fec42507afef8e28d"
+      ],
+      "adminAddresses": [
+        "0x49a67aff9d3807351b8bb450f37ffc98af9def4d"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Goal3 owner EOA",
+      "observedAt": "2026-07-13",
+      "observedBlock": 71160345,
+      "sources": [
+        {
+          "label": "Verified zkUSD token implementation",
+          "url": "https://explorer.zksync.io/address/0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b#contract"
+        },
+        {
+          "label": "Verified Goal3 portal implementation",
+          "url": "https://explorer.zksync.io/address/0xd3227d2b5c616dcf566ace0fec42507afef8e28d#contract"
+        },
+        {
+          "label": "zkSync Era RPC",
+          "url": "https://mainnet.era.zksync.io"
+        }
+      ]
+    },
     "review": {
-      "evidence": "At zkSync Era block 70747617: owner() on the zkUSD token contract (0xfc7e5629…2757) returned 0x49a67aff9d3807351b8bb450f37ffc98af9def4d. eth_getCode confirms that address is an EOA. Mint events show this EOA calls Goal3 portal contract 0x8d123a2a0a7c98555931ceda6917b865b7345164 which then mints zkUSD. No recent mints (none in last ~3M blocks). EIP-1967 proxy admin slot = zero.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At zkSync Era block 71160345, zkUSD proxy implementation was 0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b and Goal3 portal proxy implementation was 0xd3227d2b5c616dcf566ace0fec42507afef8e28d; both admin and beacon slots were zero. Both implementations returned the EIP-1822 implementation-slot UUID and verified source restricts _authorizeUpgrade() to onlyOwner. Both proxy owners were the same EOA, and the portal retained token MINTER_ROLE.",
+      "reviewer": "Codex Safety Score V9 review",
+      "reviewedAt": "2026-07-13",
       "sources": [
         {
           "label": "Goal3 zkUSD docs",
