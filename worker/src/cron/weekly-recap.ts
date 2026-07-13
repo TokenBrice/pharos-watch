@@ -566,7 +566,7 @@ export async function generateWeeklyRecap(
   });
   return {
     itemCount: 1,
-    ...(digestCopy.usedRawTextFallback || digestCopy.qualityIssues.length > 0 ? { status: "degraded" as const } : {}),
+    ...(digestCopy.usedRawTextFallback || digestCopy.hasBlockingQualityIssues ? { status: "degraded" as const } : {}),
     metadata: `weekly: ${digestCopy.digestText.length} chars, telegram: ${telegramStatus}${digestCopy.usedRawTextFallback ? ", degraded: raw-text-fallback" : ""}${qualityMetadata}`,
   };
 }

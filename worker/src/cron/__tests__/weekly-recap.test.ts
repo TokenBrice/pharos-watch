@@ -110,6 +110,7 @@ function buildDailyRows() {
 function makeTables(overrides: Partial<{
   existingWeekly: Record<string, unknown> | null;
   dailyRows: ReturnType<typeof buildDailyRows>;
+  recentWeeklyRows: Record<string, unknown>[];
 }> = {}): MockTableConfig[] {
   return [
     {
@@ -119,7 +120,7 @@ function makeTables(overrides: Partial<{
     },
     {
       match: "SELECT digest_title, digest_text, digest_meta",
-      rows: [],
+      rows: overrides.recentWeeklyRows ?? [],
     },
     {
       match: "WHERE generated_at >= ? AND (digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly')",
@@ -249,6 +250,32 @@ describe("generateWeeklyRecap", () => {
     expect(weeklySystem).toContain("plumbing");
     expect(weeklySystem).toContain("week-over-week");
     expect(weeklySystem).toContain("arc");
+  });
+
+  it("keeps residual soft quality warnings visible without degrading cron health", async () => {
+    const recentWeeklyRows = [{
+      digest_title: "Prior USDT Week",
+      digest_text: "USDT led the prior weekly edition.",
+      digest_meta: JSON.stringify({
+        type: "weekly",
+        lead: "supply",
+        tone: "forensic",
+        coins: ["USDT"],
+      }),
+    }];
+    const db = mockD1(makeTables({ recentWeeklyRows }), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      { botToken: "bot", chatId: "chat" },
+    );
+
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(result.status).toBeUndefined();
+    expect(result.metadata).toContain("quality: repeated-primary-coin:soft");
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
   });
 
   it("reports weekly recap preflight and skipped progress when Anthropic is not configured", async () => {

@@ -82,8 +82,8 @@ describe("upsertDiscoveryCandidates", () => {
 
     const history = db.getHistory();
     expect(history).toHaveLength(2);
-    expect(history[0].sql).toContain("ON CONFLICT (gecko_id)");
-    expect(history[1].sql).toContain("ON CONFLICT (llama_id)");
+    expect(history[0].sql).toContain("ON CONFLICT (gecko_id) WHERE gecko_id IS NOT NULL");
+    expect(history[1].sql).toContain("ON CONFLICT (llama_id) WHERE llama_id IS NOT NULL");
   });
 
   it("rejects malformed candidates before D1 while preserving valid candidates", async () => {

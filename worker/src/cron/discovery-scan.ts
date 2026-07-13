@@ -181,7 +181,7 @@ async function upsertDiscoveryCandidatesDetailed(
           statement: db.prepare(`
           INSERT INTO discovery_candidates (gecko_id, llama_id, name, symbol, market_cap, source, first_seen, last_seen)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT (gecko_id) DO UPDATE SET${DISCOVERY_UPSERT_CONFLICT_CLAUSE}
+          ON CONFLICT (gecko_id) WHERE gecko_id IS NOT NULL DO UPDATE SET${DISCOVERY_UPSERT_CONFLICT_CLAUSE}
         `).bind(
             c.geckoId, c.llamaId ?? null, c.name, c.symbol, c.marketCap, c.source, nowSec, nowSec,
           ),
@@ -194,7 +194,7 @@ async function upsertDiscoveryCandidatesDetailed(
           statement: db.prepare(`
           INSERT INTO discovery_candidates (gecko_id, llama_id, name, symbol, market_cap, source, first_seen, last_seen)
           VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT (llama_id) DO UPDATE SET${DISCOVERY_UPSERT_CONFLICT_CLAUSE}
+          ON CONFLICT (llama_id) WHERE llama_id IS NOT NULL DO UPDATE SET${DISCOVERY_UPSERT_CONFLICT_CLAUSE}
         `).bind(
             c.llamaId, c.name, c.symbol, c.marketCap, c.source, nowSec, nowSec,
           ),
