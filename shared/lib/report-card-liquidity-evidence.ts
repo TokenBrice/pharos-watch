@@ -52,9 +52,10 @@ function classifyReportCardDexEvidence(
   if (input.liquidityEvidenceClass === "observed_unmeasured" || input.hasMeasuredLiquidityEvidence === false) {
     return "generic-tvl-proxy";
   }
-  if ((input.balanceMeasuredTvlUsd ?? 0) > 0) {
-    return "reserve-based-amm-simulation";
-  }
+  // Balance measurements improve pool-quality inputs, but without an exact
+  // invariant, fees, output identity, and executable curve they remain an
+  // aggregate TVL proxy. Model-backed route observations are consumed only by
+  // the separately activated same-notional policy.
   return "generic-tvl-proxy";
 }
 

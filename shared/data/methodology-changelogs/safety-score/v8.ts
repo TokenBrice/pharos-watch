@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.17",
+    title: "Aggregate pool balances remain TVL evidence",
+    date: "2026-07-13",
+    effectiveAt: 1783908149,
+    summary:
+      "Liquidity / Exit no longer labels balance-measured aggregate pool TVL as reserve-based AMM simulation when the retained row lacks an exact invariant, fee, output identity, and executable capacity curve.",
+    impact: [
+      "Balance measurement continues to improve DEX coverage and pool-quality inputs but does not by itself prove executable same-notional depth",
+      "Aggregate measured rows use the existing generic-TVL-proxy ceiling of 60 instead of the reserve-based AMM simulation ceiling of 85",
+      "The reserve-based AMM simulation class remains available only to exact route observations with modeled pool mechanics; P4b same-notional scoring remains inactive until its rollout gate passes",
+      "The standalone public Liquidity Score is unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.16",
     title: "DEX exit scoring carries evidence quality",
     date: "2026-07-12",

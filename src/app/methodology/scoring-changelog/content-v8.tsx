@@ -1,6 +1,23 @@
 import type { ReactNode } from "react";
 
 export const scoringChangelogV8Details: Record<string, ReactNode> = {
+  "8.17": (
+    <>
+      <p>
+        Balance-measured aggregate pool TVL is no longer treated as a reserve-based AMM simulation unless the retained
+        evidence includes the exact mechanics needed to model executable capacity.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>Aggregate balance measurements remain useful DEX coverage and pool-quality evidence.</li>
+        <li>
+          Without an exact invariant, fee, output identity, and capacity curve, the Safety Score applies the existing
+          generic-TVL-proxy ceiling of 60 rather than the AMM-simulation ceiling of 85.
+        </li>
+        <li>The standalone Liquidity Score is unchanged.</li>
+        <li>Same-notional route scoring remains inactive until the P4b rollout gate passes.</li>
+      </ul>
+    </>
+  ),
   "8.16": (
     <>
       <p>

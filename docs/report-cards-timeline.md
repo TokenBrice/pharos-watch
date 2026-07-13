@@ -1,8 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.16 (2026-02-25 → 2026-07-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v8.17 (2026-02-25 → 2026-07-13). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score.ts` for canonical machine ordering.
 
 > Older entries are archived in [report-cards-timeline-archive.md](./report-cards-timeline-archive.md); this file keeps the most recent entries.
+
+## v8.17 — Aggregate pool balances remain TVL evidence (2026-07-13)
+
+Balance-measured aggregate pool TVL no longer receives the reserve-based AMM simulation label or its 85-point ceiling unless the retained evidence includes the exact invariant, fee, output identity, and executable capacity curve. Balance measurement still improves DEX coverage and pool-quality inputs, but aggregate rows now use the existing generic-TVL-proxy ceiling of 60. The standalone public Liquidity Score is unchanged, and P4b same-notional route scoring remains inactive until its rollout gate passes.
 
 ## v8.16 — DEX exit evidence quality (2026-07-12)
 

@@ -6,12 +6,12 @@ The stablecoin registry currently contains 410 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.16`
+- **Current methodology version:** `v8.17`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v8.16)
+## Overall Grade (v8.17)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v8.16 carries DEX coverage and measurement quality into Liquidity / Exit. The public Liquidity Score remains unchanged, but Safety Score caps its DEX input at 85 for reserve-based AMM simulation, 60 for generic TVL proxies, 55 for synthetic/fallback evidence, and 45 when all reviewed deployments are provider-inaccessible. Old snapshot rows without the new evidence fields and rows explicitly marked `legacy` remain neutral. v8.15 deterministic dependency scoring and v8.14 self-link-free serial variant derivation carry forward unchanged.
+Current-version note: v8.17 keeps balance-measured aggregate pool TVL in the generic-proxy class unless the retained evidence includes the exact invariant, fee, output identity, and capacity curve needed for a reserve-based AMM simulation. The public Liquidity Score remains unchanged, but Safety Score caps generic TVL proxies at 60, synthetic/fallback evidence at 55, and provider-inaccessible-only coverage at 45. The 85-point reserve-based simulation class is reserved for exact modeled routes, and same-notional route scoring remains inactive until the P4b rollout gate passes. Old snapshot rows without the new evidence fields and rows explicitly marked `legacy` remain neutral. v8.15 deterministic dependency scoring and v8.14 self-link-free serial variant derivation carry forward unchanged.
 
 ## Yield Source-Risk Boundary
 
@@ -72,6 +72,8 @@ As of Safety Score v8.0 the Mint Authority Score feeds the **Decentralization** 
   - redemption contribution is scaled by current executable capacity versus modeled exit size (`min(max(supply × 5%, $100k), $25M)`) and by model confidence
   - the 10% diversification bonus applies only when the redemption route is plausibly independent from the DEX path (`independent-issuer-rail`)
 - P4 same-notional scoring is currently shadow-only. DEX and redemption producers can publish optional capacity curves under the same 200 bps / 300 second request, with typed output identities and failure-domain keys. Fixed replay keeps the production path on `legacy` unless an operator explicitly selects the active calibration mode.
+- Explicit `active` replay is fail-closed: it never restores legacy DEX or redemption values when the modeled request, fixed scoring clock, or eligible modeled-request observations are absent. DEX observations accept only `dex-amm` / `dex-orderbook` families; live redemption observations accept only `issuer-redemption` / `protocol-redemption`, while `eventual-redemption` remains diagnostic-only. Future-dated observations are rejected.
+- Freshness is lane-specific in active replay. Live DEX evidence uses twice the 30-minute DEX producer interval (1 hour), live redemption evidence uses twice the 4-hour redemption producer interval (8 hours), and reviewed `documented-terms` evidence retains a separate one-year review window. A curated non-independent or `unknown` route correlation vetoes the diversification bonus; `independent-issuer-rail` only permits the structural output/failure-domain checks and cannot override them.
 - The first complete producer calibration found usable modeled-request DEX capacity for 6 of 180 retained-pool assets and 31 eligible redemption assets. Activating at that coverage would change 73 overall grades, so the recorded general gate requires at least 25% eligible coverage in each observed producer cohort and currently returns `hold`. No Safety Score version change is made while that gate is closed.
 - If only DEX liquidity exists, `effectiveExitScore` equals the evidence-adjusted DEX input
 - If only eligible current-capacity redemption exists, `effectiveExitScore` uses the capacity/confidence-adjusted redemption score

@@ -60,7 +60,7 @@ describe("report-card DEX evidence policy", () => {
     });
   });
 
-  it("recognizes measured reserve simulation without calling it executable depth", () => {
+  it("does not treat balance-measured aggregate TVL as executable AMM simulation", () => {
     expect(
       applyReportCardDexEvidencePolicy({
         liquidityScore: 93,
@@ -71,9 +71,9 @@ describe("report-card DEX evidence policy", () => {
         balanceMeasuredTvlUsd: 10_000_000,
       }),
     ).toMatchObject({
-      effectiveScore: 85,
-      evidenceKind: "reserve-based-amm-simulation",
-      scoreCeiling: 85,
+      effectiveScore: 60,
+      evidenceKind: "generic-tvl-proxy",
+      scoreCeiling: 60,
     });
   });
 
@@ -97,12 +97,12 @@ describe("report-card DEX evidence policy", () => {
         ...base,
         deploymentCoverage: { observedPools: 1, verifiedNoPools: 0, providerInaccessible: 2 },
       }).effectiveScore,
-    ).toBe(80);
+    ).toBe(60);
     expect(
       applyReportCardDexEvidencePolicy({
         ...base,
         deploymentCoverage: { observedPools: 0, verifiedNoPools: 1, providerInaccessible: 2 },
       }).effectiveScore,
-    ).toBe(80);
+    ).toBe(60);
   });
 });
