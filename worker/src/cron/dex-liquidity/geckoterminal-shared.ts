@@ -1,3 +1,4 @@
+import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import { USER_AGENT } from "../../lib/constants";
 import { GT_API_BASE } from "../../lib/dex-cron-constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
@@ -43,14 +44,14 @@ export function fetchGtTokenPools(
   });
 }
 
-export function parseGtPool(pool: GtPool): ParsedPool | null {
+export function parseGtPool(pool: GtPool, chain: string): ParsedPool | null {
   const attrs = pool.attributes;
   const dexId = pool.relationships?.dex?.data?.id;
-  const poolAddress = attrs.address?.toLowerCase();
+  const poolAddress = canonicalExitRouteScopedId(chain, attrs.address ?? "");
   const baseTokenId = pool.relationships?.base_token?.data?.id;
   const quoteTokenId = pool.relationships?.quote_token?.data?.id;
-  const baseTokenAddress = baseTokenId?.split("_").pop()?.toLowerCase();
-  const quoteTokenAddress = quoteTokenId?.split("_").pop()?.toLowerCase();
+  const baseTokenAddress = canonicalExitRouteScopedId(chain, baseTokenId?.split("_").pop() ?? "");
+  const quoteTokenAddress = canonicalExitRouteScopedId(chain, quoteTokenId?.split("_").pop() ?? "");
   if (!dexId || !poolAddress || !baseTokenAddress || !quoteTokenAddress) return null;
 
   return {
@@ -71,13 +72,7 @@ export function parseGtPool(pool: GtPool): ParsedPool | null {
 // Prefix allowlist rather than a bare `v3`/`v4` substring match so DEXes whose
 // names merely contain those substrings (e.g. "traderv3-stable") aren't
 // misclassified. Add new concentrated-liquidity venues here as they appear.
-const CONCENTRATED_DEX_PREFIXES = [
-  "uniswap-v3",
-  "uniswap-v4",
-  "pancakeswap-v3",
-  "sushiswap-v3",
-  "quickswap-v3",
-];
+const CONCENTRATED_DEX_PREFIXES = ["uniswap-v3", "uniswap-v4", "pancakeswap-v3", "sushiswap-v3", "quickswap-v3"];
 
 export function getGtPoolKind(dexId: string): GtPoolKind {
   if (CONCENTRATED_DEX_PREFIXES.some((prefix) => dexId.startsWith(prefix))) {

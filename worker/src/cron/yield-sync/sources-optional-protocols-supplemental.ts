@@ -3,22 +3,28 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../lib/abort";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
-import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";
+import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 import { createOptionalSourceBudget, resolveCanonicalChain } from "./sources-helpers";
 import { OPTIONAL_PROTOCOL_API_BUDGET_MS, OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
 
 interface MorphoVaultItem {
-  address: string; name: string;
+  address: string;
+  name: string;
   asset: { symbol: string; address?: string | null };
   chain: { id: number };
   state: { netApy: number; totalAssetsUsd: number | null; fee: number } | null;
 }
 
 interface PendleMarket {
-  id: string; address: string; chainId: number;
-  isActive: boolean; expiry: string;
-  impliedApy: number; underlyingApy: number; aggregatedApy: number;
+  id: string;
+  address: string;
+  chainId: number;
+  isActive: boolean;
+  expiry: string;
+  impliedApy: number;
+  underlyingApy: number;
+  aggregatedApy: number;
   underlyingAsset: { symbol: string; address: string };
   assetRepresentation: string;
   protocol: string;
@@ -27,7 +33,9 @@ interface PendleMarket {
 }
 
 interface KongVault {
-  address: string; name: string; yearn: boolean;
+  address: string;
+  name: string;
+  yearn: boolean;
   asset: { symbol: string; address?: string | null };
   tvl: { close: number } | null;
   apy: { net: number | null; monthlyNet: number | null } | null;
@@ -106,7 +114,7 @@ function buildMorphoFilters(): TrackedMorphoFilters {
 
     for (const contract of [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])]) {
       const chain = resolveCanonicalChain(contract.chain);
-      const address = normalizeTokenAddress(contract.address ?? "");
+      const address = contract.address?.trim() ?? "";
       if (!chain || !address) continue;
       assetsByChainAddress.set(buildChainAddressKey(chain, address), {
         stablecoinId: meta.id,
@@ -126,9 +134,9 @@ function resolveMorphoTrackedAsset(
   chain: string,
   asset: MorphoVaultItem["asset"],
 ): TrackedMorphoAsset | null {
-  const normalizedAddress = normalizeTokenAddress(asset.address ?? "");
-  if (normalizedAddress) {
-    const byAddress = filters.assetsByChainAddress.get(buildChainAddressKey(chain, normalizedAddress));
+  const address = asset.address?.trim() ?? "";
+  if (address) {
+    const byAddress = filters.assetsByChainAddress.get(buildChainAddressKey(chain, address));
     if (byAddress) return byAddress;
   }
 
@@ -144,9 +152,7 @@ function isSanePendleExpiry(expiry: string, nowMs: number): boolean {
   return expiryMs >= minExpiryMs && expiryMs <= maxExpiryMs;
 }
 
-export async function fetchMorphoVaultSources(
-  signal?: AbortSignal,
-): Promise<ResolvedYieldCandidate[]> {
+export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<ResolvedYieldCandidate[]> {
   const budget = createOptionalSourceBudget("Morpho vault sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   const filters = buildMorphoFilters();
   if (filters.symbols.length === 0) return [];
@@ -235,9 +241,7 @@ export async function fetchMorphoVaultSources(
   }
 }
 
-export async function fetchPendleMarketSources(
-  signal?: AbortSignal,
-): Promise<ResolvedYieldCandidate[]> {
+export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<ResolvedYieldCandidate[]> {
   const results: ResolvedYieldCandidate[] = [];
   const budget = createOptionalSourceBudget("Pendle market sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   const nowMs = Date.now();
@@ -251,10 +255,15 @@ export async function fetchPendleMarketSources(
         while (!budget.budgetController.signal.aborted) {
           throwIfAborted(budget.budgetController.signal);
           const url = `https://api-v2.pendle.finance/core/v1/${chainId}/markets?limit=${limit}&skip=${skip}&is_active=true`;
-          const result = await fetchJsonWithRetry<{ total?: number; results?: PendleMarket[] }>(url, {
-            headers: { Accept: "application/json", "User-Agent": USER_AGENT },
-            signal: budget.signal,
-          }, 0, { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS });
+          const result = await fetchJsonWithRetry<{ total?: number; results?: PendleMarket[] }>(
+            url,
+            {
+              headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+              signal: budget.signal,
+            },
+            0,
+            { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+          );
           if (!result?.response.ok) break;
 
           const body = result.body;
@@ -323,9 +332,7 @@ export async function fetchPendleMarketSources(
   }
 }
 
-export async function fetchYearnKongSources(
-  signal?: AbortSignal,
-): Promise<ResolvedYieldCandidate[]> {
+export async function fetchYearnKongSources(signal?: AbortSignal): Promise<ResolvedYieldCandidate[]> {
   const results: ResolvedYieldCandidate[] = [];
   const seenAddresses = new Set<string>();
   const budget = createOptionalSourceBudget("Yearn Kong sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
@@ -389,7 +396,7 @@ export async function fetchYearnKongSources(
             normalizedAssetAddress === "0x9f4330700a36b29952869fac9b33f45eedd8a3d8" &&
             vault.name.trim().toLowerCase() === "staked ybold";
           const sourcePrefix = vault.yearn ? "Yearn" : "Kong";
-          const sourceNamespace = isK3Sbold ? "k3" : (vault.yearn ? "yearn" : "kong");
+          const sourceNamespace = isK3Sbold ? "k3" : vault.yearn ? "yearn" : "kong";
 
           results.push({
             stablecoinId: isK3Sbold ? "sbold-k3-capital" : undefined,
@@ -427,9 +434,7 @@ export async function fetchYearnKongSources(
   }
 }
 
-export async function fetchBeefySources(
-  signal?: AbortSignal,
-): Promise<ResolvedYieldCandidate[]> {
+export async function fetchBeefySources(signal?: AbortSignal): Promise<ResolvedYieldCandidate[]> {
   const budget = createOptionalSourceBudget("Beefy sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   try {
     const [apyRes, vaultsRes, tvlRes] = await Promise.all([

@@ -1,4 +1,6 @@
 import type { StagedPool } from "../dex-discovery/types";
+import { CHAIN_META } from "@shared/lib/chains";
+import { canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { STAGED_POOL_MAX_TVL_USD, stagedPoolConfidence, stagedPoolMaturityDays } from "../dex-discovery/types";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
@@ -50,6 +52,7 @@ export type StagedPoolSkipReason =
   | "invalid_tvl"
   | "invalid_price"
   | "stale_confidence_zero"
+  | "legacy_lowercase_identity_superseded"
   | "authoritative_confirmation_missing"
   | "duplicate_exact_identity"
   | "duplicate_unique_derived_identity"
@@ -72,7 +75,7 @@ function toBoolean(value: number | boolean | null): boolean | null {
 
 function toStagedPool(row: StagedPoolRow): StagedPool {
   return {
-    poolId: row.pool_id.toLowerCase(),
+    poolId: canonicalExitRouteScopedKey(row.chain, row.pool_id),
     stablecoinId: row.stablecoin_id,
     source: row.source,
     chain: row.chain,
@@ -95,6 +98,41 @@ function toStagedPool(row: StagedPoolRow): StagedPool {
     discoveredAt: toFiniteNumber(row.discovered_at) ?? 0,
     refreshedAt: toFiniteNumber(row.refreshed_at) ?? 0,
   };
+}
+
+function legacyLowercaseIdentityKey(row: StagedPoolRow): string | null {
+  const chain = canonicalExitRouteChain(row.chain);
+  if (CHAIN_META[chain]?.type === "evm" || chain === "orderbook") return null;
+  return JSON.stringify([
+    row.stablecoin_id,
+    row.source,
+    chain,
+    canonicalExitRouteScopedKey(chain, row.pool_id).toLowerCase(),
+    row.base_token?.trim().toLowerCase() ?? "",
+    row.quote_token?.trim().toLowerCase() ?? "",
+  ]);
+}
+
+function hasMixedCaseNativeIdentity(row: StagedPoolRow): boolean {
+  const values = [canonicalExitRouteScopedKey(row.chain, row.pool_id), row.base_token ?? "", row.quote_token ?? ""];
+  return values.some((value) => value !== value.toLowerCase());
+}
+
+function collectSupersededLegacyLowercaseRows(rows: readonly StagedPoolRow[]): ReadonlySet<StagedPoolRow> {
+  const correctedByIdentity = new Map<string, number>();
+  for (const row of rows) {
+    const key = legacyLowercaseIdentityKey(row);
+    if (!key || !hasMixedCaseNativeIdentity(row)) continue;
+    correctedByIdentity.set(key, Math.max(correctedByIdentity.get(key) ?? Number.NEGATIVE_INFINITY, row.refreshed_at));
+  }
+
+  return new Set(
+    rows.filter((row) => {
+      const key = legacyLowercaseIdentityKey(row);
+      if (!key || hasMixedCaseNativeIdentity(row)) return false;
+      return (correctedByIdentity.get(key) ?? Number.NEGATIVE_INFINITY) > row.refreshed_at;
+    }),
+  );
 }
 
 function readCgTickerOrderbookMetadata(rawJson: string | null): CgTickerOrderbookMetadata | null {
@@ -294,6 +332,7 @@ export async function mergeStagedPools(
   let optionalWildcardIdentitySkipped = 0;
   let authoritativeProtocolSkipped = 0;
   const skipDimensions = new Map<string, StagedPoolSkipDimension>();
+  const supersededLegacyLowercaseRows = collectSupersededLegacyLowercaseRows(rows);
 
   const stagedEntries: Array<{
     stagedPool: StagedPool;
@@ -306,6 +345,11 @@ export async function mergeStagedPools(
   }> = [];
 
   for (const row of rows) {
+    if (supersededLegacyLowercaseRows.has(row)) {
+      skippedCount++;
+      incrementSkipDimension(skipDimensions, "legacy_lowercase_identity_superseded", row);
+      continue;
+    }
     const stagedPool = toStagedPool(row);
     if (!stagedPool.poolId || !stagedPool.stablecoinId) {
       skippedCount++;
@@ -324,17 +368,17 @@ export async function mergeStagedPools(
     }
 
     const profile = resolveStagedPoolProfile(stagedPool);
-    const orderbookMetadata = stagedPool.source === "cg_tickers"
-      ? readCgTickerOrderbookMetadata(stagedPool.rawJson)
-      : null;
+    const orderbookMetadata =
+      stagedPool.source === "cg_tickers" ? readCgTickerOrderbookMetadata(stagedPool.rawJson) : null;
     // For orderbook pools, preserve the full poolId so that
     // isTrustworthyExactPoolId recognises the "orderbook:" prefix and
     // registers a usable exact key for downstream dedup.
-    const poolAddressOrId = stagedPool.chain === "orderbook"
-      ? stagedPool.poolId
-      : stagedPool.poolId.includes(":")
-        ? stagedPool.poolId.split(":").slice(1).join(":")
-        : stagedPool.poolId;
+    const poolAddressOrId =
+      stagedPool.chain === "orderbook"
+        ? stagedPool.poolId
+        : stagedPool.poolId.includes(":")
+          ? stagedPool.poolId.split(":").slice(1).join(":")
+          : stagedPool.poolId;
     const identity = buildPoolIdentity({
       chain: stagedPool.chain,
       protocol: profile.dexId,
@@ -408,11 +452,7 @@ export async function mergeStagedPools(
     // carry priceUsd. These observations still feed diagnostics and later retained-
     // pool price eligibility, but dex_prices is now rebuilt only from the final
     // retained pool set after dedupe and filtering.
-    if (
-      stagedPool.priceUsd != null &&
-      stagedPool.priceUsd > 0 &&
-      adjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
-    ) {
+    if (stagedPool.priceUsd != null && stagedPool.priceUsd > 0 && adjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
       const obs = stagedPriceObs.get(stagedPool.stablecoinId) ?? [];
       obs.push({
         price: stagedPool.priceUsd,

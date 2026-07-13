@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { crawlTokenPools, shouldSkipFallbackCurvePool, type CrawlStats } from "../crawl-helpers";
+import {
+  crawlTokenPools,
+  getChainAwareDsTrackedTokenPriceUsd,
+  shouldSkipFallbackCurvePool,
+  type CrawlStats,
+} from "../crawl-helpers";
 import type { GtNewPool } from "../types";
 
 interface RawPool {
@@ -43,7 +48,7 @@ describe("crawlTokenPools", () => {
         throw new Error("should not fetch");
       },
       parsePool: () => null,
-      buildNewPool: () => ({} as GtNewPool),
+      buildNewPool: () => ({}) as GtNewPool,
     });
 
     expect(result.stoppedEarly).toBe(true);
@@ -233,5 +238,54 @@ describe("crawlTokenPools", () => {
     expect(stats.poolsNew).toBe(0);
     expect(newPools.size).toBe(0);
     expect(priceObs.size).toBe(0);
+  });
+
+  it("does not collapse case-distinct non-EVM token identities", async () => {
+    const pair = {
+      baseToken: { address: "MintCase" },
+      quoteToken: { address: "QuoteCase" },
+      priceUsd: "1",
+      priceNative: "1",
+    } as never;
+    expect(getChainAwareDsTrackedTokenPriceUsd(pair, "mintCase", "solana")).toEqual({
+      side: null,
+      priceUsd: null,
+    });
+    expect(getChainAwareDsTrackedTokenPriceUsd(pair, "mintCase", "ethereum")).toEqual({
+      side: "base",
+      priceUsd: 1,
+    });
+
+    const stats = makeStats();
+    const newPools = new Map<string, GtNewPool[]>();
+    await crawlTokenPools<RawPool, GtNewPool>({
+      sourceLabel: "test",
+      tokens: [{ sourceChain: "solana", ourChain: "solana", address: "MintCase", stablecoinId: "test" }],
+      chainAddressToId: new Map([["solana:MintCase", "test"]]),
+      knownPoolAddrs: new Set(),
+      protocolTvlCaps: new Map(),
+      newPools,
+      priceObs: new Map(),
+      stats,
+      fetchPools: async () => [{ id: "PoolCase", tvlUsd: 100_000, price: 1 }],
+      parsePool: (pool) => ({
+        dexId: "testdex",
+        poolAddress: pool.id,
+        tvlUsd: pool.tvlUsd,
+        volume24hUsd: 10_000,
+        baseTokenAddress: "mintCase",
+        quoteTokenAddress: "QuoteCase",
+        baseTokenPriceUsd: pool.price,
+        quoteTokenPriceUsd: 1,
+        createdAt: null,
+        poolName: "TEST / QUOTE",
+      }),
+      buildNewPool: () => {
+        throw new Error("case-distinct mint must not match");
+      },
+    });
+
+    expect(stats.poolsNew).toBe(0);
+    expect(newPools.size).toBe(0);
   });
 });

@@ -1,9 +1,11 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import { QUALITY_MULTIPLIERS, isBlockedDexId } from "../../lib/dex-cron-constants";
 import type { LlamaPool, CurvePoolEntry, LiquidityMetrics } from "./types";
 import {
   classifyPoolType,
+  buildPoolFingerprint,
   getQualityMultiplier,
   normalizeProtocol,
   computePoolPairQuality,
@@ -11,7 +13,6 @@ import {
   computePoolStress,
   initMetrics,
   isCryptoSwap,
-  buildPoolFingerprint,
 } from "./pool-helpers";
 import { isTrustworthyExactPoolId } from "./pool-identity";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
@@ -56,8 +57,8 @@ export function processPoolMetrics(
       const vol7d = pool.volumeUsd7d ?? 0;
 
       // Try to find Curve enrichment data (address-based first, symbol-combo fallback)
-      const chainNorm = pool.chain.toLowerCase();
-      const addrCurveKey = `${chainNorm}:${pool.pool.toLowerCase()}`;
+      const chainNorm = canonicalExitRouteChain(pool.chain);
+      const addrCurveKey = canonicalExitRouteAssetKey(chainNorm, pool.pool);
       const symCurveKey = `${chainNorm}:${poolSymbols
         .map((s) => s.toUpperCase())
         .sort()
@@ -103,7 +104,7 @@ export function processPoolMetrics(
         }
       } else if (poolType === "uniswap-v3-5bp" && uniV3PoolFees.size > 0) {
         // Try to resolve exact fee tier from subgraph data
-        const addrKey = `${chainNorm}:${pool.pool.toLowerCase()}`;
+        const addrKey = canonicalExitRouteAssetKey(chainNorm, pool.pool);
         let feeTier = uniV3PoolFees.get(addrKey);
         if (feeTier == null) {
           const symKey = `${chainNorm}:${poolSymbols
@@ -121,7 +122,7 @@ export function processPoolMetrics(
         qualMult = getQualityMultiplier(resolvedPoolType);
       } else if (poolType === "aerodrome-volatile" && aerodromeIsStable.size > 0) {
         // Refine Aerodrome pool type using isStable flag from subgraph
-        const addrKey = `${chainNorm}:${pool.pool.toLowerCase()}`;
+        const addrKey = canonicalExitRouteAssetKey(chainNorm, pool.pool);
         const isStable = aerodromeIsStable.get(addrKey);
         if (isStable === true) {
           resolvedPoolType = "aerodrome-stable";
@@ -169,17 +170,16 @@ export function processPoolMetrics(
         // Per-stablecoin pair quality
         const coinPairQuality = computePoolPairQuality(poolSymbols, meta.symbol);
 
-        const {
-          qualityAdjustedTvl: poolQualityAdjustedTvl,
-          effectiveTvl: poolEffTvl,
-        } = computePoolQualityContribution({
-          qualityTvlUsd: pool.tvlUsd,
-          effectiveTvlUsd: effectivePoolTvl,
-          qualityMultiplier: qualMult,
-          balanceRatio,
-          pairQuality: coinPairQuality,
-          hasMeasuredBalance: curveData != null,
-        });
+        const { qualityAdjustedTvl: poolQualityAdjustedTvl, effectiveTvl: poolEffTvl } = computePoolQualityContribution(
+          {
+            qualityTvlUsd: pool.tvlUsd,
+            effectiveTvlUsd: effectivePoolTvl,
+            qualityMultiplier: qualMult,
+            balanceRatio,
+            pairQuality: coinPairQuality,
+            hasMeasuredBalance: curveData != null,
+          },
+        );
 
         // Pool stress for this pool
         const stressIdx = computePoolStress(balanceRatio, organicFraction, poolMaturityDays, coinPairQuality);
@@ -221,9 +221,9 @@ export function processPoolMetrics(
         // Pool entry with enriched extra
         m.topPools.push({
           poolId: isTrustworthyExactPoolId(pool.pool, pool.project)
-            ? `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`
-            : (buildPoolFingerprint(pool.chain, pool.project, pool.underlyingTokens ?? [])
-                ?? `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`),
+            ? canonicalExitRouteAssetKey(pool.chain, pool.pool)
+            : (buildPoolFingerprint(chainNorm, pool.project, pool.underlyingTokens ?? []) ??
+              canonicalExitRouteAssetKey(pool.chain, pool.pool)),
           project: protocol,
           chain: pool.chain,
           tvlUsd: rawContribTvl,

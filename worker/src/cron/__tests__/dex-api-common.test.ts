@@ -27,10 +27,18 @@ const MOCK_POOL: DexApiPool = {
 };
 
 function buildContractMetaByChainAddress(
-  entries: Array<[string, { stablecoinId: string; symbol: string; decimals: number | null; source: "contract" | "tradedContract" }]>,
+  entries: Array<
+    [string, { stablecoinId: string; symbol: string; decimals: number | null; source: "contract" | "tradedContract" }]
+  >,
   chains: string[],
-): Map<string, { stablecoinId: string; symbol: string; decimals: number | null; source: "contract" | "tradedContract" }> {
-  const result = new Map<string, { stablecoinId: string; symbol: string; decimals: number | null; source: "contract" | "tradedContract" }>();
+): Map<
+  string,
+  { stablecoinId: string; symbol: string; decimals: number | null; source: "contract" | "tradedContract" }
+> {
+  const result = new Map<
+    string,
+    { stablecoinId: string; symbol: string; decimals: number | null; source: "contract" | "tradedContract" }
+  >();
   for (const chain of chains) {
     for (const [address, meta] of entries) {
       result.set(`${chain.toLowerCase()}:${address.toLowerCase()}`, meta);
@@ -46,9 +54,8 @@ function convertToGtNewPools(
   trackedStablecoinPrices?: Map<string, number>,
 ) {
   const chains = [...new Set(pools.map((pool) => pool.chain.toLowerCase()))];
-  const effectiveTrackedPrices = trackedStablecoinPrices ?? new Map(
-    [...new Set(addressToId.values())].map((stablecoinId) => [stablecoinId, 1]),
-  );
+  const effectiveTrackedPrices =
+    trackedStablecoinPrices ?? new Map([...new Set(addressToId.values())].map((stablecoinId) => [stablecoinId, 1]));
   return convertToGtNewPoolsImpl(
     pools,
     buildChainAddressToId(addressToId, chains),
@@ -65,9 +72,8 @@ function extractPriceObservations(
   trackedStablecoinPrices?: Map<string, number>,
 ) {
   const chains = [...new Set(pools.map((pool) => pool.chain.toLowerCase()))];
-  const effectiveTrackedPrices = trackedStablecoinPrices ?? new Map(
-    [...new Set(addressToId.values())].map((stablecoinId) => [stablecoinId, 1]),
-  );
+  const effectiveTrackedPrices =
+    trackedStablecoinPrices ?? new Map([...new Set(addressToId.values())].map((stablecoinId) => [stablecoinId, 1]));
   return extractPriceObservationsImpl(
     pools,
     buildChainAddressToId(addressToId, chains),
@@ -95,10 +101,7 @@ describe("convertToGtNewPools", () => {
     const symbolToIds = new Map([["USDC", ["usdc"]]]);
     const pool: DexApiPool = {
       ...MOCK_POOL,
-      tokens: [
-        { address: "", symbol: "USDC", decimals: 6 },
-        MOCK_POOL.tokens[1]!,
-      ],
+      tokens: [{ address: "", symbol: "USDC", decimals: 6 }, MOCK_POOL.tokens[1]!],
     };
     const result = convertToGtNewPools([pool], addressToId, symbolToIds);
     expect(result.get("usdc")).toHaveLength(1);
@@ -109,10 +112,7 @@ describe("convertToGtNewPools", () => {
     const symbolToIds = new Map([["USDC", ["usdc"]]]);
     const pool: DexApiPool = {
       ...MOCK_POOL,
-      tokens: [
-        { address: "0xunknown-usdc", symbol: "USDC", decimals: 6 },
-        MOCK_POOL.tokens[1]!,
-      ],
+      tokens: [{ address: "0xunknown-usdc", symbol: "USDC", decimals: 6 }, MOCK_POOL.tokens[1]!],
     };
     const result = convertToGtNewPools([pool], addressToId, symbolToIds);
     expect(result.size).toBe(0);
@@ -254,10 +254,19 @@ describe("convertToGtNewPools", () => {
       ],
     };
     const chains = ["ethereum"];
-    const contractMetaByChainAddress = buildContractMetaByChainAddress([
-      ["0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", { stablecoinId: "usdc", symbol: "USDC", decimals: 6, source: "contract" }],
-      ["0xdAC17F958D2ee523a2206206994597C13D831ec7", { stablecoinId: "usdt", symbol: "USDT", decimals: 6, source: "contract" }],
-    ], chains);
+    const contractMetaByChainAddress = buildContractMetaByChainAddress(
+      [
+        [
+          "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          { stablecoinId: "usdc", symbol: "USDC", decimals: 6, source: "contract" },
+        ],
+        [
+          "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+          { stablecoinId: "usdt", symbol: "USDT", decimals: 6, source: "contract" },
+        ],
+      ],
+      chains,
+    );
     hydrateDirectApiPoolMetadata([pool], contractMetaByChainAddress);
 
     const addressToId = new Map([
@@ -369,6 +378,66 @@ describe("convertToGtNewPools", () => {
       ],
     });
     expect(result.get("usdt-tether")![0].ammExecutionModel?.trackedTokenIndex).toBe(1);
+  });
+
+  it("keeps case-distinct Solana mints in an exact execution model", () => {
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      source: "raydium",
+      chain: "solana",
+      poolType: "raydium-amm",
+      balances: [1_000_000, 1_000_000],
+      balancesNormalized: true,
+      feeRate: 0.0025,
+      tokens: [
+        { address: "MintCase", symbol: "USDC", decimals: 6, priceUsd: 1 },
+        { address: "mintCase", symbol: "USDT", decimals: 6, priceUsd: 1 },
+      ],
+    };
+
+    const result = convertToGtNewPools([pool], new Map([["MintCase", "usdc-circle"]]), new Map());
+
+    expect(result.get("usdc-circle")?.[0].ammExecutionModel?.tokens.map((token) => token.address)).toEqual([
+      "MintCase",
+      "mintCase",
+    ]);
+  });
+
+  it("rejects EVM checksum variants as duplicate execution-model tokens", () => {
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      source: "balancer",
+      chain: "ethereum",
+      poolType: "balancer-weighted",
+      balances: [1_000_000, 1_000_000],
+      balancesNormalized: true,
+      feeRate: 0.0025,
+      tokens: [
+        {
+          address: "0xAbCd000000000000000000000000000000000001",
+          symbol: "USDC",
+          decimals: 6,
+          priceUsd: 1,
+          weight: 0.5,
+        },
+        {
+          address: "0xaBcD000000000000000000000000000000000001",
+          symbol: "USDC",
+          decimals: 6,
+          priceUsd: 1,
+          weight: 0.5,
+        },
+      ],
+    };
+
+    const result = convertToGtNewPools(
+      [pool],
+      new Map([["0xabcd000000000000000000000000000000000001", "usdc-circle"]]),
+      new Map(),
+    );
+
+    expect(result.get("usdc-circle")).toHaveLength(2);
+    expect(result.get("usdc-circle")?.every((entry) => entry.ammExecutionModel == null)).toBe(true);
   });
 
   it("retains complete Balancer weights and source token reference prices", () => {
@@ -584,12 +653,7 @@ describe("extractPriceObservations", () => {
     };
     const addressToId = new Map([["0xusr", "usr-resolv"]]);
 
-    const result = extractPriceObservations(
-      [pool],
-      addressToId,
-      new Map(),
-      new Map([["usr-resolv", 0.2]]),
-    );
+    const result = extractPriceObservations([pool], addressToId, new Map(), new Map([["usr-resolv", 0.2]]));
 
     expect(result.size).toBe(0);
   });
@@ -644,10 +708,7 @@ describe("extractPriceObservations", () => {
     const symbolToIds = new Map([["USDC", ["usdc"]]]);
     const pool: DexApiPool = {
       ...MOCK_POOL,
-      tokens: [
-        { address: "0xunknown-usdc", symbol: "USDC", decimals: 6 },
-        MOCK_POOL.tokens[1]!,
-      ],
+      tokens: [{ address: "0xunknown-usdc", symbol: "USDC", decimals: 6 }, MOCK_POOL.tokens[1]!],
     };
     const result = extractPriceObservations([pool], new Map(), symbolToIds);
     expect(result.size).toBe(0);

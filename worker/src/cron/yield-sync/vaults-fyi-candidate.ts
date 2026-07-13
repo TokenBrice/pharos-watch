@@ -1,7 +1,7 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import { isRecord } from "@shared/lib/type-guards";
 import { MIN_LENDING_POOL_TVL_USD } from "../../lib/constants";
-import { normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import { buildYieldIdentityLookups, resolveYieldCandidateStablecoinId } from "./identity";
 import type { ResolvedYieldCandidate } from "./types";
 import {
@@ -108,7 +108,11 @@ function isActiveStatus(row: Record<string, unknown>): boolean {
 }
 
 function sourceId(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function getVaultId(row: Record<string, unknown>, fallbackVaultId?: string): string | null {
@@ -180,7 +184,7 @@ export function parseVaultsFyiCandidateFromDetailedVault(
     return null;
   }
 
-  const assetAddress = normalizeTokenAddress(parseAssetAddress(asset) ?? "");
+  const assetAddress = canonicalExitRouteScopedId(chain, parseAssetAddress(asset) ?? "");
   const symbol = getString(asset.symbol);
   if (!assetAddress || !symbol) {
     telemetry.auditOnlyCount += 1;

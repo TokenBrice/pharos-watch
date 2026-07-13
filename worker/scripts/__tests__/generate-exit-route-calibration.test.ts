@@ -1,16 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import type { ExitRouteObservation } from "@shared/types/market";
+import type { DexLiquidityData, ExitRouteObservation } from "@shared/types/market";
+import {
+  computeDexLiquidityPayloadFingerprint,
+  computeReportCardsRegistryFingerprint,
+} from "../../src/lib/report-cards-fixed-input";
 import { buildExitRouteCalibrationReport, selectBestRouteCapacity } from "../generate-exit-route-calibration";
 
 const CLOCK_SEC = 1_783_891_200;
 
-function fixedInput() {
+function fixedInput(dexLiqMap: Record<string, DexLiquidityData> = {}) {
   return {
-    schemaVersion: 1 as const,
+    schemaVersion: 2 as const,
     capturedAt: "2026-07-12T22:00:00.000Z",
     sourceGeneration: "fixed-fixture",
+    dexGenerationId: "dex-generation-42",
+    dexPayloadFingerprint: computeDexLiquidityPayloadFingerprint(dexLiqMap, "dex-generation-42"),
     registryRevision: "fixture-revision",
+    registryFingerprint: computeReportCardsRegistryFingerprint(),
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
     clockSec: CLOCK_SEC,
     updatedAt: CLOCK_SEC,
@@ -22,7 +29,7 @@ function fixedInput() {
     },
     pegDataById: {},
     activeDepegPeakBpsById: {},
-    dexLiqMap: {},
+    dexLiqMap,
     redemptionBackstopMap: {},
     bluechipMap: {},
     resolvedBlacklistStatuses: {},
@@ -32,6 +39,52 @@ function fixedInput() {
     dexDeploymentSupplyCoverageById: {},
     collateralDriftCoins: [],
     liveToFallbackCoins: [],
+  };
+}
+
+function dexRow(
+  exitRouteObservations: ExitRouteObservation[],
+  coverage: DexLiquidityData["exitRouteObservationCoverage"],
+): DexLiquidityData {
+  return {
+    totalTvlUsd: 1,
+    totalVolume24hUsd: 1,
+    totalVolume7dUsd: 1,
+    poolCount: 2,
+    pairCount: 1,
+    chainCount: 1,
+    protocolTvl: {},
+    chainTvl: {},
+    topPools: [],
+    liquidityScore: 50,
+    concentrationHhi: null,
+    depthStability: null,
+    tvlChange24h: null,
+    tvlChange7d: null,
+    updatedAt: CLOCK_SEC - 100,
+    dexPriceUsd: null,
+    dexDeviationBps: null,
+    priceSourceCount: null,
+    priceSourceTvl: null,
+    priceSources: null,
+    effectiveTvlUsd: 1,
+    avgPoolStress: null,
+    weightedBalanceRatio: null,
+    organicFraction: null,
+    durabilityScore: null,
+    coverageClass: "primary",
+    coverageConfidence: 1,
+    liquidityEvidenceClass: "measured",
+    hasMeasuredLiquidityEvidence: true,
+    trendworthy: true,
+    sourceMix: {},
+    balanceMeasuredTvlUsd: 1,
+    organicMeasuredTvlUsd: 1,
+    scoreComponents: null,
+    lockedLiquidityPct: null,
+    methodologyVersion: "fixture",
+    exitRouteObservations,
+    exitRouteObservationCoverage: coverage,
   };
 }
 
@@ -101,6 +154,39 @@ describe("exit-route decision-gate calibration", () => {
     });
   });
 
+  it("shares lane, future-time, and documented-term eligibility with active scoring", () => {
+    const invalidDexRows = [
+      observation({ routeId: "dex:future", observedAt: CLOCK_SEC + 1 }),
+      observation({ routeId: "dex:wrong-family", routeFamily: "issuer-redemption" }),
+    ];
+    expect(
+      selectBestRouteCapacity({
+        observations: invalidDexRows,
+        lane: "dex",
+        modeledExitSizeUsd: 100_000,
+        clockSec: CLOCK_SEC,
+        maxObservationAgeSec: 3_600,
+      }),
+    ).toMatchObject({ status: "observed-ineligible", eligibleObservationCount: 0 });
+
+    const reviewedTerms = observation({
+      routeId: "redeem:reviewed",
+      routeFamily: "issuer-redemption",
+      evidenceKind: "documented-terms",
+      observedAt: CLOCK_SEC - 300 * 86_400,
+      freshnessSeconds: 300 * 86_400,
+    });
+    expect(
+      selectBestRouteCapacity({
+        observations: [reviewedTerms],
+        lane: "redemption",
+        modeledExitSizeUsd: 100_000,
+        clockSec: CLOCK_SEC,
+        maxObservationAgeSec: 3_600,
+      }),
+    ).toMatchObject({ status: "eligible", eligibleObservationCount: 1 });
+  });
+
   it("emits a deterministic all-active replay and an explicit blocked activation decision", () => {
     const options = {
       generationId: "dex-generation-42",
@@ -109,7 +195,8 @@ describe("exit-route decision-gate calibration", () => {
       decisionReason: "Hold until both route lanes meet the general minimum coverage policy.",
       minimumDexEligibleAssets: 1,
       minimumRedemptionEligibleAssets: 1,
-      maxObservationAgeSec: 1_000,
+      dexMaxObservationAgeSec: 1_000,
+      liveRedemptionMaxObservationAgeSec: 1_000,
     };
     const first = buildExitRouteCalibrationReport(fixedInput(), options);
     const second = buildExitRouteCalibrationReport(fixedInput(), options);
@@ -145,5 +232,47 @@ describe("exit-route decision-gate calibration", () => {
       unsupported: 0,
       unknown: first.rows.length,
     });
+  });
+
+  it("does not count an eligible observation from partial retained-pool coverage", () => {
+    const input = fixedInput({
+      "usdc-circle": dexRow([observation()], {
+        status: "populated",
+        capabilityMatrixVersion: "fixture-v1",
+        retainedPoolCount: 2,
+        scoreEligiblePoolCount: 1,
+        observationCount: 1,
+        scoreEligibleObservationCount: 1,
+        unsupportedPoolCount: 0,
+        evidenceCounts: { "reserve-based-amm-simulation": 1 },
+        unsupportedReasons: {},
+      }),
+    });
+    const report = buildExitRouteCalibrationReport(input, {
+      generationId: "dex-generation-42",
+      producerGenerationStatus: "complete",
+      activationDecision: "hold",
+      decisionReason: "Partial producer coverage cannot satisfy the DEX floor.",
+      minimumDexEligibleAssets: 1,
+      minimumRedemptionEligibleAssets: 0,
+      dexMaxObservationAgeSec: 1_000,
+    });
+    const row = report.rows.find((candidate) => candidate.id === "usdc-circle");
+
+    expect(row?.dex).toMatchObject({ status: "observed-ineligible", eligibleObservationCount: 0, best: null });
+    expect(row?.dexProducerCoverage).toMatchObject({ complete: false, scoreEligiblePoolCount: 1 });
+    expect(report.coverage.dex.eligibleAssets).toBe(0);
+    expect(report.activationDecision.blockers).toContain("dex-eligible-asset-floor-not-met");
+  });
+
+  it("rejects a calibration generation that is not bound to the captured DEX payload", () => {
+    expect(() =>
+      buildExitRouteCalibrationReport(fixedInput(), {
+        generationId: "different-generation",
+        producerGenerationStatus: "complete",
+        activationDecision: "hold",
+        decisionReason: "fixture",
+      }),
+    ).toThrow("does not match fixed input DEX generation");
   });
 });

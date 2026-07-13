@@ -1,10 +1,11 @@
 import {
+  DexExitRouteObservationSchema,
   ExitRouteObservationCoverageSchema,
-  ExitRouteObservationSchema,
   type DexLiquidityData,
   type LiquidityCoverageClass,
 } from "@shared/types/market";
 import { classifyLiquidityEvidence } from "@shared/lib/dex-liquidity-evidence";
+import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { parseJsonObject } from "./json-parse";
 
@@ -21,6 +22,7 @@ interface DexLiquidityRow {
   balance_measured_tvl_usd: number | null;
   organic_measured_tvl_usd: number | null;
   score_components_json: string | null;
+  methodology_version: string | null;
   deployment_chain: string | null;
   deployment_contract_address: string | null;
   deployment_outcome: "observed_pools" | "verified_no_pools" | "provider_inaccessible" | null;
@@ -40,6 +42,7 @@ type DexLiquiditySnapshot = Pick<DexLiquidityData, "liquidityScore" | "concentra
       | "organicMeasuredTvlUsd"
       | "exitRouteObservations"
       | "exitRouteObservationCoverage"
+      | "methodologyVersion"
     >
   > & {
     deploymentCoverage?: {
@@ -62,7 +65,7 @@ export interface DexLiquidityLoadResult {
 type DeploymentCoverage = NonNullable<DexLiquiditySnapshot["deploymentCoverage"]>;
 
 function deploymentKey(stablecoinId: string, chain: string, address: string): string {
-  return `${stablecoinId}\u0000${chain}\u0000${address.toLowerCase()}`;
+  return `${stablecoinId}\u0000${canonicalExitRouteAssetKey(chain, address)}`;
 }
 
 const CURRENT_DEPLOYMENT_KEYS = new Set(
@@ -97,14 +100,36 @@ function parseCoverageConfidence(value: number | null, stablecoinId: string): nu
 
 function parseExitRouteDetails(
   json: string | null,
+  stablecoinId: string,
 ): Pick<DexLiquiditySnapshot, "exitRouteObservations" | "exitRouteObservationCoverage"> {
   const raw = parseJsonObject(json);
   if (raw == null) return {};
-  const observations = ExitRouteObservationSchema.array().safeParse(raw.exitRouteObservations);
-  const coverage = ExitRouteObservationCoverageSchema.safeParse(raw.exitRouteObservationCoverage);
+  const observations =
+    raw.exitRouteObservations === undefined
+      ? null
+      : DexExitRouteObservationSchema.array().safeParse(raw.exitRouteObservations);
+  const coverage =
+    raw.exitRouteObservationCoverage === undefined
+      ? null
+      : ExitRouteObservationCoverageSchema.safeParse(raw.exitRouteObservationCoverage);
+  if (observations && !observations.success) {
+    throw new Error(`Invalid persisted DEX exit-route observations for ${stablecoinId}`);
+  }
+  if (coverage && !coverage.success) {
+    throw new Error(`Invalid persisted DEX exit-route coverage for ${stablecoinId}`);
+  }
+  if (observations?.success && coverage?.success) {
+    const eligibleObservationCount = observations.data.filter((observation) => observation.scoreEligible).length;
+    if (
+      coverage.data.observationCount !== observations.data.length ||
+      coverage.data.scoreEligibleObservationCount !== eligibleObservationCount
+    ) {
+      throw new Error(`Persisted DEX exit-route coverage counts do not match observations for ${stablecoinId}`);
+    }
+  }
   return {
-    ...(observations.success ? { exitRouteObservations: observations.data } : {}),
-    ...(coverage.success ? { exitRouteObservationCoverage: coverage.data } : {}),
+    ...(observations?.success ? { exitRouteObservations: observations.data } : {}),
+    ...(coverage?.success ? { exitRouteObservationCoverage: coverage.data } : {}),
   };
 }
 
@@ -114,7 +139,7 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
       `SELECT dl.stablecoin_id, dl.liquidity_score, dl.concentration_hhi,
               dl.pool_count, dl.chain_count, dl.total_tvl_usd, dl.effective_tvl_usd,
               dl.coverage_class, dl.coverage_confidence, dl.balance_measured_tvl_usd,
-              dl.organic_measured_tvl_usd, dl.score_components_json, dl.updated_at,
+              dl.organic_measured_tvl_usd, dl.score_components_json, dl.methodology_version, dl.updated_at,
               dco.chain AS deployment_chain,
               dco.contract_address AS deployment_contract_address,
               dco.outcome AS deployment_outcome
@@ -171,8 +196,11 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
       concentrationHhi: row.concentration_hhi,
       poolCount: row.pool_count,
       chainCount: row.chain_count,
-      ...parseExitRouteDetails(row.score_components_json),
+      ...parseExitRouteDetails(row.score_components_json, row.stablecoin_id),
     };
+    if (typeof row.methodology_version === "string" && row.methodology_version.trim()) {
+      snapshot.methodologyVersion = row.methodology_version.trim();
+    }
     if (coverageClass != null && coverageConfidence != null && evidence != null) {
       snapshot.coverageClass = coverageClass;
       snapshot.coverageConfidence = coverageConfidence;

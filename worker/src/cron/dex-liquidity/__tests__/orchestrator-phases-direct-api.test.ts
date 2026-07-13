@@ -32,9 +32,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
     const knownPoolIndex = createKnownPoolIdentityIndex();
     const metrics = new Map();
     const priceObservations = new Map();
-    const chainAddressToId = new Map([
-      ["plasma:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", "usdai-usd-ai"],
-    ]);
+    const chainAddressToId = new Map([["plasma:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", "usdai-usd-ai"]]);
 
     await integrateDirectApiLiquidityPhase({
       directApiPools,
@@ -187,22 +185,24 @@ describe("integrateDirectApiLiquidityPhase", () => {
       source: "dl",
     });
     const metrics = new Map([["usdc-circle", usdcMetrics]]);
-    const directApiPools: DexApiPool[] = [{
-      source: "raydium",
-      chain: "solana",
-      poolAddress,
-      poolType: "raydium-amm",
-      tokens: [
-        { address: "UsdcMint", symbol: "USDC", decimals: 6 },
-        { address: "UsdtMint", symbol: "USDT", decimals: 6 },
-      ],
-      price: 1,
-      tvlUsd: 4_000_000,
-      volume24hUsd: 100_000,
-      feeRate: 0.0025,
-      balances: [2_000_000, 2_000_000],
-      balancesNormalized: true,
-    }];
+    const directApiPools: DexApiPool[] = [
+      {
+        source: "raydium",
+        chain: "solana",
+        poolAddress,
+        poolType: "raydium-amm",
+        tokens: [
+          { address: "UsdcMint", symbol: "USDC", decimals: 6 },
+          { address: "UsdtMint", symbol: "USDT", decimals: 6 },
+        ],
+        price: 1,
+        tvlUsd: 4_000_000,
+        volume24hUsd: 100_000,
+        feeRate: 0.0025,
+        balances: [2_000_000, 2_000_000],
+        balancesNormalized: true,
+      },
+    ];
 
     const result = await integrateDirectApiLiquidityPhase({
       directApiPools,
@@ -211,8 +211,8 @@ describe("integrateDirectApiLiquidityPhase", () => {
       metrics,
       priceObservations: new Map(),
       chainAddressToId: new Map([
-        ["solana:usdcmint", "usdc-circle"],
-        ["solana:usdtmint", "usdt-tether"],
+        ["solana:UsdcMint", "usdc-circle"],
+        ["solana:UsdtMint", "usdt-tether"],
       ]),
       symbolToChainScopedIds: new Map(),
       symbolToIds: new Map(),

@@ -1,4 +1,5 @@
 import { CHAIN_META } from "@shared/lib/chains";
+import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import type { LiquidityMetrics, PoolMeasurementFlags, GtNewPool, CgNewPool } from "./types";
 import {
   computePoolPairQuality,
@@ -12,7 +13,7 @@ import { STAGED_POOL_DEFAULTS } from "../dex-discovery/types";
 type SecondaryPool = GtNewPool | CgNewPool;
 
 function toChainDisplay(chain: string): string {
-  return CHAIN_META[chain.toLowerCase()]?.name ?? chain;
+  return CHAIN_META[canonicalExitRouteChain(chain)]?.name ?? chain;
 }
 
 export function addSecondaryPoolContribution(
@@ -27,7 +28,7 @@ export function addSecondaryPoolContribution(
     metrics.set(stablecoinId, m);
   }
 
-  const incomingPoolId = `${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`;
+  const incomingPoolId = canonicalExitRouteAssetKey(pool.chain, pool.address);
   const existingPool = m.topPools.find((existing) => existing.poolId === incomingPoolId);
   if (existingPool) {
     if (pool.ammExecutionModel) {
@@ -42,12 +43,13 @@ export function addSecondaryPoolContribution(
   const organicFraction = STAGED_POOL_DEFAULTS.organicFraction;
   const hasMeasuredBalance = pool.balanceRatio != null && Number.isFinite(pool.balanceRatio);
   const balanceRatio = hasMeasuredBalance ? pool.balanceRatio! : STAGED_POOL_DEFAULTS.balanceRatioFallback;
-  const pairQuality = pool.pairQualityOverride != null && Number.isFinite(pool.pairQualityOverride)
-    ? pool.pairQualityOverride
-    : computePoolPairQuality(
-      (pool.symbol ?? "").split(/\s*\/\s*/).map((s) => s.trim()),
-      stablecoinSymbol,
-    );
+  const pairQuality =
+    pool.pairQualityOverride != null && Number.isFinite(pool.pairQualityOverride)
+      ? pool.pairQualityOverride
+      : computePoolPairQuality(
+          (pool.symbol ?? "").split(/\s*\/\s*/).map((s) => s.trim()),
+          stablecoinSymbol,
+        );
   const { qualityAdjustedTvl, effectiveTvl } = computePoolQualityContribution({
     qualityTvlUsd: pool.tvlUsd,
     effectiveTvlUsd: pool.tvlUsd,
@@ -61,9 +63,12 @@ export function addSecondaryPoolContribution(
   const protocol = normalizeProtocol(pool.dexId);
   const measurement: PoolMeasurementFlags | undefined = pool.measurement;
   const lockedLiquidityPct = "lockedLiquidityPct" in pool ? pool.lockedLiquidityPct : null;
-  const feeTier = "feePercentage" in pool
-    ? (pool.feePercentage != null ? Math.round(pool.feePercentage * 100) : undefined)
-    : pool.feeTierBps;
+  const feeTier =
+    "feePercentage" in pool
+      ? pool.feePercentage != null
+        ? Math.round(pool.feePercentage * 100)
+        : undefined
+      : pool.feeTierBps;
 
   m.totalTvlUsd += pool.tvlUsd;
   m.totalVolume24hUsd += pool.volume24hUsd;
@@ -89,7 +94,7 @@ export function addSecondaryPoolContribution(
   m.chainTvl[chainDisplay] = (m.chainTvl[chainDisplay] ?? 0) + pool.tvlUsd;
 
   m.topPools.push({
-    poolId: `${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`,
+    poolId: incomingPoolId,
     project: protocol,
     chain: chainDisplay,
     tvlUsd: pool.tvlUsd,
@@ -100,10 +105,12 @@ export function addSecondaryPoolContribution(
     source: pool.sourceFamily,
     ...(pool.price > 0 ? { price: pool.price } : {}),
     extra: {
-      ...(hasMeasuredBalance ? {
-        balanceRatio: Math.round(balanceRatio * 100) / 100,
-        balanceDetails: pool.balanceDetails,
-      } : {}),
+      ...(hasMeasuredBalance
+        ? {
+            balanceRatio: Math.round(balanceRatio * 100) / 100,
+            balanceDetails: pool.balanceDetails,
+          }
+        : {}),
       ...(feeTier != null ? { feeTier } : {}),
       qualityAdjustedTvl: Math.round(qualityAdjustedTvl),
       effectiveTvl: Math.round(effectiveTvl),

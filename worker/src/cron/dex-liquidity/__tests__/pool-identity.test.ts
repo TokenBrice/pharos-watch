@@ -8,6 +8,46 @@ import {
 } from "../pool-identity";
 
 describe("pool identity dedup", () => {
+  it("preserves case-distinct Solana pool and token identities", () => {
+    const upper = buildPoolIdentity({
+      chain: "Solana",
+      protocol: "raydium",
+      poolAddressOrId: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
+      tokenAddresses: ["MintCase", "QuoteMint"],
+      poolType: "raydium-amm",
+    });
+    const lower = buildPoolIdentity({
+      chain: "solana",
+      protocol: "raydium",
+      poolAddressOrId: "9j7m8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
+      tokenAddresses: ["mintCase", "QuoteMint"],
+      poolType: "raydium-amm",
+    });
+
+    expect(upper.exactPoolKey).not.toBe(lower.exactPoolKey);
+    expect(upper.derivedMatchKey).not.toBe(lower.derivedMatchKey);
+  });
+
+  it("collapses EVM checksum variants in exact and derived identities", () => {
+    const checksum = buildPoolIdentity({
+      chain: "Ethereum",
+      protocol: "balancer",
+      poolAddressOrId: "0xAbCd000000000000000000000000000000000001",
+      tokenAddresses: ["0xAbCd000000000000000000000000000000000002", "0xAbCd000000000000000000000000000000000003"],
+      poolType: "balancer-weighted",
+    });
+    const lowercase = buildPoolIdentity({
+      chain: "ethereum",
+      protocol: "balancer",
+      poolAddressOrId: "0xabcd000000000000000000000000000000000001",
+      tokenAddresses: ["0xabcd000000000000000000000000000000000002", "0xabcd000000000000000000000000000000000003"],
+      poolType: "balancer-weighted",
+    });
+
+    expect(checksum.exactPoolKey).toBe(lowercase.exactPoolKey);
+    expect(checksum.derivedMatchKey).toBe(lowercase.derivedMatchKey);
+  });
+
   it("canonicalizes exact pool ids that already include a chain prefix", () => {
     const identity = buildPoolIdentity({
       chain: "ethereum",
@@ -27,7 +67,7 @@ describe("pool identity dedup", () => {
       tokenAddresses: [],
     });
 
-    expect(identity.exactPoolKey).toBe("orderbook:orderbook:binance:usdt-tether");
+    expect(identity.exactPoolKey).toBe("orderbook:binance:usdt-tether");
     expect(identity.identitySource).toBe("native-id");
   });
 
@@ -256,15 +296,18 @@ describe("pool identity dedup", () => {
 
   it("dedupes DL (fee=na) vs direct-API (fee=1) via the na-variant secondary lookup", () => {
     const known = createKnownPoolIdentityIndex();
-    registerKnownPoolIdentity(known, buildPoolIdentity({
-      chain: "ethereum",
-      protocol: "balancer",
-      poolAddressOrId: "0xabc0000000000000000000000000000000000000",
-      tokenAddresses: ["0xusdc0000000000000000000000000000000000000", "0xusdt0000000000000000000000000000000000000"],
-      poolType: "balancer-stable",
-      feeTierBps: 1,
-      isStable: true,
-    }));
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain: "ethereum",
+        protocol: "balancer",
+        poolAddressOrId: "0xabc0000000000000000000000000000000000000",
+        tokenAddresses: ["0xusdc0000000000000000000000000000000000000", "0xusdt0000000000000000000000000000000000000"],
+        poolType: "balancer-stable",
+        feeTierBps: 1,
+        isStable: true,
+      }),
+    );
     const incoming = buildPoolIdentity({
       chain: "ethereum",
       protocol: "balancer-v3",
@@ -276,7 +319,10 @@ describe("pool identity dedup", () => {
       isStableHint: true,
     });
     const reason = getIdentityDedupReason(
-      incoming, known, { derived: 1, wildcard: 1 }, { allowOptionalWildcard: true },
+      incoming,
+      known,
+      { derived: 1, wildcard: 1 },
+      { allowOptionalWildcard: true },
     );
     expect(reason).not.toBeNull();
   });
@@ -284,16 +330,19 @@ describe("pool identity dedup", () => {
   it("dedupes direct-API (fee=concrete) vs DL (fee=na) via na-variant reverse lookup", () => {
     const known = createKnownPoolIdentityIndex();
     // Known: DL row with fee=na
-    registerKnownPoolIdentity(known, buildPoolIdentity({
-      chain: "ethereum",
-      protocol: "balancer-v3",
-      poolAddressOrId: "6b6de6c7-uuid-opaque",
-      tokenAddresses: ["0xusdc0000000000000000000000000000000000000", "0xusdt0000000000000000000000000000000000000"],
-      poolType: "balancer-weighted",
-      feeTierBps: null,
-      isStable: null,
-      isStableHint: true,
-    }));
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain: "ethereum",
+        protocol: "balancer-v3",
+        poolAddressOrId: "6b6de6c7-uuid-opaque",
+        tokenAddresses: ["0xusdc0000000000000000000000000000000000000", "0xusdt0000000000000000000000000000000000000"],
+        poolType: "balancer-weighted",
+        feeTierBps: null,
+        isStable: null,
+        isStableHint: true,
+      }),
+    );
     // Incoming: direct-API row with concrete fee
     const incoming = buildPoolIdentity({
       chain: "ethereum",
@@ -305,7 +354,10 @@ describe("pool identity dedup", () => {
       isStable: true,
     });
     const reason = getIdentityDedupReason(
-      incoming, known, { derived: 1, wildcard: 1 }, { allowOptionalWildcard: true },
+      incoming,
+      known,
+      { derived: 1, wildcard: 1 },
+      { allowOptionalWildcard: true },
     );
     expect(reason).toBe("derived_unique");
   });

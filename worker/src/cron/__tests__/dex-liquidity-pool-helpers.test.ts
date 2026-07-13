@@ -3,12 +3,14 @@ import { GT_CHAIN_MAP, GT_ONLY_CHAIN_MAP } from "../../lib/chain-registry";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-cron-constants";
 import {
   buildSymbolLookups,
+  buildPoolFingerprint,
   classifyPoolType,
   computeDurabilityScore,
   computeLiquidityScore,
   computePoolPairQuality,
   computePoolStress,
   getGtDexQuality,
+  getTrackedContracts,
   getPairQuality,
   getQualityMultiplier,
   initMetrics,
@@ -215,6 +217,31 @@ describe("dex-liquidity pool helpers", () => {
     expect(addressToId.get("0xdac17f958d2ee523a2206206994597c13d831ec7")).toBe("usdt-tether");
     expect(addressToId.get("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).toBe("usdc-circle");
     expect(chainAddressToId.get("ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7")).toBe("usdt-tether");
+    expect(chainAddressToId.get("solana:HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L")).toBe("eusd-telcoin");
+    expect(chainAddressToId.get("solana:hqmycztdq9g3ozejdrueqsftlkgyfvbpd3yhatnain3l")).toBeUndefined();
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Symbol collisions detected"));
+  });
+
+  it("canonicalizes fingerprints and tracked deployments by chain type", () => {
+    expect(buildPoolFingerprint("solana", "Raydium", ["MintCase", "QuoteCase"])).toBe(
+      "fp:solana:raydium:MintCase:QuoteCase",
+    );
+    expect(buildPoolFingerprint("solana", "Raydium", ["mintCase", "QuoteCase"])).not.toBe(
+      buildPoolFingerprint("solana", "Raydium", ["MintCase", "QuoteCase"]),
+    );
+    expect(buildPoolFingerprint("ethereum", "Uniswap-v3", ["0xAbC", "0xDeF"])).toBe(
+      "fp:ethereum:uniswap-v3:0xabc:0xdef",
+    );
+
+    expect(
+      getTrackedContracts({
+        contracts: [
+          { chain: "solana", address: "MintCase", decimals: 6 },
+          { chain: "solana", address: "mintCase", decimals: 6 },
+          { chain: "ethereum", address: "0xAbC", decimals: 6 },
+          { chain: "ethereum", address: "0xabc", decimals: 6 },
+        ],
+      }).map(({ chain, address }) => `${chain}:${address}`),
+    ).toEqual(["solana:MintCase", "solana:mintCase", "ethereum:0xAbC"]);
   });
 });

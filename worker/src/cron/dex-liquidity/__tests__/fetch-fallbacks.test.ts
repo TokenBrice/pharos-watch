@@ -6,6 +6,7 @@ const activeStablecoins = vi.hoisted(() => [
     symbol: "USDC",
     geckoId: "usd-coin",
     flags: { governance: "centralized", pegCurrency: "USD", navToken: false },
+    contracts: [{ chain: "solana", address: "MintCase", decimals: 6 }],
   },
   {
     id: "usdt-tether",
@@ -28,6 +29,20 @@ vi.mock("../../../lib/cron-logger", () => ({
   logCronEvent: vi.fn(async () => {}),
 }));
 
+vi.mock("../../../lib/dexscreener", async () => {
+  const actual = await vi.importActual<typeof import("../../../lib/dexscreener")>("../../../lib/dexscreener");
+  return {
+    ...actual,
+    fetchDsTokenPoolsWithStatus: vi.fn(),
+    dsRateLimit: vi.fn(async () => {}),
+  };
+});
+
+vi.mock("../../../lib/circuit-breaker", () => ({
+  shouldAttemptFetch: vi.fn(async () => true),
+  recordOutcome: vi.fn(async () => {}),
+}));
+
 vi.mock("../../../lib/abort", async () => {
   const actual = await vi.importActual<typeof import("../../../lib/abort")>("../../../lib/abort");
   return {
@@ -43,10 +58,11 @@ import {
   buildCgTickerPriceObservations,
   filterValidCgTickers,
 } from "../coingecko-tickers-shared";
-import { fetchCgTickersFallback, getCgTickersFallbackTargets } from "../fetch-fallbacks";
+import { fetchCgTickersFallback, fetchDsFallbackPools, getCgTickersFallbackTargets } from "../fetch-fallbacks";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 import type { CgTicker, DexPriceObs, LiquidityMetrics } from "../types";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
+import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 
 function createMockDb(): D1Database {
   return {
@@ -120,6 +136,51 @@ function makeObservation(overrides: Partial<DexPriceObs> = {}): DexPriceObs {
 
 beforeEach(() => {
   vi.mocked(fetchJsonWithRetry).mockReset();
+  vi.mocked(fetchDsTokenPoolsWithStatus).mockReset();
+});
+
+describe("DexScreener fallback identity", () => {
+  it("preserves non-EVM identity case and rejects case-distinct tracked tokens", async () => {
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
+      ok: true,
+      pairs: [
+        {
+          chainId: "solana",
+          dexId: "raydium",
+          pairAddress: "PoolCase",
+          baseToken: { address: "MintCase", name: "USD Coin", symbol: "USDC" },
+          quoteToken: { address: "QuoteCase", name: "Tether", symbol: "USDT" },
+          priceUsd: "1",
+          priceNative: "1",
+          volume: { h24: 20_000, h6: 0, h1: 0, m5: 0 },
+          liquidity: { usd: 100_000, base: 0, quote: 0 },
+          pairCreatedAt: null,
+        },
+        {
+          chainId: "solana",
+          dexId: "raydium",
+          pairAddress: "poolCase",
+          baseToken: { address: "mintCase", name: "Different Token", symbol: "OTHER" },
+          quoteToken: { address: "QuoteCase", name: "Tether", symbol: "USDT" },
+          priceUsd: "1",
+          priceNative: "1",
+          volume: { h24: 20_000, h6: 0, h1: 0, m5: 0 },
+          liquidity: { usd: 100_000, base: 0, quote: 0 },
+          pairCreatedAt: null,
+        },
+      ],
+    });
+
+    const result = await fetchDsFallbackPools(createMockDb(), new Map(), new Map(), createKnownPoolIdentityIndex());
+
+    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith("solana", "MintCase", undefined);
+    expect(result.newPools.get("usdc-circle")).toEqual([
+      expect.objectContaining({
+        address: "PoolCase",
+        chain: "solana",
+      }),
+    ]);
+  });
 });
 
 describe("CoinGecko tickers shared helpers", () => {
@@ -179,26 +240,34 @@ describe("CoinGecko tickers shared helpers", () => {
   });
 
   it("builds synthetic orderbook TVL and price observations with plausibility gating", () => {
-    const summaries = buildCgTickerExchangeSummaries(new Map([
-      ["kinesis", {
-        name: "Kinesis",
-        volumeUsd: 20_000,
-        priceVolumeWeightedSum: 20_000,
-        depthDownUsd: 0,
-        depthDownCount: 0,
-        depthUpUsd: 0,
-        depthUpCount: 0,
-      }],
-      ["tiny", {
-        name: "Tiny Exchange",
-        volumeUsd: 10_000,
-        priceVolumeWeightedSum: 12_000,
-        depthDownUsd: 0,
-        depthDownCount: 0,
-        depthUpUsd: 0,
-        depthUpCount: 0,
-      }],
-    ]));
+    const summaries = buildCgTickerExchangeSummaries(
+      new Map([
+        [
+          "kinesis",
+          {
+            name: "Kinesis",
+            volumeUsd: 20_000,
+            priceVolumeWeightedSum: 20_000,
+            depthDownUsd: 0,
+            depthDownCount: 0,
+            depthUpUsd: 0,
+            depthUpCount: 0,
+          },
+        ],
+        [
+          "tiny",
+          {
+            name: "Tiny Exchange",
+            volumeUsd: 10_000,
+            priceVolumeWeightedSum: 12_000,
+            depthDownUsd: 0,
+            depthDownCount: 0,
+            depthUpUsd: 0,
+            depthUpCount: 0,
+          },
+        ],
+      ]),
+    );
 
     expect(summaries).toEqual([
       {
@@ -227,35 +296,45 @@ describe("CoinGecko tickers shared helpers", () => {
 
     const priceObs = buildCgTickerPriceObservations("usdc-circle", summaries);
 
-    expect(priceObs).toEqual([{
-      price: 1,
-      tvl: 20_000 * ORDERBOOK_TVL_FACTOR,
-      chain: "orderbook",
-      protocol: "cg-ticker-kinesis",
-    }]);
+    expect(priceObs).toEqual([
+      {
+        price: 1,
+        tvl: 20_000 * ORDERBOOK_TVL_FACTOR,
+        chain: "orderbook",
+        protocol: "cg-ticker-kinesis",
+      },
+    ]);
   });
 
   it("uses measured 2% downside orderbook depth when available, capped by volume-derived TVL", () => {
-    const summaries = buildCgTickerExchangeSummaries(new Map([
-      ["deep", {
-        name: "Deep Exchange",
-        volumeUsd: 20_000,
-        priceVolumeWeightedSum: 20_000,
-        depthDownUsd: 500_000,
-        depthDownCount: 1,
-        depthUpUsd: 450_000,
-        depthUpCount: 1,
-      }],
-      ["shallow", {
-        name: "Shallow Exchange",
-        volumeUsd: 20_000,
-        priceVolumeWeightedSum: 20_000,
-        depthDownUsd: 12_000,
-        depthDownCount: 1,
-        depthUpUsd: 18_000,
-        depthUpCount: 1,
-      }],
-    ]));
+    const summaries = buildCgTickerExchangeSummaries(
+      new Map([
+        [
+          "deep",
+          {
+            name: "Deep Exchange",
+            volumeUsd: 20_000,
+            priceVolumeWeightedSum: 20_000,
+            depthDownUsd: 500_000,
+            depthDownCount: 1,
+            depthUpUsd: 450_000,
+            depthUpCount: 1,
+          },
+        ],
+        [
+          "shallow",
+          {
+            name: "Shallow Exchange",
+            volumeUsd: 20_000,
+            priceVolumeWeightedSum: 20_000,
+            depthDownUsd: 12_000,
+            depthDownCount: 1,
+            depthUpUsd: 18_000,
+            depthUpCount: 1,
+          },
+        ],
+      ]),
+    );
 
     expect(summaries).toEqual([
       expect.objectContaining({
@@ -323,22 +402,19 @@ describe("fetchCgTickersFallback", () => {
     vi.mocked(fetchJsonWithRetry).mockImplementation(async () => ({
       response: new Response("", { status: 200 }),
       body: {
-        tickers: [makeTicker({
-          market: { name: "Kinesis", identifier: "kinesis" },
-          converted_last: { usd: 1 },
-          converted_volume: { usd: 20_000 },
-          cost_to_move_down_usd: 40_000,
-          cost_to_move_up_usd: 45_000,
-        })],
+        tickers: [
+          makeTicker({
+            market: { name: "Kinesis", identifier: "kinesis" },
+            converted_last: { usd: 1 },
+            converted_volume: { usd: 20_000 },
+            cost_to_move_down_usd: 40_000,
+            cost_to_move_up_usd: 45_000,
+          }),
+        ],
       },
     }));
 
-    const result = await fetchCgTickersFallback(
-      createMockDb(),
-      new Map(),
-      new Map(),
-      createKnownPoolIdentityIndex(),
-    );
+    const result = await fetchCgTickersFallback(createMockDb(), new Map(), new Map(), createKnownPoolIdentityIndex());
 
     const poolIdsFor = (stablecoinId: string) =>
       result.newPools.get(stablecoinId)?.map((pool) => `${pool.chain}:${pool.address}`);

@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
-import {
-  buildYieldIdentityLookups,
-  canUseSymbolOnlyYieldMatch,
-  resolveYieldCandidateStablecoinId,
-} from "../identity";
+import { buildYieldIdentityLookups, canUseSymbolOnlyYieldMatch, resolveYieldCandidateStablecoinId } from "../identity";
 
 /**
  * Audit Q-146: the identity disambiguation resolver decides whether an
@@ -12,11 +8,7 @@ import {
  * ambiguity-vs-unique boundary is the exact cross-wiring risk the lending
  * collision blocklist guards against, so it is covered here directly.
  */
-function makeCoin(
-  id: string,
-  symbol: string,
-  contracts: Array<{ chain: string; address: string }>,
-): StablecoinMeta {
+function makeCoin(id: string, symbol: string, contracts: Array<{ chain: string; address: string }>): StablecoinMeta {
   return { id, symbol, contracts } as unknown as StablecoinMeta;
 }
 
@@ -27,16 +19,35 @@ describe("resolveYieldCandidateStablecoinId", () => {
       makeCoin("usdx-b", "USDX", [{ chain: "arbitrum", address: "0xBBB" }]),
     ]);
 
-    const result = resolveYieldCandidateStablecoinId(
-      { symbol: "USDX", chain: "ethereum", address: "0xAAA" },
-      lookups,
-    );
+    const result = resolveYieldCandidateStablecoinId({ symbol: "USDX", chain: "ethereum", address: "0xAAA" }, lookups);
 
     expect(result).toEqual({
       status: "matched",
       stablecoinId: "usdx-a",
       matchType: "chain-address",
     });
+  });
+
+  it("preserves mixed-case Solana mint identity before ambiguous symbol fallback", () => {
+    const targetMint = "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1";
+    const lookups = buildYieldIdentityLookups([
+      makeCoin("usdx-a", "USDX", [{ chain: "solana", address: targetMint }]),
+      makeCoin("usdx-b", "USDX", [{ chain: "solana", address: "Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus" }]),
+    ]);
+
+    expect(
+      resolveYieldCandidateStablecoinId({ symbol: "USDX", chain: "Solana", address: targetMint }, lookups),
+    ).toEqual({
+      status: "matched",
+      stablecoinId: "usdx-a",
+      matchType: "chain-address",
+    });
+    expect(
+      resolveYieldCandidateStablecoinId(
+        { symbol: "USDX", chain: "solana", address: targetMint.toLowerCase() },
+        lookups,
+      ),
+    ).toEqual({ status: "ambiguous" });
   });
 
   it("resolves a unique chain-scoped symbol when two coins share the symbol on different chains", () => {
@@ -76,10 +87,7 @@ describe("resolveYieldCandidateStablecoinId", () => {
       makeCoin("solo-usd", "SOLO", [{ chain: "ethereum", address: "0xCCC" }]),
     ]);
 
-    const result = resolveYieldCandidateStablecoinId(
-      { symbol: "SOLO", chain: null, address: null },
-      lookups,
-    );
+    const result = resolveYieldCandidateStablecoinId({ symbol: "SOLO", chain: null, address: null }, lookups);
 
     expect(result).toEqual({
       status: "matched",
@@ -94,10 +102,7 @@ describe("resolveYieldCandidateStablecoinId", () => {
       makeCoin("usdx-b", "USDX", [{ chain: "arbitrum", address: "0xBBB" }]),
     ]);
 
-    const result = resolveYieldCandidateStablecoinId(
-      { symbol: "USDX", chain: null, address: null },
-      lookups,
-    );
+    const result = resolveYieldCandidateStablecoinId({ symbol: "USDX", chain: null, address: null }, lookups);
 
     expect(result).toEqual({ status: "ambiguous" });
   });
@@ -107,10 +112,7 @@ describe("resolveYieldCandidateStablecoinId", () => {
       makeCoin("solo-usd", "SOLO", [{ chain: "ethereum", address: "0xCCC" }]),
     ]);
 
-    const result = resolveYieldCandidateStablecoinId(
-      { symbol: "", chain: "ethereum", address: "0xNOPE" },
-      lookups,
-    );
+    const result = resolveYieldCandidateStablecoinId({ symbol: "", chain: "ethereum", address: "0xNOPE" }, lookups);
 
     expect(result).toEqual({ status: "unresolved" });
   });

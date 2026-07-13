@@ -1,3 +1,8 @@
+import {
+  canonicalExitRouteAssetKey,
+  canonicalExitRouteChain,
+  canonicalExitRouteScopedId,
+} from "@shared/lib/exit-route-identity";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type { DexApiPoolToken } from "../../lib/dex-api-types";
 import type { SymbolLookups } from "./types";
@@ -18,7 +23,7 @@ export function normalizeTokenAddress(address: string): string {
 }
 
 export function buildChainAddressKey(chain: string, address: string): string {
-  return `${chain.toLowerCase()}:${normalizeTokenAddress(address)}`;
+  return canonicalExitRouteAssetKey(chain, address);
 }
 
 export const makeChainAddressKey = buildChainAddressKey;
@@ -29,7 +34,7 @@ export function resolveStablecoinToken(
   lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
   options?: TokenResolutionOptions,
 ): TokenResolutionResult {
-  const normalizedAddress = normalizeTokenAddress(token.address);
+  const normalizedAddress = canonicalExitRouteScopedId(chain, token.address ?? "");
   if (normalizedAddress) {
     const byChainAddress = lookups.chainAddressToId.get(buildChainAddressKey(chain, normalizedAddress));
     if (byChainAddress) {
@@ -50,7 +55,7 @@ export function resolveStablecoinToken(
   const symbol = normalizeDexSymbol(token.symbol);
   if (!symbol) return { status: "unresolved" };
 
-  const chainScoped = lookups.symbolToChainScopedIds.get(symbol)?.get(chain.toLowerCase()) ?? [];
+  const chainScoped = lookups.symbolToChainScopedIds.get(symbol)?.get(canonicalExitRouteChain(chain)) ?? [];
   if (chainScoped.length === 1) {
     return {
       status: "matched",
@@ -88,5 +93,5 @@ export function getChainScopedSymbolIds(
 ): string[] {
   const normalized = normalizeDexSymbol(symbol);
   if (!normalized) return [];
-  return lookups.symbolToChainScopedIds.get(normalized)?.get(chain.toLowerCase()) ?? [];
+  return lookups.symbolToChainScopedIds.get(normalized)?.get(canonicalExitRouteChain(chain)) ?? [];
 }

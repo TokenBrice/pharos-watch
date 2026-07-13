@@ -22,6 +22,7 @@ function liquidityRow(overrides: Record<string, unknown> = {}): Record<string, u
     coverage_confidence: 0.9,
     balance_measured_tvl_usd: 12_000_000,
     organic_measured_tvl_usd: 9_000_000,
+    methodology_version: "5.10",
     deployment_chain: null,
     deployment_contract_address: null,
     deployment_outcome: null,
@@ -64,6 +65,7 @@ describe("loadDexLiquiditySnapshot", () => {
           effectiveTvlUsd: 15_000_000,
           balanceMeasuredTvlUsd: 12_000_000,
           organicMeasuredTvlUsd: 9_000_000,
+          methodologyVersion: "5.10",
           deploymentCoverage: { observedPools: 1, verifiedNoPools: 1, providerInaccessible: 1 },
         },
       },
@@ -95,7 +97,46 @@ describe("loadDexLiquiditySnapshot", () => {
       concentrationHhi: null,
       poolCount: 1,
       chainCount: 1,
+      methodologyVersion: "5.10",
     });
+  });
+
+  it("rejects redemption-family observations persisted in the DEX lane", async () => {
+    const redemptionObservation = {
+      routeId: "redeem:misrouted",
+      routeFamily: "issuer-redemption",
+      scope: { kind: "issuer", issuerId: "issuer" },
+      requestedNotionalUsd: 100_000,
+      settlementHorizonSec: 300,
+      maxCostBps: 200,
+      executableUsd: 100_000,
+      completionRatio: 1,
+      output: { kind: "fiat", currency: "USD" },
+      evidenceKind: "documented-terms",
+      confidence: "high",
+      scoreEligible: true,
+      observedAt: 100,
+      freshnessSeconds: 0,
+      commonModeKeys: ["issuer:test"],
+    };
+    const scoreComponents = {
+      exitRouteObservations: [redemptionObservation],
+      exitRouteObservationCoverage: {
+        status: "populated",
+        capabilityMatrixVersion: "test-v1",
+        retainedPoolCount: 1,
+        observationCount: 1,
+        scoreEligibleObservationCount: 1,
+        scoreEligiblePoolCount: 1,
+        unsupportedPoolCount: 0,
+        evidenceCounts: { "documented-terms": 1 },
+        unsupportedReasons: {},
+      },
+    };
+
+    await expect(
+      loadDexLiquiditySnapshot(mockDb([liquidityRow({ score_components_json: JSON.stringify(scoreComponents) })])),
+    ).rejects.toThrow("Invalid persisted DEX exit-route observations for usdc-circle");
   });
 
   it("quarantines malformed coverage evidence without suppressing valid rows", async () => {
@@ -153,6 +194,32 @@ describe("loadDexLiquiditySnapshot", () => {
     expect(result.map["usdc-circle"].deploymentCoverage).toEqual({
       observedPools: 0,
       verifiedNoPools: 1,
+      providerInaccessible: 0,
+    });
+  });
+
+  it("matches deployment coverage with chain-aware address canonicalization", async () => {
+    const solanaMint = "HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L";
+    const result = await loadDexLiquiditySnapshot(
+      mockDb([
+        liquidityRow({
+          stablecoin_id: "eusd-telcoin",
+          deployment_chain: "solana",
+          deployment_contract_address: solanaMint,
+          deployment_outcome: "observed_pools",
+        }),
+        liquidityRow({
+          stablecoin_id: "eusd-telcoin",
+          deployment_chain: "solana",
+          deployment_contract_address: solanaMint.toLowerCase(),
+          deployment_outcome: "verified_no_pools",
+        }),
+      ]),
+    );
+
+    expect(result.map["eusd-telcoin"].deploymentCoverage).toEqual({
+      observedPools: 1,
+      verifiedNoPools: 0,
       providerInaccessible: 0,
     });
   });

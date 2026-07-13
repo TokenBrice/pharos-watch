@@ -9,6 +9,14 @@ import type {
   ExitRouteOutput,
   LiquidityPoolSourceFamily,
 } from "../types/market";
+import {
+  canonicalExitRouteAssetKey,
+  canonicalExitRouteChain,
+  canonicalExitRouteScopedId,
+  canonicalExitRouteScopedKey,
+  encodeExitRouteIdentityPart,
+  normalizeExitRouteCorrelationKey,
+} from "./exit-route-identity";
 
 const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.2";
 
@@ -16,8 +24,19 @@ const DEFAULT_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as co
 const REFERENCE_NOTIONAL_USD = 1_000_000;
 const REFERENCE_COST_BPS = 200;
 const IMMEDIATE_SETTLEMENT_HORIZON_SEC = 300;
+export const P4_AMM_MODELED_TVL_MIN_RATIO = 0.5;
+export const P4_AMM_MODELED_TVL_MAX_RATIO = 2;
 
 type CapabilityLevel = "exact" | "partial" | "symbol-only" | "aggregate-only" | "absent";
+type DexRouteEvidenceKind = Extract<
+  ExitRouteEvidenceKind,
+  | "measured-executable-depth"
+  | "reserve-based-amm-simulation"
+  | "direct-orderbook-depth"
+  | "generic-tvl-proxy"
+  | "synthetic-or-fallback"
+  | "unobserved"
+>;
 
 export interface DexRouteSourceCapability {
   id: string;
@@ -35,7 +54,7 @@ export interface DexRouteSourceCapability {
   outputIdentity: CapabilityLevel;
   fees: CapabilityLevel;
   observationTime: "producer-run" | "source-observed" | "absent";
-  outputEvidenceKind: ExitRouteEvidenceKind;
+  outputEvidenceKind: DexRouteEvidenceKind;
   confidence: ExitRouteConfidence;
   outputKinds: readonly ExitRouteOutput["kind"][];
   commonModeKeyKinds: readonly string[];
@@ -220,6 +239,21 @@ export interface P4DexRouteObservationResult {
   coverage: ExitRouteObservationCoverage;
 }
 
+/**
+ * Exact-route scoring may replace the aggregate DEX path only when every
+ * retained pool produced a score-eligible modeled observation. Partial
+ * producer support remains useful shadow evidence but is not an exhaustive
+ * view of the holder's DEX exits.
+ */
+export function isDexExitRouteCoverageComplete(coverage: ExitRouteObservationCoverage | null | undefined): boolean {
+  return (
+    coverage?.status === "populated" &&
+    coverage.retainedPoolCount > 0 &&
+    coverage.unsupportedPoolCount === 0 &&
+    coverage.scoreEligiblePoolCount === coverage.retainedPoolCount
+  );
+}
+
 function roundUsd(value: number): number {
   return Math.round(Math.max(0, value) * 100) / 100;
 }
@@ -305,16 +339,16 @@ function buildCapacityCurve(
   return null;
 }
 
-function canonicalAssetKey(chain: string, address: string): string {
-  const normalizedAddress = /^0x[0-9a-f]{40}$/i.test(address.trim())
-    ? address.trim().toLowerCase()
-    : address.trim();
-  return `${normalizedKey(chain)}:${normalizedAddress}`;
-}
-
-function validateAmmExecutionModel(model: DexAmmExecutionModel): string[] {
+function validateAmmExecutionModel(
+  model: DexAmmExecutionModel,
+  context: { chain: string; stablecoinId: string; retainedTvlUsd: number },
+): string[] {
   const issues: string[] = [];
-  if (!Number.isInteger(model.trackedTokenIndex) || model.trackedTokenIndex < 0 || model.trackedTokenIndex >= model.tokens.length) {
+  if (
+    !Number.isInteger(model.trackedTokenIndex) ||
+    model.trackedTokenIndex < 0 ||
+    model.trackedTokenIndex >= model.tokens.length
+  ) {
     issues.push("invalid-tracked-token-index");
   }
   if (!Number.isFinite(model.feeRate) || model.feeRate < 0 || model.feeRate >= 1) issues.push("invalid-fee");
@@ -322,12 +356,24 @@ function validateAmmExecutionModel(model: DexAmmExecutionModel): string[] {
   const identities = new Set<string>();
   for (const token of model.tokens) {
     if (!token.address?.trim() || !token.symbol?.trim()) issues.push("missing-token-identity");
-    const identity = token.address.trim().toLowerCase();
+    const identity = canonicalExitRouteScopedId(context.chain, token.address);
     if (identities.has(identity)) issues.push("duplicate-token-identity");
     identities.add(identity);
-    if (!Number.isInteger(token.decimals) || token.decimals < 0 || token.decimals > 255) issues.push("invalid-decimals");
+    if (!Number.isInteger(token.decimals) || token.decimals < 0 || token.decimals > 255)
+      issues.push("invalid-decimals");
     if (!Number.isFinite(token.balance) || token.balance <= 0) issues.push("invalid-balance");
-    if (!Number.isFinite(token.referencePriceUsd) || token.referencePriceUsd <= 0) issues.push("invalid-reference-price");
+    if (!Number.isFinite(token.referencePriceUsd) || token.referencePriceUsd <= 0)
+      issues.push("invalid-reference-price");
+  }
+  const trackedToken = model.tokens[model.trackedTokenIndex];
+  if (trackedToken && trackedToken.trackedAssetId !== context.stablecoinId) {
+    issues.push("tracked-input-stablecoin-mismatch");
+  }
+  const modeledTvlUsd = model.tokens.reduce((total, token) => total + token.balance * token.referencePriceUsd, 0);
+  if (Number.isFinite(modeledTvlUsd) && modeledTvlUsd > 0) {
+    const modeledTvlRatio = modeledTvlUsd / context.retainedTvlUsd;
+    if (modeledTvlRatio < P4_AMM_MODELED_TVL_MIN_RATIO) issues.push("modeled-tvl-below-retained-bound");
+    if (modeledTvlRatio > P4_AMM_MODELED_TVL_MAX_RATIO) issues.push("modeled-tvl-above-retained-bound");
   }
   if (model.invariant === "constant-product") {
     if (model.source !== "raydium" || model.tokens.length !== 2) issues.push("invalid-constant-product-model");
@@ -344,18 +390,14 @@ function validateAmmExecutionModel(model: DexAmmExecutionModel): string[] {
   return [...new Set(issues)];
 }
 
-function simulateAmmOutput(
-  model: DexAmmExecutionModel,
-  outputTokenIndex: number,
-  inputAmount: number,
-): number {
+function simulateAmmOutput(model: DexAmmExecutionModel, outputTokenIndex: number, inputAmount: number): number {
   const input = model.tokens[model.trackedTokenIndex]!;
   const output = model.tokens[outputTokenIndex]!;
   const effectiveInput = inputAmount * (1 - model.feeRate);
   if (!Number.isFinite(effectiveInput) || effectiveInput <= 0) return 0;
 
   if (model.invariant === "constant-product") {
-    return output.balance * effectiveInput / (input.balance + effectiveInput);
+    return (output.balance * effectiveInput) / (input.balance + effectiveInput);
   }
 
   const inputWeight = input.weight!;
@@ -373,10 +415,14 @@ function executableAmmInputUsd(
   const input = model.tokens[model.trackedTokenIndex]!;
   const output = model.tokens[outputTokenIndex]!;
   const minimumOutputRatio = Math.max(0, 1 - maxCostBps / 10_000);
-  const marginalOutputRatio = model.invariant === "constant-product"
-    ? (output.balance / input.balance) * (1 - model.feeRate) * output.referencePriceUsd / input.referencePriceUsd
-    : (output.balance / input.balance) * (input.weight! / output.weight!) *
-      (1 - model.feeRate) * output.referencePriceUsd / input.referencePriceUsd;
+  const marginalOutputRatio =
+    model.invariant === "constant-product"
+      ? ((output.balance / input.balance) * (1 - model.feeRate) * output.referencePriceUsd) / input.referencePriceUsd
+      : ((output.balance / input.balance) *
+          (input.weight! / output.weight!) *
+          (1 - model.feeRate) *
+          output.referencePriceUsd) /
+        input.referencePriceUsd;
   if (!Number.isFinite(marginalOutputRatio) || marginalOutputRatio + 1e-12 < minimumOutputRatio) return 0;
 
   const qualifies = (inputUsd: number): boolean => {
@@ -397,19 +443,18 @@ function executableAmmInputUsd(
   return lower;
 }
 
-function buildAmmCapacityCurve(
-  model: DexAmmExecutionModel,
-  outputTokenIndex: number,
-): ExitRouteCapacityPoint[] {
-  return DEFAULT_NOTIONALS_USD.map((notional) => buildCapacityPoint(
-    notional,
-    REFERENCE_COST_BPS,
-    executableAmmInputUsd(model, outputTokenIndex, notional, REFERENCE_COST_BPS),
-  ));
+function buildAmmCapacityCurve(model: DexAmmExecutionModel, outputTokenIndex: number): ExitRouteCapacityPoint[] {
+  return DEFAULT_NOTIONALS_USD.map((notional) =>
+    buildCapacityPoint(
+      notional,
+      REFERENCE_COST_BPS,
+      executableAmmInputUsd(model, outputTokenIndex, notional, REFERENCE_COST_BPS),
+    ),
+  );
 }
 
 function outputFromAmmToken(chain: string, token: DexAmmExecutionToken): ExitRouteOutput {
-  const assetKey = canonicalAssetKey(chain, token.address);
+  const assetKey = canonicalExitRouteAssetKey(chain, token.address);
   if (token.trackedAssetId) {
     return {
       kind: "tracked-stablecoin",
@@ -473,9 +518,12 @@ export function validateExitRouteCapacityCurve(points: readonly ExitRouteCapacit
 }
 
 function commonModeKeys(pool: P4DexRoutePoolInput, output: ExitRouteOutput): string[] {
-  const keys = new Set<string>([`protocol:${normalizedKey(pool.project)}`, `pool:${normalizedKey(pool.poolId)}`]);
+  const keys = new Set<string>([
+    `protocol:${normalizedKey(pool.project)}`,
+    `pool:${canonicalExitRouteScopedKey(pool.chain, pool.poolId)}`,
+  ]);
   if (pool.poolType === "orderbook") keys.add(`venue:${normalizedKey(pool.project)}`);
-  else keys.add(`chain:${normalizedKey(pool.chain)}`);
+  else keys.add(`chain:${canonicalExitRouteChain(pool.chain)}`);
   if (output.currency) keys.add(`fiat:${normalizedKey(output.currency)}`);
   for (const assetId of output.trackedAssetIds ?? []) keys.add(`asset:${normalizedKey(assetId)}`);
   for (const assetKey of output.assetKeys ?? []) keys.add(`token:${assetKey}`);
@@ -483,7 +531,11 @@ function commonModeKeys(pool: P4DexRoutePoolInput, output: ExitRouteOutput): str
     if (item.assetId) keys.add(`asset:${normalizedKey(item.assetId)}`);
     else if (item.symbol) keys.add(`asset-symbol:${normalizedKey(item.symbol)}`);
   }
-  return [...keys].sort();
+  return [...keys].map(normalizeExitRouteCorrelationKey).filter(Boolean).sort();
+}
+
+function buildDexRouteId(parts: readonly string[]): string {
+  return `dex:${parts.map(encodeExitRouteIdentityPart).join(":")}`;
 }
 
 export function buildP4DexExitRouteObservations(params: {
@@ -495,6 +547,7 @@ export function buildP4DexExitRouteObservations(params: {
   const evidenceCounts: Record<string, number> = {};
   const unsupportedReasons: Record<string, number> = {};
   let unsupportedPoolCount = 0;
+  let scoreEligiblePoolCount = 0;
 
   for (const pool of params.retainedPools) {
     if (!Number.isFinite(pool.tvlUsd) || pool.tvlUsd <= 0 || !pool.poolId || !pool.project || !pool.chain) {
@@ -505,7 +558,11 @@ export function buildP4DexExitRouteObservations(params: {
     const capability = capabilityForPool(pool);
     const ammModel = pool.extra?.ammExecutionModel;
     if (ammModel != null) {
-      const modelIssues = validateAmmExecutionModel(ammModel);
+      const modelIssues = validateAmmExecutionModel(ammModel, {
+        chain: pool.chain,
+        stablecoinId: params.stablecoinId,
+        retainedTvlUsd: pool.tvlUsd,
+      });
       if (modelIssues.length > 0) {
         unsupportedPoolCount++;
         for (const issue of modelIssues) {
@@ -522,17 +579,19 @@ export function buildP4DexExitRouteObservations(params: {
         const curve = buildAmmCapacityCurve(ammModel, outputTokenIndex);
         if (validateExitRouteCapacityCurve(curve).length > 0) continue;
         const referencePoint = curve.find(
-          (point) => point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD &&
-            point.maxCostBps === REFERENCE_COST_BPS,
+          (point) => point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD && point.maxCostBps === REFERENCE_COST_BPS,
         );
         if (!referencePoint) continue;
 
         const output = outputFromAmmToken(pool.chain, outputToken);
-        const outputIdentity = canonicalAssetKey(pool.chain, outputToken.address);
+        const outputIdentity = canonicalExitRouteAssetKey(pool.chain, outputToken.address);
         observations.push({
-          routeId:
-            `dex:${normalizedKey(params.stablecoinId)}:${normalizedKey(pool.source)}:` +
-            `${normalizedKey(pool.poolId)}:${normalizedKey(outputIdentity)}`,
+          routeId: buildDexRouteId([
+            normalizedKey(params.stablecoinId),
+            normalizedKey(pool.source),
+            canonicalExitRouteScopedKey(pool.chain, pool.poolId),
+            outputIdentity,
+          ]),
           routeFamily: "dex-amm",
           scope: {
             kind: "chain-contract",
@@ -554,13 +613,14 @@ export function buildP4DexExitRouteObservations(params: {
           commonModeKeys: commonModeKeys(pool, output),
           capacityCurve: curve,
         });
-        evidenceCounts[capability.outputEvidenceKind] =
-          (evidenceCounts[capability.outputEvidenceKind] ?? 0) + 1;
+        evidenceCounts[capability.outputEvidenceKind] = (evidenceCounts[capability.outputEvidenceKind] ?? 0) + 1;
         emittedForPool++;
       }
       if (emittedForPool === 0) {
         unsupportedPoolCount++;
         unsupportedReasons.noExecutableCounterAsset = (unsupportedReasons.noExecutableCounterAsset ?? 0) + 1;
+      } else if (capability.scoreEligible) {
+        scoreEligiblePoolCount++;
       }
       continue;
     }
@@ -589,7 +649,11 @@ export function buildP4DexExitRouteObservations(params: {
     const output = outputFromPool(pool);
     const orderbook = capability.model === "direct-orderbook";
     observations.push({
-      routeId: `dex:${normalizedKey(params.stablecoinId)}:${normalizedKey(pool.source)}:${normalizedKey(pool.poolId)}`,
+      routeId: buildDexRouteId([
+        normalizedKey(params.stablecoinId),
+        normalizedKey(pool.source),
+        canonicalExitRouteScopedKey(pool.chain, pool.poolId),
+      ]),
       routeFamily: orderbook ? "dex-orderbook" : "dex-amm",
       scope: orderbook
         ? { kind: "venue", venue: pool.project, protocol: pool.project }
@@ -614,6 +678,7 @@ export function buildP4DexExitRouteObservations(params: {
       capacityCurve: curve,
     });
     evidenceCounts[capability.outputEvidenceKind] = (evidenceCounts[capability.outputEvidenceKind] ?? 0) + 1;
+    if (capability.scoreEligible) scoreEligiblePoolCount++;
   }
 
   return {
@@ -624,6 +689,7 @@ export function buildP4DexExitRouteObservations(params: {
       retainedPoolCount: params.retainedPools.length,
       observationCount: observations.length,
       scoreEligibleObservationCount: observations.filter((observation) => observation.scoreEligible).length,
+      scoreEligiblePoolCount,
       unsupportedPoolCount,
       evidenceCounts,
       unsupportedReasons,

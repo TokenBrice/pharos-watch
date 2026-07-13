@@ -1,11 +1,44 @@
 import { describe, expect, it } from "vitest";
+import { ExitRouteObservationCoverageSchema } from "@shared/types/market";
 import {
   DEX_ROUTE_SOURCE_CAPABILITIES,
+  P4_AMM_MODELED_TVL_MAX_RATIO,
+  P4_AMM_MODELED_TVL_MIN_RATIO,
   buildP4DexExitRouteObservations,
+  isDexExitRouteCoverageComplete,
   validateExitRouteCapacityCurve,
 } from "../p4-exit-route-capacity";
 
 describe("P4 DEX exit route observations", () => {
+  it("rejects internally inconsistent producer coverage counts", () => {
+    const coverage = {
+      status: "populated",
+      capabilityMatrixVersion: "test-v1",
+      retainedPoolCount: 1,
+      observationCount: 0,
+      scoreEligibleObservationCount: 0,
+      scoreEligiblePoolCount: 1,
+      unsupportedPoolCount: 0,
+      evidenceCounts: {},
+      unsupportedReasons: {},
+    };
+
+    expect(ExitRouteObservationCoverageSchema.safeParse(coverage).success).toBe(false);
+    expect(
+      ExitRouteObservationCoverageSchema.safeParse({
+        ...coverage,
+        scoreEligiblePoolCount: 0,
+        scoreEligibleObservationCount: 1,
+      }).success,
+    ).toBe(false);
+    expect(
+      ExitRouteObservationCoverageSchema.safeParse({
+        ...coverage,
+        scoreEligiblePoolCount: 0,
+        unsupportedPoolCount: 2,
+      }).success,
+    ).toBe(false);
+  });
   it("uses retained orderbook depth at its measured 2% bound", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
@@ -46,6 +79,82 @@ describe("P4 DEX exit route observations", () => {
     });
     expect(result.observations[0]!.capacityCurve).toHaveLength(4);
     expect(validateExitRouteCapacityCurve(result.observations[0]!.capacityCurve!)).toEqual([]);
+  });
+
+  it("does not infer complete pool coverage from multiple observations emitted by one exact pool", () => {
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [
+        {
+          poolId: "ethereum:0x0000000000000000000000000000000000000001",
+          project: "balancer",
+          chain: "ethereum",
+          tvlUsd: 3_000_000,
+          symbol: "USDC / USDT / DAI",
+          poolType: "balancer-weighted",
+          source: "direct_api",
+          extra: {
+            ammExecutionModel: {
+              source: "balancer",
+              invariant: "weighted-constant-mean",
+              trackedTokenIndex: 0,
+              feeRate: 0.001,
+              tokens: [
+                {
+                  address: "0x0000000000000000000000000000000000000011",
+                  symbol: "USDC",
+                  decimals: 6,
+                  balance: 1_000_000,
+                  referencePriceUsd: 1,
+                  referencePriceSource: "tracked-market",
+                  trackedAssetId: "usdc-circle",
+                  weight: 0.34,
+                },
+                {
+                  address: "0x0000000000000000000000000000000000000012",
+                  symbol: "USDT",
+                  decimals: 6,
+                  balance: 1_000_000,
+                  referencePriceUsd: 1,
+                  referencePriceSource: "tracked-market",
+                  trackedAssetId: "usdt-tether",
+                  weight: 0.33,
+                },
+                {
+                  address: "0x0000000000000000000000000000000000000013",
+                  symbol: "DAI",
+                  decimals: 18,
+                  balance: 1_000_000,
+                  referencePriceUsd: 1,
+                  referencePriceSource: "tracked-market",
+                  trackedAssetId: "dai-makerdao",
+                  weight: 0.33,
+                },
+              ],
+            },
+          },
+        },
+        {
+          poolId: "orderbook:coinbase:usdc-circle",
+          project: "coinbase",
+          chain: "orderbook",
+          tvlUsd: 1_000_000,
+          symbol: "USDC / USD",
+          poolType: "orderbook",
+          source: "cg_tickers",
+          extra: { orderbookDepthUsd: 500_000 },
+        },
+      ],
+    });
+
+    expect(result.coverage).toMatchObject({
+      retainedPoolCount: 2,
+      scoreEligibleObservationCount: 2,
+      scoreEligiblePoolCount: 1,
+      unsupportedPoolCount: 0,
+    });
+    expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(false);
   });
 
   it("reports shaped Curve evidence as non-executable instead of inferring depth from TVL", () => {
@@ -150,7 +259,230 @@ describe("P4 DEX exit route observations", () => {
     expect(result.observations[0]!.executableUsd).toBeGreaterThan(80_000);
     expect(result.observations[0]!.executableUsd).toBeLessThan(90_000);
     expect(result.observations[0]!.commonModeKeys).toContain("token:solana:UsdtMint");
+    expect(result.observations[0]!.routeId).toBe("dex:usdc-circle:direct-api:solana%3Araydium-pool:solana%3AUsdtMint");
     expect(validateExitRouteCapacityCurve(result.observations[0]!.capacityCurve!)).toEqual([]);
+  });
+
+  it("keeps case-distinct Solana pool and mint identities in distinct routes", () => {
+    const buildPool = (poolId: string, outputMint: string) => ({
+      poolId,
+      project: "raydium",
+      chain: "Solana",
+      tvlUsd: 4_000_000,
+      symbol: "USDC / USDT",
+      poolType: "raydium-amm",
+      source: "direct_api" as const,
+      extra: {
+        ammExecutionModel: {
+          source: "raydium" as const,
+          invariant: "constant-product" as const,
+          trackedTokenIndex: 0,
+          feeRate: 0.0025,
+          tokens: [
+            {
+              address: "TrackedMint",
+              symbol: "USDC",
+              decimals: 6,
+              balance: 2_000_000,
+              referencePriceUsd: 1,
+              referencePriceSource: "tracked-market" as const,
+              trackedAssetId: "usdc-circle",
+            },
+            {
+              address: outputMint,
+              symbol: "USDT",
+              decimals: 6,
+              balance: 2_000_000,
+              referencePriceUsd: 1,
+              referencePriceSource: "tracked-market" as const,
+              trackedAssetId: "usdt-tether",
+            },
+          ],
+        },
+      },
+    });
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [buildPool("solana:PoolCase", "OutputMint"), buildPool("solana:poolCase", "outputMint")],
+    });
+
+    expect(result.observations).toHaveLength(2);
+    expect(new Set(result.observations.map((observation) => observation.routeId)).size).toBe(2);
+    expect(result.observations.map((observation) => observation.routeId)).toEqual([
+      "dex:usdc-circle:direct-api:solana%3APoolCase:solana%3AOutputMint",
+      "dex:usdc-circle:direct-api:solana%3ApoolCase:solana%3AoutputMint",
+    ]);
+    expect(result.observations[0]!.commonModeKeys).toContain("pool:solana:PoolCase");
+    expect(result.observations[1]!.commonModeKeys).toContain("pool:solana:poolCase");
+  });
+
+  it("collapses EVM checksum variants when validating duplicate model tokens", () => {
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [
+        {
+          poolId: "ethereum:0x0000000000000000000000000000000000000001",
+          project: "balancer",
+          chain: "Ethereum",
+          tvlUsd: 2_000_000,
+          symbol: "USDC / USDC",
+          poolType: "balancer-weighted",
+          source: "direct_api",
+          extra: {
+            ammExecutionModel: {
+              source: "balancer",
+              invariant: "weighted-constant-mean",
+              trackedTokenIndex: 0,
+              feeRate: 0.001,
+              tokens: [
+                {
+                  address: "0xAbCd000000000000000000000000000000000001",
+                  symbol: "USDC",
+                  decimals: 6,
+                  balance: 1_000_000,
+                  referencePriceUsd: 1,
+                  referencePriceSource: "tracked-market",
+                  trackedAssetId: "usdc-circle",
+                  weight: 0.5,
+                },
+                {
+                  address: "0xaBcD000000000000000000000000000000000001",
+                  symbol: "USDC",
+                  decimals: 6,
+                  balance: 1_000_000,
+                  referencePriceUsd: 1,
+                  referencePriceSource: "tracked-market",
+                  trackedAssetId: "usdc-circle",
+                  weight: 0.5,
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(result.observations).toEqual([]);
+    expect(result.coverage).toMatchObject({
+      retainedPoolCount: 1,
+      unsupportedPoolCount: 1,
+      unsupportedReasons: { "invalidExecutionModel:duplicate-token-identity": 1 },
+    });
+  });
+
+  it("requires the exact model input to identify the scored stablecoin", () => {
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [
+        {
+          poolId: "solana:TrackedMismatchPool",
+          project: "raydium",
+          chain: "solana",
+          tvlUsd: 4_000_000,
+          symbol: "USDT / USDC",
+          poolType: "raydium-amm",
+          source: "direct_api",
+          extra: {
+            ammExecutionModel: {
+              source: "raydium",
+              invariant: "constant-product",
+              trackedTokenIndex: 0,
+              feeRate: 0.0025,
+              tokens: [
+                {
+                  address: "UsdtMint",
+                  symbol: "USDT",
+                  decimals: 6,
+                  balance: 2_000_000,
+                  referencePriceUsd: 1,
+                  referencePriceSource: "tracked-market",
+                  trackedAssetId: "usdt-tether",
+                },
+                {
+                  address: "UsdcMint",
+                  symbol: "USDC",
+                  decimals: 6,
+                  balance: 2_000_000,
+                  referencePriceUsd: 1,
+                  referencePriceSource: "tracked-market",
+                  trackedAssetId: "usdc-circle",
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(result.observations).toEqual([]);
+    expect(result.coverage).toMatchObject({
+      retainedPoolCount: 1,
+      unsupportedPoolCount: 1,
+      unsupportedReasons: { "invalidExecutionModel:tracked-input-stablecoin-mismatch": 1 },
+    });
+  });
+
+  it("accepts coherent model TVL at the named bounds and quarantines mismatches", () => {
+    const buildPool = (poolId: string, retainedTvlUsd: number) => ({
+      poolId,
+      project: "raydium",
+      chain: "solana",
+      tvlUsd: retainedTvlUsd,
+      symbol: "USDC / USDT",
+      poolType: "raydium-amm",
+      source: "direct_api" as const,
+      extra: {
+        ammExecutionModel: {
+          source: "raydium" as const,
+          invariant: "constant-product" as const,
+          trackedTokenIndex: 0,
+          feeRate: 0.0025,
+          tokens: [
+            {
+              address: "UsdcMint",
+              symbol: "USDC",
+              decimals: 6,
+              balance: 1_000_000,
+              referencePriceUsd: 1,
+              referencePriceSource: "tracked-market" as const,
+              trackedAssetId: "usdc-circle",
+            },
+            {
+              address: "UsdtMint",
+              symbol: "USDT",
+              decimals: 6,
+              balance: 1_000_000,
+              referencePriceUsd: 1,
+              referencePriceSource: "tracked-market" as const,
+              trackedAssetId: "usdt-tether",
+            },
+          ],
+        },
+      },
+    });
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [
+        buildPool("solana:LowerBound", 2_000_000 / P4_AMM_MODELED_TVL_MIN_RATIO),
+        buildPool("solana:UpperBound", 2_000_000 / P4_AMM_MODELED_TVL_MAX_RATIO),
+        buildPool("solana:TooLarge", 5_000_000),
+        buildPool("solana:TooSmall", 500_000),
+      ],
+    });
+
+    expect(result.observations).toHaveLength(2);
+    expect(result.coverage).toMatchObject({
+      retainedPoolCount: 4,
+      unsupportedPoolCount: 2,
+      unsupportedReasons: {
+        "invalidExecutionModel:modeled-tvl-below-retained-bound": 1,
+        "invalidExecutionModel:modeled-tvl-above-retained-bound": 1,
+      },
+    });
   });
 
   it("values Balancer weighted output with that token's own reference price", () => {

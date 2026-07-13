@@ -1,7 +1,9 @@
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
+import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
+import type { DsPair, DsTrackedTokenPrice } from "../../lib/dexscreener";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, GtNewPool } from "./types";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
@@ -73,7 +75,7 @@ export type CrawlTokenPoolsConfig<TRawPool, TNewPool extends GtNewPool> = {
   }) => Promise<boolean>;
   fetchPools: (tokenAddress: string, sourceChain: string, signal?: AbortSignal) => Promise<TRawPool[]>;
   onRequestResult?: (token: CrawlToken, status: "success" | "failure") => void;
-  parsePool: (rawPool: TRawPool) => ParsedPool | null;
+  parsePool: (rawPool: TRawPool, chain: string) => ParsedPool | null;
   buildNewPool: (args: BuildNewPoolArgs<TRawPool>) => TNewPool;
 };
 
@@ -85,6 +87,34 @@ export function shouldSkipFallbackCurvePool(chain: string, dexId: string): boole
   return dexId.startsWith("curve") && NATIVE_CURVE_API_CHAINS.has(chain);
 }
 
+export function getChainAwareDsTrackedTokenPriceUsd(
+  pair: DsPair,
+  trackedAddress: string,
+  chain: string,
+): DsTrackedTokenPrice {
+  const tracked = canonicalExitRouteScopedId(chain, trackedAddress);
+  const baseAddress = canonicalExitRouteScopedId(chain, pair.baseToken.address);
+  const quoteAddress = canonicalExitRouteScopedId(chain, pair.quoteToken.address);
+  const basePriceUsd = Number.parseFloat(pair.priceUsd ?? "");
+
+  if (tracked === baseAddress) {
+    return {
+      side: "base",
+      priceUsd: Number.isFinite(basePriceUsd) && basePriceUsd > 0 ? basePriceUsd : null,
+    };
+  }
+  if (tracked !== quoteAddress) return { side: null, priceUsd: null };
+
+  const priceNative = Number.parseFloat(pair.priceNative ?? "");
+  return {
+    side: "quote",
+    priceUsd:
+      Number.isFinite(basePriceUsd) && basePriceUsd > 0 && Number.isFinite(priceNative) && priceNative > 0
+        ? basePriceUsd / priceNative
+        : null,
+  };
+}
+
 function resolveStablecoinSide(
   chain: string,
   stablecoinAddress: string,
@@ -93,9 +123,9 @@ function resolveStablecoinSide(
   quoteTokenAddress: string,
   chainAddressToId: Map<string, string>,
 ): "base" | "quote" | null {
-  const addressLower = stablecoinAddress.toLowerCase();
-  if (baseTokenAddress === addressLower) return "base";
-  if (quoteTokenAddress === addressLower) return "quote";
+  const address = canonicalExitRouteScopedId(chain, stablecoinAddress);
+  if (canonicalExitRouteScopedId(chain, baseTokenAddress) === address) return "base";
+  if (canonicalExitRouteScopedId(chain, quoteTokenAddress) === address) return "quote";
 
   const baseId = chainAddressToId.get(makeChainAddressKey(chain, baseTokenAddress));
   if (baseId === stablecoinId) return "base";
@@ -139,7 +169,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
       for (const rawPool of pools) {
         let parsed: ParsedPool | null = null;
         try {
-          parsed = config.parsePool(rawPool);
+          parsed = config.parsePool(rawPool, token.ourChain);
         } catch {
           continue;
         }
@@ -176,7 +206,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
           config.priceObs.set(token.stablecoinId, obs);
         }
 
-        const poolKey = `${token.ourChain}:${parsed.poolAddress}`;
+        const poolKey = canonicalExitRouteScopedKey(token.ourChain, parsed.poolAddress);
         const fpKey = buildPoolFingerprint(token.ourChain, parsed.dexId, [
           parsed.baseTokenAddress,
           parsed.quoteTokenAddress,
@@ -197,22 +227,27 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
         const maturityDays = toMaturityDays(parsed.createdAt, nowSec);
 
         const poolList = config.newPools.get(token.stablecoinId) ?? [];
-        poolList.push(config.buildNewPool({
-          rawPool,
-          parsed,
-          stablecoinId: token.stablecoinId,
-          chain: token.ourChain,
-          price,
-          cappedTvlUsd,
-          maturityDays,
-        }));
+        poolList.push(
+          config.buildNewPool({
+            rawPool,
+            parsed,
+            stablecoinId: token.stablecoinId,
+            chain: token.ourChain,
+            price,
+            cappedTvlUsd,
+            maturityDays,
+          }),
+        );
         config.newPools.set(token.stablecoinId, poolList);
         config.stats.poolsNew++;
       }
     } catch (err) {
       if (config.signal?.aborted) throw err;
       config.onRequestResult?.(token, "failure");
-      console.warn(`[dex-liquidity] ${config.sourceLabel} pool crawl error for ${token.ourChain}:${token.address}:`, err);
+      console.warn(
+        `[dex-liquidity] ${config.sourceLabel} pool crawl error for ${token.ourChain}:${token.address}:`,
+        err,
+      );
     }
   }
 

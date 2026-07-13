@@ -564,8 +564,8 @@ describe("processPoolMetrics", () => {
       ),
       new Map(),
       new Map([
-        ["solana:epjfwdd5aufqssqem2qa5n8y7w5a4d8nqv1f6p5a6x1", "usdc-circle"],
-        ["solana:es9vmfrzacermjfrf4h2fy6q2jve4yjzs83p2wm8wus", "usdt-tether"],
+        ["solana:EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", "usdc-circle"],
+        ["solana:Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus", "usdt-tether"],
       ]),
       new Map(),
       new Map(),

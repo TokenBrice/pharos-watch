@@ -25,6 +25,14 @@ export const ExitRouteEvidenceKindSchema = z.union([
 ]);
 export type ExitRouteEvidenceKind = z.infer<typeof ExitRouteEvidenceKindSchema>;
 
+const RedemptionExitEvidenceKindSchema = z.enum([
+  "documented-terms",
+  "live-reserve-state",
+  "onchain-contract-state",
+  "manual-review",
+]);
+export type RedemptionExitEvidenceKind = z.infer<typeof RedemptionExitEvidenceKindSchema>;
+
 export const ExitRouteConfidenceSchema = z.enum(["high", "medium", "low", "unknown"]);
 export type ExitRouteConfidence = z.infer<typeof ExitRouteConfidenceSchema>;
 
@@ -87,7 +95,7 @@ export const ExitRouteCapacityPointSchema = z.object({
 });
 export type ExitRouteCapacityPoint = z.infer<typeof ExitRouteCapacityPointSchema>;
 
-export const ExitRouteObservationSchema = z.object({
+const ExitRouteObservationBaseSchema = z.object({
   routeId: z.string().min(1),
   routeFamily: ExitRouteFamilySchema,
   scope: ExitRouteScopeSchema,
@@ -105,16 +113,110 @@ export const ExitRouteObservationSchema = z.object({
   commonModeKeys: z.array(z.string().min(1)),
   capacityCurve: z.array(ExitRouteCapacityPointSchema).min(1).max(16).optional(),
 });
+
+const DEX_EXIT_ROUTE_FAMILIES = new Set<ExitRouteFamily>(["dex-amm", "dex-orderbook"]);
+const REDEMPTION_EXIT_ROUTE_FAMILIES = new Set<ExitRouteFamily>([
+  "issuer-redemption",
+  "protocol-redemption",
+  "eventual-redemption",
+]);
+const DEX_EXIT_EVIDENCE_KINDS = new Set<string>(DexExitEvidenceKindSchema.options);
+const REDEMPTION_EXIT_EVIDENCE_KINDS = new Set<string>(RedemptionExitEvidenceKindSchema.options);
+
+function enforceDexExitRouteLane(observation: z.infer<typeof ExitRouteObservationBaseSchema>, ctx: z.RefinementCtx) {
+  if (!DEX_EXIT_ROUTE_FAMILIES.has(observation.routeFamily)) {
+    ctx.addIssue({ code: "custom", path: ["routeFamily"], message: "DEX observations require a DEX route family" });
+  }
+  if (!DEX_EXIT_EVIDENCE_KINDS.has(observation.evidenceKind)) {
+    ctx.addIssue({ code: "custom", path: ["evidenceKind"], message: "DEX observations require DEX evidence" });
+  }
+}
+
+function enforceRedemptionExitRouteLane(
+  observation: z.infer<typeof ExitRouteObservationBaseSchema>,
+  ctx: z.RefinementCtx,
+) {
+  if (!REDEMPTION_EXIT_ROUTE_FAMILIES.has(observation.routeFamily)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["routeFamily"],
+      message: "redemption observations require a redemption route family",
+    });
+  }
+  if (!REDEMPTION_EXIT_EVIDENCE_KINDS.has(observation.evidenceKind)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["evidenceKind"],
+      message: "redemption observations require redemption evidence",
+    });
+  }
+  if (observation.routeFamily === "eventual-redemption" && observation.scoreEligible) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["scoreEligible"],
+      message: "eventual redemption observations are diagnostic-only",
+    });
+  }
+}
+
+export const DexExitRouteObservationSchema = ExitRouteObservationBaseSchema.superRefine((observation, ctx) => {
+  enforceDexExitRouteLane(observation, ctx);
+});
+export type DexExitRouteObservation = z.infer<typeof DexExitRouteObservationSchema>;
+
+export const RedemptionExitRouteObservationSchema = ExitRouteObservationBaseSchema.superRefine((observation, ctx) => {
+  enforceRedemptionExitRouteLane(observation, ctx);
+});
+export type RedemptionExitRouteObservation = z.infer<typeof RedemptionExitRouteObservationSchema>;
+
+export const ExitRouteObservationSchema = ExitRouteObservationBaseSchema.superRefine((observation, ctx) => {
+  if (DEX_EXIT_ROUTE_FAMILIES.has(observation.routeFamily)) enforceDexExitRouteLane(observation, ctx);
+  else enforceRedemptionExitRouteLane(observation, ctx);
+});
 export type ExitRouteObservation = z.infer<typeof ExitRouteObservationSchema>;
 
-export const ExitRouteObservationCoverageSchema = z.object({
-  status: z.enum(["populated", "unsupported", "unknown"]),
-  capabilityMatrixVersion: z.string().min(1),
-  retainedPoolCount: z.number().int().nonnegative(),
-  observationCount: z.number().int().nonnegative(),
-  scoreEligibleObservationCount: z.number().int().nonnegative(),
-  unsupportedPoolCount: z.number().int().nonnegative(),
-  evidenceCounts: z.record(z.string(), z.number().int().nonnegative()),
-  unsupportedReasons: z.record(z.string(), z.number().int().nonnegative()),
-});
+export const ExitRouteObservationCoverageSchema = z
+  .object({
+    status: z.enum(["populated", "unsupported", "unknown"]),
+    capabilityMatrixVersion: z.string().min(1),
+    retainedPoolCount: z.number().int().nonnegative(),
+    observationCount: z.number().int().nonnegative(),
+    scoreEligibleObservationCount: z.number().int().nonnegative(),
+    scoreEligiblePoolCount: z.number().int().nonnegative().optional(),
+    unsupportedPoolCount: z.number().int().nonnegative(),
+    evidenceCounts: z.record(z.string(), z.number().int().nonnegative()),
+    unsupportedReasons: z.record(z.string(), z.number().int().nonnegative()),
+  })
+  .superRefine((coverage, ctx) => {
+    if (coverage.scoreEligibleObservationCount > coverage.observationCount) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["scoreEligibleObservationCount"],
+        message: "score-eligible observations cannot exceed total observations",
+      });
+    }
+    if (coverage.unsupportedPoolCount > coverage.retainedPoolCount) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["unsupportedPoolCount"],
+        message: "unsupported pools cannot exceed retained pools",
+      });
+    }
+    if (coverage.scoreEligiblePoolCount != null) {
+      if (coverage.scoreEligiblePoolCount > coverage.retainedPoolCount) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["scoreEligiblePoolCount"],
+          message: "score-eligible pools cannot exceed retained pools",
+        });
+      }
+      if (coverage.scoreEligiblePoolCount > coverage.scoreEligibleObservationCount) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["scoreEligiblePoolCount"],
+          message: "each score-eligible pool requires a score-eligible observation",
+        });
+      }
+    }
+  });
 export type ExitRouteObservationCoverage = z.infer<typeof ExitRouteObservationCoverageSchema>;

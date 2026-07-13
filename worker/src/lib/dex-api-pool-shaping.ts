@@ -5,6 +5,7 @@ import { buildPoolIdentity } from "../cron/dex-liquidity/pool-identity";
 import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sanity";
 import type { PriceValidationReferences } from "./price-validation";
 import type { DexAmmExecutionModel, DexAmmExecutionToken } from "@shared/types/market";
+import { canonicalExitRouteScopedId, canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { DexApiFetchResult, DexApiPool, DexApiPoolToken } from "./dex-api-types";
 import {
   derivePoolVolume24hUsd,
@@ -50,9 +51,9 @@ const DEX_DIAGNOSTIC_SAMPLE_LIMIT = 12;
 const DEX_DIAGNOSTIC_MAX_CHARS = 240;
 
 function boundDexDiagnostics(values: readonly string[]): string[] {
-  const bounded = values.slice(0, DEX_DIAGNOSTIC_SAMPLE_LIMIT).map((value) =>
-    value.replace(/\s+/g, " ").trim().slice(0, DEX_DIAGNOSTIC_MAX_CHARS)
-  );
+  const bounded = values
+    .slice(0, DEX_DIAGNOSTIC_SAMPLE_LIMIT)
+    .map((value) => value.replace(/\s+/g, " ").trim().slice(0, DEX_DIAGNOSTIC_MAX_CHARS));
   const omitted = values.length - bounded.length;
   if (omitted > 0) bounded.push(`${omitted} additional diagnostic(s) omitted`);
   return bounded;
@@ -110,16 +111,18 @@ export function normalizeDexApiPoolsForMerge(pools: DexApiPool[]): DexApiPoolNor
       continue;
     }
 
-    const balances = Array.isArray(pool.balances) &&
+    const balances =
+      Array.isArray(pool.balances) &&
       pool.balances.length === tokens.length &&
       pool.balances.every((balance) => toNonNegativeFiniteNumberOrNull(balance) != null)
-      ? pool.balances
-      : null;
-    const tokenVolumes24h = Array.isArray(pool.tokenVolumes24h) &&
+        ? pool.balances
+        : null;
+    const tokenVolumes24h =
+      Array.isArray(pool.tokenVolumes24h) &&
       pool.tokenVolumes24h.length === tokens.length &&
       pool.tokenVolumes24h.every((volume) => toNonNegativeFiniteNumberOrNull(volume) != null)
-      ? pool.tokenVolumes24h
-      : null;
+        ? pool.tokenVolumes24h
+        : null;
 
     normalizedPools.push({
       ...pool,
@@ -147,7 +150,7 @@ function resolvePoolTokenSymbol(
 ): string | null {
   const normalizedSymbol = normalizeDexSymbol(token.symbol);
   if (normalizedSymbol) return token.symbol;
-  const contractMeta = contractMetaByChainAddress.get(`${pool.chain.toLowerCase()}:${token.address.toLowerCase()}`);
+  const contractMeta = contractMetaByChainAddress.get(canonicalExitRouteAssetKey(pool.chain, token.address));
   return contractMeta?.symbol ?? null;
 }
 
@@ -157,8 +160,8 @@ function resolvePoolTokenDecimals(
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"],
 ): number | null {
   if (Number.isFinite(token.decimals) && token.decimals > 0) return token.decimals;
-  if (token.address.toLowerCase() === NATIVE_PLACEHOLDER_TOKEN) return 18;
-  const contractMeta = contractMetaByChainAddress.get(`${pool.chain.toLowerCase()}:${token.address.toLowerCase()}`);
+  if (canonicalExitRouteScopedId(pool.chain, token.address) === NATIVE_PLACEHOLDER_TOKEN) return 18;
+  const contractMeta = contractMetaByChainAddress.get(canonicalExitRouteAssetKey(pool.chain, token.address));
   return contractMeta?.decimals ?? null;
 }
 
@@ -198,7 +201,7 @@ export function hydrateDirectApiPoolMetadata(
         normalizationComplete = false;
         break;
       }
-      normalizedBalances.push(rawBalance / (10 ** decimals));
+      normalizedBalances.push(rawBalance / 10 ** decimals);
     }
 
     pool.balances = normalizationComplete ? normalizedBalances : null;
@@ -229,24 +232,21 @@ function resolveExecutionToken(
   }
   if (!Number.isFinite(balance) || balance <= 0) return null;
 
-  const trackedAssetId = resolveStablecoinIdForDexApiToken(
-    pool.chain,
-    token,
-    chainAddressToId,
-    symbolToChainScopedIds,
-  );
+  const trackedAssetId = resolveStablecoinIdForDexApiToken(pool.chain, token, chainAddressToId, symbolToChainScopedIds);
   const sourcePrice = toPositiveFiniteNumberOrNull(token.priceUsd);
-  const trackedPrice = trackedAssetId == null
-    ? null
-    : toPositiveFiniteNumberOrNull(trackedStablecoinPrices?.get(trackedAssetId));
-  const referencePriceUsd = sourcePrice ?? trackedPrice ?? getTokenReferenceUsdPrice(
-    token,
-    pool.chain,
-    chainAddressToId,
-    symbolToChainScopedIds,
-    validationReferences,
-    trackedStablecoinPrices,
-  );
+  const trackedPrice =
+    trackedAssetId == null ? null : toPositiveFiniteNumberOrNull(trackedStablecoinPrices?.get(trackedAssetId));
+  const referencePriceUsd =
+    sourcePrice ??
+    trackedPrice ??
+    getTokenReferenceUsdPrice(
+      token,
+      pool.chain,
+      chainAddressToId,
+      symbolToChainScopedIds,
+      validationReferences,
+      trackedStablecoinPrices,
+    );
   if (referencePriceUsd == null || !Number.isFinite(referencePriceUsd) || referencePriceUsd <= 0) return null;
 
   const weight = toPositiveFiniteNumberOrNull(token.weight);
@@ -256,11 +256,8 @@ function resolveExecutionToken(
     decimals: token.decimals,
     balance,
     referencePriceUsd,
-    referencePriceSource: sourcePrice != null
-      ? "source-token-usd"
-      : trackedPrice != null
-        ? "tracked-market"
-        : "peg-reference",
+    referencePriceSource:
+      sourcePrice != null ? "source-token-usd" : trackedPrice != null ? "tracked-market" : "peg-reference",
     ...(trackedAssetId ? { trackedAssetId } : {}),
     ...(weight != null ? { weight } : {}),
   };
@@ -288,25 +285,28 @@ function buildAmmExecutionModel(
     return null;
   }
 
-  const invariant = pool.source === "raydium" && pool.poolType === "raydium-amm" && pool.tokens.length === 2
-    ? "constant-product"
-    : pool.source === "balancer" && pool.poolType === "balancer-weighted"
-      ? "weighted-constant-mean"
-      : null;
+  const invariant =
+    pool.source === "raydium" && pool.poolType === "raydium-amm" && pool.tokens.length === 2
+      ? "constant-product"
+      : pool.source === "balancer" && pool.poolType === "balancer-weighted"
+        ? "weighted-constant-mean"
+        : null;
   if (invariant == null) return null;
 
-  const tokens = pool.tokens.map((token, index) => resolveExecutionToken(
-    pool,
-    token,
-    pool.balances![index]!,
-    chainAddressToId,
-    symbolToChainScopedIds,
-    validationReferences,
-    trackedStablecoinPrices,
-  ));
+  const tokens = pool.tokens.map((token, index) =>
+    resolveExecutionToken(
+      pool,
+      token,
+      pool.balances![index]!,
+      chainAddressToId,
+      symbolToChainScopedIds,
+      validationReferences,
+      trackedStablecoinPrices,
+    ),
+  );
   if (tokens.some((token) => token == null)) return null;
   const exactTokens = tokens as DexAmmExecutionToken[];
-  const identityKeys = exactTokens.map((token) => token.address.toLowerCase());
+  const identityKeys = exactTokens.map((token) => canonicalExitRouteScopedId(pool.chain, token.address));
   if (new Set(identityKeys).size !== identityKeys.length) return null;
 
   if (invariant === "weighted-constant-mean") {
@@ -348,24 +348,25 @@ function derivePoolBalanceMetrics(
     if (!Number.isFinite(balance) || balance == null || balance < 0) return null;
 
     const directPrice = token.priceUsd;
-    const priceUsd = directPrice != null && Number.isFinite(directPrice) && directPrice > 0
-      ? directPrice
-      : getTokenReferenceUsdPrice(
-        token,
-        pool.chain,
-        chainAddressToId,
-        symbolToChainScopedIds,
-        validationReferences,
-        trackedStablecoinPrices,
-      ) ??
-        deriveTokenUsdPrice(
-          pool,
-          index,
-          chainAddressToId,
-          symbolToChainScopedIds,
-          validationReferences,
-          trackedStablecoinPrices,
-        );
+    const priceUsd =
+      directPrice != null && Number.isFinite(directPrice) && directPrice > 0
+        ? directPrice
+        : (getTokenReferenceUsdPrice(
+            token,
+            pool.chain,
+            chainAddressToId,
+            symbolToChainScopedIds,
+            validationReferences,
+            trackedStablecoinPrices,
+          ) ??
+          deriveTokenUsdPrice(
+            pool,
+            index,
+            chainAddressToId,
+            symbolToChainScopedIds,
+            validationReferences,
+            trackedStablecoinPrices,
+          ));
 
     if (priceUsd == null || !Number.isFinite(priceUsd) || priceUsd <= 0) return null;
     return balance * priceUsd;
@@ -442,7 +443,12 @@ export function convertToGtNewPools(
 
     for (let i = 0; i < pool.tokens.length; i++) {
       const token = pool.tokens[i];
-      const stablecoinId = resolveStablecoinIdForDexApiToken(pool.chain, token, chainAddressToId, symbolToChainScopedIds);
+      const stablecoinId = resolveStablecoinIdForDexApiToken(
+        pool.chain,
+        token,
+        chainAddressToId,
+        symbolToChainScopedIds,
+      );
       if (!stablecoinId) continue;
 
       const qualityMultiplier = QUALITY_MULTIPLIERS[pool.poolType] ?? QUALITY_MULTIPLIERS.generic!;
@@ -479,10 +485,12 @@ export function convertToGtNewPools(
         symbol: symbolStr,
         poolType: pool.poolType,
         sourceFamily: "direct_api",
-        ...(balanceMetrics ? {
-          balanceRatio: balanceMetrics.balanceRatio,
-          balanceDetails: balanceMetrics.balanceDetails,
-        } : {}),
+        ...(balanceMetrics
+          ? {
+              balanceRatio: balanceMetrics.balanceRatio,
+              balanceDetails: balanceMetrics.balanceDetails,
+            }
+          : {}),
         ...(feeTierBps != null ? { feeTierBps } : {}),
         ...(ammExecutionModel ? { ammExecutionModel } : {}),
         measurement: {
@@ -527,7 +535,12 @@ export function extractPriceObservations(
 
     for (let i = 0; i < pool.tokens.length; i++) {
       const token = pool.tokens[i];
-      const stablecoinId = resolveStablecoinIdForDexApiToken(pool.chain, token, chainAddressToId, symbolToChainScopedIds);
+      const stablecoinId = resolveStablecoinIdForDexApiToken(
+        pool.chain,
+        token,
+        chainAddressToId,
+        symbolToChainScopedIds,
+      );
       if (!stablecoinId) continue;
 
       const price = deriveTokenUsdPrice(

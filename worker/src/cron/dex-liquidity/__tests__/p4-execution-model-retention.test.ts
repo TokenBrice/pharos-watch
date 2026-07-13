@@ -51,4 +51,31 @@ describe("P4 direct AMM execution model retention", () => {
 
     expect(metrics.get("usdc-circle")?.topPools[0]?.extra?.ammExecutionModel).toEqual(pool.ammExecutionModel);
   });
+
+  it("retains case-distinct Solana pools as separate telemetry", () => {
+    const metrics = new Map<string, LiquidityMetrics>();
+    const basePool: GtNewPool = {
+      address: "PoolCase",
+      chain: "solana",
+      dexId: "raydium",
+      name: "raydium:USDC / USDT",
+      tvlUsd: 1_000_000,
+      volume24hUsd: 50_000,
+      qualityMultiplier: 0.8,
+      maturityDays: 30,
+      price: 1,
+      symbol: "USDC / USDT",
+      poolType: "raydium-amm",
+      sourceFamily: "direct_api",
+    };
+
+    addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", basePool);
+    addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", { ...basePool, address: "poolCase" });
+
+    expect(metrics.get("usdc-circle")?.poolCount).toBe(2);
+    expect(metrics.get("usdc-circle")?.topPools.map((pool) => pool.poolId)).toEqual([
+      "solana:PoolCase",
+      "solana:poolCase",
+    ]);
+  });
 });

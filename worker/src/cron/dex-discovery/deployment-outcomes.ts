@@ -3,6 +3,11 @@ import {
   getDexDiscoveryProviders,
   type DexDeploymentOutcome,
 } from "@shared/lib/dex-deployment-coverage";
+import {
+  canonicalExitRouteAssetKey,
+  canonicalExitRouteChain,
+  canonicalExitRouteScopedId,
+} from "@shared/lib/exit-route-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment } from "@shared/types/core";
 import { batchExecute } from "../../lib/db";
@@ -34,13 +39,16 @@ ON CONFLICT(stablecoin_id, chain, contract_address) DO UPDATE SET
   waiver_expires_at = excluded.waiver_expires_at`;
 
 function deploymentKey(chain: string, address: string): string {
-  return `${chain.toLowerCase()}:${address.toLowerCase()}`;
+  return canonicalExitRouteAssetKey(chain, address);
 }
 
 function matchesDeployment(pool: StagedPool, deployment: ContractDeployment): boolean {
-  if (pool.chain.toLowerCase() !== deployment.chain.toLowerCase()) return false;
-  const address = deployment.address.toLowerCase();
-  return pool.baseToken?.toLowerCase() === address || pool.quoteToken?.toLowerCase() === address;
+  if (canonicalExitRouteChain(pool.chain) !== canonicalExitRouteChain(deployment.chain)) return false;
+  const address = canonicalExitRouteScopedId(deployment.chain, deployment.address);
+  return (
+    canonicalExitRouteScopedId(pool.chain, pool.baseToken ?? "") === address ||
+    canonicalExitRouteScopedId(pool.chain, pool.quoteToken ?? "") === address
+  );
 }
 
 export function classifyDexDeploymentOutcomes(params: {
@@ -95,11 +103,12 @@ export function classifyDexDeploymentOutcomes(params: {
       address: deployment.address,
       outcome: "provider_inaccessible",
       providers,
-      reason: providers.length === 0
-        ? "No registered token-pool provider supports this chain"
-        : failedChecks.has(key)
-          ? "All attempted token-pool provider queries failed"
-          : "No provider completed a query for this deployment in the bounded crawl",
+      reason:
+        providers.length === 0
+          ? "No registered token-pool provider supports this chain"
+          : failedChecks.has(key)
+            ? "All attempted token-pool provider queries failed"
+            : "No provider completed a query for this deployment in the bounded crawl",
       observedPoolCount: 0,
       observedAt: params.nowSec,
     };
@@ -131,19 +140,21 @@ export async function upsertDexDeploymentOutcomes(
   if (outcomes.length === 0) return 0;
   const statements = outcomes.map((outcome) => {
     const waiver = getActiveDexCoverageWaiver(outcome.stablecoinId, outcome.chain, outcome.observedAt);
-    return db.prepare(UPSERT_OUTCOME_SQL).bind(
-      outcome.stablecoinId,
-      outcome.chain,
-      outcome.address.toLowerCase(),
-      outcome.outcome,
-      JSON.stringify(outcome.providers),
-      outcome.reason,
-      outcome.observedPoolCount,
-      outcome.observedAt,
-      waiver?.owner ?? null,
-      waiver?.reason ?? null,
-      waiver?.expiresAt ?? null,
-    );
+    return db
+      .prepare(UPSERT_OUTCOME_SQL)
+      .bind(
+        outcome.stablecoinId,
+        outcome.chain,
+        canonicalExitRouteScopedId(outcome.chain, outcome.address),
+        outcome.outcome,
+        JSON.stringify(outcome.providers),
+        outcome.reason,
+        outcome.observedPoolCount,
+        outcome.observedAt,
+        waiver?.owner ?? null,
+        waiver?.reason ?? null,
+        waiver?.expiresAt ?? null,
+      );
   });
   await batchExecute(db, statements, { chunkSize: 50, signal });
   return outcomes.length;

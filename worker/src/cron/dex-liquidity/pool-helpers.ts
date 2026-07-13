@@ -1,8 +1,18 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { clamp, clampScore } from "@shared/lib/math";
 import { DURABILITY_COMPONENT_WEIGHTS } from "@shared/lib/liquidity-score-weights";
+import {
+  canonicalExitRouteAssetKey,
+  canonicalExitRouteChain,
+  canonicalExitRouteScopedId,
+} from "@shared/lib/exit-route-identity";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
-import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY, COMPOSITE_POOL_NAMES, normalizeDexSymbol } from "../../lib/dex-cron-constants";
+import {
+  QUALITY_MULTIPLIERS,
+  GT_DEX_QUALITY,
+  COMPOSITE_POOL_NAMES,
+  normalizeDexSymbol,
+} from "../../lib/dex-cron-constants";
 import type { LiquidityMetrics, ScoreComponents, SymbolLookups } from "./types";
 import { VOLATILE_PAIR_QUALITY, SYMBOL_GOVERNANCE } from "./constants";
 import { LIQUIDITY_COMPONENT_WEIGHTS } from "./score-weights";
@@ -247,12 +257,13 @@ export function normalizeProtocol(project: string): string {
 /** Build the canonical cross-source pool fingerprint for token-pair dedup. */
 export function buildPoolFingerprint(chain: string, protocol: string, tokenAddresses: string[]): string | null {
   if (tokenAddresses.length < 2) return null;
+  const canonicalChain = canonicalExitRouteChain(chain);
   const normalized = tokenAddresses
-    .map((token) => token.trim().toLowerCase())
+    .map((token) => canonicalExitRouteScopedId(canonicalChain, token))
     .filter(Boolean)
     .sort();
   if (normalized.length < 2) return null;
-  return `fp:${chain.toLowerCase()}:${normalizeProtocol(protocol)}:${normalized.join(":")}`;
+  return `fp:${canonicalChain}:${normalizeProtocol(protocol)}:${normalized.join(":")}`;
 }
 
 function getCompositePoolSymbols(symbol: string): string[] | null {
@@ -301,7 +312,7 @@ export function getTrackedContracts(meta: Pick<StablecoinMeta, "contracts" | "tr
   const result: ContractDeployment[] = [];
   const seen = new Set<string>();
   for (const contract of [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])]) {
-    const key = `${contract.chain}:${contract.address.toLowerCase()}`;
+    const key = canonicalExitRouteAssetKey(contract.chain, contract.address);
     if (seen.has(key)) continue;
     seen.add(key);
     result.push(contract);
@@ -342,7 +353,7 @@ export function buildSymbolLookups(): SymbolLookups {
     if (existing.length > 1) collidingSymbols.add(key);
 
     for (const contract of getTrackedContracts(meta)) {
-      const chain = contract.chain.toLowerCase();
+      const chain = canonicalExitRouteChain(contract.chain);
       const scopedByChain = symbolToChainScopedIds.get(key) ?? new Map<string, string[]>();
       const scopedIds = scopedByChain.get(chain) ?? [];
       if (!scopedIds.includes(meta.id)) {
@@ -368,10 +379,11 @@ export function buildSymbolLookups(): SymbolLookups {
     }
   >();
   const globalAddressOwners = new Map<string, Set<string>>();
-  const addAddressOwner = (address: string, id: string) => {
-    const owners = globalAddressOwners.get(address.toLowerCase()) ?? new Set<string>();
+  const addAddressOwner = (chain: string, address: string, id: string) => {
+    const canonicalAddress = canonicalExitRouteScopedId(chain, address);
+    const owners = globalAddressOwners.get(canonicalAddress) ?? new Set<string>();
     owners.add(id);
-    globalAddressOwners.set(address.toLowerCase(), owners);
+    globalAddressOwners.set(canonicalAddress, owners);
   };
   for (const meta of ACTIVE_STABLECOINS) {
     for (const contract of meta.contracts ?? []) {
@@ -384,7 +396,7 @@ export function buildSymbolLookups(): SymbolLookups {
           typeof contract.decimals === "number" && Number.isFinite(contract.decimals) ? contract.decimals : null,
         source: "contract",
       });
-      addAddressOwner(contract.address, meta.id);
+      addAddressOwner(contract.chain, contract.address, meta.id);
     }
     for (const contract of meta.tradedContracts ?? []) {
       const key = buildChainAddressKey(contract.chain, contract.address);
@@ -398,7 +410,7 @@ export function buildSymbolLookups(): SymbolLookups {
           source: "tradedContract",
         });
       }
-      addAddressOwner(contract.address, meta.id);
+      addAddressOwner(contract.chain, contract.address, meta.id);
     }
   }
 

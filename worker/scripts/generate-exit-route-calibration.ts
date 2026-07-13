@@ -4,11 +4,12 @@ import { pathToFileURL } from "node:url";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   computeModeledExitSizeUsd,
+  isExitRouteObservationScoreEligible,
   REDEMPTION_EFFECTIVE_EXIT_MODEL,
   SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY,
   SAME_NOTIONAL_EXIT_REQUEST_POLICY,
 } from "@shared/lib/redemption-backstop-scoring";
-import { validateExitRouteCapacityCurve } from "@shared/lib/p4-exit-route-capacity";
+import { isDexExitRouteCoverageComplete, validateExitRouteCapacityCurve } from "@shared/lib/p4-exit-route-capacity";
 import type { ExitRouteObservation } from "@shared/types/market";
 import type { ReportCard, ReportCardGrade } from "@shared/types/report-cards";
 import {
@@ -24,19 +25,8 @@ import {
   type ReportCardsFixedInput,
 } from "../src/lib/report-cards-fixed-input";
 
-const DEFAULT_MAX_OBSERVATION_AGE_SEC =
-  Math.max(CRON_INTERVALS["sync-dex-liquidity"], CRON_INTERVALS["sync-redemption-backstops"]) * 2;
-
-const DEX_SCOREABLE_EVIDENCE = new Set<ExitRouteObservation["evidenceKind"]>([
-  "measured-executable-depth",
-  "reserve-based-amm-simulation",
-  "direct-orderbook-depth",
-]);
-const REDEMPTION_SCOREABLE_EVIDENCE = new Set<ExitRouteObservation["evidenceKind"]>([
-  "documented-terms",
-  "live-reserve-state",
-  "onchain-contract-state",
-]);
+const DEFAULT_DEX_MAX_OBSERVATION_AGE_SEC = CRON_INTERVALS["sync-dex-liquidity"] * 2;
+const DEFAULT_LIVE_REDEMPTION_MAX_OBSERVATION_AGE_SEC = CRON_INTERVALS["sync-redemption-backstops"] * 2;
 
 const USAGE = `Usage: npx tsx worker/scripts/generate-exit-route-calibration.ts --input <path> --output <path> [options]
 
@@ -49,8 +39,10 @@ Options:
   --decision-reason <reason>             Evidence-based general-policy rationale (required)
   --minimum-dex-eligible-assets <n>      General activation floor (default: 1)
   --minimum-redemption-eligible-assets <n> General activation floor (default: 1)
-  --max-observation-age-sec <n>          Fixed freshness window (default: producer interval x2)
+  --dex-max-observation-age-sec <n>      DEX freshness window (default: DEX interval x2)
+  --live-redemption-max-observation-age-sec <n> Live redemption freshness window (default: redemption interval x2)
   --allow-methodology-mismatch           Replay an older capture through current code
+  --allow-registry-mismatch              Replay against a changed stablecoin registry
   -h, --help                             Show this help`;
 
 type RouteLane = "dex" | "redemption";
@@ -64,8 +56,10 @@ export interface ExitRouteCalibrationOptions {
   decisionReason: string;
   minimumDexEligibleAssets?: number;
   minimumRedemptionEligibleAssets?: number;
-  maxObservationAgeSec?: number;
+  dexMaxObservationAgeSec?: number;
+  liveRedemptionMaxObservationAgeSec?: number;
   allowMethodologyMismatch?: boolean;
+  allowRegistryMismatch?: boolean;
 }
 
 export interface AuditedRouteCapacity {
@@ -132,24 +126,6 @@ function resolveCapacityAtRequest(
   return { executableUsd, completionRatio: executableUsd / modeledExitSizeUsd };
 }
 
-function isEligibleObservation(
-  observation: ExitRouteObservation,
-  lane: RouteLane,
-  clockSec: number,
-  maxObservationAgeSec: number,
-): boolean {
-  if (!observation.scoreEligible) return false;
-  if (observation.settlementHorizonSec !== SAME_NOTIONAL_EXIT_REQUEST_POLICY.settlementHorizonSec) return false;
-  const allowedEvidence = lane === "dex" ? DEX_SCOREABLE_EVIDENCE : REDEMPTION_SCOREABLE_EVIDENCE;
-  if (!allowedEvidence.has(observation.evidenceKind)) return false;
-  const ageSec = Math.max(0, clockSec - observation.observedAt, observation.freshnessSeconds);
-  const evidenceMaxAgeSec =
-    observation.evidenceKind === "documented-terms"
-      ? SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec
-      : maxObservationAgeSec;
-  return ageSec <= evidenceMaxAgeSec;
-}
-
 export function selectBestRouteCapacity(args: {
   observations: readonly ExitRouteObservation[] | null | undefined;
   lane: RouteLane;
@@ -170,7 +146,16 @@ export function selectBestRouteCapacity(args: {
     };
   }
   const eligible = observations.flatMap((observation) => {
-    if (!isEligibleObservation(observation, args.lane, args.clockSec, args.maxObservationAgeSec)) return [];
+    if (
+      !isExitRouteObservationScoreEligible(observation, args.lane, {
+        exitObservationAsOfSec: args.clockSec,
+        ...(args.lane === "dex"
+          ? { dexExitObservationMaxAgeSec: args.maxObservationAgeSec }
+          : { liveRedemptionExitObservationMaxAgeSec: args.maxObservationAgeSec }),
+      })
+    ) {
+      return [];
+    }
     const capacity = resolveCapacityAtRequest(observation, args.modeledExitSizeUsd!);
     return capacity ? [{ observation, capacity }] : [];
   });
@@ -233,8 +218,15 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
   const fixedInput: ReportCardsFixedInput = normalizeFixedInput(fixedInputValue);
   const minimumDexEligibleAssets = options.minimumDexEligibleAssets ?? 1;
   const minimumRedemptionEligibleAssets = options.minimumRedemptionEligibleAssets ?? 1;
-  const maxObservationAgeSec = options.maxObservationAgeSec ?? DEFAULT_MAX_OBSERVATION_AGE_SEC;
+  const dexMaxObservationAgeSec = options.dexMaxObservationAgeSec ?? DEFAULT_DEX_MAX_OBSERVATION_AGE_SEC;
+  const liveRedemptionMaxObservationAgeSec =
+    options.liveRedemptionMaxObservationAgeSec ?? DEFAULT_LIVE_REDEMPTION_MAX_OBSERVATION_AGE_SEC;
   if (!options.generationId.trim()) throw new Error("generationId must be non-empty");
+  if (options.generationId !== fixedInput.dexGenerationId) {
+    throw new Error(
+      `Calibration generation ${options.generationId} does not match fixed input DEX generation ${fixedInput.dexGenerationId}`,
+    );
+  }
   if (!options.decisionReason.trim()) throw new Error("decisionReason must be non-empty");
   if (!Number.isInteger(minimumDexEligibleAssets) || minimumDexEligibleAssets < 0) {
     throw new Error("minimumDexEligibleAssets must be a non-negative integer");
@@ -242,13 +234,18 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
   if (!Number.isInteger(minimumRedemptionEligibleAssets) || minimumRedemptionEligibleAssets < 0) {
     throw new Error("minimumRedemptionEligibleAssets must be a non-negative integer");
   }
-  if (!Number.isInteger(maxObservationAgeSec) || maxObservationAgeSec < 0) {
-    throw new Error("maxObservationAgeSec must be a non-negative integer");
+  if (!Number.isInteger(dexMaxObservationAgeSec) || dexMaxObservationAgeSec < 0) {
+    throw new Error("dexMaxObservationAgeSec must be a non-negative integer");
+  }
+  if (!Number.isInteger(liveRedemptionMaxObservationAgeSec) || liveRedemptionMaxObservationAgeSec < 0) {
+    throw new Error("liveRedemptionMaxObservationAgeSec must be a non-negative integer");
   }
 
   const replayOptions = {
     allowMethodologyMismatch: options.allowMethodologyMismatch,
-    maxExitObservationAgeSec: maxObservationAgeSec,
+    allowRegistryMismatch: options.allowRegistryMismatch,
+    dexExitObservationMaxAgeSec: dexMaxObservationAgeSec,
+    liveRedemptionExitObservationMaxAgeSec: liveRedemptionMaxObservationAgeSec,
   };
   const legacy = buildReportCardsSnapshotFromFixedInput(fixedInput, {
     ...replayOptions,
@@ -271,20 +268,30 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
       );
       const redemptionProfile = fixedInput.redemptionBackstopMap[newCard.id]?.capacityProfile;
       const modeledExitSizeUsd = redemptionProfile?.modeledExitSizeUsd ?? computeModeledExitSizeUsd(supplyUsd);
-      const dex = selectBestRouteCapacity({
+      const selectedDex = selectBestRouteCapacity({
         observations: fixedInput.dexLiqMap[newCard.id]?.exitRouteObservations,
         lane: "dex",
         modeledExitSizeUsd,
         clockSec: fixedInput.clockSec,
-        maxObservationAgeSec,
+        maxObservationAgeSec: dexMaxObservationAgeSec,
       });
       const dexProducerCoverage = fixedInput.dexLiqMap[newCard.id]?.exitRouteObservationCoverage;
+      const dexProducerCoverageComplete = isDexExitRouteCoverageComplete(dexProducerCoverage);
+      const dex =
+        selectedDex.status === "eligible" && !dexProducerCoverageComplete
+          ? {
+              ...selectedDex,
+              status: "observed-ineligible" as const,
+              eligibleObservationCount: 0,
+              best: null,
+            }
+          : selectedDex;
       const redemption = selectBestRouteCapacity({
         observations: redemptionProfile?.exitRouteObservations,
         lane: "redemption",
         modeledExitSizeUsd,
         clockSec: fixedInput.clockSec,
-        maxObservationAgeSec,
+        maxObservationAgeSec: liveRedemptionMaxObservationAgeSec,
       });
       return {
         id: newCard.id,
@@ -301,9 +308,17 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
           ? {
               status: dexProducerCoverage.status,
               retainedPoolCount: dexProducerCoverage.retainedPoolCount,
+              scoreEligiblePoolCount: dexProducerCoverage.scoreEligiblePoolCount ?? 0,
               unsupportedPoolCount: dexProducerCoverage.unsupportedPoolCount,
+              complete: dexProducerCoverageComplete,
             }
-          : { status: "unknown" as const, retainedPoolCount: 0, unsupportedPoolCount: 0 },
+          : {
+              status: "unknown" as const,
+              retainedPoolCount: 0,
+              scoreEligiblePoolCount: 0,
+              unsupportedPoolCount: 0,
+              complete: false,
+            },
         redemption,
         oldExitScore: oldCard.rawInputs.effectiveExitScore,
         newExitScore: newCard.rawInputs.effectiveExitScore,
@@ -336,6 +351,8 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
     source: {
       sourceGeneration: fixedInput.sourceGeneration,
       registryRevision: fixedInput.registryRevision,
+      registryFingerprint: fixedInput.registryFingerprint,
+      dexPayloadFingerprint: fixedInput.dexPayloadFingerprint,
       capturedAt: fixedInput.capturedAt,
       clockSec: fixedInput.clockSec,
       inputMethodologyVersion: fixedInput.methodologyVersion,
@@ -345,7 +362,8 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
       modeledExitSize: REDEMPTION_EFFECTIVE_EXIT_MODEL.modeledExitSize,
       modeledExitSizeFormulaChanged: false,
       comparisonRequest: SAME_NOTIONAL_EXIT_REQUEST_POLICY,
-      maxObservationAgeSec,
+      dexMaxObservationAgeSec,
+      liveRedemptionMaxObservationAgeSec,
       documentedTermsMaxAgeSec: SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec,
       selection: "greatest absolute executable capacity among policy-eligible observations",
       capacityInterpolation: "exact point or conservative lower bound from the retained monotonic curve",
@@ -424,8 +442,13 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
       "decision-reason": { type: "string" },
       "minimum-dex-eligible-assets": { type: "string", default: "1" },
       "minimum-redemption-eligible-assets": { type: "string", default: "1" },
-      "max-observation-age-sec": { type: "string", default: String(DEFAULT_MAX_OBSERVATION_AGE_SEC) },
+      "dex-max-observation-age-sec": { type: "string", default: String(DEFAULT_DEX_MAX_OBSERVATION_AGE_SEC) },
+      "live-redemption-max-observation-age-sec": {
+        type: "string",
+        default: String(DEFAULT_LIVE_REDEMPTION_MAX_OBSERVATION_AGE_SEC),
+      },
       "allow-methodology-mismatch": { type: "boolean" },
+      "allow-registry-mismatch": { type: "boolean" },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
@@ -456,11 +479,16 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
       name: "--minimum-redemption-eligible-assets",
       min: 0,
     }),
-    maxObservationAgeSec: parseCliInteger(values["max-observation-age-sec"], {
-      name: "--max-observation-age-sec",
+    dexMaxObservationAgeSec: parseCliInteger(values["dex-max-observation-age-sec"], {
+      name: "--dex-max-observation-age-sec",
+      min: 0,
+    }),
+    liveRedemptionMaxObservationAgeSec: parseCliInteger(values["live-redemption-max-observation-age-sec"], {
+      name: "--live-redemption-max-observation-age-sec",
       min: 0,
     }),
     allowMethodologyMismatch: values["allow-methodology-mismatch"] === true,
+    allowRegistryMismatch: values["allow-registry-mismatch"] === true,
   });
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
   writeFileSync(values.output, `${JSON.stringify(report, null, 2)}\n`, "utf8");

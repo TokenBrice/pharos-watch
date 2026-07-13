@@ -1,16 +1,18 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD, CIRCUIT_SOURCE } from "../../lib/constants";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import { fetchDsTokenPoolsWithStatus, dsRateLimit, DS_CHAIN_MAP, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
+import { fetchDsTokenPoolsWithStatus, dsRateLimit, DS_CHAIN_MAP } from "../../lib/dexscreener";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { logCronEvent } from "../../lib/cron-logger";
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-cron-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type { LiquidityMetrics, DexPriceObs, GtNewPool, CgTicker } from "./types";
 import { getTrackedContracts } from "./pool-helpers";
+import { getChainAwareDsTrackedTokenPriceUsd } from "./crawl-helpers";
 import { CG_TICKERS_RATE_MS } from "./constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import {
@@ -36,18 +38,13 @@ const WEAK_COVERAGE_MIN_TVL_USD = 250_000;
 const WEAK_COVERAGE_MIN_MEASURED_BALANCE_SHARE = 0.25;
 const DEXSCREENER_LIQUIDITY_CIRCUIT = CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY;
 
-function needsCoverageEnrichment(
-  metric: LiquidityMetrics | undefined,
-  observations: DexPriceObs[],
-): boolean {
+function needsCoverageEnrichment(metric: LiquidityMetrics | undefined, observations: DexPriceObs[]): boolean {
   if (!metric) return true;
   if ((metric.poolCount ?? 0) === 0) return true;
   if (observations.length === 0) return true;
 
   const protocolCount = new Set(observations.map((observation) => observation.protocol)).size;
-  const measuredBalanceShare = metric.totalTvlUsd > 0
-    ? metric.totalTvlForBalance / metric.totalTvlUsd
-    : 0;
+  const measuredBalanceShare = metric.totalTvlUsd > 0 ? metric.totalTvlForBalance / metric.totalTvlUsd : 0;
 
   if (metric.poolCount < WEAK_COVERAGE_MIN_POOL_COUNT) return true;
   if (protocolCount < WEAK_COVERAGE_MIN_PROTOCOL_COUNT) return true;
@@ -57,10 +54,7 @@ function needsCoverageEnrichment(
   return false;
 }
 
-function needsOrderbookFallback(
-  metric: LiquidityMetrics | undefined,
-  observations: DexPriceObs[],
-): boolean {
+function needsOrderbookFallback(metric: LiquidityMetrics | undefined, observations: DexPriceObs[]): boolean {
   if (!metric) return true;
   if ((metric.poolCount ?? 0) === 0) return true;
   if (observations.length === 0) return true;
@@ -247,9 +241,9 @@ export async function fetchDsFallbackPools(
         const vol24h = pair.volume?.h24 ?? 0;
         if (vol24h === 0 && tvl < 10_000) continue;
 
-        const baseAddr = pair.baseToken.address.toLowerCase();
-        const quoteAddr = pair.quoteToken.address.toLowerCase();
-        const { side, priceUsd } = getDsTrackedTokenPriceUsd(pair, contract.address);
+        const baseAddr = canonicalExitRouteScopedId(contract.chain, pair.baseToken.address);
+        const quoteAddr = canonicalExitRouteScopedId(contract.chain, pair.quoteToken.address);
+        const { side, priceUsd } = getChainAwareDsTrackedTokenPriceUsd(pair, contract.address, contract.chain);
         if (!side) continue;
 
         const pairIdentity = buildPoolIdentity({
@@ -277,7 +271,11 @@ export async function fetchDsFallbackPools(
             protocol: pair.dexId,
             poolKey: pairIdentity.exactPoolKey ?? undefined,
             derivedMatchKey: pairIdentity.derivedMatchKey ?? undefined,
-            identityConfidence: pairIdentity.exactPoolKey ? "exact" : pairIdentity.derivedMatchKey ? "derived_ambiguous" : "none",
+            identityConfidence: pairIdentity.exactPoolKey
+              ? "exact"
+              : pairIdentity.derivedMatchKey
+                ? "derived_ambiguous"
+                : "none",
             sourceFamily: "dexscreener",
           });
           priceObs.set(meta.id, obs);
@@ -292,7 +290,10 @@ export async function fetchDsFallbackPools(
         // Quality multiplier — use GT_DEX_QUALITY for known DEXes, generic fallback
         let qualMult = QUALITY_MULTIPLIERS["generic"]!;
         for (const [prefix, q] of GT_DEX_QUALITY) {
-          if (pair.dexId.startsWith(prefix)) { qualMult = q; break; }
+          if (pair.dexId.startsWith(prefix)) {
+            qualMult = q;
+            break;
+          }
         }
 
         // Pool type inference
@@ -306,26 +307,26 @@ export async function fetchDsFallbackPools(
           stablecoinId: meta.id,
           identity: pairIdentity,
           pool: {
-          address: pair.pairAddress.toLowerCase(),
-          chain: contract.chain,
-          dexId: pair.dexId,
-          name: symbolStr,
-          tvlUsd: tvl,
-          volume24hUsd: vol24h,
-          qualityMultiplier: qualMult,
-          maturityDays,
-          poolType,
-          price: priceUsd ?? 0,
-          symbol: symbolStr,
-          sourceFamily: "dexscreener",
-          measurement: {
-            tvlMeasured: true,
-            volumeMeasured: true,
-            balanceMeasured: false,
-            maturityMeasured: pair.pairCreatedAt != null,
-            priceMeasured: priceUsd != null && priceUsd > 0,
-            synthetic: false,
-          },
+            address: canonicalExitRouteScopedId(contract.chain, pair.pairAddress),
+            chain: contract.chain,
+            dexId: pair.dexId,
+            name: symbolStr,
+            tvlUsd: tvl,
+            volume24hUsd: vol24h,
+            qualityMultiplier: qualMult,
+            maturityDays,
+            poolType,
+            price: priceUsd ?? 0,
+            symbol: symbolStr,
+            sourceFamily: "dexscreener",
+            measurement: {
+              tvlMeasured: true,
+              volumeMeasured: true,
+              balanceMeasured: false,
+              maturityMeasured: pair.pairCreatedAt != null,
+              priceMeasured: priceUsd != null && priceUsd > 0,
+              synthetic: false,
+            },
           },
         });
       }
@@ -429,7 +430,10 @@ export async function fetchCgTickersFallback(
       return { newPools, priceObs };
     }
     try {
-      const url = cgUrl(`/coins/${meta.geckoId}/tickers?include_exchange_logo=false&depth=true`, coingeckoApiKey ?? null);
+      const url = cgUrl(
+        `/coins/${meta.geckoId}/tickers?include_exchange_logo=false&depth=true`,
+        coingeckoApiKey ?? null,
+      );
       const timeout = AbortSignal.timeout(10_000);
       const result = await fetchJsonWithRetry<{ tickers?: CgTicker[] }>(url, {
         headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
@@ -448,9 +452,7 @@ export async function fetchCgTickersFallback(
         continue;
       }
 
-      const exchangeSummaries = buildCgTickerExchangeSummaries(
-        aggregateCgTickersByExchange(valid),
-      );
+      const exchangeSummaries = buildCgTickerExchangeSummaries(aggregateCgTickersByExchange(valid));
 
       const pools: GtNewPool[] = [];
       for (const summary of exchangeSummaries) {
@@ -464,11 +466,7 @@ export async function fetchCgTickersFallback(
           feeTierBps: null,
           isStable: null,
         });
-        const dedupReason = getIdentityDedupReason(
-          identity,
-          knownPoolIndex,
-          { derived: 0, wildcard: 0 },
-        );
+        const dedupReason = getIdentityDedupReason(identity, knownPoolIndex, { derived: 0, wildcard: 0 });
         if (dedupReason !== null) {
           continue;
         }

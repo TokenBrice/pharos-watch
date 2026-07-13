@@ -1,4 +1,5 @@
 import type { ContractDeployment } from "@shared/types/core";
+import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -10,11 +11,7 @@ import { classifyCgPool, parseCgPool } from "../dex-liquidity/coingecko-onchain-
 import { normalizeProtocol } from "../dex-liquidity/pool-helpers";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import { makeChainAddressKey } from "../dex-liquidity/token-resolution";
-import {
-  DISCOVERY_STAGE_TIMEOUT_MS,
-  type CrawlStageContext,
-  toStagedPool,
-} from "./staged-pool";
+import { DISCOVERY_STAGE_TIMEOUT_MS, type CrawlStageContext, toStagedPool } from "./staged-pool";
 import type { DexDeploymentProviderCheck } from "./types";
 
 export interface CoinGeckoPoolsStageResult {
@@ -59,12 +56,12 @@ export async function crawlCoinGeckoPoolsStage({
   const providerChecks: DexDeploymentProviderCheck[] = [];
 
   if (!apiKey) {
-    console.warn(`[dex-discovery] CG API key not configured — Stage 1 (CG onchain) skipped for ${context.stablecoinId}`);
+    console.warn(
+      `[dex-discovery] CG API key not configured — Stage 1 (CG onchain) skipped for ${context.stablecoinId}`,
+    );
   }
 
-  const cgOnchainAllowed = apiKey
-    ? await dependencies.shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_ONCHAIN)
-    : false;
+  const cgOnchainAllowed = apiKey ? await dependencies.shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_ONCHAIN) : false;
 
   if (apiKey && !cgOnchainAllowed) {
     console.warn(`[dex-discovery] CG onchain circuit open — Stage 1 skipped for ${context.stablecoinId}`);
@@ -88,7 +85,9 @@ export async function crawlCoinGeckoPoolsStage({
       const gtNetwork = GT_CHAIN_MAP[chain] ?? providers?.geckoTerminal;
       const dsNetwork = DS_CHAIN_MAP[chain] ?? providers?.dexscreener;
       if (!gtNetwork && !dsNetwork) {
-        console.warn(`[dex-discovery] Chain "${chain}" not in discovery provider registry for ${context.stablecoinId}, skipping`);
+        console.warn(
+          `[dex-discovery] Chain "${chain}" not in discovery provider registry for ${context.stablecoinId}, skipping`,
+        );
         unresolvedChains.push(chain);
       }
       continue;
@@ -103,7 +102,7 @@ export async function crawlCoinGeckoPoolsStage({
     try {
       const result = await dependencies.fetchCgTokenPoolsWithStatus(
         cgNetwork,
-        address.toLowerCase(),
+        canonicalExitRouteScopedId(chain, address),
         context.buildStageSignal(DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain),
         apiKey,
         { maxRetries: 0, timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain },
@@ -117,17 +116,17 @@ export async function crawlCoinGeckoPoolsStage({
       });
 
       for (const pool of result.pools) {
-        const parsed = parseCgPool(pool);
+        const parsed = parseCgPool(pool, chain);
         if (!parsed) continue;
 
-        const poolId = `${chain.toLowerCase()}:${parsed.poolAddress}`;
+        const poolId = canonicalExitRouteScopedKey(chain, parsed.poolAddress);
         if (context.hasKnownPool(poolId)) continue;
 
-        const addressLower = address.toLowerCase();
+        const canonicalAddress = canonicalExitRouteScopedId(chain, address);
         const side =
-          addressLower === parsed.baseTokenAddress
+          canonicalAddress === parsed.baseTokenAddress
             ? "base"
-            : addressLower === parsed.quoteTokenAddress
+            : canonicalAddress === parsed.quoteTokenAddress
               ? "quote"
               : null;
         if (!side) continue;
@@ -136,23 +135,17 @@ export async function crawlCoinGeckoPoolsStage({
         const tvlUsd = parsed.tvlUsd;
         if (!Number.isFinite(tvlUsd) || tvlUsd < 1_000) continue;
         const hasUsablePrice = Number.isFinite(priceRaw) && priceRaw > 0;
-        if (
-          hasUsablePrice &&
-          !isPlausibleDexObservationPrice(context.stablecoinId, priceRaw, context.references)
-        ) {
+        if (hasUsablePrice && !isPlausibleDexObservationPrice(context.stablecoinId, priceRaw, context.references)) {
           continue;
         }
 
         const volume24h = parsed.volume24hUsd;
         if (tvlUsd > 0 && volume24h / tvlUsd > 50) continue;
 
-        const {
-          qualityMultiplier,
-          poolType,
-          feePercentage,
-          lockedLiquidityPct,
-          balanceRatio,
-        } = classifyCgPool(parsed, pool.attributes);
+        const { qualityMultiplier, poolType, feePercentage, lockedLiquidityPct, balanceRatio } = classifyCgPool(
+          parsed,
+          pool.attributes,
+        );
         const dexId = parsed.dexId;
         const protocol = normalizeProtocol(dexId);
         const stagedPool = toStagedPool(context, {
@@ -179,10 +172,7 @@ export async function crawlCoinGeckoPoolsStage({
 
         context.addPool(stagedPool);
 
-        if (
-          stagedPool.priceUsd != null &&
-          tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
-        ) {
+        if (stagedPool.priceUsd != null && tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
           context.addPriceObs({
             stablecoinId: context.stablecoinId,
             price: stagedPool.priceUsd,

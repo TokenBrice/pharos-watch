@@ -2,20 +2,22 @@ import { describe, expect, it } from "vitest";
 import { QUALITY_MULTIPLIERS } from "../../../lib/dex-cron-constants";
 import { parseCgPool, classifyCgPool } from "../coingecko-onchain-shared";
 
-function makeCgPool(overrides: Partial<{
-  dexId: string;
-  address: string;
-  reserveUsd: string | null;
-  volumeUsd24h: string | null;
-  baseAddress: string;
-  quoteAddress: string;
-  basePriceUsd: string | null;
-  quotePriceUsd: string | null;
-  name: string;
-  createdAt: string | null;
-  feePct: string | null;
-  lockedLiquidityPct: string | null;
-}> = {}) {
+function makeCgPool(
+  overrides: Partial<{
+    dexId: string;
+    address: string;
+    reserveUsd: string | null;
+    volumeUsd24h: string | null;
+    baseAddress: string;
+    quoteAddress: string;
+    basePriceUsd: string | null;
+    quotePriceUsd: string | null;
+    name: string;
+    createdAt: string | null;
+    feePct: string | null;
+    lockedLiquidityPct: string | null;
+  }> = {},
+) {
   return {
     id: "pool-1",
     type: "pool",
@@ -40,7 +42,7 @@ function makeCgPool(overrides: Partial<{
 
 describe("CoinGecko onchain shared helpers", () => {
   it("parses CG pools and classifies fee buckets with locked-liquidity propagation", () => {
-    const parsed = parseCgPool(makeCgPool({ feePct: "0.05", lockedLiquidityPct: "37.5" }) as never);
+    const parsed = parseCgPool(makeCgPool({ feePct: "0.05", lockedLiquidityPct: "37.5" }) as never, "ethereum");
 
     expect(parsed).not.toBeNull();
 
@@ -75,16 +77,19 @@ describe("CoinGecko onchain shared helpers", () => {
       },
     };
 
-    expect(parseCgPool(malformed as never)).toBeNull();
+    expect(parseCgPool(malformed as never, "ethereum")).toBeNull();
   });
 
   it("falls back to dex-quality classification when fee data is absent", () => {
-    const parsed = parseCgPool(makeCgPool({
-      dexId: "curve-stable-swap",
-      feePct: null,
-      basePriceUsd: "1.00",
-      quotePriceUsd: "0.99",
-    }) as never);
+    const parsed = parseCgPool(
+      makeCgPool({
+        dexId: "curve-stable-swap",
+        feePct: null,
+        basePriceUsd: "1.00",
+        quotePriceUsd: "0.99",
+      }) as never,
+      "ethereum",
+    );
 
     expect(parsed).not.toBeNull();
 
@@ -100,12 +105,15 @@ describe("CoinGecko onchain shared helpers", () => {
   });
 
   it("drops invalid numeric fields instead of emitting NaN", () => {
-    const parsed = parseCgPool(makeCgPool({
-      feePct: "not-a-number",
-      lockedLiquidityPct: "bad-value",
-      basePriceUsd: "1.0",
-      quotePriceUsd: "0.3",
-    }) as never);
+    const parsed = parseCgPool(
+      makeCgPool({
+        feePct: "not-a-number",
+        lockedLiquidityPct: "bad-value",
+        basePriceUsd: "1.0",
+        quotePriceUsd: "0.3",
+      }) as never,
+      "ethereum",
+    );
 
     expect(parsed).not.toBeNull();
 
@@ -117,5 +125,20 @@ describe("CoinGecko onchain shared helpers", () => {
     expect(classified.feePercentage).toBeNull();
     expect(classified.lockedLiquidityPct).toBeNull();
     expect(classified.balanceRatio).toBeNull();
+  });
+
+  it("preserves non-EVM pool and token address case while normalizing EVM addresses", () => {
+    const raw = makeCgPool({ address: "PoolCase", baseAddress: "MintCase", quoteAddress: "QuoteCase" }) as never;
+
+    expect(parseCgPool(raw, "solana")).toMatchObject({
+      poolAddress: "PoolCase",
+      baseTokenAddress: "MintCase",
+      quoteTokenAddress: "QuoteCase",
+    });
+    expect(parseCgPool(raw, "ethereum")).toMatchObject({
+      poolAddress: "poolcase",
+      baseTokenAddress: "mintcase",
+      quoteTokenAddress: "quotecase",
+    });
   });
 });

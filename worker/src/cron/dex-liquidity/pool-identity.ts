@@ -1,3 +1,8 @@
+import {
+  canonicalExitRouteChain,
+  canonicalExitRouteScopedId,
+  canonicalExitRouteScopedKey,
+} from "@shared/lib/exit-route-identity";
 import { normalizeProtocol } from "./pool-helpers";
 
 export type PoolIdentityConfidence = "exact" | "derived_unique" | "derived_ambiguous" | "none";
@@ -32,10 +37,6 @@ export function createKnownPoolIdentityIndex(): KnownPoolIdentityIndex {
   };
 }
 
-function normalizeTokenAddress(address: string): string {
-  return (address ?? "").trim().toLowerCase();
-}
-
 function isUniswapV4PoolId(poolId: string, protocol?: string | null): boolean {
   return normalizeProtocol(protocol ?? "") === "uniswap-v4" && /^0x[a-f0-9]{64}$/i.test(poolId);
 }
@@ -50,10 +51,11 @@ function isTrustworthyOrderbookPoolId(poolId: string): boolean {
 
 function canonicalizeExactPoolId(poolId: string, chain: string): string {
   const trimmed = poolId.trim();
-  if (chain.toLowerCase() === "orderbook") return trimmed;
-  const chainPrefix = `${chain.toLowerCase()}:`;
-  return trimmed.toLowerCase().startsWith(chainPrefix)
-    ? trimmed.slice(chainPrefix.length)
+  if (canonicalExitRouteChain(chain) === "orderbook") return trimmed;
+  const separatorIndex = trimmed.indexOf(":");
+  return separatorIndex >= 0 &&
+    canonicalExitRouteChain(trimmed.slice(0, separatorIndex)) === canonicalExitRouteChain(chain)
+    ? trimmed.slice(separatorIndex + 1)
     : trimmed;
 }
 
@@ -61,7 +63,8 @@ export function isTrustworthyExactPoolId(poolId: string | null | undefined, prot
   if (!poolId) return false;
   const trimmed = poolId.trim();
   if (!trimmed) return false;
-  if (trimmed.startsWith("orderbook-") || trimmed.startsWith("orderbook:")) return isTrustworthyOrderbookPoolId(trimmed);
+  if (trimmed.startsWith("orderbook-") || trimmed.startsWith("orderbook:"))
+    return isTrustworthyOrderbookPoolId(trimmed);
   if (/^0x[a-f0-9]{40}$/i.test(trimmed)) return true;
   if (isUniswapV4PoolId(trimmed, protocol)) return true;
   return /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(trimmed);
@@ -126,21 +129,19 @@ export function buildPoolIdentity(input: {
   isStable?: boolean | null;
   isStableHint?: boolean;
 }): PoolIdentity {
-  const chain = input.chain.toLowerCase();
-  const exactPoolId = input.poolAddressOrId
-    ? canonicalizeExactPoolId(input.poolAddressOrId, chain)
-    : "";
+  const chain = canonicalExitRouteChain(input.chain);
+  const exactPoolId = input.poolAddressOrId ? canonicalizeExactPoolId(input.poolAddressOrId, chain) : "";
   const exactPoolKey = isTrustworthyExactPoolId(exactPoolId, input.protocol)
-    ? `${chain}:${exactPoolId.toLowerCase()}`
+    ? canonicalExitRouteScopedKey(chain, exactPoolId)
     : null;
 
   const effectiveIsStable: boolean | null =
     input.isStable === true || (input.isStable == null && input.isStableHint === true)
       ? true
-      : input.isStable ?? null;
+      : (input.isStable ?? null);
 
   const normalizedTokens = input.tokenAddresses
-    .map((token) => normalizeTokenAddress(token))
+    .map((token) => canonicalExitRouteScopedId(chain, token))
     .filter(Boolean)
     .sort();
   const poolShapeFamily = resolvePoolShapeFamily(input.poolType, input.protocol, effectiveIsStable);

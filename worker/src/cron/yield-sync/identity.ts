@@ -82,10 +82,10 @@ export function resolveYieldCandidateStablecoinId(
   candidate: YieldCandidateIdentityInput,
   lookups: YieldIdentityLookups,
 ): YieldIdentityResolution {
-  const normalizedChain = candidate.chain ? resolveChainId(candidate.chain) ?? candidate.chain.toLowerCase() : null;
-  const normalizedAddress = normalizeTokenAddress(candidate.address ?? "");
-  if (normalizedChain && normalizedAddress) {
-    const byChainAddress = lookups.chainAddressToId.get(buildChainAddressKey(normalizedChain, normalizedAddress));
+  const normalizedChain = candidate.chain ? (resolveChainId(candidate.chain) ?? candidate.chain.toLowerCase()) : null;
+  const candidateAddress = candidate.address?.trim() ?? "";
+  if (normalizedChain && candidateAddress) {
+    const byChainAddress = lookups.chainAddressToId.get(buildChainAddressKey(normalizedChain, candidateAddress));
     if (byChainAddress) {
       return {
         status: "matched",
@@ -147,7 +147,9 @@ export function canUseSymbolOnlyYieldMatch(
   return symbolIds.length === 1 && symbolIds[0] === meta.id;
 }
 
-export function buildDlChainFilter(meta: Pick<StablecoinMeta, "contracts" | "tradedContracts">): Set<string> | undefined {
+export function buildDlChainFilter(
+  meta: Pick<StablecoinMeta, "contracts" | "tradedContracts">,
+): Set<string> | undefined {
   const chainIds = new Set<string>();
   for (const contract of getTrackedContracts(meta)) {
     const chainId = resolveChainId(contract.chain);
@@ -164,10 +166,13 @@ export function getTrackedContractAddresses(
   meta: Pick<StablecoinMeta, "contracts" | "tradedContracts">,
   chain?: string | null,
 ): string[] {
-  const normalizedChain = chain ? resolveChainId(chain) ?? chain.toLowerCase() : null;
+  const normalizedChain = chain ? (resolveChainId(chain) ?? chain.toLowerCase()) : null;
 
   return getTrackedContracts(meta)
-    .filter((contract) => !normalizedChain || (resolveChainId(contract.chain) ?? contract.chain.toLowerCase()) === normalizedChain)
+    .filter(
+      (contract) =>
+        !normalizedChain || (resolveChainId(contract.chain) ?? contract.chain.toLowerCase()) === normalizedChain,
+    )
     .map((contract) => normalizeTokenAddress(contract.address))
     .filter(Boolean);
 }

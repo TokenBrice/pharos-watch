@@ -7,7 +7,11 @@ import {
   PriceObservedAtModeSchema,
 } from "./core";
 import { ContractDeploymentSchema } from "./stablecoin-meta-schemas";
-import { ExitRouteObservationCoverageSchema, ExitRouteObservationSchema } from "./exit-route";
+import {
+  DexExitRouteObservationSchema,
+  ExitRouteObservationCoverageSchema,
+  ExitRouteObservationSchema,
+} from "./exit-route";
 
 export {
   BluechipRatingSchema,
@@ -19,6 +23,7 @@ export {
 } from "./bluechip";
 export {
   DexExitEvidenceKindSchema,
+  DexExitRouteObservationSchema,
   ExitRouteCapacityPointSchema,
   ExitRouteConfidenceSchema,
   ExitRouteEvidenceKindSchema,
@@ -29,6 +34,7 @@ export {
   ExitRouteOutputSchema,
   ExitRouteScopeSchema,
   type DexExitEvidenceKind,
+  type DexExitRouteObservation,
   type ExitRouteCapacityPoint,
   type ExitRouteConfidence,
   type ExitRouteEvidenceKind,
@@ -189,35 +195,37 @@ export const DexAmmExecutionTokenSchema = z.object({
 });
 export type DexAmmExecutionToken = z.infer<typeof DexAmmExecutionTokenSchema>;
 
-export const DexAmmExecutionModelSchema = z.object({
-  source: z.enum(["raydium", "balancer"]),
-  invariant: z.enum(["constant-product", "weighted-constant-mean"]),
-  trackedTokenIndex: z.number().int().nonnegative(),
-  feeRate: z.number().finite().min(0).lt(1),
-  tokens: z.array(DexAmmExecutionTokenSchema).min(2).max(8),
-}).superRefine((model, ctx) => {
-  if (model.trackedTokenIndex >= model.tokens.length) {
-    ctx.addIssue({ code: "custom", path: ["trackedTokenIndex"], message: "tracked token index is out of range" });
-  }
-  if (model.invariant === "constant-product") {
-    if (model.source !== "raydium" || model.tokens.length !== 2) {
-      ctx.addIssue({ code: "custom", path: ["invariant"], message: "invalid constant-product model" });
+export const DexAmmExecutionModelSchema = z
+  .object({
+    source: z.enum(["raydium", "balancer"]),
+    invariant: z.enum(["constant-product", "weighted-constant-mean"]),
+    trackedTokenIndex: z.number().int().nonnegative(),
+    feeRate: z.number().finite().min(0).lt(1),
+    tokens: z.array(DexAmmExecutionTokenSchema).min(2).max(8),
+  })
+  .superRefine((model, ctx) => {
+    if (model.trackedTokenIndex >= model.tokens.length) {
+      ctx.addIssue({ code: "custom", path: ["trackedTokenIndex"], message: "tracked token index is out of range" });
     }
-    return;
-  }
-  if (model.source !== "balancer") {
-    ctx.addIssue({ code: "custom", path: ["source"], message: "weighted models require Balancer source" });
-  }
-  const weights = model.tokens.map((token) => token.weight);
-  if (weights.some((weight) => weight == null)) {
-    ctx.addIssue({ code: "custom", path: ["tokens"], message: "weighted models require every token weight" });
-    return;
-  }
-  const weightSum = (weights as number[]).reduce((sum, weight) => sum + weight, 0);
-  if (Math.abs(weightSum - 1) > 0.0001) {
-    ctx.addIssue({ code: "custom", path: ["tokens"], message: "weighted model token weights must sum to one" });
-  }
-});
+    if (model.invariant === "constant-product") {
+      if (model.source !== "raydium" || model.tokens.length !== 2) {
+        ctx.addIssue({ code: "custom", path: ["invariant"], message: "invalid constant-product model" });
+      }
+      return;
+    }
+    if (model.source !== "balancer") {
+      ctx.addIssue({ code: "custom", path: ["source"], message: "weighted models require Balancer source" });
+    }
+    const weights = model.tokens.map((token) => token.weight);
+    if (weights.some((weight) => weight == null)) {
+      ctx.addIssue({ code: "custom", path: ["tokens"], message: "weighted models require every token weight" });
+      return;
+    }
+    const weightSum = (weights as number[]).reduce((sum, weight) => sum + weight, 0);
+    if (Math.abs(weightSum - 1) > 0.0001) {
+      ctx.addIssue({ code: "custom", path: ["tokens"], message: "weighted model token weights must sum to one" });
+    }
+  });
 export type DexAmmExecutionModel = z.infer<typeof DexAmmExecutionModelSchema>;
 
 const DexLiquidityPoolSchema = z.object({
@@ -278,6 +286,21 @@ const DexPriceSourceSchema = z.object({
   tvl: z.number(),
 });
 
+function enforceDexExitRouteObservations(
+  observations: readonly z.infer<typeof ExitRouteObservationSchema>[] | null | undefined,
+  ctx: z.RefinementCtx,
+) {
+  (observations ?? []).forEach((observation, index) => {
+    if (!DexExitRouteObservationSchema.safeParse(observation).success) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["exitRouteObservations", index],
+        message: "invalid DEX exit-route observation",
+      });
+    }
+  });
+}
+
 export const LiquidityEvidenceClassSchema = z.enum([
   "unobserved",
   "measured",
@@ -313,71 +336,75 @@ const DexDeploymentCoverageSchema = z.object({
   ),
 });
 
-const DexLiquidityDataSchema = z.object({
-  totalTvlUsd: z.number(),
-  totalVolume24hUsd: z.number(),
-  totalVolume7dUsd: z.number(),
-  poolCount: z.number(),
-  pairCount: z.number(),
-  chainCount: z.number(),
-  protocolTvl: z.record(z.string(), z.number()),
-  chainTvl: z.record(z.string(), z.number()),
-  topPools: z.array(DexLiquidityPoolSchema),
-  liquidityScore: z.number().min(0).max(100).nullable(),
-  concentrationHhi: z.number().min(0).max(1).nullable(),
-  depthStability: z.number().nullable(),
-  tvlChange24h: z.number().nullable(),
-  tvlChange7d: z.number().nullable(),
-  updatedAt: z.number(),
-  dexPriceUsd: z.number().nullable(),
-  dexDeviationBps: z.number().nullable(),
-  priceSourceCount: z.number().nullable(),
-  priceSourceTvl: z.number().nullable(),
-  priceSources: z.array(DexPriceSourceSchema).nullable(),
-  effectiveTvlUsd: z.number(),
-  avgPoolStress: z.number().min(0).max(100).nullable(),
-  weightedBalanceRatio: z.number().nullable(),
-  organicFraction: z.number().nullable(),
-  durabilityScore: z.number().min(0).max(100).nullable(),
-  coverageClass: LiquidityCoverageClassSchema.nullable(),
-  coverageConfidence: z.number().min(0).max(1),
-  liquidityEvidenceClass: LiquidityEvidenceClassSchema,
-  hasMeasuredLiquidityEvidence: z.boolean(),
-  trendworthy: z.boolean(),
-  sourceMix: LiquiditySourceMixSchema,
-  balanceMeasuredTvlUsd: z.number(),
-  organicMeasuredTvlUsd: z.number(),
-  scoreComponents: z
-    .object({
-      tvlDepth: z.number(),
-      volumeActivity: z.number(),
-      poolQuality: z.number(),
-      durability: z.number(),
-      pairDiversity: z.number(),
-    })
-    .nullable(),
-  lockedLiquidityPct: z.number().nullable(),
-  methodologyVersion: z.string(),
-  deploymentCoverage: DexDeploymentCoverageSchema.nullable().optional(),
-  exitRouteObservations: z.array(ExitRouteObservationSchema).nullable().optional(),
-  exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-});
+const DexLiquidityDataSchema = z
+  .object({
+    totalTvlUsd: z.number(),
+    totalVolume24hUsd: z.number(),
+    totalVolume7dUsd: z.number(),
+    poolCount: z.number(),
+    pairCount: z.number(),
+    chainCount: z.number(),
+    protocolTvl: z.record(z.string(), z.number()),
+    chainTvl: z.record(z.string(), z.number()),
+    topPools: z.array(DexLiquidityPoolSchema),
+    liquidityScore: z.number().min(0).max(100).nullable(),
+    concentrationHhi: z.number().min(0).max(1).nullable(),
+    depthStability: z.number().nullable(),
+    tvlChange24h: z.number().nullable(),
+    tvlChange7d: z.number().nullable(),
+    updatedAt: z.number(),
+    dexPriceUsd: z.number().nullable(),
+    dexDeviationBps: z.number().nullable(),
+    priceSourceCount: z.number().nullable(),
+    priceSourceTvl: z.number().nullable(),
+    priceSources: z.array(DexPriceSourceSchema).nullable(),
+    effectiveTvlUsd: z.number(),
+    avgPoolStress: z.number().min(0).max(100).nullable(),
+    weightedBalanceRatio: z.number().nullable(),
+    organicFraction: z.number().nullable(),
+    durabilityScore: z.number().min(0).max(100).nullable(),
+    coverageClass: LiquidityCoverageClassSchema.nullable(),
+    coverageConfidence: z.number().min(0).max(1),
+    liquidityEvidenceClass: LiquidityEvidenceClassSchema,
+    hasMeasuredLiquidityEvidence: z.boolean(),
+    trendworthy: z.boolean(),
+    sourceMix: LiquiditySourceMixSchema,
+    balanceMeasuredTvlUsd: z.number(),
+    organicMeasuredTvlUsd: z.number(),
+    scoreComponents: z
+      .object({
+        tvlDepth: z.number(),
+        volumeActivity: z.number(),
+        poolQuality: z.number(),
+        durability: z.number(),
+        pairDiversity: z.number(),
+      })
+      .nullable(),
+    lockedLiquidityPct: z.number().nullable(),
+    methodologyVersion: z.string(),
+    deploymentCoverage: DexDeploymentCoverageSchema.nullable().optional(),
+    exitRouteObservations: z.array(ExitRouteObservationSchema).nullable().optional(),
+    exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
+  })
+  .superRefine((data, ctx) => enforceDexExitRouteObservations(data.exitRouteObservations, ctx));
 export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;
 
-export const DexLiquidityHistoryPointSchema = z.object({
-  tvl: z.number(),
-  volume24h: z.number(),
-  score: z.number().nullable(),
-  date: z.number(),
-  coverageClass: LiquidityCoverageClassSchema,
-  coverageConfidence: z.number(),
-  liquidityEvidenceClass: LiquidityEvidenceClassSchema,
-  hasMeasuredLiquidityEvidence: z.boolean(),
-  trendworthy: z.boolean(),
-  methodologyVersion: z.string(),
-  exitRouteObservations: z.array(ExitRouteObservationSchema).optional(),
-  exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-});
+export const DexLiquidityHistoryPointSchema = z
+  .object({
+    tvl: z.number(),
+    volume24h: z.number(),
+    score: z.number().nullable(),
+    date: z.number(),
+    coverageClass: LiquidityCoverageClassSchema,
+    coverageConfidence: z.number(),
+    liquidityEvidenceClass: LiquidityEvidenceClassSchema,
+    hasMeasuredLiquidityEvidence: z.boolean(),
+    trendworthy: z.boolean(),
+    methodologyVersion: z.string(),
+    exitRouteObservations: z.array(ExitRouteObservationSchema).optional(),
+    exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
+  })
+  .superRefine((data, ctx) => enforceDexExitRouteObservations(data.exitRouteObservations, ctx));
 export type DexLiquidityHistoryPoint = z.infer<typeof DexLiquidityHistoryPointSchema>;
 
 export const DexLiquidityHistoryResponseSchema = z.array(DexLiquidityHistoryPointSchema);

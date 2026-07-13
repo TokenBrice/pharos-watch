@@ -1,4 +1,5 @@
 import type { ContractDeployment } from "@shared/types/core";
+import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { sleepWithSignal } from "../../lib/abort";
 import { CHAIN_META } from "@shared/lib/chains";
 import { GT_CHAIN_MAP } from "../../lib/chain-registry";
@@ -8,12 +9,7 @@ import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../dex-liquidity/
 import type { GtNewPool, GtPool, DexPriceObs } from "../dex-liquidity/types";
 import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-helpers";
 import { makeChainAddressKey } from "../dex-liquidity/token-resolution";
-import {
-  DISCOVERY_STAGE_TIMEOUT_MS,
-  buildStageSignal,
-  type CrawlStageContext,
-  toStagedPool,
-} from "./staged-pool";
+import { DISCOVERY_STAGE_TIMEOUT_MS, buildStageSignal, type CrawlStageContext, toStagedPool } from "./staged-pool";
 import type { DexDeploymentProviderCheck } from "./types";
 
 type GeckoTerminalNewPool = GtNewPool & {
@@ -63,7 +59,7 @@ export async function crawlGeckoTerminalPoolsStage({
     gtTokens.push({
       sourceChain: gtNetwork,
       ourChain: chain,
-      address: address.toLowerCase(),
+      address: canonicalExitRouteScopedId(chain, address),
       stablecoinId: context.stablecoinId,
     });
     gtChainAddressToId.set(makeChainAddressKey(chain, address), context.stablecoinId);
@@ -133,31 +129,33 @@ export async function crawlGeckoTerminalPoolsStage({
 
   const gtPools = gtNewPools.get(context.stablecoinId) ?? [];
   for (const pool of gtPools) {
-    const poolId = `${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`;
+    const poolId = canonicalExitRouteScopedKey(pool.chain, pool.address);
     if (context.hasKnownPool(poolId)) continue;
     if (pool.volume24hUsd <= 0 && pool.tvlUsd < 10_000) continue;
 
-    context.addPool(toStagedPool(context, {
-      poolId,
-      source: "gecko_terminal",
-      chain: pool.chain,
-      protocol: normalizeProtocol(pool.dexId),
-      dexId: pool.dexId,
-      symbol: pool.name,
-      tvlUsd: pool.tvlUsd,
-      volume24h: pool.volume24hUsd,
-      qualityMultiplier: pool.qualityMultiplier,
-      poolType: pool.poolType,
-      feeTier: null,
-      balanceRatio: null,
-      isStable: null,
-      baseToken: pool.baseToken || null,
-      quoteToken: pool.quoteToken || null,
-      quoteSymbol: pool.quoteSymbol,
-      priceUsd: pool.price > 0 ? pool.price : null,
-      lockedLiqPct: null,
-      rawJson: null,
-    }));
+    context.addPool(
+      toStagedPool(context, {
+        poolId,
+        source: "gecko_terminal",
+        chain: pool.chain,
+        protocol: normalizeProtocol(pool.dexId),
+        dexId: pool.dexId,
+        symbol: pool.name,
+        tvlUsd: pool.tvlUsd,
+        volume24h: pool.volume24hUsd,
+        qualityMultiplier: pool.qualityMultiplier,
+        poolType: pool.poolType,
+        feeTier: null,
+        balanceRatio: null,
+        isStable: null,
+        baseToken: pool.baseToken || null,
+        quoteToken: pool.quoteToken || null,
+        quoteSymbol: pool.quoteSymbol,
+        priceUsd: pool.price > 0 ? pool.price : null,
+        lockedLiqPct: null,
+        rawJson: null,
+      }),
+    );
   }
 
   const gtObs = gtPriceObs.get(context.stablecoinId) ?? [];

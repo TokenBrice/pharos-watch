@@ -162,6 +162,7 @@ vi.mock("@shared/lib/chains", () => ({
     ethereum: { name: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
     tron: { name: "Tron", evmChainId: null, explorerUrl: "https://tronscan.org", type: "tron" },
   },
+  resolveChainId: (chain: string) => chain.trim().toLowerCase(),
 }));
 
 import { syncBlacklist, type SyncBlacklistOptions } from "../sync-blacklist";

@@ -130,6 +130,101 @@ describe("mergeStagedPools", () => {
     vi.restoreAllMocks();
   });
 
+  it("retains case-distinct Solana staged pools as separate identities", async () => {
+    const now = 1_710_000_000;
+    const upperPool = "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc";
+    const lowerPool = "9j7m8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc";
+    const makeRow = (poolId: string) => ({
+      pool_id: `solana:${poolId}`,
+      stablecoin_id: "usdc-circle",
+      source: "gecko_terminal",
+      chain: "solana",
+      protocol: "raydium",
+      dex_id: "raydium",
+      symbol: "USDC/USDT",
+      tvl_usd: 100_000,
+      volume_24h: 50_000,
+      quality_multiplier: 0.8,
+      pool_type: "raydium-amm",
+      fee_tier: 25,
+      balance_ratio: 1,
+      is_stable: 1,
+      base_token: "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1",
+      quote_token: "Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus",
+      quote_symbol: "USDT",
+      price_usd: 1,
+      locked_liq_pct: null,
+      raw_json: null,
+      discovered_at: now - 86_400,
+      refreshed_at: now,
+    });
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(
+      createMockDb([makeRow(upperPool), makeRow(lowerPool)]),
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+    );
+
+    expect(result.mergedCount).toBe(2);
+    expect(result.skippedCount).toBe(0);
+    expect(metrics.get("usdc-circle")?.topPools.map((pool: { poolId: string }) => pool.poolId)).toEqual([
+      `solana:${upperPool}`,
+      `solana:${lowerPool}`,
+    ]);
+  });
+
+  it("supersedes an older legacy-lowercase Solana row with its corrected identity", async () => {
+    const now = 1_710_000_000;
+    const correctedPool = "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc";
+    const correctedBase = "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1";
+    const correctedQuote = "Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus";
+    const makeRow = (poolId: string, base: string, quote: string, refreshedAt: number) => ({
+      pool_id: `solana:${poolId}`,
+      stablecoin_id: "usdc-circle",
+      source: "gecko_terminal",
+      chain: "solana",
+      protocol: "raydium",
+      dex_id: "raydium",
+      symbol: "USDC/USDT",
+      tvl_usd: 100_000,
+      volume_24h: 50_000,
+      quality_multiplier: 0.8,
+      pool_type: "raydium-amm",
+      fee_tier: 25,
+      balance_ratio: 1,
+      is_stable: 1,
+      base_token: base,
+      quote_token: quote,
+      quote_symbol: "USDT",
+      price_usd: 1,
+      locked_liq_pct: null,
+      raw_json: null,
+      discovered_at: now - 86_400,
+      refreshed_at: refreshedAt,
+    });
+    const metrics = new Map();
+    const result = await mergeStagedPools(
+      createMockDb([
+        makeRow(correctedPool.toLowerCase(), correctedBase.toLowerCase(), correctedQuote.toLowerCase(), now - 60),
+        makeRow(correctedPool, correctedBase, correctedQuote, now),
+      ]),
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+    );
+
+    expect(result.mergedCount).toBe(1);
+    expect(result.skippedCount).toBe(1);
+    expect(result.skipDimensions).toContainEqual(
+      expect.objectContaining({ reason: "legacy_lowercase_identity_superseded", count: 1 }),
+    );
+    expect(metrics.get("usdc-circle")?.topPools.map((pool: { poolId: string }) => pool.poolId)).toEqual([
+      `solana:${correctedPool}`,
+    ]);
+  });
+
   it("returns zero counts with empty staging table", async () => {
     const mockDb = createMockDb([]);
     const metrics = new Map();

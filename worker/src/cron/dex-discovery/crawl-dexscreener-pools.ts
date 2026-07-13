@@ -1,21 +1,15 @@
 import type { ContractDeployment } from "@shared/types/core";
+import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { CHAIN_META } from "@shared/lib/chains";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
-import {
-  dsRateLimit,
-  fetchDsTokenPoolsWithStatus,
-  getDsTrackedTokenPriceUsd,
-} from "../../lib/dexscreener";
+import { dsRateLimit, fetchDsTokenPoolsWithStatus } from "../../lib/dexscreener";
 import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-helpers";
+import { getChainAwareDsTrackedTokenPriceUsd } from "../dex-liquidity/crawl-helpers";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
-import {
-  DISCOVERY_STAGE_TIMEOUT_MS,
-  type CrawlStageContext,
-  toStagedPool,
-} from "./staged-pool";
+import { DISCOVERY_STAGE_TIMEOUT_MS, type CrawlStageContext, toStagedPool } from "./staged-pool";
 import type { DexDeploymentProviderCheck } from "./types";
 
 type DexScreenerTarget = readonly [string, string];
@@ -31,7 +25,6 @@ export interface DexScreenerPoolsStageDependencies {
   recordOutcome: typeof recordOutcome;
   dsRateLimit: typeof dsRateLimit;
   fetchDsTokenPoolsWithStatus: typeof fetchDsTokenPoolsWithStatus;
-  getDsTrackedTokenPriceUsd: typeof getDsTrackedTokenPriceUsd;
 }
 
 const defaultDexScreenerPoolsStageDependencies: DexScreenerPoolsStageDependencies = {
@@ -39,7 +32,6 @@ const defaultDexScreenerPoolsStageDependencies: DexScreenerPoolsStageDependencie
   recordOutcome,
   dsRateLimit,
   fetchDsTokenPoolsWithStatus,
-  getDsTrackedTokenPriceUsd,
 };
 
 interface SelectDexScreenerTargetsOptions {
@@ -135,10 +127,10 @@ export async function crawlDexScreenerPoolsStage({
         if (vol24h === 0 && tvl < 10_000) continue;
         if (tvl > 0 && vol24h / tvl > 50) continue;
 
-        const poolAddress = pair.pairAddress?.toLowerCase();
+        const poolAddress = canonicalExitRouteScopedId(chain, pair.pairAddress ?? "");
         const dexId = pair.dexId;
-        const baseAddr = pair.baseToken?.address?.toLowerCase();
-        const quoteAddr = pair.quoteToken?.address?.toLowerCase();
+        const baseAddr = canonicalExitRouteScopedId(chain, pair.baseToken?.address ?? "");
+        const quoteAddr = canonicalExitRouteScopedId(chain, pair.quoteToken?.address ?? "");
         if (!poolAddress || !dexId || !baseAddr || !quoteAddr) {
           console.warn(`[dex-discovery] dexscreener malformed pair for ${chain}:${address}`, {
             pairAddress: pair.pairAddress ?? null,
@@ -149,38 +141,40 @@ export async function crawlDexScreenerPoolsStage({
           continue;
         }
 
-        const poolId = `${chain.toLowerCase()}:${poolAddress}`;
+        const poolId = canonicalExitRouteScopedKey(chain, poolAddress);
         if (context.hasKnownPool(poolId)) continue;
 
-        const { side, priceUsd } = dependencies.getDsTrackedTokenPriceUsd(pair, address);
+        const { side, priceUsd } = getChainAwareDsTrackedTokenPriceUsd(pair, address, chain);
         if (!side) continue;
 
-        context.addPool(toStagedPool(context, {
-          poolId,
-          source: "dexscreener",
-          chain,
-          protocol: normalizeProtocol(dexId),
-          dexId,
-          symbol: `${pair.baseToken.symbol ?? context.stablecoinId} / ${pair.quoteToken.symbol ?? "UNKNOWN"}`,
-          tvlUsd: tvl,
-          volume24h: vol24h,
-          qualityMultiplier: getGtDexQuality(dexId),
-          poolType:
-            pair.labels?.includes("CLMM") || pair.labels?.includes("V3")
-              ? "ds-concentrated"
-              : pair.labels?.includes("StableSwap")
-                ? "ds-stableswap"
-                : "ds-amm",
-          feeTier: null,
-          balanceRatio: null,
-          isStable: null,
-          baseToken: baseAddr,
-          quoteToken: quoteAddr,
-          quoteSymbol: pair.quoteToken?.symbol ?? null,
-          priceUsd,
-          lockedLiqPct: null,
-          rawJson: null,
-        }));
+        context.addPool(
+          toStagedPool(context, {
+            poolId,
+            source: "dexscreener",
+            chain,
+            protocol: normalizeProtocol(dexId),
+            dexId,
+            symbol: `${pair.baseToken.symbol ?? context.stablecoinId} / ${pair.quoteToken.symbol ?? "UNKNOWN"}`,
+            tvlUsd: tvl,
+            volume24h: vol24h,
+            qualityMultiplier: getGtDexQuality(dexId),
+            poolType:
+              pair.labels?.includes("CLMM") || pair.labels?.includes("V3")
+                ? "ds-concentrated"
+                : pair.labels?.includes("StableSwap")
+                  ? "ds-stableswap"
+                  : "ds-amm",
+            feeTier: null,
+            balanceRatio: null,
+            isStable: null,
+            baseToken: baseAddr,
+            quoteToken: quoteAddr,
+            quoteSymbol: pair.quoteToken?.symbol ?? null,
+            priceUsd,
+            lockedLiqPct: null,
+            rawJson: null,
+          }),
+        );
 
         if (
           priceUsd != null &&

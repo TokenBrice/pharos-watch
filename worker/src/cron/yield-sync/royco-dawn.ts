@@ -80,7 +80,7 @@ function buildTrackedAssetByChainAddress(): Map<string, RoycoTrackedAsset> {
   for (const meta of ACTIVE_STABLECOINS) {
     for (const contract of stablecoinContracts(meta)) {
       const chain = resolveCanonicalChain(contract.chain);
-      const address = normalizeTokenAddress(contract.address);
+      const address = contract.address.trim();
       if (!chain || !address) continue;
       byChainAddress.set(buildChainAddressKey(chain, address), {
         stablecoinId: meta.id,
@@ -92,7 +92,7 @@ function buildTrackedAssetByChainAddress(): Map<string, RoycoTrackedAsset> {
   for (const [stablecoinId, variant] of Object.entries(YIELD_VARIANT_MAP)) {
     if (!variant.variantAddress || !variant.variantChain) continue;
     const chain = resolveCanonicalChain(variant.variantChain);
-    const address = normalizeTokenAddress(variant.variantAddress);
+    const address = variant.variantAddress.trim();
     const meta = ACTIVE_STABLECOINS.find((entry) => entry.id === stablecoinId);
     if (!chain || !address || !meta) continue;
     byChainAddress.set(buildChainAddressKey(chain, address), {
@@ -104,15 +104,17 @@ function buildTrackedAssetByChainAddress(): Map<string, RoycoTrackedAsset> {
   return byChainAddress;
 }
 
-function resolveVaultDepositToken(vault: RoycoVault, chain: string, lookup: Map<string, RoycoTrackedAsset>): RoycoTrackedAsset | null {
-  const address = normalizeTokenAddress(vault.depositToken?.contractAddress ?? "");
-  return address ? lookup.get(buildChainAddressKey(chain, address)) ?? null : null;
+function resolveVaultDepositToken(
+  vault: RoycoVault,
+  chain: string,
+  lookup: Map<string, RoycoTrackedAsset>,
+): RoycoTrackedAsset | null {
+  const address = vault.depositToken?.contractAddress?.trim() ?? "";
+  return address ? (lookup.get(buildChainAddressKey(chain, address)) ?? null) : null;
 }
 
 function readMarketStatus(value: string | null | undefined): YieldMarketStatus | null {
-  return value === "normal" || value === "protected" || value === "unhealthy" || value === "critical"
-    ? value
-    : null;
+  return value === "normal" || value === "protected" || value === "unhealthy" || value === "critical" ? value : null;
 }
 
 function sourceRiskForTranche(params: {
@@ -121,7 +123,9 @@ function sourceRiskForTranche(params: {
   vault: RoycoVault;
   chain: string;
 }): YieldSourceRisk {
-  const shareTokenAddress = normalizeTokenAddress(params.vault.shareToken?.contractAddress ?? params.vault.address ?? "");
+  const shareTokenAddress = normalizeTokenAddress(
+    params.vault.shareToken?.contractAddress ?? params.vault.address ?? "",
+  );
   const depositTokenAddress = normalizeTokenAddress(params.vault.depositToken?.contractAddress ?? "");
   const status = readMarketStatus(params.market.status);
   const investabilityFlags = [
@@ -143,9 +147,10 @@ function sourceRiskForTranche(params: {
     marketUtilizationRatio: finiteNumber(params.market.utilization?.currentRatio),
     marketUtilizationLimitRatio: finiteNumber(params.market.utilization?.requiredRatio),
     marketDrawdownRatio: finiteNumber(params.market.drawdown?.ratio),
-    marketTotalDrawdowns: Number.isInteger(params.market.totalDrawdowns) && params.market.totalDrawdowns != null
-      ? params.market.totalDrawdowns
-      : null,
+    marketTotalDrawdowns:
+      Number.isInteger(params.market.totalDrawdowns) && params.market.totalDrawdowns != null
+        ? params.market.totalDrawdowns
+        : null,
     marketStatus: status,
     marketTvlUsd: finiteNumber(params.market.tvlUsd),
     trancheTvlUsd: finiteNumber(params.vault.tvl?.tokenAmountUsd),
@@ -153,7 +158,7 @@ function sourceRiskForTranche(params: {
     trancheDepositTokenAddress: depositTokenAddress || null,
     withdrawalDelaySeconds:
       params.side === "junior" && Number.isInteger(params.market.juniorRedemptionDelay)
-        ? params.market.juniorRedemptionDelay ?? null
+        ? (params.market.juniorRedemptionDelay ?? null)
         : null,
     kycRequired: null,
     accessRestricted: null,
@@ -237,7 +242,7 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
   const budget = createOptionalSourceBudget("Royco Dawn sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   const trackedByAddress = buildTrackedAssetByChainAddress();
   const observedAt = Math.floor(Date.now() / 1000);
-    const results: ResolvedYieldCandidate[] = [];
+  const results: ResolvedYieldCandidate[] = [];
 
   try {
     let pageIndex = 0;
@@ -305,7 +310,10 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
       }
 
       pageIndex += 1;
-      if (markets.length < ROYCO_DAWN_PAGE_SIZE || (typeof body.count === "number" && pageIndex * ROYCO_DAWN_PAGE_SIZE >= body.count)) {
+      if (
+        markets.length < ROYCO_DAWN_PAGE_SIZE ||
+        (typeof body.count === "number" && pageIndex * ROYCO_DAWN_PAGE_SIZE >= body.count)
+      ) {
         break;
       }
     }
