@@ -15,6 +15,11 @@ import { formatCompactUsdShort } from "./format";
 import { scoreToGrade } from "./report-card-core";
 import { detailItemsFromParts, joinReportCardDetail, plural } from "./report-card-detail";
 import { roundScore } from "./math";
+import {
+  applyReportCardDexEvidencePolicy,
+  type ReportCardDexEvidenceInput,
+  type ReportCardDexEvidencePolicy,
+} from "./report-card-liquidity-evidence";
 
 interface PegStabilityFacts {
   score: number;
@@ -237,6 +242,7 @@ export function isRedemptionEligibleForLiquidity(
 
 interface LiquidityScoringFacts {
   dexScore: number | null;
+  dexEvidencePolicy: ReportCardDexEvidencePolicy;
   redemptionEligibleForLiquidity: boolean;
   redemptionExclusionReason: string | null;
   redemptionScore: number | null;
@@ -248,11 +254,12 @@ interface LiquidityScoringFacts {
 }
 
 function buildLiquidityScoringFacts(
-  liq: Pick<DexLiquidityData, "liquidityScore"> | undefined,
+  liq: ReportCardDexEvidenceInput | undefined,
   redemption: RedemptionLiquidityInput | undefined,
   options?: { activeDepegBps?: number | null },
 ): LiquidityScoringFacts {
-  const dexScore = liq?.liquidityScore ?? null;
+  const dexEvidencePolicy = applyReportCardDexEvidencePolicy(liq ?? { liquidityScore: null });
+  const dexScore = dexEvidencePolicy.effectiveScore;
   const eligibilityOptions = { ...options, dexLiquidityScore: dexScore };
   const redemptionEligibleForLiquidity = isRedemptionEligibleForLiquidity(redemption, eligibilityOptions);
   const redemptionExclusionReason = getRedemptionExclusionReason(redemption, eligibilityOptions);
@@ -262,6 +269,7 @@ function buildLiquidityScoringFacts(
     : null;
   return {
     dexScore,
+    dexEvidencePolicy,
     redemptionEligibleForLiquidity,
     redemptionExclusionReason,
     redemptionScore,
@@ -302,7 +310,10 @@ function describeUnavailableLiquidity(facts: LiquidityScoringFacts): string {
 }
 
 export function scoreLiquidity(
-  liq: Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> | undefined,
+  liq:
+    | (Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> &
+        Omit<ReportCardDexEvidenceInput, "liquidityScore">)
+    | undefined,
   redemption?: RedemptionLiquidityInput,
   options?: { activeDepegBps?: number | null },
 ): ReportCardDimension {
@@ -323,6 +334,16 @@ export function scoreLiquidity(
   parts.push(`Effective exit score: ${score}/100`);
   if (facts.dexScore !== null) {
     parts.push(`DEX liquidity ${roundScore(facts.dexScore)}/100`);
+    if (
+      facts.dexEvidencePolicy.observedScore != null &&
+      facts.dexEvidencePolicy.observedScore !== facts.dexScore
+    ) {
+      parts.push(
+        `observed DEX score ${roundScore(facts.dexEvidencePolicy.observedScore)}/100 capped by ${facts.dexEvidencePolicy.evidenceKind ?? "weak"} evidence`,
+      );
+    } else if (facts.dexEvidencePolicy.evidenceKind != null) {
+      parts.push(`DEX evidence: ${facts.dexEvidencePolicy.evidenceKind}`);
+    }
   } else {
     parts.push("DEX liquidity unavailable");
   }

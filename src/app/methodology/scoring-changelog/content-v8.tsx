@@ -1,6 +1,23 @@
 import type { ReactNode } from "react";
 
 export const scoringChangelogV8Details: Record<string, ReactNode> = {
+  "8.16": (
+    <>
+      <p>
+        Liquidity / Exit now carries the evidence quality behind each published DEX score instead of treating TVL
+        proxies, fallback rows, and retained AMM reserves as measured executable depth.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>Reserve-based AMM simulation caps at 85, generic TVL proxies at 60, and synthetic/fallback evidence at 55.</li>
+        <li>A row with provider-inaccessible deployments and no observed deployment caps at 45.</li>
+        <li>Legacy report-card inputs without republished evidence fields remain neutral and wire-compatible.</li>
+        <li>
+          The fixed-input replay changed 18 scores and 9 grades with no NR transitions; the standalone public Liquidity
+          Score is unchanged.
+        </li>
+      </ul>
+    </>
+  ),
   "8.15": (
     <>
       <p>

@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.16",
+    title: "DEX exit scoring carries evidence quality",
+    date: "2026-07-12",
+    effectiveAt: 1783900400,
+    summary:
+      "Liquidity / Exit now retains DEX coverage, measurement, effective-TVL, and deployment-access evidence and applies conservative ceilings when the published DEX score rests on reserve simulation, generic TVL proxies, synthetic fallback, or inaccessible-only coverage rather than measured executable depth.",
+    impact: [
+      "Report-card DEX snapshot reads preserve coverage class and confidence, evidence class, measured-balance and organic TVL, effective TVL, and aggregate deployment outcomes",
+      "Legacy rows without republished evidence fields remain score-neutral and parse through the existing optional raw-input contract",
+      "Reserve-based AMM simulation is capped at 85, generic TVL proxy evidence at 60, and synthetic or fallback evidence at 55; a row with provider-inaccessible deployments and no observed deployment is capped at 45",
+      "The standalone public Liquidity Score is unchanged; the evidence-adjusted DEX value is used only as the Safety Score effective-exit input and is exposed beside the observed score and binding evidence ceiling",
+      "Fixed-input calibration changed 18 overall scores and 9 grades with no NR transitions; the largest moves were XSGD 80/A- to 72/B, IDRX 69/B- to 63/C+, and HOLLAR 53/C- to 48/D",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.15",
     title: "Dependency scoring is deterministic across cycles and unavailable upstreams",
     date: "2026-07-12",

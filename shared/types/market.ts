@@ -216,6 +216,16 @@ export const LiquidityEvidenceClassSchema = z.enum([
 ]);
 export type LiquidityEvidenceClass = z.infer<typeof LiquidityEvidenceClassSchema>;
 
+export const DexExitEvidenceKindSchema = z.enum([
+  "measured-executable-depth",
+  "reserve-based-amm-simulation",
+  "direct-orderbook-depth",
+  "generic-tvl-proxy",
+  "synthetic-or-fallback",
+  "unobserved",
+]);
+export type DexExitEvidenceKind = z.infer<typeof DexExitEvidenceKindSchema>;
+
 export const DexDeploymentOutcomeSchema = z.enum([
   "observed_pools",
   "verified_no_pools",

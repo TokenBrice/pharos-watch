@@ -19,6 +19,11 @@ import {
 import type { BluechipGrade, CustodyModel } from "./core";
 import { RedemptionModelConfidenceSchema, RedemptionRouteFamilySchema } from "./redemption";
 import { DependencyWeightSchema, StablecoinLinkSchema } from "./stablecoin-meta-schemas";
+import {
+  DexExitEvidenceKindSchema,
+  LiquidityCoverageClassSchema,
+  LiquidityEvidenceClassSchema,
+} from "./market";
 
 export type ReportCardGrade = BluechipGrade | "NR";
 const REPORT_CARD_GRADE_VALUES = [...BLUECHIP_GRADE_VALUES, "NR"] as const;
@@ -110,6 +115,24 @@ const RawDimensionInputsSchema = z.object({
   depegEventCount: z.number(),
   lastEventAt: z.number().nullable(),
   liquidityScore: z.number().nullable(),
+  liquidityObservedScore: z.number().nullable().optional(),
+  liquidityCoverageClass: LiquidityCoverageClassSchema.nullable().optional(),
+  liquidityCoverageConfidence: z.number().min(0).max(1).nullable().optional(),
+  liquidityEvidenceClass: LiquidityEvidenceClassSchema.nullable().optional(),
+  liquidityExitEvidenceKind: DexExitEvidenceKindSchema.nullable().optional(),
+  liquidityEvidenceCeiling: z.number().min(0).max(100).nullable().optional(),
+  liquidityHasMeasuredEvidence: z.boolean().nullable().optional(),
+  liquidityEffectiveTvlUsd: z.number().nonnegative().nullable().optional(),
+  liquidityBalanceMeasuredTvlUsd: z.number().nonnegative().nullable().optional(),
+  liquidityOrganicMeasuredTvlUsd: z.number().nonnegative().nullable().optional(),
+  liquidityDeploymentCoverage: z
+    .object({
+      observedPools: z.number().int().nonnegative(),
+      verifiedNoPools: z.number().int().nonnegative(),
+      providerInaccessible: z.number().int().nonnegative(),
+    })
+    .nullable()
+    .optional(),
   effectiveExitScore: z.number().nullable(),
   redemptionBackstopScore: z.number().nullable(),
   redemptionRouteFamily: RedemptionRouteFamilySchema.nullable(),

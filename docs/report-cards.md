@@ -6,12 +6,12 @@ The stablecoin registry currently contains 410 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.15`
+- **Current methodology version:** `v8.16`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v8.15)
+## Overall Grade (v8.16)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v8.15 makes dependency scoring deterministic under malformed or cyclic graphs and uses one scoring path for fully and partially unavailable upstreams. Static SCCs block scoring pending review. A live-created SCC falls its affected assets back to their curated/manual dependency sets and reruns diagnostics; if the fallback graph is still invalid, the snapshot is rejected before cache or grade-history publication. Every unavailable weight is scored at 70 inside the normal blend and remains subject to the weak-upstream penalty and wrapper/mechanism ceilings. v8.14 self-link-free serial variant derivation and typed dependency provenance carry forward unchanged.
+Current-version note: v8.16 carries DEX coverage and measurement quality into Liquidity / Exit. The public Liquidity Score remains unchanged, but Safety Score caps its DEX input at 85 for reserve-based AMM simulation, 60 for generic TVL proxies, 55 for synthetic/fallback evidence, and 45 when all reviewed deployments are provider-inaccessible. Old snapshot rows without the new evidence fields remain neutral. v8.15 deterministic dependency scoring and v8.14 self-link-free serial variant derivation carry forward unchanged.
 
 ## Yield Source-Risk Boundary
 
@@ -66,11 +66,12 @@ As of Safety Score v8.0 the Mint Authority Score feeds the **Decentralization** 
 ### Liquidity / Exit Details
 
 - The public DEX liquidity dataset stays unchanged and fully market-based (see [DEX Liquidity Score](./dex-liquidity.md))
-- Report cards use `effectiveExitScore`, not raw `liquidityScore`
+- Report cards use `effectiveExitScore`, not raw `liquidityScore`. The DEX input is first evidence-adjusted: reserve-based AMM simulation is capped at 85, generic TVL proxy evidence at 60, synthetic/fallback evidence at 55, and inaccessible-only deployment coverage at 45. Measured executable depth and direct order-book depth are reserved evidence classes and receive no evidence ceiling when a future producer can substantiate them.
+- Coverage class/confidence, effective TVL, measured-balance and organic TVL, evidence class, and deployment outcomes remain visible in raw inputs. Missing fields from an older producer generation are default-neutral rather than inferred as weak.
 - `effectiveExitScore` uses the Redemption Backstop v4 capacity-aware best-path model:
   - redemption contribution is scaled by current executable capacity versus modeled exit size (`min(max(supply × 5%, $100k), $25M)`) and by model confidence
   - the 10% diversification bonus applies only when the redemption route is plausibly independent from the DEX path (`independent-issuer-rail`)
-- If only DEX liquidity exists, `effectiveExitScore = liquidityScore`
+- If only DEX liquidity exists, `effectiveExitScore` equals the evidence-adjusted DEX input
 - If only eligible current-capacity redemption exists, `effectiveExitScore` uses the capacity/confidence-adjusted redemption score
 - Documented offchain-issuer eventual exits remain visible but do not replace missing DEX liquidity without current executable capacity.
 - Redemption uplift is only used when the redemption route is resolved, above the low-confidence / heuristic tier, and not currently impaired by route-availability evidence
@@ -446,7 +447,7 @@ Implementation notes:
 Key types:
 
 - **`DependencyWeight`**: `{ id: string; weight: number; type?: "wrapper" | "mechanism" | "collateral" }` — upstream stablecoin ID, collateral fraction (0–1), and optional dependency ceiling semantics. Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `activeDepegBps`, `depegEventCount`, `lastEventAt`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionModelConfidence`, `redemptionUsedForLiquidity`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `mintAuthorityScore`, `oracleRiskTier`, `oracleRiskScore`, `bridgeRouteRiskTier`, `bridgeRouteRiskScore`, `dependencies`, `variantParentId`, `variantKind`, `navToken`, `collateralFromLive`, `dependencyFromLive`) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card, including peg state; the evidence-adjusted and observed DEX scores; DEX coverage, evidence, measured-TVL, and deployment fields; redemption score/capacity/route fields; resilience and governance tiers; oracle, bridge, and Mint Authority inputs; typed dependencies and their provenance; variant identity; and live-collateral provenance. This enables client-side stress recomputation without discarding why a DEX input was capped.
 - **`ReportCard.oracleRisk`**: Optional display payload for reviewed or inherited oracle setup context (`tier`, `score`, `label`, `summary`, provenance, sources, selected branch, branch rows, and `inheritedFrom`). It is presentation evidence; scoring uses the raw oracle fields inside Decentralization.
 - **`ReportCard.bridgeRouteRisk`**: Optional display payload for reviewed bridge-route context (`tier`, `score`, `label`, `summary`, provenance, protocol evidence, and sources`). It is presentation evidence; scoring uses the raw bridge-route fields inside Decentralization.
 

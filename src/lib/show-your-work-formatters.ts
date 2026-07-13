@@ -69,6 +69,13 @@ export function formatReportCard(rawInputs: RawDimensionInputs): ShowYourWorkTab
     },
     { label: "Depeg event count", value: fmtNum(rawInputs.depegEventCount) },
     { label: "Liquidity score", value: fmtNum(rawInputs.liquidityScore) },
+    { label: "Observed DEX score", value: fmtNum(rawInputs.liquidityObservedScore) },
+    { label: "DEX exit evidence", value: rawInputs.liquidityExitEvidenceKind ?? "legacy / unavailable" },
+    { label: "DEX evidence ceiling", value: fmtNum(rawInputs.liquidityEvidenceCeiling) },
+    { label: "DEX coverage class", value: rawInputs.liquidityCoverageClass ?? "—" },
+    { label: "DEX coverage confidence", value: fmtNum(rawInputs.liquidityCoverageConfidence) },
+    { label: "DEX effective TVL", value: fmtNum(rawInputs.liquidityEffectiveTvlUsd) },
+    { label: "DEX balance-measured TVL", value: fmtNum(rawInputs.liquidityBalanceMeasuredTvlUsd) },
     { label: "Redemption backstop score", value: fmtNum(rawInputs.redemptionBackstopScore) },
     { label: "Effective exit score", value: fmtNum(rawInputs.effectiveExitScore) },
     {

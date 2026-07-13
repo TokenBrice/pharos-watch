@@ -27,6 +27,10 @@ import {
 } from "@shared/lib/report-cards";
 import { isRedemptionEligibleForLiquidity } from "@shared/lib/report-card-peg-liquidity";
 import {
+  applyReportCardDexEvidencePolicy,
+  type ReportCardDexEvidenceInput,
+} from "@shared/lib/report-card-liquidity-evidence";
+import {
   computeMintAuthorityScore,
   stablecoinToMintAuthorityScoringInput,
   type MintAuthorityParentResolver,
@@ -54,7 +58,11 @@ export interface ComputeCardInput {
   meta: (typeof ACTIVE_STABLECOINS)[number];
   pegDataById: Map<string, PegSummaryCoin>;
   activeDepegPeakBpsById: Map<string, number>;
-  dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">>;
+  dexLiqMap: Record<
+    string,
+    Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> &
+      Omit<ReportCardDexEvidenceInput, "liquidityScore">
+  >;
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
   bluechipMap: Record<string, BluechipRating>;
   overallScores: Map<string, number>;
@@ -304,13 +312,14 @@ function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMint
   // USDP, USDT, ...) through the "primary-market route requires DEX liquidity
   // floor" exclusion on routine delays.
   const liq = dexLiqMap[meta.id];
+  const dexEvidencePolicy = applyReportCardDexEvidencePolicy(liq ?? { liquidityScore: null });
   const redemption = redemptionBackstopMap[meta.id];
   const rating = bluechipMap[meta.id];
   const activeDepegSourceId = resolvedPeg.inheritedFromReference && meta.pegReferenceId ? meta.pegReferenceId : meta.id;
   const activeDepegBps = peg?.activeDepeg ? (activeDepegPeakBpsById.get(activeDepegSourceId) ?? null) : null;
   const redemptionUsedForLiquidity = isRedemptionEligibleForLiquidity(redemption, {
     activeDepegBps,
-    dexLiquidityScore: liq?.liquidityScore ?? null,
+    dexLiquidityScore: dexEvidencePolicy.effectiveScore,
   });
 
   const resilienceFactors = resolveResilienceFactors(meta);
@@ -375,7 +384,24 @@ function computeReportCard(input: ComputeCardInput): { card: ReportCard; preMint
     activeDepegBps,
     depegEventCount: peg?.eventCount ?? 0,
     lastEventAt: peg?.lastEventAt ?? null,
-    liquidityScore: liq?.liquidityScore ?? null,
+    liquidityScore: dexEvidencePolicy.effectiveScore,
+    liquidityObservedScore: dexEvidencePolicy.observedScore,
+    liquidityCoverageClass: liq?.coverageClass ?? null,
+    liquidityCoverageConfidence: liq?.coverageConfidence ?? null,
+    liquidityEvidenceClass: liq?.liquidityEvidenceClass ?? null,
+    liquidityExitEvidenceKind: dexEvidencePolicy.evidenceKind,
+    liquidityEvidenceCeiling: dexEvidencePolicy.scoreCeiling,
+    liquidityHasMeasuredEvidence: liq?.hasMeasuredLiquidityEvidence ?? null,
+    liquidityEffectiveTvlUsd: liq?.effectiveTvlUsd ?? null,
+    liquidityBalanceMeasuredTvlUsd: liq?.balanceMeasuredTvlUsd ?? null,
+    liquidityOrganicMeasuredTvlUsd: liq?.organicMeasuredTvlUsd ?? null,
+    liquidityDeploymentCoverage: liq?.deploymentCoverage
+      ? {
+          observedPools: liq.deploymentCoverage.observedPools,
+          verifiedNoPools: liq.deploymentCoverage.verifiedNoPools,
+          providerInaccessible: liq.deploymentCoverage.providerInaccessible,
+        }
+      : null,
     effectiveExitScore: dimensions.liquidity.score,
     redemptionBackstopScore: redemption?.score ?? null,
     redemptionRouteFamily: redemption?.routeFamily ?? null,
