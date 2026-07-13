@@ -1,6 +1,6 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
-import type { LiquidityMetrics, PoolMeasurementFlags, GtNewPool, CgNewPool } from "./types";
+import type { LiquidityMetrics, PoolEntry, PoolMeasurementFlags, GtNewPool, CgNewPool } from "./types";
 import {
   computePoolPairQuality,
   computePoolQualityContribution,
@@ -21,6 +21,7 @@ export function addSecondaryPoolContribution(
   stablecoinId: string,
   stablecoinSymbol: string,
   pool: SecondaryPool,
+  existingPoolsById?: Map<string, PoolEntry>,
 ): void {
   let m = metrics.get(stablecoinId);
   if (!m) {
@@ -29,7 +30,9 @@ export function addSecondaryPoolContribution(
   }
 
   const incomingPoolId = canonicalExitRouteAssetKey(pool.chain, pool.address);
-  const existingPool = m.topPools.find((existing) => existing.poolId === incomingPoolId);
+  const existingPool = existingPoolsById
+    ? existingPoolsById.get(incomingPoolId)
+    : m.topPools.find((existing) => existing.poolId === incomingPoolId);
   if (existingPool) {
     if (pool.ammExecutionModel) {
       existingPool.extra = {
@@ -93,7 +96,7 @@ export function addSecondaryPoolContribution(
   m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + pool.tvlUsd;
   m.chainTvl[chainDisplay] = (m.chainTvl[chainDisplay] ?? 0) + pool.tvlUsd;
 
-  m.topPools.push({
+  const poolEntry: PoolEntry = {
     poolId: incomingPoolId,
     project: protocol,
     chain: chainDisplay,
@@ -126,5 +129,7 @@ export function addSecondaryPoolContribution(
       ...(measurement ? { measurement } : {}),
       ...(pool.ammExecutionModel ? { ammExecutionModel: pool.ammExecutionModel } : {}),
     },
-  });
+  };
+  m.topPools.push(poolEntry);
+  existingPoolsById?.set(incomingPoolId, poolEntry);
 }

@@ -1,8 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { logCronEvent, type CronEventInput } from "../../lib/cron-logger";
-import type {
-  LiquidityMetrics, GtNewPool, CgNewPool,
-} from "./types";
+import type { LiquidityMetrics, PoolEntry, GtNewPool, CgNewPool } from "./types";
 import { addSecondaryPoolContribution } from "./pool-contribution";
 
 type DexCrawlerEvent = Omit<CronEventInput, "job">;
@@ -24,9 +22,14 @@ function mergeSecondaryPools<TPool extends GtNewPool | CgNewPool>(
   for (const [stablecoinId, pools] of discoveredPools) {
     const meta = TRACKED_META_BY_ID.get(stablecoinId);
     if (!meta) continue;
+    const poolIndex = new Map<string, PoolEntry>();
+    for (const pool of metrics.get(stablecoinId)?.topPools ?? []) {
+      const poolId = pool.poolId;
+      if (!poolIndex.has(poolId)) poolIndex.set(poolId, pool);
+    }
 
     for (const pool of pools) {
-      addSecondaryPoolContribution(metrics, stablecoinId, meta.symbol, pool);
+      addSecondaryPoolContribution(metrics, stablecoinId, meta.symbol, pool, poolIndex);
       options?.onPoolMerged?.(pool);
       merged++;
     }
