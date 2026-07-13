@@ -22,7 +22,13 @@ import type {
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { ReserveSlice } from "@shared/types/reserves";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
+import { buildSafetyScoreV9MechanismReview } from "./safety-score-v9-extension-mechanism";
 import { buildSafetyScoreV9ReserveClassifications } from "./safety-score-v9-extension-reserves";
+import { buildSafetyScoreV9RouteReviews } from "./safety-score-v9-extension-routes";
+import {
+  buildSafetyScoreV9SupplyReview,
+  safetyScoreV9RouteSupplyShare,
+} from "./safety-score-v9-extension-supply";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 
 export type V9ExtensionRegistryMeta = Pick<
@@ -34,13 +40,17 @@ export type V9ExtensionRegistryMeta = Pick<
   | "implementationLaunchDate"
   | "launchDate"
   | "reserves"
+  | "reserveReview"
+  | "custodyProfile"
+  | "proofOfReserves"
   | "dependencies"
   | "dependencyReview"
   | "mintAuthority"
   | "oracleRisk"
   | "bridgeRouteRisk"
   | "blacklistabilityReview"
->;
+> &
+  Partial<Pick<StablecoinMeta, "flags">>;
 
 export interface BuildSafetyScoreV9BaselineExtensionOptions {
   metaById?: ReadonlyMap<string, V9ExtensionRegistryMeta>;
@@ -169,10 +179,12 @@ function requiredStatus(
 }
 
 function notApplicableStatus(policyRuleId: string, rationale: string, evidenceKeys: readonly string[]): V9FactStatusV2 {
+  // The fact-set compiler rebinds statuses to research-overlay evidence; a
+  // sentinel id only satisfies the known-state evidence invariant until then.
   return {
     applicability: { state: "not-applicable", policyRuleId, rationale, gapId: null },
     observationState: "known",
-    evidenceRefIds: [...evidenceKeys],
+    evidenceRefIds: evidenceKeys.length > 0 ? [...evidenceKeys] : [`extension-evidence:${policyRuleId}`],
     gapIds: [],
   };
 }
@@ -182,10 +194,19 @@ function reviewedObservationState(confidence: ResearchEvidence["confidence"]): "
   return confidence === "limited" ? "bounded-unknown" : "missing";
 }
 
-function canonicalAuthorityType(control: MintAuthorityControl): ControlOverlay["authority"] {
+function issuerAuthorityKey(assetId: string, control: MintAuthorityControl): string | null {
+  if (control.authorityType !== "issuer-backend" && control.authorityType !== "custodian") return null;
+  const slug = control.label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `issuer-backend:${assetId}:${slug || "unlabeled"}`;
+}
+
+function canonicalAuthorityType(assetId: string, control: MintAuthorityControl): ControlOverlay["authority"] {
   const authorityKey = control.address
     ? `${control.chain ?? "chain-unresolved"}:${control.address.toLowerCase()}`
-    : (control.failureDomainKeys?.[0] ?? null);
+    : (control.failureDomainKeys?.[0] ?? issuerAuthorityKey(assetId, control));
   if (authorityKey === null) return null;
   const model: NonNullable<ControlOverlay["authority"]>["model"] = (() => {
     if (control.authorityType === "safe" || control.authorityType === "multisig") return "multisig";
@@ -211,10 +232,10 @@ function mintControlKind(control: MintAuthorityControl): ControlOverlay["control
   return "mint";
 }
 
-function mintCapabilities(control: MintAuthorityControl): ControlOverlay["capabilities"] {
+function mintCapabilities(control: MintAuthorityControl, upgradeCapable: boolean): ControlOverlay["capabilities"] {
   const capabilities = new Set<ControlOverlay["capabilities"][number]>();
   if (["direct", "cap-limited", "can-authorize"].includes(control.directMintAbility)) capabilities.add("mint");
-  if (control.directMintAbility === "upgrade-only") capabilities.add("upgrade");
+  if (control.directMintAbility === "upgrade-only" || upgradeCapable) capabilities.add("upgrade");
   if (control.directMintAbility === "parameter-only") capabilities.add("parameter-change");
   if (control.role === "bridge-admin" || control.authorityType === "bridge") capabilities.add("bridge-mint");
   return [...capabilities].sort(compareText);
@@ -227,11 +248,14 @@ function controlFailureDomains(
 ): ControlOverlay["failureDomains"] {
   const kind =
     controlKind === "upgrade" ? "upgrade-control" : controlKind === "bridge" ? "bridge-route" : "mint-control";
+  const issuerKey = issuerAuthorityKey(assetId, control);
   const exactKeys = control.failureDomainKeys?.length
     ? control.failureDomainKeys
     : control.address
       ? [`${control.chain ?? "chain-unresolved"}:${control.address.toLowerCase()}`]
-      : [];
+      : issuerKey
+        ? [issuerKey]
+        : [];
   return [...new Set(exactKeys)].sort(compareText).map((key) => ({ kind, key: key || `asset:${assetId}` }));
 }
 
@@ -240,35 +264,40 @@ function adaptMintControl(
   control: MintAuthorityControl,
   index: number,
   incidents: MintAuthorityProfile["mintIncidents"],
+  reviewComplete: boolean,
+  upgradeCapable: boolean,
 ): ControlOverlay {
   const controlKind = mintControlKind(control);
-  const capabilities = mintCapabilities(control);
+  const capabilities = mintCapabilities(control, upgradeCapable);
   const hasMint = capabilities.includes("mint");
+  const capped = control.directMintAbility === "cap-limited" || control.canRaiseCap === true;
   const capSemantics: ControlOverlay["capSemantics"] = (() => {
     if (!hasMint) return { kind: "not-applicable", bound: null };
-    if (control.canRaiseCap === true) return { kind: "raiseable", bound: null };
-    if (control.directMintAbility === "direct" || control.directMintAbility === "can-authorize") {
-      return { kind: "unbounded", bound: null };
+    if (control.directMintAbility === "direct") return { kind: "unbounded", bound: null };
+    if (capped) {
+      // Reviewed caps exist but the campaign records raise authority, not the
+      // numeric bound, so a raiseable cap is the strongest claimable state.
+      return control.canRaiseCap === true ? { kind: "raiseable", bound: null } : { kind: "unknown", bound: null };
     }
-    return { kind: "unknown", bound: null };
+    return control.directMintAbility === "can-authorize"
+      ? { kind: "unbounded", bound: null }
+      : { kind: "unknown", bound: null };
   })();
-  const claimImpairment: ControlOverlay["claimImpairment"] = hasMint
-    ? control.directMintAbility === "cap-limited"
-      ? "bounded"
-      : "unbounded"
-    : capabilities.length === 0
-      ? "none"
-      : "unknown";
-  const economicLossScope: ControlOverlay["economicLossScope"] = hasMint
-    ? "global-claim"
-    : capabilities.length === 0
-      ? "access-only"
-      : "unknown";
+  const claimImpairment: ControlOverlay["claimImpairment"] = (() => {
+    if (hasMint) return capped ? "bounded" : "unbounded";
+    if (capabilities.includes("upgrade") || capabilities.includes("bridge-mint")) return "unbounded";
+    if (capabilities.includes("parameter-change")) return "bounded";
+    return "none";
+  })();
+  const economicLossScope: ControlOverlay["economicLossScope"] =
+    claimImpairment === "none" ? "access-only" : "global-claim";
   const incidentState: ControlOverlay["incidentState"] = incidents?.some((incident) => incident.status === "active")
     ? "active"
     : incidents?.some((incident) => incident.status === "resolved")
       ? "resolved"
-      : "unknown";
+      : reviewComplete
+        ? "none"
+        : "unknown";
   const controlKey = `mint-meta:${assetId}:${index}:${digest("safety-score-v9.mint-control-key.v1", {
     chain: control.chain ?? null,
     address: control.address?.toLowerCase() ?? null,
@@ -284,7 +313,7 @@ function adaptMintControl(
     capSemantics,
     claimImpairment,
     economicLossScope,
-    authority: canonicalAuthorityType(control),
+    authority: canonicalAuthorityType(assetId, control),
     delaySec: control.timelockDelaySec ?? null,
     materialSupplyShare: null,
     incidentState,
@@ -385,7 +414,6 @@ function prepareDependency(
   const validEdges = collateralWeight <= 1.000001 ? edges : [];
   if (collateralWeight > 1.000001) issueCodes.push("collateral-weight-exceeds-one");
   issueCodes.push(...collateralExposureMappingIssues(validEdges, liveReserveSlices));
-  if (derived.source === "live-unmapped") issueCodes.push("live-reserve-unmapped");
   if (derived.source === "manual") {
     const review = meta.dependencyReview;
     if (!review) {
@@ -425,12 +453,7 @@ function prepareDependency(
       fallbackReason: derived.fallbackReason,
       edges: validEdges,
       diagnostics: {
-        graphState:
-          issueCodes.includes("live-reserve-unmapped") || dependencyReviewUnresolved
-            ? "unresolved"
-            : issueCodes.length > 0
-              ? "invalid"
-              : "valid",
+        graphState: dependencyReviewUnresolved ? "unresolved" : issueCodes.length > 0 ? "invalid" : "valid",
         issueCodes: [...new Set(issueCodes)].sort(compareText),
         sccMemberAssetIds: [],
       },
@@ -530,12 +553,42 @@ const ORACLE_BRANCH_ADAPTERS = [
   ["shutdown-bad-debt", (branch: OracleRiskBranch) => branch.shutdownOrBadDebtBehavior != null],
 ] as const;
 
+function buildPegReference(meta: V9ExtensionRegistryMeta): ExtensionAsset["pegReference"] {
+  const pegCurrency = meta.flags?.pegCurrency;
+  if (pegCurrency === undefined) return null;
+  if (pegCurrency === "VAR" || pegCurrency === "OTHER") {
+    return { referenceKind: "other", referenceKey: `unreviewed:${pegCurrency.toLowerCase()}`, failureDomains: [] };
+  }
+  if (pegCurrency === "GOLD" || pegCurrency === "SILVER") {
+    return {
+      referenceKind: "asset",
+      referenceKey: pegCurrency === "GOLD" ? "commodity:xau" : "commodity:xag",
+      failureDomains: [],
+    };
+  }
+  return { referenceKind: "fiat", referenceKey: pegCurrency, failureDomains: [] };
+}
+
+const ORACLE_FREE_ARCHETYPES = new Set(["fiat-cash", "tbill", "rwa-credit-fund"]);
+
 function adaptOracleReview(
   meta: V9ExtensionRegistryMeta,
+  archetype: string,
   evidence: ReviewEvidenceBuilder,
 ): NonNullable<ExtensionAsset["economicControlReview"]>["oracle"] {
   const profile: OracleRiskProfile | undefined = meta.oracleRisk;
   if (!profile?.reviewedAt || !profile.reviewer || !profile.confidence) {
+    if (!profile && ORACLE_FREE_ARCHETYPES.has(archetype)) {
+      return {
+        status: notApplicableStatus(
+          "v9.control.oracle-review",
+          `The ${archetype} mechanism archetype has no oracle- or liquidation-dependent stabilization path.`,
+          [],
+        ),
+        tier: null,
+        branches: [],
+      };
+    }
     return {
       status: requiredStatus("v9.control.oracle-review", "missing", `oracle:${meta.id}`),
       tier: null,
@@ -602,7 +655,11 @@ function adaptOracleReview(
   };
 }
 
-function bridgeControl(assetId: string, route: BridgeRouteDeployment): ControlOverlay | null {
+function bridgeControl(
+  assetId: string,
+  route: BridgeRouteDeployment,
+  materialSupplyShare: number | null,
+): ControlOverlay | null {
   if (route.routeClass === "native" || route.issuanceModel === "native-issuance") return null;
   const capabilities: ControlOverlay["capabilities"] =
     route.issuanceModel === "bridge-representation" || route.issuanceModel === "wrapped-representation"
@@ -610,20 +667,21 @@ function bridgeControl(assetId: string, route: BridgeRouteDeployment): ControlOv
       : [];
   const authorityKey = route.controllerAddress
     ? `${route.controllerChain}:${route.controllerAddress.toLowerCase()}`
-    : null;
+    : (route.failureDomainKeys?.[0] ?? `bridge-route:${route.id}`);
+  const mintsRepresentation = capabilities.includes("bridge-mint");
   return {
     controlKey: `bridge-meta:${assetId}:${digest("safety-score-v9.bridge-control-key.v1", route.id).slice(0, 20)}`,
     deploymentKey: route.id,
     controlKind: "bridge",
     scope: "deployment",
     capabilities,
-    capSemantics: { kind: "unknown", bound: null },
-    claimImpairment: "unknown",
+    capSemantics: mintsRepresentation ? { kind: "unbounded", bound: null } : { kind: "not-applicable", bound: null },
+    claimImpairment: mintsRepresentation ? "unbounded" : "bounded",
     economicLossScope: "deployment",
-    authority: authorityKey ? { authorityKey, model: "unknown", threshold: null } : null,
+    authority: { authorityKey, model: route.controllerAddress ? "contract" : "unknown", threshold: null },
     delaySec: null,
-    materialSupplyShare: null,
-    incidentState: "unknown",
+    materialSupplyShare,
+    incidentState: route.reviewDisposition === "reviewed" ? "none" : "unknown",
     failureDomains: (route.failureDomainKeys?.length ? route.failureDomainKeys : [route.id])
       .map((key) => ({ kind: "bridge-route" as const, key }))
       .sort((left, right) => compareText(left.key, right.key)),
@@ -632,6 +690,8 @@ function bridgeControl(assetId: string, route: BridgeRouteDeployment): ControlOv
 
 function adaptBridgeReview(
   meta: V9ExtensionRegistryMeta,
+  supplyReview: ExtensionAsset["supplyReview"],
+  deployedChainCount: number,
   evidence: ReviewEvidenceBuilder,
 ): {
   review: NonNullable<ExtensionAsset["economicControlReview"]>["bridge"];
@@ -639,6 +699,19 @@ function adaptBridgeReview(
 } {
   const profile: BridgeRouteRiskProfile | undefined = meta.bridgeRouteRisk;
   if (!profile) {
+    if (deployedChainCount <= 1) {
+      return {
+        review: {
+          status: notApplicableStatus(
+            "v9.control.bridge-review",
+            "The exact captured supply is confined to one deployment; no bridge route carries the claim.",
+            [],
+          ),
+          routes: [],
+        },
+        controls: [],
+      };
+    }
     return {
       review: {
         status: requiredStatus("v9.control.bridge-review", "missing", `bridge:${meta.id}`),
@@ -656,20 +729,33 @@ function adaptBridgeReview(
     sources: profile.sources,
     payload: profile,
   });
-  const controls = (profile.routes ?? [])
-    .filter((route) => route.reviewDisposition === "reviewed")
-    .map((route) => bridgeControl(meta.id, route))
+  const reviewedRoutes = (profile.routes ?? []).filter((route) => route.reviewDisposition === "reviewed");
+  const controls = reviewedRoutes
+    .map((route) => bridgeControl(meta.id, route, safetyScoreV9RouteSupplyShare(supplyReview ?? null, route.id)))
     .filter((control): control is ControlOverlay => control !== null);
   const controlsByDeployment = new Map(controls.map((control) => [control.deploymentKey, control]));
-  const routes = (profile.routes ?? [])
-    .filter((route) => route.reviewDisposition === "reviewed")
-    .flatMap((route) => {
-      const control = controlsByDeployment.get(route.id);
-      return control ? [{ controlKey: control.controlKey, tier: route.riskTier }] : [];
-    });
+  const routes = reviewedRoutes.flatMap((route) => {
+    const control = controlsByDeployment.get(route.id);
+    return control ? [{ controlKey: control.controlKey, tier: route.riskTier }] : [];
+  });
+  if (controls.length === 0) {
+    return {
+      review: {
+        status: notApplicableStatus(
+          "v9.control.bridge-review",
+          "Every reviewed deployment route is native issuance; no bridge control carries the claim.",
+          evidenceKeys,
+        ),
+        routes: [],
+      },
+      controls: [],
+    };
+  }
+  const allRoutesReviewed = (profile.routes ?? []).every((route) => route.reviewDisposition === "reviewed");
+  const state = allRoutesReviewed && reviewedObservationState(confidence) === "known" ? "known" : "bounded-unknown";
   return {
     review: {
-      status: requiredStatus("v9.control.bridge-review", "bounded-unknown", `bridge:${meta.id}`, evidenceKeys),
+      status: requiredStatus("v9.control.bridge-review", state, `bridge:${meta.id}`, evidenceKeys),
       routes,
     },
     controls,
@@ -704,41 +790,69 @@ function adaptMintReview(
     sources: profile.review.sources,
     payload: profile,
   });
+  const reviewComplete =
+    profile.review.disposition !== "unresolved" &&
+    (profile.review.unresolvedQuestions?.length ?? 0) === 0 &&
+    reviewedObservationState(confidence) === "known";
+  const upgradeability = profile.upgradeability;
   const controls =
     profile.review.disposition === "unresolved"
       ? []
       : (profile.controls ?? []).map((control, index) =>
-          adaptMintControl(meta.id, control, index, profile.mintIncidents),
+          adaptMintControl(
+            meta.id,
+            control,
+            index,
+            profile.mintIncidents,
+            reviewComplete,
+            upgradeability?.canChangeMintLogic === true && upgradeability.controlRef === control.label,
+          ),
         );
   const mintControl = controls.find((control) => control.capabilities.includes("mint")) ?? null;
-  const upgradeability = profile.upgradeability;
   const referencedUpgradeIndex =
     upgradeability?.controlRef == null
       ? -1
       : (profile.controls ?? []).findIndex((control) => control.label === upgradeability.controlRef);
   const referencedUpgrade = referencedUpgradeIndex >= 0 ? (controls[referencedUpgradeIndex] ?? null) : null;
+  const reviewedUpgradeControl =
+    referencedUpgrade?.capabilities.includes("upgrade") === true
+      ? referencedUpgrade
+      : (controls.find((control) => control.capabilities.includes("upgrade")) ?? null);
   const upgrade =
     upgradeability?.model === "immutable" && upgradeability.canChangeMintLogic === false
       ? { state: "immutable" as const, controlKey: null }
-      : upgradeability?.canChangeMintLogic === true && referencedUpgrade?.capabilities.includes("upgrade")
-        ? { state: "reviewed" as const, controlKey: referencedUpgrade.controlKey }
+      : reviewedUpgradeControl !== null
+        ? { state: "reviewed" as const, controlKey: reviewedUpgradeControl.controlKey }
         : { state: "unknown" as const, controlKey: null };
-  const state =
-    profile.review.disposition === "unresolved"
+  const issuerBackendMint = mintControl?.authority?.model === "issuer-backend";
+  const reconciliation: NonNullable<ExtensionAsset["economicControlReview"]>["mint"]["reconciliation"] =
+    mintControl === null
+      ? upgrade.state === "immutable"
+        ? "not-applicable"
+        : "unknown"
+      : issuerBackendMint
+        ? meta.proofOfReserves?.latestReport || meta.proofOfReserves?.cadence
+          ? "periodic"
+          : "unknown"
+        : "not-applicable";
+  const immutableWithoutMint = mintControl === null && upgrade.state === "immutable";
+  const state = !reviewComplete
+    ? profile.review.disposition === "unresolved" || reviewedObservationState(confidence) === "missing"
       ? "missing"
-      : reviewedObservationState(confidence) === "missing"
-        ? "missing"
-        : "bounded-unknown";
+      : "bounded-unknown"
+    : reconciliation === "unknown" && (issuerBackendMint || (mintControl === null && !immutableWithoutMint))
+      ? "bounded-unknown"
+      : "known";
   return {
     review: {
       status: requiredStatus(
         "v9.control.mint-review",
         state,
         `mint:${meta.id}`,
-        state === "bounded-unknown" ? evidenceKeys : [],
+        state === "known" || state === "bounded-unknown" ? evidenceKeys : [],
       ),
       controlKey: mintControl?.controlKey ?? null,
-      reconciliation: "unknown",
+      reconciliation,
       upgrade,
     },
     controls,
@@ -855,19 +969,32 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
       addDependencyEvidence(meta, reviewEvidence);
+      const supplyReview = buildSafetyScoreV9SupplyReview(fixedInput, assetId, meta.bridgeRouteRisk);
+      const deployedChainCount = Object.keys(fixedInput.chainCirculatingById[assetId] ?? {}).length;
       const mint = adaptMintReview(meta, reviewEvidence);
-      const oracle = adaptOracleReview(meta, reviewEvidence);
-      const bridge = adaptBridgeReview(meta, reviewEvidence);
+      const oracle = adaptOracleReview(meta, archetype, reviewEvidence);
+      const bridge = adaptBridgeReview(meta, supplyReview, deployedChainCount, reviewEvidence);
       const controls = [...mint.controls, ...bridge.controls].sort((left, right) =>
         compareText(left.controlKey, right.controlKey),
       );
       const accessReview = adaptAccessReview(meta, metaById, reviewEvidence);
       const reviewedEvidence = reviewEvidence.finish();
+      const controlsFullyResolved =
+        controls.length > 0 &&
+        controls.every(
+          (control) =>
+            control.capSemantics.kind !== "unknown" &&
+            control.claimImpairment !== "unknown" &&
+            control.economicLossScope !== "unknown" &&
+            control.incidentState !== "unknown" &&
+            control.authority !== null &&
+            control.authority.model !== "unknown",
+        );
       return {
         assetId,
         archetype,
         launchedAtSec: conservativeDateEndSec(meta.implementationLaunchDate ?? meta.launchDate, clockSec),
-        mechanismRiskReview: null,
+        mechanismRiskReview: buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype),
         dependencies: {
           ...prepared.dependency,
           diagnostics: cycle
@@ -880,16 +1007,18 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         },
         reserveApplicability: { state: "required" },
         reserveClassifications: buildSafetyScoreV9ReserveClassifications(liveReserves),
-        routeReviews: [],
+        routeReviews: buildSafetyScoreV9RouteReviews(fixedInput, assetId),
         retainedRoutes: [],
         controlReview:
           controls.length > 0
-            ? {
-                state: "partially-reviewed-controls",
-                controls,
-                rationale:
-                  "Reviewed metadata identifies controls, but reconciliation, incident, cap, economic-loss, or materiality semantics remain unresolved.",
-              }
+            ? controlsFullyResolved
+              ? { state: "reviewed-controls", controls }
+              : {
+                  state: "partially-reviewed-controls",
+                  controls,
+                  rationale:
+                    "Reviewed metadata identifies controls, but reconciliation, incident, cap, economic-loss, or materiality semantics remain unresolved.",
+                }
             : null,
         economicControlReview:
           meta.mintAuthority || meta.oracleRisk || meta.bridgeRouteRisk
@@ -900,8 +1029,8 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
               }
             : null,
         accessReview,
-        pegReference: null,
-        supplyReview: null,
+        pegReference: buildPegReference(meta),
+        supplyReview,
         ...reviewedEvidence,
       };
     }),

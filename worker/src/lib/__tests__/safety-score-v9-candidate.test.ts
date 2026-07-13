@@ -82,7 +82,11 @@ function route(assetId: string): ExitRouteObservation {
 function exactFixedInput(
   assetId: string,
   liquidityScore = 12,
-  options: { includeObservedDexCoverage?: boolean; dexMethodologyVersion?: string } = {},
+  options: {
+    includeObservedDexCoverage?: boolean;
+    dexMethodologyVersion?: string;
+    includeDexObservations?: boolean;
+  } = {},
 ) {
   return createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
@@ -138,7 +142,7 @@ function exactFixedInput(
         effectiveTvlUsd: 1_000_000,
         balanceMeasuredTvlUsd: 1_000_000,
         organicMeasuredTvlUsd: 1_000_000,
-        exitRouteObservations: [route(assetId)],
+        exitRouteObservations: options.includeDexObservations === false ? [] : [route(assetId)],
         ...(options.includeObservedDexCoverage === false
           ? {}
           : {
@@ -453,19 +457,33 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
 
   it("keeps reviewed-metadata enrichment not rated while critical V9 reviews remain absent", () => {
     const result = buildSafetyScoreV9Candidate({
-      fixedInput: exactFixedInput("usdc-circle"),
+      // The reviewed registry metadata resolves the mechanism, control, mint,
+      // and access reviews, but this capture has no exit-route observations, so
+      // the route pillar stays absent and the asset remains NR.
+      fixedInput: exactFixedInput("usdc-circle", 12, {
+        includeDexObservations: false,
+        includeObservedDexCoverage: false,
+      }),
       publishedAtSec: PUBLISHED_AT_SEC,
     });
 
     expect(result.extension.assets[0]).toMatchObject({
       assetId: "usdc-circle",
-      mechanismRiskReview: null,
-      controlReview: { state: "partially-reviewed-controls" },
+      // Reviewed reserve/proof-of-reserves and mint-authority evidence enriches
+      // the mechanism, control, and mint reviews to resolved states, but the
+      // critical exit-route reviews remain absent, so the asset stays NR.
+      mechanismRiskReview: {
+        archetype: "fiat-cash",
+        claimAndSegregation: { status: { observationState: "bounded-unknown" } },
+        custodyContinuity: { status: { observationState: "bounded-unknown" } },
+        assuranceAndReconciliation: { status: { observationState: "known" } },
+      },
+      controlReview: { state: "reviewed-controls" },
       economicControlReview: {
         mint: {
-          status: { observationState: "bounded-unknown" },
-          reconciliation: "unknown",
-          upgrade: { state: "unknown" },
+          status: { observationState: "known" },
+          reconciliation: "not-applicable",
+          upgrade: { state: "reviewed" },
         },
       },
       accessReview: { transfer: { posture: "restrictable" } },

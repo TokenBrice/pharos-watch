@@ -421,11 +421,19 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(baseline.assets[0]).toMatchObject({
       assetId: "alpha",
       archetype: "fiat-cash",
-      mechanismRiskReview: null,
+      // The reviewed cash reserve backs the claim/custody components at the
+      // bounded quality; assurance stays missing without a proof-of-reserves
+      // report, and the captured DEX observation yields a derived exit route.
+      mechanismRiskReview: {
+        archetype: "fiat-cash",
+        claimAndSegregation: { status: { observationState: "bounded-unknown" } },
+        custodyContinuity: { status: { observationState: "bounded-unknown" } },
+        assuranceAndReconciliation: { status: { observationState: "missing" } },
+      },
       controlReview: null,
       economicControlReview: null,
       accessReview: null,
-      routeReviews: [],
+      routeReviews: [{ lane: "dex", routeId: "dex:primary", coverageClass: "exact-complete" }],
     });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     expect(compiled.assets[0]!.gaps.map((gap) => gap.reasonCode)).toEqual(
@@ -857,6 +865,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
                 evidence: "The issuer minter path is reviewed, but reconciliation and upgrades are not established.",
                 reviewer: "Fixture reviewer",
                 reviewedAt: "1970-01-01",
+                // Open questions keep the review incomplete, so the control is
+                // retained while reconciliation, incidents, and upgrades stay
+                // unresolved (bounded-unknown).
+                unresolvedQuestions: ["Reconciliation cadence and upgrade authority are not yet established."],
               },
             },
           },
@@ -922,7 +934,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     });
   });
 
-  it("keeps reviewed bridge routes bounded when authority and materiality semantics are absent", () => {
+  it("resolves reviewed bridge route semantics while an unknown controller keeps the control partially reviewed", () => {
     const fixed = exactFixedInput();
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
       metaById: new Map([
@@ -962,19 +974,22 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       ]),
     });
     expect(baseline.assets[0]!.economicControlReview?.bridge).toMatchObject({
-      status: { observationState: "bounded-unknown" },
+      status: { observationState: "known" },
       routes: [{ tier: "external-lock-mint" }],
     });
+    // The reviewed bridge-representation route resolves cap, claim, and incident
+    // semantics, but the controller address is unknown, so the control stays
+    // partially reviewed and its authority model is unknown.
     const bridgeControl =
       baseline.assets[0]!.controlReview?.state === "partially-reviewed-controls"
         ? baseline.assets[0]!.controlReview.controls[0]
         : null;
     expect(bridgeControl).toMatchObject({
-      materialSupplyShare: null,
-      authority: null,
-      capSemantics: { kind: "unknown" },
-      claimImpairment: "unknown",
-      incidentState: "unknown",
+      materialSupplyShare: 0,
+      authority: { model: "unknown" },
+      capSemantics: { kind: "unbounded" },
+      claimImpairment: "unbounded",
+      incidentState: "none",
     });
   });
 
