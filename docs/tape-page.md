@@ -100,7 +100,7 @@ Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/cron/project
 | ------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------- |
 | `depeg.opened` / `.resolved` / `.peak_worsened` | `depeg_events`                          | Confirmed peg deviations, recovery-backed resolutions, and peak transitions |
 | `freeze.blocked` / `.unblocked` / `.destroyed`  | `blacklist_events`                      | Issuer freeze, unblock, and fund-destroy actions                     |
-| `score.upgraded` / `.downgraded`                | `safety_grade_history`                  | Stablecoin Safety Score grade transitions                            |
+| `score.upgraded` / `.downgraded`                | `safety_score_history_v2` plus unmatched legacy `safety_grade_history` rows | Organic stablecoin Safety Score grade transitions; methodology-boundary, rollback, and restoration baselines are excluded |
 | `psi.band_changed`                              | `stability_index_samples`               | PSI regime-band transitions                                          |
 | `dews.band_transitions` (emits `.escalated` / `.deescalated`) | `stress_signals`                        | DEWS stress-level changes                                            |
 | `mint_burn.large_flow` (emits `.large_mint` / `.large_burn`)          | `mint_burn_events`                      | Large single-transaction mint or burn flows (one event per direction) |

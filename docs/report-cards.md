@@ -24,6 +24,18 @@ Cemetery coins get a permanent F.
 
 Current-version note: v8.17 keeps balance-measured aggregate pool TVL in the generic-proxy class unless the retained evidence includes the exact invariant, fee, output identity, and capacity curve needed for a reserve-based AMM simulation. The public Liquidity Score remains unchanged, but Safety Score caps generic TVL proxies at 60, synthetic/fallback evidence at 55, and provider-inaccessible-only coverage at 45. The 85-point reserve-based simulation class is reserved for exact modeled routes, and same-notional route scoring remains inactive until the P4b rollout gate passes. Old snapshot rows without the new evidence fields and rows explicitly marked `legacy` remain neutral. v8.15 deterministic dependency scoring and v8.14 self-link-free serial variant derivation carry forward unchanged.
 
+Safety Score V9 is implemented as an internal candidate and shadow pipeline,
+not as the active methodology. It replaces unrestricted weighted compensation
+with archetype-specific Backing, Exit, and Economic Control pillars bounded by
+the weakest material failure path, structural ceilings, evidence sufficiency,
+dependencies, peg behavior, and stress propagation. Candidate failures cannot
+affect V8 publication; exact candidate state is available only to the admin
+workspace. The current all-active candidate remains `0/360` rateable because
+critical reviewed facts are incomplete. Independent holdout validation,
+release-cohort coverage, an explicit sealed `v9-rc-N`, and 30 consecutive
+verified shadow days are still mandatory before any public or downstream
+cutover. See [Safety Score V9 readiness](./process/safety-score-v9-readiness.md).
+
 ## Yield Source-Risk Boundary
 
 Yield Intelligence source-risk evidence is not a report-card input in the current methodology. `sourceRisk.*` fields can affect the Pharos Yield Score (PYS), opportunity-level tranche Safety Scores, and same-confidence yield source arbitration, but they do not change the underlying stablecoin's Safety Score, Resilience, or Dependency Risk dimensions here. External lending opportunities and structured-tranche rows belong to opportunity scoring, not the base stablecoin report card.
@@ -442,16 +454,16 @@ The same publication cron also persists a private exact fixed-input artifact at 
 
 Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal, including canonical `weight` and `type` metadata), `methodology` (version, weights, `pegMultiplierExponent`, thresholds), `inputFreshness` (DEX and redemption freshness used for score gating), `liquidityStale`, `redemptionStale`, and `updatedAt`. See [API Reference](./api-reference.md) for the full response shape.
 
-`GET /api/safety-score-history` — per-coin Safety Score grade history timeline (`stablecoin` required, `days` optional). Backed by `safety_grade_history` event rows written daily by `snapshot-safety-grade-history`. Cache: slow (1-hour edge).
+`GET /api/safety-score-history` — per-coin Safety Score grade history timeline (`stablecoin` required, `days` optional). The compatibility response keeps its existing shape while reading identity-rich `safety_score_history_v2` rows plus legacy `safety_grade_history` gaps. V2 methodology-boundary, rollback, and restoration baselines are intentionally excluded because the legacy response cannot represent a non-comparable boundary without implying a continuous series. Cache: slow (1-hour edge).
 
 Implementation notes:
 
 - Report cards and peg summary share peg-event derivation through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), so peg score/current deviation windows are computed with identical logic in both endpoints. The quarter-hourly `publish-report-card-cache` pass is the only writer of the producer-published `peg-analytics` D1 cache row; `/api/peg-summary` accepts it for up to 30 minutes (2x producer cadence) and falls back to direct compute on a miss or stale row.
-- Report-card API responses and the grade-history cron both use `worker/src/lib/report-cards-snapshot.ts` (`buildReportCardsSnapshot()`), preventing scoring drift between live API and persisted history.
+- Report-card API responses use the active published report-card snapshot. The grade-history cron reads the immutable model-keyed V8 full artifact selected by `safety_score_publication_state`, so persisted history carries the exact published model generation, base-input generation, methodology, and evaluation-build identity instead of independently recomputing the score.
 - `publish-report-card-cache` validates the exact active registry set before writing. Missing, duplicate, defunct-active, or unexpected live IDs reject the whole publication; expected coverage must equal scored plus NR rows.
 - Exact fixed-input schema v3 records `captureKind`, the sorted active IDs, source/DEX/redemption generation IDs, registry revision and fingerprint, DEX/redemption payload fingerprints, producer methodology versions, the fixed clock, and lane freshness. The cache envelope stores the normalized JSON as `gzip-base64` with its source generation, SHA-256, and uncompressed byte length; export decoding rechecks the length, checksum, capture kind, and generation. Replay recomputes both payload fingerprints, rejects methodology or current-registry drift unless the invoking tool exposes and receives the corresponding explicit override, and requires exact captures to retain full active DEX and blacklist identity sets.
 - The full snapshot, compact `report_card_cache` score map used by lightweight and yield-safety consumers, and Telegram `alert:safety-source-cache` are written in one D1 batch. Each carries the same `publicationGenerationId`, methodology version, and completeness manifest. Strict compact-cache consumers, including hourly yield publication, publication-health fallback, and the data-invariant canary, require scored IDs plus explicit NR IDs to equal the exact active registry set; count-preserving identity swaps are rejected. The compact cache also carries `degradedInputs` metadata (`inputsStale`, `liquidityStale`, `redemptionStale`, and `staleInputs`).
-- `snapshot-safety-grade-history` owns only append-only grade history. It no longer overwrites the compact cache independently, and still suppresses `safety_grade_history` seed and grade-transition inserts when report-card inputs are degraded.
+- `snapshot-safety-grade-history` owns only append-only grade history. For each healthy current-V8 seed or organic grade change it writes the legacy row and an immutable V2 twin; the V2 row records model, methodology, nullable discriminated policy identity, evaluation-build digest, base-input generation, model-publication generation, publication epoch, and transition kind. It still suppresses both writes when the selected report-card inputs are degraded. A V9-active manifest fails closed: the authorized V9 cutover baseline writer is deliberately not implemented by this pre-activation infrastructure.
 
 Key types:
 
@@ -507,7 +519,8 @@ State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.
 | `shared/lib/report-cards.ts`                                        | Pure grading engine: dimension scorers, weights, thresholds, colors, `computeStressedGrades()`                                                        |
 | `worker/src/lib/report-cards-snapshot.ts`                           | Shared report-card snapshot builder used by API + grade-history cron                                                                                  |
 | `worker/src/api/report-cards.ts`                                    | API handler: serves shared snapshot response with freshness headers                                                                                   |
-| `worker/src/cron/snapshot-safety-grade-history.ts`                  | Daily grade-history event snapshot writer (`safety_grade_history`)                                                                                    |
+| `worker/src/cron/snapshot-safety-grade-history.ts`                  | Daily V8 grade-history writer (legacy + version-aware V2 organic rows)                                                                                 |
+| `worker/src/lib/safety-score-history-v2.ts`                         | Active-model source validation, dual-write helpers, and legacy-compatible dual-read projections                                                       |
 | `worker/src/api/safety-score-history.ts`                            | History endpoint for per-coin grade transitions                                                                                                       |
 | `src/components/stress-test-panel.tsx`                              | Stress test / Contagion Map collapsible panel (stress test controls + impact table)                                                                   |
 | `src/components/report-card.tsx`                                    | Full detail card with radar                                                                                                                           |

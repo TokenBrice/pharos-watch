@@ -1,18 +1,76 @@
 # Safety Score v9 Readiness
 
-This document describes the pre-v9 compiler, calibration corpus, and current activation gate. It does not define an active Safety Score methodology. Production remains on Safety Score v8.17 and P4 same-notional scoring remains shadow-only.
+This document describes the Safety Score V9 candidate compiler, evaluator,
+shadow pipeline, calibration corpus, and current activation gate. It does not
+define an active Safety Score methodology. Production remains on Safety Score
+v8.17 and P4 same-notional scoring remains shadow-only.
 
 ## Durable Artifacts
 
 - `shared/data/safety-score-v9/historical-fixtures-v1.json`: 26 point-in-time fixtures (12 adverse, 14 resilient). Every source publication is at or before the fixture `asOf`; adverse outcome windows start at or after `asOf`. Each source now declares its capture state, and each fixture separates fact-freeze from outcome-annotation provenance. The legacy corpus honestly records all 26 sources as unarchived and all authoring controls as retrospective/unverified, so it cannot clear activation evidence integrity.
 - `shared/data/safety-score-v9/calibration-cohort-v1.json`: 24 active assets spanning fiat anchors, CDPs, wrappers, private credit, synthetic designs, RWA funds, bridge scope, dependencies, and missing-evidence cases.
 - `shared/data/safety-score-v9/matched-invariants-v1.ts`: expectation-free transformations for redemption, optional routes, reserve and bridge materiality, dependency availability, oracle common mode, evidence criticality, and parent propagation.
+- `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`: the explicit candidate-only methodology policy, including formula order and constants, evidence dispositions, exit and materiality policy, structural limits, and the complete reason-code registry. It has lifecycle `candidate` and no release version; it is not an active `9.0` policy.
+- `shared/data/safety-score-v9/golden-scenarios-v1.ts`: the durable 30-case archetype corpus and 28 ordering constraints used for policy sensitivity and the research evaluator. Expectations remain outside production-shaped scoring inputs.
 - `shared/data/safety-score-v9/exit-route-calibration-v1.json`: all-active P4 producer coverage, calibrated coverage floors, legacy-versus-active score movements, and the activation disposition.
 - `shared/data/safety-score-v9/readiness-baseline-v1.json`: final all-active compiler output, itemized manual-evidence audit, calibration-cohort dispositions, historical calibration, route coverage, shadow evaluation, and go/no-go recommendation.
 
+## Implementation Status
+
+The V9 implementation establishes candidate infrastructure without changing production scoring:
+
+- `shared/types/safety-score-v9.ts` defines and cross-validates the strict methodology-policy schema, evidence-disposition vocabulary, and exhaustive reason registry.
+- `shared/lib/safety-score-v9/policy.ts` loads the candidate policy, canonicalizes its semantic payload with code-unit ordering, computes a domain-separated SHA-256 semantic digest, and makes the closed reason registry authoritative for rateability, treatment, reason-coded ceiling resolution, and audit classification. Lifecycle labels and release metadata are excluded from the semantic digest, so a later promotion can prove that its scoring semantics are unchanged.
+- `shared/lib/safety-score-v9-research.ts` and `shared/lib/safety-score-v9-compiler.ts` now require an explicit validated policy. Compiled inputs bind the semantic digest that produced them, and scoring rejects a mismatched policy. Score traces carry both the evaluation policy ID and semantic digest. Production-shaped scoring inputs cannot supply arbitrary numeric caps; that capability is confined to the phase-zero scenario adapter used by the research harness.
+- `shared/types/safety-score-v9-base-input.ts` and `shared/lib/safety-score-v9/base-input-identity.ts` define a model-neutral, canonical base-input identity and deterministic generation ID.
+- `shared/lib/safety-score-v9/exit-observation-set.ts` provides deterministic DEX/redemption observation merging, stable route ordering, duplicate handling, conflict rejection, and per-lane diagnostics.
+- `scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts` perturbs one numeric semantic field at a time over the durable golden corpus and reports affected archetypes, grade cliffs, full cap-candidate and binding-cap changes, score saturation, and all 28 pairwise ordering gaps/pass transitions. Its parameter listing contains only fields whose two default isolated perturbations both satisfy the policy schema; coupled fields are not advertised, and explicit invalid attempts fail closed.
+- The runtime-neutral `facts`, archetype, Backing, Exit, Control, access-posture,
+  dependency, formula, score, trace, stress, coverage, validation, and public
+  projection modules under `shared/lib/safety-score-v9/` form one strict
+  candidate evaluator. Critical missing facts produce reason-coded `NR`; no
+  unrelated pillar can compensate for a binding structural path.
+- `worker/src/lib/safety-score-v9-fact-set.ts` builds a schema-versioned fact
+  set from one normalized base input plus a V9 extension. Reviewed adapters
+  preserve per-component URLs, review dates, content hashes, confidence, and
+  freshness and reject future, stale-as-current, or registry-drifted evidence.
+  They do not infer permissionlessness, immutable upgrades, incident-free
+  history, bridge materiality, or numeric mint caps.
+- `worker/src/lib/safety-score-v9-candidate.ts` and
+  `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
+  candidate deterministically. The current policy semantic digest is
+  `5ec0823b12f9e1fd21fb31ba4a2ec059d25388d64ffe13fac80de376142c8a85`;
+  the current evaluation-build digest is
+  `9daf02b66af811963fa0db8999238c022f806c90370ffead885cdd75f24257f4`.
+- After a valid V8 publication commits, the Worker runs V9 in a separate
+  failure domain. It retains all five content-addressed replay artifacts,
+  candidate/diff state, every scheduled attempt, and canonical UTC-day history.
+  A V9 compile, retention, or D1 failure cannot suppress or replace V8.
+- `GET /api/admin-safety-score-v9` and the internal admin workspace expose only
+  exact retained candidate state. Material movements use append-only semantic
+  review keys through `POST /api/admin-safety-score-v9/reviews`; a review record
+  cannot activate V9.
+- The release-window evaluator accepts no caller-supplied pass booleans. The D1
+  authorization verifier cross-binds the candidate seal, independent validation
+  report, canonical 30-entry daily release-coverage series, policy/build
+  identities, every canonical day, and byte-identical replay of all five
+  retained artifacts. Only an
+  explicit `v9-rc-N` candidate can count; ordinary candidate-shadow days cannot.
+- Safety history now dual-writes identity-rich V2 rows while preserving the
+  public V8 compatibility response. Methodology-boundary rows are excluded from
+  continuous V8 history, and no V9 cutover baseline writer exists yet.
+
+These are implemented candidate and operational boundaries, not completed
+readiness gates. Report-card fixed-input capture, calibration, replay, and
+readiness share canonical registry, DEX, redemption, producer-methodology, and
+base-input identities; declared provenance is not trusted on its own.
+Production remains on v8.17. The candidate policy is neither independently
+validated nor authorized as Safety Score 9.0, and the public V9/consumer cutover
+path is deliberately absent.
+
 ## Compiler Boundary
 
-`shared/lib/safety-score-v9-compiler.ts` converts the exact active `StablecoinMeta` and fixed report-card sets into `CompiledV9AssetInput` records. Compilation fails on duplicate, missing, or unexpected report-card IDs. The readiness generator combines DEX observations with redemption observations from the fixed publication input before compiling exit evidence. It uses the fixed publication clock as `compilerEvidenceAsOf`; later observations are rejected by the compiler and counted as provenance blockers instead of moving the as-of boundary forward. The generator validates the fixed-input shape and binds schema-v3 registry, generation, fingerprint, methodology, and replay metadata to the committed calibration. Readiness remains blocked unless the capture is schema v3 `exact-publication-inputs` and every binding agrees.
+`shared/lib/safety-score-v9-compiler.ts` converts the exact active `StablecoinMeta` and fixed report-card sets into `CompiledV9AssetInput` records. Compilation fails on duplicate, missing, or unexpected report-card IDs. The readiness generator combines DEX observations with redemption observations from the fixed publication input before compiling exit evidence. It uses the fixed publication clock as `compilerEvidenceAsOf`; later observations are rejected by the compiler and counted as provenance blockers instead of moving the as-of boundary forward. Exact fixed-input normalization rejects missing DEX methodology provenance or declared producer-version sets that disagree with the score-bearing DEX, peg, and redemption rows; calibration reprojects those versions instead of copying the declaration. The readiness generator validates the fixed-input shape and binds schema-v3 registry, generation, fingerprint, methodology, normalized report-card replay payload, and replay metadata to the committed calibration. It also imports the calibration artifact's decision, activation-ready flag, consistency flag, and blocker list into the final recommendation; recomputed coverage cannot override an explicit hold. Readiness remains blocked unless the fixed capture is schema v3 `exact-publication-inputs`, the calibration source records `exact-publication-inputs`, no mismatch bypass was used, the calibration explicitly authorizes activation, and every binding agrees.
 
 The compiler may carry structured pillar, peg, parent, evidence, implementation-age, failure-domain, and unresolved facts. The historical compiler accepts `HistoricalV9FactsInput`, a strict facts-only projection that excludes outcome labels and outcome annotation provenance at the type and runtime schema boundary. It must not accept or store:
 
@@ -21,13 +79,13 @@ The compiler may carry structured pillar, peg, parent, evidence, implementation-
 - asset-specific exceptions;
 - post-outcome evidence in historical fixtures.
 
-Numeric weights, evidence ceilings, track-record ceilings, bounded-compensability rules, and structural signal caps live only in `shared/lib/safety-score-v9-research.ts`. They are provisional research constants, not production methodology.
+Numeric weights, evidence ceilings, track-record ceilings, bounded-compensability rules, structural signal caps, and exit-model constants now live in the explicit candidate policy. The scorer reads them through the validated policy envelope rather than hidden defaults. They remain provisional candidate semantics, not production methodology.
 
-Missing critical facts produce reason-coded `NR`. Every unresolved fact is emitted as an itemized audit record with asset, pillar, code, classification, criticality, path, and reason; unsupported designs and unresolved methodology are not silently treated as missing data. The 24-asset calibration cohort also carries per-asset cohorts, candidate grade, disposition, and sorted critical facts. Parent evaluation is deterministic and parent-first; missing parents and cycles remain explicit. Fuzzy implementation dates use the conservative range end, and variants inherit the newest critical implementation layer.
+Missing critical facts produce their exact reason-coded `NR`. Bounded facts with a `ceiling` treatment emit an executable reason cap that references an existing evidence or minimum track-record ceiling; a ceiling treatment cannot validate without such a rule. Every unresolved fact is emitted as an itemized audit record with asset, pillar, code, classification, criticality, path, and reason; its owner, fact class, boundedness, treatment, release severity, and public label are declared once in the candidate registry rather than duplicated on every row. Unsupported designs and unresolved methodology are not silently treated as missing data. The 24-asset calibration cohort also carries per-asset cohorts, candidate grade, disposition, and sorted critical facts. Parent evaluation is deterministic and parent-first; missing parents and cycles remain explicit. Fuzzy implementation dates use the conservative range end, and variants inherit the newest critical implementation layer.
 
 ## Current Result
 
-Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `2026-07-13T01:00:16.000Z`; the fixed compiler evidence boundary is `2026-07-13T01:02:53.000Z`. The inputs use the fixed v8.16 legacy replay and the P4a observations stored in that fixed input. The available fixed input is schema v1 `legacy-unverified`, not a publication-exact schema v3 capture. It also cannot bind generation/fingerprint metadata to the committed calibration, its replay methodology differs from the calibrated replay, and 381 supplied evidence timestamps are later than its clock. Each condition independently blocks readiness.
+Baseline generated at `2026-07-13T02:00:00.000Z` from report cards observed at `2026-07-13T01:00:16.000Z`; the fixed compiler evidence boundary is `2026-07-13T01:02:53.000Z`. The inputs use the fixed v8.16 legacy replay and the P4a observations stored in that fixed input. The available fixed input is schema v1 `legacy-unverified`, not a publication-exact schema v3 capture. It also cannot bind generation/fingerprint metadata to the committed calibration, its normalized replay payload and methodology differ from the calibrated replay, and 381 supplied evidence timestamps are later than its clock. The committed P4 calibration is itself a public reconstruction produced with methodology and registry mismatch allowances. Each condition independently blocks readiness.
 
 | Gate                                                      |                 Result |
 | --------------------------------------------------------- | ---------------------: |
@@ -35,11 +93,13 @@ Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `
 | Fixed input schema / capture kind                         | v1 / legacy-unverified |
 | Compiler exceptions / silent omissions                    |                  0 / 0 |
 | Candidate rateable / reason-coded `NR`                    |                0 / 360 |
-| Manual audit items, critical / noncritical                |            2,836 / 129 |
-| Manual audit classes, missing / methodology / unsupported |        2,815 / 0 / 150 |
+| Manual audit items, critical / noncritical                |            2,228 / 759 |
+| Manual audit classes, missing / methodology / unsupported |        2,820 / 0 / 167 |
 | Calibration cohort, critical-complete / unresolved `NR`   |                 0 / 24 |
 | Historical adverse / resilient fixtures                   |                12 / 14 |
 | Historical rateable / `NR` fixtures                       |                 8 / 18 |
+| Historical adverse rateable / `NR`                        |                  3 / 9 |
+| Historical resilient rateable / `NR`                      |                  5 / 9 |
 | Historical false negatives / false positives              |                  0 / 9 |
 | Historical timestamp chronology validation                |                 passed |
 | Historical source immutability / authoring blinding       |                blocked |
@@ -48,6 +108,7 @@ Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `
 | DEX observations / score-eligible observations            |                 21 / 0 |
 | Redemption observation assets / observations              |              108 / 108 |
 | Redemption score-eligible assets / observations           |                31 / 31 |
+| Redemption resolved / unresolved / unknown outputs        |           48 / 46 / 14 |
 | Raw positive-observation / calibrated DEX-eligible assets |                  7 / 0 |
 | Calibrated DEX / redemption eligible assets               |                 0 / 31 |
 | Calibrated DEX / redemption floors                        |                45 / 27 |
@@ -56,46 +117,67 @@ Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `
 | P4 activation decision                                    |                   hold |
 | V9 readiness decision                                     |                  no-go |
 
-The manual-evidence audit contains 2,965 itemized records: 2,815 `missing-data` and 150 `unsupported-design`; 2,836 are critical. The largest reason-coded queues are 544 material reserve slices without structured evidence, 373 unknown control-cap authorities, 340 unreviewed reserve envelopes, 329 missing upgradeability reviews, 209 unresolved control identities, 179 missing and 150 unsupported same-notional routes, 145 unavailable runtime bridge-materiality facts, 125 missing custody profiles, 95 unresolved selected bridge routes, 81 CDP oracle branch-applicability decisions, 76 mint-control questions, 55 missing peg inputs, 36 missing implementation dates, 22 unresolved exit outputs, 21 future-dated route facts, 7 incomplete DEX route-coverage records, and 3 unresolved archetypes. Another 127 missing latest assurance reports are noncritical. These are work queues, not implied defaults.
+The manual-evidence audit contains 2,987 itemized records: 2,820 `missing-data` and 167 `unsupported-design`; 2,228 are critical under the candidate registry and 759 are noncritical. The largest reason-coded queues are 544 material reserve slices without structured evidence, 373 unknown control-cap authorities, 340 unreviewed reserve envelopes, 329 missing upgradeability reviews, 209 unresolved control identities, 184 missing and 167 unsupported same-notional routes, 145 unavailable runtime bridge-materiality facts, 127 missing latest assurance reports, 125 missing custody profiles, 95 unresolved selected bridge routes, 81 CDP oracle branch-applicability decisions, 76 mint-control questions, 55 missing peg inputs, 36 missing implementation dates, 22 unresolved exit outputs, 21 future-dated route facts, 7 incomplete DEX route-coverage records, and 3 unresolved archetypes. Material reserve slices, missing implementation dates, unresolved optional exit outputs, and missing assurance reports are noncritical pillar/ceiling/diagnostic cases under the current policy; their old compiler-authored booleans no longer force `NR`. These are work queues, not implied defaults.
 
 The separate static P7 audit has exact route rows for all 218 applicable multi-deployment profiles, but only 9 profiles are semantically complete. The other 209 profiles contain unresolved rows: 1,124 of 1,216 total routes remain unresolved, while 92 are reviewed. The 95 unresolved selected bridge routes above are only the runtime-selected scoring subset of that larger static research queue.
 
 All 24 calibration-cohort assets are currently `reason-coded-critical-unresolved` and candidate `NR`; the stored dispositions expose the exact blocking facts for manual audit. The shadow pass likewise produces `NR` for all 360 active assets, including 305 entries from currently graded assets. That is a deliberate fail-closed result of the stricter itemized contracts, not a compiler omission.
 
-The historical facts-only research pass has no adverse false negatives under the provisional thresholds, but 18 fixtures are `NR` and 9 resilient fixtures are conservative false positives because critical point-in-time evidence was unresolved. That is calibration debt; it is not a reason to weaken the no-look-ahead or critical-evidence rules. The corpus has passed only source-date chronology. Its source pages are mutable and unarchived, and its original author separation/outcome access was not preserved; readiness therefore records both conditions as explicit no-go blockers rather than presenting a look-ahead-proof claim. P4 remains on `hold` because calibrated DEX coverage is 0 eligible assets against the 45-asset floor; redemption coverage clears its 27-asset floor at 31. The historical P4 generation predates the per-pool `scoreEligiblePoolCount` field, so its 21 observations remain visible but fail closed as incomplete pool coverage. Active replay makes 244 exit scores `NR` and changes 140 overall grades.
+Only 3 of 12 adverse fixtures and 5 of 14 resilient fixtures are currently rateable; the other 9 in each outcome class are `NR`. There are no false negatives among the three rateable adverse cases, while all nine resilient `NR` cases count as conservative false positives because critical point-in-time evidence was unresolved. Those denominators make the limitation explicit: this is calibration debt, not evidence that the candidate has already proved broad historical separation. The corpus has passed only source-date chronology. Its source pages are mutable and unarchived, and its original author separation/outcome access was not preserved; readiness therefore records both conditions as explicit no-go blockers rather than presenting a look-ahead-proof claim. P4 remains on `hold` because its source is a public reconstruction with methodology/registry bypasses and calibrated DEX coverage is 0 eligible assets against the 45-asset floor; redemption coverage clears its 27-asset floor at 31. The historical P4 generation predates the per-pool `scoreEligiblePoolCount` field, so its 21 observations remain visible but fail closed as incomplete pool coverage. Active replay makes 244 exit scores `NR` and changes 140 overall grades.
 
-## Reproduction
+## Local Artifact Reproduction
+
+The following commands reproduce the tracked decision records only in a workspace that retains the ignored historical inputs under `agents/safety-score-v9/artifacts/`. Those inputs are research working data, not a clean-clone archive.
 
 ```bash
-npm run report-cards:capture-fixed-input -- \
-  --exact-cache-export agents/safety-score-v9/artifacts/report-cards-fixed-input-cache.json \
-  --output agents/safety-score-v9/artifacts/fixed-v8.16-p4-calibration.json
-
-npm run report-cards:replay -- \
-  --input agents/safety-score-v9/artifacts/fixed-v8.16-p4-calibration.json \
-  --output agents/safety-score-v9/artifacts/replay-v8.16-p4-legacy.json \
-  --dex-max-age-sec 3600 \
-  --redemption-max-age-sec 28800
-
 npm run report-cards:calibrate-exit-routes -- \
-  --input agents/safety-score-v9/artifacts/fixed-v8.16-p4-calibration.json \
+  --input agents/safety-score-v9/artifacts/fixed-v3-public-p4-calibration.json \
   --output shared/data/safety-score-v9/exit-route-calibration-v1.json \
   --generation-id dex-liquidity-1783905029 \
   --producer-generation-status complete \
   --activation-decision hold \
-  --decision-reason "Exact DEX capacity coverage is below the general activation floor" \
+  --decision-reason "No retained-pool asset has score-eligible complete DEX coverage under the per-pool gate, below the 45-asset activation floor; strict active replay makes 244 exit scores NR and changes 140 overall grades, so v8 scoring remains legacy until publication-exact complete-pool coverage improves" \
   --minimum-dex-eligible-assets 45 \
   --minimum-redemption-eligible-assets 27 \
   --dex-max-observation-age-sec 3600 \
-  --live-redemption-max-observation-age-sec 28800
+  --live-redemption-max-observation-age-sec 28800 \
+  --allow-methodology-mismatch \
+  --allow-registry-mismatch
 
 npm run safety-score-v9:readiness -- \
   --report-cards agents/safety-score-v9/artifacts/replay-v8.16-p4-legacy.json \
   --fixed-input agents/safety-score-v9/artifacts/fixed-v8.16-p4-calibration.json \
   --output shared/data/safety-score-v9/readiness-baseline-v1.json \
-  --generated-at 2026-07-13T01:30:00.000Z
+  --generated-at 2026-07-13T02:00:00.000Z
+
+npm run safety-score-v9:sensitivity -- \
+  --output agents/safety-score-v9/results/v9-implementation/policy-sensitivity-candidate-v1.json
 ```
 
-The exact-cache export may be either the raw private cache envelope or Wrangler's D1 JSON query result. No such publication-exact artifact is currently available in the research corpus. The public endpoint reconstruction mode instead requires `--baseline-output`, `--captured-at`, `--registry-revision`, and `--dex-generation-id`; it is not exact release-calibration evidence. The committed calibration was conservatively rebuilt as a historical drift record from the pre-exact public reconstruction and therefore cannot authorize activation. Replay offers `--allow-methodology-mismatch` but intentionally has no registry-mismatch bypass. Calibration separately offers `--allow-methodology-mismatch` and `--allow-registry-mismatch`; use either only for an explicitly labeled drift study, never for activation evidence. The `p4b-activation-v1` policy defaults to, and refuses any override below, 45 eligible DEX assets and 27 eligible redemption assets. An `activate` request throws instead of writing a contradictory report whenever producer or coverage blockers remain.
+When those ignored files are present, each output above is byte-reproducible. A clean clone cannot rebuild the tracked calibration or readiness JSON until the corresponding fixed inputs are archived in a durable, content-addressed location. The calibration remains a historical drift record and cannot authorize activation; its two mismatch flags are intentional historical-drift allowances.
 
-Files under `agents/` are ignored fixed-input/research working artifacts. The committed exit-route calibration and readiness baseline are the durable decision records. Production remains on v8.17, P4 remains shadow-only, and no v9 activation is authorized while the recorded dispositions are `hold` and `no-go`.
+## Future Exact Capture
+
+Once a private publication cache export is available, capture and replay it under distinct v9 filenames rather than overwriting the legacy baseline inputs:
+
+```bash
+npm run report-cards:capture-fixed-input -- \
+  --exact-cache-export agents/safety-score-v9/artifacts/report-cards-fixed-input-cache.json \
+  --output agents/safety-score-v9/artifacts/fixed-v9-publication-exact.json
+
+npm run report-cards:replay -- \
+  --input agents/safety-score-v9/artifacts/fixed-v9-publication-exact.json \
+  --output agents/safety-score-v9/artifacts/replay-v9-publication-exact.json \
+  --dex-max-age-sec 3600 \
+  --redemption-max-age-sec 28800
+
+npm run safety-score-v9:replay -- \
+  --input agents/safety-score-v9/artifacts/fixed-v9-publication-exact.json \
+  --output agents/safety-score-v9/artifacts/replay-v9-candidate.json \
+  --published-at 2026-07-13T02:00:00.000Z \
+  --publication-epoch 0
+```
+
+The exact-cache export may be either the raw private cache envelope or Wrangler's D1 JSON query result. The V9 replay accepts the resulting normalized exact JSON or the raw exact-cache envelope, uses only its explicit publication time and epoch, and emits the same candidate-pipeline intermediates and identities needed for byte comparison. An optional `v9-rc-N` ID labels the replay but does not promote the candidate policy or authorize release. No such publication-exact artifact is currently available in the research corpus. The public endpoint reconstruction mode instead requires `--baseline-output`, `--captured-at`, `--registry-revision`, and `--dex-generation-id`; it is not exact release-calibration evidence. V8 replay offers `--allow-methodology-mismatch` but intentionally has no registry-mismatch bypass. Calibration separately offers `--allow-methodology-mismatch` and `--allow-registry-mismatch`; use either only for an explicitly labeled drift study, never for activation evidence. The `p4b-activation-v1` policy defaults to, and refuses any override below, 45 eligible DEX assets and 27 eligible redemption assets. An `activate` request throws instead of writing a contradictory report whenever producer or coverage blockers remain.
+
+Files under `agents/` are ignored fixed-input/research working artifacts. The committed candidate policy, exit-route calibration, and readiness baseline are durable decision records, but their ignored source captures are not yet a durable evidence archive. An exact schema-v3 `exact-publication-inputs` capture with matching registry, producer generation, fingerprint, methodology, and replay bindings remains an activation blocker. Production remains on v8.17, P4 remains shadow-only, and no v9 activation is authorized while the recorded dispositions are `hold` and `no-go`.
