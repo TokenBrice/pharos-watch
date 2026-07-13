@@ -20,6 +20,10 @@ import { handleAdminTelegramResend } from "../api/admin-telegram-resend";
 import { handleAdminTelegramBroadcast } from "../api/admin-telegram-broadcast";
 import { handleAdminTelegramDeliveryControl } from "../api/admin-telegram-delivery-control";
 import { handleAdminTelegramAdoptionReport } from "../api/admin-telegram-adoption-report";
+import {
+  handleAdminSafetyScoreV9,
+  handleAdminSafetyScoreV9MovementReview,
+} from "../api/admin-safety-score-v9";
 import { handleAlertBrokerCanary } from "../api/admin-alert-broker-canary";
 import { handleStatusProbeHistory } from "../api/status-probe-history";
 import { handleArmReserveRecoveryFaultInjection } from "../api/admin-reserve-recovery-fault-injection";
@@ -111,5 +115,7 @@ export const ADMIN_STATIC_ROUTES = [
   defineStaticRoute("admin-telegram-broadcast", handleAdminTelegramBroadcast),
   defineStaticRoute("admin-telegram-delivery-control", handleAdminTelegramDeliveryControl),
   defineStaticRoute("admin-telegram-adoption-report", handleAdminTelegramAdoptionReport),
+  defineStaticRoute("admin-safety-score-v9", handleAdminSafetyScoreV9),
+  defineStaticRoute("admin-safety-score-v9-review", handleAdminSafetyScoreV9MovementReview),
   defineStaticRoute("status-probe-history", handleStatusProbeHistory),
 ] as const satisfies readonly StaticRouteDefinition[];

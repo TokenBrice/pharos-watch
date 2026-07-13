@@ -42,6 +42,12 @@ export const ADMIN_WORKSPACES = [
     legacySectionId: "history",
   },
   {
+    id: "safety-score-v9",
+    label: "Safety V9",
+    path: "/admin/safety-score-v9/",
+    legacySectionId: "safety-score-v9",
+  },
+  {
     id: "api-management",
     label: "API Management",
     path: "/admin-api/",
