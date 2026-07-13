@@ -1,10 +1,13 @@
+import { z } from "zod";
+import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
-import type {
-  V9FiatCashMechanismRiskReview,
-  V9MechanismFactV1,
-  V9MechanismQualityLevel,
-  V9MechanismRiskReview,
-  V9TbillMechanismRiskReview,
+import {
+  V9MechanismRiskReviewSchema,
+  type V9FiatCashMechanismRiskReview,
+  type V9MechanismFactV1,
+  type V9MechanismQualityLevel,
+  type V9MechanismRiskReview,
+  type V9TbillMechanismRiskReview,
 } from "@shared/types/safety-score-v9-backing";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
@@ -106,19 +109,166 @@ function buildTbillReview(
   };
 }
 
+const OverlayComponentSchema = z
+  .object({
+    quality: z.enum(["strong", "adequate", "limited", "weak", "failed"]),
+  })
+  .strict();
+
+const OverlaySourceSchema = z
+  .object({ label: z.string().min(1), url: z.string().url() })
+  .strict();
+
+const MechanismReviewOverlaySchema = z
+  .object({
+    assetId: z.string().min(1),
+    archetype: z.enum(["cdp", "synthetic-delta-neutral", "algorithmic", "rwa-credit-fund"]),
+    reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    sources: z.array(OverlaySourceSchema).min(1),
+    notes: z.string().min(1),
+    metrics: z.record(z.string(), z.number().finite()),
+    venueShares: z
+      .array(
+        z
+          .object({
+            venueKey: z.string().min(1),
+            share: z.number().min(0).max(1),
+            failureDomains: z
+              .array(z.object({ kind: z.string().min(1), key: z.string().min(1) }).strict())
+              .default([]),
+          })
+          .strict(),
+      )
+      .optional(),
+    components: z.record(z.string(), OverlayComponentSchema),
+  })
+  .strict();
+
+const MechanismReviewOverlayFileSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    note: z.string(),
+    overlays: z.array(MechanismReviewOverlaySchema),
+  })
+  .strict()
+  .superRefine((file, ctx) => {
+    const ids = file.overlays.map((overlay) => overlay.assetId);
+    if (new Set(ids).size !== ids.length) {
+      ctx.addIssue({ code: "custom", path: ["overlays"], message: "Duplicate overlay assetId" });
+    }
+  });
+
+type MechanismReviewOverlay = z.infer<typeof MechanismReviewOverlaySchema>;
+
+// Component fields (camelCase) per archetype; numeric metric fields separate.
+const OVERLAY_ARCHETYPE_COMPONENTS: Record<MechanismReviewOverlay["archetype"], readonly string[]> = {
+  cdp: [
+    "collateralizationParameters",
+    "liquidationMechanics",
+    "backstop",
+    "branchIsolation",
+    "shutdownAndBadDebt",
+    "structuralRedemption",
+  ],
+  "synthetic-delta-neutral": [
+    "venueAndCustody",
+    "hedgeReconciliation",
+    "fundingBasisStress",
+    "marginAndLiquidation",
+    "unwindCapacity",
+    "lossAbsorption",
+  ],
+  algorithmic: [
+    "contractionCapacity",
+    "confidenceAndIncentives",
+    "oracleAndControlAssumptions",
+    "emergencyRecovery",
+    "lossRecovery",
+  ],
+  "rwa-credit-fund": [
+    "creditQuality",
+    "seniority",
+    "legalEnforceability",
+    "valuationCadence",
+    "maturityAndLiquidity",
+    "custody",
+    "recovery",
+  ],
+};
+
+const OVERLAY_ARCHETYPE_METRICS: Record<MechanismReviewOverlay["archetype"], readonly string[]> = {
+  cdp: ["collateralizationRatio", "liquidationCapacityRatio"],
+  "synthetic-delta-neutral": ["hedgeCoverageRatio", "marginBufferPct", "lossAbsorptionShare"],
+  algorithmic: ["exogenousBackingShare", "reflexiveBackingShare", "contractionCapacityRatio"],
+  "rwa-credit-fund": ["weightedAverageMaturityDays", "valuationCadenceDays"],
+};
+
+function kebabCase(value: string): string {
+  return value.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
+}
+
+function expandOverlayReview(overlay: MechanismReviewOverlay): V9MechanismRiskReview {
+  const componentKeys = OVERLAY_ARCHETYPE_COMPONENTS[overlay.archetype];
+  const metricKeys = OVERLAY_ARCHETYPE_METRICS[overlay.archetype];
+  for (const key of Object.keys(overlay.components)) {
+    if (!componentKeys.includes(key)) {
+      throw new Error(`Unknown ${overlay.archetype} mechanism component in overlay ${overlay.assetId}: ${key}`);
+    }
+  }
+  for (const key of metricKeys) {
+    if (!(key in overlay.metrics)) {
+      throw new Error(`Overlay ${overlay.assetId} is missing required ${overlay.archetype} metric: ${key}`);
+    }
+  }
+  for (const key of Object.keys(overlay.metrics)) {
+    if (!metricKeys.includes(key)) {
+      throw new Error(`Unknown ${overlay.archetype} mechanism metric in overlay ${overlay.assetId}: ${key}`);
+    }
+  }
+  const review: Record<string, unknown> = { archetype: overlay.archetype, ...overlay.metrics };
+  if (overlay.archetype === "synthetic-delta-neutral") {
+    review.venueShares = overlay.venueShares ?? [];
+  }
+  for (const componentField of componentKeys) {
+    const curated = overlay.components[componentField];
+    // A component the curated review does not evidence stays bounded-unknown;
+    // serial mechanism components are never published as missing.
+    review[componentField] = curated
+      ? knownFact(kebabCase(componentField), curated.quality)
+      : boundedFact(kebabCase(componentField), true);
+  }
+  return V9MechanismRiskReviewSchema.parse(review);
+}
+
+const MECHANISM_REVIEW_OVERLAYS: ReadonlyMap<string, MechanismReviewOverlay> = new Map(
+  MechanismReviewOverlayFileSchema.parse(mechanismReviewOverlaysAsset).overlays.map((overlay) => [
+    overlay.assetId,
+    overlay,
+  ]),
+);
+
+/** Curated overlay row (review provenance) for one asset, if present. */
+export function getSafetyScoreV9MechanismReviewOverlay(assetId: string): MechanismReviewOverlay | null {
+  return MECHANISM_REVIEW_OVERLAYS.get(assetId) ?? null;
+}
+
 /**
  * Builds the conservative mechanism risk review the exact evidence supports.
- * Components with dated reserve/assurance evidence are bounded-unknown at the
- * policy's bounded quality; only the assurance component claims a reviewed
- * quality, restated from the recorded proof-of-reserves report. Archetypes
- * whose review requires measured mechanism ratios (CDP, synthetic,
- * algorithmic, RWA credit) remain absent until a curated review exists.
+ * A curated overlay (schema-validated, source-cited) takes precedence for the
+ * archetypes whose review requires measured mechanism ratios (CDP, synthetic,
+ * algorithmic, RWA credit); an overlay whose archetype disagrees with the
+ * resolved archetype is ignored rather than silently applied. Components with
+ * dated reserve/assurance evidence are bounded-unknown at the policy's
+ * bounded quality; only the assurance component claims a reviewed quality,
+ * restated from the recorded proof-of-reserves report.
  */
 export function buildSafetyScoreV9MechanismReview(
   fixedInput: Readonly<ReportCardsFixedInput>,
   meta: MechanismMeta,
   archetype: string,
 ): V9MechanismRiskReview | null {
+  const overlay = MECHANISM_REVIEW_OVERLAYS.get(meta.id);
+  if (overlay && overlay.archetype === archetype) return expandOverlayReview(overlay);
   if (archetype === "fiat-cash") return buildFiatCashReview(fixedInput, meta);
   if (archetype === "tbill") return buildTbillReview(fixedInput, meta);
   return null;

@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "note": "Curated Safety Score v9 mechanism-review overlays for archetypes whose review requires measured mechanism ratios (CDP, synthetic-delta-neutral, algorithmic, rwa-credit-fund). Every numeric metric and every curated component quality must cite at least one source URL in `sources`; components without curated evidence are published bounded-unknown by the extension. Schema is enforced by MechanismReviewOverlayFileSchema in worker/src/lib/safety-score-v9-extension-mechanism.ts.",
+  "overlays": []
+}
