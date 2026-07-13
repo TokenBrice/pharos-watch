@@ -454,6 +454,7 @@ describe("fetchBalancerPools", () => {
     expect(pools.pools[0].feeRate).toBeCloseTo(0.0001);
     expect(pools.pools[0].poolAddress).toBe("0x0000000000000000000000000000000000000abc");
     expect(pools.pools[0].balances).toEqual([500000, 500000]);
+    expect(pools.pools[0].balancesNormalized).toBe(true);
   });
 
   it("uses the exact pool address exposed by the API instead of the 32-byte vault pool id", async () => {
@@ -778,6 +779,7 @@ describe("fetchRaydiumPools", () => {
     const pools = await fetchRaydiumPools();
     const std = pools.pools.find((p) => p.poolType === "raydium-amm");
     expect(std).toBeDefined();
+    expect(std?.balancesNormalized).toBe(true);
   });
 
   it("sets chain to solana for all pools", async () => {

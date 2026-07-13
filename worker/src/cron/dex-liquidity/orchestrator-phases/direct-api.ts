@@ -413,6 +413,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
   const directApiIdentityCounts = countPoolIdentityKeys(eligibleDirectApiIdentities);
 
   const retainedDirectApiPools: DexApiPool[] = [];
+  const exactDuplicatePoolsForEvidence: DexApiPool[] = [];
   for (const { pool, identity } of eligibleDirectApiPoolEntries) {
     const dedupReason = getIdentityDedupReason(
       identity,
@@ -428,6 +429,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
     if (dedupReason === "exact") {
       directApiDedupSkippedByAddress++;
       incrementReason(excludedByReason, "duplicate_exact_identity");
+      exactDuplicatePoolsForEvidence.push(pool);
       continue;
     }
     if (dedupReason === "derived_unique") {
@@ -469,9 +471,10 @@ export async function integrateDirectApiLiquidityPhase(params: {
     );
   }
 
-  if (retainedDirectApiPools.length > 0) {
+  const directApiPoolsForContribution = [...retainedDirectApiPools, ...exactDuplicatePoolsForEvidence];
+  if (directApiPoolsForContribution.length > 0) {
     const directApiGtPools = convertToGtNewPools(
-      retainedDirectApiPools,
+      directApiPoolsForContribution,
       params.chainAddressToId,
       params.symbolToChainScopedIds,
       params.validationReferences,
