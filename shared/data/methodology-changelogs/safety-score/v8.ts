@@ -10,7 +10,7 @@ export const SAFETY_SCORE_V8: readonly MethodologyChangelogEntry[] = [
       "Liquidity / Exit now retains DEX coverage, measurement, effective-TVL, and deployment-access evidence and applies conservative ceilings when the published DEX score rests on reserve simulation, generic TVL proxies, synthetic fallback, or inaccessible-only coverage rather than measured executable depth.",
     impact: [
       "Report-card DEX snapshot reads preserve coverage class and confidence, evidence class, measured-balance and organic TVL, effective TVL, and aggregate deployment outcomes",
-      "Legacy rows without republished evidence fields remain score-neutral and parse through the existing optional raw-input contract",
+      "Rows without republished evidence fields and rows explicitly marked legacy remain score-neutral and parse through the existing optional raw-input contract",
       "Reserve-based AMM simulation is capped at 85, generic TVL proxy evidence at 60, and synthetic or fallback evidence at 55; a row with provider-inaccessible deployments and no observed deployment is capped at 45",
       "The standalone public Liquidity Score is unchanged; the evidence-adjusted DEX value is used only as the Safety Score effective-exit input and is exposed beside the observed score and binding evidence ceiling",
       "Fixed-input calibration changed 18 overall scores and 9 grades with no NR transitions; the largest moves were XSGD 80/A- to 72/B, IDRX 69/B- to 63/C+, and HOLLAR 53/C- to 48/D",

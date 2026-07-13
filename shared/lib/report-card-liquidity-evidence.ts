@@ -1,8 +1,4 @@
-import type {
-  DexExitEvidenceKind,
-  LiquidityCoverageClass,
-  LiquidityEvidenceClass,
-} from "../types/market";
+import type { DexExitEvidenceKind, LiquidityCoverageClass, LiquidityEvidenceClass } from "../types/market";
 
 export interface ReportCardDexEvidenceInput {
   liquidityScore: number | null;
@@ -48,14 +44,12 @@ export function classifyReportCardDexEvidence(
     input.balanceMeasuredTvlUsd !== undefined ||
     input.deploymentCoverage !== undefined;
   if (!hasNewEvidence) return null;
+  if (input.coverageClass === "legacy") return null;
   if (input.liquidityEvidenceClass === "unobserved") return "unobserved";
-  if (input.coverageClass === "fallback" || input.coverageClass === "legacy") {
+  if (input.coverageClass === "fallback") {
     return "synthetic-or-fallback";
   }
-  if (
-    input.liquidityEvidenceClass === "observed_unmeasured" ||
-    input.hasMeasuredLiquidityEvidence === false
-  ) {
+  if (input.liquidityEvidenceClass === "observed_unmeasured" || input.hasMeasuredLiquidityEvidence === false) {
     return "generic-tvl-proxy";
   }
   if ((input.balanceMeasuredTvlUsd ?? 0) > 0) {
@@ -64,9 +58,7 @@ export function classifyReportCardDexEvidence(
   return "generic-tvl-proxy";
 }
 
-export function applyReportCardDexEvidencePolicy(
-  input: ReportCardDexEvidenceInput,
-): ReportCardDexEvidencePolicy {
+export function applyReportCardDexEvidencePolicy(input: ReportCardDexEvidenceInput): ReportCardDexEvidencePolicy {
   const evidenceKind = classifyReportCardDexEvidence(input);
   if (input.liquidityScore == null) {
     return {
@@ -95,6 +87,7 @@ export function applyReportCardDexEvidencePolicy(
   if (
     deploymentCoverage != null &&
     deploymentCoverage.observedPools === 0 &&
+    deploymentCoverage.verifiedNoPools === 0 &&
     deploymentCoverage.providerInaccessible > 0
   ) {
     scoreCeiling = Math.min(scoreCeiling ?? 100, 45);

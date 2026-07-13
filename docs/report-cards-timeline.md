@@ -6,7 +6,7 @@ Internal changelog reconstructed from git history plus the live version metadata
 
 ## v8.16 — DEX exit evidence quality (2026-07-12)
 
-Report-card snapshot reads now retain DEX coverage class/confidence, evidence class, effective and measured TVL, and aggregate deployment outcomes. The standalone public Liquidity Score is unchanged, while Liquidity / Exit uses a bounded evidence-adjusted DEX input: reserve-based AMM simulation caps at 85, generic TVL proxy evidence at 60, synthetic/fallback evidence at 55, and provider-inaccessible-only deployment coverage at 45. Old rows without republished evidence fields remain neutral. Fixed-input calibration changed 18 overall scores and 9 grades with no NR transition; the largest movements were XSGD `80/A- -> 72/B`, IDRX `69/B- -> 63/C+`, and HOLLAR `53/C- -> 48/D`.
+Report-card snapshot reads now retain DEX coverage class/confidence, evidence class, effective and measured TVL, and aggregate deployment outcomes. The standalone public Liquidity Score is unchanged, while Liquidity / Exit uses a bounded evidence-adjusted DEX input: reserve-based AMM simulation caps at 85, generic TVL proxy evidence at 60, synthetic/fallback evidence at 55, and provider-inaccessible-only deployment coverage at 45. Old rows without republished evidence fields and rows explicitly marked `legacy` remain neutral. Fixed-input calibration changed 18 overall scores and 9 grades with no NR transition; the largest movements were XSGD `80/A- -> 72/B`, IDRX `69/B- -> 63/C+`, and HOLLAR `53/C- -> 48/D`.
 
 ## v8.15 — Deterministic cycles and unavailable-upstream scoring (2026-07-12)
 

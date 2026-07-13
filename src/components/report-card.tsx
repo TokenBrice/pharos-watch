@@ -406,14 +406,20 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
               <div className="space-y-1.5">
                 {card.rawInputs.liquidityScore != null ? (
                   <div className="flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
-                    <span className="text-muted-foreground">DEX Liquidity</span>
-                    <ScoreWithBand score={card.rawInputs.liquidityScore} label="DEX liquidity">
-                      <span className="tabular-nums text-foreground">{card.rawInputs.liquidityScore} / 100</span>
+                    <span className="text-muted-foreground">DEX input (evidence-adjusted)</span>
+                    <ScoreWithBand score={card.rawInputs.liquidityScore} label="Evidence-adjusted DEX input">
+                      <span className="tabular-nums text-foreground">
+                        {card.rawInputs.liquidityScore} / 100
+                        {card.rawInputs.liquidityObservedScore != null &&
+                        card.rawInputs.liquidityObservedScore !== card.rawInputs.liquidityScore
+                          ? ` (observed ${card.rawInputs.liquidityObservedScore})`
+                          : ""}
+                      </span>
                     </ScoreWithBand>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.08em]">
-                    <span className="text-muted-foreground">DEX Liquidity</span>
+                    <span className="text-muted-foreground">DEX input (evidence-adjusted)</span>
                     <span className="text-foreground/60">Unavailable</span>
                   </div>
                 )}

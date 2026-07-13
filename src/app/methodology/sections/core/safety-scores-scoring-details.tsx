@@ -106,10 +106,10 @@ export function SafetyScoresScoringDetails() {
           current executable capacity and route confidence.
         </p>
         <p>
-          Before that blend, the DEX input is bounded by its retained evidence: reserve-based AMM simulation caps at
-          85, generic TVL proxy evidence at 60, synthetic or fallback evidence at 55, and provider-inaccessible-only
-          deployment coverage at 45. Older snapshots without these evidence fields remain neutral. The public
-          standalone Liquidity Score is not rewritten by this Safety Score policy.
+          Before that blend, the DEX input is bounded by its retained evidence: reserve-based AMM simulation caps at 85,
+          generic TVL proxy evidence at 60, synthetic or fallback evidence at 55, and provider-inaccessible-only
+          deployment coverage at 45. Older snapshots without these evidence fields and rows explicitly marked legacy
+          remain neutral. The public standalone Liquidity Score is not rewritten by this Safety Score policy.
         </p>
         <p className="pharos-numeric">modeledExitUsd = min(max(supplyUsd &times; 0.05, 100000), 25000000)</p>
         <p className="pharos-numeric">

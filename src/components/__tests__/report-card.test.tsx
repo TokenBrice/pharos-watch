@@ -93,8 +93,27 @@ describe("ReportCardDetail", () => {
     render(<ReportCardDetail card={makeReportCard()} liquidityComponents={null} />);
 
     expect(screen.getByRole("button", { name: "Hide Exit Liquidity details" })).toBeTruthy();
-    expect(screen.getByText("DEX Liquidity")).toBeTruthy();
+    expect(screen.getByText("DEX input (evidence-adjusted)")).toBeTruthy();
     expect(screen.getByText("72 / 100")).toBeTruthy();
+  });
+
+  it("distinguishes a capped Safety input from the observed DEX score", () => {
+    render(
+      <ReportCardDetail
+        card={{
+          ...makeReportCard(),
+          rawInputs: createReportCardRawInputs({
+            liquidityScore: 55,
+            liquidityObservedScore: 90,
+            liquidityEvidenceCeiling: 55,
+          }),
+        }}
+        liquidityComponents={null}
+      />,
+    );
+
+    expect(screen.getByText("DEX input (evidence-adjusted)")).toBeTruthy();
+    expect(screen.getByText("55 / 100 (observed 90)")).toBeTruthy();
   });
 
   it("expands dimension details from the disclosure control", () => {

@@ -11,6 +11,23 @@ describe("report-card DEX evidence policy", () => {
       reason: null,
       legacyNeutral: true,
     });
+
+    expect(
+      applyReportCardDexEvidencePolicy({
+        liquidityScore: 92,
+        coverageClass: "legacy",
+        coverageConfidence: 0.5,
+        liquidityEvidenceClass: "observed_unmeasured",
+        hasMeasuredLiquidityEvidence: false,
+      }),
+    ).toEqual({
+      observedScore: 92,
+      effectiveScore: 92,
+      evidenceKind: null,
+      scoreCeiling: null,
+      reason: null,
+      legacyNeutral: true,
+    });
   });
 
   it("caps fallback and generic TVL proxy observations", () => {
@@ -79,6 +96,12 @@ describe("report-card DEX evidence policy", () => {
       applyReportCardDexEvidencePolicy({
         ...base,
         deploymentCoverage: { observedPools: 1, verifiedNoPools: 0, providerInaccessible: 2 },
+      }).effectiveScore,
+    ).toBe(80);
+    expect(
+      applyReportCardDexEvidencePolicy({
+        ...base,
+        deploymentCoverage: { observedPools: 0, verifiedNoPools: 1, providerInaccessible: 2 },
       }).effectiveScore,
     ).toBe(80);
   });
