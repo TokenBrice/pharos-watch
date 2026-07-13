@@ -206,7 +206,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension.ts",
-      "sha256": "33a820e5cff1e993380581d142b16ccf167cf1fddf3e5175286b8518233bef1c"
+      "sha256": "205875205e0089955c787502cd6d756b09bb069254af325b663209dfd4db61bd"
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-boundary.ts",
@@ -214,10 +214,10 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set.ts",
-      "sha256": "047354d431f0ed99cc9344f1830d9dffaca16c2bf358d08c7ee8b58ce53f97f9"
+      "sha256": "51bbf88025dd048c6661ea275204647089c67a404d4a403ccad30c00381ae8d8"
     }
   ],
-  "digest": "592f939780880fdc71fe9c0000fbdf18b1b1d7033dfda24b4449cb097c6d5eab"
+  "digest": "03e1ed0fe7845769d4b5557955f2ce9a86f6ac815e71ffc65fad8c1dbb21ebe0"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

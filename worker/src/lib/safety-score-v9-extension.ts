@@ -24,7 +24,11 @@ import type { ReserveSlice } from "@shared/types/reserves";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import { buildSafetyScoreV9MechanismReview } from "./safety-score-v9-extension-mechanism";
 import { buildSafetyScoreV9ReserveClassifications } from "./safety-score-v9-extension-reserves";
-import { buildSafetyScoreV9RouteReviews } from "./safety-score-v9-extension-routes";
+import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/redemption-backstop-scoring";
+import {
+  buildSafetyScoreV9RetainedRedemptionRoutes,
+  buildSafetyScoreV9RouteReviews,
+} from "./safety-score-v9-extension-routes";
 import {
   buildSafetyScoreV9SupplyReview,
   safetyScoreV9RouteSupplyShare,
@@ -960,6 +964,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     routeFreshness: {
       dexMaxAgeSec: CRON_INTERVALS["sync-dex-liquidity"] * 2,
       redemptionMaxAgeSec: CRON_INTERVALS["sync-redemption-backstops"] * 2,
+      documentedTermsMaxAgeSec: SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec,
     },
     assets: fixedInput.activeAssetIds.map((assetId) => {
       const meta = metaById.get(assetId)!;
@@ -1008,7 +1013,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         reserveApplicability: { state: "required" },
         reserveClassifications: buildSafetyScoreV9ReserveClassifications(liveReserves),
         routeReviews: buildSafetyScoreV9RouteReviews(fixedInput, assetId),
-        retainedRoutes: [],
+        retainedRoutes: buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId),
         controlReview:
           controls.length > 0
             ? controlsFullyResolved

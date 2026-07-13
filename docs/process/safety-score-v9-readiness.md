@@ -46,7 +46,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
   candidate deterministically. The current policy semantic digest is
   `204dc01eb2ca995b874b55323ed8c7d7fbab150f6f8b61c42aa374082839c17a`;
   the current evaluation-build digest is
-  `592f939780880fdc71fe9c0000fbdf18b1b1d7033dfda24b4449cb097c6d5eab`.
+  `03e1ed0fe7845769d4b5557955f2ce9a86f6ac815e71ffc65fad8c1dbb21ebe0`.
 - The shadow extension builder now maps reviewed repository evidence into the
   strict fact set instead of clamping every fact to an unresolved state: peg
   references from the registry peg currency, chain-supply bridge materiality
@@ -57,7 +57,16 @@ The V9 implementation establishes candidate infrastructure without changing prod
   are bounded-unknown at the policy's bounded quality. Bounded mechanism
   components gap as the non-critical `bounded-mechanism-review` reason;
   excluded optional exit routes stay on per-route traces instead of imposing
-  critical reasons once a score-eligible route carries the exit claim. With
+  critical reasons once a score-eligible route carries the exit claim. Full-
+  supply redemption rows that quantify no immediate capacity gain a bounded
+  observation derived from the row's own reviewed model (redemption
+  methodology `v4.18`); the extension retains the identical derivation for
+  captures that predate the producer emitting it. Documented-terms route
+  evidence lives on the policy's `documentedTermsMaxAgeSec` review cadence
+  instead of the producer cron cadence, and the exit portfolio only reports
+  `known` completeness when every retained DEX pool carries a score-eligible
+  exact observation, so diagnostic-only route sets stay bounded-unknown
+  rather than arming the reviewed-complete zero-score path. With
   the 2026-07-13 exact publication capture, the candidate produces real
   scores for `usdt-tether` and `usdc-circle` (83.15% of tracked supply
   weight); every other asset remains reason-coded `NR` pending exit-route

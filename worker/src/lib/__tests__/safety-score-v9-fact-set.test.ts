@@ -324,7 +324,7 @@ function extension(): SafetyScoreV9FactSetExtensionV2 {
       peg: { generationId: "peg:fixture-v1", observedAtSec: OBSERVED_AT_SEC, maxAgeSec: 500 },
       researchOverlays: { generationId: "research:fixture-v1", observedAtSec: OBSERVED_AT_SEC, maxAgeSec: 500 },
     },
-    routeFreshness: { dexMaxAgeSec: 500, redemptionMaxAgeSec: 500 },
+    routeFreshness: { dexMaxAgeSec: 500, redemptionMaxAgeSec: 500, documentedTermsMaxAgeSec: 31_536_000 },
     assets: [
       {
         assetId: "alpha",

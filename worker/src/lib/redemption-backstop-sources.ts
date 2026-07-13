@@ -36,7 +36,10 @@ import {
   readRedemptionBackstopLiveMetadata,
   type RedemptionBackstopLiveMetadata,
 } from "./redemption-backstop-live-metadata";
-import { buildRedemptionExitRouteObservation } from "./redemption-exit-route-observations";
+import {
+  buildRedemptionExitRouteObservation,
+  deriveSupplyModelExitRouteObservation,
+} from "./redemption-exit-route-observations";
 
 function resolveStaticFields(
   stablecoinId: string,
@@ -260,7 +263,7 @@ export async function buildRedemptionBackstopEntry(
     ...mergedRouteStatus.notes,
   ]);
 
-  return {
+  const entry: RedemptionBackstopEntry = {
     stablecoinId,
     score,
     effectiveExitScore,
@@ -315,6 +318,13 @@ export async function buildRedemptionBackstopEntry(
     notes,
     capsApplied,
   };
+  if (entry.capacityProfile && !entry.capacityProfile.exitRouteObservations) {
+    const derived = deriveSupplyModelExitRouteObservation(entry, now);
+    if (derived) {
+      return { ...entry, capacityProfile: { ...entry.capacityProfile, exitRouteObservations: [derived] } };
+    }
+  }
+  return entry;
 }
 
 function inferDefaultRouteExitCorrelation(

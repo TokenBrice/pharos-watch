@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.18",
+    title: "Bounded exit-route observations for documented full-supply routes",
+    date: "2026-07-13",
+    effectiveAt: 1783976400,
+    summary:
+      "Resolved full-supply redemption routes that quantify no immediate capacity now publish an explicitly-bounded exit-route observation derived from the row's own reviewed model: documented-terms evidence at the review timestamp, capacity bounded by the documented full-supply basis, and a cost bound only when the fee model is a documented fixed bps fee. Atomic settlement projects onto the same-notional exit request; every slower settlement model publishes diagnostic eventual-redemption evidence that is never score-eligible.",
+    impact: [
+      "Open, resolved `supply-full` routes with documented-bound capacity confidence and a reviewed docs timestamp emit one `exitRouteObservations` row where they previously emitted none",
+      "Only atomic-settlement routes with a documented fixed-bps fee at or under the 200 bps same-notional cost bound are score-eligible; immediate, same-day, days, and queued settlement models publish `eventual-redemption` diagnostic observations with conservative settlement-horizon ceilings (1h/1d/14d/30d)",
+      "Routes with formula, variable, or undisclosed fee models carry a zero executable bound because the published row states no defensible cost bound",
+      "Redemption scores, capacity scores, effective-exit blending, and eventual redeemability are unchanged; this adds observation evidence only",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.17",
     title: "Live-direct capacity tranche: Mento family, USTB, PUSD, cUSD fee, savings-vault cohort",
     date: "2026-07-09",

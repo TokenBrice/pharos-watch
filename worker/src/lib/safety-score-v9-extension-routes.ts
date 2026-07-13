@@ -1,9 +1,11 @@
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
+import { deriveSupplyModelExitRouteObservation } from "./redemption-exit-route-observations";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
 
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
+type RetainedRoute = ExtensionAsset["retainedRoutes"][number];
 type RouteReview = ExtensionAsset["routeReviews"][number];
 type RouteOutputReview = NonNullable<RouteReview["output"]>;
 type RouteValuation = NonNullable<RouteOutputReview["valuation"]>;
@@ -294,5 +296,26 @@ export function buildSafetyScoreV9RouteReviews(
   for (const observation of redemption?.capacityProfile?.exitRouteObservations ?? []) {
     reviews.push(buildRedemptionRouteReview(fixedInput, redemption!, observation));
   }
+  for (const retained of buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId)) {
+    reviews.push(buildRedemptionRouteReview(fixedInput, redemption!, retained.observation));
+  }
   return reviews.sort((left, right) => compareText(`${left.lane}:${left.routeId}`, `${right.lane}:${right.routeId}`));
+}
+
+/**
+ * Derives same-notional route evidence for captured full-supply redemption
+ * rows that predate the producer emitting observations itself. The derivation
+ * is the producer's own (shared function over the published row), so a later
+ * capture that carries the observation natively replaces this retained route
+ * byte-for-byte and the derivation no-ops.
+ */
+export function buildSafetyScoreV9RetainedRedemptionRoutes(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  assetId: string,
+): RetainedRoute[] {
+  const redemption = fixedInput.redemptionBackstopMap[assetId];
+  if (!redemption || (redemption.capacityProfile?.exitRouteObservations?.length ?? 0) > 0) return [];
+  const observation = deriveSupplyModelExitRouteObservation(redemption, fixedInput.clockSec);
+  if (!observation) return [];
+  return [{ lane: "redemption", observation, disposition: "observed", rejection: null }];
 }

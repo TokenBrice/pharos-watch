@@ -1,3 +1,4 @@
+import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -10,6 +11,17 @@ import type {
 } from "@shared/types/redemption";
 
 const REDEMPTION_CAPACITY_CURVE_REQUESTS_USD = [100_000, 1_000_000, 5_000_000, 25_000_000] as const;
+
+// Conservative documented ceilings for projecting a reviewed settlement model
+// onto an observation horizon. Only "atomic" satisfies the same-notional
+// request horizon; every other model is published as diagnostic evidence.
+const DERIVED_SETTLEMENT_HORIZON_CEILING_SEC: Record<RedemptionBackstopEntry["settlementModel"], number> = {
+  atomic: SAME_NOTIONAL_EXIT_REQUEST_POLICY.settlementHorizonSec,
+  immediate: 3_600,
+  "same-day": 86_400,
+  days: 14 * 86_400,
+  queued: 30 * 86_400,
+};
 
 interface BuildRedemptionExitRouteObservationInput {
   stablecoinId: string;
@@ -73,7 +85,10 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
   };
 }
 
-function resolveOutput(stablecoinId: string, config: RedemptionBackstopConfig): ExitRouteOutput {
+function resolveOutput(
+  stablecoinId: string,
+  config: Pick<RedemptionBackstopConfig, "routeFamily" | "outputAssetType">,
+): ExitRouteOutput {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
   if (config.routeFamily === "offchain-issuer") {
     return { kind: "fiat", ...(meta?.flags.pegCurrency ? { currency: meta.flags.pegCurrency } : {}) };
@@ -87,6 +102,25 @@ function resolveOutput(stablecoinId: string, config: RedemptionBackstopConfig): 
     return { kind: "collateral" };
   }
   return { kind: "unresolved-asset" };
+}
+
+function resolveScopeAndCommonModes(
+  stablecoinId: string,
+  routeFamily: RedemptionBackstopConfig["routeFamily"],
+): { scope: ExitRouteObservation["scope"]; commonModeKeys: string[] } {
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  const chain = meta?.contracts?.length === 1 ? meta.contracts[0]!.chain : undefined;
+  return {
+    scope:
+      routeFamily === "offchain-issuer"
+        ? { kind: "issuer", issuerId: stablecoinId }
+        : { kind: "protocol", protocol: meta?.protocolSlug ?? stablecoinId, ...(chain ? { chain } : {}) },
+    commonModeKeys: [
+      routeFamily === "offchain-issuer" ? `issuer:${stablecoinId}` : `protocol:${meta?.protocolSlug ?? stablecoinId}`,
+      ...(meta?.variantOf ? [`parent:${meta.variantOf}`] : []),
+      ...(chain ? [`chain:${chain}`] : []),
+    ],
+  };
 }
 
 function resolveCostBps(
@@ -167,23 +201,12 @@ export function buildRedemptionExitRouteObservation(
     buildCapacityPoint(request, input.scoringCapacityUsd!, input.config, input.resolvedFeeBps),
   );
   const point = capacityCurve.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd)!;
-  const meta = TRACKED_META_BY_ID.get(input.stablecoinId);
-  const chain = meta?.contracts?.length === 1 ? meta.contracts[0]!.chain : undefined;
-  const commonModeKeys = [
-    input.config.routeFamily === "offchain-issuer"
-      ? `issuer:${input.stablecoinId}`
-      : `protocol:${meta?.protocolSlug ?? input.stablecoinId}`,
-    ...(meta?.variantOf ? [`parent:${meta.variantOf}`] : []),
-    ...(chain ? [`chain:${chain}`] : []),
-  ];
+  const { scope, commonModeKeys } = resolveScopeAndCommonModes(input.stablecoinId, input.config.routeFamily);
 
   return {
     routeId: `redemption:${input.stablecoinId}:${input.config.routeFamily}`,
     routeFamily: input.config.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
-    scope:
-      input.config.routeFamily === "offchain-issuer"
-        ? { kind: "issuer", issuerId: input.stablecoinId }
-        : { kind: "protocol", protocol: meta?.protocolSlug ?? input.stablecoinId, ...(chain ? { chain } : {}) },
+    scope,
     ...point,
     settlementHorizonSec: SAME_NOTIONAL_EXIT_REQUEST_POLICY.settlementHorizonSec,
     output: resolveOutput(input.stablecoinId, input.config),
@@ -192,6 +215,90 @@ export function buildRedemptionExitRouteObservation(
     scoreEligible,
     observedAt: evidence.observedAt,
     freshnessSeconds: Math.max(0, input.now - evidence.observedAt),
+    commonModeKeys,
+    capacityCurve,
+  };
+}
+
+/**
+ * Derives an explicitly-bounded exit-route observation from a published
+ * full-supply redemption row that quantified no immediate capacity. The
+ * observation carries only what the row's own reviewed model states: capacity
+ * bounded by the documented full-supply basis, documented-terms evidence at
+ * the review timestamp, and a cost bound only when the documented fee model is
+ * a fixed bps fee. Atomic settlement projects onto the same-notional request;
+ * every other settlement model is published as diagnostic
+ * `eventual-redemption` evidence (never score-eligible).
+ *
+ * Works purely from the published entry so the runtime producer and the V9
+ * shadow extension derive byte-identical observations from the same row.
+ */
+export function deriveSupplyModelExitRouteObservation(
+  entry: RedemptionBackstopEntry,
+  now: number,
+): ExitRouteObservation | null {
+  const profile = entry.capacityProfile;
+  const eventualUsd = profile?.eventualUsd;
+  const modeledExitSizeUsd = profile?.modeledExitSizeUsd;
+  if (
+    entry.provider !== REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_FULL_MODEL ||
+    !profile ||
+    profile.scoringUsd != null ||
+    (profile.exitRouteObservations?.length ?? 0) > 0 ||
+    entry.resolutionState !== "resolved" ||
+    entry.routeStatus !== "open" ||
+    entry.capacityConfidence !== "documented-bound" ||
+    eventualUsd == null ||
+    !Number.isFinite(eventualUsd) ||
+    eventualUsd <= 0 ||
+    modeledExitSizeUsd == null ||
+    !Number.isFinite(modeledExitSizeUsd) ||
+    modeledExitSizeUsd <= 0
+  ) {
+    return null;
+  }
+  const reviewTimestamp = reviewedAtSec(entry.docs?.reviewedAt);
+  if (reviewTimestamp === null) return null;
+
+  // Only "atomic" satisfies the 300s same-notional horizon; "immediate" is
+  // bounded at an hour and stays diagnostic alongside slower models.
+  const routeFamily: ExitRouteObservation["routeFamily"] =
+    entry.settlementModel === "atomic"
+      ? entry.routeFamily === "offchain-issuer"
+        ? "issuer-redemption"
+        : "protocol-redemption"
+      : "eventual-redemption";
+  // A documented fixed-bps fee is the only cost bound the published row
+  // defensibly states; formula/variable/undisclosed fees stay unbounded.
+  const feeBoundBps = entry.feeModelKind === "fixed-bps" && entry.feeBps != null ? entry.feeBps : null;
+  const withinCost = feeBoundBps != null && feeBoundBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps;
+  const requests = [...new Set([...REDEMPTION_CAPACITY_CURVE_REQUESTS_USD, modeledExitSizeUsd])]
+    .filter((request) => request <= Math.max(modeledExitSizeUsd, eventualUsd))
+    .sort((left, right) => left - right);
+  const capacityCurve = requests.map((request) => {
+    const executableUsd = withinCost ? Math.min(request, eventualUsd) : 0;
+    return {
+      requestedNotionalUsd: request,
+      maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
+      executableUsd,
+      completionRatio: executableUsd / request,
+    };
+  });
+  const point = capacityCurve.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd)!;
+  const { scope, commonModeKeys } = resolveScopeAndCommonModes(entry.stablecoinId, entry.routeFamily);
+
+  return {
+    routeId: `redemption:${entry.stablecoinId}:${entry.routeFamily}`,
+    routeFamily,
+    scope,
+    ...point,
+    settlementHorizonSec: DERIVED_SETTLEMENT_HORIZON_CEILING_SEC[entry.settlementModel],
+    output: resolveOutput(entry.stablecoinId, entry),
+    evidenceKind: "documented-terms",
+    confidence: "medium",
+    scoreEligible: routeFamily !== "eventual-redemption" && withinCost,
+    observedAt: reviewTimestamp,
+    freshnessSeconds: Math.max(0, now - reviewTimestamp),
     commonModeKeys,
     capacityCurve,
   };

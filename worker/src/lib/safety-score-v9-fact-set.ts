@@ -425,6 +425,7 @@ export const SafetyScoreV9FactSetExtensionV2Schema = z
       .object({
         dexMaxAgeSec: z.number().int().nonnegative(),
         redemptionMaxAgeSec: z.number().int().nonnegative(),
+        documentedTermsMaxAgeSec: z.number().int().nonnegative(),
       })
       .strict(),
     assets: canonicalArrayBy(AssetExtensionSchema, (asset) => asset.assetId).refine((assets) => assets.length > 0, {
@@ -1110,10 +1111,14 @@ function routeEvidence(
   retained: boolean,
 ): string {
   const generationId = lane === "dex" ? context.fixedInput.dexGenerationId : context.fixedInput.redemptionGenerationId;
+  // Documented-terms evidence lives on the review cadence the policy states
+  // (semantic.exit.documentedTermsMaxAgeSec), not the producer cron cadence.
   const maxAgeSec =
     lane === "dex"
       ? context.extension.routeFreshness.dexMaxAgeSec
-      : context.extension.routeFreshness.redemptionMaxAgeSec;
+      : observation.evidenceKind === "documented-terms"
+        ? context.extension.routeFreshness.documentedTermsMaxAgeSec
+        : context.extension.routeFreshness.redemptionMaxAgeSec;
   return addEvidence(
     context,
     createV9EvidenceReference(
@@ -1515,12 +1520,44 @@ function buildRoutes(context: AssetBuildContext): {
   const statuses = routes.flatMap((route) => [route.status, route.output.status]);
   const gapIds = [...new Set(statuses.flatMap((status) => status.gapIds))];
   const evidenceRefIds = [...new Set(statuses.flatMap((status) => status.evidenceRefIds))];
+  // "known" asserts the whole exit surface is observed (it upgrades evidence
+  // level and arms the reviewed-complete zero-score path), so it additionally
+  // requires every retained DEX pool to carry a score-eligible observation.
+  // A portfolio holding only diagnostic routes over an incompletely observed
+  // DEX surface stays bounded-unknown. A missing redemption row does not
+  // demote the state: absent redemption evidence can only understate the
+  // score, and the zero-score path still requires an observed portfolio.
+  const coverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
+  const dexSurfaceComplete =
+    coverage != null &&
+    (coverage.retainedPoolCount === 0 ||
+      (coverage.status === "populated" &&
+        coverage.scoreEligiblePoolCount != null &&
+        coverage.scoreEligiblePoolCount === coverage.retainedPoolCount));
+  const portfolioGapIds = [...gapIds];
+  if (!dexSurfaceComplete) {
+    portfolioGapIds.push(
+      addGap(
+        context,
+        createV9FactGap({
+          gapId: `${context.asset.assetId}:gap:exit-portfolio-coverage`,
+          reasonCode: "incomplete-dex-route-coverage",
+          ownerDomain: "exit",
+          policyRuleId: "v9.exit.same-notional-route",
+          observationState: "bounded-unknown",
+          path: { kind: "local-component", componentKey: "exit-portfolio-coverage" },
+          message: "Retained DEX pools do not all carry score-eligible exact route observations.",
+          evidenceRefIds,
+        }),
+      ),
+    );
+  }
   return {
     exitStatus: createV9FactStatus({
       applicability: requiredV9Applicability("v9.exit.same-notional-route"),
-      observationState: gapIds.length > 0 ? "bounded-unknown" : "known",
+      observationState: portfolioGapIds.length > 0 ? "bounded-unknown" : "known",
       evidenceRefIds,
-      gapIds,
+      gapIds: portfolioGapIds,
     }),
     exitRoutes: routes,
   };

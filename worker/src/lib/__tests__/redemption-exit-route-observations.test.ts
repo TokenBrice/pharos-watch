@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import type { RedemptionCapacityProfile } from "@shared/types/redemption";
-import { buildRedemptionExitRouteObservation } from "../redemption-exit-route-observations";
+import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
+import {
+  buildRedemptionExitRouteObservation,
+  deriveSupplyModelExitRouteObservation,
+} from "../redemption-exit-route-observations";
 
 const config: RedemptionBackstopConfig = {
   routeFamily: "offchain-issuer",
@@ -99,5 +102,118 @@ describe("redemption same-notional route observations", () => {
   it("returns no observation when the immediate capacity request is undefined", () => {
     expect(build({ capacityProfile: undefined })).toBeNull();
     expect(build({ scoringCapacityUsd: null })).toBeNull();
+  });
+});
+
+const supplyFullEntry: RedemptionBackstopEntry = {
+  stablecoinId: "usdc-circle",
+  score: null,
+  effectiveExitScore: null,
+  dexLiquidityScore: null,
+  accessScore: 40,
+  settlementScore: 65,
+  executionCertaintyScore: 60,
+  capacityScore: null,
+  outputAssetQualityScore: 100,
+  costScore: 40,
+  routeFamily: "offchain-issuer",
+  accessModel: "issuer-api",
+  settlementModel: "atomic",
+  executionModel: "rules-based-nav",
+  outputAssetType: "stable-single",
+  provider: "supply-full-model",
+  sourceMode: "estimated",
+  resolutionState: "resolved",
+  routeStatus: "open",
+  routeStatusSource: "static-config",
+  holderEligibility: "verified-customer",
+  capacityConfidence: "documented-bound",
+  capacitySemantics: "eventual-only",
+  capacityProfile: {
+    immediateUsd: null,
+    eventualUsd: 100_000_000,
+    scoringUsd: null,
+    scoringHorizon: "eventual",
+    capacityProfileConfidence: "documented-bound",
+    modeledExitSizeUsd: 5_000_000,
+  },
+  feeConfidence: "fixed",
+  feeModelKind: "fixed-bps",
+  modelConfidence: "medium",
+  immediateCapacityUsd: null,
+  immediateCapacityRatio: null,
+  feeBps: 10,
+  queueEnabled: false,
+  methodologyVersion: "4.18",
+  updatedAt: Date.UTC(2026, 6, 13) / 1_000,
+  docs: { label: "Terms", url: "https://example.com/terms", reviewedAt: "2026-07-01" },
+};
+
+describe("derived supply-model route observations", () => {
+  const now = Date.UTC(2026, 6, 13) / 1_000;
+
+  it("projects an atomic full-supply row onto the same-notional request", () => {
+    const observation = deriveSupplyModelExitRouteObservation(supplyFullEntry, now);
+    expect(observation).toMatchObject({
+      routeId: "redemption:usdc-circle:offchain-issuer",
+      routeFamily: "issuer-redemption",
+      requestedNotionalUsd: 5_000_000,
+      settlementHorizonSec: 300,
+      maxCostBps: 200,
+      executableUsd: 5_000_000,
+      completionRatio: 1,
+      evidenceKind: "documented-terms",
+      confidence: "medium",
+      scoreEligible: true,
+      observedAt: Date.parse("2026-07-01T00:00:00.000Z") / 1_000,
+    });
+  });
+
+  it("publishes slower settlement models as diagnostic eventual redemption evidence", () => {
+    for (const settlementModel of ["immediate", "same-day", "days", "queued"] as const) {
+      const observation = deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, settlementModel }, now);
+      expect(observation).toMatchObject({ routeFamily: "eventual-redemption", scoreEligible: false });
+      expect(observation!.settlementHorizonSec).toBeGreaterThan(300);
+    }
+  });
+
+  it("carries a zero executable bound when the published fee model states no fixed bound", () => {
+    const undisclosed = deriveSupplyModelExitRouteObservation(
+      { ...supplyFullEntry, feeModelKind: "documented-variable", feeBps: null },
+      now,
+    );
+    expect(undisclosed).toMatchObject({ scoreEligible: false, executableUsd: 0, completionRatio: 0 });
+    const overCost = deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, feeBps: 250 }, now);
+    expect(overCost).toMatchObject({ scoreEligible: false, executableUsd: 0 });
+  });
+
+  it("derives nothing outside the documented full-supply basis", () => {
+    expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, provider: "reserve-sync-metadata" }, now)).toBeNull();
+    expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, resolutionState: "impaired" }, now)).toBeNull();
+    expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, routeStatus: "degraded" }, now)).toBeNull();
+    expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, docs: null }, now)).toBeNull();
+    expect(
+      deriveSupplyModelExitRouteObservation(
+        {
+          ...supplyFullEntry,
+          capacityProfile: { ...supplyFullEntry.capacityProfile!, scoringUsd: 1_000_000 },
+        },
+        now,
+      ),
+    ).toBeNull();
+    expect(
+      deriveSupplyModelExitRouteObservation(
+        {
+          ...supplyFullEntry,
+          capacityProfile: {
+            ...supplyFullEntry.capacityProfile!,
+            exitRouteObservations: [
+              deriveSupplyModelExitRouteObservation(supplyFullEntry, now)!,
+            ],
+          },
+        },
+        now,
+      ),
+    ).toBeNull();
   });
 });
