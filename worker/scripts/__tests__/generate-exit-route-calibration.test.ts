@@ -193,8 +193,6 @@ describe("exit-route decision-gate calibration", () => {
       producerGenerationStatus: "complete" as const,
       activationDecision: "hold" as const,
       decisionReason: "Hold until both route lanes meet the general minimum coverage policy.",
-      minimumDexEligibleAssets: 1,
-      minimumRedemptionEligibleAssets: 1,
       dexMaxObservationAgeSec: 1_000,
       liveRedemptionMaxObservationAgeSec: 1_000,
     };
@@ -253,8 +251,6 @@ describe("exit-route decision-gate calibration", () => {
       producerGenerationStatus: "complete",
       activationDecision: "hold",
       decisionReason: "Partial producer coverage cannot satisfy the DEX floor.",
-      minimumDexEligibleAssets: 1,
-      minimumRedemptionEligibleAssets: 0,
       dexMaxObservationAgeSec: 1_000,
     });
     const row = report.rows.find((candidate) => candidate.id === "usdc-circle");
@@ -274,5 +270,28 @@ describe("exit-route decision-gate calibration", () => {
         decisionReason: "fixture",
       }),
     ).toThrow("does not match fixed input DEX generation");
+  });
+
+  it("rejects caller-supplied floors below the versioned general policy", () => {
+    expect(() =>
+      buildExitRouteCalibrationReport(fixedInput(), {
+        generationId: "dex-generation-42",
+        producerGenerationStatus: "complete",
+        activationDecision: "hold",
+        decisionReason: "fixture",
+        minimumDexEligibleAssets: 1,
+      }),
+    ).toThrow("minimumDexEligibleAssets must be an integer at least 45");
+  });
+
+  it("refuses to emit an activation decision while the gate has blockers", () => {
+    expect(() =>
+      buildExitRouteCalibrationReport(fixedInput(), {
+        generationId: "dex-generation-42",
+        producerGenerationStatus: "complete",
+        activationDecision: "activate",
+        decisionReason: "fixture",
+      }),
+    ).toThrow("Cannot activate same-notional scoring");
   });
 });

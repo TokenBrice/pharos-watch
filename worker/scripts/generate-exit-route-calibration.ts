@@ -9,7 +9,11 @@ import {
   SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY,
   SAME_NOTIONAL_EXIT_REQUEST_POLICY,
 } from "@shared/lib/redemption-backstop-scoring";
-import { isDexExitRouteCoverageComplete, validateExitRouteCapacityCurve } from "@shared/lib/p4-exit-route-capacity";
+import {
+  isDexExitRouteCoverageComplete,
+  P4_GENERAL_ACTIVATION_POLICY_V1,
+  validateExitRouteCapacityCurve,
+} from "@shared/lib/p4-exit-route-capacity";
 import type { ExitRouteObservation } from "@shared/types/market";
 import type { ReportCard, ReportCardGrade } from "@shared/types/report-cards";
 import {
@@ -37,8 +41,8 @@ Options:
   --producer-generation-status <status> complete or incomplete (required)
   --activation-decision <decision>       activate or hold (required)
   --decision-reason <reason>             Evidence-based general-policy rationale (required)
-  --minimum-dex-eligible-assets <n>      General activation floor (default: 1)
-  --minimum-redemption-eligible-assets <n> General activation floor (default: 1)
+  --minimum-dex-eligible-assets <n>      General activation floor (minimum/default: 45)
+  --minimum-redemption-eligible-assets <n> General activation floor (minimum/default: 27)
   --dex-max-observation-age-sec <n>      DEX freshness window (default: DEX interval x2)
   --live-redemption-max-observation-age-sec <n> Live redemption freshness window (default: redemption interval x2)
   --allow-methodology-mismatch           Replay an older capture through current code
@@ -216,8 +220,10 @@ function cardsById(cards: readonly ReportCard[]): Map<string, ReportCard> {
 
 export function buildExitRouteCalibrationReport(fixedInputValue: unknown, options: ExitRouteCalibrationOptions) {
   const fixedInput: ReportCardsFixedInput = normalizeFixedInput(fixedInputValue);
-  const minimumDexEligibleAssets = options.minimumDexEligibleAssets ?? 1;
-  const minimumRedemptionEligibleAssets = options.minimumRedemptionEligibleAssets ?? 1;
+  const minimumDexEligibleAssets =
+    options.minimumDexEligibleAssets ?? P4_GENERAL_ACTIVATION_POLICY_V1.minimumDexEligibleAssets;
+  const minimumRedemptionEligibleAssets =
+    options.minimumRedemptionEligibleAssets ?? P4_GENERAL_ACTIVATION_POLICY_V1.minimumRedemptionEligibleAssets;
   const dexMaxObservationAgeSec = options.dexMaxObservationAgeSec ?? DEFAULT_DEX_MAX_OBSERVATION_AGE_SEC;
   const liveRedemptionMaxObservationAgeSec =
     options.liveRedemptionMaxObservationAgeSec ?? DEFAULT_LIVE_REDEMPTION_MAX_OBSERVATION_AGE_SEC;
@@ -228,11 +234,21 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
     );
   }
   if (!options.decisionReason.trim()) throw new Error("decisionReason must be non-empty");
-  if (!Number.isInteger(minimumDexEligibleAssets) || minimumDexEligibleAssets < 0) {
-    throw new Error("minimumDexEligibleAssets must be a non-negative integer");
+  if (
+    !Number.isInteger(minimumDexEligibleAssets) ||
+    minimumDexEligibleAssets < P4_GENERAL_ACTIVATION_POLICY_V1.minimumDexEligibleAssets
+  ) {
+    throw new Error(
+      `minimumDexEligibleAssets must be an integer at least ${P4_GENERAL_ACTIVATION_POLICY_V1.minimumDexEligibleAssets}`,
+    );
   }
-  if (!Number.isInteger(minimumRedemptionEligibleAssets) || minimumRedemptionEligibleAssets < 0) {
-    throw new Error("minimumRedemptionEligibleAssets must be a non-negative integer");
+  if (
+    !Number.isInteger(minimumRedemptionEligibleAssets) ||
+    minimumRedemptionEligibleAssets < P4_GENERAL_ACTIVATION_POLICY_V1.minimumRedemptionEligibleAssets
+  ) {
+    throw new Error(
+      `minimumRedemptionEligibleAssets must be an integer at least ${P4_GENERAL_ACTIVATION_POLICY_V1.minimumRedemptionEligibleAssets}`,
+    );
   }
   if (!Number.isInteger(dexMaxObservationAgeSec) || dexMaxObservationAgeSec < 0) {
     throw new Error("dexMaxObservationAgeSec must be a non-negative integer");
@@ -344,6 +360,9 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
     ...(redemptionEligibleAssets >= minimumRedemptionEligibleAssets ? [] : ["redemption-eligible-asset-floor-not-met"]),
   ];
   const activationReady = blockers.length === 0;
+  if (options.activationDecision === "activate" && !activationReady) {
+    throw new Error(`Cannot activate same-notional scoring: ${blockers.join(", ")}`);
+  }
 
   return {
     schemaVersion: 1,
@@ -359,6 +378,7 @@ export function buildExitRouteCalibrationReport(fixedInputValue: unknown, option
       replayMethodologyVersion: active.methodology.version,
     },
     generalPolicy: {
+      activationPolicyVersion: P4_GENERAL_ACTIVATION_POLICY_V1.version,
       modeledExitSize: REDEMPTION_EFFECTIVE_EXIT_MODEL.modeledExitSize,
       modeledExitSizeFormulaChanged: false,
       comparisonRequest: SAME_NOTIONAL_EXIT_REQUEST_POLICY,
@@ -440,8 +460,14 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
       "producer-generation-status": { type: "string" },
       "activation-decision": { type: "string" },
       "decision-reason": { type: "string" },
-      "minimum-dex-eligible-assets": { type: "string", default: "1" },
-      "minimum-redemption-eligible-assets": { type: "string", default: "1" },
+      "minimum-dex-eligible-assets": {
+        type: "string",
+        default: String(P4_GENERAL_ACTIVATION_POLICY_V1.minimumDexEligibleAssets),
+      },
+      "minimum-redemption-eligible-assets": {
+        type: "string",
+        default: String(P4_GENERAL_ACTIVATION_POLICY_V1.minimumRedemptionEligibleAssets),
+      },
       "dex-max-observation-age-sec": { type: "string", default: String(DEFAULT_DEX_MAX_OBSERVATION_AGE_SEC) },
       "live-redemption-max-observation-age-sec": {
         type: "string",
@@ -473,11 +499,11 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
     decisionReason: values["decision-reason"],
     minimumDexEligibleAssets: parseCliInteger(values["minimum-dex-eligible-assets"], {
       name: "--minimum-dex-eligible-assets",
-      min: 0,
+      min: P4_GENERAL_ACTIVATION_POLICY_V1.minimumDexEligibleAssets,
     }),
     minimumRedemptionEligibleAssets: parseCliInteger(values["minimum-redemption-eligible-assets"], {
       name: "--minimum-redemption-eligible-assets",
-      min: 0,
+      min: P4_GENERAL_ACTIVATION_POLICY_V1.minimumRedemptionEligibleAssets,
     }),
     dexMaxObservationAgeSec: parseCliInteger(values["dex-max-observation-age-sec"], {
       name: "--dex-max-observation-age-sec",
