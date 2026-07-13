@@ -109,7 +109,8 @@ export async function rollbackPagesDeployment({
       lastError = err;
       onAttemptError?.(attempt, err);
       if (attempt < maxAttempts) {
-        await sleep(retryDelayMs * attempt);
+        const delayMs = retryDelayMs * attempt;
+        if (delayMs > 0) await sleep(delayMs);
       }
     }
   }
