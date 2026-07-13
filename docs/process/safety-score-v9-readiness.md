@@ -12,7 +12,7 @@ This document describes the pre-v9 compiler, calibration corpus, and current act
 
 ## Compiler Boundary
 
-`shared/lib/safety-score-v9-compiler.ts` converts the exact active `StablecoinMeta` and fixed report-card sets into `CompiledV9AssetInput` records. Compilation fails on duplicate, missing, or unexpected report-card IDs. The readiness generator combines DEX observations with redemption observations from the fixed publication input before compiling exit evidence. It keeps the report-card observation time separate and sets `compilerEvidenceAsOf` to the latest accepted report-card, DEX-row, or exact-route observation time; `generatedAt` may not precede that evidence clock. The generator also records the fixed-input schema and capture kind and blocks readiness unless it is schema v3 `exact-publication-inputs`.
+`shared/lib/safety-score-v9-compiler.ts` converts the exact active `StablecoinMeta` and fixed report-card sets into `CompiledV9AssetInput` records. Compilation fails on duplicate, missing, or unexpected report-card IDs. The readiness generator combines DEX observations with redemption observations from the fixed publication input before compiling exit evidence. It uses the fixed publication clock as `compilerEvidenceAsOf`; later observations are rejected by the compiler and counted as provenance blockers instead of moving the as-of boundary forward. The generator validates the fixed-input shape and binds schema-v3 registry, generation, fingerprint, methodology, and replay metadata to the committed calibration. Readiness remains blocked unless the capture is schema v3 `exact-publication-inputs` and every binding agrees.
 
 The compiler may carry structured pillar, peg, parent, evidence, implementation-age, failure-domain, and unresolved facts. The historical compiler accepts `HistoricalV9FactsInput`, a strict facts-only projection that excludes outcome labels and outcome annotation provenance at the type and runtime schema boundary. It must not accept or store:
 
@@ -27,7 +27,7 @@ Missing critical facts produce reason-coded `NR`. Every unresolved fact is emitt
 
 ## Current Result
 
-Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `2026-07-13T01:00:16.000Z`; the latest compiler evidence is `2026-07-13T01:10:29.000Z`. The inputs use the fixed v8.16 legacy replay and complete P4a generation `dex-liquidity-1783905029`. The available fixed input is schema v1 `legacy-unverified`, not a publication-exact schema v3 capture, so provenance independently blocks readiness.
+Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `2026-07-13T01:00:16.000Z`; the fixed compiler evidence boundary is `2026-07-13T01:02:53.000Z`. The inputs use the fixed v8.16 legacy replay and the P4a observations stored in that fixed input. The available fixed input is schema v1 `legacy-unverified`, not a publication-exact schema v3 capture. It also cannot bind generation/fingerprint metadata to the committed calibration, its replay methodology differs from the calibrated replay, and 381 supplied evidence timestamps are later than its clock. Each condition independently blocks readiness.
 
 | Gate                                                      |                 Result |
 | --------------------------------------------------------- | ---------------------: |
@@ -35,8 +35,8 @@ Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `
 | Fixed input schema / capture kind                         | v1 / legacy-unverified |
 | Compiler exceptions / silent omissions                    |                  0 / 0 |
 | Candidate rateable / reason-coded `NR`                    |                0 / 360 |
-| Manual audit items, critical / noncritical                |            2,810 / 130 |
-| Manual audit classes, missing / methodology / unsupported |        2,788 / 2 / 150 |
+| Manual audit items, critical / noncritical                |            2,836 / 129 |
+| Manual audit classes, missing / methodology / unsupported |        2,815 / 0 / 150 |
 | Calibration cohort, critical-complete / unresolved `NR`   |                 0 / 24 |
 | Historical adverse / resilient fixtures                   |                12 / 14 |
 | Historical rateable / `NR` fixtures                       |                 8 / 18 |
@@ -56,7 +56,7 @@ Baseline generated at `2026-07-13T01:30:00.000Z` from report cards observed at `
 | P4 activation decision                                    |                   hold |
 | V9 readiness decision                                     |                  no-go |
 
-The manual-evidence audit contains 2,940 itemized records: 2,788 `missing-data`, 150 `unsupported-design`, and 2 `unresolved-methodology`; 2,810 are critical. The largest reason-coded queues are 544 material reserve slices without structured evidence, 373 unknown control-cap authorities, 340 unreviewed reserve envelopes, 329 missing upgradeability reviews, 209 unresolved control identities, 173 missing and 150 unsupported same-notional routes, 145 unavailable runtime bridge-materiality facts, 125 missing custody profiles, 95 unresolved selected bridge routes, 81 CDP oracle branch-applicability decisions, 76 mint-control questions, 55 missing peg inputs, 36 missing implementation dates, 22 unresolved exit outputs, 7 incomplete DEX route-coverage records, and 3 unresolved archetypes. Another 127 missing latest assurance reports are noncritical. These are work queues, not implied defaults.
+The manual-evidence audit contains 2,965 itemized records: 2,815 `missing-data` and 150 `unsupported-design`; 2,836 are critical. The largest reason-coded queues are 544 material reserve slices without structured evidence, 373 unknown control-cap authorities, 340 unreviewed reserve envelopes, 329 missing upgradeability reviews, 209 unresolved control identities, 179 missing and 150 unsupported same-notional routes, 145 unavailable runtime bridge-materiality facts, 125 missing custody profiles, 95 unresolved selected bridge routes, 81 CDP oracle branch-applicability decisions, 76 mint-control questions, 55 missing peg inputs, 36 missing implementation dates, 22 unresolved exit outputs, 21 future-dated route facts, 7 incomplete DEX route-coverage records, and 3 unresolved archetypes. Another 127 missing latest assurance reports are noncritical. These are work queues, not implied defaults.
 
 The separate static P7 audit has exact route rows for all 218 applicable multi-deployment profiles, but only 9 profiles are semantically complete. The other 209 profiles contain unresolved rows: 1,124 of 1,216 total routes remain unresolved, while 92 are reviewed. The 95 unresolved selected bridge routes above are only the runtime-selected scoring subset of that larger static research queue.
 
@@ -92,7 +92,6 @@ npm run report-cards:calibrate-exit-routes -- \
 npm run safety-score-v9:readiness -- \
   --report-cards agents/safety-score-v9/artifacts/replay-v8.16-p4-legacy.json \
   --fixed-input agents/safety-score-v9/artifacts/fixed-v8.16-p4-calibration.json \
-  --dex-liquidity agents/safety-score-v9/artifacts/dex-liquidity-p4a.json \
   --output shared/data/safety-score-v9/readiness-baseline-v1.json \
   --generated-at 2026-07-13T01:30:00.000Z
 ```

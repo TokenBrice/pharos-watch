@@ -27,13 +27,18 @@ export interface V9CommonControlDomain {
   paths: readonly CriticalControlIdentityOccurrence["path"][];
 }
 
+type V9DexLiquidityEvidenceRow = Pick<
+  DexLiquidityData,
+  "updatedAt" | "exitRouteObservations" | "exitRouteObservationCoverage"
+>;
+
 export interface CompileV9AssetOptions {
   asOf: string;
   compiledAt: string;
   methodologyVersion: string;
   reportCardObservedAt?: string;
   metaById: ReadonlyMap<string, StablecoinMeta>;
-  dexLiquidityById?: ReadonlyMap<string, DexLiquidityData>;
+  dexLiquidityById?: ReadonlyMap<string, V9DexLiquidityEvidenceRow>;
   exitRouteObservationsById?: ReadonlyMap<string, readonly ExitRouteObservation[]>;
   dexExitObservationMaxAgeSec?: number | null;
   liveRedemptionExitObservationMaxAgeSec?: number | null;

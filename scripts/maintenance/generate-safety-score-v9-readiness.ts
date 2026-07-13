@@ -2,16 +2,23 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
+import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
+import { sha256Hex } from "@shared/lib/sha256";
+import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   assertExactReportCardIds,
   compileHistoricalFixtureToV9Input,
   compileReportCardSetToV9Inputs,
 } from "@shared/lib/safety-score-v9-compiler";
 import { scoreCompiledAsset, scoreCompiledAssetSet } from "@shared/lib/safety-score-v9-research";
-import { DexLiquidityMapSchema, type DexLiquidityMap, type ExitRouteObservation } from "@shared/types/market";
+import {
+  ExitRouteObservationCoverageSchema,
+  ExitRouteObservationSchema,
+  type ExitRouteObservation,
+} from "@shared/types/market";
 import { RedemptionBackstopMapSchema, type RedemptionBackstopMap } from "@shared/types/redemption";
-import { ReportCardsResponseSchema } from "@shared/types/report-cards";
+import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/types/report-cards";
 import {
   HistoricalV9FixtureCorpusSchema,
   historicalFactsInput,
@@ -29,7 +36,6 @@ const USAGE = `Usage: npx tsx scripts/maintenance/generate-safety-score-v9-readi
 Options:
   --report-cards <path>   Fixed-input report-card replay JSON (required)
   --fixed-input <path>    Fixed publication input used by that replay (required)
-  --dex-liquidity <path>  Optional P4a DEX API JSON from the same generation
   --output <path>         Readiness report JSON (required)
   --generated-at <iso>    Fixed report generation timestamp (required)
   -h, --help              Show this help`;
@@ -40,32 +46,103 @@ interface CalibrationCohortAsset {
   assets: Array<{ assetId: string; cohorts: string[] }>;
 }
 
+const FreshnessEntrySchema = z
+  .object({
+    updatedAt: z.number().finite().nonnegative().nullable(),
+    ageSeconds: z.number().finite().nonnegative().nullable(),
+    stale: z.boolean(),
+  })
+  .strict();
+
+const ReadinessDexRowSchema = z
+  .object({
+    updatedAt: z.number().int().nonnegative(),
+    exitRouteObservations: z.array(ExitRouteObservationSchema).nullable().optional(),
+    exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
+  })
+  .passthrough();
+
+const FixedPublicationInputBase = {
+  capturedAt: z.string().datetime(),
+  sourceGeneration: z.string().min(1),
+  registryRevision: z.string().min(1),
+  methodologyVersion: z.string().min(1),
+  clockSec: z.number().int().nonnegative(),
+  updatedAt: z.number().int().nonnegative(),
+  liquidityStale: z.boolean(),
+  redemptionStale: z.boolean(),
+  inputFreshness: z
+    .object({
+      dexLiquidity: FreshnessEntrySchema,
+      redemptionBackstops: FreshnessEntrySchema,
+    })
+    .strict(),
+  dexLiqMap: z.record(z.string(), ReadinessDexRowSchema),
+  redemptionBackstopMap: RedemptionBackstopMapSchema,
+};
+
+const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
+
 const FixedPublicationInputSchema = z.discriminatedUnion("schemaVersion", [
   z
     .object({
       schemaVersion: z.literal(1),
-      capturedAt: z.string().datetime(),
-      redemptionBackstopMap: RedemptionBackstopMapSchema,
+      ...FixedPublicationInputBase,
     })
     .passthrough(),
   z
     .object({
       schemaVersion: z.literal(2),
-      capturedAt: z.string().datetime(),
-      redemptionBackstopMap: RedemptionBackstopMapSchema,
+      ...FixedPublicationInputBase,
+      dexGenerationId: z.string().min(1),
+      dexPayloadFingerprint: Sha256Schema,
+      registryFingerprint: Sha256Schema,
     })
     .passthrough(),
   z
     .object({
       schemaVersion: z.literal(3),
+      ...FixedPublicationInputBase,
       captureKind: z.enum(["exact-publication-inputs", "public-reconstruction"]),
-      capturedAt: z.string().datetime(),
-      redemptionBackstopMap: RedemptionBackstopMapSchema,
+      activeAssetIds: z.array(z.string().min(1)),
+      dexGenerationId: z.string().min(1),
+      redemptionGenerationId: z.string().min(1),
+      dexPayloadFingerprint: Sha256Schema,
+      redemptionPayloadFingerprint: Sha256Schema,
+      registryFingerprint: Sha256Schema,
+      inputMethodologyVersions: z
+        .object({
+          safetyScore: z.string().min(1),
+          dexLiquidity: z.array(z.string().min(1)),
+          pegScore: z.array(z.string().min(1)),
+          redemptionBackstop: z.array(z.string().min(1)),
+        })
+        .strict(),
     })
     .passthrough(),
 ]);
 
 type FixedPublicationInput = z.infer<typeof FixedPublicationInputSchema>;
+type ReadinessDexMap = Record<string, z.infer<typeof ReadinessDexRowSchema>>;
+
+export function parseFixedPublicationInput(value: unknown): FixedPublicationInput {
+  return FixedPublicationInputSchema.parse(value);
+}
+
+function currentRegistryFingerprint(): string {
+  return sha256Hex(
+    stableJsonStringifyV1({
+      domain: "report-cards.fixed-input.registry.v1",
+      activeStablecoins: [...ACTIVE_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
+      frozenStablecoins: [...FROZEN_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
+      deadStablecoins: [...DEAD_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
+    }),
+  );
+}
+
+function exactStringSetMatch(left: readonly string[], right: readonly string[]): boolean {
+  return stableJsonStringifyV1([...new Set(left)].sort()) === stableJsonStringifyV1([...new Set(right)].sort());
+}
 
 export function assessFixedInputProvenance(input: FixedPublicationInput) {
   const captureKind = input.schemaVersion === 3 ? input.captureKind : "legacy-unverified";
@@ -81,8 +158,92 @@ export function assessFixedInputProvenance(input: FixedPublicationInput) {
   };
 }
 
+export function assessReadinessInputBindings(args: {
+  fixedInput: FixedPublicationInput;
+  reportCards: ReportCardsResponse;
+  activeIds: readonly string[];
+  suppliedEvidenceTimes: readonly number[];
+}): string[] {
+  const { fixedInput, reportCards, activeIds, suppliedEvidenceTimes } = args;
+  const blockers: string[] = [];
+  const calibrationSource = exitRouteCalibrationAsset.source;
+
+  if (reportCards.updatedAt !== fixedInput.updatedAt) {
+    blockers.push(
+      `Report-card replay timestamp ${reportCards.updatedAt} does not match fixed input ${fixedInput.updatedAt}`,
+    );
+  }
+  if (reportCards.liquidityStale !== fixedInput.liquidityStale) {
+    blockers.push("Report-card replay liquidity freshness does not match the fixed input");
+  }
+  if (reportCards.redemptionStale !== fixedInput.redemptionStale) {
+    blockers.push("Report-card replay redemption freshness does not match the fixed input");
+  }
+  if (stableJsonStringifyV1(reportCards.inputFreshness) !== stableJsonStringifyV1(fixedInput.inputFreshness)) {
+    blockers.push("Report-card replay input-freshness envelope does not match the fixed input");
+  }
+  if (reportCards.methodology.version !== calibrationSource.replayMethodologyVersion) {
+    blockers.push(
+      `Report-card replay methodology v${reportCards.methodology.version} does not match calibrated replay v${calibrationSource.replayMethodologyVersion}`,
+    );
+  }
+  if (fixedInput.updatedAt > fixedInput.clockSec) {
+    blockers.push("Fixed input report-card timestamp is later than its publication clock");
+  }
+  if (Date.parse(fixedInput.capturedAt) / 1_000 < fixedInput.clockSec) {
+    blockers.push("Fixed input capture timestamp is earlier than its publication clock");
+  }
+  for (const [lane, freshness] of Object.entries(fixedInput.inputFreshness)) {
+    if (freshness.updatedAt != null && freshness.updatedAt > fixedInput.clockSec) {
+      blockers.push(`Fixed input ${lane} generation is later than its publication clock`);
+    }
+  }
+  const futureEvidenceCount = suppliedEvidenceTimes.filter((timestamp) => timestamp > fixedInput.clockSec).length;
+  if (futureEvidenceCount > 0) {
+    blockers.push(
+      `${futureEvidenceCount} supplied compiler evidence timestamp${futureEvidenceCount === 1 ? " is" : "s are"} later than the fixed publication clock`,
+    );
+  }
+
+  if (fixedInput.schemaVersion !== 3) {
+    blockers.push("Legacy fixed input lacks the generation and fingerprint fields required for cross-artifact binding");
+    return blockers;
+  }
+
+  if (!exactStringSetMatch(fixedInput.activeAssetIds, activeIds)) {
+    blockers.push("Fixed input active asset identities do not match the current active registry");
+  }
+  const fixedDexIds = Object.keys(fixedInput.dexLiqMap).filter((id) => id !== "__global__");
+  if (fixedInput.captureKind === "exact-publication-inputs" && !exactStringSetMatch(fixedDexIds, activeIds)) {
+    blockers.push("Exact fixed input DEX rows do not match the current active registry");
+  }
+  const registryFingerprint = currentRegistryFingerprint();
+  if (fixedInput.registryFingerprint !== registryFingerprint) {
+    blockers.push(
+      `Fixed input registry fingerprint ${fixedInput.registryFingerprint} does not match current ${registryFingerprint}`,
+    );
+  }
+  if (fixedInput.inputMethodologyVersions.safetyScore !== fixedInput.methodologyVersion) {
+    blockers.push("Fixed input safety-score methodology metadata is internally inconsistent");
+  }
+  const bindings = [
+    ["DEX generation", fixedInput.dexGenerationId, exitRouteCalibrationAsset.generationId],
+    ["source generation", fixedInput.sourceGeneration, calibrationSource.sourceGeneration],
+    ["registry revision", fixedInput.registryRevision, calibrationSource.registryRevision],
+    ["registry fingerprint", fixedInput.registryFingerprint, calibrationSource.registryFingerprint],
+    ["DEX payload fingerprint", fixedInput.dexPayloadFingerprint, calibrationSource.dexPayloadFingerprint],
+    ["capture timestamp", fixedInput.capturedAt, calibrationSource.capturedAt],
+    ["publication clock", String(fixedInput.clockSec), String(calibrationSource.clockSec)],
+    ["input methodology", fixedInput.methodologyVersion, calibrationSource.inputMethodologyVersion],
+  ] as const;
+  for (const [label, actual, expected] of bindings) {
+    if (actual !== expected) blockers.push(`Fixed input ${label} ${actual} does not match calibrated ${expected}`);
+  }
+  return blockers;
+}
+
 export function buildExitRouteObservationMap(
-  dexMap: DexLiquidityMap | null,
+  dexMap: ReadinessDexMap,
   redemptionMap: RedemptionBackstopMap,
   activeIds: ReadonlySet<string>,
 ): ReadonlyMap<string, readonly ExitRouteObservation[]> {
@@ -181,7 +342,7 @@ export function buildManualInputAudit(compiled: readonly CompiledV9AssetInput[])
   return { total: items.length, byClass, byCriticality, items };
 }
 
-export function summarizeRouteObservationCoverage(dexMap: DexLiquidityMap, activeIds: ReadonlySet<string>) {
+export function summarizeRouteObservationCoverage(dexMap: ReadinessDexMap, activeIds: ReadonlySet<string>) {
   return Object.entries(dexMap)
     .filter(([id]) => id !== "__global__" && activeIds.has(id))
     .reduce(
@@ -296,16 +457,10 @@ export function selectExactActiveReportCards<T extends { id: string; isDefunct: 
   return activeCards;
 }
 
-export function generateV9ReadinessReport(args: {
-  reportCards: unknown;
-  fixedInput: unknown;
-  dexLiquidity?: unknown;
-  generatedAt: string;
-}) {
+export function generateV9ReadinessReport(args: { reportCards: unknown; fixedInput: unknown; generatedAt: string }) {
   const reportCards = ReportCardsResponseSchema.parse(args.reportCards);
-  const fixedInput = FixedPublicationInputSchema.parse(args.fixedInput);
-  const fixedInputProvenance = assessFixedInputProvenance(fixedInput);
-  const dexMap = args.dexLiquidity === undefined ? null : DexLiquidityMapSchema.parse(args.dexLiquidity);
+  const fixedInput = parseFixedPublicationInput(args.fixedInput);
+  const dexMap = fixedInput.dexLiqMap;
   const historical = HistoricalV9FixtureCorpusSchema.parse(historicalFixtureAsset);
   const cohort = calibrationCohortAsset as CalibrationCohortAsset;
   const generatedAtMs = Date.parse(args.generatedAt);
@@ -324,17 +479,27 @@ export function generateV9ReadinessReport(args: {
   const activeCards = selectExactActiveReportCards(reportCards.cards, activeRegistryIds);
   const exitRouteObservationsById = buildExitRouteObservationMap(dexMap, fixedInput.redemptionBackstopMap, activeIds);
   const runtimeEvidenceTimes = [
-    ...(dexMap
-      ? Object.entries(dexMap)
-          .filter(([id]) => id !== "__global__" && activeIds.has(id))
-          .map(([, row]) => row.updatedAt)
-      : []),
+    ...Object.entries(dexMap)
+      .filter(([id]) => id !== "__global__" && activeIds.has(id))
+      .map(([, row]) => row.updatedAt),
     ...[...exitRouteObservationsById.values()].flatMap((observations) =>
       observations.map((observation) => observation.observedAt),
     ),
   ];
-  const asOf = new Date(Math.max(reportCards.updatedAt, ...runtimeEvidenceTimes) * 1_000).toISOString();
-  if (generatedAtMs < Date.parse(asOf)) throw new Error("generatedAt cannot be earlier than compiler evidence asOf");
+  const bindingBlockers = assessReadinessInputBindings({
+    fixedInput,
+    reportCards,
+    activeIds: activeRegistryIds,
+    suppliedEvidenceTimes: runtimeEvidenceTimes,
+  });
+  const basicProvenance = assessFixedInputProvenance(fixedInput);
+  const fixedInputProvenance = {
+    ...basicProvenance,
+    blockers: [...basicProvenance.blockers, ...bindingBlockers],
+  };
+  const asOf = new Date(fixedInput.clockSec * 1_000).toISOString();
+  if (generatedAtMs < Date.parse(asOf))
+    throw new Error("generatedAt cannot be earlier than the fixed publication clock");
   const compiled = compileReportCardSetToV9Inputs(ACTIVE_STABLECOINS, activeCards, {
     asOf,
     compiledAt: args.generatedAt,
@@ -343,11 +508,7 @@ export function generateV9ReadinessReport(args: {
     dexExitObservationMaxAgeSec: CRON_INTERVALS["sync-dex-liquidity"] * 2,
     liveRedemptionExitObservationMaxAgeSec: CRON_INTERVALS["sync-redemption-backstops"] * 2,
     exitRouteObservationsById,
-    ...(dexMap
-      ? {
-          dexLiquidityById: new Map(Object.entries(dexMap).filter(([id]) => id !== "__global__" && activeIds.has(id))),
-        }
-      : {}),
+    dexLiquidityById: new Map(Object.entries(dexMap).filter(([id]) => id !== "__global__" && activeIds.has(id))),
   });
   const evaluated = scoreCompiledAssetSet(compiled);
   const cardsById = new Map(activeCards.map((card) => [card.id, card]));
@@ -399,17 +560,7 @@ export function generateV9ReadinessReport(args: {
     .slice(0, 25);
   const gradeChanges = movements.filter((movement) => movement.currentGrade !== movement.candidateGrade);
 
-  const routeCoverage = dexMap
-    ? summarizeRouteObservationCoverage(dexMap, activeIds)
-    : {
-        assets: 0,
-        statuses: { unavailable: ACTIVE_STABLECOINS.length },
-        retainedPoolAssets: 0,
-        retainedPools: 0,
-        observations: 0,
-        scoreEligibleObservations: 0,
-        dexEligibleAssets: 0,
-      };
+  const routeCoverage = summarizeRouteObservationCoverage(dexMap, activeIds);
   const redemptionEligibleAssets = exitRouteCalibrationAsset.coverage.redemption.eligibleAssets;
   const redemptionRouteCoverage = summarizeRedemptionObservationCoverage(fixedInput.redemptionBackstopMap, activeIds);
   const calibratedDexEligibleAssets = exitRouteCalibrationAsset.coverage.dex.eligibleAssets;
@@ -582,7 +733,6 @@ async function main(): Promise<void> {
     options: {
       "report-cards": { type: "string" },
       "fixed-input": { type: "string" },
-      "dex-liquidity": { type: "string" },
       output: { type: "string" },
       "generated-at": { type: "string" },
     },
@@ -596,9 +746,6 @@ async function main(): Promise<void> {
   const report = generateV9ReadinessReport({
     reportCards: JSON.parse(readFileSync(values["report-cards"], "utf8")) as unknown,
     fixedInput: JSON.parse(readFileSync(values["fixed-input"], "utf8")) as unknown,
-    ...(typeof values["dex-liquidity"] === "string"
-      ? { dexLiquidity: JSON.parse(readFileSync(values["dex-liquidity"], "utf8")) as unknown }
-      : {}),
     generatedAt: values["generated-at"],
   });
   writeFileSync(values.output, `${JSON.stringify(report, null, 2)}\n`, "utf8");

@@ -3,7 +3,7 @@
   "generatedAt": "2026-07-13T01:30:00.000Z",
   "input": {
     "reportCardsAsOf": "2026-07-13T01:00:16.000Z",
-    "compilerEvidenceAsOf": "2026-07-13T01:10:29.000Z",
+    "compilerEvidenceAsOf": "2026-07-13T01:02:53.000Z",
     "currentMethodologyVersion": "8.16",
     "activeRegistryCount": 360,
     "activeReportCardCount": 360,
@@ -13,7 +13,10 @@
       "capturedAt": "2026-07-13T01:15:00.000Z",
       "exactPublicationInputs": false,
       "blockers": [
-        "Fixed replay input is schema v1 legacy-unverified, not schema v3 exact-publication-inputs"
+        "Fixed replay input is schema v1 legacy-unverified, not schema v3 exact-publication-inputs",
+        "Report-card replay methodology v8.16 does not match calibrated replay v8.17",
+        "381 supplied compiler evidence timestamps are later than the fixed publication clock",
+        "Legacy fixed input lacks the generation and fingerprint fields required for cross-artifact binding"
       ]
     }
   },
@@ -322,9 +325,9 @@
           },
           {
             "pillar": "exit",
-            "code": "incomparable-route-requests",
-            "path": "exitRouteObservations",
-            "reason": "Eligible observations do not share a common notional, cost bound, and settlement horizon."
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.0.observedAt",
+            "reason": "Exit-route observation dex:dai-makerdao:direct-api:ethereum-0x0b09dea16768f0799065c475be02919503cb2a35:ethereum-0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
           },
           {
             "pillar": "exit",
@@ -894,9 +897,75 @@
           },
           {
             "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.2.observedAt",
+            "reason": "Exit-route observation dex:usdc-circle:direct-api:base-0x5332584890d6e415a6dc910254d6430b8aab7e69:base-0x54330d28ca3357f294334bdc454a032e7f353416 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.7.observedAt",
+            "reason": "Exit-route observation dex:usdc-circle:direct-api:base-0x96967707b1932011c0449882c90caf7b5b1a2298:base-0x323c05bc83c549e2e3deba1bb6800a63e7220f24 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.1.observedAt",
+            "reason": "Exit-route observation dex:usdc-circle:direct-api:ethereum-0x48995dbdca50fa5346b0771d40a5ae7664262f7e:ethereum-0x68917a0e538cf4a807b3d415c1af5cdbab0ff4dc is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.4.observedAt",
+            "reason": "Exit-route observation dex:usdc-circle:direct-api:ethereum-0x4f883b5c0c01fe13cedd05c684f00266b0626e23:ethereum-0x2e3cfe45e3ee7c017277f22e35d2f29edc99d570 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.0.observedAt",
+            "reason": "Exit-route observation dex:usdc-circle:direct-api:ethereum-0x96646936b91d6b9d7d0c47c496afbf3d6ec7b6f8:ethereum-0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.3.observedAt",
+            "reason": "Exit-route observation dex:usdc-circle:direct-api:ethereum-0xf506984c16737b1a9577cadeda02a49fd612aff8:ethereum-0x35e78b3982e87ecfd5b3f3265b601c046cdbe232 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.8.observedAt",
+            "reason": "Exit-route observation dex:usdc-circle:direct-api:solana-2exiumdi14e9b8fy62qca5uh6wdhs2b38wtsxp72mibj:solana-es9vmfrzacermjfrf4h2fyd4kconky11mcce8benwnyb is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.9.observedAt",
+            "reason": "Exit-route observation dex:usdc-circle:direct-api:solana-7tbgqz32rsuwxbxy7eybcianmbjq1gm1wkmfjqjuwoyf:solana-es9vmfrzacermjfrf4h2fyd4kconky11mcce8benwnyb is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.5.observedAt",
+            "reason": "Exit-route observation dex:usdc-circle:direct-api:sonic-0xa476b33460e792bac5cc294ba19f0543ab00dc01:sonic-0x6c9b3a74ae4779da5ca999371ee8950e8db3407f is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.6.observedAt",
+            "reason": "Exit-route observation dex:usdc-circle:direct-api:sonic-0xa476b33460e792bac5cc294ba19f0543ab00dc01:sonic-0xe5da20f15420ad15de0fa650600afc998bbe3955 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
             "code": "incomplete-dex-route-coverage",
             "path": "exitRouteObservationCoverage",
             "reason": "Retained DEX pools do not all have score-eligible exact route-capacity observations."
+          },
+          {
+            "pillar": "exit",
+            "code": "missing-same-notional-route",
+            "path": "exitRouteObservations",
+            "reason": "No fresh score-eligible same-notional route observation is available."
           }
         ]
       },
@@ -1248,9 +1317,33 @@
           },
           {
             "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.0.observedAt",
+            "reason": "Exit-route observation dex:usdt-tether:direct-api:ethereum-0x3e5fa9518ea95c3e533eb377c001702a9aacaa32:ethereum-0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.1.observedAt",
+            "reason": "Exit-route observation dex:usdt-tether:direct-api:solana-2exiumdi14e9b8fy62qca5uh6wdhs2b38wtsxp72mibj:solana-epjfwdd5aufqssqem2qn1xzybapc8g4weggkzwytdt1v is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
+            "code": "future-dated-input-fact",
+            "path": "exitRouteObservations.2.observedAt",
+            "reason": "Exit-route observation dex:usdt-tether:direct-api:solana-7tbgqz32rsuwxbxy7eybcianmbjq1gm1wkmfjqjuwoyf:solana-epjfwdd5aufqssqem2qn1xzybapc8g4weggkzwytdt1v is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+          },
+          {
+            "pillar": "exit",
             "code": "incomplete-dex-route-coverage",
             "path": "exitRouteObservationCoverage",
             "reason": "Retained DEX pools do not all have score-eligible exact route-capacity observations."
+          },
+          {
+            "pillar": "exit",
+            "code": "missing-same-notional-route",
+            "path": "exitRouteObservations",
+            "reason": "No fresh score-eligible same-notional route observation is available."
           }
         ]
       },
@@ -1845,7 +1938,7 @@
       "runtime-bridge-materiality-unavailable": 145,
       "missing-custody-profile": 125,
       "missing-latest-assurance-report": 127,
-      "missing-same-notional-route": 173,
+      "missing-same-notional-route": 179,
       "mint-control-question": 76,
       "partial-reserve-review": 12,
       "material-unknown-reserve-exposure": 16,
@@ -1857,11 +1950,10 @@
       "missing-implementation-date": 36,
       "nonmaterial-dependency-unavailable": 1,
       "incomplete-dex-route-coverage": 7,
-      "incomparable-route-requests": 1,
+      "future-dated-input-fact": 21,
       "material-dependency-unavailable": 6,
       "unresolved-mint-authority": 1,
       "bounded-unknown-reserve-exposure": 1,
-      "correlated-exit-routes": 1,
       "missing-archetype": 3,
       "missing-oracle-profile": 6,
       "unknown-control-mint-ability": 1,
@@ -1876,7 +1968,7 @@
       "missing-upgradeability-review": 329,
       "runtime-bridge-materiality-unavailable": 145,
       "missing-custody-profile": 125,
-      "missing-same-notional-route": 173,
+      "missing-same-notional-route": 179,
       "mint-control-question": 76,
       "partial-reserve-review": 12,
       "material-unknown-reserve-exposure": 16,
@@ -1887,7 +1979,7 @@
       "material-bridge-supply-unmatched": 3,
       "missing-implementation-date": 36,
       "incomplete-dex-route-coverage": 7,
-      "incomparable-route-requests": 1,
+      "future-dated-input-fact": 21,
       "material-dependency-unavailable": 6,
       "unresolved-mint-authority": 1,
       "missing-archetype": 3,
@@ -1941,15 +2033,15 @@
     "largestMovements": []
   },
   "remainingManualInputs": {
-    "total": 2940,
+    "total": 2965,
     "byClass": {
-      "missing-data": 2788,
-      "unresolved-methodology": 2,
+      "missing-data": 2815,
+      "unresolved-methodology": 0,
       "unsupported-design": 150
     },
     "byCriticality": {
-      "critical": 2810,
-      "noncritical": 130
+      "critical": 2836,
+      "noncritical": 129
     },
     "items": [
       {
@@ -6212,11 +6304,11 @@
       {
         "assetId": "dai-makerdao",
         "pillar": "exit",
-        "code": "incomparable-route-requests",
-        "classification": "unresolved-methodology",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
         "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "Eligible observations do not share a common notional, cost bound, and settlement horizon."
+        "path": "exitRouteObservations.0.observedAt",
+        "reason": "Exit-route observation dex:dai-makerdao:direct-api:ethereum-0x0b09dea16768f0799065c475be02919503cb2a35:ethereum-0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
       },
       {
         "assetId": "dai-makerdao",
@@ -13439,11 +13531,38 @@
       {
         "assetId": "mai-qidao",
         "pillar": "exit",
-        "code": "correlated-exit-routes",
-        "classification": "unresolved-methodology",
-        "critical": false,
-        "path": "exitRouteObservations.commonModeKeys",
-        "reason": "Every eligible exit route shares: chain:polygon, pool:polygon-0x2e7f4db55bf11e0d8c25b0007728dfb2d138f904, protocol:balancer."
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.0.observedAt",
+        "reason": "Exit-route observation dex:mai-qidao:direct-api:polygon-0x2e7f4db55bf11e0d8c25b0007728dfb2d138f904:polygon-0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "mai-qidao",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.1.observedAt",
+        "reason": "Exit-route observation dex:mai-qidao:direct-api:polygon-0x2e7f4db55bf11e0d8c25b0007728dfb2d138f904:polygon-0x53e0bca35ec356bd5dddfebbd1fc0fd03fabad39 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "mai-qidao",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.2.observedAt",
+        "reason": "Exit-route observation dex:mai-qidao:direct-api:polygon-0x2e7f4db55bf11e0d8c25b0007728dfb2d138f904:polygon-0x596ebe76e2db4470966ea395b0d063ac6197a8c5 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "mai-qidao",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.3.observedAt",
+        "reason": "Exit-route observation dex:mai-qidao:direct-api:polygon-0x2e7f4db55bf11e0d8c25b0007728dfb2d138f904:polygon-0xd289c01528921b5f6d5b111a50a99456d495bf78 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
       },
       {
         "assetId": "mai-qidao",
@@ -13453,6 +13572,15 @@
         "critical": true,
         "path": "exitRouteObservationCoverage",
         "reason": "Retained DEX pools do not all have score-eligible exact route-capacity observations."
+      },
+      {
+        "assetId": "mai-qidao",
+        "pillar": "exit",
+        "code": "missing-same-notional-route",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations",
+        "reason": "No fresh score-eligible same-notional route observation is available."
       },
       {
         "assetId": "mapollo-midas",
@@ -17390,11 +17518,29 @@
       {
         "assetId": "scusd-rings",
         "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.0.observedAt",
+        "reason": "Exit-route observation dex:scusd-rings:direct-api:sonic-0x25ca5451cd5a50ab1d324b5e64f32c0799661891:sonic-0xe5da20f15420ad15de0fa650600afc998bbe3955 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "scusd-rings",
+        "pillar": "exit",
         "code": "incomplete-dex-route-coverage",
         "classification": "missing-data",
         "critical": true,
         "path": "exitRouteObservationCoverage",
         "reason": "Retained DEX pools do not all have score-eligible exact route-capacity observations."
+      },
+      {
+        "assetId": "scusd-rings",
+        "pillar": "exit",
+        "code": "missing-same-notional-route",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations",
+        "reason": "No fresh score-eligible same-notional route observation is available."
       },
       {
         "assetId": "sdai-sky",
@@ -19037,11 +19183,29 @@
       {
         "assetId": "susds-sky",
         "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.0.observedAt",
+        "reason": "Exit-route observation dex:susds-sky:direct-api:ethereum-0x642bb6860b4776cc10b26b8f361fd139e7f0db04:ethereum-0xf3b5b661b92b75c71fa5aba8fd95d7514a9cd605 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "susds-sky",
+        "pillar": "exit",
         "code": "incomplete-dex-route-coverage",
         "classification": "missing-data",
         "critical": true,
         "path": "exitRouteObservationCoverage",
         "reason": "Retained DEX pools do not all have score-eligible exact route-capacity observations."
+      },
+      {
+        "assetId": "susds-sky",
+        "pillar": "exit",
+        "code": "missing-same-notional-route",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations",
+        "reason": "No fresh score-eligible same-notional route observation is available."
       },
       {
         "assetId": "susdt-spark",
@@ -20774,11 +20938,110 @@
       {
         "assetId": "usdc-circle",
         "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.2.observedAt",
+        "reason": "Exit-route observation dex:usdc-circle:direct-api:base-0x5332584890d6e415a6dc910254d6430b8aab7e69:base-0x54330d28ca3357f294334bdc454a032e7f353416 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdc-circle",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.7.observedAt",
+        "reason": "Exit-route observation dex:usdc-circle:direct-api:base-0x96967707b1932011c0449882c90caf7b5b1a2298:base-0x323c05bc83c549e2e3deba1bb6800a63e7220f24 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdc-circle",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.1.observedAt",
+        "reason": "Exit-route observation dex:usdc-circle:direct-api:ethereum-0x48995dbdca50fa5346b0771d40a5ae7664262f7e:ethereum-0x68917a0e538cf4a807b3d415c1af5cdbab0ff4dc is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdc-circle",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.4.observedAt",
+        "reason": "Exit-route observation dex:usdc-circle:direct-api:ethereum-0x4f883b5c0c01fe13cedd05c684f00266b0626e23:ethereum-0x2e3cfe45e3ee7c017277f22e35d2f29edc99d570 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdc-circle",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.0.observedAt",
+        "reason": "Exit-route observation dex:usdc-circle:direct-api:ethereum-0x96646936b91d6b9d7d0c47c496afbf3d6ec7b6f8:ethereum-0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdc-circle",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.3.observedAt",
+        "reason": "Exit-route observation dex:usdc-circle:direct-api:ethereum-0xf506984c16737b1a9577cadeda02a49fd612aff8:ethereum-0x35e78b3982e87ecfd5b3f3265b601c046cdbe232 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdc-circle",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.8.observedAt",
+        "reason": "Exit-route observation dex:usdc-circle:direct-api:solana-2exiumdi14e9b8fy62qca5uh6wdhs2b38wtsxp72mibj:solana-es9vmfrzacermjfrf4h2fyd4kconky11mcce8benwnyb is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdc-circle",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.9.observedAt",
+        "reason": "Exit-route observation dex:usdc-circle:direct-api:solana-7tbgqz32rsuwxbxy7eybcianmbjq1gm1wkmfjqjuwoyf:solana-es9vmfrzacermjfrf4h2fyd4kconky11mcce8benwnyb is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdc-circle",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.5.observedAt",
+        "reason": "Exit-route observation dex:usdc-circle:direct-api:sonic-0xa476b33460e792bac5cc294ba19f0543ab00dc01:sonic-0x6c9b3a74ae4779da5ca999371ee8950e8db3407f is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdc-circle",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.6.observedAt",
+        "reason": "Exit-route observation dex:usdc-circle:direct-api:sonic-0xa476b33460e792bac5cc294ba19f0543ab00dc01:sonic-0xe5da20f15420ad15de0fa650600afc998bbe3955 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdc-circle",
+        "pillar": "exit",
         "code": "incomplete-dex-route-coverage",
         "classification": "missing-data",
         "critical": true,
         "path": "exitRouteObservationCoverage",
         "reason": "Retained DEX pools do not all have score-eligible exact route-capacity observations."
+      },
+      {
+        "assetId": "usdc-circle",
+        "pillar": "exit",
+        "code": "missing-same-notional-route",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations",
+        "reason": "No fresh score-eligible same-notional route observation is available."
       },
       {
         "assetId": "usdcv-societe-generale-forge",
@@ -23114,11 +23377,47 @@
       {
         "assetId": "usdt-tether",
         "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.0.observedAt",
+        "reason": "Exit-route observation dex:usdt-tether:direct-api:ethereum-0x3e5fa9518ea95c3e533eb377c001702a9aacaa32:ethereum-0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdt-tether",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.1.observedAt",
+        "reason": "Exit-route observation dex:usdt-tether:direct-api:solana-2exiumdi14e9b8fy62qca5uh6wdhs2b38wtsxp72mibj:solana-epjfwdd5aufqssqem2qn1xzybapc8g4weggkzwytdt1v is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdt-tether",
+        "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.2.observedAt",
+        "reason": "Exit-route observation dex:usdt-tether:direct-api:solana-7tbgqz32rsuwxbxy7eybcianmbjq1gm1wkmfjqjuwoyf:solana-epjfwdd5aufqssqem2qn1xzybapc8g4weggkzwytdt1v is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "usdt-tether",
+        "pillar": "exit",
         "code": "incomplete-dex-route-coverage",
         "classification": "missing-data",
         "critical": true,
         "path": "exitRouteObservationCoverage",
         "reason": "Retained DEX pools do not all have score-eligible exact route-capacity observations."
+      },
+      {
+        "assetId": "usdt-tether",
+        "pillar": "exit",
+        "code": "missing-same-notional-route",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations",
+        "reason": "No fresh score-eligible same-notional route observation is available."
       },
       {
         "assetId": "usdtb-ethena",
@@ -26741,11 +27040,29 @@
       {
         "assetId": "xdai-gnosis",
         "pillar": "exit",
+        "code": "future-dated-input-fact",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations.0.observedAt",
+        "reason": "Exit-route observation dex:xdai-gnosis:direct-api:gnosis-0x79c872ed3acb3fc5770dd8a0cd9cd5db3b3ac985:gnosis-0xce11e14225575945b8e6dc0d4f2dd4c570f79d9f is dated 2026-07-13T01:10:29.000Z, after the compiler as-of 2026-07-13T01:02:53.000Z."
+      },
+      {
+        "assetId": "xdai-gnosis",
+        "pillar": "exit",
         "code": "incomplete-dex-route-coverage",
         "classification": "missing-data",
         "critical": true,
         "path": "exitRouteObservationCoverage",
         "reason": "Retained DEX pools do not all have score-eligible exact route-capacity observations."
+      },
+      {
+        "assetId": "xdai-gnosis",
+        "pillar": "exit",
+        "code": "missing-same-notional-route",
+        "classification": "missing-data",
+        "critical": true,
+        "path": "exitRouteObservations",
+        "reason": "No fresh score-eligible same-notional route observation is available."
       },
       {
         "assetId": "xmd-metal-dollar",
@@ -28418,8 +28735,11 @@
     "decision": "no-go",
     "blockers": [
       "Fixed replay input is schema v1 legacy-unverified, not schema v3 exact-publication-inputs",
+      "Report-card replay methodology v8.16 does not match calibrated replay v8.17",
+      "381 supplied compiler evidence timestamps are later than the fixed publication clock",
+      "Legacy fixed input lacks the generation and fingerprint fields required for cross-artifact binding",
       "360 active assets compile to reason-coded NR",
-      "2810 critical facts remain unresolved",
+      "2836 critical facts remain unresolved",
       "DEX same-notional coverage is 0 eligible assets; calibrated floor is 45",
       "26 historical sources are mutable and unarchived",
       "26 historical fixtures lack independently verified outcome blinding",

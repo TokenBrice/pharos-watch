@@ -10,12 +10,24 @@ import {
   buildExitRouteObservationMap,
   buildManualInputAudit,
   evaluateP4CoverageBlockers,
+  parseFixedPublicationInput,
   selectExactActiveReportCards,
   summarizeRedemptionObservationCoverage,
   summarizeRouteObservationCoverage,
 } from "../maintenance/generate-safety-score-v9-readiness";
 
 describe("v9 readiness audit helpers", () => {
+  it("rejects a capture-kind-only artifact before provenance assessment", () => {
+    expect(() =>
+      parseFixedPublicationInput({
+        schemaVersion: 3,
+        captureKind: "exact-publication-inputs",
+        capturedAt: "2026-07-13T01:00:00.000Z",
+        redemptionBackstopMap: {},
+      }),
+    ).toThrow();
+  });
+
   it("fails closed unless the replay input is a schema-v3 exact publication capture", () => {
     const fixed = (value: unknown) => value as Parameters<typeof assessFixedInputProvenance>[0];
 
