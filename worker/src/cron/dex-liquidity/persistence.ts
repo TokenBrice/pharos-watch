@@ -174,12 +174,21 @@ function canReuseHistoricalSnapshot(
   rows: readonly HistoricalSnapshotRow[],
   expectedActiveIds: ReadonlySet<string>,
   expectedScoredIds: ReadonlySet<string>,
+  incomingRouteHistoryIds: ReadonlySet<string>,
 ): boolean {
   const activeIds = new Set(rows.map((row) => row.stablecoin_id));
   if (activeIds.size !== rows.length || !setsEqual(activeIds, expectedActiveIds)) return false;
 
   const scoredIds = new Set(rows.filter((row) => row.liquidity_score != null).map((row) => row.stablecoin_id));
-  return setsEqual(scoredIds, expectedScoredIds);
+  if (!setsEqual(scoredIds, expectedScoredIds)) return false;
+
+  const existingRouteHistoryIds = new Set(
+    rows.filter((row) => row.exit_route_summary_json != null).map((row) => row.stablecoin_id),
+  );
+  for (const id of incomingRouteHistoryIds) {
+    if (!existingRouteHistoryIds.has(id)) return false;
+  }
+  return true;
 }
 
 async function stageDexLiquidityPublicationGeneration(
@@ -709,6 +718,11 @@ export async function writeHistoricalSnapshots(
   const expectedActiveIds = new Set(ACTIVE_STABLECOINS.map((coin) => coin.id));
   const activeScoreMap = new Map([...scoreMap].filter(([id]) => expectedActiveIds.has(id)));
   const incomingScoredIds = new Set(activeScoreMap.keys());
+  const incomingRouteHistoryIds = new Set(
+    [...activeScoreMap]
+      .filter(([, scoreResult]) => buildDexExitRouteHistoryJson(scoreResult) != null)
+      .map(([id]) => id),
+  );
   let historyRowsPruned = 0;
   let retentionPruneFailed = false;
   const pruneHistory = async (): Promise<void> => {
@@ -756,7 +770,7 @@ export async function writeHistoricalSnapshots(
     }
     const targetScoredIds = new Set([...existingScoredRows.keys(), ...incomingScoredIds]);
 
-    if (canReuseHistoricalSnapshot(existingRows, expectedActiveIds, targetScoredIds)) {
+    if (canReuseHistoricalSnapshot(existingRows, expectedActiveIds, targetScoredIds, incomingRouteHistoryIds)) {
       await pruneHistory();
       return {
         snapshotRowsWritten: 0,
@@ -771,6 +785,7 @@ export async function writeHistoricalSnapshots(
     for (const meta of ACTIVE_STABLECOINS) {
       const data = activeScoreMap.get(meta.id);
       const existingData = existingScoredRows.get(meta.id);
+      const incomingExitRouteHistoryJson = data ? buildDexExitRouteHistoryJson(data) : null;
       snapshotRows.push(
         data
           ? [
@@ -783,7 +798,7 @@ export async function writeHistoricalSnapshots(
               data.coverageConfidence,
               JSON.stringify(data.sourceMix),
               LIQUIDITY_METHODOLOGY_VERSION,
-              buildDexExitRouteHistoryJson(data),
+              incomingExitRouteHistoryJson ?? existingData?.exit_route_summary_json ?? null,
             ]
           : existingData
             ? [

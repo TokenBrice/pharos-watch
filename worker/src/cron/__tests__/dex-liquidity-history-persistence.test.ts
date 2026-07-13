@@ -190,6 +190,59 @@ describe("DEX liquidity history atomic identity replacement", () => {
     });
   });
 
+  it("replaces a complete same-day legacy snapshot when route evidence first arrives", async () => {
+    const fixture = createHarness();
+    sqlite = fixture.sqlite;
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const scoredId = ACTIVE_ID_LIST[0]!;
+    insertSnapshotRows(sqlite, ACTIVE_ID_LIST, new Set([scoredId]));
+
+    const result = await writeHistoricalSnapshots(
+      fixture.db,
+      new Map([[scoredId, makeScoreWithRouteEvidence()]]),
+      undefined,
+      NOW_SEC,
+    );
+
+    expect(result).toMatchObject({ skipped: false, writeFailed: false });
+    const stored = sqlite
+      .prepare("SELECT exit_route_summary_json FROM dex_liquidity_history WHERE stablecoin_id = ?")
+      .get(scoredId) as { exit_route_summary_json: string };
+    expect(JSON.parse(stored.exit_route_summary_json)).toMatchObject({
+      observations: [{ routeId: "dex:test" }],
+    });
+  });
+
+  it("preserves existing same-day route evidence during a later identity rewrite", async () => {
+    const fixture = createHarness();
+    sqlite = fixture.sqlite;
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const routeId = ACTIVE_ID_LIST[0]!;
+    const newlyScoredId = ACTIVE_ID_LIST[1]!;
+    insertSnapshotRows(sqlite, ACTIVE_ID_LIST, new Set([routeId]));
+    const retainedRouteJson = JSON.stringify({ observations: [{ routeId: "dex:retained" }], coverage: null });
+    sqlite
+      .prepare("UPDATE dex_liquidity_history SET exit_route_summary_json = ? WHERE stablecoin_id = ?")
+      .run(retainedRouteJson, routeId);
+
+    const result = await writeHistoricalSnapshots(
+      fixture.db,
+      new Map([
+        [routeId, makeScore()],
+        [newlyScoredId, makeScore()],
+      ]),
+      undefined,
+      NOW_SEC,
+    );
+
+    expect(result).toMatchObject({ skipped: false, writeFailed: false });
+    expect(
+      sqlite
+        .prepare("SELECT exit_route_summary_json FROM dex_liquidity_history WHERE stablecoin_id = ?")
+        .get(routeId),
+    ).toMatchObject({ exit_route_summary_json: retainedRouteJson });
+  });
+
   it("removes surplus and inactive scored IDs after an active-universe shrink", async () => {
     const fixture = createHarness();
     sqlite = fixture.sqlite;
