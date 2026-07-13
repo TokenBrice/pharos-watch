@@ -79,7 +79,9 @@
         "source": "docs",
         "name": "IOTA native cross-chain bridge",
         "url": "https://docs.virtue.money/arbitrage-opportunities",
-        "bridgeTypes": ["canonicalBridge"]
+        "bridgeTypes": [
+          "canonicalBridge"
+        ]
       }
     ],
     "sources": [
@@ -92,28 +94,31 @@
       {
         "id": "iota:0xd3b63e603a78786facf65ff22e79701f3e824881a12fa3268d62a75530fe904f::vusd::VUSD",
         "destinationChain": "iota",
-        "canonicalChain": "iota",
         "contractAddress": "0xd3b63e603a78786facf65ff22e79701f3e824881a12fa3268d62a75530fe904f::vusd::VUSD",
-        "protocol": "IOTA native cross-chain bridge",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "canonical-rollup-bridge",
-        "semantics": "lock-mint",
-        "scope": "global",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13"
       },
       {
         "id": "iota-evm:0x10740259a1860af3327dd0642ee35d6e8e7143ff",
-        "sourceChain": "iota",
         "destinationChain": "iota-evm",
-        "canonicalChain": "iota",
         "contractAddress": "0x10740259a1860af3327dd0642ee35d6e8e7143ff",
-        "protocol": "IOTA native cross-chain bridge",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "canonical-rollup-bridge",
-        "semantics": "lock-mint",
-        "scope": "global",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13"
       }
     ]
@@ -137,8 +142,12 @@
     "summary": "VUSD is on IOTA Rebased (Move VM). The package at 0xd3b63e...904f is immutable, but contains an admin module. An AdminCap object (0x38a7b38d...) is held by EOA/address 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12. AdminCap gates set_supply_limit, add_version, remove_module, and set_beneficiary — active admin privileges over mint supply.",
     "upgradeability": {
       "model": "custom",
-      "implementationAddresses": ["0xd3b63e603a78786facf65ff22e79701f3e824881a12fa3268d62a75530fe904f"],
-      "adminAddresses": ["0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12"],
+      "implementationAddresses": [
+        "0xd3b63e603a78786facf65ff22e79701f3e824881a12fa3268d62a75530fe904f"
+      ],
+      "adminAddresses": [
+        "0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12"
+      ],
       "canChangeMintLogic": true,
       "controlRef": "Virtue Money AdminCap holder",
       "observedAt": "2026-06-11",

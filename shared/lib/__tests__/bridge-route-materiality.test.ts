@@ -33,6 +33,7 @@ describe("resolveBridgeRouteMateriality", () => {
             riskTier: "issuer-native-burn-mint",
             semantics: "native-mint",
             scope: "canonical",
+            reviewDisposition: "reviewed",
           },
           {
             id: "base-peripheral",
@@ -44,6 +45,7 @@ describe("resolveBridgeRouteMateriality", () => {
             riskTier: "external-lock-mint",
             semantics: "lock-mint",
             scope: "peripheral",
+            reviewDisposition: "reviewed",
           },
         ]),
       },
@@ -72,6 +74,7 @@ describe("resolveBridgeRouteMateriality", () => {
         riskTier: "issuer-native-burn-mint",
         semantics: "native-mint",
         scope: "canonical",
+        reviewDisposition: "reviewed",
       },
       {
         id: "base-peripheral",
@@ -83,6 +86,7 @@ describe("resolveBridgeRouteMateriality", () => {
         riskTier: "external-lock-mint",
         semantics: "lock-mint",
         scope: "peripheral",
+        reviewDisposition: "reviewed",
       },
     ]);
     const result = resolveBridgeRouteMateriality(
@@ -117,6 +121,7 @@ describe("resolveBridgeRouteMateriality", () => {
             riskTier: "issuer-native-burn-mint",
             semantics: "native-mint",
             scope: "canonical",
+            reviewDisposition: "reviewed",
           },
           {
             id: "ethereum-b",
@@ -128,6 +133,7 @@ describe("resolveBridgeRouteMateriality", () => {
             riskTier: "external-lock-mint",
             semantics: "lock-mint",
             scope: "peripheral",
+            reviewDisposition: "reviewed",
           },
         ]),
       },
@@ -154,10 +160,12 @@ describe("resolveBridgeRouteMateriality", () => {
             contractAddress: "0xBBB",
             protocol: "Unresolved route",
             issuanceModel: "unknown",
-            routeClass: "third-party",
-            riskTier: "external-lock-mint",
+            routeClass: "unknown",
+            riskTier: "opaque-or-unknown",
             semantics: "unknown",
             scope: "unknown",
+            reviewDisposition: "unresolved",
+            reviewNote: "The exact route semantics and scope remain unresolved.",
           },
         ]),
       },
@@ -165,13 +173,14 @@ describe("resolveBridgeRouteMateriality", () => {
     );
 
     expect(result).toMatchObject({
-      status: "complete",
+      status: "partial",
       effectiveTier: "opaque-or-unknown",
       selectedRouteId: "base-unresolved",
       matchedSupplyRatio: 1,
       unknownSupplyRatio: 0,
+      unresolvedSupplyRatio: 1,
     });
-    expect(result.reason).toContain("unknown scope");
+    expect(result.reason).toContain("unresolved route facts");
   });
 });
 

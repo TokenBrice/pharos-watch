@@ -238,50 +238,105 @@
       {
         "id": "ethereum:0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
-        "protocol": "Chainlink CCIP",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-validated-network",
-        "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "protocol": "Falcon Finance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Falcon Finance CCIP announcement",
+            "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+          },
+          {
+            "label": "Falcon Finance smart contracts",
+            "url": "https://docs.falcon.finance/resources/smart-contracts"
+          }
+        ]
       },
       {
         "id": "bsc:0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2",
+        "sourceChain": "ethereum",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2",
         "protocol": "Chainlink CCIP",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Falcon Finance CCIP announcement",
+            "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+          },
+          {
+            "label": "Falcon Finance smart contracts",
+            "url": "https://docs.falcon.finance/resources/smart-contracts"
+          }
+        ]
       },
       {
         "id": "base:0x8210c0634ab8f273806e4b7866e9db353773c44b",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x8210c0634ab8f273806e4b7866e9db353773c44b",
         "protocol": "Chainlink CCIP",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Falcon Finance CCIP announcement",
+            "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+          },
+          {
+            "label": "Falcon Finance smart contracts",
+            "url": "https://docs.falcon.finance/resources/smart-contracts"
+          }
+        ]
       },
       {
         "id": "xdc:0x8210c0634ab8f273806e4b7866e9db353773c44b",
+        "sourceChain": "ethereum",
         "destinationChain": "xdc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x8210c0634ab8f273806e4b7866e9db353773c44b",
         "protocol": "Chainlink CCIP",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Falcon Finance CCIP announcement",
+            "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+          },
+          {
+            "label": "Falcon Finance smart contracts",
+            "url": "https://docs.falcon.finance/resources/smart-contracts"
+          }
+        ]
       }
     ]
   },

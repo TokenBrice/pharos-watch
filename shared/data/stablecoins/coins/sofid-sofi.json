@@ -130,7 +130,9 @@
         "source": "issuer",
         "name": "SoFi Bank and BitGo stablecoin infrastructure",
         "url": "https://www.sofi.com/crypto/sofiusd/",
-        "bridgeTypes": ["nativeIssuance"]
+        "bridgeTypes": [
+          "nativeIssuance"
+        ]
       }
     ],
     "sources": [
@@ -148,24 +150,30 @@
         "id": "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e",
         "destinationChain": "ethereum",
         "contractAddress": "0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e",
-        "protocol": "SoFi Bank and BitGo stablecoin infrastructure",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "single-chain-or-native",
-        "semantics": "native-mint",
-        "scope": "global",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13"
       },
       {
         "id": "solana:APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS",
         "destinationChain": "solana",
         "contractAddress": "APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS",
-        "protocol": "SoFi Bank and BitGo stablecoin infrastructure",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "single-chain-or-native",
-        "semantics": "native-mint",
-        "scope": "global",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13"
       }
     ]
@@ -180,9 +188,15 @@
     "summary": "SOFID is issued by SoFi Bank, N.A. (OCC-chartered) with BitGo Bank & Trust providing Stablecoin-as-a-Service. The on-chain contract (Ethereum ERC1967 UUPS proxy) has three EOA controls operated by BitGo: DEFAULT_ADMIN, MASTER_MINTER_ROLE, and UPGRADER_ROLE. All confirmed as EOAs (no bytecode).",
     "upgradeability": {
       "model": "uups",
-      "proxyAddresses": ["0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"],
-      "implementationAddresses": ["0x69edf9fa820df057e493635ed1db6b9e5f8124a0"],
-      "adminAddresses": ["0x564fd647254ec3e0bd704c463c1d4494307e88b4"],
+      "proxyAddresses": [
+        "0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"
+      ],
+      "implementationAddresses": [
+        "0x69edf9fa820df057e493635ed1db6b9e5f8124a0"
+      ],
+      "adminAddresses": [
+        "0x564fd647254ec3e0bd704c463c1d4494307e88b4"
+      ],
       "canChangeMintLogic": true,
       "controlRef": "SOFID UPGRADER_ROLE (EOA)",
       "observedAt": "2026-06-11",

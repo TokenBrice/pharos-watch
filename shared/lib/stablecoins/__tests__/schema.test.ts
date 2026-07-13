@@ -1003,6 +1003,66 @@ describe("Stablecoin research sidecar schemas", () => {
     expect(StablecoinRiskReviewSidecarSchema.safeParse({ id: "fixture-usd" }).success).toBe(false);
   });
 
+  it("requires route-level evidence for reviewed bridge deployments", () => {
+    const parsed = StablecoinRiskReviewSidecarSchema.safeParse({
+      id: "fixture-usd",
+      bridgeRouteRisk: {
+        tier: "issuer-native-burn-mint",
+        summary: "The fixture has an issuer-native deployment.",
+        reviewedAt: "2026-07-13",
+        reviewer: "test",
+        confidence: "verified",
+        sources: [{ label: "Issuer docs", url: "https://example.com/issuer" }],
+        routes: [
+          {
+            id: "ethereum:0xabc",
+            destinationChain: "ethereum",
+            contractAddress: "0xabc",
+            protocol: "Issuer",
+            issuanceModel: "native-issuance",
+            routeClass: "native",
+            riskTier: "issuer-native-burn-mint",
+            semantics: "native-mint",
+            scope: "canonical",
+            reviewDisposition: "reviewed",
+            observedAt: "2026-07-13",
+          },
+        ],
+      },
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) expect(parsed.error.message).toContain("route-level sources");
+  });
+
+  it("accepts an evidence-honest unresolved bridge deployment", () => {
+    expect(StablecoinRiskReviewSidecarSchema.safeParse({
+      id: "fixture-usd",
+      bridgeRouteRisk: {
+        tier: "opaque-or-unknown",
+        summary: "The fixture bridge route remains unresolved.",
+        reviewedAt: "2026-07-13",
+        reviewer: "test",
+        confidence: "unknown",
+        sourceFreeRationale: "No route-level deployment evidence was available.",
+        routes: [
+          {
+            id: "base:0xdef",
+            destinationChain: "base",
+            contractAddress: "0xdef",
+            protocol: "unresolved route",
+            issuanceModel: "unknown",
+            routeClass: "unknown",
+            riskTier: "opaque-or-unknown",
+            semantics: "unknown",
+            scope: "unknown",
+            reviewDisposition: "unresolved",
+            reviewNote: "The route semantics and scope remain unresolved.",
+          },
+        ],
+      },
+    }).success).toBe(true);
+  });
+
   it("keeps explicit blacklistability overrides coupled to their review", () => {
     expect(StablecoinRiskReviewSidecarSchema.safeParse({
       id: "fixture-usd",

@@ -210,98 +210,241 @@
       {
         "id": "ethereum:0x7712c34205737192402172409a8f7ccef8aa2aec",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x7712c34205737192402172409a8f7ccef8aa2aec",
-        "protocol": "Wormhole",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-validated-network",
-        "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "protocol": "Securitize",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Securitize BUIDL",
+            "url": "https://securitize.io/blackrock/buidl"
+          },
+          {
+            "label": "Wormhole: BlackRock and Securitize BUIDL expansion",
+            "url": "https://wormhole.com/blog/blackrock-and-securitize-expand-buidl-to-bnb-chain-with-interoperability"
+          },
+          {
+            "label": "Wormhole contract-address docs",
+            "url": "https://wormhole.com/docs/products/reference/contract-addresses/"
+          }
+        ]
       },
       {
         "id": "bsc:0x2d5bdc96d9c8aabbdb38c9a27398513e7e5ef84f",
+        "sourceChain": "ethereum",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x2d5bdc96d9c8aabbdb38c9a27398513e7e5ef84f",
         "protocol": "Wormhole",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Securitize BUIDL",
+            "url": "https://securitize.io/blackrock/buidl"
+          },
+          {
+            "label": "Wormhole: BlackRock and Securitize BUIDL expansion",
+            "url": "https://wormhole.com/blog/blackrock-and-securitize-expand-buidl-to-bnb-chain-with-interoperability"
+          },
+          {
+            "label": "Wormhole contract-address docs",
+            "url": "https://wormhole.com/docs/products/reference/contract-addresses/"
+          }
+        ]
       },
       {
         "id": "optimism:0xa1cdab15bba75a80df4089cafba013e376957cf5",
+        "sourceChain": "ethereum",
         "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xa1cdab15bba75a80df4089cafba013e376957cf5",
         "protocol": "Wormhole",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Securitize BUIDL",
+            "url": "https://securitize.io/blackrock/buidl"
+          },
+          {
+            "label": "Wormhole: BlackRock and Securitize BUIDL expansion",
+            "url": "https://wormhole.com/blog/blackrock-and-securitize-expand-buidl-to-bnb-chain-with-interoperability"
+          },
+          {
+            "label": "Wormhole contract-address docs",
+            "url": "https://wormhole.com/docs/products/reference/contract-addresses/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xa6525ae43edcd03dc08e775774dcabd3bb925872",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xa6525ae43edcd03dc08e775774dcabd3bb925872",
         "protocol": "Wormhole",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Securitize BUIDL",
+            "url": "https://securitize.io/blackrock/buidl"
+          },
+          {
+            "label": "Wormhole: BlackRock and Securitize BUIDL expansion",
+            "url": "https://wormhole.com/blog/blackrock-and-securitize-expand-buidl-to-bnb-chain-with-interoperability"
+          },
+          {
+            "label": "Wormhole contract-address docs",
+            "url": "https://wormhole.com/docs/products/reference/contract-addresses/"
+          }
+        ]
       },
       {
         "id": "avalanche:0x53fc82f14f009009b440a706e31c9021e1196a2f",
+        "sourceChain": "ethereum",
         "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x53fc82f14f009009b440a706e31c9021e1196a2f",
         "protocol": "Wormhole",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Securitize BUIDL",
+            "url": "https://securitize.io/blackrock/buidl"
+          },
+          {
+            "label": "Wormhole: BlackRock and Securitize BUIDL expansion",
+            "url": "https://wormhole.com/blog/blackrock-and-securitize-expand-buidl-to-bnb-chain-with-interoperability"
+          },
+          {
+            "label": "Wormhole contract-address docs",
+            "url": "https://wormhole.com/docs/products/reference/contract-addresses/"
+          }
+        ]
       },
       {
         "id": "polygon:0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99",
+        "sourceChain": "ethereum",
         "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99",
         "protocol": "Wormhole",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Securitize BUIDL",
+            "url": "https://securitize.io/blackrock/buidl"
+          },
+          {
+            "label": "Wormhole: BlackRock and Securitize BUIDL expansion",
+            "url": "https://wormhole.com/blog/blackrock-and-securitize-expand-buidl-to-bnb-chain-with-interoperability"
+          },
+          {
+            "label": "Wormhole contract-address docs",
+            "url": "https://wormhole.com/docs/products/reference/contract-addresses/"
+          }
+        ]
       },
       {
         "id": "solana:GyWgeqpy5GueU2YbkE8xqUeVEokCMMCEeUrfbtMw6phr",
+        "sourceChain": "ethereum",
         "destinationChain": "solana",
+        "canonicalChain": "ethereum",
         "contractAddress": "GyWgeqpy5GueU2YbkE8xqUeVEokCMMCEeUrfbtMw6phr",
         "protocol": "Wormhole",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Securitize BUIDL",
+            "url": "https://securitize.io/blackrock/buidl"
+          },
+          {
+            "label": "Wormhole: BlackRock and Securitize BUIDL expansion",
+            "url": "https://wormhole.com/blog/blackrock-and-securitize-expand-buidl-to-bnb-chain-with-interoperability"
+          },
+          {
+            "label": "Wormhole contract-address docs",
+            "url": "https://wormhole.com/docs/products/reference/contract-addresses/"
+          }
+        ]
       },
       {
         "id": "aptos:0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89",
+        "sourceChain": "ethereum",
         "destinationChain": "aptos",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89",
         "protocol": "Wormhole",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Securitize BUIDL",
+            "url": "https://securitize.io/blackrock/buidl"
+          },
+          {
+            "label": "Wormhole: BlackRock and Securitize BUIDL expansion",
+            "url": "https://wormhole.com/blog/blackrock-and-securitize-expand-buidl-to-bnb-chain-with-interoperability"
+          },
+          {
+            "label": "Wormhole contract-address docs",
+            "url": "https://wormhole.com/docs/products/reference/contract-addresses/"
+          }
+        ]
       }
     ]
   }

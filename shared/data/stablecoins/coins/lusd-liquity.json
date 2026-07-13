@@ -182,73 +182,135 @@
       {
         "id": "ethereum:0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
-        "protocol": "Arbitrum One",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "canonical-rollup-bridge",
-        "semantics": "lock-mint",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "protocol": "Liquity V1",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Liquity LUSD x-chain strategy",
+            "url": "https://www.liquity.org/blog/liquity-lusd-x-chain-strategy"
+          },
+          {
+            "label": "Liquity LUSD on Arbitrum",
+            "url": "https://www.liquity.org/blog/liquitys-lusd-emerges-as-a-growing-force-on-arbitrum"
+          },
+          {
+            "label": "L2BEAT Arbitrum One",
+            "url": "https://l2beat.com/scaling/projects/arbitrum"
+          }
+        ]
       },
       {
         "id": "optimism:0xc40f949f8a4e094d1b49a23ea9241d289b7b2819",
+        "sourceChain": "ethereum",
         "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xc40f949f8a4e094d1b49a23ea9241d289b7b2819",
-        "protocol": "Arbitrum One",
+        "protocol": "Canonical rollup bridge",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Liquity LUSD x-chain strategy",
+            "url": "https://www.liquity.org/blog/liquity-lusd-x-chain-strategy"
+          },
+          {
+            "label": "Liquity LUSD on Arbitrum",
+            "url": "https://www.liquity.org/blog/liquitys-lusd-emerges-as-a-growing-force-on-arbitrum"
+          },
+          {
+            "label": "L2BEAT Arbitrum One",
+            "url": "https://l2beat.com/scaling/projects/arbitrum"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x93b346b6bc2548da6a1e7d98e9a421b42541425b",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x93b346b6bc2548da6a1e7d98e9a421b42541425b",
-        "protocol": "Arbitrum One",
+        "protocol": "Canonical rollup bridge",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Liquity LUSD x-chain strategy",
+            "url": "https://www.liquity.org/blog/liquity-lusd-x-chain-strategy"
+          },
+          {
+            "label": "Liquity LUSD on Arbitrum",
+            "url": "https://www.liquity.org/blog/liquitys-lusd-emerges-as-a-growing-force-on-arbitrum"
+          },
+          {
+            "label": "L2BEAT Arbitrum One",
+            "url": "https://l2beat.com/scaling/projects/arbitrum"
+          }
+        ]
       },
       {
         "id": "zksync:0x503234f203fc7eb888eec8513210612a43cf6115",
         "destinationChain": "zksync",
         "contractAddress": "0x503234f203fc7eb888eec8513210612a43cf6115",
-        "protocol": "Arbitrum One",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "canonical-rollup-bridge",
-        "semantics": "lock-mint",
-        "scope": "global",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13"
       },
       {
         "id": "base:0x368181499736d0c0cc614dbb145e2ec1ac86b8c6",
         "destinationChain": "base",
         "contractAddress": "0x368181499736d0c0cc614dbb145e2ec1ac86b8c6",
-        "protocol": "Arbitrum One",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "canonical-rollup-bridge",
-        "semantics": "lock-mint",
-        "scope": "global",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13"
       },
       {
         "id": "polygon:0x23001f892c0c82b79303edc9b9033cd190bb21c7",
         "destinationChain": "polygon",
         "contractAddress": "0x23001f892c0c82b79303edc9b9033cd190bb21c7",
-        "protocol": "Arbitrum One",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "canonical-rollup-bridge",
-        "semantics": "lock-mint",
-        "scope": "global",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13"
       }
     ]

@@ -359,86 +359,183 @@
       {
         "id": "ethereum:0x6440f144b7e50d6a8439336510312d2f54beb01d",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
-        "protocol": "Chainlink CCIP",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-validated-network",
-        "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "protocol": "Liquity V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
         "protocol": "Chainlink CCIP",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          }
+        ]
       },
       {
         "id": "base:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
         "protocol": "Chainlink CCIP",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          }
+        ]
       },
       {
         "id": "optimism:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "sourceChain": "ethereum",
         "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
         "protocol": "Chainlink CCIP",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          }
+        ]
       },
       {
         "id": "avalanche:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "sourceChain": "ethereum",
         "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
         "protocol": "Chainlink CCIP",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          }
+        ]
       },
       {
         "id": "hyperevm:0x84533b1512a3a23f0c9668d88fdf86feffdbb11a",
+        "sourceChain": "ethereum",
         "destinationChain": "hyperevm",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x84533b1512a3a23f0c9668d88fdf86feffdbb11a",
         "protocol": "Chainlink CCIP",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          }
+        ]
       },
       {
         "id": "sonic:0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
+        "sourceChain": "ethereum",
         "destinationChain": "sonic",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
         "protocol": "Chainlink CCIP",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
         "semantics": "other",
-        "scope": "global",
-        "observedAt": "2026-06-13"
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          }
+        ]
       }
     ]
   },

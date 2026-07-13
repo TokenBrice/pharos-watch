@@ -730,8 +730,11 @@ export interface BridgeRouteProtocolEvidence {
   note?: string;
 }
 
-export const BRIDGE_ROUTE_CLASS_VALUES = ["native", "canonical", "third-party"] as const;
+export const BRIDGE_ROUTE_CLASS_VALUES = ["native", "canonical", "third-party", "unknown"] as const;
 export type BridgeRouteClass = (typeof BRIDGE_ROUTE_CLASS_VALUES)[number];
+
+export const BRIDGE_ROUTE_REVIEW_DISPOSITION_VALUES = ["reviewed", "unresolved"] as const;
+export type BridgeRouteReviewDisposition = (typeof BRIDGE_ROUTE_REVIEW_DISPOSITION_VALUES)[number];
 
 export const BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES = [
   "native-issuance",
@@ -769,6 +772,9 @@ export interface BridgeRouteDeployment {
   riskTier: BridgeRouteRiskTier;
   semantics: BridgeRouteSemantics;
   scope: BridgeRouteScope;
+  reviewDisposition: BridgeRouteReviewDisposition;
+  reviewNote?: string;
+  mappingVersion?: string;
   controllerChain?: string;
   controllerAddress?: string;
   failureDomainKeys?: string[];

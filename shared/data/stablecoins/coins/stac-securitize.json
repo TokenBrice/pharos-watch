@@ -82,7 +82,9 @@
         "source": "issuer",
         "name": "Securitize Digital Securities",
         "url": "https://investors.securitize.io/news/news-details/2026/Securitize-Expands-STAC-Tokenized-AAA-CLO-Fund-to-Solana/default.aspx",
-        "bridgeTypes": ["nativeIssuance"]
+        "bridgeTypes": [
+          "nativeIssuance"
+        ]
       }
     ],
     "sources": [
@@ -100,24 +102,30 @@
         "id": "ethereum:0x51c2d74017390cbbd30550179a16a1c28f7210fc",
         "destinationChain": "ethereum",
         "contractAddress": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
-        "protocol": "Securitize Digital Securities",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "single-chain-or-native",
-        "semantics": "native-mint",
-        "scope": "global",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13"
       },
       {
         "id": "solana:u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk",
         "destinationChain": "solana",
         "contractAddress": "u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk",
-        "protocol": "Securitize Digital Securities",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "single-chain-or-native",
-        "semantics": "native-mint",
-        "scope": "global",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13"
       }
     ]

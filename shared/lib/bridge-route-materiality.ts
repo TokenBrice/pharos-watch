@@ -15,6 +15,7 @@ export interface BridgeRouteMaterialityRow {
   supplyUsd: number;
   supplyRatio: number;
   material: boolean;
+  reviewDisposition: "reviewed" | "unresolved";
 }
 
 export interface BridgeRouteMaterialityResult {
@@ -26,6 +27,8 @@ export interface BridgeRouteMaterialityResult {
   unknownSupplyUsd: number;
   matchedSupplyRatio: number;
   unknownSupplyRatio: number;
+  unresolvedSupplyUsd: number;
+  unresolvedSupplyRatio: number;
   unknownChains: string[];
   routes: BridgeRouteMaterialityRow[];
   reason: string;
@@ -61,6 +64,8 @@ export function resolveBridgeRouteMateriality(
       unknownSupplyUsd: 0,
       matchedSupplyRatio: 0,
       unknownSupplyRatio: 0,
+      unresolvedSupplyUsd: 0,
+      unresolvedSupplyRatio: 0,
       unknownChains: [],
       routes: [],
       reason: "No reviewed bridge-route profile.",
@@ -76,6 +81,8 @@ export function resolveBridgeRouteMateriality(
       unknownSupplyUsd: 0,
       matchedSupplyRatio: 0,
       unknownSupplyRatio: 0,
+      unresolvedSupplyUsd: 0,
+      unresolvedSupplyRatio: 0,
       unknownChains: [],
       routes: [],
       reason: "The reviewed profile has no applicable multi-deployment route rows.",
@@ -100,6 +107,8 @@ export function resolveBridgeRouteMateriality(
       unknownSupplyUsd: 0,
       matchedSupplyRatio: 0,
       unknownSupplyRatio: 0,
+      unresolvedSupplyUsd: 0,
+      unresolvedSupplyRatio: 0,
       unknownChains: [],
       routes: [],
       reason: "Runtime chain supply is unavailable.",
@@ -121,6 +130,7 @@ export function resolveBridgeRouteMateriality(
   const unknownChains: string[] = [];
   let matchedSupplyUsd = 0;
   let unknownSupplyUsd = 0;
+  let unresolvedSupplyUsd = 0;
   for (const [chain, supplyUsd] of [...supplyByChain].sort(([left], [right]) => left.localeCompare(right))) {
     const contracts = contractsByChain.get(chain) ?? [];
     if (contracts.length !== 1) {
@@ -137,6 +147,7 @@ export function resolveBridgeRouteMateriality(
     const route = matches[0]!;
     const supplyRatio = ratio(supplyUsd, totalSupplyUsd);
     matchedSupplyUsd += supplyUsd;
+    if (route.reviewDisposition === "unresolved") unresolvedSupplyUsd += supplyUsd;
     rows.push({
       routeId: route.id,
       chain,
@@ -150,10 +161,12 @@ export function resolveBridgeRouteMateriality(
         route.scope === "canonical" ||
         ((route.scope === "peripheral" || route.scope === "unknown") &&
           supplyRatio >= BRIDGE_ROUTE_MATERIAL_SHARE_THRESHOLD),
+      reviewDisposition: route.reviewDisposition,
     });
   }
 
   const unknownSupplyRatio = ratio(unknownSupplyUsd, totalSupplyUsd);
+  const unresolvedSupplyRatio = ratio(unresolvedSupplyUsd, totalSupplyUsd);
   const eligible = rows.filter((row) => row.material);
   const unresolvedScope = eligible
     .filter((row) => row.scope === "unknown")
@@ -175,7 +188,7 @@ export function resolveBridgeRouteMateriality(
     unknownSupplyRatio >= BRIDGE_ROUTE_MATERIAL_SHARE_THRESHOLD || unresolvedScope
       ? "opaque-or-unknown"
       : (selected?.tier ?? null);
-  const status: BridgeRouteMaterialityStatus = unknownSupplyUsd > 0 ? "partial" : "complete";
+  const status: BridgeRouteMaterialityStatus = unknownSupplyUsd > 0 || unresolvedSupplyUsd > 0 ? "partial" : "complete";
   return {
     status,
     effectiveTier,
@@ -185,13 +198,15 @@ export function resolveBridgeRouteMateriality(
     unknownSupplyUsd,
     matchedSupplyRatio: ratio(matchedSupplyUsd, totalSupplyUsd),
     unknownSupplyRatio,
+    unresolvedSupplyUsd,
+    unresolvedSupplyRatio,
     unknownChains,
     routes: rows.sort((left, right) => left.routeId.localeCompare(right.routeId)),
     reason:
       unknownSupplyRatio >= BRIDGE_ROUTE_MATERIAL_SHARE_THRESHOLD
         ? `At least ${Math.round(unknownSupplyRatio * 100)}% of runtime supply cannot be assigned to one reviewed route.`
         : unresolvedScope
-          ? `Route ${unresolvedScope.routeId} has unknown scope and represents ${Math.round(unresolvedScope.supplyRatio * 100)}% of supply.`
+          ? `Route ${unresolvedScope.routeId} has unresolved route facts and represents ${Math.round(unresolvedScope.supplyRatio * 100)}% of supply.`
           : selected
             ? `Selected ${selected.routeId} as the weakest reviewed material route (${Math.round(selected.supplyRatio * 100)}% of supply).`
             : "No reviewed route is currently material.",

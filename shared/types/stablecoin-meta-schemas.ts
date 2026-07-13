@@ -40,6 +40,7 @@ import {
   BRIDGE_ROUTE_CLASS_VALUES,
   BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES,
   BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES,
+  BRIDGE_ROUTE_REVIEW_DISPOSITION_VALUES,
   BRIDGE_ROUTE_RISK_SOURCE_VALUES,
   BRIDGE_ROUTE_RISK_TIER_VALUES,
   BRIDGE_ROUTE_SCOPE_VALUES,
@@ -387,6 +388,9 @@ const BridgeRouteDeploymentSchema: z.ZodType<BridgeRouteDeployment> = z
     riskTier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
     semantics: z.enum(BRIDGE_ROUTE_SEMANTICS_VALUES),
     scope: z.enum(BRIDGE_ROUTE_SCOPE_VALUES),
+    reviewDisposition: z.enum(BRIDGE_ROUTE_REVIEW_DISPOSITION_VALUES),
+    reviewNote: z.string().min(12).optional(),
+    mappingVersion: z.string().min(1).optional(),
     controllerChain: z.string().min(1).optional(),
     controllerAddress: z.string().min(1).optional(),
     failureDomainKeys: z.array(z.string().min(1)).min(1).optional(),
@@ -401,6 +405,62 @@ const BridgeRouteDeploymentSchema: z.ZodType<BridgeRouteDeployment> = z
         code: z.ZodIssueCode.custom,
         message: "bridge route controllerChain and controllerAddress must be authored together",
         path: [route.controllerChain == null ? "controllerChain" : "controllerAddress"],
+      });
+    }
+    if (route.reviewDisposition === "reviewed") {
+      if (!hasSourceLinks(route.sources)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "reviewed bridge route requires route-level sources",
+          path: ["sources"],
+        });
+      }
+      if (route.observedAt == null && route.observedBlock == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "reviewed bridge route requires observedAt or observedBlock",
+          path: ["observedAt"],
+        });
+      }
+      if (
+        route.scope === "unknown" ||
+        route.routeClass === "unknown" ||
+        route.issuanceModel === "unknown" ||
+        route.semantics === "unknown"
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "reviewed bridge route cannot retain unknown classification facts",
+          path: ["reviewDisposition"],
+        });
+      }
+    } else {
+      if (!hasText(route.reviewNote)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "unresolved bridge route requires an explicit reviewNote",
+          path: ["reviewNote"],
+        });
+      }
+      if (
+        route.scope !== "unknown" ||
+        route.routeClass !== "unknown" ||
+        route.issuanceModel !== "unknown" ||
+        route.semantics !== "unknown" ||
+        route.riskTier !== "opaque-or-unknown"
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "unresolved bridge route must keep classification facts unknown",
+          path: ["reviewDisposition"],
+        });
+      }
+    }
+    if (route.routeClass === "native" && route.issuanceModel !== "native-issuance") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "native bridge route cannot be labeled as a bridge representation",
+        path: ["issuanceModel"],
       });
     }
   });

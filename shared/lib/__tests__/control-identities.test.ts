@@ -46,6 +46,7 @@ describe("critical control identities", () => {
             riskTier: "external-lock-mint",
             semantics: "lock-mint",
             scope: "global",
+            reviewDisposition: "reviewed",
             failureDomainKeys: ["operator:issuer"],
           },
         ],
