@@ -222,6 +222,32 @@
         "label": "Aegis smart contracts",
         "url": "https://docs.aegis.im/smart-contracts"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "protocol": "sYUSD issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x24db057b19241eefb9b522e8627c293ed8f93af2",
+        "destinationChain": "bsc",
+        "contractAddress": "0x24db057b19241eefb9b522e8627c293ed8f93af2",
+        "protocol": "sYUSD issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   }
 }

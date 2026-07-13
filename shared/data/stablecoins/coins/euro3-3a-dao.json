@@ -150,6 +150,32 @@
         "label": "DefiLlama EURO3 (per-chain circulating supply breakdown across Polygon and Linea)",
         "url": "https://defillama.com/stablecoin/euro3"
       }
+    ],
+    "routes": [
+      {
+        "id": "polygon:0xa0e4c84693266a9d3bbef2f394b33712c76599ab",
+        "destinationChain": "polygon",
+        "contractAddress": "0xa0e4c84693266a9d3bbef2f394b33712c76599ab",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "linea:0x3f817b28da4940f018c6b5c0a11c555ebb1264f9",
+        "destinationChain": "linea",
+        "contractAddress": "0x3f817b28da4940f018c6b5c0a11c555ebb1264f9",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      }
     ]
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",

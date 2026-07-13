@@ -89,32 +89,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Hyperithm market-neutral stablecoin strategies",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
-  "reserveReview": {
-    "reviewedAt": "2026-07-12",
-    "reviewer": "OpenAI Codex dependency review",
-    "confidence": "verified",
-    "sources": [{ "label": "Midas mHYPER", "url": "https://midas.app/mhyper" }],
-    "rationale": "The reserve label describes a managed market-neutral strategy and NAV, not a stablecoin reserve token.",
-    "compositionBasis": "Chainlink NAV-backed single-strategy observation",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "No stablecoin-linked reserve slice remains unresolved.",
-    "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Hyperithm market-neutral stablecoin strategies",
-        "disposition": "not-applicable",
-        "rationale": "The phrase describes the strategy mandate; it is not the identity of a tracked stablecoin claim."
-      }
-    ]
-  },
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 1,
@@ -267,7 +241,10 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": ["intent", "liquidity"]
+        "bridgeTypes": [
+          "intent",
+          "liquidity"
+        ]
       }
     ],
     "sources": [
@@ -282,6 +259,56 @@
       {
         "label": "Across developer docs",
         "url": "https://docs.across.to/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x9b5528528656dbc094765e2abb79f293c21191b9",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x9b5528528656dbc094765e2abb79f293c21191b9",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "monad:0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7",
+        "destinationChain": "monad",
+        "contractAddress": "0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plasma:0xb31bea5c2a43f942a3800558b1aa25978da75f8a",
+        "destinationChain": "plasma",
+        "contractAddress": "0xb31bea5c2a43f942a3800558b1aa25978da75f8a",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "katana:0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb",
+        "destinationChain": "katana",
+        "contractAddress": "0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },

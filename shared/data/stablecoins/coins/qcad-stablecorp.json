@@ -43,6 +43,32 @@
         "label": "Stablecorp Base announcement",
         "url": "https://stablecorp.medium.com/stablecorp-base-bringing-canada-onchain-1eb6a763470a"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x3fa142dd3f384414e05e71ad0939274edc82ec0a",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x3fa142dd3f384414e05e71ad0939274edc82ec0a",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xa15705e6fc8b3e08e7253f3758de1a754baa0761",
+        "destinationChain": "base",
+        "contractAddress": "0xa15705e6fc8b3e08e7253f3758de1a754baa0761",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "links": [
@@ -202,6 +228,30 @@
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
+        {
+          "label": "Stablecorp QCAD",
+          "url": "https://stablecorp.ca/"
+        },
+        {
+          "label": "QCAD Token Terms (SEDAR+)",
+          "url": "https://www.sedarplus.ca/csa-party/records/document.html?id=194b25dd3a2d2a8d59e108b3cf223b2fc41d68e33507899cbb350a659a9fea0a"
+        },
+        {
+          "label": "QCAD Ethereum token",
+          "url": "https://etherscan.io/address/0x3fa142dd3f384414e05e71ad0939274edc82ec0a"
+        }
+      ]
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "canChangeMintLogic": true,
+      "controlRef": "Proxy-admin upgrade authority — Ethereum and Base",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "QCAD Ethereum proxy-admin owner",
+          "url": "https://etherscan.io/address/0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e"
+        },
         {
           "label": "Stablecorp QCAD",
           "url": "https://stablecorp.ca/"

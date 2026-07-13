@@ -146,7 +146,9 @@
         "source": "docs",
         "name": "Fraxtal Bridge",
         "url": "https://docs.frax.finance/cross-chain/fraxtal-bridge",
-        "bridgeTypes": ["canonical"]
+        "bridgeTypes": [
+          "canonical"
+        ]
       }
     ],
     "sources": [
@@ -161,6 +163,32 @@
       {
         "label": "Fraxtal FPI token address",
         "url": "https://docs.frax.com/fraxtal/addresses/frax-tokens"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
+        "protocol": "Fraxtal Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "fraxtal:0xfc00000000000000000000000000000000000003",
+        "destinationChain": "fraxtal",
+        "contractAddress": "0xfc00000000000000000000000000000000000003",
+        "protocol": "Fraxtal Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },

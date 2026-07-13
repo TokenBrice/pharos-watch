@@ -179,6 +179,8 @@
     "mintIncidents": [
       {
         "date": "2025-10-15",
+        "status": "resolved",
+        "resolvedAt": "2025-10-15",
         "summary": "During a Paxos internal transfer, a technical error minted about $300T PYUSD before Paxos burned the excess and reissued the intended $300M amount.",
         "sources": [
           {
@@ -293,6 +295,68 @@
       {
         "label": "LayerZero on L2BEAT",
         "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+        "protocol": "LayerZero",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x46850ad61c2b7d64d08c9c754f45254596696984",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x46850ad61c2b7d64d08c9c754f45254596696984",
+        "protocol": "LayerZero",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo",
+        "destinationChain": "solana",
+        "contractAddress": "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo",
+        "protocol": "LayerZero",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "stellar:PYUSD-GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5",
+        "destinationChain": "stellar",
+        "contractAddress": "PYUSD-GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5",
+        "protocol": "LayerZero",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "flow:0x99af3eea856556646c98c8b9b2548fe815240750",
+        "destinationChain": "flow",
+        "contractAddress": "0x99af3eea856556646c98c8b9b2548fe815240750",
+        "protocol": "LayerZero",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },

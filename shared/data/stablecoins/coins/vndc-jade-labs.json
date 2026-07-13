@@ -99,6 +99,44 @@
         "label": "VNDC blog: What is VNDC 2.0 (multi-network rollout via issuer protocol)",
         "url": "https://blog.vndc.io/what-is-vndc-2-0-unique-digital-asset-for-the-era-of-on-chain-liquidity"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "polygon:0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa",
+        "destinationChain": "polygon",
+        "contractAddress": "0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "bsc:0xa276dc434a366c62ef010585b3885d0c85154389",
+        "destinationChain": "bsc",
+        "contractAddress": "0xa276dc434a366c62ef010585b3885d0c85154389",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      }
     ]
   },
   "collateralQuality": "exotic",
@@ -202,5 +240,22 @@
       ]
     }
   },
-  "launchDate": "2019-08-30"
+  "launchDate": "2019-08-30",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "VNDC 2.0 is an issuer-controlled reserve token described as backed by USDT and USDC collateral pools.",
+    "sources": [
+      {
+        "label": "VNDC site",
+        "url": "https://vndc.io/"
+      },
+      {
+        "label": "ONUS platform",
+        "url": "https://goonus.io/en/"
+      }
+    ]
+  }
 }

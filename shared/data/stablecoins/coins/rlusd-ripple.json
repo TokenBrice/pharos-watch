@@ -271,6 +271,32 @@
         "label": "XRPL issued currencies docs",
         "url": "https://xrpl.org/docs/concepts/tokens/fungible-tokens/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+        "destinationChain": "xrpl",
+        "contractAddress": "524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "launchDate": "2024-12-17"

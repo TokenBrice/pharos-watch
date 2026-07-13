@@ -150,6 +150,32 @@
         "label": "Token Teknoloji EUROT",
         "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
       }
+    ],
+    "routes": [
+      {
+        "id": "avalanche:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "destinationChain": "polygon",
+        "contractAddress": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-unregulated",

@@ -195,6 +195,80 @@
         "label": "Monerium cross-chain guide",
         "url": "https://monerium.com/guide/metamask-top-up/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x7ba92741bf2a568abc6f1d3413c58c6e0244f8fd",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x7ba92741bf2a568abc6f1d3413c58c6e0244f8fd",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "gnosis:0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053",
+        "destinationChain": "gnosis",
+        "contractAddress": "0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "linea:0x3bce82cf1a2bc357f956dd494713fe11dc54780f",
+        "destinationChain": "linea",
+        "contractAddress": "0x3bce82cf1a2bc357f956dd494713fe11dc54780f",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x2d80dbf04d0802abd7a342dafa5d7cb42bfbb52f",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x2d80dbf04d0802abd7a342dafa5d7cb42bfbb52f",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xc4759ed641da77cbdc9fa2f37e9260a29bf7cc52",
+        "destinationChain": "base",
+        "contractAddress": "0xc4759ed641da77cbdc9fa2f37e9260a29bf7cc52",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0x646beea7a02fdada34c8e118949fe32350ab2206",
+        "destinationChain": "polygon",
+        "contractAddress": "0x646beea7a02fdada34c8e118949fe32350ab2206",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

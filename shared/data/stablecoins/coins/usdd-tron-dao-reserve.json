@@ -53,7 +53,10 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": ["liquidity", "intent"]
+        "bridgeTypes": [
+          "liquidity",
+          "intent"
+        ]
       }
     ],
     "sources": [
@@ -68,6 +71,44 @@
       {
         "label": "L2BEAT Across",
         "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ],
+    "routes": [
+      {
+        "id": "tron:TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
+        "destinationChain": "tron",
+        "contractAddress": "TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "ethereum:0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x45e51bc23d592eb2dba86da3985299f7895d66ba",
+        "destinationChain": "bsc",
+        "contractAddress": "0x45e51bc23d592eb2dba86da3985299f7895d66ba",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },
@@ -319,7 +360,12 @@
     "reviewedAt": "2026-07-12",
     "reviewer": "OpenAI Codex dependency review",
     "confidence": "verified",
-    "sources": [{ "label": "USDD reserve dashboard", "url": "https://usdd.io/data" }],
+    "sources": [
+      {
+        "label": "USDD reserve dashboard",
+        "url": "https://usdd.io/data"
+      }
+    ],
     "rationale": "USDD reports Smart Allocator positions as a protocol aggregate while separately identifying direct USDT PSM exposure.",
     "compositionBasis": "USDD data-platform collateral categories",
     "scope": "selected-slices",
@@ -329,6 +375,7 @@
       {
         "reserveIndex": 1,
         "reserveName": "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
+        "pct": 31.5,
         "disposition": "basket-needs-split",
         "rationale": "The allocator bucket aggregates multiple positions and does not expose stablecoin-level percentages."
       }

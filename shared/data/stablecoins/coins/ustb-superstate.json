@@ -12,7 +12,7 @@
     "navToken": true
   },
   "mechanismArchetype": "tbill",
-  "collateral": "Short-duration U.S. Treasury Bills and government agency securities (weighted average maturity ~28 days), held in a segregated non-rehypothecated account at The Bank of New York Mellon; holdings disclosed publicly on a daily basis; managed by Invesco Advisers Inc. (Global Liquidity team)",
+  "collateral": "Short-duration U.S. Treasury bills held by The Bank of New York Mellon, with holdings disclosed publicly and liquidity available each market day; managed by Invesco Advisers, Inc.",
   "pegMechanism": "NAV-accreting fund share token (not pegged to $1); price launched at ~$10/share and appreciates continuously as Treasury income accrues; subscription and redemption at daily NAV in USDC or USD; NAV calculated by NAV Fund Services each NYSE/Federal Reserve business day",
   "detailProvider": "coingecko",
   "geckoId": "superstate-short-duration-us-government-securities-fund-ustb",
@@ -20,7 +20,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://superstate.com/assets/ustb",
-    "provider": "Ernst & Young LLP (annual audit); Chronicle VAO + Chainlink oracle provide daily on-chain NAV transparency",
+    "provider": "PricewaterhouseCoopers LLP (fund auditor); public holdings and on-chain NAV provide daily transparency",
     "attestorTier": "big4",
     "cadence": "daily-nav",
     "attestorJurisdiction": "United States",
@@ -197,18 +197,49 @@
         "label": "Superstate USTB docs",
         "url": "https://docs.superstate.com/investors/tokenized-funds/invesco-ustb"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plume:0xe4fa682f94610ccd170680cc3b045d77d9e528a8",
+        "destinationChain": "plume",
+        "contractAddress": "0xe4fa682f94610ccd170680cc3b045d77d9e528a8",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2",
+        "destinationChain": "solana",
+        "contractAddress": "CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "Short-term U.S. Treasury Bills and government agency securities (WAM ~28 days)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "superstate-liquidity",
     "version": 1,

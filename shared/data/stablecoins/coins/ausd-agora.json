@@ -319,6 +319,152 @@
         "label": "AUSD Etherscan token",
         "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "base",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "bsc",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "polygon",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "monad:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "monad",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9",
+        "destinationChain": "solana",
+        "contractAddress": "AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "sui:0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD",
+        "destinationChain": "sui",
+        "contractAddress": "0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "mantle:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "mantle",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "katana:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "katana",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "immutable-zkevm:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "immutable-zkevm",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-top",

@@ -156,6 +156,56 @@
         "label": "LayerZero on L2BEAT",
         "url": "https://l2beat.com/interop/protocols/layerzero"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "protocol": "LayerZero",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "protocol": "LayerZero",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "destinationChain": "base",
+        "contractAddress": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "protocol": "LayerZero",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plasma:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "destinationChain": "plasma",
+        "contractAddress": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "protocol": "LayerZero",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "mintAuthority": {

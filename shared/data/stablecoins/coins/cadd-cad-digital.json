@@ -141,6 +141,32 @@
         "label": "BusinessWire CADD launch",
         "url": "https://www.businesswire.com/news/home/20260504197679/en/Tetra-Digital-Group-Launches-CADD-Canadas-First-CAD-Backed-Stablecoin-Issued-by-a-Financial-Institution"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x16f93ebc5320c89efc8701577efe49d14a276a06",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x16f93ebc5320c89efc8701577efe49d14a276a06",
+        "destinationChain": "base",
+        "contractAddress": "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "links": [

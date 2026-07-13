@@ -270,7 +270,12 @@
     "reviewedAt": "2026-07-12",
     "reviewer": "OpenAI Codex dependency review",
     "confidence": "verified",
-    "sources": [{ "label": "GAIB transparency", "url": "https://aid.gaib.ai/transparency" }],
+    "sources": [
+      {
+        "label": "GAIB transparency",
+        "url": "https://aid.gaib.ai/transparency"
+      }
+    ],
     "rationale": "The single reserve category combines Treasury assets with accepted stablecoins and provides no constituent split.",
     "compositionBasis": "GAIB aggregate reserve observation",
     "scope": "selected-slices",
@@ -280,6 +285,7 @@
       {
         "reserveIndex": 0,
         "reserveName": "U.S. Treasuries and accepted stablecoin reserves",
+        "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "Treasuries and stablecoins are combined without allocation weights."
       }
@@ -320,7 +326,10 @@
         "name": "LayerZero OFT",
         "slug": "layerzero",
         "url": "https://blog.gaib.ai/the-ai-dollar-is-live/",
-        "bridgeTypes": ["oft", "burnAndMint"]
+        "bridgeTypes": [
+          "oft",
+          "burnAndMint"
+        ]
       }
     ],
     "sources": [
@@ -331,6 +340,56 @@
       {
         "label": "GAIB AID transparency",
         "url": "https://aid.gaib.ai/transparency"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "arbitrum:0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "base:0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "destinationChain": "base",
+        "contractAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "bsc:0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "destinationChain": "bsc",
+        "contractAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-30"
       }
     ]
   }

@@ -251,6 +251,128 @@
         "label": "Chainlink CCIP docs",
         "url": "https://docs.chain.link/ccip"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+        "destinationChain": "bsc",
+        "contractAddress": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "tron:TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc",
+        "destinationChain": "tron",
+        "contractAddress": "TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+        "destinationChain": "solana",
+        "contractAddress": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plume:0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "destinationChain": "plume",
+        "contractAddress": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "monad:0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "destinationChain": "monad",
+        "contractAddress": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "mantle:0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "destinationChain": "mantle",
+        "contractAddress": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "morph-l2:0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "destinationChain": "morph-l2",
+        "contractAddress": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "aptos:0x05fabd1b12e39967a3c24e91b7b8f67719a6dacee74f3c8b9fb7d93e855437d2",
+        "destinationChain": "aptos",
+        "contractAddress": "0x05fabd1b12e39967a3c24e91b7b8f67719a6dacee74f3c8b9fb7d93e855437d2",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "abcore:0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "destinationChain": "abcore",
+        "contractAddress": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-regulated",

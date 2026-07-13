@@ -86,6 +86,56 @@
         "label": "AUDX transparency",
         "url": "https://www.audxtoken.com/transparency"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "destinationChain": "polygon",
+        "contractAddress": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "conflux:0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+        "destinationChain": "conflux",
+        "contractAddress": "0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "xdc:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "destinationChain": "xdc",
+        "contractAddress": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

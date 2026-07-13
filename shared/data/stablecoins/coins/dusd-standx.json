@@ -77,6 +77,32 @@
         "label": "StandX key addresses",
         "url": "https://docs.standx.com/docs/dusd-solutions/key-addresses"
       }
+    ],
+    "routes": [
+      {
+        "id": "bsc:0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122",
+        "destinationChain": "bsc",
+        "contractAddress": "0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM",
+        "destinationChain": "solana",
+        "contractAddress": "DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "exotic",

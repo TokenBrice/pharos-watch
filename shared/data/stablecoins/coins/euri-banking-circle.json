@@ -175,6 +175,29 @@
       "evidence": "At Ethereum block 25294735 and BSC block 103620570: token owner = EOA 0xfCA77c... (no bytecode on both chains); EIP-1967 proxy admin = 0xE0c6d43e... (same address on both chains), proxy-admin.owner() = EOA 0x315ef9e4... (no bytecode on both chains). All on-chain addressable mint surfaces confirmed across both deployments. Issuer-backend control corroborated by MiCA credit-institution license.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "EURI EIP-1967 proxy admin (Ethereum and BSC)",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Ethereum EURI token",
+          "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+        },
+        {
+          "label": "Eurite about page",
+          "url": "https://www.eurite.com/about-us/"
+        },
+        {
+          "label": "EURI whitepaper",
+          "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
+        }
+      ]
     }
   },
   "deploymentModel": "native-multichain",
@@ -232,6 +255,32 @@
       {
         "label": "Banking Circle EURI launch",
         "url": "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+        "protocol": "EURI issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+        "destinationChain": "bsc",
+        "contractAddress": "0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+        "protocol": "EURI issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   }

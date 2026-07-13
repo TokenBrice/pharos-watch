@@ -104,6 +104,68 @@
         "label": "Juno issuance docs",
         "url": "https://docs.bitso.com/juno/docs/trigger-an-issuance"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "destinationChain": "polygon",
+        "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "destinationChain": "avalanche",
+        "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "destinationChain": "base",
+        "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-regulated",

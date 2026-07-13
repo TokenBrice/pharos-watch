@@ -224,6 +224,34 @@
       "evidence": "Ethereum (2026-05-25): owner 0x284Df7B9 3/5 HadronMultisig, proxy admin 0xa6724f79 3/5; Polygon block 88323602: owner 0x84e8d731 3/5, proxy admin 0x2f875fa2 3/5. XRPL issuer account confirmed (no signer list, master key enabled). Algorand ASA 2768422954 manager/freeze confirmed as issuer-operated accounts. All addressable mint-capable surfaces confirmed; XRPL and Algorand issuer-backend corroborated by Quantoz EMI issuance model.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0xa6724f792002D5677a7Bc370986E1B580b8773E7",
+        "0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "EURQ Ethereum EIP-1967 proxy admin",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Ethereum EURQ token",
+          "url": "https://etherscan.io/address/0x8df723295214ea6f21026eeeb4382d475f146f9f"
+        },
+        {
+          "label": "Polygon EURQ token",
+          "url": "https://polygonscan.com/address/0xd571edb2ef29df10fcd6200fd6d0ed2389983db3"
+        },
+        {
+          "label": "Quantoz EURQ/USDQ",
+          "url": "https://www.quantoz.com/products/eurq-usdq"
+        },
+        {
+          "label": "Sourcify HadronToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+        }
+      ]
     }
   },
   "custodyModel": "institutional-regulated",
@@ -273,6 +301,56 @@
       {
         "label": "Quantoz transparency",
         "url": "https://quantoz.com/transparency"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x8df723295214ea6f21026eeeb4382d475f146f9f",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x8df723295214ea6f21026eeeb4382d475f146f9f",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0xd571edb2ef29df10fcd6200fd6d0ed2389983db3",
+        "destinationChain": "polygon",
+        "contractAddress": "0xd571edb2ef29df10fcd6200fd6d0ed2389983db3",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "xrpl:EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
+        "destinationChain": "xrpl",
+        "contractAddress": "EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "algorand:2768422954",
+        "destinationChain": "algorand",
+        "contractAddress": "2768422954",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   }

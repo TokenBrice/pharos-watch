@@ -105,6 +105,56 @@
         "label": "BLOX docs",
         "url": "https://docs.blox.my"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xbed7d999f1d71ac70c263f64c7c7e009d691be2e",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xbed7d999f1d71ac70c263f64c7c7e009d691be2e",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
+        "destinationChain": "base",
+        "contractAddress": "0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv",
+        "destinationChain": "solana",
+        "contractAddress": "myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

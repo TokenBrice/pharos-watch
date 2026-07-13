@@ -161,5 +161,17 @@
       "message": "AA_FalconXUSDC is a Pareto credit-vault share, not a par-redeemable Falcon Finance USDf wrapper. Monthly exits depend on the vault credit line and Pareto redemption process."
     }
   ],
-  "launchDate": "2025-07-10"
+  "launchDate": "2025-07-10",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "FalconX AA is a credit-vault share whose strategy intentionally departs from the USDC parent reserve archetype.",
+    "sources": [
+      {
+        "label": "Pareto docs",
+        "url": "https://docs.pareto.credit/"
+      }
+    ]
+  }
 }

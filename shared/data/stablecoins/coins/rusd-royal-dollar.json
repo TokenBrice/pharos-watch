@@ -44,7 +44,9 @@
         "name": "RoyalDollar FiatToken (Ethereum) — Circle-style MASTERMINTER, non-upgradeable, no cross-chain functions",
         "slug": "royaldollar-fiattoken",
         "url": "https://etherscan.io/address/0x44bb433d29fe966992a9c812da7f252c9c53f285",
-        "bridgeTypes": ["per-chain-native-mint"],
+        "bridgeTypes": [
+          "per-chain-native-mint"
+        ],
         "note": "ERC-20 Burnable/Pausable/AccessControl; roles MASTERMINTER/MINTER/BLACKLISTER/PAUSER; no OFT/CCIP/Wormhole/Axelar/bridge functions"
       },
       {
@@ -52,7 +54,9 @@
         "name": "RoyalDollar FiatToken (BNB Chain) — same bytecode, non-upgradeable, no cross-chain functions",
         "slug": "royaldollar-fiattoken-bsc",
         "url": "https://bscscan.com/address/0x44bb433d29fe966992a9c812da7f252c9c53f285",
-        "bridgeTypes": ["per-chain-native-mint"],
+        "bridgeTypes": [
+          "per-chain-native-mint"
+        ],
         "note": "Identical RoyalDollar contract on BSC; no LayerZero/CCIP/Wormhole/Axelar/bridge functions detected"
       },
       {
@@ -60,7 +64,9 @@
         "name": "R-Bridge / RxBridge settlement ecosystem (business settlement network, not an on-chain token bridge)",
         "slug": "rxbridge",
         "url": "https://www.rcoins.digital/",
-        "bridgeTypes": ["off-chain-settlement"],
+        "bridgeTypes": [
+          "off-chain-settlement"
+        ],
         "note": "Marketing-described hybrid bank–OTC–exchange settlement layer; no on-chain burn/mint or lock/mint token bridge documented"
       }
     ],
@@ -88,6 +94,44 @@
       {
         "label": "RUSD whitepaper",
         "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "protocol": "RoyalDollar FiatToken (Ethereum) — Circle-style MASTERMINTER, non-upgradeable, no cross-chain functions",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "bsc:0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "destinationChain": "bsc",
+        "contractAddress": "0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "protocol": "RoyalDollar FiatToken (Ethereum) — Circle-style MASTERMINTER, non-upgradeable, no cross-chain functions",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "tron:TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1",
+        "destinationChain": "tron",
+        "contractAddress": "TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1",
+        "protocol": "RoyalDollar FiatToken (Ethereum) — Circle-style MASTERMINTER, non-upgradeable, no cross-chain functions",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
       }
     ]
   },

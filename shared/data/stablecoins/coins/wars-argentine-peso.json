@@ -201,6 +201,80 @@
         "label": "L2BEAT Across",
         "url": "https://l2beat.com/interop/protocols/across"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "base",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "worldchain",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "bsc",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "polygon",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "gnosis",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

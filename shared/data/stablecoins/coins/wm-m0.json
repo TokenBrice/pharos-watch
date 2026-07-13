@@ -11,7 +11,9 @@
     "rwa": true,
     "navToken": false
   },
-  "infrastructures": ["m0"],
+  "infrastructures": [
+    "m0"
+  ],
   "collateral": "Underlying M (M0 Protocol) is backed 100% by short-term U.S. Treasury bills (30–90 day WAM) held in bankruptcy-remote SPVs by permissioned Minters; M0 Validators independently attest collateral sufficiency on-chain before any M can be minted, and wM holds M 1:1 inside the Wrapped M Token contract",
   "pegMechanism": "Non-rebasing 1:1 ERC-20 wrapper around M: anyone can call wrap() to deposit M and mint wM, or unwrap() to redeem wM back to M at any time without fees or queues; wM holders are non-earning by default, so yield accrued by the underlying M is redirected via TTG-approved earner accounts and the claimExcess() mechanism to ecosystem yield recipients (downstream M0 extensions and apps), leaving wM as a flat USD-denominated unit",
   "mechanismArchetype": "tbill",
@@ -107,7 +109,10 @@
         "threshold": 2,
         "signerCount": 2,
         "safe": {
-          "owners": ["0xdcf79c332cb3fe9d39a830a5f8de7ce6b1bd6fd1", "0xe0c6ac12d0e13c0cb2fcd583430198cbee0b3a10"],
+          "owners": [
+            "0xdcf79c332cb3fe9d39a830a5f8de7ce6b1bd6fd1",
+            "0xe0c6ac12d0e13c0cb2fcd583430198cbee0b3a10"
+          ],
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
@@ -212,7 +217,9 @@
         "source": "docs",
         "name": "M0 Portals",
         "url": "https://docs.m0.org/build/bridging-user",
-        "bridgeTypes": ["lockAndMint"]
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
       }
     ],
     "sources": [
@@ -223,6 +230,68 @@
       {
         "label": "M0 core bridging process",
         "url": "https://docs.m0.org/home/technical-documentations/m-portal/core-bridging-process/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "protocol": "M0 Portals",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "protocol": "M0 Portals",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plume:0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "destinationChain": "plume",
+        "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "protocol": "M0 Portals",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "destinationChain": "base",
+        "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "protocol": "M0 Portals",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
+        "destinationChain": "solana",
+        "contractAddress": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
+        "protocol": "M0 Portals",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },

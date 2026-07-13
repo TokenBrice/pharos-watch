@@ -238,6 +238,56 @@
         "label": "Usual FAQ",
         "url": "https://docs.usual.money/start-here/faq"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x35f1c5cb7fb977e669fd244c567da99d8a3a6850",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x35f1c5cb7fb977e669fd244c567da99d8a3a6850",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x758a3e0b1f842c9306b783f8a4078c6c8c03a270",
+        "destinationChain": "base",
+        "contractAddress": "0x758a3e0b1f842c9306b783f8a4078c6c8c03a270",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x758a3e0b1f842c9306b783f8a4078c6c8c03a270",
+        "destinationChain": "bsc",
+        "contractAddress": "0x758a3e0b1f842c9306b783f8a4078c6c8c03a270",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-regulated",

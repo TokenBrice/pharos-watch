@@ -256,6 +256,44 @@
         "label": "Paxos Solana expansion",
         "url": "https://www.prnewswire.com/news-releases/paxos-expands-to-the-solana-blockchain-302021494.html"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x8e870d67f660d95d5be530380d0ec0bd388289e1",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x8e870d67f660d95d5be530380d0ec0bd388289e1",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:HVbpJAQGNpkgBaYBZQBR1t7yFdvaYVp2vCQQfKKEN4tM",
+        "destinationChain": "solana",
+        "contractAddress": "HVbpJAQGNpkgBaYBZQBR1t7yFdvaYVp2vCQQfKKEN4tM",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094",
+        "destinationChain": "bsc",
+        "contractAddress": "0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-top",

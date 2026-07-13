@@ -199,6 +199,32 @@
         "label": "MEXC guide (Jan 2026) — LayerZero cross-chain still listed as planned",
         "url": "https://blog.mexc.com/news/what-is-unitas-labs-a-complete-guide-to-usdu-and-cross-chain-yield-stablecoins/"
       }
+    ],
+    "routes": [
+      {
+        "id": "bsc:0xea953ea6634d55dac6697c436b1e81a679db5882",
+        "destinationChain": "bsc",
+        "contractAddress": "0xea953ea6634d55dac6697c436b1e81a679db5882",
+        "protocol": "Unitas roadmap — Cross-chain USDu (LayerZero), Design phase, ETA Q4 2025 (NOT live)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "solana:9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
+        "destinationChain": "solana",
+        "contractAddress": "9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
+        "protocol": "Unitas roadmap — Cross-chain USDu (LayerZero), Design phase, ETA Q4 2025 (NOT live)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      }
     ]
   },
   "collateralQuality": "exotic",

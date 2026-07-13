@@ -47,6 +47,56 @@
         "label": "dTRINITY network support",
         "url": "https://docs.dtrinity.org/key-concepts/network-support"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "fraxtal:0x788d96f655735f52c676a133f4dfc53cec614d4a",
+        "destinationChain": "fraxtal",
+        "contractAddress": "0x788d96f655735f52c676a133f4dfc53cec614d4a",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "katana:0xca52d08737e6af8763a2bf6034b3b03868f24dda",
+        "destinationChain": "katana",
+        "contractAddress": "0xca52d08737e6af8763a2bf6034b3b03868f24dda",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "sonic:0x53a6abb52b2f968fa80df6a894e4f1b1020da975",
+        "destinationChain": "sonic",
+        "contractAddress": "0x53a6abb52b2f968fa80df6a894e4f1b1020da975",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "links": [
@@ -267,5 +317,18 @@
       ]
     }
   },
-  "launchDate": "2024-12-18"
+  "launchDate": "2024-12-18",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "dUSD is atomically minted and redeemed against whitelisted dollar-stablecoin reserves, with AMO and SMO operations supporting liquidity.",
+    "sources": [
+      {
+        "label": "dTRINITY docs",
+        "url": "https://docs.dtrinity.org"
+      }
+    ]
+  }
 }

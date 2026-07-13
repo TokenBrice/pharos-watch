@@ -177,6 +177,56 @@
           "nativeTokenTransfer"
         ]
       }
+    ],
+    "routes": [
+      {
+        "id": "avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x7f4546ef315efc65336187fe3765ea779ac90183",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x14d72634328c4d03bba184a48081df65f1911279",
+        "destinationChain": "bsc",
+        "contractAddress": "0x14d72634328c4d03bba184a48081df65f1911279",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1",
+        "destinationChain": "solana",
+        "contractAddress": "34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

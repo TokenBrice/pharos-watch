@@ -127,6 +127,7 @@
     "mintIncidents": [
       {
         "date": "2022-09-06",
+        "status": "resolved",
         "summary": "A flash-loan manipulation of the AVAX/USDC JLP collateral price let an attacker borrow far more NXUSD than justified by collateral, creating about $500K of NXUSD bad debt.",
         "sources": [
           {

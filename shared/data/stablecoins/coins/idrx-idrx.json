@@ -112,6 +112,104 @@
         "label": "IDRX docs",
         "url": "https://docs.idrx.co/"
       }
+    ],
+    "routes": [
+      {
+        "id": "polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+        "destinationChain": "polygon",
+        "contractAddress": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "destinationChain": "base",
+        "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+        "destinationChain": "bsc",
+        "contractAddress": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "klaytn:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "destinationChain": "klaytn",
+        "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "gnosis:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "destinationChain": "gnosis",
+        "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "etherlink:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "destinationChain": "etherlink",
+        "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "worldchain:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "destinationChain": "worldchain",
+        "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur",
+        "destinationChain": "solana",
+        "contractAddress": "idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-unregulated",

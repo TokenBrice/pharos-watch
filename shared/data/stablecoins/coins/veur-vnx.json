@@ -265,6 +265,152 @@
         "label": "VNX Euro on RWA.xyz",
         "url": "https://app.rwa.xyz/assets/VEUR"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0x7678e162f38ec9ef2bfd1d0aaf9fd93355e5fa0b",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x7678e162f38ec9ef2bfd1d0aaf9fd93355e5fa0b",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x4883c8f0529f37e40ebea870f3c13cdfad5d01f8",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x4883c8f0529f37e40ebea870f3c13cdfad5d01f8",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x4ed9df25d38795a47f52614126e47f564d37f347",
+        "destinationChain": "base",
+        "contractAddress": "0x4ed9df25d38795a47f52614126e47f564d37f347",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0xe4095d9372e68d108225c306a4491cacfb33b097",
+        "destinationChain": "polygon",
+        "contractAddress": "0xe4095d9372e68d108225c306a4491cacfb33b097",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "celo:0x9346f43c1588b6df1d52bdd6bf846064f92d9cba",
+        "destinationChain": "celo",
+        "contractAddress": "0x9346f43c1588b6df1d52bdd6bf846064f92d9cba",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:C4Kkr9NZU3VbyedcgutU6LKmi6MKz81sx6gRmk5pX519",
+        "destinationChain": "solana",
+        "contractAddress": "C4Kkr9NZU3VbyedcgutU6LKmi6MKz81sx6gRmk5pX519",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "xrpl:VEUR-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3",
+        "destinationChain": "xrpl",
+        "contractAddress": "VEUR-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "tezos:KT1FenS7BCUjn1otfFyfrfxguiGnL4UTF3aG",
+        "destinationChain": "tezos",
+        "contractAddress": "KT1FenS7BCUjn1otfFyfrfxguiGnL4UTF3aG",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "fraxtal:0x4c0bd74da8237c08840984fdb33a84b4586aaee6",
+        "destinationChain": "fraxtal",
+        "contractAddress": "0x4c0bd74da8237c08840984fdb33a84b4586aaee6",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "icp:wu6g4-6qaaa-aaaan-qmrza-cai",
+        "destinationChain": "icp",
+        "contractAddress": "wu6g4-6qaaa-aaaan-qmrza-cai",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "stellar:VEUR-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN",
+        "destinationChain": "stellar",
+        "contractAddress": "VEUR-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN",
+        "protocol": "VEUR issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   }
 }

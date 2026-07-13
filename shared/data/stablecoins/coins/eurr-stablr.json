@@ -97,6 +97,7 @@
     "mintIncidents": [
       {
         "date": "2026-05-24",
+        "status": "active",
         "summary": "A compromised StablR mint/governance key let the attacker mint 4.5M unbacked EURR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
         "sources": [
           {
@@ -186,6 +187,30 @@
       "evidence": "Ethereum (2026-05-25): owner 0x05Aa2D11B1 as 2/2 multisig, proxy admin 0xA0609c2F as 1/1 multisig. Solana SPL mint (2026-06-11): mintAuthority and freezeAuthority are non-executable system-program-owned wallet accounts (issuer-backend). All addressable mint-capable surfaces confirmed.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0xA0609c2F05A386D835ae3C01CDA296a5F63878a0"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "EURR EIP-1967 proxy admin",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25166592,
+      "sources": [
+        {
+          "label": "Ethereum EURR token",
+          "url": "https://etherscan.io/address/0x50753cfaf86c094925bf976f218d043f8791e408"
+        },
+        {
+          "label": "StablR smart-contract docs",
+          "url": "https://docs.stablr.com/docs/smart-contract"
+        },
+        {
+          "label": "StablR EURR docs",
+          "url": "https://docs.stablr.com/docs/what-is-eurr"
+        }
+      ]
     }
   },
   "custodyModel": "institutional-regulated",

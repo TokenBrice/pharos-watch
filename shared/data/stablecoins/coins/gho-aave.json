@@ -277,7 +277,10 @@
         "name": "Chainlink CCIP",
         "slug": "ccip",
         "url": "https://l2beat.com/interop/protocols/ccip",
-        "bridgeTypes": ["burnAndMint", "lockRelease"]
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockRelease"
+        ]
       }
     ],
     "sources": [
@@ -292,6 +295,116 @@
       {
         "label": "Chainlink CCIP docs",
         "url": "https://docs.chain.link/ccip"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x7dff72693f6a4149b17e7c6314655f6a9f7c8b33",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x7dff72693f6a4149b17e7c6314655f6a9f7c8b33",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x6bb7a212910682dcfdbd5bcbb3e28fb4e8da10ee",
+        "destinationChain": "base",
+        "contractAddress": "0x6bb7a212910682dcfdbd5bcbb3e28fb4e8da10ee",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "gnosis:0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+        "destinationChain": "gnosis",
+        "contractAddress": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "ink:0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+        "destinationChain": "ink",
+        "contractAddress": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+        "destinationChain": "avalanche",
+        "contractAddress": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "mantle:0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+        "destinationChain": "mantle",
+        "contractAddress": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plasma:0xb77e872a68c62cfc0dfb02c067ecc3da23b4bbf3",
+        "destinationChain": "plasma",
+        "contractAddress": "0xb77e872a68c62cfc0dfb02c067ecc3da23b4bbf3",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "monad:0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+        "destinationChain": "monad",
+        "contractAddress": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },
@@ -343,8 +456,14 @@
     "reviewer": "OpenAI Codex dependency review",
     "confidence": "verified",
     "sources": [
-      { "label": "Aave GHO documentation", "url": "https://aave.com/docs/ecosystem/gho" },
-      { "label": "Aave GHO analytics", "url": "https://aave.tokenlogic.xyz/gho" }
+      {
+        "label": "Aave GHO documentation",
+        "url": "https://aave.com/docs/ecosystem/gho"
+      },
+      {
+        "label": "Aave GHO analytics",
+        "url": "https://aave.tokenlogic.xyz/gho"
+      }
     ],
     "rationale": "GHO facilitator balances include both identified GSM stablecoin mechanisms and direct issuance facilities that are not reserve-token claims.",
     "compositionBasis": "On-chain facilitator bucket balances",
@@ -355,30 +474,35 @@
       {
         "reserveIndex": 0,
         "reserveName": "GhoDirectFacilitator GSMs Mainnet",
+        "pct": 38.4,
         "disposition": "insufficient-evidence",
         "rationale": "The residual bucket does not expose a stablecoin identity that can be mapped to one canonical target."
       },
       {
         "reserveIndex": 1,
         "reserveName": "CoreGhoDirectMinter",
+        "pct": 22.7,
         "disposition": "not-applicable",
         "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
       },
       {
         "reserveIndex": 4,
         "reserveName": "LidoGhoDirectMinter",
+        "pct": 7.6,
         "disposition": "not-applicable",
         "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
       },
       {
         "reserveIndex": 5,
         "reserveName": "GhoDirectFacilitator Plasma",
+        "pct": 6.9,
         "disposition": "not-applicable",
         "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
       },
       {
         "reserveIndex": 6,
         "reserveName": "HorizonGhoDirectMinter",
+        "pct": 4.7,
         "disposition": "not-applicable",
         "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
       }

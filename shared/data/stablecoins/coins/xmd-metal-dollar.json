@@ -193,5 +193,18 @@
         "XPR Network is not EVM-compatible and lacks a supported public RPC or Blockscout instance; the XMD treasury contract admin/owner and any Metallicus unilateral mint authority cannot be read via standard keyless tooling. Resolution requires XPR Network-native API access or direct issuer disclosure."
       ]
     }
+  },
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "XMD is issued and redeemed against a managed basket of fiat-backed dollar stablecoins.",
+    "sources": [
+      {
+        "label": "Metal Dollar docs",
+        "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"
+      }
+    ]
   }
 }

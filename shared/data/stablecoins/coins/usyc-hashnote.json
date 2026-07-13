@@ -43,6 +43,44 @@
         "label": "USYC introduction",
         "url": "https://usyc.docs.hashnote.com/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+        "protocol": "USYC Cross Chain Teller",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311",
+        "destinationChain": "bsc",
+        "contractAddress": "0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311",
+        "protocol": "USYC Cross Chain Teller",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn",
+        "destinationChain": "solana",
+        "contractAddress": "7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn",
+        "protocol": "USYC Cross Chain Teller",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "links": [

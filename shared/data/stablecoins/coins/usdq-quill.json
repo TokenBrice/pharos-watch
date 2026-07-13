@@ -251,6 +251,30 @@
           "url": "https://scrollscan.com/address/0x3e5462da8e6c3971d445d717c389a8bec036b719"
         }
       ]
+    },
+    "upgradeability": {
+      "model": "uups",
+      "adminAddresses": [
+        "0xBe589551397d0F28255e429DDB478620b1C2f08a"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "QuillAccessManager (UUPS proxy, admin = Quill Safe multisig)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 34053392,
+      "sources": [
+        {
+          "label": "USDQ docs",
+          "url": "https://docs.quill.finance/faq/usdusdq"
+        },
+        {
+          "label": "Quill & Liquity v2 docs",
+          "url": "https://docs.quill.finance/faq/quill-and-liquity-v2"
+        },
+        {
+          "label": "QuillAccessManagerUpgradeable on Scrollscan",
+          "url": "https://scrollscan.com/address/0x3e5462da8e6c3971d445d717c389a8bec036b719"
+        }
+      ]
     }
   },
   "launchDate": "2025-01-28"

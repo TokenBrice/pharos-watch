@@ -229,7 +229,10 @@
         "pools": [
           {
             "selfTokenAddress": "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73",
-            "counterAsset": { "address": "0x765De816845861e75A25fCA122bb6898B8B1282a", "label": "USDm" }
+            "counterAsset": {
+              "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+              "label": "USDm"
+            }
           }
         ],
         "sourceUrls": ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"]
@@ -264,5 +267,23 @@
         "url": "https://docs.mento.org/mento"
       }
     ]
-  }
+  },
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "EURm remains directly backed by the shared Mento Reserve and is minted or burned as reserve-backed inventory through Mento V3.",
+    "sources": [
+      {
+        "label": "Mento V3 stable token docs",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+      },
+      {
+        "label": "Mento V3 launch",
+        "url": "https://www.mento.org/blog/mento-v3-is-here-onchain-fx-built-to-scale-across-chains"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2026-H1"
 }

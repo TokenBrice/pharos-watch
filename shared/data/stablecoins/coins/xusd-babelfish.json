@@ -281,5 +281,18 @@
       ]
     }
   },
-  "launchDate": "2021-06-01"
+  "launchDate": "2021-06-01",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "XUSD is minted and redeemed against accepted dollar-stablecoin basket assets subject to balancing constraints.",
+    "sources": [
+      {
+        "label": "BabelFish docs",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/"
+      }
+    ]
+  }
 }

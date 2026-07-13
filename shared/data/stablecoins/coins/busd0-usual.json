@@ -87,6 +87,32 @@
         "label": "bUSD0 docs",
         "url": "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
+        "protocol": "Chainlink CCIP / LayerZero for Usual",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f",
+        "protocol": "Chainlink CCIP / LayerZero for Usual",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-regulated",

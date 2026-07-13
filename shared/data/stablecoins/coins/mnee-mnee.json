@@ -208,6 +208,30 @@
       "evidence": "At Ethereum block 25294738: roleHolders()=4 (constant), requiredSignatures()=3 (constant). ChangeMinter event log (9 events) reconstructed current minter set as 5 addresses. isMinter() confirmed true for all 5. Proxy admin contract identified, its owner is an EOA (no bytecode). Source code confirms threshold-signature minting; no on-chain enumerable role list — membership confirmed from event reconstruction.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0xa3b670f2dd1722c3d4b98f146467840540c2c53e"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "MNEE EIP-1967 ProxyAdmin contract",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25294738,
+      "sources": [
+        {
+          "label": "Sourcify MNEE token/proxy verification record",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf"
+        },
+        {
+          "label": "Sourcify MNEE implementation source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x6D2E08839cEc8699565a86D046E64324826039c9/sources/src/MNEEv2.sol"
+        },
+        {
+          "label": "MNEE ChangeMinter events (Blockscout)",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf&fromBlock=0&toBlock=latest&topic0=0xcba8b2f67b1b66244252c443e6260110af641687bcceb46c810da702119ec828"
+        }
+      ]
     }
   },
   "custodyModel": "institutional-unregulated",

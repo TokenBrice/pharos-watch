@@ -172,5 +172,17 @@
       }
     }
   },
-  "launchDate": "2025-07-18"
+  "launchDate": "2025-07-18",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "sUSD1+ is the strategy-bearing staked layer and intentionally departs from the USD1 fiat-reserve parent mechanism.",
+    "sources": [
+      {
+        "label": "Lorenzo docs",
+        "url": "https://docs.lorenzo-protocol.xyz/"
+      }
+    ]
+  }
 }

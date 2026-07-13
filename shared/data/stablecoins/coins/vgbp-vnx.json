@@ -209,6 +209,29 @@
           "url": "https://base.blockscout.com/address/0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1/contracts"
         }
       ]
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "VGBP proxy admin contract",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "BaseScan VGBP proxy admin",
+          "url": "https://basescan.org/address/0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8"
+        },
+        {
+          "label": "BaseScan VGBP contract",
+          "url": "https://basescan.org/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411"
+        },
+        {
+          "label": "Base Blockscout VNXCToken implementation",
+          "url": "https://base.blockscout.com/address/0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1/contracts"
+        }
+      ]
     }
   },
   "bridgeRouteRisk": {
@@ -225,6 +248,44 @@
       {
         "label": "VNX",
         "url": "https://vnx.li/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "base:0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
+        "destinationChain": "base",
+        "contractAddress": "0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "celo:0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f",
+        "destinationChain": "celo",
+        "contractAddress": "0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1",
+        "destinationChain": "solana",
+        "contractAddress": "5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },

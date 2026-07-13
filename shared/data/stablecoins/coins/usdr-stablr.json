@@ -180,6 +180,7 @@
     "mintIncidents": [
       {
         "date": "2026-05-24",
+        "status": "active",
         "summary": "A compromised StablR mint/governance key let the attacker mint 8.35M unbacked USDR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
         "sources": [
           {
@@ -235,6 +236,26 @@
       "evidence": "At block 25294990: token owner = 0xC7Dcd...0E4 (2/2 multisig, no modules confirmed). Proxy admin = 0xbfFF...953c (2/2 multisig, no modules confirmed; prior 1/1 record was incorrect — corrected from live reads). Implementation = 0x76e0baef381656d51d733cf9aa60d7bf8017f958. USDR is a single-chain MiCAR EMT; the May 2026 exploit compromised the mint key; post-incident multisig state confirmed above.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Etherscan USDR contract",
+          "url": "https://etherscan.io/address/0x7b43e3875440b44613dc3bc08e7763e6da63c8f8"
+        },
+        {
+          "label": "StablR USDR page",
+          "url": "https://www.stablr.com/usdr"
+        }
+      ]
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDR EIP-1967 proxy admin",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25294990,
       "sources": [
         {
           "label": "Etherscan USDR contract",

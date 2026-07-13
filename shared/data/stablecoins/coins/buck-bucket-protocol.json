@@ -143,6 +143,26 @@
       "evidence": "At Sui checkpoint 285785957: BucketProtocol shared object 0x9e3dab… confirmed to hold buck_treasury_cap (TreasuryCap wrapped inside as a complex field) along with version=7 and min_bottle_size. Both admin addresses (0x169451… and 0x938884…) confirmed as EOAs via notExists object checks. 0x169451… holds AdminCap/BktAdminCap. 0x938884… holds UpgradeCap (policy=0, v27) — both are expected operational team wallets for a Sui CDP protocol. TreasuryCap locked inside the shared BucketProtocol object, not directly accessible.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "custom",
+      "adminAddresses": [
+        "0x938884d43de2bcf13a2f8f5886ea6382994ba49dcf7b3d08203acdd508778b6b"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Bucket package upgrade-cap owner (EOA)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 285785957,
+      "sources": [
+        {
+          "label": "Sui fullnode RPC",
+          "url": "https://fullnode.mainnet.sui.io:443"
+        },
+        {
+          "label": "Bucket Protocol docs",
+          "url": "https://docs.bucketprotocol.io/"
+        }
+      ]
     }
   },
   "chainTier": "established-alt-l1",

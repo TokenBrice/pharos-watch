@@ -2,14 +2,73 @@
   "id": "pyusd-paypal",
   "reserves": [
     {
-      "name": "U.S. Treasury Reverse Repos",
-      "pct": 97,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash Deposits",
-      "pct": 3,
-      "risk": "very-low"
+      "name": "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury and regulated financial counterparties",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     }
-  ]
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Paxos PYUSD transparency",
+        "url": "https://www.paxos.com/pyusd-transparency"
+      },
+      {
+        "label": "Paxos dollar-backed stablecoin terms",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      }
+    ],
+    "rationale": "Paxos identifies the eligible reserve categories and publishes monthly reports, but the reviewed public page does not expose a durable current constituent split. The previous 97/3 point estimate was replaced by the supported aggregate basket.",
+    "compositionBasis": "Issuer-stated PYUSD reserve categories; no current per-category weights captured",
+    "compositionAsOf": "2026-05-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current allocation among deposits, Treasury securities, and reverse repos is not captured in a durable public split.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer confirms all three reserve categories but the current category weights are not available in the reviewed durable source."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Reserve banks (not individually disclosed)",
+        "role": "bank"
+      },
+      {
+        "name": "Reverse-repo custody and counterparties (not individually disclosed)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Paxos PYUSD transparency",
+        "url": "https://www.paxos.com/pyusd-transparency"
+      },
+      {
+        "label": "Paxos dollar-backed stablecoin terms",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      }
+    ],
+    "uncertainty": "Paxos discloses regulated reserve categories but not provider identities or shares on the reviewed public pages; segregation, bankruptcy-remoteness, and reuse terms therefore remain unknown.",
+    "knownUnknownExposurePct": 100
+  }
 }

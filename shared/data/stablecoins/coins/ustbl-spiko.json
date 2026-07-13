@@ -175,7 +175,10 @@
         "source": "docs",
         "name": "Chainlink CCIP",
         "url": "https://docs.chain.link/ccip",
-        "bridgeTypes": ["messagePassing", "burnAndMint"]
+        "bridgeTypes": [
+          "messagePassing",
+          "burnAndMint"
+        ]
       }
     ],
     "sources": [
@@ -190,6 +193,92 @@
       {
         "label": "Chainlink CCIP docs",
         "url": "https://docs.chain.link/ccip"
+      }
+    ],
+    "routes": [
+      {
+        "id": "arbitrum:0x021289588cd81dc1ac87ea91e91607eef68303f5",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x021289588cd81dc1ac87ea91e91607eef68303f5",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "ethereum:0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "destinationChain": "polygon",
+        "contractAddress": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "destinationChain": "base",
+        "contractAddress": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "etherlink:0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "destinationChain": "etherlink",
+        "contractAddress": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "stellar:USTBL-CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO",
+        "destinationChain": "stellar",
+        "contractAddress": "USTBL-CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "starknet:0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6",
+        "destinationChain": "starknet",
+        "contractAddress": "0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },

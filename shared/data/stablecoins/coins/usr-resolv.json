@@ -148,6 +148,7 @@
     "mintIncidents": [
       {
         "date": "2026-03-22",
+        "status": "active",
         "summary": "A compromised off-chain SERVICE_ROLE key and unchecked mint parameters let the attacker mint about 80M unbacked USR and extract roughly $25M.",
         "sources": [
           {

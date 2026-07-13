@@ -132,6 +132,32 @@
         "label": "Bifrost bridge guide",
         "url": "https://docs.bifrostnetwork.com/bifrost-network/bridge/bridge-guide"
       }
+    ],
+    "routes": [
+      {
+        "id": "base:0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4",
+        "destinationChain": "base",
+        "contractAddress": "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4",
+        "protocol": "Bifrost Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bifrost:0x6906ccda405926fc3f04240187dd4fad5df6d555",
+        "destinationChain": "bifrost",
+        "contractAddress": "0x6906ccda405926fc3f04240187dd4fad5df6d555",
+        "protocol": "Bifrost Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "chainTier": "unproven",

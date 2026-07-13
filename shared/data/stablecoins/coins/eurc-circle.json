@@ -266,6 +266,92 @@
         "label": "Circle EURC supported blockchains",
         "url": "https://help.circle.com/s/article/What-blockchains-is-Euro-Coin-available-on"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+        "destinationChain": "base",
+        "contractAddress": "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
+        "destinationChain": "avalanche",
+        "contractAddress": "0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "worldchain:0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b",
+        "destinationChain": "worldchain",
+        "contractAddress": "0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "stellar:EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2",
+        "destinationChain": "stellar",
+        "contractAddress": "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+        "destinationChain": "solana",
+        "contractAddress": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "cronos:0xa6de01a2d62c6b5f3525d768f34d276652c554c8",
+        "destinationChain": "cronos",
+        "contractAddress": "0xa6de01a2d62c6b5f3525d768f34d276652c554c8",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-top",

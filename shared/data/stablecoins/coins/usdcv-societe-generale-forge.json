@@ -155,6 +155,32 @@
         "label": "USDCV white paper",
         "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x5422374b27757da72d5265cc745ea906e0446634",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x5422374b27757da72d5265cc745ea906e0446634",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:8smindLdDuySY6i2bStQX9o8DVhALCXCMbNxD98unx35",
+        "destinationChain": "solana",
+        "contractAddress": "8smindLdDuySY6i2bStQX9o8DVhALCXCMbNxD98unx35",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-top",

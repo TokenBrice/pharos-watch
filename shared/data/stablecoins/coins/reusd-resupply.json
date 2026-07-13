@@ -72,6 +72,7 @@
     "mintIncidents": [
       {
         "date": "2025-06-26",
+        "status": "resolved",
         "summary": "Resupply's crvUSD/wstUSR market exploit manipulated exchange-rate and solvency logic so negligible collateral could borrow up to the reUSD debt limit, leaving bad debt through the stablecoin borrow route.",
         "sources": [
           {

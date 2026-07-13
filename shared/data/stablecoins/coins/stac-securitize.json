@@ -71,11 +71,62 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Securitize launched STAC as issuer-administered digital fund shares on Ethereum and later expanded the same regulated fund to Solana. The reviewed deployment evidence describes native issuer issuance on both networks rather than a holder-operated third-party bridge.",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Pharos P7 bridge review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Securitize Digital Securities",
+        "url": "https://investors.securitize.io/news/news-details/2026/Securitize-Expands-STAC-Tokenized-AAA-CLO-Fund-to-Solana/default.aspx",
+        "bridgeTypes": ["nativeIssuance"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Securitize STAC Ethereum launch",
+        "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx"
+      },
+      {
+        "label": "Securitize STAC Solana expansion",
+        "url": "https://investors.securitize.io/news/news-details/2026/Securitize-Expands-STAC-Tokenized-AAA-CLO-Fund-to-Solana/default.aspx"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+        "protocol": "Securitize Digital Securities",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-07-13"
+      },
+      {
+        "id": "solana:u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk",
+        "destinationChain": "solana",
+        "contractAddress": "u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk",
+        "protocol": "Securitize Digital Securities",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-07-13"
+      }
+    ]
+  },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "STAC is a single-chain Ethereum DSToken with issueTokens functions gated by an issuer-operated EOA owner. No additional DSApp or on-ramp mint routes exist beyond the token's own owner-gated issuance surface.",
+    "summary": "STAC uses issuer-administered native token issuance on Ethereum and Solana. The reviewed Ethereum DSToken issueTokens functions are gated by an issuer-operated EOA owner; the later Solana deployment remains within Securitize's regulated issuance platform.",
     "controls": [
       {
         "chain": "ethereum",

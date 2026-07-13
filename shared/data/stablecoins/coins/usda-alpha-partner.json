@@ -114,5 +114,18 @@
       ]
     }
   },
-  "launchDate": "2025-08-07"
+  "launchDate": "2025-08-07",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "USDA presents an issuer-controlled one-dollar reserve claim; weak disclosures affect evidence quality but not the mechanism family.",
+    "sources": [
+      {
+        "label": "Alpha Partners docs",
+        "url": "https://ap-organization-1.gitbook.io/alpha-partners"
+      }
+    ]
+  }
 }

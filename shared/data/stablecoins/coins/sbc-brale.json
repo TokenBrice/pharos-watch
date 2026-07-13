@@ -225,6 +225,27 @@
           "url": "https://etherscan.io/address/0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
         }
       ]
+    },
+    "upgradeability": {
+      "model": "uups",
+      "canChangeMintLogic": true,
+      "controlRef": "Proxy upgrade authority — 6-signer legacy multisig, threshold 3 (UPGRADER_ROLE)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295066,
+      "sources": [
+        {
+          "label": "SBC Ethereum proxy implementation",
+          "url": "https://etherscan.io/address/0x935eda0060ba40ea409bb05fa2300abb4e215ac1"
+        },
+        {
+          "label": "Brale SBC proof of reserve",
+          "url": "https://brale.xyz/stablecoins/SBC"
+        },
+        {
+          "label": "SBC Ethereum token",
+          "url": "https://etherscan.io/address/0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+        }
+      ]
     }
   },
   "deploymentModel": "native-multichain",
@@ -242,6 +263,128 @@
       {
         "label": "Brale SBC proof of reserve",
         "url": "https://brale.xyz/stablecoins/SBC"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "optimism:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+        "destinationChain": "optimism",
+        "contractAddress": "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "destinationChain": "base",
+        "contractAddress": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "destinationChain": "polygon",
+        "contractAddress": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+        "destinationChain": "avalanche",
+        "contractAddress": "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "celo:0xde093684c796204224bc081f937aa059d903c52a",
+        "destinationChain": "celo",
+        "contractAddress": "0xde093684c796204224bc081f937aa059d903c52a",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA",
+        "destinationChain": "solana",
+        "contractAddress": "DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "ethereum-classic:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "destinationChain": "ethereum-classic",
+        "contractAddress": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "stellar:SBC-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
+        "destinationChain": "stellar",
+        "contractAddress": "SBC-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },

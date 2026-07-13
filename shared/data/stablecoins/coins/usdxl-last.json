@@ -95,6 +95,32 @@
         "label": "L2BEAT Hyperliquid bridge",
         "url": "https://l2beat.com/interop/protocols/hyperliquid"
       }
+    ],
+    "routes": [
+      {
+        "id": "hyperevm:0xca79db4b49f608ef54a5cb813fbed3a6387bc645",
+        "destinationChain": "hyperevm",
+        "contractAddress": "0xca79db4b49f608ef54a5cb813fbed3a6387bc645",
+        "protocol": "Hyperliquid bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "hyperliquid:0xf448c3cad413cdf0feb1746d7b057967",
+        "destinationChain": "hyperliquid",
+        "contractAddress": "0xf448c3cad413cdf0feb1746d7b057967",
+        "protocol": "Hyperliquid bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",

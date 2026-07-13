@@ -1,0 +1,73 @@
+{
+  "id": "mhyper-midas",
+  "reserves": [
+    {
+      "name": "Hyperithm market-neutral stablecoin strategies",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Hyperithm-managed reference portfolio",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Midas mHYPER",
+        "url": "https://midas.app/mhyper"
+      },
+      {
+        "label": "Midas Attestation Engine",
+        "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
+      },
+      {
+        "label": "Fordefi Midas custody case study",
+        "url": "https://www.fordefi.com/customer-stories/how-midas-brings-tokenized-investment-opportunities-on-chain-with-fordefis-defi-native-custody-2ti85"
+      }
+    ],
+    "rationale": "mHYPER is a certificate tracking a managed market-neutral reference portfolio rather than a claim on one stablecoin. Public sources identify the strategy and attestation framework, but do not provide a durable position-level composition.",
+    "compositionBasis": "Current Midas product and attestation disclosures",
+    "compositionAsOf": "2026-07-13",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The managed strategy's position-level assets, venues, and weights are not disclosed in a durable static composition.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Hyperithm market-neutral stablecoin strategies",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The strategy mandate is known, but current position-level stablecoin, protocol, and venue exposures are not available for reviewed links."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Fordefi",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Fordefi Midas custody case study",
+        "url": "https://www.fordefi.com/customer-stories/how-midas-brings-tokenized-investment-opportunities-on-chain-with-fordefis-defi-native-custody-2ti85"
+      },
+      {
+        "label": "Midas mHYPER",
+        "url": "https://midas.app/mhyper"
+      }
+    ],
+    "uncertainty": "Fordefi documents dedicated workspaces in which the strategy manager holds an MPC share and Midas holds an administrative policy share. Assets are actively deployed across protocols and venues, so provider allocation, venue segregation, and reuse conditions remain strategy-dependent."
+  }
+}

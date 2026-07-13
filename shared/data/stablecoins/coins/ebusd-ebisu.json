@@ -138,6 +138,36 @@
           "url": "https://etherscan.io/address/0xa5ae6f430e89b2c571ebf091a20a3d74a28cb726"
         }
       ]
+    },
+    "upgradeability": {
+      "model": "custom",
+      "canChangeMintLogic": true,
+      "delaySec": 604800,
+      "controlRef": "Ebisu Gnosis Safe (EbisuUpgradeable admin, 7-day timelock)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295272,
+      "sources": [
+        {
+          "label": "Ebisu CollateralRegistry on Etherscan",
+          "url": "https://etherscan.io/address/0x5e159fac2d137f7b83a12b9f30ac6ab2ba6d45e7"
+        },
+        {
+          "label": "Ebisu ebisuAdmin Safe on Etherscan",
+          "url": "https://etherscan.io/address/0x25b85831da750c912ab7f0cf53b9d82f7894ed07"
+        },
+        {
+          "label": "Liquity Friendly Fork Program",
+          "url": "https://docs.liquity.org/v2-documentation/friendly-fork-program"
+        },
+        {
+          "label": "Ebisu website",
+          "url": "https://ebisu.money/"
+        },
+        {
+          "label": "ebUSD BoldToken impl on Etherscan",
+          "url": "https://etherscan.io/address/0xa5ae6f430e89b2c571ebf091a20a3d74a28cb726"
+        }
+      ]
     }
   },
   "deploymentModel": "native-multichain",
@@ -167,6 +197,32 @@
       {
         "label": "Chainlink CCIP docs",
         "url": "https://docs.chain.link/ccip"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x09fd37d9aa613789c517e76df1c53aece2b60df4",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x09fd37d9aa613789c517e76df1c53aece2b60df4",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plasma:0xef7b1a03e0897c33b63159e38d779e3970c0e2fc",
+        "destinationChain": "plasma",
+        "contractAddress": "0xef7b1a03e0897c33b63159e38d779e3970c0e2fc",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },

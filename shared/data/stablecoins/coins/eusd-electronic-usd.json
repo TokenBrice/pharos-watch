@@ -228,6 +228,44 @@
         "label": "Sentz eUSD article",
         "url": "https://www.sentz.com/blog/electronic-dollars-eusd-a-data-protecting-stablecoin"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xcfa3ef56d303ae4faaba0592388f19d7c3399fb4",
+        "destinationChain": "base",
+        "contractAddress": "0xcfa3ef56d303ae4faaba0592388f19d7c3399fb4",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x12275dcb9048680c4be40942ea4d92c74c63b844",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x12275dcb9048680c4be40942ea4d92c74c63b844",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "exotic",
@@ -332,5 +370,18 @@
       ]
     }
   },
-  "launchDate": "2023-02-23"
+  "launchDate": "2023-02-23",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "EUSD is a redeemable Reserve Protocol basket token backed by stablecoin lending positions; RSR is first-loss capital, not borrower collateral.",
+    "sources": [
+      {
+        "label": "Reserve Protocol docs",
+        "url": "https://docs.reserve.org/"
+      }
+    ]
+  }
 }

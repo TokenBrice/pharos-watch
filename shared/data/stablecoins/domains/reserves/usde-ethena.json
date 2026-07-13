@@ -4,42 +4,91 @@
     {
       "name": "Liquid Stables (USDtb / USDC / USDT)",
       "pct": 76,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Ethena reserve stablecoin issuers and lending markets",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "concentration"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "BTC (delta-neutral)",
       "pct": 16,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "hedged-crypto",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "ETH / ETH LSTs (delta-neutral)",
       "pct": 8,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "hedged-crypto",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-12",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
       {
         "label": "Ethena transparency",
         "url": "https://app.ethena.fi/dashboards/transparency"
+      },
+      {
+        "label": "Ethena off-exchange settlement",
+        "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail"
       }
     ],
-    "rationale": "Ethena reports liquid stable reserves as an aggregate bucket, so the constituent dependency weights cannot be assigned without fabricating a split.",
-    "compositionBasis": "Curated composition aligned to the protocol transparency categories",
-    "scope": "selected-slices",
+    "rationale": "The transparency dashboard supports the aggregate stablecoin and delta-neutral backing categories. The liquid-stable bucket has no durable constituent weights, so it remains an explicitly unresolved dependency basket.",
+    "compositionBasis": "Curated snapshot aligned to the Ethena transparency categories",
+    "compositionAsOf": "2026-07-12",
+    "scope": "full-composition",
     "knownUnknownExposure": "The liquid-stables basket has identified candidate assets but no defensible constituent percentages.",
     "knownUnknownExposurePct": 76,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Liquid Stables (USDtb / USDC / USDT)",
+        "pct": 76,
         "disposition": "basket-needs-split",
         "rationale": "USDtb, USDC, and USDT are tracked, but only their combined allocation is reported.",
         "candidateCoinIds": ["usdtb-ethena", "usdc-circle", "usdt-tether"]
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Copper",
+        "role": "custodian"
+      },
+      {
+        "name": "Ceffu",
+        "role": "custodian"
+      },
+      {
+        "name": "Fireblocks",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "omnibus",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ethena off-exchange settlement",
+        "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail"
+      },
+      {
+        "label": "Ethena real-time dashboard custody notes",
+        "url": "https://docs.ethena.fi/backing-custody-and-security/real-time-dashboards"
+      }
+    ],
+    "uncertainty": "Ethena names multiple off-exchange settlement providers and states that protocol assets remain beneficially owned by the protocol, while Copper and Ceffu use commingled omnibus wallets. Provider allocation shares and contractual outcomes in each provider or exchange insolvency are not public."
   }
 }

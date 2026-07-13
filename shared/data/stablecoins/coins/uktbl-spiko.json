@@ -195,6 +195,92 @@
         "label": "Spiko UK T-Bills fund",
         "url": "https://www.spiko.io/spiko-treasury-bills-pound"
       }
+    ],
+    "routes": [
+      {
+        "id": "arbitrum:0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "protocol": "Spiko blockchain infrastructure",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "protocol": "Spiko blockchain infrastructure",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "destinationChain": "polygon",
+        "contractAddress": "0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "protocol": "Spiko blockchain infrastructure",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068",
+        "destinationChain": "base",
+        "contractAddress": "0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068",
+        "protocol": "Spiko blockchain infrastructure",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "etherlink:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "destinationChain": "etherlink",
+        "contractAddress": "0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "protocol": "Spiko blockchain infrastructure",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "starknet:0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395",
+        "destinationChain": "starknet",
+        "contractAddress": "0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395",
+        "protocol": "Spiko blockchain infrastructure",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "stellar:CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR",
+        "destinationChain": "stellar",
+        "contractAddress": "CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR",
+        "protocol": "Spiko blockchain infrastructure",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

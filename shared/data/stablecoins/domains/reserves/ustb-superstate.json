@@ -1,0 +1,61 @@
+{
+  "id": "ustb-superstate",
+  "reserves": [
+    {
+      "name": "Short-duration U.S. Treasury bills",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Superstate USTB holdings",
+        "url": "https://superstate.com/assets/ustb"
+      },
+      {
+        "label": "Superstate USTB documentation",
+        "url": "https://docs.superstate.com/superstate-funds/ustb"
+      }
+    ],
+    "rationale": "Superstate publishes the fund's Treasury-bill holdings and daily liquidity. The curated slice records the complete asset class without converting weighted-average maturity into an unsupported maximum maturity.",
+    "compositionBasis": "Superstate public USTB holdings and fund mandate",
+    "compositionAsOf": "2026-07-09",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material unclassified reserve exposure is present in the reviewed holdings.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Superstate USTB service providers",
+        "url": "https://superstate.com/assets/ustb"
+      },
+      {
+        "label": "Superstate USTB documentation",
+        "url": "https://docs.superstate.com/superstate-funds/ustb"
+      }
+    ],
+    "uncertainty": "Superstate identifies BNY Mellon as custodian and USTB as a series of a Delaware Statutory Trust. The public pages reviewed do not establish the account segregation or rehypothecation terms, so those safeguards remain unknown."
+  }
+}

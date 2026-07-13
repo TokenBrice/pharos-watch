@@ -96,7 +96,10 @@
         "name": "LayerZero OFT (verified contract source)",
         "slug": "layerzero",
         "url": "https://etherscan.io/address/0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c#code",
-        "bridgeTypes": ["external-validated-network", "oft-burn-mint"],
+        "bridgeTypes": [
+          "external-validated-network",
+          "oft-burn-mint"
+        ],
         "note": "DebtToken imports @layerzerolabs/oft-evm/contracts/OFT.sol and inherits OFT; constructor takes _layerZeroEndpoint + _delegate; send/quoteSend/lzReceive/setPeer present; mint/burn (regular OFT, not Adapter)."
       }
     ],
@@ -117,12 +120,88 @@
         "label": "RootData - BIMA described as omni-chain stablecoin protocol",
         "url": "https://www.rootdata.com/Projects/detail/BIMA"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "LayerZero OFT (verified contract source)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "destinationChain": "hemi",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "LayerZero OFT (verified contract source)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "destinationChain": "plume",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "LayerZero OFT (verified contract source)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "destinationChain": "sonic",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "LayerZero OFT (verified contract source)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "destinationChain": "bsc",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "LayerZero OFT (verified contract source)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "destinationChain": "nibiru",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "LayerZero OFT (verified contract source)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      }
     ]
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
-  "infrastructures": ["liquity-v1"],
+  "infrastructures": [
+    "liquity-v1"
+  ],
   "reserves": [
     {
       "name": "Bitcoin LSTs / LRTs and approved BTC wrappers",

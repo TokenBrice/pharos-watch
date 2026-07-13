@@ -95,6 +95,7 @@
     "mintIncidents": [
       {
         "date": "2022-04-02",
+        "status": "resolved",
         "summary": "Inverse Finance's Anchor/Frontier oracle-manipulation incident let an attacker borrow and withdraw DOLA against manipulated collateral, leaving bad debt through the stablecoin issuance route.",
         "sources": [
           {
@@ -233,6 +234,80 @@
       {
         "label": "Chainlink bridge-risk docs",
         "url": "https://docs.chain.link/resources/bridge-risks"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x865377367054516e17014ccded1e7d814edc9ce4",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x865377367054516e17014ccded1e7d814edc9ce4",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x6a7661795c374c0bfc635934efaddff3a7ee23b6",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x6a7661795c374c0bfc635934efaddff3a7ee23b6",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x4621b7a9c75199271f773ebd9a499dbd165c3191",
+        "destinationChain": "base",
+        "contractAddress": "0x4621b7a9c75199271f773ebd9a499dbd165c3191",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "optimism:0x8ae125e8653821e851f12a49f7765db9a9ce7384",
+        "destinationChain": "optimism",
+        "contractAddress": "0x8ae125e8653821e851f12a49f7765db9a9ce7384",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "fantom:0x3129662808bec728a27ab6a6b9afd3cbaca8a43c",
+        "destinationChain": "fantom",
+        "contractAddress": "0x3129662808bec728a27ab6a6b9afd3cbaca8a43c",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840",
+        "destinationChain": "bsc",
+        "contractAddress": "0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   }

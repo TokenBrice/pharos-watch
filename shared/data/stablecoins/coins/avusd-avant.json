@@ -58,6 +58,80 @@
         "label": "Chainlink CCIP docs",
         "url": "https://docs.chain.link/ccip"
       }
+    ],
+    "routes": [
+      {
+        "id": "avalanche:0x24de8771bc5ddb3362db529fc3358f2df3a0e346",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x24de8771bc5ddb3362db529fc3358f2df3a0e346",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "ethereum:0xf4c13d631450de6b12a19829e37c8e2826891dc4",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xf4c13d631450de6b12a19829e37c8e2826891dc4",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "linea:0x37c44fc08e403efc0946c0623cb1164a52ce1576",
+        "destinationChain": "linea",
+        "contractAddress": "0x37c44fc08e403efc0946c0623cb1164a52ce1576",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "berachain:0xbca138ded469f5063589bfdfdd4bc68eb1c3f252",
+        "destinationChain": "berachain",
+        "contractAddress": "0xbca138ded469f5063589bfdfdd4bc68eb1c3f252",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x3af90fda10fc6509df55e959548b1ed3bc3cfa00",
+        "destinationChain": "base",
+        "contractAddress": "0x3af90fda10fc6509df55e959548b1ed3bc3cfa00",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "monad:0x0d9d741fe423cd5419e4bcb6cb2ffa87afa93ba4",
+        "destinationChain": "monad",
+        "contractAddress": "0x0d9d741fe423cd5419e4bcb6cb2ffa87afa93ba4",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "links": [
@@ -292,5 +366,18 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "launchDate": "2024-11-15"
+  "launchDate": "2024-11-15",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "avUSD is a non-yielding, 1:1-redeemable USDC reserve receipt; the managed strategies sit behind separate staked tranches.",
+    "sources": [
+      {
+        "label": "Avant protocol docs",
+        "url": "https://docs.avantprotocol.com/"
+      }
+    ]
+  }
 }

@@ -195,6 +195,80 @@
         "label": "L2BEAT CCTP v2",
         "url": "https://l2beat.com/interop/protocols/cctpv2"
       }
+    ],
+    "routes": [
+      {
+        "id": "sonic:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "sonic",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "ethereum:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "base:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "base",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "optimism:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "optimism",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "scroll:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "scroll",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      }
     ]
   },
   "collateralQuality": "rwa",

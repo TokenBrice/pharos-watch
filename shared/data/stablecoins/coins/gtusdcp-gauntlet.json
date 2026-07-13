@@ -197,6 +197,44 @@
         "label": "Across developer docs",
         "url": "https://docs.across.to/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
+        "destinationChain": "base",
+        "contractAddress": "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   }
 }

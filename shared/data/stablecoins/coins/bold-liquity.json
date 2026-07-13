@@ -48,8 +48,41 @@
         ],
         "sources": [
           {
-            "label": "Liquity BOLD contract docs",
+            "label": "Liquity V2 contracts and mainnet addresses",
             "url": "https://github.com/liquity/bold/"
+          },
+          {
+            "label": "Liquity V2 borrowing and liquidations",
+            "url": "https://docs.liquity.org/v2-faq/borrowing-and-liquidations"
+          },
+          {
+            "label": "Liquity V2 risk disclosure",
+            "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+          }
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25520150,
+        "liquidationMechanism": "Immediate Stability Pool offset, then permissionless just-in-time liquidation or same-branch redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Each branch has a dedicated Stability Pool; uncovered debt can use just-in-time BOLD or same-branch redistribution.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or a low branch collateral ratio permanently shuts that branch and enables urgent redemptions; residual unbacked debt remains a risk to all BOLD holders.",
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "ETH / USD push oracle",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "stalenessBoundSec": 86400
+          }
+        ],
+        "fallbackBehavior": "An invalid or stale ETH/USD response shuts the WETH branch down and the price feed returns its last good price.",
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 90.91,
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 110
           }
         ]
       },
@@ -66,8 +99,55 @@
         ],
         "sources": [
           {
+            "label": "Liquity V2 contracts and mainnet addresses",
+            "url": "https://github.com/liquity/bold/"
+          },
+          {
+            "label": "Liquity V2 borrowing and liquidations",
+            "url": "https://docs.liquity.org/v2-faq/borrowing-and-liquidations"
+          },
+          {
             "label": "Liquity V2 risk disclosure",
             "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+          }
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25520150,
+        "liquidationMechanism": "Immediate Stability Pool offset, then permissionless just-in-time liquidation or same-branch redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Each branch has a dedicated Stability Pool; uncovered debt can use just-in-time BOLD or same-branch redistribution.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or a low branch collateral ratio permanently shuts that branch and enables urgent redemptions; residual unbacked debt remains a risk to all BOLD holders.",
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "stETH / USD push oracle multiplied by the wstETH / stETH exchange rate",
+            "address": "0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "stalenessBoundSec": 86400
+          },
+          {
+            "provider": "Chainlink",
+            "path": "ETH / USD push oracle",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "stalenessBoundSec": 86400
+          },
+          {
+            "provider": "Lido",
+            "path": "wstETH / stETH canonical exchange rate",
+            "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "chain": "ethereum"
+          }
+        ],
+        "fallbackBehavior": "A failed stETH/USD feed substitutes ETH/USD times the canonical wstETH rate and takes the minimum with lastGoodPrice; ETH/USD or canonical-rate failure uses lastGoodPrice and shuts the branch.",
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "maximumLtvPct": 83.33,
+            "minimumCollateralRatioPct": 120,
+            "shutdownCollateralRatioPct": 120
           }
         ]
       },
@@ -84,12 +164,60 @@
         ],
         "sources": [
           {
+            "label": "Liquity V2 contracts and mainnet addresses",
+            "url": "https://github.com/liquity/bold/"
+          },
+          {
+            "label": "Liquity V2 borrowing and liquidations",
+            "url": "https://docs.liquity.org/v2-faq/borrowing-and-liquidations"
+          },
+          {
             "label": "Liquity V2 risk disclosure",
             "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
           }
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25520150,
+        "liquidationMechanism": "Immediate Stability Pool offset, then permissionless just-in-time liquidation or same-branch redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Each branch has a dedicated Stability Pool; uncovered debt can use just-in-time BOLD or same-branch redistribution.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or a low branch collateral ratio permanently shuts that branch and enables urgent redemptions; residual unbacked debt remains a risk to all BOLD holders.",
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "rETH / ETH push oracle multiplied by ETH / USD",
+            "address": "0x536218f9E9Eb48863970252233c8F271f554C2d0",
+            "chain": "ethereum",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 172800
+          },
+          {
+            "provider": "Chainlink",
+            "path": "ETH / USD push oracle",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "stalenessBoundSec": 86400
+          },
+          {
+            "provider": "Rocket Pool",
+            "path": "rETH / ETH canonical exchange rate used as a bound and fallback",
+            "address": "0xae78736Cd615f374D3085123A210448E74Fc6393",
+            "chain": "ethereum"
+          }
+        ],
+        "fallbackBehavior": "A failed rETH/ETH market feed substitutes the canonical rETH exchange rate and takes the minimum with lastGoodPrice; ETH/USD or canonical-rate failure uses lastGoodPrice and shuts the branch.",
+        "collateralParameters": [
+          {
+            "asset": "rETH",
+            "maximumLtvPct": 83.33,
+            "minimumCollateralRatioPct": 120,
+            "shutdownCollateralRatioPct": 120
+          }
         ]
       }
-    ]
+    ],
+    "branchModel": "multi-branch"
   },
   "links": [
     {
@@ -225,6 +353,92 @@
       {
         "label": "Chainlink CCIP architecture",
         "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x6440f144b7e50d6a8439336510312d2f54beb01d",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "destinationChain": "base",
+        "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "optimism:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "destinationChain": "optimism",
+        "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "hyperevm:0x84533b1512a3a23f0c9668d88fdf86feffdbb11a",
+        "destinationChain": "hyperevm",
+        "contractAddress": "0x84533b1512a3a23f0c9668d88fdf86feffdbb11a",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "sonic:0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
+        "destinationChain": "sonic",
+        "contractAddress": "0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },

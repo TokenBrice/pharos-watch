@@ -154,6 +154,44 @@
         "label": "M0 mUSD repository",
         "url": "https://github.com/m0-foundation/mUSD"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xaca92e438df0b2401ff60da7e4337b687a2435da",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "linea:0xaca92e438df0b2401ff60da7e4337b687a2435da",
+        "destinationChain": "linea",
+        "contractAddress": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "monad:0xaca92e438df0b2401ff60da7e4337b687a2435da",
+        "destinationChain": "monad",
+        "contractAddress": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-regulated",

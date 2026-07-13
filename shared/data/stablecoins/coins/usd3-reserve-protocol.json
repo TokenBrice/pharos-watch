@@ -70,6 +70,32 @@
         "label": "USD3 transparency",
         "url": "https://api.reserve.org/discover/dtfs"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x0d86883faf4ffd7aeb116390af37746f45b6f378",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x0d86883faf4ffd7aeb116390af37746f45b6f378",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xefb97aaf77993922ac4be4da8fbc9a2425322677",
+        "destinationChain": "base",
+        "contractAddress": "0xefb97aaf77993922ac4be4da8fbc9a2425322677",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "governanceQuality": "dao-governance",
@@ -235,5 +261,22 @@
       ]
     }
   },
-  "launchDate": "2024-04-03"
+  "launchDate": "2024-04-03",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "USD3 is a redeemable Reserve Protocol basket token backed by dollar-stablecoin and lending-vault positions with RSR first-loss capital.",
+    "sources": [
+      {
+        "label": "Reserve Protocol docs",
+        "url": "https://docs.reserve.org/"
+      },
+      {
+        "label": "Reserve DTF transparency API",
+        "url": "https://api.reserve.org/discover/dtfs"
+      }
+    ]
+  }
 }

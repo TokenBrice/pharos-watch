@@ -56,6 +56,7 @@
       {
         "reserveIndex": 0,
         "reserveName": "Stablecoins (PSM)",
+        "pct": 38,
         "disposition": "basket-needs-split",
         "rationale": "The published group combines several PSM assets without per-asset weights.",
         "candidateCoinIds": ["usdc-circle", "usdt-tether", "usdp-paxos"]

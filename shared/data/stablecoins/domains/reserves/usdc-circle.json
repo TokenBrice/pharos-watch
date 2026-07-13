@@ -2,19 +2,84 @@
   "id": "usdc-circle",
   "reserves": [
     {
-      "name": "U.S. Treasuries",
-      "pct": 75,
-      "risk": "very-low"
+      "name": "U.S. Treasury securities",
+      "pct": 29.04,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 83
     },
     {
-      "name": "Overnight Repos",
-      "pct": 18,
-      "risk": "very-low"
+      "name": "Overnight U.S. Treasury repurchase agreements",
+      "pct": 59.46,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "Global financial institutions",
+      "riskFactors": ["counterparty", "liquidity", "custody"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
     },
     {
-      "name": "Cash Deposits",
-      "pct": 7,
-      "risk": "very-low"
+      "name": "Cash and net settlement balances",
+      "pct": 11.5,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Regulated financial institutions",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
     }
-  ]
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Deloitte USDC examination report - May 2026",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
+      },
+      {
+        "label": "Circle transparency",
+        "url": "https://www.circle.com/transparency"
+      }
+    ],
+    "rationale": "The May 29 examination report provides holdings and total reserve assets. Percentages normalize the report's Treasury, overnight-repo, and net cash/settlement balances to total reserve assets.",
+    "compositionBasis": "Deloitte examination of Circle's USDC Reserve Report at May 29, 2026",
+    "compositionAsOf": "2026-05-29",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material unclassified reserve exposure is present in the examined report; individual bank and repo counterparties are not named.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Systemically important and other regulated banks (not individually disclosed)",
+        "role": "bank"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Deloitte USDC examination report - May 2026",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
+      },
+      {
+        "label": "Circle reserve management",
+        "url": "https://www.circle.com/transparency"
+      }
+    ],
+    "uncertainty": "Circle identifies BNY Mellon for the majority fund custody and describes remaining cash at regulated banks, but does not publish provider-level reserve shares or every bank name. Segregated-account language is explicit; statutory bankruptcy remoteness and rehypothecation terms were not established in the reviewed public sources."
+  }
 }

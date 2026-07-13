@@ -158,6 +158,32 @@
         "label": "APYX dashboard",
         "url": "https://accountable.apyx.fi/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa",
+        "destinationChain": "base",
+        "contractAddress": "0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

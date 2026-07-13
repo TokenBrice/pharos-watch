@@ -107,6 +107,44 @@
         "label": "Across on L2BEAT",
         "url": "https://l2beat.com/interop/protocols/across"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "etherlink:0x733d504435a49fc8c4e9759e756c2846c92f0160",
+        "destinationChain": "etherlink",
+        "contractAddress": "0x733d504435a49fc8c4e9759e756c2846c92f0160",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
+        "destinationChain": "starknet",
+        "contractAddress": "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "exotic",
@@ -295,5 +333,17 @@
       ]
     }
   },
-  "launchDate": "2025-02-06"
+  "launchDate": "2025-02-06",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "The reviewed multi-strategy DeFi NAV fund mixes lending, liquidity, restaking, funding-rate, and options strategies; none of the six archetypes represents that mechanism without implying a narrower backing model.",
+    "sources": [
+      {
+        "label": "Midas docs",
+        "url": "https://docs.midas.app/"
+      }
+    ]
+  }
 }

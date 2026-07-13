@@ -61,6 +61,131 @@
   "collateralQuality": "native",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
+  "mintAuthority": {
+    "mintPath": "amo-or-custodian-hybrid",
+    "authorityPosture": "bounded-admin",
+    "confidence": "verified",
+    "summary": "Users mint USDM 1:1 by depositing USDC into MonetrixVault. The token only accepts mint calls from that vault, while a reviewed 48-hour timelock holds the ACL upgrader role and can replace UUPS mint-critical implementations.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": ["0xe2d2959f89b6389deb624bf076fe7d9e5401f377"],
+      "implementationAddresses": ["0x05faf9cfa7143804e7fb0db423fde8330cd586df"],
+      "adminAddresses": ["0xDe54E1F99752062ef448Dcc6C7636f90214C789e"],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Monetrix 48-hour upgrade timelock",
+      "observedAt": "2026-07-13",
+      "observedBlock": 40308120,
+      "sources": [
+        {
+          "label": "Monetrix contracts",
+          "url": "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts"
+        },
+        {
+          "label": "USDM proxy on HyperEVM explorer",
+          "url": "https://hyperevmscan.io/address/0xe2d2959f89b6389deb624bf076fe7d9e5401f377"
+        },
+        {
+          "label": "Monetrix ACL on HyperEVM explorer",
+          "url": "https://hyperevmscan.io/address/0x301024E319191495146AB3627fe3Fc1FfE586595"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "hyperevm",
+        "address": "0x5586c2c8223C73Ec0B41D6352748e6c173372E11",
+        "label": "MonetrixVault deposit and mint contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "User deposits are bounded by the live minimum, per-transaction maximum, and protocol TVL cap in MonetrixConfig.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 40308120,
+        "failureDomainKeys": ["operator:monetrix-protocol"],
+        "sources": [
+          {
+            "label": "Monetrix mint guide",
+            "url": "https://doc.monetrix.xyz/guide/mint"
+          },
+          {
+            "label": "Monetrix contracts",
+            "url": "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts"
+          }
+        ],
+        "evidence": "Monetrix documents MonetrixVault.deposit(amount) as the user mint path. At HyperEVM block 40308120, USDM vault() resolves to this reviewed contract."
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0xDe54E1F99752062ef448Dcc6C7636f90214C789e",
+        "label": "Monetrix 48-hour upgrade timelock",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 40308120,
+        "failureDomainKeys": ["operator:monetrix-governance"],
+        "sources": [
+          {
+            "label": "Monetrix contracts",
+            "url": "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts"
+          },
+          {
+            "label": "Monetrix ACL on HyperEVM explorer",
+            "url": "https://hyperevmscan.io/address/0x301024E319191495146AB3627fe3Fc1FfE586595"
+          }
+        ],
+        "evidence": "At block 40308120, the Monetrix ACL reports this timelock holds UPGRADER and the timelock reports getMinDelay() = 172800 seconds. USDM's UUPS authorization checks that ACL role."
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0x6f00b0Fbc805a8319b4837BB152F4FE700A329BF",
+        "label": "Monetrix 24-hour governor timelock",
+        "role": "governor",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 40308120,
+        "failureDomainKeys": ["operator:monetrix-governance"],
+        "sources": [
+          {
+            "label": "Monetrix contracts",
+            "url": "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts"
+          }
+        ],
+        "evidence": "At block 40308120, the Monetrix ACL reports this timelock holds GOVERNOR and the timelock reports getMinDelay() = 86400 seconds."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Monetrix architecture",
+          "url": "https://doc.monetrix.xyz/how-it-works/architecture"
+        },
+        {
+          "label": "Monetrix mint guide",
+          "url": "https://doc.monetrix.xyz/guide/mint"
+        },
+        {
+          "label": "Monetrix contracts",
+          "url": "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts"
+        },
+        {
+          "label": "USDM proxy on HyperEVM explorer",
+          "url": "https://hyperevmscan.io/address/0xe2d2959f89b6389deb624bf076fe7d9e5401f377"
+        }
+      ],
+      "evidence": "Primary docs identify the user deposit path and deployed contracts. HyperEVM reads at block 40308120 confirm the USDM UUPS implementation, vault address, central ACL, the 24-hour GOVERNOR timelock, and the 48-hour UPGRADER timelock.",
+      "reviewer": "Pharos P7 control review",
+      "reviewedAt": "2026-07-13",
+      "disposition": "scoreable"
+    }
+  },
   "reserves": [
     {
       "name": "USDC reserves",

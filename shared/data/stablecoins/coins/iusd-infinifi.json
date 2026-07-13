@@ -264,18 +264,21 @@
       {
         "reserveIndex": 0,
         "reserveName": "Fasanara Capital (mGLOBAL + Genesis, private credit illiquid)",
+        "pct": 21,
         "disposition": "untracked-exogenous-asset",
         "rationale": "This is an external private-credit strategy rather than a tracked stablecoin reserve claim."
       },
       {
         "reserveIndex": 6,
         "reserveName": "AutoUSD (illiquid yield strategy)",
+        "pct": 5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The adapter label identifies a Tokemak strategy and is not evidence for the separately tracked Auto Finance asset."
       },
       {
         "reserveIndex": 9,
         "reserveName": "Aave Horizon USDC/RLUSD (institutional pools)",
+        "pct": 2,
         "disposition": "basket-needs-split",
         "rationale": "USDC and RLUSD are tracked, but the combined pool allocation has no constituent split.",
         "candidateCoinIds": ["usdc-circle", "rlusd-ripple"]

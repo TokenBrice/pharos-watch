@@ -214,6 +214,56 @@
         "label": "OpenEden app TBILL vault",
         "url": "https://app.openeden.com/tbill?chain=xrpl"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0xf84d28a8d28292842dd73d1c5f99476a80b6666a",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xf84d28a8d28292842dd73d1c5f99476a80b6666a",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6",
+        "destinationChain": "solana",
+        "contractAddress": "4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "xrpl:TBL.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn",
+        "destinationChain": "xrpl",
+        "contractAddress": "TBL.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "custodyModel": "institutional-top",

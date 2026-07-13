@@ -110,6 +110,18 @@
       "unresolvedQuestions": [
         "ICP chain has no accessible EVM-compatible keyless RPC; confirming live SNS controller state, GLDT swap canister principal, and ledger canister minting rights requires ICP-native tooling (dfx CLI or ic-agent querying the NNS/SNS canister at canister ID 6c7su-kiaaa-aaaar-qaira-cai). EVM bridge contracts on Ethereum/Base/Arbitrum are the bridged representations; native issuance verification is blocked."
       ]
+    },
+    "upgradeability": {
+      "model": "custom",
+      "canChangeMintLogic": true,
+      "controlRef": "Gold DAO SNS governance (canister controller)",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Gold DAO key canisters",
+          "url": "https://docs.gold-dao.org/other/key-canisters"
+        }
+      ]
     }
   },
   "launchDate": "2024-10-30"

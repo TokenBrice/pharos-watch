@@ -206,6 +206,32 @@
         "label": "M0 bridging docs",
         "url": "https://docs.m0.org/build/bridging-user"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xd48e565561416de59da1050ed70b8d75e8ef28f9",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
+        "protocol": "M0 bridge portals",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9",
+        "destinationChain": "fluent",
+        "contractAddress": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
+        "protocol": "M0 bridge portals",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "chainTier": "ethereum",

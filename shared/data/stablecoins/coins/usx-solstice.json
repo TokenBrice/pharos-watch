@@ -122,6 +122,34 @@
       "evidence": "At Solana slot 425778559: mint authority Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4 (program-owned account) confirmed as direct-minter; program upgrade authority BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb confirmed as funded EOA (owner: System Program, not executable, 8M lamports). All mint-capable controls are issuer-operated EOA/program-owned — consistent with centralized-dependent permissioned-minter model.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "custom",
+      "adminAddresses": [
+        "BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Solstice USX program upgrade authority (EOA)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 425778559,
+      "sources": [
+        {
+          "label": "Solstice USX program",
+          "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Solstice USX",
+          "url": "https://solstice.finance/usx"
+        },
+        {
+          "label": "USX Solscan token",
+          "url": "https://solscan.io/token/6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG"
+        }
+      ]
     }
   },
   "chainTier": "mature-alt-l1",
@@ -169,5 +197,18 @@
       "message": "USX traded as low as roughly $0.10 on Orca during a December 2025 thin-liquidity event. Solstice documents institutional/KYC redemption, so retail holders without direct redemption access depend on secondary-market liquidity during stress."
     }
   ],
-  "launchDate": "2025-09-30"
+  "launchDate": "2025-09-30",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "USX is issued against deposited USDC and USDT reserves; oracle monitoring does not turn the reserve receipt into a CDP.",
+    "sources": [
+      {
+        "label": "Solstice USX docs",
+        "url": "https://docs.solstice.finance/usx"
+      }
+    ]
+  }
 }

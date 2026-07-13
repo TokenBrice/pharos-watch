@@ -39,6 +39,56 @@
         "label": "SG-FORGE CoinVertible",
         "url": "https://www.sgforge.com/product/coinvertible/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x5f7827fdeb7c20b443265fc2f40845b715385ff2",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x5f7827fdeb7c20b443265fc2f40845b715385ff2",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "xrpl:4555524356000000000000000000000000000000.rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL",
+        "destinationChain": "xrpl",
+        "contractAddress": "4555524356000000000000000000000000000000.rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "stellar:GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G",
+        "destinationChain": "stellar",
+        "contractAddress": "GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52",
+        "destinationChain": "solana",
+        "contractAddress": "DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "links": [

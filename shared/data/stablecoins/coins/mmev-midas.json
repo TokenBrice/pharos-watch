@@ -100,6 +100,44 @@
         "label": "Midas docs",
         "url": "https://docs.midas.app/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plume:0x7d611dc23267f508de90724731dc88ca28ef7473",
+        "destinationChain": "plume",
+        "contractAddress": "0x7d611dc23267f508de90724731dc88ca28ef7473",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "etherlink:0x5542f82389b76c23f5848268893234d8a63fd5c8",
+        "destinationChain": "etherlink",
+        "contractAddress": "0x5542f82389b76c23f5848268893234d8a63fd5c8",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "native",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "exotic",
@@ -285,5 +323,21 @@
       ]
     }
   },
-  "launchDate": "2025-02-04"
+  "launchDate": "2025-02-04",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "The reviewed managed DeFi NAV fund combines lending, liquidity, arbitrage, carry, and liquidation strategies; none of the six archetypes represents that mechanism without implying a narrower backing model.",
+    "sources": [
+      {
+        "label": "Midas docs",
+        "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "Midas risk disclosures",
+        "url": "https://docs.midas.app/legal/investment-risks-1-0-1"
+      }
+    ]
+  }
 }

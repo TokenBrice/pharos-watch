@@ -77,6 +77,56 @@
         "label": "L2BEAT Avalanche Bridge",
         "url": "https://l2beat.com/interop/protocols/avalanche"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "destinationChain": "polygon",
+        "contractAddress": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "destinationChain": "avalanche",
+        "contractAddress": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "klaytn:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "destinationChain": "klaytn",
+        "contractAddress": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "blacklistabilityReview": {

@@ -143,6 +143,26 @@
       "unresolvedQuestions": [
         "EUR0_MINT role holder(s) on RegistryAccess (0x65771978ff9238162a41c77384c9f55c1ec9e9ab) cannot be enumerated without scanning constructor arguments or off-chain indexing — the direct minter contract address is unknown, blocking full verification."
       ]
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0xd0faE00123a2E778c078c2691C6cB81a9DB08577"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "EUR0 ProxyAdmin (owned by Usual 8/15 Safe)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295183,
+      "sources": [
+        {
+          "label": "Ethereum EUR0 token",
+          "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
+        },
+        {
+          "label": "Usual EUR0 docs",
+          "url": "https://tech.usual.money/overview/features/eur0"
+        }
+      ]
     }
   },
   "reserves": [

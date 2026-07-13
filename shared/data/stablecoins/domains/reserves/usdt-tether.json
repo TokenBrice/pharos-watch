@@ -2,24 +2,147 @@
   "id": "usdt-tether",
   "reserves": [
     {
-      "name": "U.S. Treasury bill exposure",
-      "pct": 73.5,
-      "risk": "very-low"
+      "name": "U.S. Treasury bills",
+      "pct": 61.03,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
-      "name": "Physical gold",
-      "pct": 10.4,
-      "risk": "medium"
+      "name": "Overnight reverse repurchase agreements",
+      "pct": 10.08,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "Undisclosed reverse-repo counterparties",
+      "riskFactors": ["counterparty", "liquidity", "custody"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
+    },
+    {
+      "name": "Term reverse repurchase agreements",
+      "pct": 2.47,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "Undisclosed reverse-repo counterparties",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Cash and bank deposits",
+      "pct": 0.06,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed banking counterparties",
+      "riskFactors": ["counterparty", "custody"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Precious metals",
+      "pct": 10.34,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Physical gold inventory",
+      "riskFactors": ["market", "custody", "liquidity"],
+      "liquidityHorizon": "seven-days"
     },
     {
       "name": "Bitcoin",
-      "pct": 3.7,
-      "risk": "high"
+      "pct": 3.45,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "riskFactors": ["market", "custody", "liquidity"],
+      "liquidityHorizon": "seven-days"
     },
     {
-      "name": "Other reserve assets and excess buffer",
-      "pct": 12.4,
-      "risk": "medium"
+      "name": "Public equities",
+      "pct": 1.78,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed public-equity issuers",
+      "riskFactors": ["market", "liquidity", "concentration", "custody"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Other investments",
+      "pct": 2.53,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed",
+      "riskFactors": ["credit", "market", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Secured loans",
+      "pct": 8.25,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Undisclosed third-party borrowers",
+      "riskFactors": ["credit", "liquidity", "counterparty", "concentration"],
+      "liquidityHorizon": "over-seven-days"
     }
-  ]
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tether Q1 2026 reports and reserves",
+        "url": "https://tether.to/transparency/?tab=reports"
+      }
+    ],
+    "rationale": "The Q1 2026 issuer report supplies the top-level reserve categories and the cash-equivalent subcategory percentages. The subcategory weights are multiplied by their 73.64% parent share; opaque investment, equity, and loan constituents remain explicit unknowns.",
+    "compositionBasis": "Tether Financial Figures and Reserves Report as of March 31, 2026",
+    "compositionAsOf": "2026-03-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Public-equity issuers, other investments, and secured-loan obligors are not identified in the public reserve report.",
+    "knownUnknownExposurePct": 12.56,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 6,
+        "reserveName": "Public equities",
+        "pct": 1.78,
+        "disposition": "insufficient-evidence",
+        "rationale": "The report gives only the aggregate public-equity category, without issuer positions."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "Other investments",
+        "pct": 2.53,
+        "disposition": "insufficient-evidence",
+        "rationale": "The report does not disclose the assets inside this category."
+      },
+      {
+        "reserveIndex": 8,
+        "reserveName": "Secured loans",
+        "pct": 8.25,
+        "disposition": "insufficient-evidence",
+        "rationale": "The report states that loans are not to affiliates but does not identify borrowers or positions."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Reserve custodians and counterparties (not publicly identified)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Tether Q1 2026 reports and reserves",
+        "url": "https://tether.to/transparency/?tab=reports"
+      }
+    ],
+    "uncertainty": "The public report identifies asset categories and counterparties only in aggregate; custodian names, provider shares, legal segregation, and reuse restrictions are not disclosed.",
+    "knownUnknownExposurePct": 100
+  }
 }

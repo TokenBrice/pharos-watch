@@ -143,7 +143,9 @@
         "name": "Snowtrace verified source - StableCoin (GRAMS) with ExternallyTransferable burn/mint",
         "slug": "snowtrace-grams",
         "url": "https://snowtrace.io/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
-        "bridgeTypes": ["issuer-native-burn-mint"],
+        "bridgeTypes": [
+          "issuer-native-burn-mint"
+        ],
         "note": "externalTransfer() burns on source, externalTransferFrom() mints on destination, both onlySupplyManager whenNotPaused; no third-party bridge protocol"
       },
       {
@@ -151,7 +153,9 @@
         "name": "PolygonScan verified source - StableCoin (GRAMS), exact match, identical address",
         "slug": "polygonscan-grams",
         "url": "https://polygonscan.com/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
-        "bridgeTypes": ["issuer-native-burn-mint"],
+        "bridgeTypes": [
+          "issuer-native-burn-mint"
+        ],
         "note": "Same StableCoin contract as Avalanche; verified exact source match"
       },
       {
@@ -159,7 +163,9 @@
         "name": "Token Teknoloji - Gram Silver (GRAMS) reserve token page",
         "slug": "token-teknoloji-grams",
         "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/",
-        "bridgeTypes": ["issuer-native-burn-mint"],
+        "bridgeTypes": [
+          "issuer-native-burn-mint"
+        ],
         "note": "Lists separate ETH/AVAX/Polygon contracts; describes issuer mint-and-burn against reserves; no bridge or omnichain standard documented"
       }
     ],
@@ -175,6 +181,32 @@
       {
         "label": "Token Teknoloji - Gram Silver (GRAMS) issuer page",
         "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "avalanche:0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "protocol": "Snowtrace verified source - StableCoin (GRAMS) with ExternallyTransferable burn/mint",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "polygon:0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "destinationChain": "polygon",
+        "contractAddress": "0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "protocol": "Snowtrace verified source - StableCoin (GRAMS) with ExternallyTransferable burn/mint",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
       }
     ]
   },

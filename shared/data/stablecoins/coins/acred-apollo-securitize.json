@@ -177,6 +177,80 @@
         "label": "Wormhole Securitize case study",
         "url": "https://wormhole.com/case-studies/securitize"
       }
+    ],
+    "routes": [
+      {
+        "id": "aptos:0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88",
+        "destinationChain": "aptos",
+        "contractAddress": "0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88",
+        "protocol": "Wormhole / Securitize interoperability",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0x7c64925002bfa705834b118a923e9911bee32875",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x7c64925002bfa705834b118a923e9911bee32875",
+        "protocol": "Wormhole / Securitize interoperability",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "ethereum:0x17418038ecf73ba4026c4f428547bf099706f27b",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+        "protocol": "Wormhole / Securitize interoperability",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "ink:0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3",
+        "destinationChain": "ink",
+        "contractAddress": "0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3",
+        "protocol": "Wormhole / Securitize interoperability",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0xfce60bbc52a5705cec5b445501fbaf3274dc43d0",
+        "destinationChain": "polygon",
+        "contractAddress": "0xfce60bbc52a5705cec5b445501fbaf3274dc43d0",
+        "protocol": "Wormhole / Securitize interoperability",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8",
+        "destinationChain": "solana",
+        "contractAddress": "FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8",
+        "protocol": "Wormhole / Securitize interoperability",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

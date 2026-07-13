@@ -244,5 +244,17 @@
       ]
     }
   },
-  "launchDate": "2025-07-15"
+  "launchDate": "2025-07-15",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "The reviewed managed crypto-yield NAV fund does not disclose a stable strategy mix that fits one of the six archetypes without overstating the evidence.",
+    "sources": [
+      {
+        "label": "Midas smart-contract docs",
+        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+      }
+    ]
+  }
 }

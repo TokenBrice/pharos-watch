@@ -50,6 +50,32 @@
         "label": "GRAMG Avalanche contract source",
         "url": "https://snowtrace.io/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
       }
+    ],
+    "routes": [
+      {
+        "id": "avalanche:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "destinationChain": "avalanche",
+        "contractAddress": "0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "protocol": "Token Teknoloji StableCoin externalTransfer route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "polygon:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "destinationChain": "polygon",
+        "contractAddress": "0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "protocol": "Token Teknoloji StableCoin externalTransfer route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      }
     ]
   },
   "links": [

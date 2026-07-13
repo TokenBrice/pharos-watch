@@ -32,6 +32,32 @@
         "label": "Nest website",
         "url": "https://www.nest.credit/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plume:0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+        "destinationChain": "plume",
+        "contractAddress": "0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "links": [

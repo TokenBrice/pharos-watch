@@ -89,13 +89,6 @@
       "coinId": "usdc-circle"
     }
   ],
-  "dependencies": [
-    {
-      "id": "usdc-circle",
-      "weight": 0.23,
-      "type": "collateral"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Strategy Inc. STRC dividends (BTC-backed preferred equity)",
     "yieldType": "rebase"

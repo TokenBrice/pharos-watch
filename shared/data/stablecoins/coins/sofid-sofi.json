@@ -119,6 +119,57 @@
       "decimals": 6
     }
   ],
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "SoFi Bank issues SOFID for direct withdrawal to Ethereum or Solana wallets. The issuer's current materials describe native bank-managed availability on both supported networks, not a holder-operated third-party bridge.",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Pharos P7 bridge review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "SoFi Bank and BitGo stablecoin infrastructure",
+        "url": "https://www.sofi.com/crypto/sofiusd/",
+        "bridgeTypes": ["nativeIssuance"]
+      }
+    ],
+    "sources": [
+      {
+        "label": "SoFiUSD product page",
+        "url": "https://www.sofi.com/crypto/sofiusd/"
+      },
+      {
+        "label": "SoFiUSD multi-chain launch announcement",
+        "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e",
+        "protocol": "SoFi Bank and BitGo stablecoin infrastructure",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-07-13"
+      },
+      {
+        "id": "solana:APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS",
+        "destinationChain": "solana",
+        "contractAddress": "APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS",
+        "protocol": "SoFi Bank and BitGo stablecoin infrastructure",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-07-13"
+      }
+    ]
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
@@ -127,6 +178,22 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "SOFID is issued by SoFi Bank, N.A. (OCC-chartered) with BitGo Bank & Trust providing Stablecoin-as-a-Service. The on-chain contract (Ethereum ERC1967 UUPS proxy) has three EOA controls operated by BitGo: DEFAULT_ADMIN, MASTER_MINTER_ROLE, and UPGRADER_ROLE. All confirmed as EOAs (no bytecode).",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": ["0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"],
+      "implementationAddresses": ["0x69edf9fa820df057e493635ed1db6b9e5f8124a0"],
+      "adminAddresses": ["0x564fd647254ec3e0bd704c463c1d4494307e88b4"],
+      "canChangeMintLogic": true,
+      "controlRef": "SOFID UPGRADER_ROLE (EOA)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295030,
+      "sources": [
+        {
+          "label": "SOFID contract on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "BitGo issuance backend (Stablecoin-as-a-Service for SoFi)",
@@ -148,7 +215,7 @@
         "authorityType": "eoa",
         "address": "0xd84519fc7137e55d37674be353379a27a9bd21fe",
         "chain": "ethereum",
-        "directMintAbility": "none",
+        "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "evidence": "At Ethereum block 25295030, owner() returned 0xd84519fc7137e55d37674be353379a27a9bd21fe; eth_getCode returned no bytecode (EOA). Confirmed has DEFAULT_ADMIN role via hasRole(). Contract is AccessControlDefaultAdminRules; owner() returns the DEFAULT_ADMIN.",
         "sources": [
@@ -180,7 +247,7 @@
         "authorityType": "eoa",
         "address": "0x564fd647254ec3e0bd704c463c1d4494307e88b4",
         "chain": "ethereum",
-        "directMintAbility": "none",
+        "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "evidence": "At Ethereum block 25295030, RoleGranted event and hasRole(UPGRADER_ROLE, 0x564fd...) returned true; eth_getCode returned no bytecode (EOA). UPGRADER_ROLE = 0xcf6f9f892731e14b8859835f2ff35575f447fb501f46243c4eb8bac19e31a050. Can upgrade the UUPS proxy implementation.",
         "sources": [

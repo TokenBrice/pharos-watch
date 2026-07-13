@@ -31,6 +31,56 @@
         "label": "Multipli unwind and peg module",
         "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xd74fb32112b1ef5b4c428fead8da8d85a0019009",
+        "destinationChain": "base",
+        "contractAddress": "0xd74fb32112b1ef5b4c428fead8da8d85a0019009",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "monad:0x650b616b46ff94000eb115926ab8393b90788d76",
+        "destinationChain": "monad",
+        "contractAddress": "0x650b616b46ff94000eb115926ab8393b90788d76",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "links": [

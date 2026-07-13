@@ -40,6 +40,32 @@
         "label": "DGLD smart-contract audits",
         "url": "https://dgld.ch/legal/smart-contract-audits"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xa9299c296d7830a99414d1e5546f5171fa01e9c8",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xa9299c296d7830a99414d1e5546f5171fa01e9c8",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-07-09"
+      },
+      {
+        "id": "base:0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a",
+        "destinationChain": "base",
+        "contractAddress": "0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-07-09"
+      }
     ]
   },
   "links": [

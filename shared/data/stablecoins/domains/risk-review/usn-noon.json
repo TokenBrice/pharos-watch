@@ -81,6 +81,56 @@
         "label": "Starknet 2025 Year in Review (Noon USN+sUSN deployed via LayerZero OFT to Starknet)",
         "url": "https://www.starknet.io/blog/starknet-2025-year-in-review/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+        "protocol": "LayerZero OFT (Omnichain Fungible Token)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36",
+        "destinationChain": "sophon",
+        "contractAddress": "0xc1aa99c3881b26901af70738a7c217dc32536d36",
+        "protocol": "LayerZero OFT (Omnichain Fungible Token)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6",
+        "destinationChain": "zksync",
+        "contractAddress": "0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6",
+        "protocol": "LayerZero OFT (Omnichain Fungible Token)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "starknet:0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b",
+        "destinationChain": "starknet",
+        "contractAddress": "0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b",
+        "protocol": "LayerZero OFT (Omnichain Fungible Token)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      }
     ]
   }
 }

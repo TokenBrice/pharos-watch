@@ -168,7 +168,9 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": ["Non-minting"]
+        "bridgeTypes": [
+          "Non-minting"
+        ]
       }
     ],
     "sources": [
@@ -179,6 +181,128 @@
       {
         "label": "L2BEAT Across",
         "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "base",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "optimism",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "sonic",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "plume",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "katana",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "bsc",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "plasma",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },
@@ -224,5 +348,17 @@
       }
     }
   },
-  "launchDate": "2025-04-28"
+  "launchDate": "2025-04-28",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "YieldFi yUSD is a managed multi-strategy yield vault and intentionally departs from its USDC accounting parent.",
+    "sources": [
+      {
+        "label": "YieldFi docs",
+        "url": "https://docs.yield.fi/"
+      }
+    ]
+  }
 }

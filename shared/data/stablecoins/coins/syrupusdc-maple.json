@@ -133,20 +133,61 @@
         "label": "CoinDesk — Maple Finance Expands to Solana With Chainlink",
         "url": "https://www.coindesk.com/business/2025/06/05/crypto-lender-maple-finance-expands-to-solana-with-chainlink"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+        "protocol": "Maple Finance — syrupUSDC Expands to Solana (CCIP native availability)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "base:0x660975730059246a68521a3e2fbd4740173100f5",
+        "destinationChain": "base",
+        "contractAddress": "0x660975730059246a68521a3e2fbd4740173100f5",
+        "protocol": "Maple Finance — syrupUSDC Expands to Solana (CCIP native availability)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "arbitrum:0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
+        "protocol": "Maple Finance — syrupUSDC Expands to Solana (CCIP native availability)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "solana:AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
+        "destinationChain": "solana",
+        "contractAddress": "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
+        "protocol": "Maple Finance — syrupUSDC Expands to Solana (CCIP native availability)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      }
     ]
   },
   "collateralQuality": "rwa",
-  "custodyModel": "onchain",
+  "custodyModel": "institutional-unregulated",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "USDC (deployed as overcollateralized institutional loans)",
-      "pct": 100,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "wrapper"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
     "version": 1,

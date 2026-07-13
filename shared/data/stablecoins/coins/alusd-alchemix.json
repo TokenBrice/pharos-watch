@@ -174,6 +174,31 @@
           "url": "https://v2-docs.alchemix.fi/resources/guides/the-transmuter-elaborated"
         }
       ]
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "canChangeMintLogic": true,
+      "controlRef": "Alchemix Gnosis Safe (ADMIN_ROLE + ProxyAdmin owner)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295217,
+      "sources": [
+        {
+          "label": "Alchemix Safe on Etherscan",
+          "url": "https://etherscan.io/address/0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9"
+        },
+        {
+          "label": "AlToken (alUSD) on Etherscan",
+          "url": "https://etherscan.io/address/0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+        },
+        {
+          "label": "Alchemix V2 Developer Docs",
+          "url": "https://alchemix-finance.gitbook.io/v2"
+        },
+        {
+          "label": "The Transmuter, Elaborated",
+          "url": "https://v2-docs.alchemix.fi/resources/guides/the-transmuter-elaborated"
+        }
+      ]
     }
   },
   "deploymentModel": "third-party-bridge",
@@ -198,6 +223,68 @@
       {
         "label": "Alchemix on L2 docs",
         "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
+        "protocol": "Everclear xERC20 lockbox",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+        "protocol": "Everclear xERC20 lockbox",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+        "destinationChain": "optimism",
+        "contractAddress": "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+        "protocol": "Everclear xERC20 lockbox",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "fantom:0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e",
+        "destinationChain": "fantom",
+        "contractAddress": "0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e",
+        "protocol": "Everclear xERC20 lockbox",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "metis:0x303241e2b3b4aed0bb0f8623e7442368fed8faf3",
+        "destinationChain": "metis",
+        "contractAddress": "0x303241e2b3b4aed0bb0f8623e7442368fed8faf3",
+        "protocol": "Everclear xERC20 lockbox",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },

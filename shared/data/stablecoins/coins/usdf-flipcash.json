@@ -137,6 +137,7 @@
     "relationships": [
       {
         "id": "usdc-circle",
+        "weight": 1,
         "type": "collateral",
         "reason": "USDC is the disclosed 1:1 backing asset for Flipcash USDF."
       }

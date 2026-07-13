@@ -170,6 +170,44 @@
         "label": "L2BEAT Celo",
         "url": "https://l2beat.com/interop/protocols/celo"
       }
+    ],
+    "routes": [
+      {
+        "id": "celo:0x765de816845861e75a25fca122bb6898b8b1282a",
+        "destinationChain": "celo",
+        "contractAddress": "0x765de816845861e75a25fca122bb6898b8b1282a",
+        "protocol": "Celo",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "near:cusd.token.a11bd.near",
+        "destinationChain": "near",
+        "contractAddress": "cusd.token.a11bd.near",
+        "protocol": "Celo",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "monad:0xbc69212b8e4d445b2307c9d32dd68e2a4df00115",
+        "destinationChain": "monad",
+        "contractAddress": "0xbc69212b8e4d445b2307c9d32dd68e2a4df00115",
+        "protocol": "Celo",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
@@ -237,14 +275,22 @@
         "pools": [
           {
             "selfTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
-            "counterAsset": { "address": "0xceba9300f2b948710d2653dd7b07f33a8b32118c", "label": "USDC" }
+            "counterAsset": {
+              "address": "0xceba9300f2b948710d2653dd7b07f33a8b32118c",
+              "label": "USDC"
+            }
           },
           {
             "selfTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
-            "counterAsset": { "address": "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e", "label": "USDT" }
+            "counterAsset": {
+              "address": "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e",
+              "label": "USDT"
+            }
           }
         ],
-        "sourceUrls": ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"]
+        "sourceUrls": [
+          "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+        ]
       }
     }
   },
@@ -320,5 +366,23 @@
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-06-18"
   },
-  "launchDate": "2020-04-22"
+  "launchDate": "2020-04-22",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "USDm remains directly backed by the shared Mento Reserve and is minted or burned as reserve-backed inventory through Mento V3.",
+    "sources": [
+      {
+        "label": "Mento V3 stable token docs",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+      },
+      {
+        "label": "Mento V3 launch",
+        "url": "https://www.mento.org/blog/mento-v3-is-here-onchain-fx-built-to-scale-across-chains"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2026-H1"
 }

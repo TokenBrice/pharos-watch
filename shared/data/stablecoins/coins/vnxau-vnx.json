@@ -202,6 +202,92 @@
         "label": "VNX Gold docs",
         "url": "https://vnx.gitbook.io/vnx-platform/vnx-gold/executive-summary"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x6d57b2e05f26c26b549231c866bdd39779e4a488",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x6d57b2e05f26c26b549231c866bdd39779e4a488",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400",
+        "destinationChain": "polygon",
+        "contractAddress": "0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xac3fe22294beaed9d1fd752323a6d06d12ff3098",
+        "destinationChain": "base",
+        "contractAddress": "0xac3fe22294beaed9d1fd752323a6d06d12ff3098",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "etherlink:0x93f5475da60143c50e8be3fed10c143b0cf8b9e9",
+        "destinationChain": "etherlink",
+        "contractAddress": "0x93f5475da60143c50e8be3fed10c143b0cf8b9e9",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "stellar:VNXAU-GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3",
+        "destinationChain": "stellar",
+        "contractAddress": "VNXAU-GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R",
+        "destinationChain": "solana",
+        "contractAddress": "9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "tezos:KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv",
+        "destinationChain": "tezos",
+        "contractAddress": "KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

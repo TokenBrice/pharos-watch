@@ -280,6 +280,44 @@
         "label": "StraitsX XUSD",
         "url": "https://www.straitsx.com/xusd"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xc08e7e23c235073c6807c2efe7021304cb7c2815",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xc08e7e23c235073c6807c2efe7021304cb7c2815",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
+        "destinationChain": "bsc",
+        "contractAddress": "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z",
+        "destinationChain": "solana",
+        "contractAddress": "4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

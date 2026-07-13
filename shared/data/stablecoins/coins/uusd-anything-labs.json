@@ -126,7 +126,40 @@
           "url": "https://bscscan.com/token/0x61a10e8556bed032ea176330e7f17d6a12a10000"
         }
       ]
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "UUSD proxy-admin ownership chain",
+      "observedAt": "2026-06-11",
+      "observedBlock": 103627514,
+      "sources": [
+        {
+          "label": "UUSD contract (BscScan)",
+          "url": "https://bscscan.com/token/0x61a10e8556bed032ea176330e7f17d6a12a10000"
+        }
+      ]
     }
   },
-  "launchDate": "2026-02-03"
+  "launchDate": "2026-02-03",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "UUSD presents an issuer-controlled reserve-backed design even though the reserve composition and peg operations remain insufficiently disclosed.",
+    "sources": [
+      {
+        "label": "UUSD site",
+        "url": "https://uusd.ai/"
+      },
+      {
+        "label": "UUSD repository",
+        "url": "https://github.com/uusdai/uusd"
+      }
+    ]
+  }
 }

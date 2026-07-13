@@ -191,6 +191,32 @@
         "label": "Kinka site",
         "url": "https://kinka-gold.com/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x722a89f1b925fe41883978219c2176aecc7d6699",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x722a89f1b925fe41883978219c2176aecc7d6699",
+        "protocol": "XNK issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "cardano:2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b",
+        "destinationChain": "cardano",
+        "contractAddress": "2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b",
+        "protocol": "XNK issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   }
 }

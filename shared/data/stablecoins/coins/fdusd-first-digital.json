@@ -302,6 +302,80 @@
         "label": "First Digital FDUSD",
         "url": "https://www.firstdigitallabs.com/fdusd"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+        "protocol": "FDUSD issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+        "destinationChain": "bsc",
+        "contractAddress": "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+        "protocol": "FDUSD issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x93c9932e4afa59201f0b5e63f7d816516f1669fe",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x93c9932e4afa59201f0b5e63f7d816516f1669fe",
+        "protocol": "FDUSD issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "sui:0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a::fdusd::FDUSD",
+        "destinationChain": "sui",
+        "contractAddress": "0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a::fdusd::FDUSD",
+        "protocol": "FDUSD issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "ton:EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89",
+        "destinationChain": "ton",
+        "contractAddress": "EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89",
+        "protocol": "FDUSD issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u",
+        "destinationChain": "solana",
+        "contractAddress": "9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u",
+        "protocol": "FDUSD issuer-operated multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   }
 }

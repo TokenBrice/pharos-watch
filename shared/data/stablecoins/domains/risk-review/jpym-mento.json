@@ -69,6 +69,32 @@
         "label": "Wormhole docs — Native Token Transfers overview (hub-and-spoke vs burn-mint, Manager/Transceiver, Guardian attestation)",
         "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/overview/"
       }
+    ],
+    "routes": [
+      {
+        "id": "celo:0xc45ecf20f3cd864b32d9794d6f76814ae8892e20",
+        "destinationChain": "celo",
+        "contractAddress": "0xc45ecf20f3cd864b32d9794d6f76814ae8892e20",
+        "protocol": "Wormhole NTT (Native Token Transfers)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "monad:0x22f6a6752800eab67b84748fefc3cc658384af72",
+        "destinationChain": "monad",
+        "contractAddress": "0x22f6a6752800eab67b84748fefc3cc658384af72",
+        "protocol": "Wormhole NTT (Native Token Transfers)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      }
     ]
   }
 }

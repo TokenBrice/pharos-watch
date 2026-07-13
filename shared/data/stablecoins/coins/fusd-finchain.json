@@ -160,6 +160,56 @@
         "label": "Chainlink CCIP",
         "url": "https://chain.link/cross-chain"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "sonic:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "destinationChain": "sonic",
+        "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "monad:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "destinationChain": "monad",
+        "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",
@@ -306,6 +356,29 @@
       "evidence": "Ethereum block 25294994: MINTER_ROLE count = 4 (FinChain mint proxy + TokenBridgeSender + 2x CCIP BurnMintTokenPool); DEFAULT_ADMIN_ROLE = 1 holder (EOA 0xc61f22aa). ProxyAdmin 0x29A48097 owned by EOA 0xc61f22aa (confirmed empty code). Same ProxyAdmin present on Avalanche and Sonic. Monad deployment not verifiable (no public RPC). All addressable Ethereum/Avalanche/Sonic mint surfaces confirmed.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0x29A48097055d6779e6832355680B7C7bF0D43C53"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "FUSD ProxyAdmin (upgrade authority, EOA-owned)",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Ethereum FinChain FUSD token",
+          "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        },
+        {
+          "label": "FinChain FUSD docs",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"
+        },
+        {
+          "label": "FinChain deployments",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+        }
+      ]
     }
   },
   "reserves": [

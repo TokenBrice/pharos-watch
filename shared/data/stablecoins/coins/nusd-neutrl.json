@@ -96,6 +96,7 @@
       {
         "reserveIndex": 0,
         "reserveName": "Stablecoin reserves",
+        "pct": 93.5,
         "disposition": "basket-needs-split",
         "rationale": "No constituent weights are available for a canonical dependency mapping."
       }

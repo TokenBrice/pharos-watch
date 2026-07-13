@@ -159,5 +159,17 @@
       }
     }
   },
-  "launchDate": "2025-10-31"
+  "launchDate": "2025-10-31",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "sAID is the AI-infrastructure financing vault layer and intentionally departs from the liquid AID parent reserve archetype.",
+    "sources": [
+      {
+        "label": "GAIB docs",
+        "url": "https://docs.gaib.ai/"
+      }
+    ]
+  }
 }

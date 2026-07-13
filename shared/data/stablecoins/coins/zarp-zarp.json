@@ -97,6 +97,56 @@
         "label": "L2BEAT Across",
         "url": "https://l2beat.com/interop/protocols/across"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "destinationChain": "base",
+        "contractAddress": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "destinationChain": "polygon",
+        "contractAddress": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
+        "destinationChain": "solana",
+        "contractAddress": "dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "blacklistabilityReview": {

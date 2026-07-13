@@ -58,6 +58,56 @@
         "label": "Quantoz transparency",
         "url": "https://www.quantoz.com/transparency"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xc83e27f270cce0a3a3a29521173a83f402c1768b",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xc83e27f270cce0a3a3a29521173a83f402c1768b",
+        "protocol": "LayerZero / Stargate",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "polygon:0xb291996477504506bf5f583102b5b5ea5d1e40e0",
+        "destinationChain": "polygon",
+        "contractAddress": "0xb291996477504506bf5f583102b5b5ea5d1e40e0",
+        "protocol": "LayerZero / Stargate",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "xrpl:USDQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
+        "destinationChain": "xrpl",
+        "contractAddress": "USDQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
+        "protocol": "LayerZero / Stargate",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "algorand:2768603795",
+        "destinationChain": "algorand",
+        "contractAddress": "2768603795",
+        "protocol": "LayerZero / Stargate",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-30"
+      }
     ]
   },
   "links": [
@@ -303,6 +353,30 @@
       "evidence": "At ETH block 25294990: owner()=0x284Df (3/5 multisig, no modules), proxy admin=0xa6724f (3/5 multisig, no modules). At Polygon block 88323726: owner()=0x84e8d (2/5 multisig, no modules), proxy admin=0x2f875 (3/5 multisig, no modules). Polygon deployment uses same HadronToken implementation and can independently mint. XRPL and Algorand contracts not in mint-authority scope (separate ledger rails); Ethereum and Polygon are the material EVM mint surfaces.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0xa6724f792002d5677a7bc370986e1b580b8773e7",
+        "0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDQ Ethereum proxy admin",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Sourcify USDQ Ethereum HadronToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+        },
+        {
+          "label": "Quantoz USDQ product page",
+          "url": "https://www.quantoz.com/products/eurq-usdq"
+        },
+        {
+          "label": "Etherscan USDQ contract",
+          "url": "https://etherscan.io/address/0xc83e27f270cce0a3a3a29521173a83f402c1768b"
+        }
+      ]
     }
   },
   "deploymentModel": "third-party-bridge",

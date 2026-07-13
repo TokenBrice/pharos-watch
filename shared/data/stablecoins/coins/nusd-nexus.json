@@ -202,5 +202,18 @@
       ]
     }
   },
-  "launchDate": "2021-08-16"
+  "launchDate": "2021-08-16",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "NUSD is bridge-liquidity supply backed by accepted dollar stablecoins in Synapse pools rather than overcollateralized debt positions.",
+    "sources": [
+      {
+        "label": "Synapse docs",
+        "url": "https://docs.synapseprotocol.com/"
+      }
+    ]
+  }
 }

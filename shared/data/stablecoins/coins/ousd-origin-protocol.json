@@ -113,6 +113,7 @@
     "mintIncidents": [
       {
         "date": "2020-11-17",
+        "status": "resolved",
         "summary": "Origin Dollar's VaultCore mint logic was exploited through missing validation and reentrancy checks, inflating OUSD supply and draining about $7.7M from the vault.",
         "sources": [
           {
@@ -238,5 +239,23 @@
         "url": "https://github.com/OriginProtocol/origin-dollar"
       }
     ]
-  }
+  },
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "OUSD is a redeemable stablecoin-reserve vault whose deployed strategies manage the backing after issuance.",
+    "sources": [
+      {
+        "label": "Origin OUSD site",
+        "url": "https://www.originprotocol.com/ousd"
+      },
+      {
+        "label": "Origin January 2021 update",
+        "url": "https://www.originprotocol.com/blog/january-2021-origin-token-ogn-holder-update?lang=en"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2021-01"
 }

@@ -92,6 +92,44 @@
         "label": "Maple Finance - syrupUSDT on Plasma (cross-chain expansion)",
         "url": "https://maple.finance/insights/syrupusdt-on-plasma"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+        "protocol": "Chainlink CCIP - syrupUSDT Cross-Chain Token directory entry",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "plasma:0xc4374775489cb9c56003bf2c9b12495fc64f0771",
+        "destinationChain": "plasma",
+        "contractAddress": "0xc4374775489cb9c56003bf2c9b12495fc64f0771",
+        "protocol": "Chainlink CCIP - syrupUSDT Cross-Chain Token directory entry",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "bsc:0x8e9d4cea39299323fe8eda678cad449718556c4e",
+        "destinationChain": "bsc",
+        "contractAddress": "0x8e9d4cea39299323fe8eda678cad449718556c4e",
+        "protocol": "Chainlink CCIP - syrupUSDT Cross-Chain Token directory entry",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      }
     ]
   }
 }

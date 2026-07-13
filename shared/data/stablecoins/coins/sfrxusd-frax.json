@@ -192,6 +192,104 @@
         "label": "Frax sfrxUSD docs",
         "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "fraxtal:0xfc00000000000000000000000000000000000008",
+        "destinationChain": "fraxtal",
+        "contractAddress": "0xfc00000000000000000000000000000000000008",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "sei:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "destinationChain": "sei",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "mode:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "destinationChain": "mode",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "xlayer:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "destinationChain": "xlayer",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "katana:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "destinationChain": "katana",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "sonic:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "destinationChain": "sonic",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

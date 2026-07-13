@@ -177,6 +177,29 @@
       "evidence": "Reconfirmed at Ethereum block 25294993: owner() still returns 0x1EEa4eE3F31ba4E3276C00Ee618df6f2Cc59f002. Reconfirmed at BSC block 103627450: owner() same Safe. Safe global API (eth) returned threshold 4, 6 owners, no modules, zero guard. BSC RPC getOwners() returned 6 owners; storage slot 4 returned threshold 4. Both chains verified consistent.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0x59e7b43227af72dd80822de8e52acf2fce7a8049"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "AEUR proxy admin",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Ethereum AEUR contract",
+          "url": "https://etherscan.io/address/0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21#readProxyContract"
+        },
+        {
+          "label": "Anchored Coins AEUR",
+          "url": "https://www.anchoredcoins.com/en/landing/aeur"
+        },
+        {
+          "label": "Sourcify AEUR implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x7b709447e7812cbb0faec635759144db88e0a58f?fields=metadata,abi"
+        }
+      ]
     }
   },
   "deploymentModel": "native-multichain",

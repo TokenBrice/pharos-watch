@@ -87,6 +87,32 @@
         "label": "L2BEAT Hyperliquid",
         "url": "https://l2beat.com/interop/protocols/hyperliquid"
       }
+    ],
+    "routes": [
+      {
+        "id": "hyperevm:0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
+        "destinationChain": "hyperevm",
+        "contractAddress": "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
+        "protocol": "Hyperliquid",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "hyperliquid:0x88102bea0bbad5f301f6e9e4dacdf979",
+        "destinationChain": "hyperliquid",
+        "contractAddress": "0x88102bea0bbad5f301f6e9e4dacdf979",
+        "protocol": "Hyperliquid",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "canBeBlacklisted": true,

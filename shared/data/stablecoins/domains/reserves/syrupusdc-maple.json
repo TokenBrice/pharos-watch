@@ -1,0 +1,76 @@
+{
+  "id": "syrupusdc-maple",
+  "reserves": [
+    {
+      "name": "USDC-denominated institutional loans and supporting strategies",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Maple permissioned borrower pool",
+      "riskFactors": ["credit", "liquidity", "counterparty", "legal", "concentration", "smart-contract"],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Maple syrupUSDC structure",
+        "url": "https://docs.maple.finance/syrupusdc-for-lenders/introduction"
+      },
+      {
+        "label": "Maple syrupUSDC withdrawals",
+        "url": "https://docs.maple.finance/syrupusdc-for-lenders/risk"
+      },
+      {
+        "label": "Maple proof of reserves",
+        "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+      }
+    ],
+    "rationale": "Maple documents an ERC-4626 claim on a segregated USDC-denominated pool whose assets include overcollateralized institutional loans and supporting basis/liquidity strategies. Withdrawal queues can take up to 30 days, so the reserve is classified as private credit with an over-seven-day liquidity horizon.",
+    "compositionBasis": "Maple pool structure and proof-of-reserves disclosures",
+    "compositionAsOf": "2026-05-07",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unlinked reserve exposure is recorded; borrower, collateral, and supporting-strategy allocations vary within the linked USDC-denominated pool and are not stored as fixed weights.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Anchorage Digital",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "BitGo",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Zodia Custody",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Maple custody and legal structure FAQ",
+        "url": "https://docs.maple.finance/syrupusdc-usdt-for-lenders/faq"
+      },
+      {
+        "label": "Maple proof of reserves",
+        "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+      }
+    ],
+    "uncertainty": "Maple identifies approved institutional custodians and a segregated SPV, but collateral is allocated across custodians and may be staked under strategy controls. Provider-level shares and the live borrower/collateral allocation are not published in the static review."
+  }
+}

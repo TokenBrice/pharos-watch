@@ -170,23 +170,6 @@
   },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-top",
-  "reserves": [
-    {
-      "name": "U.S. Treasury Bills",
-      "pct": 60,
-      "risk": "very-low"
-    },
-    {
-      "name": "Overnight Repos",
-      "pct": 30,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash",
-      "pct": 10,
-      "risk": "very-low"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "BlackRock T-bill fund",
     "yieldType": "rebase"
@@ -221,6 +204,104 @@
       {
         "label": "Wormhole contract-address docs",
         "url": "https://wormhole.com/docs/products/reference/contract-addresses/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x7712c34205737192402172409a8f7ccef8aa2aec",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x7712c34205737192402172409a8f7ccef8aa2aec",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x2d5bdc96d9c8aabbdb38c9a27398513e7e5ef84f",
+        "destinationChain": "bsc",
+        "contractAddress": "0x2d5bdc96d9c8aabbdb38c9a27398513e7e5ef84f",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "optimism:0xa1cdab15bba75a80df4089cafba013e376957cf5",
+        "destinationChain": "optimism",
+        "contractAddress": "0xa1cdab15bba75a80df4089cafba013e376957cf5",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0xa6525ae43edcd03dc08e775774dcabd3bb925872",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xa6525ae43edcd03dc08e775774dcabd3bb925872",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0x53fc82f14f009009b440a706e31c9021e1196a2f",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x53fc82f14f009009b440a706e31c9021e1196a2f",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99",
+        "destinationChain": "polygon",
+        "contractAddress": "0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:GyWgeqpy5GueU2YbkE8xqUeVEokCMMCEeUrfbtMw6phr",
+        "destinationChain": "solana",
+        "contractAddress": "GyWgeqpy5GueU2YbkE8xqUeVEokCMMCEeUrfbtMw6phr",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "aptos:0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89",
+        "destinationChain": "aptos",
+        "contractAddress": "0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89",
+        "protocol": "Wormhole",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   }

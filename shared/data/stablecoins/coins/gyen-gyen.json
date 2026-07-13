@@ -328,6 +328,30 @@
       "evidence": "At Ethereum block 25295183: minter()=0x78AFae...1C (EOA), owner()=0xfb5dAE...6D (EOA), admin()=0x703736...17 (EOA), minterAdmin()=0x1e412a...e3 (EOA), pauser()=0xe73b76...40 (EOA), prohibiter()=0x72fe98...cf (EOA), wiper()=0x42757e...6e (EOA), capper()=0xb95ab5...0a (EOA), proxy admin slot=0xe5e877...73 (EOA). All role holders are EOAs consistent with GMO Trust institutional key custody. Solana and Stellar deployments not verified (separate minting mechanisms). Solana mint authority resolved at slot 425797741: 2-of-2 SPL token multisig.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0xe5e877ad41b61958265dc9bce2b00554c313a973"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "GYEN EIP-1967 proxy admin",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295183,
+      "sources": [
+        {
+          "label": "GYEN Ethereum contract on Etherscan",
+          "url": "https://etherscan.io/address/0xc08512927d12348f6620a698105e1baac6ecd911"
+        },
+        {
+          "label": "GMO Trust stablecoin source",
+          "url": "https://github.com/trust-zcom/gmotrust-stablecoin-contract"
+        },
+        {
+          "label": "GMO Trust GYEN announcement",
+          "url": "https://www.gmo.jp/en/news/article/809/"
+        }
+      ]
     }
   },
   "deploymentModel": "native-multichain",

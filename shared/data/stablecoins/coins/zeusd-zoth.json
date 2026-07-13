@@ -29,7 +29,10 @@
         "name": "LayerZero OFT Adapter (Zoth contract deployments)",
         "slug": "layerzero",
         "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments",
-        "bridgeTypes": ["external-lock-mint", "oft-adapter"],
+        "bridgeTypes": [
+          "external-lock-mint",
+          "oft-adapter"
+        ],
         "note": "Zoth docs explicitly list a 'Layer Zero Adapter' on Ethereum (0xBf1060028b212896F799CFbaeA1eD4EEbd060978) and 'ZeUSD OFT' contracts on Manta/Metis/Avalanche; marked as deprecated infrastructure but the documented cross-chain route."
       },
       {
@@ -37,7 +40,11 @@
         "name": "LayerZero OFTAdapter contract (Etherscan)",
         "slug": "layerzero",
         "url": "https://etherscan.io/address/0xBf1060028b212896F799CFbaeA1eD4EEbd060978#code",
-        "bridgeTypes": ["external-lock-mint", "oft-adapter", "lockbox"],
+        "bridgeTypes": [
+          "external-lock-mint",
+          "oft-adapter",
+          "lockbox"
+        ],
         "note": "Inherits OFTAdapter/OFTCore/IOAppCore, references LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c, wraps inner ZeUSD via token(); send/quoteSend/lzReceive/setPeer present. Lock-on-Ethereum, mint-on-satellite pattern."
       },
       {
@@ -45,7 +52,9 @@
         "name": "ZeUSD token (plain upgradeable ERC20, not an OFT)",
         "slug": "zeusd-token",
         "url": "https://etherscan.io/address/0x7dc9748da8e762e569f9269f48f69a1a9f8ea761#code",
-        "bridgeTypes": ["erc20-proxy"],
+        "bridgeTypes": [
+          "erc20-proxy"
+        ],
         "note": "ERC1967 proxy over an ERC20Upgradeable/AccessControl/UUPS impl with no LayerZero/OFT messaging functions — confirms the Adapter/lockbox (not native OFT) architecture."
       }
     ],
@@ -65,6 +74,56 @@
       {
         "label": "ZeUSD token contract (Etherscan code — plain ERC20 proxy)",
         "url": "https://etherscan.io/address/0x7dc9748da8e762e569f9269f48f69a1a9f8ea761#code"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+        "protocol": "LayerZero OFT Adapter (Zoth contract deployments)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "manta:0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+        "destinationChain": "manta",
+        "contractAddress": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+        "protocol": "LayerZero OFT Adapter (Zoth contract deployments)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "metis:0x2d3d1a6982840dd88bc2380fd557f8a9d5e27a77",
+        "destinationChain": "metis",
+        "contractAddress": "0x2d3d1a6982840dd88bc2380fd557f8a9d5e27a77",
+        "protocol": "LayerZero OFT Adapter (Zoth contract deployments)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "avalanche:0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+        "protocol": "LayerZero OFT Adapter (Zoth contract deployments)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
       }
     ]
   },
@@ -131,6 +190,7 @@
     "mintIncidents": [
       {
         "date": "2025-03-01",
+        "status": "resolved",
         "summary": "Zoth's mintWithStable collateral-accounting flaw let an attacker manipulate swap output/LTV validation, mint ZeUSD without sufficient backing, and drain about $285K.",
         "sources": [
           {
@@ -145,6 +205,7 @@
       },
       {
         "date": "2025-03-21",
+        "status": "resolved",
         "summary": "A compromised Zoth admin/deployer key enabled a malicious proxy upgrade of USD0PPSubVaultUpgradeable and drained roughly $8.4M-$8.85M of USD0++ before funds were swapped and moved off-chain.",
         "sources": [
           {
@@ -257,9 +318,13 @@
       {
         "reserveIndex": 0,
         "reserveName": "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)",
+        "pct": 70,
         "disposition": "basket-needs-split",
         "rationale": "The named instruments have no published individual percentages.",
-        "candidateCoinIds": ["usyc-hashnote", "tbill-openeden"]
+        "candidateCoinIds": [
+          "usyc-hashnote",
+          "tbill-openeden"
+        ]
       }
     ]
   },

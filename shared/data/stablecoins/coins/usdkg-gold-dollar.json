@@ -171,6 +171,32 @@
         "label": "CryptoBriefing — Kyrgyzstan launches USDKG, Tron-first deployment with Ethereum next phase, supply growth via additional gold + minting",
         "url": "https://cryptobriefing.com/kyrgyzstan-usdkg-gold-backed-stablecoin-tron/"
       }
+    ],
+    "routes": [
+      {
+        "id": "tron:TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG",
+        "destinationChain": "tron",
+        "contractAddress": "TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "ethereum:0xe820c06321e60d36257c666643fa5436643445e3",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xe820c06321e60d36257c666643fa5436643445e3",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      }
     ]
   },
   "mintAuthority": {

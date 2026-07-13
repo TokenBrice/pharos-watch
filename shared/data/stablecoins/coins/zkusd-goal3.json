@@ -111,5 +111,22 @@
         }
       ]
     }
+  },
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "zkUSD is presented as portal-issued and redeemable at one USDC, making it a reserve-style receipt rather than a borrower CDP.",
+    "sources": [
+      {
+        "label": "Goal3 docs",
+        "url": "https://docs.goal3.xyz/"
+      },
+      {
+        "label": "Goal3 site",
+        "url": "https://goal3.xyz/"
+      }
+    ]
   }
 }

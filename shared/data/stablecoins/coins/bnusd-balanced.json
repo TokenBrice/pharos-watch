@@ -162,6 +162,68 @@
         "label": "Balanced xCall connection article",
         "url": "https://blog.balanced.network/archway-connection/"
       }
+    ],
+    "routes": [
+      {
+        "id": "base:0x78b7cd9308287deb724527d8703c889e2d6c3708",
+        "destinationChain": "base",
+        "contractAddress": "0x78b7cd9308287deb724527d8703c889e2d6c3708",
+        "protocol": "Balanced xCall",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0xdbdd50997361522495ecfe57ebb6850da0e4c699",
+        "destinationChain": "avalanche",
+        "contractAddress": "0xdbdd50997361522495ecfe57ebb6850da0e4c699",
+        "protocol": "Balanced xCall",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0xa67f4b09eed22f8201ee0637cbe9d654e63f946e",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xa67f4b09eed22f8201ee0637cbe9d654e63f946e",
+        "protocol": "Balanced xCall",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0xc65132325bd4fcf2ec5f3a9375487163b6999206",
+        "destinationChain": "bsc",
+        "contractAddress": "0xc65132325bd4fcf2ec5f3a9375487163b6999206",
+        "protocol": "Balanced xCall",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "injective:factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
+        "destinationChain": "injective",
+        "contractAddress": "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
+        "protocol": "Balanced xCall",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",

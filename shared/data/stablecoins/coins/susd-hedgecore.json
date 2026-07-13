@@ -166,5 +166,18 @@
       ]
     }
   },
-  "launchDate": "2025-10-11"
+  "launchDate": "2025-10-11",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "HedgeCore sUSD is a USDC-funded lending receipt over a Venus position, with operator-controlled redemption rather than borrower debt.",
+    "sources": [
+      {
+        "label": "HedgeCore yield docs",
+        "url": "https://docs.hedgecore.io/docs/protocol/yield-generation"
+      }
+    ]
+  }
 }

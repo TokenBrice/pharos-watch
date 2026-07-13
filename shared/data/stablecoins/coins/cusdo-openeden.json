@@ -102,6 +102,56 @@
         "label": "Chainlink USDO CCIP directory",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
+        "destinationChain": "base",
+        "contractAddress": "0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
+        "destinationChain": "bsc",
+        "contractAddress": "0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs",
+        "destinationChain": "solana",
+        "contractAddress": "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "collateralQuality": "rwa",

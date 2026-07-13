@@ -85,8 +85,14 @@
     "params": {
       "vaultAddress": "0xc417fd8e9661c0d2120b64a04bb3278c17e99db1",
       "assets": [
-        { "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174", "decimals": 6 },
-        { "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", "decimals": 6 }
+        {
+          "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+          "decimals": 6
+        },
+        {
+          "address": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+          "decimals": 6
+        }
       ],
       "slice": {
         "name": "USDC / USDC.e on Polygon",
@@ -157,5 +163,18 @@
       ]
     }
   },
-  "launchDate": "2026-04-28"
+  "launchDate": "2026-04-28",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "PUSD is an application deposit receipt backed by supported USDC balances and redeemed through Polymarket rails.",
+    "sources": [
+      {
+        "label": "Polymarket PUSD docs",
+        "url": "https://docs.polymarket.com/concepts/pusd"
+      }
+    ]
+  }
 }

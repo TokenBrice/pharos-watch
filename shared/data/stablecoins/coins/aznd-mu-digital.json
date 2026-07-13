@@ -179,6 +179,32 @@
         "label": "Mu Digital docs - Smart Contract Addresses (AZND on Ethereum + Monad; docs do not name the bridge)",
         "url": "https://docs.mudigital.net/technical-reference/smart-contract-architecture/smart-contract-addresses.md"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+        "protocol": "LayerZero V2 OFT (Omnichain Fungible Token)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "monad:0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8",
+        "destinationChain": "monad",
+        "contractAddress": "0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8",
+        "protocol": "LayerZero V2 OFT (Omnichain Fungible Token)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "other",
+        "scope": "global",
+        "observedAt": "2026-06-21"
+      }
     ]
   },
   "mintAuthority": {

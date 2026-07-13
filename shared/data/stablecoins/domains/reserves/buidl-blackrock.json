@@ -1,0 +1,70 @@
+{
+  "id": "buidl-blackrock",
+  "reserves": [
+    {
+      "name": "Cash, U.S. Treasury bills, and repurchase agreements",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury and institutional repo counterparties",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Securitize BUIDL product",
+        "url": "https://securitize.io/blackrock/buidl"
+      },
+      {
+        "label": "Securitize BUIDL collateral announcement",
+        "url": "https://investors.securitize.io/news/news-details/2026/OKX-BlackRock-and-Standard-Chartered-Launch-Joint-Framework-to-Establish-New-Utility-for-Tokenized-Real-World-Assets/default.aspx"
+      }
+    ],
+    "rationale": "Current issuer materials confirm that BUIDL invests across cash, Treasury bills, and repurchase agreements but do not publish a durable category split. The prior 60/30/10 estimate was therefore replaced by the supported aggregate basket.",
+    "compositionBasis": "BlackRock/Securitize stated investment categories",
+    "compositionAsOf": "2026-04-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The allocation among cash, Treasury bills, and repurchase agreements is not captured in the reviewed durable sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Cash, U.S. Treasury bills, and repurchase agreements",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The fund mandate identifies the categories but not current category weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "BlackRock BUIDL launch",
+        "url": "https://investors.securitize.io/news/news-details/2024/BlackRock-Launches-Its-First-Tokenized-Fund-BUIDL-on-the-Ethereum-Network-03-20-2024/default.aspx"
+      },
+      {
+        "label": "SEC BUIDL Form D filing",
+        "url": "https://www.sec.gov/Archives/edgar/data/2013810/0002014390-24-000001-index.htm"
+      }
+    ],
+    "uncertainty": "The separate BVI fund structure and BNY Mellon service role are public, but reviewed sources do not establish provider shares, account-level segregation, or rehypothecation restrictions."
+  }
+}

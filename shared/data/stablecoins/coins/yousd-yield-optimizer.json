@@ -60,7 +60,9 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": ["Non-minting"]
+        "bridgeTypes": [
+          "Non-minting"
+        ]
       }
     ],
     "sources": [
@@ -75,6 +77,44 @@
       {
         "label": "L2BEAT Across",
         "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ],
+    "routes": [
+      {
+        "id": "base:0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "destinationChain": "base",
+        "contractAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "ethereum:0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "protocol": "Across",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "global",
+        "observedAt": "2026-06-13"
       }
     ]
   },
@@ -260,5 +300,18 @@
       ]
     }
   },
-  "launchDate": "2025-04-17"
+  "launchDate": "2025-04-17",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex mechanism review",
+    "rationale": "yoUSD is a USDC-denominated ERC-4626 reserve vault allocated across approved DeFi strategies rather than a borrower CDP.",
+    "sources": [
+      {
+        "label": "YO docs",
+        "url": "https://docs.yo.xyz"
+      }
+    ]
+  }
 }

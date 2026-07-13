@@ -32,6 +32,44 @@
         "label": "Nest website",
         "url": "https://www.nest.credit/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plume:0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "destinationChain": "plume",
+        "contractAddress": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "plasma:0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "destinationChain": "plasma",
+        "contractAddress": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "links": [

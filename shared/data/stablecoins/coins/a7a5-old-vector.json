@@ -40,6 +40,32 @@
         "label": "A7A5 website",
         "url": "https://www.a7a5.io/"
       }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "tron:TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ",
+        "destinationChain": "tron",
+        "contractAddress": "TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ",
+        "protocol": "profile-reviewed route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "global",
+        "observedAt": "2026-06-13"
+      }
     ]
   },
   "links": [
