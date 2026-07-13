@@ -11,7 +11,9 @@ inputs:
     required: false
     default: "true"
   tooling-cache:
-    description: Whether to restore the shared tooling cache.
+    description: >-
+      Whether to restore the shared build, lint, typecheck, and browser cache.
+      Enable only for jobs that consume those artifacts.
     required: false
     default: "false"
   tooling-cache-save:

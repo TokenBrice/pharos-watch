@@ -83,6 +83,31 @@ const PAGES_EXTRA_EXACT_PATHS = [
   "tsconfig.json",
 ];
 
+// These Markdown sources are compiled into public /docs/* routes. Keep this
+// list aligned with PUBLIC_DOCS; the classifier test fails on drift.
+const PUBLIC_DOC_SOURCE_PATHS = [
+  "docs/api-reference.md",
+  "docs/architecture.md",
+  "docs/chain-health.md",
+  "docs/classification.md",
+  "docs/data-flow-map.md",
+  "docs/data-pipeline.md",
+  "docs/depeg-detection.md",
+  "docs/design-context.md",
+  "docs/design-language.md",
+  "docs/design-tokens.md",
+  "docs/dews.md",
+  "docs/dex-liquidity.md",
+  "docs/mint-burn-flows.md",
+  "docs/pricing-pipeline.md",
+  "docs/redemption-backstops.md",
+  "docs/report-cards.md",
+  "docs/shadow-stablecoins.md",
+  "docs/stability-index.md",
+  "docs/worker-and-api-limits.md",
+  "docs/yield-intelligence.md",
+];
+
 const WORKER_EXTRA_EXACT_PATHS = [
   "scripts/ci/check-cron-schedule-sync.ts",
   "scripts/ci/check-worker-import-boundary.mjs",
@@ -108,7 +133,11 @@ export const DEPLOY_IMPACT_REGISTRY = {
     ]),
   },
   pages: {
-    exactPaths: uniqueSorted([...getValidationCommandDeployImpactPaths("pages"), ...PAGES_EXTRA_EXACT_PATHS]),
+    exactPaths: uniqueSorted([
+      ...getValidationCommandDeployImpactPaths("pages"),
+      ...PAGES_EXTRA_EXACT_PATHS,
+      ...PUBLIC_DOC_SOURCE_PATHS,
+    ]),
     prefixes: ["data/", "functions/", "public/", "shared/", "src/"],
     workflowOnlyExactPaths: [".github/workflows/pages-release.yml", ".github/workflows/rebuild-pages.yml"],
   },

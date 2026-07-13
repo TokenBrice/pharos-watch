@@ -3,7 +3,9 @@
 import { execFileSync } from "node:child_process";
 import {
   hasDeployImpact,
+  hasOnlyInternalDocsImpact,
   hasPagesDeployImpact,
+  hasPagesPublishImpact,
   hasPagesUiImpact,
   hasWorkerPackagePromotionImpact,
   hasWorkerDeployImpact,
@@ -16,7 +18,9 @@ const ZERO_SHA = /^0+$/;
 
 export {
   hasDeployImpact,
+  hasOnlyInternalDocsImpact,
   hasPagesDeployImpact,
+  hasPagesPublishImpact,
   hasPagesUiImpact,
   hasWorkerDeployImpact,
   hasWorkerPackagePromotionImpact,
@@ -63,7 +67,9 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
     return {
       changedFiles: [],
       deployRequired: true,
+      docsOnly: false,
       pagesChanged: true,
+      pagesDeployRequired: true,
       pagesUiChanged: true,
       reason: `Non-push event (${eventName ?? "unknown"}) runs the full deploy workflow`,
       workerChanged: true,
@@ -75,7 +81,9 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
     return {
       changedFiles: [],
       deployRequired: true,
+      docsOnly: false,
       pagesChanged: true,
+      pagesDeployRequired: true,
       pagesUiChanged: true,
       reason: "Missing push diff base/head; falling back to full deploy path",
       workerChanged: true,
@@ -85,13 +93,17 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
 
   let changedFiles = [];
   try {
-    const raw = execFile("git", ["diff", "--name-only", `${baseSha}...${headSha}`], { encoding: "utf8" });
+    const raw = execFile("git", ["diff", "--name-only", "--no-renames", `${baseSha}...${headSha}`], {
+      encoding: "utf8",
+    });
     changedFiles = normalizeChangedFiles(raw);
   } catch {
     return {
       changedFiles: [],
       deployRequired: true,
+      docsOnly: false,
       pagesChanged: true,
+      pagesDeployRequired: true,
       pagesUiChanged: true,
       reason: `Failed to diff ${baseSha}...${headSha}; falling back to full deploy path`,
       workerChanged: true,
@@ -100,6 +112,7 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
   }
 
   const pagesChanged = hasPagesDeployImpact(changedFiles);
+  const pagesDeployRequired = hasPagesPublishImpact(changedFiles);
   const pagesUiChanged = pagesChanged && hasPagesUiImpact(changedFiles);
   const workerChanged = hasWorkerDeployImpact(changedFiles);
   const workerPromotionRequired =
@@ -108,7 +121,9 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
   return {
     changedFiles,
     deployRequired: hasDeployImpact(changedFiles),
+    docsOnly: hasOnlyInternalDocsImpact(changedFiles),
     pagesChanged,
+    pagesDeployRequired,
     pagesUiChanged,
     reason:
       changedFiles.length > 0
@@ -125,7 +140,9 @@ function writeGithubOutputLine(key, value) {
 
 export function emitGithubOutputs(classification) {
   writeGithubOutputLine("deploy_required", classification.deployRequired ? "true" : "false");
+  writeGithubOutputLine("docs_only", classification.docsOnly ? "true" : "false");
   writeGithubOutputLine("pages_changed", classification.pagesChanged ? "true" : "false");
+  writeGithubOutputLine("pages_deploy_required", classification.pagesDeployRequired ? "true" : "false");
   writeGithubOutputLine("pages_ui_changed", classification.pagesUiChanged ? "true" : "false");
   writeGithubOutputLine("worker_changed", classification.workerChanged ? "true" : "false");
   writeGithubOutputLine("worker_promotion_required", classification.workerPromotionRequired ? "true" : "false");
@@ -145,10 +162,12 @@ function runCli(env = process.env) {
     }
   }
   console.error(`[deploy-changes] pages_changed=${classification.pagesChanged}`);
+  console.error(`[deploy-changes] pages_deploy_required=${classification.pagesDeployRequired}`);
   console.error(`[deploy-changes] pages_ui_changed=${classification.pagesUiChanged}`);
   console.error(`[deploy-changes] worker_changed=${classification.workerChanged}`);
   console.error(`[deploy-changes] worker_promotion_required=${classification.workerPromotionRequired}`);
   console.error(`[deploy-changes] deploy_required=${classification.deployRequired}`);
+  console.error(`[deploy-changes] docs_only=${classification.docsOnly}`);
 
   emitGithubOutputs(classification);
 }

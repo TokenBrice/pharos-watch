@@ -36,6 +36,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: telegram-load-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   telegram-load:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
@@ -45,6 +49,4 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
-        with:
-          tooling-cache: "true"
       - run: npm run check:telegram-load

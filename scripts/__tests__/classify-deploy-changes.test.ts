@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   classifyDeployChanges,
   hasDeployImpact,
+  hasOnlyInternalDocsImpact,
   hasPagesDeployImpact,
+  hasPagesPublishImpact,
   hasPagesUiImpact,
   hasWorkerPackagePromotionImpact,
   hasWorkerDeployImpact,
@@ -11,6 +13,7 @@ import {
   normalizeChangedFiles,
 } from "../ci/classify-deploy-changes.mjs";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
+import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 
 describe("normalizeChangedFiles", () => {
   it("normalizes separators and removes blank lines", () => {
@@ -72,6 +75,34 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-openapi-spec.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-postman-collection.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/wait-pages-release-marker.mjs"])).toBe(true);
+  });
+
+  it("validates tests without treating them as publishable Pages changes", () => {
+    const files = [
+      "src/components/__tests__/header.test.tsx",
+      "shared/lib/classification.spec.ts",
+      "functions/__tests__/proxy.test.ts",
+    ];
+
+    expect(hasPagesDeployImpact(files)).toBe(true);
+    expect(hasPagesPublishImpact(files)).toBe(false);
+    expect(hasPagesUiImpact(files)).toBe(false);
+  });
+
+  it("publishes every Markdown source rendered by the public docs route", () => {
+    for (const doc of PUBLIC_DOCS) {
+      const file = `docs/${doc.source}`;
+      expect(hasPagesDeployImpact([file]), file).toBe(true);
+      expect(hasPagesPublishImpact([file]), file).toBe(true);
+    }
+  });
+});
+
+describe("hasOnlyInternalDocsImpact", () => {
+  it("recognizes internal docs but excludes public docs and mixed changes", () => {
+    expect(hasOnlyInternalDocsImpact(["docs/testing.md", "README.md"])).toBe(true);
+    expect(hasOnlyInternalDocsImpact(["docs/api-reference.md"])).toBe(false);
+    expect(hasOnlyInternalDocsImpact(["docs/testing.md", "scripts/__tests__/example.test.ts"])).toBe(false);
   });
 });
 
@@ -242,7 +273,9 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesDeployRequired).toBe(true);
     expect(result.pagesUiChanged).toBe(true);
+    expect(result.docsOnly).toBe(false);
   });
 
   it("falls back to full worker deploy when the push base sha is unavailable", () => {
@@ -255,6 +288,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesDeployRequired).toBe(true);
     expect(result.pagesUiChanged).toBe(true);
   });
 
@@ -402,11 +436,46 @@ diff --git a/package.json b/package.json
     });
 
     expect(result.deployRequired).toBe(false);
+    expect(result.docsOnly).toBe(true);
     expect(result.workerChanged).toBe(false);
     expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(false);
+    expect(result.pagesDeployRequired).toBe(false);
     expect(result.pagesUiChanged).toBe(false);
     expect(result.changedFiles).toEqual(["docs/testing.md", "docs/process/notes.md"]);
+  });
+
+  it("validates test-only Pages changes without publishing them", () => {
+    const execFile = () => "src/components/__tests__/header.test.tsx\n";
+
+    const result = classifyDeployChanges({
+      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
+      eventName: "push",
+      execFile,
+      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
+    });
+
+    expect(result.deployRequired).toBe(true);
+    expect(result.docsOnly).toBe(false);
+    expect(result.pagesChanged).toBe(true);
+    expect(result.pagesDeployRequired).toBe(false);
+    expect(result.pagesUiChanged).toBe(false);
+    expect(result.workerChanged).toBe(false);
+  });
+
+  it("publishes when production source is renamed into a test path", () => {
+    const execFile = () => "src/components/header.tsx\nsrc/components/__tests__/header.test.tsx\n";
+
+    const result = classifyDeployChanges({
+      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
+      eventName: "push",
+      execFile,
+      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
+    });
+
+    expect(result.pagesChanged).toBe(true);
+    expect(result.pagesDeployRequired).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
   });
 
   it("passes push refs to git diff as arguments", () => {
@@ -424,7 +493,7 @@ diff --git a/package.json b/package.json
     });
 
     expect(received).toEqual([
-      ["git", ["diff", "--name-only", "aaa; touch /tmp/should-not-run...bbb && echo injected"]],
+      ["git", ["diff", "--name-only", "--no-renames", "aaa; touch /tmp/should-not-run...bbb && echo injected"]],
     ]);
   });
 });

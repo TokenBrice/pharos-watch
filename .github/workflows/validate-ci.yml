@@ -13,7 +13,7 @@ on:
         default: false
         type: boolean
       pages_changed:
-        description: Whether the changed diff touches Pages deploy surfaces.
+        description: Whether the changed diff touches Pages validation surfaces.
         required: false
         default: true
         type: boolean
@@ -66,6 +66,9 @@ jobs:
       contents: read
     env:
       # Match pages-release.yml so the validate build inlines the same flags.
+      # OG freshness is checked independently by validate-prebuild, so this
+      # build can consume the committed editorial cards without Firefox.
+      GENERATED_ARTIFACTS_SKIP: og-editorial
       NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"
       NEXT_PUBLIC_PHAROS_HERO_VERDICT: ${{ vars.NEXT_PUBLIC_PHAROS_HERO_VERDICT }}
       NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: ${{ vars.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER }}
@@ -85,7 +88,6 @@ jobs:
           tooling-cache: "true"
           tooling-cache-save: "true"
           install-playwright-chromium: "true"
-          install-playwright-firefox: "true"
       - run: npm run validate:pages
 
   test-noncritical:
@@ -101,12 +103,10 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
-        with:
-          tooling-cache: "true"
       - run: npm run test:noncritical -- --shard=${{ matrix.shard }}/2
 
   coverage-critical:
@@ -125,8 +125,6 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
-        with:
-          tooling-cache: "true"
       - run: npm run coverage:critical
 
   typecheck-worker:
@@ -136,8 +134,6 @@ jobs:
     permissions:
       contents: read
     steps:
-      # Typecheck + scheduled smoke read no git history (unlike the shard jobs,
-      # whose sitemap/docs-metadata prerequisites are git-derived).
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 1

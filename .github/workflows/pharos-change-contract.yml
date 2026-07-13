@@ -9,6 +9,10 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: pharos-change-contract-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   comment:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}

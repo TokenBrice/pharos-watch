@@ -16,7 +16,10 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+      node_compat_changed: ${{ steps.node_compat.outputs.changed }}
       pages_changed: ${{ steps.classify.outputs.pages_changed }}
+      pages_deploy_required: ${{ steps.classify.outputs.pages_deploy_required }}
       worker_changed: ${{ steps.classify.outputs.worker_changed }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -29,17 +32,56 @@ jobs:
           DEPLOY_EVENT_NAME: push
           DEPLOY_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/ci/classify-deploy-changes.mjs >> "$GITHUB_OUTPUT"
+      - id: node_compat
+        name: Detect Node compatibility changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if git diff --quiet "${BASE_SHA}...${HEAD_SHA}" -- \
+            '*.cjs' '*.cts' '*.js' '*.jsx' '*.mjs' '*.mts' '*.ts' '*.tsx' \
+            '.nvmrc' 'package.json' 'package-lock.json' 'tsconfig*.json' \
+            '**/package.json' '**/tsconfig*.json' \
+            '.github/actions/setup-workspace/action.yml' \
+            '.github/workflows/pull-request-checks.yml'; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
   validate:
     needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/validate-ci.yml
     with:
       coverage-compare-ref: ${{ github.event.pull_request.base.sha }}
       pages_changed: ${{ needs.detect-changes.outputs.pages_changed == 'true' }}
+      run_pages_build_and_seo: ${{ needs.detect-changes.outputs.pages_deploy_required == 'true' }}
       worker_changed: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}
+
+  validate-docs:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.docs_only == 'true' }}
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+      - run: npm run check:verified-doc-links
+      - run: npm run check:doc-source-paths
+      - run: npm run check:doc-sync
+      - run: npm run check:agent-doc-sync
+      - run: npm run check:doc-counts
 
   node26-proof:
     name: Node 26 proof
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.node_compat_changed == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     continue-on-error: true

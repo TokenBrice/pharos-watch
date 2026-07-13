@@ -28,11 +28,7 @@ const LOCKFILE_PACKAGE_METADATA_KEYS = new Set([
   "version",
 ]);
 const UNKNOWN_LOCKFILE_PACKAGE_CHANGE = "*lockfile-package-change*";
-const PAGES_UI_EXACT_PATHS = new Set([
-  "next.config.ts",
-  "package.json",
-  "package-lock.json",
-]);
+const PAGES_UI_EXACT_PATHS = new Set(["next.config.ts", "package.json", "package-lock.json"]);
 const FULL_DEPLOY_INFRA_PREFIXES = DEPLOY_IMPACT_REGISTRY.fullDeployInfra.prefixes;
 const PAGES_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.pages.prefixes;
 const WORKER_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.worker.prefixes;
@@ -41,38 +37,54 @@ const WORKER_SHARED_EXCLUDED_PREFIXES = DEPLOY_IMPACT_REGISTRY.worker.sharedExcl
 const WORKER_PROMOTION_SHARED_EXCLUDED_PREFIXES = DEPLOY_IMPACT_REGISTRY.workerPromotion.sharedExcludedPrefixes ?? [];
 
 function isTestPath(file) {
-  return /(^|\/)__tests__\/.*\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
-    || /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
+  return /(^|\/)__tests__\//.test(file) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
+}
+
+function isPagesImpactPath(file) {
+  return (
+    FULL_DEPLOY_INFRA_PATHS.has(file) ||
+    FULL_DEPLOY_GUARDRAIL_EXACT_PATHS.has(file) ||
+    PAGES_ONLY_INFRA_PATHS.has(file) ||
+    PAGES_CHANGE_EXACT_PATHS.has(file) ||
+    FULL_DEPLOY_INFRA_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
+    PAGES_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix))
+  );
 }
 
 function isWorkerPromotionSharedPath(file) {
-  return file.startsWith("shared/")
-    && !WORKER_PROMOTION_SHARED_EXCLUDED_PATHS.has(file)
-    && !WORKER_PROMOTION_SHARED_EXCLUDED_PREFIXES.some((prefix) => file.startsWith(prefix))
-    && !isTestPath(file);
+  return (
+    file.startsWith("shared/") &&
+    !WORKER_PROMOTION_SHARED_EXCLUDED_PATHS.has(file) &&
+    !WORKER_PROMOTION_SHARED_EXCLUDED_PREFIXES.some((prefix) => file.startsWith(prefix)) &&
+    !isTestPath(file)
+  );
 }
 
 function isWorkerSharedDeployPath(file) {
-  return file.startsWith("shared/")
-    && !WORKER_SHARED_EXCLUDED_PATHS.has(file)
-    && !WORKER_SHARED_EXCLUDED_PREFIXES.some((prefix) => file.startsWith(prefix))
-    && !isTestPath(file);
+  return (
+    file.startsWith("shared/") &&
+    !WORKER_SHARED_EXCLUDED_PATHS.has(file) &&
+    !WORKER_SHARED_EXCLUDED_PREFIXES.some((prefix) => file.startsWith(prefix)) &&
+    !isTestPath(file)
+  );
 }
 
 function isWorkerPromotionPath(file) {
   if (WORKER_PROMOTION_EXCLUDED_PATHS.has(file) || isTestPath(file)) {
     return false;
   }
-  return WORKER_PROMOTION_EXACT_PATHS.has(file)
-    || WORKER_PROMOTION_PREFIXES.some((prefix) => file.startsWith(prefix))
-    || isWorkerPromotionSharedPath(file);
+  return (
+    WORKER_PROMOTION_EXACT_PATHS.has(file) ||
+    WORKER_PROMOTION_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
+    isWorkerPromotionSharedPath(file)
+  );
 }
 
 function parseQuotedJsonKey(line) {
-  if (!line.startsWith("\"")) {
+  if (!line.startsWith('"')) {
     return null;
   }
-  const closingQuoteIndex = line.indexOf("\"", 1);
+  const closingQuoteIndex = line.indexOf('"', 1);
   if (closingQuoteIndex === -1) {
     return null;
   }
@@ -171,19 +183,20 @@ export function extractPackageNamesFromDiff(diffText) {
 }
 
 export function hasWorkerPackagePromotionImpact(diffText) {
-  return extractPackageNamesFromDiff(diffText).some((name) =>
-    name === UNKNOWN_LOCKFILE_PACKAGE_CHANGE || WORKER_ROOT_RUNTIME_PACKAGES.has(name),
+  return extractPackageNamesFromDiff(diffText).some(
+    (name) => name === UNKNOWN_LOCKFILE_PACKAGE_CHANGE || WORKER_ROOT_RUNTIME_PACKAGES.has(name),
   );
 }
 
 export function hasWorkerDeployImpact(files) {
-  return files.some((file) =>
-    FULL_DEPLOY_INFRA_PATHS.has(file)
-    || FULL_DEPLOY_GUARDRAIL_EXACT_PATHS.has(file)
-    || WORKER_CHANGE_EXACT_PATHS.has(file)
-    || FULL_DEPLOY_INFRA_PREFIXES.some((prefix) => file.startsWith(prefix))
-    || WORKER_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix))
-    || isWorkerSharedDeployPath(file),
+  return files.some(
+    (file) =>
+      FULL_DEPLOY_INFRA_PATHS.has(file) ||
+      FULL_DEPLOY_GUARDRAIL_EXACT_PATHS.has(file) ||
+      WORKER_CHANGE_EXACT_PATHS.has(file) ||
+      FULL_DEPLOY_INFRA_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
+      WORKER_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
+      isWorkerSharedDeployPath(file),
   );
 }
 
@@ -192,20 +205,26 @@ export function hasWorkerPromotionImpact(files) {
 }
 
 export function hasPagesDeployImpact(files) {
-  return files.some((file) =>
-    FULL_DEPLOY_INFRA_PATHS.has(file)
-    || FULL_DEPLOY_GUARDRAIL_EXACT_PATHS.has(file)
-    || PAGES_ONLY_INFRA_PATHS.has(file)
-    || PAGES_CHANGE_EXACT_PATHS.has(file)
-    || FULL_DEPLOY_INFRA_PREFIXES.some((prefix) => file.startsWith(prefix))
-    || PAGES_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix)),
-  );
+  return files.some((file) => isPagesImpactPath(file));
+}
+
+export function hasPagesPublishImpact(files) {
+  return files.some((file) => !isTestPath(file) && isPagesImpactPath(file));
 }
 
 export function hasPagesUiImpact(files) {
-  return files.some((file) =>
-    PAGES_UI_EXACT_PATHS.has(file)
-    || PAGES_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix)),
+  return files.some(
+    (file) =>
+      !isTestPath(file) &&
+      (PAGES_UI_EXACT_PATHS.has(file) || PAGES_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix))),
+  );
+}
+
+export function hasOnlyInternalDocsImpact(files) {
+  return (
+    files.length > 0 &&
+    !hasDeployImpact(files) &&
+    files.every((file) => file.startsWith("docs/") || (!file.includes("/") && file.endsWith(".md")))
   );
 }
 

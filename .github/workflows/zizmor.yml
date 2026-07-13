@@ -3,8 +3,14 @@ name: Zizmor
 on:
   push:
     branches: [main]
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/**"
   pull_request:
     branches: [main]
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/**"
   schedule:
     - cron: "15 6 * * 1"
 
