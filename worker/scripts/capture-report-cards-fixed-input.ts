@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveBlacklistStatuses } from "@shared/lib/report-cards";
 import { BluechipRatingsMapSchema } from "@shared/types/bluechip";
@@ -7,7 +7,11 @@ import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { normalizeFixedInput, type ReportCardsFixedInput } from "../src/lib/report-cards-fixed-input";
+import {
+  createReportCardsFixedInput,
+  parseReportCardsFixedInputCacheValue,
+  type ReportCardsFixedInput,
+} from "../src/lib/report-cards-fixed-input";
 import { computeDexDeploymentSupplyCoverage } from "../src/lib/report-cards-snapshot-inputs";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
@@ -19,6 +23,8 @@ Options:
   --origin <url>                  Site origin (default: https://pharos.watch)
   --captured-at <iso>             Fixed capture timestamp (required)
   --registry-revision <revision>  Git/catalog revision identifier (required)
+  --dex-generation-id <id>        DEX producer generation captured by this input (required)
+  --exact-cache-export <path>      Export a local db_cache query result instead of reconstructing
   --concurrency <n>               Reserve endpoint concurrency (default: 6)
   -h, --help                      Show this help`;
 
@@ -26,6 +32,7 @@ interface CaptureOptions {
   origin: string;
   capturedAt: string;
   registryRevision: string;
+  dexGenerationId: string;
   concurrency: number;
 }
 
@@ -135,11 +142,12 @@ export async function captureReportCardsFixedInput(
       entry.updatedAt != null && entry.ageSeconds != null ? [entry.updatedAt + entry.ageSeconds] : [],
     ),
   );
-
-  const fixedInput = normalizeFixedInput({
-    schemaVersion: 1,
+  const fixedInput = createReportCardsFixedInput({
+    captureKind: "public-reconstruction",
     capturedAt: options.capturedAt,
     sourceGeneration: baseline.publication?.generationId ?? `report-cards:${baseline.updatedAt}`,
+    dexGenerationId: options.dexGenerationId,
+    redemptionGenerationId: `redemption-backstops-${inputFreshness.redemptionBackstops.updatedAt ?? "unavailable"}`,
     registryRevision: options.registryRevision,
     methodologyVersion: baseline.methodology.version,
     clockSec: fixedClockSec,
@@ -174,16 +182,34 @@ async function main(): Promise<void> {
       origin: { type: "string", default: "https://pharos.watch" },
       "captured-at": { type: "string" },
       "registry-revision": { type: "string" },
+      "dex-generation-id": { type: "string" },
+      "exact-cache-export": { type: "string" },
       concurrency: { type: "string", default: "6" },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
   if (typeof values.output !== "string") throw new Error("--output is required");
+  if (typeof values["exact-cache-export"] === "string") {
+    // Accept either the raw cache envelope or Wrangler D1's JSON query result.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator input path.
+    let raw: unknown = JSON.parse(readFileSync(values["exact-cache-export"], "utf8"));
+    if (Array.isArray(raw)) raw = raw[0];
+    if (raw && typeof raw === "object" && "results" in raw) {
+      raw = (raw as { results?: Array<{ value?: unknown }> }).results?.[0]?.value;
+    }
+    const fixedInput = await parseReportCardsFixedInputCacheValue(raw);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
+    writeFileSync(values.output, `${JSON.stringify(fixedInput, null, 2)}\n`, "utf8");
+    return;
+  }
   if (typeof values["baseline-output"] !== "string") throw new Error("--baseline-output is required");
   if (typeof values["captured-at"] !== "string" || !Number.isFinite(Date.parse(values["captured-at"]))) {
     throw new Error("--captured-at must be a valid ISO timestamp");
   }
   if (typeof values["registry-revision"] !== "string") throw new Error("--registry-revision is required");
+  if (typeof values["dex-generation-id"] !== "string" || !values["dex-generation-id"].trim()) {
+    throw new Error("--dex-generation-id is required");
+  }
   const concurrency = Number(values.concurrency);
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 12) {
     throw new Error("--concurrency must be an integer from 1 through 12");
@@ -193,8 +219,12 @@ async function main(): Promise<void> {
     origin,
     capturedAt: values["captured-at"],
     registryRevision: values["registry-revision"],
+    dexGenerationId: values["dex-generation-id"],
     concurrency,
   });
+  console.warn(
+    "[report-cards:capture-fixed-input] Public endpoint fanout is a reconstruction, not exact P0c evidence; use --exact-cache-export for release calibration.",
+  );
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
   writeFileSync(values.output, `${JSON.stringify(fixedInput, null, 2)}\n`, "utf8");
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.

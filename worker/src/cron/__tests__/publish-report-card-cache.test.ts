@@ -1,14 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
-import {
-  DIMENSION_WEIGHTS,
-  GRADE_THRESHOLDS,
-  PEG_MULTIPLIER_EXPONENT,
-} from "@shared/lib/report-cards";
+import { DIMENSION_WEIGHTS, GRADE_THRESHOLDS, PEG_MULTIPLIER_EXPONENT } from "@shared/lib/report-cards";
 import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 
 const mockBuildReportCardsSnapshot = vi.fn();
 const mockSetCacheMany = vi.fn();
+const mockBuildFixedInputCacheEntry = vi.fn();
 
 vi.mock("../../lib/report-cards-snapshot", () => ({
   buildReportCardsSnapshot: mockBuildReportCardsSnapshot,
@@ -18,6 +15,10 @@ vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(),
   setCache: vi.fn(),
   setCacheMany: mockSetCacheMany,
+}));
+
+vi.mock("../../lib/report-cards-fixed-input", () => ({
+  buildReportCardsFixedInputCacheEntry: mockBuildFixedInputCacheEntry,
 }));
 
 vi.mock("@shared/lib/stablecoins/registry", () => ({
@@ -30,6 +31,13 @@ describe("publishReportCardCache", () => {
   beforeEach(() => {
     mockBuildReportCardsSnapshot.mockReset();
     mockSetCacheMany.mockReset();
+    mockBuildFixedInputCacheEntry.mockReset();
+    mockBuildFixedInputCacheEntry.mockResolvedValue({
+      key: "report-cards:fixed-input:exact",
+      value: '{"fixed":"input-envelope"}',
+      storedBytes: 256,
+      uncompressedBytes: 512,
+    });
   });
 
   it("writes a generation-aware alert safety source cache from the live cards", async () => {
@@ -69,6 +77,9 @@ describe("publishReportCardCache", () => {
         dexLiquidity: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
         redemptionBackstops: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
       },
+      fixedInput: {
+        sourceGeneration: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
+      },
     });
     mockSetCacheMany.mockResolvedValue(undefined);
 
@@ -77,21 +88,20 @@ describe("publishReportCardCache", () => {
     expect(result.itemCount).toBe(1);
     // The producer is the only caller allowed to publish the peg-analytics
     // aggregate cache; read paths build the snapshot without the side effect.
-    expect(mockBuildReportCardsSnapshot).toHaveBeenCalledWith(
-      expect.anything(),
-      { publishPegAnalytics: true },
-    );
+    expect(mockBuildReportCardsSnapshot).toHaveBeenCalledWith(expect.anything(), {
+      publishPegAnalytics: true,
+      captureFixedInput: true,
+    });
     expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
     const entries = mockSetCacheMany.mock.calls[0]?.[1] as Array<{ key: string; value: string }>;
     expect(entries.map((entry) => entry.key)).toEqual([
       "report-cards:snapshot",
       "report_card_cache",
       "alert:safety-source-cache",
+      "report-cards:fixed-input:exact",
     ]);
     const parsed = entries.map((entry) => JSON.parse(entry.value));
-    expect(parsed[0].payload.publication.generationId).toBe(
-      `report-cards:${METHODOLOGY_VERSION}:1700000000`,
-    );
+    expect(parsed[0].payload.publication.generationId).toBe(`report-cards:${METHODOLOGY_VERSION}:1700000000`);
     expect(parsed[1].payload.publicationGenerationId).toBe(parsed[0].payload.publication.generationId);
     expect(parsed[2].publicationGenerationId).toBe(parsed[0].payload.publication.generationId);
     expect(parsed[0].payload.publication).toMatchObject({
@@ -99,7 +109,9 @@ describe("publishReportCardCache", () => {
       scoredCount: 1,
       notRatedCount: 0,
     });
-    expect(entries[2]?.value).toContain("\"usdc-circle\"");
+    expect(entries[2]?.value).toContain('"usdc-circle"');
+    expect(parsed[3]).toEqual({ fixed: "input-envelope" });
+    expect(parsed[0].payload.fixedInput).toBeUndefined();
   });
 
   it("rejects a shrunken active set before publishing any projection", async () => {
@@ -119,6 +131,7 @@ describe("publishReportCardCache", () => {
         dexLiquidity: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
         redemptionBackstops: { updatedAt: 1_700_000_000, ageSeconds: 0, stale: false },
       },
+      fixedInput: { sourceGeneration: `report-cards:${METHODOLOGY_VERSION}:1700000000` },
     });
 
     await expect(publishReportCardCache({} as D1Database)).rejects.toThrow("report-card-active-set-mismatch");

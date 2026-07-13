@@ -11,6 +11,8 @@ Options:
   --input <path>                  Fixed build-input JSON
   --output <path>                 Write replay JSON instead of stdout
   --allow-methodology-mismatch    Replay a captured input with current methodology code
+  --dex-max-age-sec <seconds>     Override the DEX observation freshness window
+  --redemption-max-age-sec <sec>  Override the live-redemption freshness window
   -h, --help                      Show this help`;
 
 async function main(): Promise<void> {
@@ -19,14 +21,24 @@ async function main(): Promise<void> {
       input: { type: "string" },
       output: { type: "string" },
       "allow-methodology-mismatch": { type: "boolean" },
+      "dex-max-age-sec": { type: "string" },
+      "redemption-max-age-sec": { type: "string" },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
   if (typeof values.input !== "string") throw new Error("--input is required");
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator input path.
   const fixedInput = JSON.parse(readFileSync(values.input, "utf8")) as unknown;
+  const parseMaxAge = (raw: unknown, flag: string): number | undefined => {
+    if (raw == null) return undefined;
+    const parsed = Number(raw);
+    if (!Number.isInteger(parsed) || parsed < 0) throw new Error(`${flag} must be a non-negative integer`);
+    return parsed;
+  };
   const snapshot = buildReportCardsSnapshotFromFixedInput(fixedInput, {
     allowMethodologyMismatch: values["allow-methodology-mismatch"] === true,
+    dexExitObservationMaxAgeSec: parseMaxAge(values["dex-max-age-sec"], "--dex-max-age-sec"),
+    liveRedemptionExitObservationMaxAgeSec: parseMaxAge(values["redemption-max-age-sec"], "--redemption-max-age-sec"),
   });
   const output = serializeNormalizedReportCardsReplay(snapshot);
   if (typeof values.output === "string") {

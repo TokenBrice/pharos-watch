@@ -16,8 +16,17 @@ import {
 } from "./report-cards-snapshot-finalize";
 import type { StablecoinData } from "@shared/types/market";
 import type { DependencyGraphEdge } from "@shared/lib/dependency-graph";
+import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import type { DimensionKey, ReportCard, ReportCardGrade } from "@shared/types/report-cards";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import {
+  computeReportCardsRegistryFingerprint,
+  createReportCardsFixedInput,
+  type FixedDexLiquidityRow,
+  type ReportCardsFixedInput,
+} from "./report-cards-fixed-input";
 
 export { ReportCardsSnapshotUnavailableError } from "./report-cards-snapshot-inputs";
 export { topologicalOrder } from "./report-cards-snapshot-card";
@@ -46,6 +55,8 @@ export interface ReportCardsSnapshot {
   collateralDriftCoins?: CollateralDriftEntry[];
   /** Coins that fell back from live to curated scoring */
   liveToFallbackCoins?: string[];
+  /** Exact in-memory scoring inputs, present only for the publication cron. */
+  fixedInput?: ReportCardsFixedInput;
 }
 
 export interface BuildReportCardsSnapshotOptions {
@@ -57,6 +68,105 @@ export interface BuildReportCardsSnapshotOptions {
   publishPegAnalytics?: boolean;
   preloadedStablecoinsCache?: StablecoinsCacheLoadResult;
   sameNotionalScoringMode?: "legacy" | "active";
+  captureFixedInput?: boolean;
+}
+
+interface DexPublicationRow {
+  stablecoin_id: string;
+  publication_generation_id: string | null;
+  updated_at: number | null;
+}
+
+interface RedemptionPublicationRow {
+  run_id: string;
+  expected_count: number;
+  written_count: number;
+  min_updated_at: number | null;
+  max_updated_at: number | null;
+}
+
+export function resolveExactDexPublicationGeneration(
+  rows: readonly DexPublicationRow[],
+  activeIds: readonly string[] = ACTIVE_STABLECOINS.map((coin) => coin.id),
+): { generationId: string; updatedAt: number } {
+  const byId = new Map(rows.map((row) => [row.stablecoin_id, row]));
+  const missingIds = activeIds.filter((id) => !byId.has(id));
+  if (missingIds.length > 0) {
+    throw new Error(`Exact fixed-input capture missing ${missingIds.length} active DEX rows: ${missingIds.join(",")}`);
+  }
+  const activeRows = activeIds.map((id) => byId.get(id)!);
+  const generations = new Set(activeRows.map((row) => row.publication_generation_id));
+  const timestamps = new Set(activeRows.map((row) => row.updated_at));
+  if (generations.size !== 1 || generations.has(null)) {
+    throw new Error(`Exact fixed-input capture spans ${generations.size} active DEX generations`);
+  }
+  if (timestamps.size !== 1 || timestamps.has(null)) {
+    throw new Error(`Exact fixed-input capture spans ${timestamps.size} active DEX timestamps`);
+  }
+  const generationId = activeRows[0]!.publication_generation_id!;
+  const updatedAt = activeRows[0]!.updated_at!;
+  if (generationId !== `dex-liquidity-${updatedAt}`) {
+    throw new Error(`Active DEX generation ${generationId} does not match row timestamp ${updatedAt}`);
+  }
+  return { generationId, updatedAt };
+}
+
+async function loadExactDexPublicationGeneration(db: D1Database): Promise<{
+  generationId: string;
+  updatedAt: number;
+}> {
+  const rows = await db
+    .prepare(
+      `SELECT stablecoin_id, publication_generation_id, updated_at
+         FROM dex_liquidity
+        WHERE stablecoin_id != '__global__'
+          AND (publication_generation_id IS NULL OR publication_generation_id IN (
+            SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'
+          ))`,
+    )
+    .all<DexPublicationRow>();
+  return resolveExactDexPublicationGeneration(rows.results ?? []);
+}
+
+async function loadExactRedemptionPublicationGeneration(
+  db: D1Database,
+  updatedAt: number | null,
+  rowCount: number,
+): Promise<string> {
+  if (updatedAt == null && rowCount === 0) return "redemption-backstops-unavailable";
+  if (updatedAt == null || rowCount === 0) {
+    throw new Error("Exact fixed-input redemption generation has inconsistent freshness and row coverage");
+  }
+  const rows = await db
+    .prepare(
+      `SELECT run_id, expected_count, written_count, min_updated_at, max_updated_at
+         FROM redemption_backstop_runs
+        WHERE status = 'completed' AND max_updated_at = ?
+        ORDER BY completed_at DESC
+        LIMIT 2`,
+    )
+    .bind(updatedAt)
+    .all<RedemptionPublicationRow>();
+  const matching = (rows.results ?? []).filter(
+    (row) =>
+      row.expected_count === rowCount &&
+      row.written_count === rowCount &&
+      row.min_updated_at === updatedAt &&
+      row.max_updated_at === updatedAt,
+  );
+  if (matching.length !== 1 || !matching[0]!.run_id) {
+    throw new Error(
+      `Exact fixed-input capture could not bind ${rowCount} redemption rows at ${updatedAt} to one completed run`,
+    );
+  }
+  return matching[0]!.run_id;
+}
+
+function freshnessAtClock(entry: ReportCardsInputFreshness["dexLiquidity"], clockSec: number) {
+  return {
+    ...entry,
+    ageSeconds: entry.updatedAt == null ? null : Math.max(0, clockSec - entry.updatedAt),
+  };
 }
 
 export async function buildReportCardsSnapshot(
@@ -65,6 +175,7 @@ export async function buildReportCardsSnapshot(
     publishPegAnalytics = false,
     preloadedStablecoinsCache,
     sameNotionalScoringMode = "legacy",
+    captureFixedInput = false,
   }: BuildReportCardsSnapshotOptions = {},
 ): Promise<ReportCardsSnapshot> {
   const {
@@ -124,6 +235,12 @@ export async function buildReportCardsSnapshot(
   const nonNavPegDataById = new Map(
     [...pegAnalytics.pegDataById].filter(([id]) => ACTIVE_META_BY_ID.get(id)?.flags.navToken !== true),
   );
+  const scoringInputFreshness: ReportCardsInputFreshness = captureFixedInput
+    ? {
+        dexLiquidity: freshnessAtClock(inputFreshness.dexLiquidity, pegAnalytics.nowSec),
+        redemptionBackstops: freshnessAtClock(inputFreshness.redemptionBackstops, pegAnalytics.nowSec),
+      }
+    : inputFreshness;
 
   const resolvedBlacklistStatuses = resolveBlacklistStatuses(ACTIVE_STABLECOINS, {
     reserveSlicesById: liveReserveMap,
@@ -151,21 +268,88 @@ export async function buildReportCardsSnapshot(
     chainCirculatingById: new Map(peggedAssets.map((asset) => [asset.id, asset.chainCirculating])),
     sameNotionalScoringMode,
     exitObservationAsOfSec: pegAnalytics.nowSec,
-    maxExitObservationAgeSec:
-      Math.max(CRON_INTERVALS["sync-dex-liquidity"], CRON_INTERVALS["sync-redemption-backstops"]) * 2,
+    dexExitObservationMaxAgeSec: CRON_INTERVALS["sync-dex-liquidity"] * 2,
+    liveRedemptionExitObservationMaxAgeSec: CRON_INTERVALS["sync-redemption-backstops"] * 2,
   });
 
   const { driftCoins: collateralDriftCoins, fallbackCoins: liveToFallbackCoins } =
     summarizeCollateralDriftFromLiveReserveMap(liveReserveMap);
 
-  return buildReportCardsSnapshotEnvelope({
+  const snapshot = buildReportCardsSnapshotEnvelope({
     cards: sortReportCards([...liveReportCards.cards, ...buildDefunctReportCards()]),
     updatedAt: stablecoinsCached.updatedAt,
     liquidityStale,
     redemptionStale,
-    inputFreshness,
+    inputFreshness: scoringInputFreshness,
     collateralDriftCoins,
     liveToFallbackCoins,
     dependencyGraphEdges: liveReportCards.dependencyGraphEdges,
   });
+
+  if (!captureFixedInput) return snapshot;
+
+  const dexPublication = await loadExactDexPublicationGeneration(db);
+  if (scoringInputFreshness.dexLiquidity.updatedAt !== dexPublication.updatedAt) {
+    throw new Error(
+      `Exact fixed-input DEX freshness ${scoringInputFreshness.dexLiquidity.updatedAt} does not match active generation ${dexPublication.updatedAt}`,
+    );
+  }
+  const dexLiqMap: Record<string, FixedDexLiquidityRow> = {};
+  const dexDeploymentSupplyCoverageById: ReportCardsFixedInput["dexDeploymentSupplyCoverageById"] = {};
+  for (const coin of ACTIVE_STABLECOINS) {
+    const row = dexLiquiditySnapshot.map[coin.id];
+    if (!row) throw new Error(`Exact fixed-input capture has no in-memory DEX row for ${coin.id}`);
+    dexLiqMap[coin.id] = {
+      ...row,
+      methodologyVersion: LIQUIDITY_METHODOLOGY_VERSION,
+      updatedAt: dexPublication.updatedAt,
+    };
+    const coverage = (row as typeof row & { deploymentSupplyCoverage?: DexDeploymentSupplyCoverage })
+      .deploymentSupplyCoverage;
+    if (coverage) dexDeploymentSupplyCoverageById[coin.id] = coverage;
+  }
+
+  const redemptionTimestamps = [...new Set(Object.values(redemptionBackstopMap).map((row) => row.updatedAt))];
+  if (redemptionTimestamps.length > 1) {
+    throw new Error(`Exact fixed-input capture spans ${redemptionTimestamps.length} redemption timestamps`);
+  }
+  const redemptionUpdatedAt = scoringInputFreshness.redemptionBackstops.updatedAt;
+  if (redemptionTimestamps.length === 1 && redemptionTimestamps[0] !== redemptionUpdatedAt) {
+    throw new Error(
+      `Exact fixed-input redemption freshness ${redemptionUpdatedAt} does not match row timestamp ${redemptionTimestamps[0]}`,
+    );
+  }
+  const redemptionGenerationId = await loadExactRedemptionPublicationGeneration(
+    db,
+    redemptionUpdatedAt,
+    Object.keys(redemptionBackstopMap).length,
+  );
+  const registryFingerprint = computeReportCardsRegistryFingerprint();
+  const fixedInput = createReportCardsFixedInput({
+    captureKind: "exact-publication-inputs",
+    capturedAt: new Date(pegAnalytics.nowSec * 1_000).toISOString(),
+    sourceGeneration: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${stablecoinsCached.updatedAt}`,
+    dexGenerationId: dexPublication.generationId,
+    redemptionGenerationId,
+    registryRevision: `sha256:${registryFingerprint}`,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    clockSec: pegAnalytics.nowSec,
+    updatedAt: stablecoinsCached.updatedAt,
+    liquidityStale,
+    redemptionStale,
+    inputFreshness: scoringInputFreshness,
+    pegDataById: Object.fromEntries(nonNavPegDataById),
+    activeDepegPeakBpsById: Object.fromEntries(activeDepegPeakBpsById),
+    dexLiqMap,
+    redemptionBackstopMap,
+    bluechipMap,
+    resolvedBlacklistStatuses: Object.fromEntries(resolvedBlacklistStatuses),
+    liveReserveMap: Object.fromEntries(liveReserveMap),
+    liveReserveProvenanceMap: Object.fromEntries(liveReserveProvenanceMap),
+    chainCirculatingById: Object.fromEntries(peggedAssets.map((asset) => [asset.id, asset.chainCirculating])),
+    dexDeploymentSupplyCoverageById,
+    collateralDriftCoins,
+    liveToFallbackCoins,
+  });
+  return { ...snapshot, fixedInput };
 }
