@@ -210,6 +210,43 @@ describe("Safety Score history V2", () => {
     });
   });
 
+  it("rejects organic and baseline transitions with invalid predecessor values", () => {
+    const { db } = createHistoryDatabase();
+    const common = {
+      stablecoinId: "usdc-circle",
+      recordedAt: 200,
+      grade: "A" as const,
+      score: 88,
+      identity: v8Identity(),
+      createdAt: 205,
+    };
+
+    expect(() =>
+      prepareV8OrganicSafetyScoreHistoryWrites(db, {
+        ...common,
+        prevGrade: null,
+        prevScore: 79,
+        transitionKind: "organic-grade-change",
+      }),
+    ).toThrow("requires a previous grade");
+    expect(() =>
+      prepareV8OrganicSafetyScoreHistoryWrites(db, {
+        ...common,
+        prevGrade: "B+",
+        prevScore: null,
+        transitionKind: "initial-baseline",
+      }),
+    ).toThrow("cannot carry comparable previous values");
+    expect(() =>
+      prepareV8OrganicSafetyScoreHistoryWrites(db, {
+        ...common,
+        prevGrade: null,
+        prevScore: 79,
+        transitionKind: "initial-baseline",
+      }),
+    ).toThrow("cannot carry comparable previous values");
+  });
+
   it("fails closed when an existing V2 identity is replayed with different provenance", async () => {
     const { db } = createHistoryDatabase();
     const common = {
