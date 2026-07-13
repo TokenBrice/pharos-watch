@@ -44,9 +44,26 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
   candidate deterministically. The current policy semantic digest is
-  `5ec0823b12f9e1fd21fb31ba4a2ec059d25388d64ffe13fac80de376142c8a85`;
+  `204dc01eb2ca995b874b55323ed8c7d7fbab150f6f8b61c42aa374082839c17a`;
   the current evaluation-build digest is
-  `c8a7fc445491fcdee54b8efe2c383380a30a77a69d345e22c36441375eb8b039`.
+  `592f939780880fdc71fe9c0000fbdf18b1b1d7033dfda24b4449cb097c6d5eab`.
+- The shadow extension builder now maps reviewed repository evidence into the
+  strict fact set instead of clamping every fact to an unresolved state: peg
+  references from the registry peg currency, chain-supply bridge materiality
+  reconciled against reviewed bridge-route rows, reviewed route semantics for
+  every captured DEX/redemption observation, faithful mint/upgrade/oracle/
+  bridge control mapping from mint-authority and risk-review evidence, and
+  conservative fiat/tbill mechanism reviews whose evidence-backed components
+  are bounded-unknown at the policy's bounded quality. Bounded mechanism
+  components gap as the non-critical `bounded-mechanism-review` reason;
+  excluded optional exit routes stay on per-route traces instead of imposing
+  critical reasons once a score-eligible route carries the exit claim. With
+  the 2026-07-13 exact publication capture, the candidate produces real
+  scores for `usdt-tether` and `usdc-circle` (83.15% of tracked supply
+  weight); every other asset remains reason-coded `NR` pending exit-route
+  producer coverage, upgradeability/control curation, reserve envelopes, and
+  peg coverage. The 305-asset and 99%-weight rateability floors therefore
+  still fail and every shadow day remains non-qualifying.
 - After a valid V8 publication commits, the Worker runs V9 in a separate
   failure domain. It retains latest candidate/diff state and one compact daily
   summary. Full replay artifacts are retained only for selected first, final,
