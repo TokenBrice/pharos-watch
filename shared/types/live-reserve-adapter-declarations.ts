@@ -122,6 +122,16 @@ type LiveReserveAdapterDescriptorDeclaration = {
 };
 
 export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
+  "3jane-usd3": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: "none",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
   abracadabra: {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "abracadabra",

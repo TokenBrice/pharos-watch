@@ -22,11 +22,12 @@ function adapterReview(
   adapter: string,
   sourceFile: string,
   rationale: string,
+  reviewedAt = "2026-07-12",
 ): DependencyAdapterMappingReview {
   return {
     adapter,
     reviewer: "Codex dependency mapping review",
-    reviewedAt: "2026-07-12",
+    reviewedAt,
     sourceFiles: [sourceFile],
     rationale,
   };
@@ -97,6 +98,7 @@ export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDispositio
 
 /** Exact adapters observed producing mapped live dependency sets in the P1b replay. */
 export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappingReview[] = [
+  adapterReview("3jane-usd3", "worker/src/cron/reserve-adapters/3jane-usd3.ts", "Maps the liquid waUSDC/USDC reserve bucket to the canonical Circle USDC dependency while leaving the private-credit receivables unlinked.", "2026-07-13"),
   adapterReview("accountable", "worker/src/cron/reserve-adapters/accountable.ts", "Maps only configured, canonical asset rows from the Accountable reserve payload."),
   adapterReview("asymmetry", "worker/src/cron/reserve-adapters/asymmetry.ts", "Maps the reviewed afCVX and stablecoin branches to canonical upstream IDs."),
   adapterReview("blast-usdb-yield-manager", "worker/src/cron/reserve-adapters/blast-usdb-yield-manager.ts", "Maps balances from the reviewed Blast USDB yield-manager asset roster."),

@@ -210,6 +210,18 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
 
   // --- Risky / crypto-backed ---
   {
+    // 3Jane USD3 TransparentUpgradeableProxy, verified Blockscout deployment tx
+    // 0xa50b1bacaceebe52c33a9815fa9e0eb8549f2c38218f41745647b881a7008243.
+    chain: ETHEREUM,
+    stablecoinId: "usd3-3jane",
+    dustThreshold: 10_000,
+    startBlock: 23_214_680,
+    tier: "extended",
+    startBlockSource: "blockscout-ethereum-proxy-deployment-2025-08-25",
+    startBlockConfidence: "high",
+    events: transferMintBurn(),
+  },
+  {
     chain: ETHEREUM,
     stablecoinId: "dai-makerdao",
     dustThreshold: 10_000,

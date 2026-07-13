@@ -1,4 +1,6 @@
 export const YIELD_POOL_MAP: Record<string, string> = {
+  // USD3 - 3Jane senior credit tranche, Ethereum, native NAV appreciation
+  "usd3-3jane": "f8cd444e-d99f-4132-b234-fd3482bf8806",
   // sUSDe - ethena-usde native staking, Ethereum, $3.5B TVL, ~3.6% APY
   "susde-ethena": "66985a81-9c51-46ca-9977-42b4fe7bc6df",
   // USYC - ondo-yield-assets (listed as USDYC), Ethereum, $602M TVL, ~3.6% APY

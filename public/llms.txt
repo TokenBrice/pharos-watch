@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 360 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 361 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -249,6 +249,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [OpenEden OpenDollar (USDO)](https://pharos.watch/stablecoin/usdo-openeden/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Compounding OpenDollar (cUSDO)](https://pharos.watch/stablecoin/cusdo-openeden/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Cygnus Finance Global USD (cgUSD)](https://pharos.watch/stablecoin/cgusd-cygnus-finance/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [3Jane USD3 (USD3)](https://pharos.watch/stablecoin/usd3-3jane/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [EUR CoinVertible (EURCV)](https://pharos.watch/stablecoin/eurcv-societe-generale-forge/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Quantoz USDQ (USDQ)](https://pharos.watch/stablecoin/usdq-quantoz/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Resupply USD (REUSD)](https://pharos.watch/stablecoin/reusd-resupply/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

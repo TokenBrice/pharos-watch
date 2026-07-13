@@ -52,6 +52,26 @@ describe("mint-burn-contracts reUSD config", () => {
   });
 });
 
+describe("mint-burn-contracts 3Jane USD3 config", () => {
+  it("starts zero-address Transfer tracking at the verified proxy deployment block", () => {
+    const configs = getMintBurnConfigsForStablecoin("usd3-3jane");
+    expect(configs).toHaveLength(1);
+    expect(configs[0]).toMatchObject({
+      chain: { chainId: "ethereum" },
+      symbol: "USD3",
+      contractAddress: "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+      decimals: 6,
+      dustThreshold: 10_000,
+      startBlock: 23_214_680,
+      tier: "extended",
+      adapterKind: "transfer-zero-address",
+      startBlockSource: "blockscout-ethereum-proxy-deployment-2025-08-25",
+      startBlockConfidence: "high",
+    });
+    expect(configs[0]!.events.map((event) => event.direction)).toEqual(["mint", "burn"]);
+  });
+});
+
 describe("mint-burn-contracts removals", () => {
   it("does not track explicitly removed no-signal tokens", () => {
     const trackedIds = new Set(MINT_BURN_CONFIGS.map((c) => c.stablecoinId));

@@ -1,0 +1,162 @@
+{
+  "id": "usd3-3jane",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "USD3 shares are minted by the vault only against USDC deposits. A 3-of-5 3Jane Safe controls a one-day configuration timelock, while a separate seven-day timelock owns the proxy admin and can replace mint-critical implementation logic.",
+    "inheritedFrom": "usdc-circle",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": ["0x056B269Eb1f75477a8666ae8C7fE01b64dD55eCc"],
+      "implementationAddresses": ["0xb606fb370eaaad03d71b49ae5e42aa4aec7458d9"],
+      "adminAddresses": ["0x41c838664a9c64905537ff410333b9f5964cc596"],
+      "canChangeMintLogic": true,
+      "delaySec": 604800,
+      "controlRef": "USD3 proxy upgrade timelock",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25524745,
+      "sources": [
+        {
+          "label": "3Jane contract addresses",
+          "url": "https://docs.3jane.xyz/developers/addresses"
+        },
+        {
+          "label": "Ethereum USD3 proxy",
+          "url": "https://eth.blockscout.com/address/0x056B269Eb1f75477a8666ae8C7fE01b64dD55eCc"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x056B269Eb1f75477a8666ae8C7fE01b64dD55eCc",
+        "label": "USD3 deposit-mint vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "capDescription": "ERC-4626 shares are minted only against USDC deposits; the reviewed implementation exposes no privileged unbacked mint path.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25524745,
+        "sources": [
+          {
+            "label": "3Jane USD3 source",
+            "url": "https://github.com/3jane-protocol/moneymarket-contracts/blob/main/src/usd3/USD3.sol"
+          }
+        ],
+        "evidence": "The deployed USD3 strategy follows ERC-4626 deposit and mint accounting against USDC. Token supply changes through deposits, withdrawals, redemptions, and proxy-upgradeable strategy logic rather than a separate privileged token minter."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1dccd4628d48a50c1a7adea3848bcc869f08f8c2",
+        "label": "USD3 protocol configuration timelock",
+        "role": "cap-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 86400,
+        "capDescription": "ProtocolConfig held a 75,000,000 USDC supply cap and 100% max-on-credit setting at the observed block; the timelock can change these limits.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25524745,
+        "sources": [
+          {
+            "label": "3Jane protocol configuration",
+            "url": "https://docs.3jane.xyz/protocol-global-config"
+          },
+          {
+            "label": "3Jane contract addresses",
+            "url": "https://docs.3jane.xyz/developers/addresses"
+          }
+        ],
+        "evidence": "Onchain ProtocolConfig reads at block 25524745 returned a 75,000,000 USDC supply cap, maxOnCredit of 10,000 bps, and a minimum timelock delay of 86,400 seconds. The 3Jane Safe is a proposer and executor."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3D3C41419Ab401cd25055E8f9421D7D96d887885",
+        "label": "USD3 proxy upgrade timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 604800,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25524745,
+        "sources": [
+          {
+            "label": "Ethereum USD3 proxy",
+            "url": "https://eth.blockscout.com/address/0x056B269Eb1f75477a8666ae8C7fE01b64dD55eCc"
+          }
+        ],
+        "evidence": "The EIP-1967 proxy admin is 0x41c838664a9c64905537ff410333b9f5964cc596. Its owner is this OpenZeppelin timelock, whose getMinDelay() returned 604,800 seconds at the observed block."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x33333333c480194b5b651987b7d00cb9427365b7",
+        "label": "3Jane governance Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0+L2",
+          "owners": [
+            "0x208662548D73755b4C96a9f7809a035910E55631",
+            "0x5A519B341962307a98BB196EcFc21b8fa89395D1",
+            "0x751A84FCE3dd5161ecC741Da47929337a7e6f64f",
+            "0xa84Bd17f9efBA6A4dbB631285C689D9E58d56D33",
+            "0x1226858E04b9d077258F153275613734421cD06B"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "observedBlock": 25524745,
+          "observedAt": "2026-07-13",
+          "source": "safe-api"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25524745,
+        "failureDomainKeys": ["3jane-governance-safe"],
+        "sources": [
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x33333333c480194b5b651987b7d00cb9427365b7/"
+          }
+        ],
+        "evidence": "The Safe Transaction Service reported five owners, a threshold of three, no enabled modules, and no guard. The Safe holds proposer, executor, and canceller roles on the reviewed timelocks and is the strategy management and keeper."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "3Jane contract addresses",
+          "url": "https://docs.3jane.xyz/developers/addresses"
+        },
+        {
+          "label": "3Jane money-market contracts",
+          "url": "https://github.com/3jane-protocol/moneymarket-contracts"
+        },
+        {
+          "label": "Ethereum USD3 proxy",
+          "url": "https://eth.blockscout.com/address/0x056B269Eb1f75477a8666ae8C7fE01b64dD55eCc"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x33333333c480194b5b651987b7d00cb9427365b7/"
+        }
+      ],
+      "evidence": "At Ethereum block 25524745, USD3 was a TransparentUpgradeableProxy using implementation 0xb606fb370eaaad03d71b49ae5e42aa4aec7458d9. A 3-of-5 Safe controls protocol operations through one-day and seven-day timelocks. Deposits were permissionless, the configured supply cap was 75 million USDC, and the reviewed implementation exposed no independent unbacked mint function.",
+      "reviewer": "OpenAI Codex mint-authority review",
+      "reviewedAt": "2026-07-13",
+      "disposition": "scoreable"
+    }
+  }
+}

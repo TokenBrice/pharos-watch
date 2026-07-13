@@ -1,4 +1,12 @@
 {
+  "usd3-3jane": {
+    "title": "Senior Credit Is Still Credit",
+    "text": "USD3 packages 3Jane's senior credit tranche into an ERC-4626 share: USDC enters, idle cash waits in Aave, and the rest finances fintech receivables and crypto credit lines. Its NAV can rise above a dollar because interest accrues into the share price, so the familiar ticker is doing fund accounting rather than promising a fixed $1 quote. sUSD3 absorbs losses first, but that protection is only as thick as the junior tranche; recoveries from an impaired off-chain borrower can take months or years. Pharos can see the live split between liquid waUSDC and deployed credit, plus the amount immediately withdrawable, which is more useful than calling the whole balance USDC-backed. The senior seat is safer than the junior one, not the same thing as cash.",
+    "updatedAt": "2026-07-13",
+    "authoredBy": "ai",
+    "model": "gpt-5.6-sol",
+    "factsAsOf": "2026-07-13"
+  },
   "kusd-kerne": {
     "title": "Genesis Beta, USDC-Backed Today",
     "text": "kUSD is Kerne Protocol's Base-native synthetic dollar, live at genesis scale but still pre-active in Pharos because the runtime price path is not ready. DefiLlama now indexes Kerne USD supply as stablecoin id 402, but the row reports price=null and CoinGecko does not yet resolve a Kerne USD coin, so Pharos keeps it on the upcoming tracker rather than the active dashboard. Current backing is simple: combined USDC reserves in the mint and redeem Peg Stability Module contracts cover outstanding kUSD slightly above 1:1. The more ambitious delta-neutral design, with a WETH vault and Hyperliquid short hedge, is documented as degraded and excluded from reserves pending a v2 redeploy. Admin authority sits with a 2-of-3 Gnosis Safe, and Kerne publishes hourly signed proof-of-reserves data at kerne.fi/verify.",

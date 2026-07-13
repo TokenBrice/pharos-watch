@@ -1,0 +1,107 @@
+{
+  "id": "usd3-3jane",
+  "detailProvider": "coingecko",
+  "name": "3Jane USD3",
+  "symbol": "USD3",
+  "oneLiner": "USD3 is 3Jane's yield-bearing senior share in a USDC-funded credit pool, protected first by the junior sUSD3 tranche.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC deposited into 3Jane's senior credit strategy. Idle liquidity is held as USDC or Aave waUSDC, while deployed capital finances pooled fintech receivables and crypto credit lines through MorphoCredit. The junior sUSD3 tranche is designed to absorb credit losses before USD3.",
+  "pegMechanism": "ERC-4626 NAV share rather than a fixed $1 token: permissionless USDC deposits mint USD3 shares, interest accrues into the share price, and fee-free withdrawals return USDC when the strategy's idle and Aave liquidity is available.",
+  "mechanismArchetype": "rwa-credit-fund",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "OpenAI Codex mechanism review",
+    "rationale": "USD3 is an ERC-4626 senior fund share whose NAV is backed primarily by pooled private-credit receivables, with a smaller USDC/Aave liquidity buffer and a subordinate first-loss tranche.",
+    "sources": [
+      {
+        "label": "3Jane core money market",
+        "url": "https://docs.3jane.xyz/architecture/core-money-market"
+      },
+      {
+        "label": "3Jane suppliers",
+        "url": "https://docs.3jane.xyz/architecture/core-money-market/suppliers"
+      },
+      {
+        "label": "3Jane money-market contracts",
+        "url": "https://github.com/3jane-protocol/moneymarket-contracts"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2025-08-25",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://app.3jane.xyz/info/backing",
+    "provider": "3Jane backing dashboard and onchain accounting",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.3jane.xyz/"
+    },
+    {
+      "label": "App",
+      "url": "https://app.3jane.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/3janexyz"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.3jane.xyz/"
+    },
+    {
+      "label": "Audits",
+      "url": "https://docs.3jane.xyz/resources/audits"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+      "decimals": 6
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "archetypeOverride": true,
+  "liveReservesConfig": {
+    "adapter": "3jane-usd3",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usd3-3jane",
+    "display": {
+      "url": "https://app.3jane.xyz/info/backing",
+      "label": "3Jane backing"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    }
+  },
+  "yieldConfig": {
+    "defiLlamaPoolId": "f8cd444e-d99f-4132-b234-fd3482bf8806",
+    "yieldSource": "3Jane senior credit tranche",
+    "yieldType": "nav-appreciation"
+  },
+  "launchDate": "2025-08-25"
+}

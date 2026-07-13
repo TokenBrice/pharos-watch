@@ -11,7 +11,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and the named `reserve-post-sync-watchdog` child for collateral-drift cache updates and stale-source alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 272 active live-enabled stablecoins across 61 registered adapters; 279 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 60 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
+- **Current coverage:** 273 active live-enabled stablecoins across 62 registered adapters; 276 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. 61 adapter keys are currently configured by per-coin metadata in `shared/data/stablecoins/coins/*.json`
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -406,6 +406,7 @@ This table reflects the shared adapter registry. `Configured coins` can be `0` f
 
 | Adapter                      | Primary input                                    | Semantics                                             | Configured coins |
 | ---------------------------- | ------------------------------------------------ | ----------------------------------------------------- | ---------------- |
+| `3jane-usd3`                 | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
 | `abracadabra`                | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
 | `accountable`                | `http-json`                                      | `collateral-mix` / `protocol-reserve`                 | 7                |
 | `anzen-usdz`                 | `onchain-evm`                                    | `single-asset`                                        | 1                |
@@ -508,6 +509,8 @@ Current unbound registered adapter is explicit:
 `collateral-positions-api` can now optionally attach direct redemption-capacity telemetry alongside the collateral mix when a reviewed bridge-backed stable exit exists. `zchf-frankencoin` uses this path to publish the current CHFAU StablecoinBridge inventory as `immediateRedeemableUsd` for redemption-backstop modeling without changing the reserve-slice composition itself. Until Frankencoin's price API publishes CHFAU directly, this route values the CHFAU bridge balance through the existing VCHF CHF-price proxy.
 
 `cap-vault` reads Cap cUSD's Ethereum vault state directly. Reserve slices are based on each supported asset's total supplied balance, while redemption-capacity telemetry uses unpaused available balances after borrows so the route does not treat borrowed or paused collateral as immediate exit capacity. The adapter emits nested `metadata.redemption` with `capacityKind = "live-direct-bounded"`, `freshnessKind = "same-run-onchain"`, `routeStatusSource = "onchain"` from per-asset pause checks, and zero-second settlement-delay telemetry.
+
+`3jane-usd3` reads USD3's Ethereum strategy, MorphoCredit market, waUSDC conversion, and idle USDC accounting directly. It splits the strategy NAV between the pro-rata liquid waUSDC/USDC buffer and deployed private-credit exposure, then uses `availableWithdrawLimit(address(0))` as direct bounded USDC redemption capacity. The same-run telemetry also carries shutdown state, the configured commitment delay, and the documented zero withdrawal fee.
 
 `origin-vault-balances`, `blast-usdb-yield-manager`, `sgho-wrapper`, and `nest-vault-positions` cover additional strategy-vault reserve sources without widening generic adapters. Origin reads OUSD Vault `checkBalance(asset)` plus `totalValue()` so only mapped assets are credited, and it separately reads idle ERC-20 `balanceOf(vault)` as direct bounded redemption capacity while excluding deployed strategy balances. Blast reads Ethereum USDYieldManager `totalValue()` and reconciles it against Blast USDB supply. `sgho-wrapper` handles Aave's legacy sGHO/stkGHO-compatible contract by reading `previewRedeem(totalSupply)` as same-run backing evidence because that contract does not expose standard ERC-4626 `asset()` / `totalAssets()` reads; its redemption metadata now also carries bounded same-run capacity ratio, any-holder eligibility, and zero-second settlement delay. Nest consumes the Nest Alpha Vault positions, NAV, and last-price-update APIs, preserving the latest verified update timestamp and grouping private/structured vault exposure as high risk.
 

@@ -107,6 +107,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["usdo-openeden", "OpenEden OpenDollar", "USDO"],
   ["cusdo-openeden", "Compounding OpenDollar", "cUSDO"],
   ["cgusd-cygnus-finance", "Cygnus Finance Global USD", "cgUSD"],
+  ["usd3-3jane", "3Jane USD3", "USD3"],
   ["eurcv-societe-generale-forge", "EUR CoinVertible", "EURCV"],
   ["aeur-anchored-coins", "Anchored Coins AEUR", "AEUR", "frozen", "2026-07-11"],
   ["usdq-quantoz", "Quantoz USDQ", "USDQ"],

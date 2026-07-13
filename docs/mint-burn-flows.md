@@ -78,7 +78,7 @@ Token identity now resolves from the shared stablecoin registry in `shared/lib/s
 
 ### Representative Stablecoins
 
-Current scope: **135 contract configs** across **135 stablecoin IDs** (7 critical + 128 extended).
+Current scope: **136 contract configs** across **136 stablecoin IDs** (7 critical + 129 extended).
 
 March 24, 2026 expansion: an additional 40 transfer-only configs were added for tracked assets that already had shared contract metadata but were not yet wired into the mint/burn registry. That wave initially included USDai on Ethereum, but canonical USDai issuance tracking now runs on native Arbitrum after LayerZero bridge-transfer filtering work. GYD was later removed when the asset moved to the cemetery. The broader active wave includes `U`, `A7A5`, `USDA` (Avalon), `BRZ`, `KAG`, `satUSD`, `rwaUSDi`, `FPI`, `AEUR`, `USDQ`, `USDX`, `MIM`, `USA₮`, `ZeUSD`, `GGBR`, `XSGD`, `IDRT`, `TRYB`, `EURS`, `pUSD` (Plume), `USBD`, `DGLD`, `AxCNH`, `EURQ`, `GYEN`, `USDU Finance`, `ZARP`, `USDp`, `PHT`, `VCHF`, `USSD`, `CADC`, `VEUR`, `dUSD` (dTRINITY), `USDaf`, `EURAU`, `DUSD` (Alto), and `ebUSD`.
 
@@ -96,6 +96,7 @@ The table below is representative, not exhaustive. The complete active registry 
 | USDS | usds-sky | 18 | Risky | Transfer |
 | FRXUSD | frxusd-frax | 18 | Risky | Transfer |
 | BOLD | bold-liquity | 18 | Risky | Transfer |
+| USD3 | usd3-3jane | 6 | Extended | Transfer |
 | yBOLD | ybold-yearn | 18 | Extended | Transfer |
 | fxUSD | fxusd-f-x-protocol | 18 | Extended | Transfer |
 | crvUSD | crvusd-curve | 18 | Extended | Transfer |

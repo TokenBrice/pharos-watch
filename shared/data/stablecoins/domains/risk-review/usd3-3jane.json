@@ -1,0 +1,20 @@
+{
+  "id": "usd3-3jane",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "3Jane USD3 source",
+        "url": "https://github.com/3jane-protocol/moneymarket-contracts/blob/main/src/usd3/USD3.sol"
+      },
+      {
+        "label": "Circle USDC smart contract",
+        "url": "https://www.circle.com/multi-chain-usdc/ethereum"
+      }
+    ],
+    "evidence": "The reviewed USD3 implementation does not expose a native holder blacklist, but redemptions and reserve liquidity depend on Circle-controlled USDC. A Circle freeze can therefore block the wrapper's reserve or redemption flow, and the upgradeable USD3 implementation is an additional admin surface.",
+    "reviewer": "OpenAI Codex blacklistability review",
+    "reviewedAt": "2026-07-13"
+  }
+}

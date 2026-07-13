@@ -43,7 +43,7 @@ const { getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
   hasTrackedVariantMeta,
 });
 
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 410;
+const EXPECTED_TRACKED_STABLECOIN_COUNT = 411;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -464,6 +464,7 @@ describe("tracked stablecoin metadata", () => {
       "sfrxusd-frax",
       "savusd-avant",
       "cusdo-openeden",
+      "usd3-3jane",
       "syusd-aegis",
       "sbold-k3-capital",
       "ybold-yearn",

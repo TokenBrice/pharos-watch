@@ -309,6 +309,7 @@ describe("yield config registry", () => {
     }
 
     expect(YIELD_POOL_MAP["susde-ethena"]).toBe("66985a81-9c51-46ca-9977-42b4fe7bc6df");
+    expect(YIELD_POOL_MAP["usd3-3jane"]).toBe("f8cd444e-d99f-4132-b234-fd3482bf8806");
     expect(YIELD_POOL_MAP["susds-sky"]).toBe("d8c4eff5-c8a9-46fc-a888-057c4c668e72");
     expect(YIELD_POOL_MAP["sdai-sky"]).toBe("13392973-be6e-4b2f-bce9-4f7dd53d1c3a");
     expect(YIELD_POOL_MAP["sfrxusd-frax"]).toBe("42523cca-14b0-44f6-95fb-4781069520a5");

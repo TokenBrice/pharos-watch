@@ -27,6 +27,31 @@ import {
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts";
 
 const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "usd3-3jane": defineStablecoinRedeemConfig({
+    executionModel: "rules-based-nav",
+    capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
+    costModel: fixedFee(
+      0,
+      "3Jane documents fee-free USD3 withdrawals; the vault implementation returns USDC at current NAV subject to available strategy liquidity.",
+    ),
+    routeExitCorrelation: "same-protocol-liquidity",
+    reviewedAt: "2026-07-13",
+    docs: [
+      sourceRef(
+        "3Jane supplier withdrawals",
+        "https://docs.3jane.xyz/architecture/core-money-market/suppliers",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "3Jane USD3 implementation",
+        "https://github.com/3jane-protocol/moneymarket-contracts/blob/main/src/usd3/USD3.sol",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Fresh 3Jane onchain reserve telemetry reads availableWithdrawLimit(address(0)) as the current direct USDC exit bound and preserves any configured commitment delay; private-credit NAV outside that bound is not treated as immediately redeemable.",
+    ],
+  }),
   "dusd-dtrinity": defineStablecoinRedeemConfig({
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",

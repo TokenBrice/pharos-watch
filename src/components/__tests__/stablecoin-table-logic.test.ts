@@ -160,7 +160,7 @@ describe("buildTrackedIdSet", () => {
     expect(allVariants.has("busd0-usual")).toBe(true);
     expect(allVariants.has("srusd-reservoir")).toBe(true);
     expect(allVariants.has("usds-sky")).toBe(false);
-    expect(allVariants.size).toBe(46);
+    expect(allVariants.size).toBe(47);
 
     const strategy = buildTrackedIdSet(["variant-strategy-vault"]);
     expect(strategy).toEqual(new Set([
@@ -185,6 +185,7 @@ describe("buildTrackedIdSet", () => {
       "said-gaib",
       "sdusd-dtrinity",
       "stusd-stoneyield",
+      "usd3-3jane",
       "yvusdc-yearn",
       "ybold-yearn",
       "yusd-yieldfi",

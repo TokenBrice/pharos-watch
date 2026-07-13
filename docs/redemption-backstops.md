@@ -34,8 +34,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 311
-- **Route families:** 150 `offchain-issuer`, 64 `stablecoin-redeem`, 40 `collateral-redeem`, 38 `queue-redeem`, 10 `psm-swap`, 9 `basket-redeem`
+- **Configured coins:** 312
+- **Route families:** 150 `offchain-issuer`, 65 `stablecoin-redeem`, 40 `collateral-redeem`, 38 `queue-redeem`, 10 `psm-swap`, 9 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
@@ -156,6 +156,7 @@ Live reserve adapters can now emit a nested `metadata.redemption` object for new
 
 Sky `DAI` and `USDS` now use the live `sky-makercore` PSM `USDC` balance as their immediate redeemable bound when that telemetry is fresh, with the prior 33% reviewed heuristic retained only as fallback.
 `cUSD` now uses the live `cap-vault` onchain adapter for bounded current redemption capacity, scoring against unpaused available vault balances rather than full eventual basket redeemability.
+`USD3` now uses the live `3jane-usd3` onchain adapter for fee-free, bounded USDC redemption capacity from `availableWithdrawLimit(address(0))`; credit NAV outside currently redeemable waUSDC liquidity is not scored as an immediate exit.
 `LUSD` now uses the live `liquity-v1` onchain adapter for bounded current direct capacity, scoring against `TroveManager.getEntireSystemDebt()` when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model.
 `BOLD`, `feUSD`, `USDQ`, `NECT`, and `CDP` now use the live `liquity-v2-branches` onchain adapter for bounded current direct capacity, scoring against aggregate ActivePool branch debt when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model. The adapter can also surface branch shutdown/sunsetting as degraded route status.
 `meUSD` now uses the live `liquity-native-active-pool` onchain adapter for Mezo's native ActivePool shape, scoring against latest contract debt only when the same-run collateral, TCR/MCR, and fee telemetry is fresh and clean.

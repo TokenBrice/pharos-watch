@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. The API normally serves the cron-published report-card snapshot and computes the same response shape on read only when that snapshot is missing, invalid, or pinned to an older Safety Score methodology generation.
 
-The stablecoin registry currently contains 410 tracked metadata entries. Report-card snapshots score the 360 active tracked assets plus the 88 cemetery assets; 17 frozen-archive tracked entries are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch.
+The stablecoin registry currently contains 411 tracked metadata entries. Report-card snapshots score the 361 active tracked assets plus the 88 cemetery assets; 17 frozen-archive tracked entries are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch.
 
 ## Methodology Versioning
 
@@ -30,7 +30,7 @@ with archetype-specific Backing, Exit, and Economic Control pillars bounded by
 the weakest material failure path, structural ceilings, evidence sufficiency,
 dependencies, peg behavior, and stress propagation. Candidate failures cannot
 affect V8 publication; exact candidate state is available only to the admin
-workspace. The current all-active candidate remains `0/360` rateable because
+workspace. The current all-active candidate remains `0/361` rateable because
 critical reviewed facts are incomplete. Independent holdout validation,
 release-cohort coverage, a frozen release candidate, and at least 14
 consecutive verified shadow days plus two elapsed cycles of the four-hour
@@ -502,7 +502,7 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. The current snapshot size is 465 cards (360 active tracked assets plus 88 cemetery entries plus 17 frozen archives; pre-launch tracked assets are excluded) × 5 dimensions, which remains comfortably sub-millisecond in practice.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. The current snapshot size is 466 cards (361 active tracked assets plus 88 cemetery entries plus 17 frozen archives; pre-launch tracked assets are excluded) × 5 dimensions, which remains comfortably sub-millisecond in practice.
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 
 State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.

@@ -1,5 +1,6 @@
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
+import { fetchThreeJaneUsd3Reserves } from "./3jane-usd3";
 import { fetchAbracadabraReserves } from "./abracadabra";
 import { fetchAccountableReserves } from "./accountable";
 import { fetchAnzenUsdzReserves } from "./anzen-usdz";
@@ -65,6 +66,7 @@ import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
 
 export const LIVE_RESERVE_ADAPTER_FETCHERS = {
+  "3jane-usd3": fetchThreeJaneUsd3Reserves,
   abracadabra: fetchAbracadabraReserves,
   accountable: fetchAccountableReserves,
   "anzen-usdz": fetchAnzenUsdzReserves,
