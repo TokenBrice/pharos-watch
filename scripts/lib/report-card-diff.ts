@@ -191,19 +191,13 @@ function assetSetDiff(card: ReportCard, changeKind: "added" | "removed"): Report
   return {
     id: card.id,
     changeKind,
-    scoreChange: {
-      before: changeKind === "removed" ? card.overallScore : null,
-      after: changeKind === "added" ? card.overallScore : null,
-    },
-    gradeChange: {
-      before: changeKind === "removed" ? card.overallGrade : "NR",
-      after: changeKind === "added" ? card.overallGrade : "NR",
-    },
+    scoreChange: null,
+    gradeChange: null,
     dimensionChanges: {},
     rawInputChanges: {},
     bindingSignalChanges: {},
     classification: "asset-set",
-    absoluteScoreChange: card.overallScore == null ? null : Math.abs(card.overallScore),
+    absoluteScoreChange: null,
   };
 }
 

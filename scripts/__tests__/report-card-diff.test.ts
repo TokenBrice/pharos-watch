@@ -65,8 +65,8 @@ describe("report-card deterministic diff", () => {
     expect(report.summary).toMatchObject({
       addedAssets: 1,
       removedAssets: 1,
-      gradeChanges: 4,
-      nrEntries: 1,
+      gradeChanges: 2,
+      nrEntries: 0,
       nrExits: 1,
       graphEdgesAdded: 1,
       graphEdgesRemoved: 1,
