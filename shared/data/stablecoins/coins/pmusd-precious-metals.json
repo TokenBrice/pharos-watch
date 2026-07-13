@@ -123,6 +123,49 @@
         "evidence": "At Ethereum block 25294813: treasury.owner(), proxy admin 0x89ab60d8….owner(), and Market proxy admin 0x89ab60d8….owner() all returned 0xCa3144AAD… Safe API: threshold 2, 3 owners, no enabled modules, zero guard, masterCopy 0x41675C…."
       }
     ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf",
+        "0x51c4348af0c6066a2fd31bd968bc0c039fe27342",
+        "0x4e8ef157762f0b8a7ad0d9ff45f86b203a0658cc"
+      ],
+      "implementationAddresses": [
+        "0x32d93b015562cc8da0ef3ccbccc3f8e1da8541d8",
+        "0x5fe0f17975819a2c40791e7cf8148c23b902c1d9",
+        "0x11b21afa735e24683f0912d9f6f8a8bfabbeb10e"
+      ],
+      "adminAddresses": [
+        "0x89ab60d8fcd674b2b0b308e7fa63ff84a2682ce2"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "RAAC admin Safe",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526982,
+      "sources": [
+        {
+          "label": "pmUSD token proxy",
+          "url": "https://etherscan.io/address/0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf#code"
+        },
+        {
+          "label": "RAAC Treasury proxy",
+          "url": "https://etherscan.io/address/0x51c4348af0c6066a2fd31bd968bc0c039fe27342#code"
+        },
+        {
+          "label": "RAAC Market proxy",
+          "url": "https://etherscan.io/address/0x4e8ef157762f0b8a7ad0d9ff45f86b203a0658cc#code"
+        },
+        {
+          "label": "RAAC shared ProxyAdmin",
+          "url": "https://etherscan.io/address/0x89ab60d8fcd674b2b0b308e7fa63ff84a2682ce2#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {

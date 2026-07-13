@@ -99,6 +99,22 @@
         "evidence": "At Hemi block 4610504, owner() on 0x71881974e96152643c74a8e0214b877cfb2a0aa1 returned 0x3eDEEF3ae2e9aA5B55e5Ce4D324f9C24165C75Be. eth_getCode at that address returned non-empty bytecode confirming a contract (not an EOA). Safe API (hemi slug) returned threshold=1, owners=[0x29Aa2eD..., 0x8b01d375...], modules=[], guard=0x0, version=1.4.1+L2. getModules() RPC call returned empty array; guard slot=0x0 confirmed no guard."
       }
     ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 4843202,
+      "sources": [
+        {
+          "label": "Verified vCRED token source",
+          "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+        },
+        {
+          "label": "Hemi RPC",
+          "url": "https://rpc.hemi.network/rpc"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
