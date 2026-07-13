@@ -137,7 +137,42 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions, and live reads resolve the owner to a legacy 3/5 multisig-style contract.",
+    "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions. The token and its transparent ProxyAdmin are both controlled immediately by the same legacy 3/5 multisig contract.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x07041776f5007aca2a54844f50503a18a72a8b68"
+      ],
+      "implementationAddresses": [
+        "0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e"
+      ],
+      "adminAddresses": [
+        "0x3e4c6460aa00c11c81e3c5b95b15d612f5f2d9c7"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "USAT owner-only minter",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526649,
+      "sources": [
+        {
+          "label": "USAT Ethereum transparent proxy",
+          "url": "https://etherscan.io/address/0x07041776f5007aca2a54844f50503a18a72a8b68#code"
+        },
+        {
+          "label": "USAT Ethereum implementation",
+          "url": "https://etherscan.io/address/0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e#code"
+        },
+        {
+          "label": "USAT Ethereum ProxyAdmin",
+          "url": "https://etherscan.io/address/0x3e4c6460aa00c11c81e3c5b95b15d612f5f2d9c7#code"
+        },
+        {
+          "label": "USAT Sourcify source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -149,6 +184,8 @@
         "threshold": 3,
         "signerCount": 5,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526649,
         "sources": [
           {
             "label": "USAT Ethereum proxy",
@@ -159,7 +196,7 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
           }
         ],
-        "evidence": "At Ethereum block 25294588, the USAT proxy owner() returned this address; required() returned 3 and getOwners() returned five legacy multisig owner slots. Verified HadronToken source exposes mint(address,uint256), redeem(uint256), and destroyBlockedFunds as owner-only functions."
+        "evidence": "At Ethereum block 25526649, the USAT proxy owner() and ProxyAdmin owner() both returned this address. required() returned 3 and getOwners() returned five current legacy multisig owner slots: 0x6744A526..., 0x106743fD..., 0xD3Fc71bD..., 0x68298631..., and 0x1e1Ed372.... Verified HadronToken source exposes mint(address,uint256), redeem(uint256), and destroyBlockedFunds as owner-only functions."
       }
     ],
     "review": {
@@ -181,9 +218,9 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
         }
       ],
-      "evidence": "Ethereum reads identified the USAT proxy implementation and a 3/5 multisig-style owner address, while verified HadronToken source confirms owner-only mint and redeem authority. Phase 0c second pass rechecked owner(), required(), and getOwners() at Ethereum block 25294588.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25526649, the EIP-1967 implementation and admin slots resolved to implementation 0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e and ProxyAdmin 0x3e4c6460aa00c11c81e3c5b95b15d612f5f2d9c7. ProxyAdmin.owner() and token owner() both returned the same reviewed legacy multisig, whose current required() value is 3 and getOwners() returned five signers. The verified HadronToken source confirms owner-only mint and redeem authority; ProxyAdmin source exposes immediate owner-only upgrades with no timelock.",
+      "reviewer": "Codex Safety Score V9 data research",
+      "reviewedAt": "2026-07-13"
     }
   },
   "custodyModel": "institutional-regulated",
