@@ -24,6 +24,12 @@ export interface V9ScoringConfig {
   compensabilityHeadroom: number;
   pegExponent: number;
   evidenceCeilings: Readonly<Record<V9EvidenceLevel, number | null>>;
+  activeDepegCaps: readonly {
+    minimumBps: number;
+    limit: number;
+    kind: string;
+    reason: string;
+  }[];
   trackRecordCeilings: readonly {
     minMonthsInclusive: number;
     maxMonthsExclusive: number | null;
@@ -32,6 +38,7 @@ export interface V9ScoringConfig {
     reason: string;
   }[];
   gradeThresholds: readonly { grade: Exclude<V9Grade, "NR">; minScore: number }[];
+  capTiePriority: readonly V9CapTrace["source"][];
   scoreDecimals: number;
 }
 
@@ -41,6 +48,20 @@ const PROVISIONAL_V9_RESEARCH_CONFIG = {
   compensabilityHeadroom: 20,
   pegExponent: 0.4,
   evidenceCeilings: { strong: null, adequate: 84, limited: 69, insufficient: null },
+  activeDepegCaps: [
+    {
+      minimumBps: 2_500,
+      limit: 39,
+      kind: "active-depeg:f",
+      reason: "An active depeg of at least 25% limits the candidate rating to the F range.",
+    },
+    {
+      minimumBps: 1_000,
+      limit: 49,
+      kind: "active-depeg:d",
+      reason: "An active depeg of at least 10% limits the candidate rating to the D range.",
+    },
+  ],
   trackRecordCeilings: [
     {
       minMonthsInclusive: 0,
@@ -83,6 +104,14 @@ const PROVISIONAL_V9_RESEARCH_CONFIG = {
     { grade: "C-", minScore: 50 },
     { grade: "D", minScore: 40 },
     { grade: "F", minScore: 0 },
+  ],
+  capTiePriority: [
+    "active-depeg",
+    "structural",
+    "parent",
+    "evidence",
+    "track-record",
+    "bounded-compensability",
   ],
   scoreDecimals: 0,
 } as const satisfies V9ScoringConfig;
@@ -205,14 +234,10 @@ export function resolveV9StructuralCaps(signals: readonly V9StructuralSignal[]):
   return caps;
 }
 
-const CAP_PRIORITY: Readonly<Record<V9CapTrace["source"], number>> = {
-  "active-depeg": 0,
-  structural: 1,
-  parent: 2,
-  evidence: 3,
-  "track-record": 4,
-  "bounded-compensability": 5,
-};
+function capPriority(source: V9CapTrace["source"], config: V9ScoringConfig): number {
+  const priority = config.capTiePriority.indexOf(source);
+  return priority === -1 ? config.capTiePriority.length : priority;
+}
 
 /** Score an expectation-free v9 research input without reading external state. */
 export function scoreV9Input(
@@ -322,17 +347,15 @@ export function scoreV9Input(
     });
   }
   if (input.activeDepegBps !== null) {
-    const activeCap =
-      input.activeDepegBps >= 2_500
-        ? { limit: 39, kind: "active-depeg:f" }
-        : input.activeDepegBps >= 1_000
-          ? { limit: 49, kind: "active-depeg:d" }
-          : null;
+    const activeCap = [...config.activeDepegCaps]
+      .sort((left, right) => right.minimumBps - left.minimumBps)
+      .find((cap) => input.activeDepegBps! >= cap.minimumBps);
     if (activeCap) {
       capCandidates.push({
         source: "active-depeg",
-        ...activeCap,
-        reason: "Active peg impairment limits the candidate rating.",
+        limit: activeCap.limit,
+        kind: activeCap.kind,
+        reason: activeCap.reason,
       });
     }
   }
@@ -354,7 +377,7 @@ export function scoreV9Input(
           .sort(
             (left, right) =>
               left.limit - right.limit ||
-              CAP_PRIORITY[left.source] - CAP_PRIORITY[right.source] ||
+              capPriority(left.source, config) - capPriority(right.source, config) ||
               left.kind.localeCompare(right.kind),
           )[0] ?? null);
   const caps = capCandidates.map<V9CapTrace>((cap) => ({ ...cap, binding: cap === bindingCandidate }));
