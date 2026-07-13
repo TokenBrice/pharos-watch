@@ -36,6 +36,7 @@ import {
   type DiscoveryCandidateRow,
 } from "../lib/discovery-candidates";
 import { loadFreshIndependentLiveReserveMap } from "../lib/live-reserves-store";
+import { validatePricingSourceFreshness } from "../lib/pricing-source-freshness";
 import {
   hasUsableStablecoinsPayload,
   loadStablecoinsCache,
@@ -136,6 +137,7 @@ function coverageClasses(raw: unknown): CoverageClassCounts {
 async function fetchCoinGeckoUsdPrices(
   geckoIds: string[],
   coingeckoApiKey: string,
+  now: number,
 ): Promise<Map<string, number>> {
   const BATCH_SIZE = 250;
   const prices = new Map<string, number>();
@@ -145,6 +147,7 @@ async function fetchCoinGeckoUsdPrices(
     const params = new URLSearchParams({
       ids: batch.join(","),
       vs_currencies: "usd",
+      include_last_updated_at: "true",
     });
     const response = await fetch(cgUrl(`/simple/price?${params.toString()}`, coingeckoApiKey), {
       headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey),
@@ -155,7 +158,7 @@ async function fetchCoinGeckoUsdPrices(
       throw new Error(`CoinGecko simple price fetch failed (${response.status})`);
     }
 
-    let payload: Record<string, { usd?: number }> | null;
+    let payload: Record<string, { usd?: number; last_updated_at?: number }> | null;
     try {
       payload = await response.json();
     } catch {
@@ -172,9 +175,17 @@ async function fetchCoinGeckoUsdPrices(
     }
     if (!payload || typeof payload !== "object") continue;
     for (const [geckoId, quote] of Object.entries(payload)) {
-      if (typeof quote?.usd === "number" && Number.isFinite(quote.usd) && quote.usd > 0) {
-        prices.set(geckoId, quote.usd);
-      }
+      if (typeof quote?.usd !== "number" || !Number.isFinite(quote.usd) || quote.usd <= 0) continue;
+      const freshness = validatePricingSourceFreshness({
+        source: "coingecko",
+        observedAt: quote.last_updated_at,
+        observedAtMode: "upstream",
+        nowSec: now,
+        requireObservedAt: true,
+      });
+      if (!freshness.accepted) continue;
+
+      prices.set(geckoId, quote.usd);
     }
   }
 
@@ -208,7 +219,7 @@ async function loadCoinGeckoPriceDiff(
   }
 
   const geckoIds = [...new Set(trackedWithGeckoId.map((asset) => asset.geckoId).filter((value): value is string => Boolean(value)))];
-  const coingeckoPrices = await fetchCoinGeckoUsdPrices(geckoIds, coingeckoApiKey);
+  const coingeckoPrices = await fetchCoinGeckoUsdPrices(geckoIds, coingeckoApiKey, now);
 
   let comparedCoins = 0;
   const rows = trackedWithGeckoId.flatMap((asset) => {

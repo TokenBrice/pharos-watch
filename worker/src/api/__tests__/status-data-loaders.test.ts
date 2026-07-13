@@ -67,8 +67,8 @@ describe("handleStatus", () => {
       {
         match: "/simple/price",
         body: {
-          tether: { usd: 1 },
-          "paypal-usd": { usd: 1 },
+          tether: { usd: 1, last_updated_at: now - 60 },
+          "paypal-usd": { usd: 1, last_updated_at: now - 60 },
           "buck-2": { usd: 0.09 },
         },
       },
@@ -128,6 +128,107 @@ describe("handleStatus", () => {
     });
     expect(body.coingeckoPriceDiff?.rows[0].diffPct ?? 0).toBeGreaterThan(5);
     expect(body.coingeckoPriceDiff?.rows.map((row) => row.stablecoinId)).not.toContain("buck-buck-assets");
+  });
+
+  it("only compares CoinGecko quotes with valid current upstream timestamps", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          name: "Tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 1,
+          priceSource: "coingecko+defillama-list",
+          priceConfidence: "high",
+          circulating: { peggedUSD: 100_000_000 },
+          chainCirculating: {},
+          chains: [],
+        },
+        {
+          id: "pyusd-paypal",
+          name: "PayPal USD",
+          symbol: "PYUSD",
+          geckoId: "paypal-usd",
+          price: 0.9,
+          priceSource: "defillama",
+          priceConfidence: "single-source",
+          circulating: { peggedUSD: 100_000_000 },
+          chainCirculating: {},
+          chains: [],
+        },
+        {
+          id: "usdc-circle",
+          name: "USD Coin",
+          symbol: "USDC",
+          geckoId: "usd-coin",
+          price: 0.9,
+          priceSource: "defillama",
+          priceConfidence: "single-source",
+          circulating: { peggedUSD: 100_000_000 },
+          chainCirculating: {},
+          chains: [],
+        },
+        {
+          id: "usds-sky",
+          name: "USDS",
+          symbol: "USDS",
+          geckoId: "usds",
+          price: 0.9,
+          priceSource: "defillama",
+          priceConfidence: "single-source",
+          circulating: { peggedUSD: 100_000_000 },
+          chainCirculating: {},
+          chains: [],
+        },
+      ],
+    });
+
+    fixtureMockFetch([
+      {
+        match: "include_last_updated_at=true",
+        body: {
+          tether: { usd: 1, last_updated_at: now - 60 },
+          "paypal-usd": { usd: 1, last_updated_at: now - 24 * 60 * 60 },
+          "usd-coin": { usd: 1 },
+          usds: { usd: 1, last_updated_at: now + 11 * 60 },
+        },
+      },
+    ]);
+
+    const db = fixtureMockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request, "cg-test-key");
+    const body = (await res.json()) as {
+      coingeckoPriceDiff: {
+        trackedWithGeckoId: number;
+        comparedCoins: number;
+        mismatchedCount: number;
+        rows: Array<{ stablecoinId: string }>;
+      } | null;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.coingeckoPriceDiff).toMatchObject({
+      trackedWithGeckoId: 4,
+      comparedCoins: 1,
+      mismatchedCount: 0,
+      rows: [],
+    });
   });
 
   it("surfaces CoinGecko comparison loader failures through sectionErrors", async () => {
@@ -383,9 +484,9 @@ describe("handleStatus", () => {
       {
         match: "/simple/price",
         body: {
-          tether: { usd: 1 },
-          "the-standard-usd": { usd: 0.700692 },
-          "paypal-usd": { usd: 1 },
+          tether: { usd: 1, last_updated_at: now - 60 },
+          "the-standard-usd": { usd: 0.700692, last_updated_at: now - 60 },
+          "paypal-usd": { usd: 1, last_updated_at: now - 60 },
         },
       },
     ]);
