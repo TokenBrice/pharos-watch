@@ -233,10 +233,10 @@ describe("adaptSkyModules", () => {
     const stableSlice = slices.find((s) => s.name.includes("Stablecoins"));
     expect(stableSlice).toBeDefined();
     expect(stableSlice!.risk).toBe("very-low");
-    // Task 2.24: PSM slice no longer hardcodes coinId because PSM holds USDC+USDT+USDP;
-    // depType remains "mechanism" (the slice still describes the PSM's role).
+    // The PSM is a mixed basket, so neither a single coinId nor its relational
+    // depType can be authored until the slice is split into exact exposures.
     expect(stableSlice!.coinId).toBeUndefined();
-    expect(stableSlice!.depType).toBe("mechanism");
+    expect(stableSlice!.depType).toBeUndefined();
 
     const sparkSlice = slices.find((s) => s.name.includes("Spark"));
     expect(sparkSlice).toBeDefined();

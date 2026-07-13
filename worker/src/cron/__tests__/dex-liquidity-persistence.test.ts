@@ -123,8 +123,8 @@ function makeHistoryIdentityRows(
 function extractHistoryInsertRows(statements: readonly PreparedStatementWithMeta[]): unknown[][] {
   const rows: unknown[][] = [];
   for (const statement of statements) {
-    for (let index = 0; index < statement.boundValues.length; index += 9) {
-      rows.push(statement.boundValues.slice(index, index + 9));
+    for (let index = 0; index < statement.boundValues.length; index += 10) {
+      rows.push(statement.boundValues.slice(index, index + 10));
     }
   }
   return rows;
@@ -658,6 +658,7 @@ describe("dex-liquidity persistence", () => {
       1,
       JSON.stringify({ dl: { poolCount: 1, tvlUsd: 1 } }),
       LIQUIDITY_METHODOLOGY_VERSION,
+      null,
     ]);
     expect(daiPlaceholder).toEqual([
       "dai-makerdao",
@@ -669,6 +670,7 @@ describe("dex-liquidity persistence", () => {
       0,
       null,
       LIQUIDITY_METHODOLOGY_VERSION,
+      null,
     ]);
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining("[dex-liquidity] Reconciled daily snapshot (10/1 ->"),

@@ -166,6 +166,8 @@ export const CRITICAL_FILES = [
   "shared/lib/mint-authority-scoring.ts",
   "shared/lib/peg-score.ts",
   "shared/lib/psi-eligible.ts",
+  "shared/lib/safety-score-v9-compiler.ts",
+  "shared/lib/safety-score-v9-research.ts",
   "shared/lib/yield-scoring.ts",
   "shared/lib/report-card-blacklist-matchers.ts",
   "shared/lib/blacklist-active-records.ts",
