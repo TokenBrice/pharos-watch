@@ -50,11 +50,7 @@ function hasOtherTrackedLinkedExposure(
 export function validateVariantRelationships(tracked: StablecoinMeta[]): string[] {
   const errors: string[] = [];
   const metaById = new Map(tracked.map((meta) => [meta.id, meta]));
-  const activeIds = new Set(
-    tracked
-      .filter(isActiveStablecoinMeta)
-      .map((meta) => meta.id),
-  );
+  const activeIds = new Set(tracked.filter(isActiveStablecoinMeta).map((meta) => meta.id));
 
   for (const meta of tracked) {
     if (
@@ -141,14 +137,21 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
       );
     }
 
+    if (
+      meta.archetypeOverride === true &&
+      meta.mechanismArchetype != null &&
+      meta.mechanismArchetype === parent.mechanismArchetype
+    ) {
+      errors.push(
+        `${meta.id}: archetypeOverride is only valid for an intentional departure from parent ${parent.id}. ` +
+          `Remove the redundant override and direct mechanismArchetype to inherit the parent classification.`,
+      );
+    }
+
     // Null-parent + declared child archetype: the resolver would silently use
     // the child's own archetype, which can mask a missing parent classification.
     // Require archetypeOverride: true so the divergence is explicit.
-    if (
-      meta.mechanismArchetype != null &&
-      parent.mechanismArchetype == null &&
-      meta.archetypeOverride !== true
-    ) {
+    if (meta.mechanismArchetype != null && parent.mechanismArchetype == null && meta.archetypeOverride !== true) {
       errors.push(
         `${meta.id}: declares mechanismArchetype "${meta.mechanismArchetype}" but parent ${parent.id} has no archetype. ` +
           `Fix: either classify parent ${parent.id} with a mechanismArchetype, or set archetypeOverride: true on ${meta.id} to declare an intentional departure.`,

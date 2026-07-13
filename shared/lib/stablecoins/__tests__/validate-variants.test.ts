@@ -22,10 +22,7 @@ function makeCoin(overrides: CoinOverrides): StablecoinMeta {
   } as StablecoinMeta;
 }
 
-function makeParent(
-  id: string,
-  archetype: MechanismArchetype | null,
-): StablecoinMeta {
+function makeParent(id: string, archetype: MechanismArchetype | null): StablecoinMeta {
   return makeCoin({
     id,
     flags: {
@@ -40,11 +37,7 @@ function makeParent(
   });
 }
 
-function makeChild(
-  id: string,
-  variantOf: string,
-  overrides: Partial<StablecoinMeta> = {},
-): StablecoinMeta {
+function makeChild(id: string, variantOf: string, overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
   return makeCoin({
     id,
     variantOf,
@@ -84,6 +77,18 @@ describe("validateVariantRelationships", () => {
       archetypeOverride: true,
     });
     expect(validateVariantRelationships([parent, child])).toEqual([]);
+  });
+
+  it("rejects a redundant override when the child matches its parent", () => {
+    const parent = makeParent("parent-a", "fiat-cash");
+    const child = makeChild("child-a", "parent-a", {
+      mechanismArchetype: "fiat-cash",
+      archetypeOverride: true,
+    });
+
+    expect(validateVariantRelationships([parent, child])).toEqual([
+      expect.stringContaining("archetypeOverride is only valid for an intentional departure"),
+    ]);
   });
 
   it("fails when a child diverges from the parent's archetype without an override", () => {

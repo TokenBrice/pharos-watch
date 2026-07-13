@@ -94,6 +94,8 @@ export const VALIDATION_LANES = [
         "scripts/ci/check-stablecoin-data.ts",
         "scripts/ci/check-oracle-risk-coverage.ts",
         "scripts/lib/oracle-risk-coverage.ts",
+        "scripts/ci/check-mechanism-archetype-coverage.ts",
+        "scripts/lib/mechanism-archetype-coverage.ts",
         "scripts/ci/check-supply-helper-usage.mjs",
       ],
       validationOnly: ["worker/src/cron/reserve-adapters/__tests__/http-html-fixture-coverage.test.ts"],
@@ -107,11 +109,12 @@ export const VALIDATION_LANES = [
       prebuild("npm run audit:pricing-providers", 2),
       prebuild("npm run check:provider-resilience", 3),
       prebuild("npm run check:client-registry-imports", 11, ["full", "pages"]),
-      ordered("npm run check:dependency-coverage", "manual-advisory", undefined),
+      prebuild("npm run check:dependency-coverage", 41),
       prebuild("npm run check:redemption-backstops", 28),
       ordered("npm run check:redemption-coverage-audit", "manual-advisory", undefined),
       prebuild("npm run check:stablecoin-data", 35),
       prebuild("npm run check:oracle-risk-coverage:enforce", 36),
+      prebuild("npm run check:mechanism-archetype-coverage", 42),
       prebuild("npm run check:supply-helper-usage", 37),
       ordered("npm run check:world-map", "manual-advisory", undefined, ["full", "pages"]),
     ],
@@ -351,11 +354,11 @@ export function validateValidationLanes(lanes = VALIDATION_LANES) {
     throw new Error("The terminal prebuild barrier must be npm run check:generated-artifacts");
   }
 
-  if (commands.size !== 58) throw new Error(`Expected exactly 58 unique validation leaves; received ${commands.size}`);
+  if (commands.size !== 59) throw new Error(`Expected exactly 59 unique validation leaves; received ${commands.size}`);
   const phaseLeaves = (phase) => leaves.filter((leaf) => leaf.phase === phase);
-  validateContiguousOrder(phaseLeaves("prebuild"), "prebuild", 40);
-  if (phaseLeaves("manual-advisory").length !== 3) {
-    throw new Error("Expected exactly 3 manual-advisory leaves");
+  validateContiguousOrder(phaseLeaves("prebuild"), "prebuild", 42);
+  if (phaseLeaves("manual-advisory").length !== 2) {
+    throw new Error("Expected exactly 2 manual-advisory leaves");
   }
   validateContiguousOrder(phaseLeaves("pages"), "pages", 8);
   validateContiguousOrder(phaseLeaves("worker"), "worker", 2);

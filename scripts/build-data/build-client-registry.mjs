@@ -287,12 +287,24 @@ function projectMintIncidents(value) {
   const incidents = value
     .filter(isPlainObject)
     .map((incident) => {
-      const { date, summary } = incident;
+      const { date, status, resolvedAt, summary } = incident;
       const sources = projectLinks(incident.sources);
-      if (typeof date !== "string" || typeof summary !== "string" || !sources || sources.length === 0) {
+      if (
+        typeof date !== "string" ||
+        (status !== "active" && status !== "resolved") ||
+        typeof summary !== "string" ||
+        !sources ||
+        sources.length === 0
+      ) {
         return null;
       }
-      return { date, summary, sources };
+      return {
+        date,
+        status,
+        ...(typeof resolvedAt === "string" ? { resolvedAt } : {}),
+        summary,
+        sources,
+      };
     })
     .filter((incident) => incident !== null);
 

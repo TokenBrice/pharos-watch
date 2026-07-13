@@ -278,7 +278,15 @@ export function MintAuthoritySection({
                       <div key={incident.date} className="py-1.5 first:pt-0 last:pb-0">
                         <p className="font-medium">
                           {profile.mintIncidents.length > 1 ? incident.date : `Mint incident ${incident.date}`}
+                          <span className="ml-2 text-xs font-semibold uppercase">
+                            {incident.status === "active" ? "Active" : "Resolved"}
+                          </span>
                         </p>
+                        {incident.resolvedAt ? (
+                          <p className="mt-0.5 text-xs text-red-700/85 dark:text-red-300/85">
+                            Resolved {incident.resolvedAt}
+                          </p>
+                        ) : null}
                         <p className="mt-0.5 text-xs leading-relaxed text-red-700/85 dark:text-red-300/85">
                           {incident.summary}
                         </p>

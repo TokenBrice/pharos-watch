@@ -11,4 +11,5 @@ export * from "./badges";
 export * from "./risk";
 export * from "./mechanism-archetypes";
 export * from "./resolve-mechanism-archetype";
+export * from "./resolve-implementation-launch-date";
 export type { BadgeStyle } from "./common";

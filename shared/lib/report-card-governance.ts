@@ -145,11 +145,12 @@ export function resolveOracleRiskScore(meta?: StablecoinMeta): ResolvedOracleRis
   let tier = meta.oracleRisk.tier;
   let selectedBranch: OracleRiskBranch | null = null;
 
-  for (const branch of meta.oracleRisk.branches ?? []) {
-    if (ORACLE_RISK_SCORE[branch.tier] < ORACLE_RISK_SCORE[tier]) {
-      tier = branch.tier;
-      selectedBranch = branch;
-    }
+  const weakestBranch = [...(meta.oracleRisk.branches ?? [])].sort(
+    (left, right) => ORACLE_RISK_SCORE[left.tier] - ORACLE_RISK_SCORE[right.tier] || left.id.localeCompare(right.id),
+  )[0];
+  if (weakestBranch && ORACLE_RISK_SCORE[weakestBranch.tier] <= ORACLE_RISK_SCORE[tier]) {
+    tier = weakestBranch.tier;
+    selectedBranch = weakestBranch;
   }
 
   return {

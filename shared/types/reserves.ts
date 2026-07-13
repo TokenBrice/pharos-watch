@@ -5,6 +5,45 @@ export const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-h
 export type ReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
 export const ReserveRiskSchema = z.enum(RESERVE_RISK_VALUES);
 
+export const RESERVE_ASSET_CLASS_VALUES = [
+  "cash",
+  "bank-deposit",
+  "treasury-bill",
+  "government-security",
+  "repo",
+  "money-market-fund",
+  "stablecoin",
+  "cryptoasset",
+  "hedged-crypto",
+  "private-credit",
+  "public-credit",
+  "tokenized-security",
+  "fund-share",
+  "protocol-position",
+  "other",
+] as const;
+export type ReserveAssetClass = (typeof RESERVE_ASSET_CLASS_VALUES)[number];
+export const ReserveAssetClassSchema = z.enum(RESERVE_ASSET_CLASS_VALUES);
+
+export const RESERVE_RISK_FACTOR_VALUES = [
+  "credit",
+  "duration",
+  "liquidity",
+  "custody",
+  "counterparty",
+  "smart-contract",
+  "market",
+  "basis",
+  "legal",
+  "concentration",
+] as const;
+export type ReserveRiskFactor = (typeof RESERVE_RISK_FACTOR_VALUES)[number];
+export const ReserveRiskFactorSchema = z.enum(RESERVE_RISK_FACTOR_VALUES);
+
+export const RESERVE_LIQUIDITY_HORIZON_VALUES = ["immediate", "one-day", "seven-days", "over-seven-days", "unknown"] as const;
+export type ReserveLiquidityHorizon = (typeof RESERVE_LIQUIDITY_HORIZON_VALUES)[number];
+export const ReserveLiquidityHorizonSchema = z.enum(RESERVE_LIQUIDITY_HORIZON_VALUES);
+
 export interface ReserveSlice {
   name: string;
   pct: number;
@@ -12,6 +51,11 @@ export interface ReserveSlice {
   coinId?: string;
   depType?: DependencyType;
   blacklistable?: boolean;
+  assetClass?: ReserveAssetClass;
+  issuerOrObligor?: string;
+  riskFactors?: ReserveRiskFactor[];
+  liquidityHorizon?: ReserveLiquidityHorizon;
+  maturityDaysMax?: number;
 }
 
 export const ReserveSliceSchema: z.ZodType<ReserveSlice> = z.object({
@@ -21,6 +65,11 @@ export const ReserveSliceSchema: z.ZodType<ReserveSlice> = z.object({
   coinId: z.string().optional(),
   depType: DependencyTypeSchema.optional(),
   blacklistable: z.boolean().optional(),
+  assetClass: ReserveAssetClassSchema.optional(),
+  issuerOrObligor: z.string().min(1).optional(),
+  riskFactors: z.array(ReserveRiskFactorSchema).min(1).optional(),
+  liquidityHorizon: ReserveLiquidityHorizonSchema.optional(),
+  maturityDaysMax: z.number().finite().int().nonnegative().optional(),
 }).strict();
 
 export type ReserveCompositionValidationMode = "full" | "partial-known-exposure";

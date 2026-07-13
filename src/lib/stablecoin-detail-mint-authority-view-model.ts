@@ -63,6 +63,8 @@ export interface MintAuthorityDetailScoreComponentViewModel {
 
 export interface MintAuthorityDetailIncidentViewModel {
   date: string;
+  status: "active" | "resolved";
+  resolvedAt: string | null;
   summary: string;
   sources: MintAuthorityDetailSourceViewModel[];
 }
@@ -418,7 +420,16 @@ function readMintIncidents(value: unknown): MintAuthorityDetailIncidentViewModel
     if (!isRecord(incident)) continue;
     const date = stringValue(incident.date);
     const summary = stringValue(incident.summary);
-    if (date && summary) incidents.push({ date, summary, sources: readSources(incident.sources) });
+    const status = incident.status === "active" || incident.status === "resolved" ? incident.status : null;
+    if (date && summary && status) {
+      incidents.push({
+        date,
+        status,
+        resolvedAt: stringValue(incident.resolvedAt),
+        summary,
+        sources: readSources(incident.sources),
+      });
+    }
   }
   // Newest first: the callout leads with the most recent incident.
   return incidents.sort((a, b) => b.date.localeCompare(a.date));

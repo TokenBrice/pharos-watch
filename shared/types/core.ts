@@ -88,6 +88,34 @@ export const PROOF_OF_RESERVES_CADENCE_VALUES = [
 ] as const;
 export type ProofOfReservesCadence = (typeof PROOF_OF_RESERVES_CADENCE_VALUES)[number];
 
+export const PROOF_ASSURANCE_METHOD_VALUES = [
+  "audit",
+  "examination",
+  "review",
+  "agreed-upon-procedures",
+  "attestation",
+  "onchain-proof",
+  "self-verification",
+] as const;
+export type ProofAssuranceMethod = (typeof PROOF_ASSURANCE_METHOD_VALUES)[number];
+
+export const PROOF_ASSURANCE_SCOPE_VALUES = ["assets-only", "assets-and-liabilities"] as const;
+export type ProofAssuranceScope = (typeof PROOF_ASSURANCE_SCOPE_VALUES)[number];
+
+export const LIABILITY_RECONCILIATION_VALUES = ["full", "partial", "none", "unknown"] as const;
+export type LiabilityReconciliation = (typeof LIABILITY_RECONCILIATION_VALUES)[number];
+
+export interface ProofOfReservesLatestReport {
+  periodEnd: string;
+  publishedAt: string;
+  assuranceMethod: ProofAssuranceMethod;
+  scope: ProofAssuranceScope;
+  liabilityReconciliation: LiabilityReconciliation;
+  reviewer: string;
+  confidence: ResearchReviewConfidence;
+  sources: StablecoinLink[];
+}
+
 export interface ProofOfReserves {
   type: ProofOfReservesType;
   url: string;
@@ -96,6 +124,7 @@ export interface ProofOfReserves {
   cadence?: ProofOfReservesCadence;
   attestorJurisdiction?: string;
   attestorLicense?: string;
+  latestReport?: ProofOfReservesLatestReport;
 }
 
 export interface StablecoinLink {
@@ -105,6 +134,18 @@ export interface StablecoinLink {
 
 export const RESEARCH_REVIEW_CONFIDENCE_VALUES = ["verified", "probable", "manual-review", "unknown"] as const;
 export type ResearchReviewConfidence = (typeof RESEARCH_REVIEW_CONFIDENCE_VALUES)[number];
+
+export const MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES = ["resolved", "unresolved"] as const;
+export type MechanismArchetypeReviewDisposition = (typeof MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES)[number];
+
+/** Review record for a direct mechanism classification or a reason-coded unresolved design. */
+export interface MechanismArchetypeReview {
+  disposition: MechanismArchetypeReviewDisposition;
+  reviewedAt: string;
+  reviewer: string;
+  rationale: string;
+  sources: StablecoinLink[];
+}
 
 export const RESERVE_REVIEW_SCOPE_VALUES = ["full-composition", "dependency-relationships", "selected-slices"] as const;
 export type ReserveReviewScope = (typeof RESERVE_REVIEW_SCOPE_VALUES)[number];
@@ -121,6 +162,7 @@ export type ReserveNonLinkDisposition = (typeof RESERVE_NON_LINK_DISPOSITION_VAL
 export interface ReserveNonLinkReview {
   reserveIndex: number;
   reserveName: string;
+  pct: number;
   disposition: ReserveNonLinkDisposition;
   rationale: string;
   candidateCoinIds?: string[];
@@ -136,12 +178,13 @@ export interface ReserveReview {
   compositionAsOf?: string;
   scope: ReserveReviewScope;
   knownUnknownExposure: string;
-  knownUnknownExposurePct?: number;
+  knownUnknownExposurePct: number;
   nonLinkDispositions?: ReserveNonLinkReview[];
 }
 
 export interface DependencyReviewRelationship {
   id: string;
+  weight: number;
   type: DependencyType;
   reason: string;
 }
@@ -153,6 +196,38 @@ export interface DependencyReview {
   sources: StablecoinLink[];
   rationale: string;
   relationships: DependencyReviewRelationship[];
+}
+
+export const CUSTODY_PROVIDER_ROLE_VALUES = ["custodian", "subcustodian", "bank", "prime-broker", "other"] as const;
+export type CustodyProviderRole = (typeof CUSTODY_PROVIDER_ROLE_VALUES)[number];
+
+export const CUSTODY_SEGREGATION_VALUES = ["segregated", "omnibus", "mixed", "unknown"] as const;
+export type CustodySegregation = (typeof CUSTODY_SEGREGATION_VALUES)[number];
+
+export const CUSTODY_BANKRUPTCY_REMOTENESS_VALUES = ["structured", "contractual-only", "none", "unknown"] as const;
+export type CustodyBankruptcyRemoteness = (typeof CUSTODY_BANKRUPTCY_REMOTENESS_VALUES)[number];
+
+export const CUSTODY_REHYPOTHECATION_VALUES = ["prohibited", "permitted", "conditional", "unknown"] as const;
+export type CustodyRehypothecation = (typeof CUSTODY_REHYPOTHECATION_VALUES)[number];
+
+export interface CustodyProviderReview {
+  name: string;
+  role: CustodyProviderRole;
+  sharePct?: number;
+  jurisdiction?: string;
+}
+
+export interface CustodyProfile {
+  providers: CustodyProviderReview[];
+  segregation: CustodySegregation;
+  bankruptcyRemoteness: CustodyBankruptcyRemoteness;
+  rehypothecation: CustodyRehypothecation;
+  reviewedAt: string;
+  reviewer: string;
+  confidence: ResearchReviewConfidence;
+  sources: StablecoinLink[];
+  uncertainty: string;
+  knownUnknownExposurePct?: number;
 }
 
 export const MINT_AUTHORITY_MINT_PATH_VALUES = [
@@ -248,7 +323,33 @@ export interface MintAuthoritySafeState {
   fallbackHandler?: string | null;
   masterCopy?: string | null;
   observedBlock?: number;
+  observedAt?: string;
   source: MintAuthoritySafeSource;
+}
+
+export const MINT_AUTHORITY_UPGRADE_MODEL_VALUES = [
+  "immutable",
+  "transparent-proxy",
+  "uups",
+  "beacon",
+  "diamond",
+  "custom",
+  "unknown",
+] as const;
+export type MintAuthorityUpgradeModel = (typeof MINT_AUTHORITY_UPGRADE_MODEL_VALUES)[number];
+
+export interface MintAuthorityUpgradeability {
+  model: MintAuthorityUpgradeModel;
+  proxyAddresses?: string[];
+  implementationAddresses?: string[];
+  adminAddresses?: string[];
+  canChangeMintLogic: boolean | "unknown";
+  delaySec?: number;
+  /** Exact label of the reviewed control that can change mint-critical logic. */
+  controlRef?: string;
+  observedAt?: string;
+  observedBlock?: number;
+  sources: StablecoinLink[];
 }
 
 export interface MintAuthorityRouteChecks {
@@ -288,6 +389,10 @@ export interface MintAuthorityControl {
   safe?: MintAuthoritySafeState;
   routeChecks?: MintAuthorityRouteChecks;
   keyCustodyAttestation?: MintAuthorityKeyCustodyAttestation;
+  observedAt?: string;
+  observedBlock?: number;
+  /** Reviewed non-address common modes such as issuer, custodian, or operator identity. */
+  failureDomainKeys?: string[];
   bypassSurfaces?: string[];
   sources?: StablecoinLink[];
   evidence?: string;
@@ -299,6 +404,7 @@ export interface MintAuthorityReview {
   evidence: string;
   reviewer: string;
   reviewedAt: string;
+  disposition?: "scoreable" | "unresolved";
   unresolvedQuestions?: string[];
 }
 
@@ -308,8 +414,11 @@ export interface MintAuthorityProfile {
   confidence: MintAuthorityConfidence;
   summary: string;
   inheritedFrom?: string;
+  upgradeability?: MintAuthorityUpgradeability;
   mintIncidents?: Array<{
     date: string;
+    status: "active" | "resolved";
+    resolvedAt?: string;
     summary: string;
     sources: StablecoinLink[];
   }>;
@@ -540,6 +649,28 @@ export type OracleRiskTier = (typeof ORACLE_RISK_TIER_VALUES)[number];
 
 export const ORACLE_RISK_CONFIDENCE_VALUES = ["verified", "probable", "limited", "unknown"] as const;
 export type OracleRiskConfidence = (typeof ORACLE_RISK_CONFIDENCE_VALUES)[number];
+export const ORACLE_RISK_BRANCH_MODEL_VALUES = ["single-path", "multi-branch"] as const;
+export type OracleRiskBranchModel = (typeof ORACLE_RISK_BRANCH_MODEL_VALUES)[number];
+
+export interface OracleRiskFeed {
+  provider: string;
+  path: string;
+  address?: string;
+  chain: string;
+  heartbeatSec?: number;
+  stalenessBoundSec?: number;
+  observedAt?: string;
+  observedBlock?: number;
+  failureDomainKeys?: string[];
+}
+
+export interface OracleRiskCollateralParameter {
+  asset: string;
+  maximumLtvPct?: number;
+  minimumCollateralRatioPct?: number;
+  shutdownCollateralRatioPct?: number;
+  note?: string;
+}
 
 export interface OracleRiskBranch {
   id: string;
@@ -548,12 +679,23 @@ export interface OracleRiskBranch {
   summary: string;
   collateralAssets?: string[];
   chains?: string[];
+  feeds?: OracleRiskFeed[];
+  fallbackBehavior?: string;
+  observedAt?: string;
+  observedBlock?: number;
+  collateralParameters?: OracleRiskCollateralParameter[];
+  liquidationMechanism?: string;
+  liquidationDelaySec?: number;
+  backstop?: string;
+  shutdownOrBadDebtBehavior?: string;
+  failureDomainKeys?: string[];
   sources?: StablecoinLink[];
 }
 
 export interface OracleRiskProfile {
   tier: OracleRiskTier;
   summary: string;
+  branchModel?: OracleRiskBranchModel;
   reviewedAt?: string;
   reviewer?: string;
   confidence?: OracleRiskConfidence;
@@ -588,6 +730,53 @@ export interface BridgeRouteProtocolEvidence {
   note?: string;
 }
 
+export const BRIDGE_ROUTE_CLASS_VALUES = ["native", "canonical", "third-party"] as const;
+export type BridgeRouteClass = (typeof BRIDGE_ROUTE_CLASS_VALUES)[number];
+
+export const BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES = [
+  "native-issuance",
+  "bridge-representation",
+  "wrapped-representation",
+  "liquidity-settlement",
+  "unknown",
+] as const;
+export type BridgeRouteIssuanceModel = (typeof BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES)[number];
+
+export const BRIDGE_ROUTE_SEMANTICS_VALUES = [
+  "native-mint",
+  "burn-mint",
+  "lock-mint",
+  "liquidity",
+  "intent",
+  "other",
+  "unknown",
+] as const;
+export type BridgeRouteSemantics = (typeof BRIDGE_ROUTE_SEMANTICS_VALUES)[number];
+
+export const BRIDGE_ROUTE_SCOPE_VALUES = ["global", "canonical", "peripheral", "unknown"] as const;
+export type BridgeRouteScope = (typeof BRIDGE_ROUTE_SCOPE_VALUES)[number];
+
+export interface BridgeRouteDeployment {
+  id: string;
+  sourceChain?: string;
+  destinationChain: string;
+  canonicalChain?: string;
+  contractAddress: string;
+  representationId?: string;
+  protocol: string;
+  issuanceModel: BridgeRouteIssuanceModel;
+  routeClass: BridgeRouteClass;
+  riskTier: BridgeRouteRiskTier;
+  semantics: BridgeRouteSemantics;
+  scope: BridgeRouteScope;
+  controllerChain?: string;
+  controllerAddress?: string;
+  failureDomainKeys?: string[];
+  observedAt?: string;
+  observedBlock?: number;
+  sources?: StablecoinLink[];
+}
+
 export interface BridgeRouteRiskProfile {
   tier: BridgeRouteRiskTier;
   summary: string;
@@ -597,6 +786,7 @@ export interface BridgeRouteRiskProfile {
   protocols?: BridgeRouteProtocolEvidence[];
   sourceFreeRationale?: string;
   sources?: StablecoinLink[];
+  routes?: BridgeRouteDeployment[];
 }
 
 export const INFRASTRUCTURE_VALUES = ["liquity-v1", "liquity-v2", "m0"] as const;
@@ -737,6 +927,9 @@ export interface StablecoinMeta {
   collateral?: string;
   pegMechanism?: string;
   mechanismArchetype?: MechanismArchetype;
+  mechanismArchetypeReview?: MechanismArchetypeReview;
+  /** Current mechanism implementation boundary; fuzzy dates use the conservative range-end policy. */
+  implementationLaunchDate?: string;
   commodityOunces?: number;
   geckoId?: string;
   cmcSlug?: string;
@@ -768,6 +961,7 @@ export interface StablecoinMeta {
   archetypeOverride?: boolean;
   reserves?: ReserveSlice[];
   reserveReview?: ReserveReview;
+  custodyProfile?: CustodyProfile;
   liveReservesConfig?: LiveReservesConfig;
   notices?: CoinNotice[];
   tags?: string[];

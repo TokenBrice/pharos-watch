@@ -191,6 +191,8 @@ describe("MintAuthoritySection", () => {
           mintIncidents: [
             {
               date: "2024-06-13",
+              status: "active",
+              resolvedAt: null,
               summary: "Privileged mint authority created unbacked supply during an exploit.",
               sources: [{ label: "Incident report", url: "https://example.com/incident" }],
             },
@@ -215,11 +217,15 @@ describe("MintAuthoritySection", () => {
           mintIncidents: [
             {
               date: "2025-10-04",
+              status: "resolved",
+              resolvedAt: "2025-10-04",
               summary: "Second exploit borrowed stablecoin with no collateral.",
               sources: [],
             },
             {
               date: "2024-01-30",
+              status: "resolved",
+              resolvedAt: null,
               summary: "First exploit turned the borrow route into bad debt.",
               sources: [],
             },

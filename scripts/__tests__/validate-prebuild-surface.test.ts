@@ -23,7 +23,8 @@ describe("validate:prebuild surface filtering", () => {
     expect(commands).toContain("npm run audit:pricing-providers");
     expect(commands).toContain("npm run check:provider-resilience");
     expect(commands).toContain("npm run check:generated-artifacts");
-    expect(commands).not.toContain("npm run check:dependency-coverage");
+    expect(commands).toContain("npm run check:dependency-coverage");
+    expect(commands).toContain("npm run check:mechanism-archetype-coverage");
     expect(commands).not.toContain("npm run check:redemption-coverage-audit");
     expect(commands).not.toContain("npm run check:world-map");
     expect(commands).not.toContain("npm run check:migrations");
@@ -38,7 +39,8 @@ describe("validate:prebuild surface filtering", () => {
     expect(commands).toContain("npm run check:provider-resilience");
     expect(commands).toContain("npm run check:migrations");
     expect(commands).toContain("npm run check:sql-safety");
-    expect(commands).not.toContain("npm run check:dependency-coverage");
+    expect(commands).toContain("npm run check:dependency-coverage");
+    expect(commands).toContain("npm run check:mechanism-archetype-coverage");
     expect(commands).not.toContain("npm run check:redemption-coverage-audit");
     expect(commands).not.toContain("npm run check:generated-artifacts");
     expect(commands).not.toContain("npm run check:world-map");

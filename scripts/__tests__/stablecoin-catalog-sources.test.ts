@@ -11,6 +11,7 @@ import {
   loadGeneratedPerCoinCoins,
   loadLegacyStablecoinEntries,
   loadPerCoinStablecoinEntries,
+  loadStablecoinDomainSidecarEntries,
   syncGeneratedPerCoinAsset,
   type StablecoinSourceEntry,
 } from "../lib/stablecoin-catalog-sources";
@@ -92,6 +93,22 @@ function makeReserveReview(): Record<string, unknown> {
     compositionAsOf: "2026-07-01",
     scope: "full-composition",
     knownUnknownExposure: "None identified in the fixture.",
+    knownUnknownExposurePct: 0,
+  };
+}
+
+function makeCustodyProfile(): Record<string, unknown> {
+  return {
+    providers: [{ name: "Fixture Bank", role: "bank", sharePct: 100, jurisdiction: "US" }],
+    segregation: "segregated",
+    bankruptcyRemoteness: "contractual-only",
+    rehypothecation: "prohibited",
+    reviewedAt: "2026-07-12",
+    reviewer: "test",
+    confidence: "verified",
+    sources: [{ label: "Custody report", url: "https://example.com/custody" }],
+    uncertainty: "No material custody allocation is unresolved in the fixture.",
+    knownUnknownExposurePct: 0,
   };
 }
 
@@ -189,19 +206,53 @@ describe("stablecoin catalog source helpers", () => {
     const rootDir = makeTempRoot();
     const reserves = makeReserves();
     const reserveReview = makeReserveReview();
+    const custodyProfile = makeCustodyProfile();
 
     writeJson(rootDir, "shared/data/stablecoins/coins/sidecar-usd.json", makeCoin("sidecar-usd"));
     writeJson(rootDir, "shared/data/stablecoins/domains/reserves/sidecar-usd.json", {
       id: "sidecar-usd",
       reserves,
       reserveReview,
+      custodyProfile,
     });
 
     const entries = loadPerCoinStablecoinEntries(rootDir);
     expect(entries).toHaveLength(1);
     expect(entries[0]?.coin.reserves).toEqual(reserves);
     expect(entries[0]?.coin.reserveReview).toEqual(reserveReview);
+    expect(entries[0]?.coin.custodyProfile).toEqual(custodyProfile);
     expect(entries[0]?.sidecarFiles).toEqual(["shared/data/stablecoins/domains/reserves/sidecar-usd.json"]);
+  });
+
+  it("loads a review-only reserve sidecar before merged-record validation", () => {
+    const rootDir = makeTempRoot();
+    const reserveReview = makeReserveReview();
+
+    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/review-only-usd.json", {
+      id: "review-only-usd",
+      reserveReview,
+    });
+
+    expect(loadStablecoinDomainSidecarEntries(rootDir)).toEqual([
+      expect.objectContaining({
+        domain: "reserves",
+        fields: ["reserveReview"],
+        id: "review-only-usd",
+        patch: { reserveReview },
+      }),
+    ]);
+  });
+
+  it("rejects a review-only reserve sidecar when the merged record has no reserves", () => {
+    const rootDir = makeTempRoot();
+
+    writeJson(rootDir, "shared/data/stablecoins/coins/review-only-usd.json", makeCoin("review-only-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/domains/reserves/review-only-usd.json", {
+      id: "review-only-usd",
+      reserveReview: makeReserveReview(),
+    });
+
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/reserveReview requires a reserve composition/);
   });
 
   it("merges all research sidecar domains into one stablecoin projection", () => {

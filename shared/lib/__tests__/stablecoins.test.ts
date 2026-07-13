@@ -197,6 +197,123 @@ describe("tracked stablecoin metadata", () => {
     }
   });
 
+  it("validates mechanism reviews and sourced implementation boundaries", () => {
+    const review = {
+      disposition: "resolved",
+      reviewedAt: "2026-07-13",
+      reviewer: "test reviewer",
+      rationale: "The current implementation is a reserve-backed receipt.",
+      sources: [{ label: "Docs", url: "https://example.com/docs" }],
+    };
+
+    expect(
+      parseStablecoinMetaAssets(
+        [
+          makeStablecoinAsset({
+            launchDate: "2020-04-22",
+            mechanismArchetype: "fiat-cash",
+            mechanismArchetypeReview: review,
+            implementationLaunchDate: "2026-H1",
+          }),
+        ],
+        "reviewed mechanism",
+      ),
+    ).toHaveLength(1);
+
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [makeStablecoinAsset({ mechanismArchetypeReview: review })],
+        "resolved review without archetype",
+      ),
+    ).toThrow(/resolved mechanismArchetypeReview requires mechanismArchetype/);
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [
+          makeStablecoinAsset({
+            mechanismArchetype: "fiat-cash",
+            mechanismArchetypeReview: { ...review, disposition: "unresolved" },
+          }),
+        ],
+        "unresolved review with archetype",
+      ),
+    ).toThrow(/unresolved mechanismArchetypeReview cannot declare mechanismArchetype/);
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [makeStablecoinAsset({ launchDate: "2026", implementationLaunchDate: "2025" })],
+        "unsourced implementation date",
+      ),
+    ).toThrow(/implementationLaunchDate requires a sourced mechanismArchetypeReview/);
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [
+          makeStablecoinAsset({
+            launchDate: "2026",
+            mechanismArchetype: "fiat-cash",
+            mechanismArchetypeReview: review,
+            implementationLaunchDate: "2025",
+          }),
+        ],
+        "implementation before project",
+      ),
+    ).toThrow(/implementationLaunchDate cannot unambiguously precede launchDate/);
+  });
+
+  it("requires declared multi-branch oracle structure", () => {
+    const profile = {
+      tier: "standard-external",
+      summary: "Collateral markets use separate reviewed feed paths.",
+      reviewedAt: "2026-07-13",
+      reviewer: "test reviewer",
+      confidence: "verified",
+    };
+    const branch = {
+      id: "eth",
+      label: "ETH branch",
+      tier: "standard-external",
+      summary: "ETH branch uses a reviewed external feed path.",
+    };
+
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [
+          makeStablecoinAsset({
+            mechanismArchetype: "cdp",
+            flags: {
+              backing: "crypto-backed",
+              pegCurrency: "USD",
+              governance: "decentralized",
+              yieldBearing: false,
+              rwa: false,
+              navToken: false,
+            },
+            oracleRisk: { ...profile, branchModel: "multi-branch" },
+          }),
+        ],
+        "multi branch without rows",
+      ),
+    ).toThrow(/multi-branch oracleRisk profiles require branches/);
+
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [
+          makeStablecoinAsset({
+            mechanismArchetype: "cdp",
+            flags: {
+              backing: "crypto-backed",
+              pegCurrency: "USD",
+              governance: "decentralized",
+              yieldBearing: false,
+              rwa: false,
+              navToken: false,
+            },
+            oracleRisk: { ...profile, branches: [branch] },
+          }),
+        ],
+        "branch rows without model",
+      ),
+    ).toThrow(/oracleRisk branches require branchModel multi-branch/);
+  });
+
   it("rejects unsupported launch date formats", () => {
     const rejected = ["2026-13", "2026-02-30", "2026-Q5", "2026-H3", "H1 2026", "2026/05/27"];
 
@@ -481,7 +598,9 @@ describe("tracked stablecoin metadata", () => {
             confidence: "verified",
             sources: [{ label: "Docs", url: "https://example.com/docs" }],
             rationale: "The mechanism relationship cannot be represented as proportional reserves.",
-            relationships: [{ id: "usdc-circle", type: "mechanism", reason: "Required stabilization route." }],
+            relationships: [
+              { id: "usdc-circle", weight: 1, type: "mechanism", reason: "Required stabilization route." },
+            ],
           },
         }),
       ],
@@ -489,6 +608,34 @@ describe("tracked stablecoin metadata", () => {
     );
 
     expect(parsed[0]?.dependencyReview?.relationships).toHaveLength(1);
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [
+          makeStablecoinAsset({
+            dependencies,
+            dependencyReview: {
+              ...parsed[0]!.dependencyReview!,
+              relationships: [{ ...parsed[0]!.dependencyReview!.relationships[0]!, weight: 1 - 5e-7 }],
+            },
+          }),
+        ],
+        "manual-with-rounded-weight.json",
+      ),
+    ).not.toThrow();
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [
+          makeStablecoinAsset({
+            dependencies,
+            dependencyReview: {
+              ...parsed[0]!.dependencyReview!,
+              relationships: [{ ...parsed[0]!.dependencyReview!.relationships[0]!, weight: 0.99 }],
+            },
+          }),
+        ],
+        "manual-with-stale-weight.json",
+      ),
+    ).toThrowError(/weight must match the authored dependency weight/);
   });
 
   it("fingerprints reviewed non-link dispositions to the current reserve slice", () => {
@@ -506,6 +653,7 @@ describe("tracked stablecoin metadata", () => {
         {
           reserveIndex: 1,
           reserveName: "Stablecoin basket",
+          pct: 20,
           disposition: "basket-needs-split" as const,
           rationale: "No constituent weights are available.",
           candidateCoinIds: ["usdc-circle", "usdt-tether"],
@@ -525,6 +673,20 @@ describe("tracked stablecoin metadata", () => {
       parseStablecoinMetaAssets(
         [
           makeStablecoinAsset({
+            reserves,
+            reserveReview: {
+              ...reserveReview,
+              nonLinkDispositions: [{ ...reserveReview.nonLinkDispositions[0], pct: 20 + 5e-7 }],
+            },
+          }),
+        ],
+        "reviewed-reserves-rounded-pct.json",
+      ),
+    ).not.toThrow();
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [
+          makeStablecoinAsset({
             reserves: [reserves[0], { ...reserves[1], name: "Changed basket" }],
             reserveReview,
           }),
@@ -532,6 +694,121 @@ describe("tracked stablecoin metadata", () => {
         "stale-reviewed-reserves.json",
       ),
     ).toThrowError(/must match the current reserve index and name/);
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [
+          makeStablecoinAsset({
+            reserves,
+            reserveReview: {
+              ...reserveReview,
+              nonLinkDispositions: [{ ...reserveReview.nonLinkDispositions[0], pct: 19.99 }],
+            },
+          }),
+        ],
+        "stale-reviewed-reserve-pct.json",
+      ),
+    ).toThrowError(/disposition pct must match the current reserve slice/);
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [makeStablecoinAsset({ reserves, reserveReview: { ...reserveReview, knownUnknownExposurePct: 19.99 } })],
+        "stale-known-unknown-pct.json",
+      ),
+    ).toThrowError(/knownUnknownExposurePct must equal the total pct of unresolved dispositions/);
+  });
+
+  it("accepts structured reserve facts and validates latest assurance reports", () => {
+    const parsed = parseStablecoinMetaAssets(
+      [
+        makeStablecoinAsset({
+          reserves: [
+            {
+              name: "Treasury bills",
+              pct: 100,
+              risk: "very-low",
+              assetClass: "treasury-bill",
+              issuerOrObligor: "United States Treasury",
+              riskFactors: ["duration", "custody"],
+              liquidityHorizon: "one-day",
+              maturityDaysMax: 90,
+            },
+          ],
+          proofOfReserves: {
+            type: "independent-audit",
+            url: "https://example.com/reports",
+            latestReport: {
+              periodEnd: "2026-06-30",
+              publishedAt: "2026-07-10",
+              assuranceMethod: "examination",
+              scope: "assets-and-liabilities",
+              liabilityReconciliation: "full",
+              reviewer: "test",
+              confidence: "verified",
+              sources: [{ label: "Report", url: "https://example.com/reports/june" }],
+            },
+          },
+        }),
+      ],
+      "reserve-evidence.json",
+    );
+    expect(parsed[0]?.reserves?.[0]?.assetClass).toBe("treasury-bill");
+
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [
+          makeStablecoinAsset({
+            proofOfReserves: {
+              type: "independent-audit",
+              url: "https://example.com/reports",
+              latestReport: {
+                periodEnd: "2026-07-01",
+                publishedAt: "2026-06-30",
+                assuranceMethod: "audit",
+                scope: "assets-only",
+                liabilityReconciliation: "none",
+                reviewer: "test",
+                confidence: "verified",
+                sources: [{ label: "Report", url: "https://example.com/report" }],
+              },
+            },
+          }),
+        ],
+        "future-period-report.json",
+      ),
+    ).toThrowError(/publishedAt cannot precede periodEnd/);
+  });
+
+  it("validates reviewed custody concentration without deriving custodyModel", () => {
+    const custodyProfile = {
+      providers: [
+        { name: "Bank A", role: "bank" as const, sharePct: 60, jurisdiction: "US" },
+        { name: "Bank B", role: "bank" as const, sharePct: 30, jurisdiction: "US" },
+      ],
+      segregation: "segregated" as const,
+      bankruptcyRemoteness: "contractual-only" as const,
+      rehypothecation: "prohibited" as const,
+      reviewedAt: "2026-07-12",
+      reviewer: "test",
+      confidence: "verified" as const,
+      sources: [{ label: "Custody disclosure", url: "https://example.com/custody" }],
+      uncertainty: "Ten percent of cash placement is not allocated by provider.",
+      knownUnknownExposurePct: 10,
+    };
+    expect(
+      parseStablecoinMetaAssets([makeStablecoinAsset({ custodyProfile })], "custody-profile.json")[0]?.custodyProfile,
+    ).toEqual(custodyProfile);
+    expect(() =>
+      parseStablecoinMetaAssets(
+        [
+          makeStablecoinAsset({
+            custodyProfile: {
+              ...custodyProfile,
+              providers: custodyProfile.providers.map((provider) => ({ ...provider, sharePct: 60 })),
+            },
+          }),
+        ],
+        "overweight-custody.json",
+      ),
+    ).toThrowError(/shares cannot exceed 100%/);
   });
 
   it("enforces reserve percentages as finite positive percentages", () => {

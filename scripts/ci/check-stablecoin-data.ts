@@ -9,6 +9,7 @@ import { classifyPegClass, normalizePegTypeFromCurrency } from "../../shared/lib
 import type { DeadStablecoin, StablecoinMeta } from "../../shared/types";
 import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, validateReserveCompositionTotal } from "../../shared/types/reserves";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { getTrackedAlgorithmicBackingIssue } from "../lib/stablecoin-data-gate-issues";
 import {
   CANONICAL_ORDER_ASSET_FILE,
@@ -25,7 +26,6 @@ import {
   type StablecoinSourceEntry,
 } from "../lib/stablecoin-catalog-sources";
 
-const DEPENDENCY_RESERVE_WEIGHT_TOLERANCE = 0.005;
 const RESERVE_TOTAL_ALLOWLIST = new Set<string>();
 const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
   // Kava USDX remains a live tracked feed while the cemetery keeps the 2022
@@ -154,44 +154,18 @@ function dependencyKey(dependency: { id: string; type?: string }): string {
   return `${dependency.id}::${dependency.type ?? "collateral"}`;
 }
 
-function getDependencyReserveAlignmentIssues(coin: StablecoinMeta): string[] {
+export function getDependencyReserveOverlapIssues(coin: Pick<StablecoinMeta, "dependencies" | "reserves">): string[] {
   const dependencies = coin.dependencies ?? [];
   const linkedReserves = (coin.reserves ?? []).filter((reserve) => reserve.coinId);
   if (dependencies.length === 0 || linkedReserves.length === 0) return [];
 
-  const dependencyWeights = new Map<string, number>();
-  for (const dependency of dependencies) {
-    const key = dependencyKey(dependency);
-    dependencyWeights.set(key, (dependencyWeights.get(key) ?? 0) + dependency.weight);
-  }
-
-  const reserveWeights = new Map<string, number>();
-  for (const reserve of linkedReserves) {
-    const key = dependencyKey({ id: reserve.coinId!, type: reserve.depType });
-    reserveWeights.set(key, (reserveWeights.get(key) ?? 0) + reserve.pct / 100);
-  }
-
-  const issues: string[] = [];
-  for (const key of dependencyWeights.keys()) {
-    if (!reserveWeights.has(key)) {
-      issues.push(`dependencies includes ${key} but linked reserves do not`);
-    }
-  }
-  for (const key of reserveWeights.keys()) {
-    if (!dependencyWeights.has(key)) {
-      issues.push(`linked reserves include ${key} but dependencies does not`);
-    }
-  }
-  for (const [key, dependencyWeight] of dependencyWeights) {
-    const reserveWeight = reserveWeights.get(key);
-    if (reserveWeight != null && Math.abs(dependencyWeight - reserveWeight) > DEPENDENCY_RESERVE_WEIGHT_TOLERANCE) {
-      issues.push(
-        `${key} weight mismatch: dependencies=${dependencyWeight}, linked reserves=${Number(reserveWeight.toFixed(6))}`,
-      );
-    }
-  }
-
-  return issues;
+  const reserveKeys = new Set(
+    linkedReserves.map((reserve) => dependencyKey({ id: reserve.coinId!, type: reserve.depType })),
+  );
+  return [...new Set(dependencies.map(dependencyKey).filter((key) => reserveKeys.has(key)))].map(
+    (key) =>
+      `${key} is authored in both dependencies and linked reserves; keep reserve-backed relationships only in reserves`,
+  );
 }
 
 function getReserveDependencyTypeLinkIssues(coin: StablecoinMeta): string[] {
@@ -359,137 +333,144 @@ function getLogoRegistryIssues(): string[] {
     .map((key) => `${LOGOS_FILE}: raw numeric DefiLlama logo key "${key}" must be migrated to a canonical id`);
 }
 
-let canonicalOrder: string[] = [];
-let legacyEntries: StablecoinSourceEntry[] = [];
-let perCoinEntries: StablecoinSourceEntry[] = [];
+function runStablecoinDataCheck(): void {
+  let canonicalOrder: string[] = [];
+  let legacyEntries: StablecoinSourceEntry[] = [];
+  let perCoinEntries: StablecoinSourceEntry[] = [];
 
-canonicalOrder = readCanonicalOrder();
+  canonicalOrder = readCanonicalOrder();
 
-try {
-  legacyEntries = loadLegacyStablecoinEntries();
-} catch (error) {
-  reportError(error instanceof Error ? error.message : String(error));
-}
-
-try {
-  perCoinEntries = loadPerCoinStablecoinEntries();
-} catch (error) {
-  reportError(error instanceof Error ? error.message : String(error));
-}
-
-try {
-  loadGeneratedPerCoinCoins();
-} catch (error) {
-  reportError(error instanceof Error ? error.message : String(error));
-}
-
-if (errorCount === 0) {
   try {
-    syncGeneratedPerCoinAsset({ check: true });
-    process.stdout.write(`${GENERATED_PER_COIN_ASSET_FILE}: generated aggregate is current\n`);
+    legacyEntries = loadLegacyStablecoinEntries();
   } catch (error) {
     reportError(error instanceof Error ? error.message : String(error));
   }
+
+  try {
+    perCoinEntries = loadPerCoinStablecoinEntries();
+  } catch (error) {
+    reportError(error instanceof Error ? error.message : String(error));
+  }
+
+  try {
+    loadGeneratedPerCoinCoins();
+  } catch (error) {
+    reportError(error instanceof Error ? error.message : String(error));
+  }
+
+  if (errorCount === 0) {
+    try {
+      syncGeneratedPerCoinAsset({ check: true });
+      process.stdout.write(`${GENERATED_PER_COIN_ASSET_FILE}: generated aggregate is current\n`);
+    } catch (error) {
+      reportError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  if (errorCount === 0) {
+    const allEntries = perCoinEntries;
+    const knownIds = new Set(perCoinEntries.map((entry) => entry.coin.id));
+
+    for (const issue of findNonEmptyLegacyStablecoinShards(legacyEntries)) {
+      reportError(formatLegacyShardEntriesIssue(issue));
+    }
+
+    for (const issue of findDuplicateStablecoinIds(allEntries)) {
+      reportError(
+        `${STABLECOIN_DATA_DIR}: duplicate stablecoin id "${issue.id}" found in ${issue.entries.map((entry) => entry.file).join(", ")}`,
+      );
+    }
+
+    for (const issue of getDeadStablecoinRegistryIssues(DEAD_STABLECOINS)) {
+      reportError(`${STABLECOIN_DATA_DIR}/../dead-stablecoins.json: ${issue}`);
+    }
+
+    for (const issue of getTrackedDeadLlamaIdOverlapIssues(allEntries, DEAD_STABLECOINS)) {
+      reportError(issue);
+    }
+
+    for (const issue of getLogoRegistryIssues()) {
+      reportError(issue);
+    }
+
+    const canonicalIssues = findCanonicalOrderIssues(canonicalOrder, allEntries);
+    for (const id of canonicalIssues.duplicateIds) {
+      reportError(`${STABLECOIN_DATA_DIR}/${CANONICAL_ORDER_ASSET_FILE}: duplicate stablecoin ID "${id}"`);
+    }
+    for (const id of canonicalIssues.unknownIds) {
+      reportError(`${STABLECOIN_DATA_DIR}/${CANONICAL_ORDER_ASSET_FILE}: unknown stablecoin ID "${id}"`);
+    }
+    if (canonicalIssues.missingIds.length > 0) {
+      reportError(
+        `${STABLECOIN_DATA_DIR}/${CANONICAL_ORDER_ASSET_FILE}: missing tracked stablecoin IDs ${canonicalIssues.missingIds.join(", ")}`,
+      );
+    }
+
+    for (const entry of allEntries) {
+      const reserveTotalIssue = getReserveTotalIssue(entry.coin);
+      if (reserveTotalIssue) {
+        reportError(`${entry.file} (${entry.coin.id}): ${reserveTotalIssue}`);
+      }
+
+      const dependencyTotalIssue = getDependencyTotalIssue(entry.coin);
+      if (dependencyTotalIssue) {
+        reportError(`${entry.file} (${entry.coin.id}): ${dependencyTotalIssue}`);
+      }
+
+      for (const overlapIssue of getDependencyReserveOverlapIssues(entry.coin)) {
+        reportError(`${entry.file} (${entry.coin.id}): ${overlapIssue}`);
+      }
+
+      for (const reserveDependencyTypeLinkIssue of getReserveDependencyTypeLinkIssues(entry.coin)) {
+        reportError(`${entry.file} (${entry.coin.id}): ${reserveDependencyTypeLinkIssue}`);
+      }
+
+      const algorithmicBackingIssue = getTrackedAlgorithmicBackingIssue(entry.coin);
+      if (algorithmicBackingIssue) {
+        reportError(`${entry.file} (${entry.coin.id}): ${algorithmicBackingIssue}`);
+      }
+
+      const runtimeAdmissionIssue = getRuntimeAdmissionIssue(entry.coin);
+      if (runtimeAdmissionIssue) {
+        reportError(`${entry.file} (${entry.coin.id}): ${runtimeAdmissionIssue}`);
+      }
+
+      const commodityOuncesIssue = getCommodityOuncesIssue(entry.coin);
+      if (commodityOuncesIssue) {
+        reportError(`${entry.file} (${entry.coin.id}): ${commodityOuncesIssue}`);
+      }
+
+      const pegRuntimeSupportIssue = getPegRuntimeSupportIssue(entry.coin);
+      if (pegRuntimeSupportIssue) {
+        reportError(`${entry.file} (${entry.coin.id}): ${pegRuntimeSupportIssue}`);
+      }
+
+      for (const referenceIssue of getReferenceIssues(entry.coin, knownIds)) {
+        reportError(`${entry.file} (${entry.coin.id}): ${referenceIssue}`);
+      }
+
+      for (const contractIssue of getContractDeploymentIssues(entry.coin)) {
+        reportError(`${entry.file} (${entry.coin.id}): ${contractIssue}`);
+      }
+    }
+
+    for (const error of validateVariantRelationships(allEntries.map((entry) => entry.coin))) {
+      reportError(`${STABLECOIN_DATA_DIR}: ${error}`);
+    }
+
+    for (const issue of findBlacklistabilityReviewIssues(allEntries.map((entry) => entry.coin))) {
+      reportError(`${STABLECOIN_DATA_DIR}: ${issue.id}: ${issue.message}`);
+    }
+  }
+
+  if (errorCount > 0) {
+    process.stderr.write(`\n${errorCount} error(s) found in stablecoin data files.\n`);
+    process.exitCode = 1;
+    return;
+  }
+  process.stdout.write("Stablecoin data validation: OK\n");
 }
 
-if (errorCount === 0) {
-  const allEntries = perCoinEntries;
-  const knownIds = new Set(perCoinEntries.map((entry) => entry.coin.id));
-
-  for (const issue of findNonEmptyLegacyStablecoinShards(legacyEntries)) {
-    reportError(formatLegacyShardEntriesIssue(issue));
-  }
-
-  for (const issue of findDuplicateStablecoinIds(allEntries)) {
-    reportError(
-      `${STABLECOIN_DATA_DIR}: duplicate stablecoin id "${issue.id}" found in ${issue.entries.map((entry) => entry.file).join(", ")}`,
-    );
-  }
-
-  for (const issue of getDeadStablecoinRegistryIssues(DEAD_STABLECOINS)) {
-    reportError(`${STABLECOIN_DATA_DIR}/../dead-stablecoins.json: ${issue}`);
-  }
-
-  for (const issue of getTrackedDeadLlamaIdOverlapIssues(allEntries, DEAD_STABLECOINS)) {
-    reportError(issue);
-  }
-
-  for (const issue of getLogoRegistryIssues()) {
-    reportError(issue);
-  }
-
-  const canonicalIssues = findCanonicalOrderIssues(canonicalOrder, allEntries);
-  for (const id of canonicalIssues.duplicateIds) {
-    reportError(`${STABLECOIN_DATA_DIR}/${CANONICAL_ORDER_ASSET_FILE}: duplicate stablecoin ID "${id}"`);
-  }
-  for (const id of canonicalIssues.unknownIds) {
-    reportError(`${STABLECOIN_DATA_DIR}/${CANONICAL_ORDER_ASSET_FILE}: unknown stablecoin ID "${id}"`);
-  }
-  if (canonicalIssues.missingIds.length > 0) {
-    reportError(
-      `${STABLECOIN_DATA_DIR}/${CANONICAL_ORDER_ASSET_FILE}: missing tracked stablecoin IDs ${canonicalIssues.missingIds.join(", ")}`,
-    );
-  }
-
-  for (const entry of allEntries) {
-    const reserveTotalIssue = getReserveTotalIssue(entry.coin);
-    if (reserveTotalIssue) {
-      reportError(`${entry.file} (${entry.coin.id}): ${reserveTotalIssue}`);
-    }
-
-    const dependencyTotalIssue = getDependencyTotalIssue(entry.coin);
-    if (dependencyTotalIssue) {
-      reportError(`${entry.file} (${entry.coin.id}): ${dependencyTotalIssue}`);
-    }
-
-    for (const alignmentIssue of getDependencyReserveAlignmentIssues(entry.coin)) {
-      reportError(`${entry.file} (${entry.coin.id}): ${alignmentIssue}`);
-    }
-
-    for (const reserveDependencyTypeLinkIssue of getReserveDependencyTypeLinkIssues(entry.coin)) {
-      reportError(`${entry.file} (${entry.coin.id}): ${reserveDependencyTypeLinkIssue}`);
-    }
-
-    const algorithmicBackingIssue = getTrackedAlgorithmicBackingIssue(entry.coin);
-    if (algorithmicBackingIssue) {
-      reportError(`${entry.file} (${entry.coin.id}): ${algorithmicBackingIssue}`);
-    }
-
-    const runtimeAdmissionIssue = getRuntimeAdmissionIssue(entry.coin);
-    if (runtimeAdmissionIssue) {
-      reportError(`${entry.file} (${entry.coin.id}): ${runtimeAdmissionIssue}`);
-    }
-
-    const commodityOuncesIssue = getCommodityOuncesIssue(entry.coin);
-    if (commodityOuncesIssue) {
-      reportError(`${entry.file} (${entry.coin.id}): ${commodityOuncesIssue}`);
-    }
-
-    const pegRuntimeSupportIssue = getPegRuntimeSupportIssue(entry.coin);
-    if (pegRuntimeSupportIssue) {
-      reportError(`${entry.file} (${entry.coin.id}): ${pegRuntimeSupportIssue}`);
-    }
-
-    for (const referenceIssue of getReferenceIssues(entry.coin, knownIds)) {
-      reportError(`${entry.file} (${entry.coin.id}): ${referenceIssue}`);
-    }
-
-    for (const contractIssue of getContractDeploymentIssues(entry.coin)) {
-      reportError(`${entry.file} (${entry.coin.id}): ${contractIssue}`);
-    }
-  }
-
-  for (const error of validateVariantRelationships(allEntries.map((entry) => entry.coin))) {
-    reportError(`${STABLECOIN_DATA_DIR}: ${error}`);
-  }
-
-  for (const issue of findBlacklistabilityReviewIssues(allEntries.map((entry) => entry.coin))) {
-    reportError(`${STABLECOIN_DATA_DIR}: ${issue.id}: ${issue.message}`);
-  }
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  runStablecoinDataCheck();
 }
-
-if (errorCount > 0) {
-  process.stderr.write(`\n${errorCount} error(s) found in stablecoin data files.\n`);
-  process.exit(1);
-}
-process.stdout.write("Stablecoin data validation: OK\n");

@@ -38,6 +38,44 @@ export {
 
 const SCORE_GRADE_GAP_LIMIT = 50;
 const CURATED_ONLY_CANDIDATE_LIMIT = 50;
+const RESERVE_REVIEW_STALE_DAYS = 365;
+const RESERVE_COMPOSITION_STALE_DAYS = 180;
+const MATERIAL_UNKNOWN_EXPOSURE_PCT = 10;
+
+const PROOF_REPORT_MAX_AGE_DAYS: Readonly<
+  Record<NonNullable<StablecoinMeta["proofOfReserves"]>["cadence"] & string, number>
+> = {
+  "daily-nav": 14,
+  "real-time": 14,
+  daily: 14,
+  weekly: 21,
+  monthly: 62,
+  "semi-monthly": 45,
+  quarterly: 125,
+  "semi-annual": 215,
+  annual: 400,
+  "ad-hoc": 400,
+  none: 400,
+};
+
+export interface ReserveEvidenceGapRow {
+  coinId: string;
+  symbol: string;
+  reason: string;
+}
+
+export interface MaterialUnknownExposureRow extends ReserveEvidenceGapRow {
+  pct: number;
+}
+
+export interface OpaqueReserveSliceRow {
+  coinId: string;
+  symbol: string;
+  reserveIndex: number;
+  reserveName: string;
+  pct: number;
+  disposition: string | null;
+}
 
 export interface CuratedOnlyReserveCandidateRow extends LiveReserveSourceQualityNote {
   coinId: string;
@@ -73,6 +111,25 @@ export interface ReserveCoverageAudit {
     activeUnlinkedReserveSlicePctGte10Count: number;
     activeUnlinkedReserveSlicePctGte50Count: number;
     activeWithLinkedReserveSliceCount: number;
+    activeStructuredReserveSliceCount: number;
+    activeWithReserveReviewCount: number;
+    activeMissingReserveReviewCount: number;
+    activeStaleReserveReviewCount: number;
+    activeMissingCompositionDateCount: number;
+    activeStaleCompositionCount: number;
+    activeMaterialUnknownExposureCount: number;
+    activeOpaqueReserveSliceCount: number;
+    activeWithProofOfReservesCount: number;
+    activeWithLatestProofReportCount: number;
+    activeLatestProofAssetsOnlyCount: number;
+    activeLatestProofAssetsAndLiabilitiesCount: number;
+    activeIndependentAuditCount: number;
+    activeIndependentAuditMissingLatestReportCount: number;
+    activeStaleLatestProofReportCount: number;
+    activeExplicitCustodyModelCount: number;
+    activeWithCustodyProfileCount: number;
+    activeMissingCustodyProfileCount: number;
+    activeCustodyConsistencyWarningCount: number;
     liveEnabledActiveCount: number;
     curatedOnlyActiveCount: number;
     curatedOnlyCandidateRankSource: "stablecoin-api-market-cap" | "local-canonical-order";
@@ -84,6 +141,16 @@ export interface ReserveCoverageAudit {
   liveEnabledByEvidenceClass: Record<LiveReserveEvidenceClass, number>;
   independentConfiguredButNotScoreGradeIds: string[] | null;
   curatedOnlyActiveCandidates: CuratedOnlyReserveCandidateRow[];
+  missingReserveReview: ReserveEvidenceGapRow[];
+  staleReserveReview: ReserveEvidenceGapRow[];
+  missingCompositionDate: ReserveEvidenceGapRow[];
+  staleComposition: ReserveEvidenceGapRow[];
+  materialUnknownExposure: MaterialUnknownExposureRow[];
+  opaqueReserveSlices: OpaqueReserveSliceRow[];
+  independentAuditMissingLatestReport: ReserveEvidenceGapRow[];
+  staleLatestProofReport: ReserveEvidenceGapRow[];
+  missingCustodyProfile: ReserveEvidenceGapRow[];
+  custodyConsistencyWarnings: ReserveEvidenceGapRow[];
   warnings: string[];
 }
 
@@ -99,6 +166,39 @@ interface CliOptions {
 
 function boolValue(value: unknown): boolean {
   return value === true;
+}
+
+function ageDays(date: string, generatedAt: string): number {
+  return (Date.parse(generatedAt) - Date.parse(`${date}T00:00:00.000Z`)) / 86_400_000;
+}
+
+function evidenceGap(coin: StablecoinMeta, reason: string): ReserveEvidenceGapRow {
+  return { coinId: coin.id, symbol: coin.symbol, reason };
+}
+
+function isOpaqueReserveSlice(reserve: ReserveSlice): boolean {
+  if (reserve.coinId || reserve.pct < MATERIAL_UNKNOWN_EXPOSURE_PCT) return false;
+  return (
+    /\b(?:basket|mix(?:ed)?|other|various|multiple|portfolio|strateg(?:y|ies))\b|\([^)]*\/[^)]*\)/i.test(
+      reserve.name,
+    ) ||
+    (reserve.assetClass === "other" && reserve.name.includes(",") && /\band\b/i.test(reserve.name))
+  );
+}
+
+function custodyConsistencyReason(coin: StablecoinMeta): string | null {
+  if (!coin.custodyModel || !coin.custodyProfile) return null;
+  const offchainRoles = coin.custodyProfile.providers.filter((provider) => provider.role !== "other");
+  if (coin.custodyModel === "onchain" && offchainRoles.length > 0) {
+    return "onchain custodyModel has a reviewed bank, custodian, or prime-broker provider";
+  }
+  if (coin.custodyModel.startsWith("institutional-") && offchainRoles.length === 0) {
+    return "institutional custodyModel has no reviewed bank, custodian, or prime-broker provider";
+  }
+  if (coin.custodyModel === "cex" && coin.custodyProfile.segregation === "segregated") {
+    return "cex custodyModel conflicts with a fully segregated custody profile";
+  }
+  return null;
 }
 
 function extractReportCardRows(payload: unknown): UnknownRecord[] | null {
@@ -118,14 +218,16 @@ function buildCuratedOnlyCandidates(
   const rows = activeCoins.flatMap((coin, index): CuratedOnlyReserveCandidateRow[] => {
     if (coin.liveReservesConfig?.adapter || reserveSlicesFor(coin).length === 0) return [];
     const note = REVIEWED_LIVE_RESERVE_SOURCE_NOTES[coin.id] ?? DEFAULT_SOURCE_QUALITY_NOTE;
-    return [{
-      coinId: coin.id,
-      symbol: coin.symbol,
-      name: coin.name,
-      marketCapUsd: marketCapById?.get(coin.id) ?? null,
-      rank: index + 1,
-      ...note,
-    }];
+    return [
+      {
+        coinId: coin.id,
+        symbol: coin.symbol,
+        name: coin.name,
+        marketCapUsd: marketCapById?.get(coin.id) ?? null,
+        rank: index + 1,
+        ...note,
+      },
+    ];
   });
 
   return sortByMarketCapOrRank(rows);
@@ -150,9 +252,7 @@ function summarizeReportCards(
   activeIds: ReadonlySet<string>,
 ): Pick<
   ReserveCoverageAudit["summary"],
-  | "reportCardActiveCount"
-  | "collateralFromLiveActiveCount"
-  | "dependencyFromLiveActiveCount"
+  "reportCardActiveCount" | "collateralFromLiveActiveCount" | "dependencyFromLiveActiveCount"
 > & { collateralFromLiveIds: Set<string> } {
   const rows = extractReportCardRows(payload);
   if (!rows) {
@@ -186,6 +286,7 @@ function summarizeReportCards(
 }
 
 export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {}): ReserveCoverageAudit {
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
   const trackedCoins = input.trackedCoins ?? TRACKED_STABLECOINS;
   const activeCoins = input.activeCoins ?? ACTIVE_STABLECOINS;
   const preLaunchCoins = input.preLaunchCoins ?? PRE_LAUNCH_STABLECOINS;
@@ -211,8 +312,27 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
   let activeUnlinkedReserveSlicePctGte10Count = 0;
   let activeUnlinkedReserveSlicePctGte50Count = 0;
   let activeWithLinkedReserveSliceCount = 0;
+  let activeStructuredReserveSliceCount = 0;
   let liveEnabledActiveCount = 0;
   const independentConfiguredIds: string[] = [];
+  const missingReserveReview: ReserveEvidenceGapRow[] = [];
+  const staleReserveReview: ReserveEvidenceGapRow[] = [];
+  const missingCompositionDate: ReserveEvidenceGapRow[] = [];
+  const staleComposition: ReserveEvidenceGapRow[] = [];
+  const materialUnknownExposure: MaterialUnknownExposureRow[] = [];
+  const opaqueReserveSlices: OpaqueReserveSliceRow[] = [];
+  const independentAuditMissingLatestReport: ReserveEvidenceGapRow[] = [];
+  const staleLatestProofReport: ReserveEvidenceGapRow[] = [];
+  const missingCustodyProfile: ReserveEvidenceGapRow[] = [];
+  const custodyConsistencyWarnings: ReserveEvidenceGapRow[] = [];
+  let activeWithReserveReviewCount = 0;
+  let activeWithProofOfReservesCount = 0;
+  let activeWithLatestProofReportCount = 0;
+  let activeLatestProofAssetsOnlyCount = 0;
+  let activeLatestProofAssetsAndLiabilitiesCount = 0;
+  let activeIndependentAuditCount = 0;
+  let activeExplicitCustodyModelCount = 0;
+  let activeWithCustodyProfileCount = 0;
 
   for (const coin of activeCoins) {
     const reserves = reserveSlicesFor(coin);
@@ -222,6 +342,15 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
     }
 
     for (const reserve of reserves) {
+      if (
+        reserve.assetClass ||
+        reserve.issuerOrObligor ||
+        reserve.riskFactors ||
+        reserve.liquidityHorizon ||
+        reserve.maturityDaysMax != null
+      ) {
+        activeStructuredReserveSliceCount += 1;
+      }
       if (reserve.coinId) {
         activeLinkedReserveSliceCount += 1;
       } else {
@@ -230,6 +359,86 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
         if (reserve.pct >= 50) activeUnlinkedReserveSlicePctGte50Count += 1;
       }
     }
+
+    if (reserves.length > 0) {
+      if (coin.reserveReview) {
+        activeWithReserveReviewCount += 1;
+        if (ageDays(coin.reserveReview.reviewedAt, generatedAt) > RESERVE_REVIEW_STALE_DAYS) {
+          staleReserveReview.push(evidenceGap(coin, `reviewed ${coin.reserveReview.reviewedAt}`));
+        }
+        if (!coin.reserveReview.compositionAsOf) {
+          missingCompositionDate.push(evidenceGap(coin, "reserveReview has no compositionAsOf date"));
+        } else if (ageDays(coin.reserveReview.compositionAsOf, generatedAt) > RESERVE_COMPOSITION_STALE_DAYS) {
+          staleComposition.push(evidenceGap(coin, `composition as of ${coin.reserveReview.compositionAsOf}`));
+        }
+        if (coin.reserveReview.knownUnknownExposurePct >= MATERIAL_UNKNOWN_EXPOSURE_PCT) {
+          materialUnknownExposure.push({
+            ...evidenceGap(coin, coin.reserveReview.knownUnknownExposure),
+            pct: coin.reserveReview.knownUnknownExposurePct,
+          });
+        }
+      } else {
+        missingReserveReview.push(evidenceGap(coin, "curated reserves have no sourced reserveReview"));
+      }
+
+      for (let reserveIndex = 0; reserveIndex < reserves.length; reserveIndex += 1) {
+        const reserve = reserves[reserveIndex];
+        if (!isOpaqueReserveSlice(reserve)) continue;
+        const disposition = coin.reserveReview?.nonLinkDispositions?.find(
+          (entry) => entry.reserveIndex === reserveIndex && entry.reserveName === reserve.name,
+        );
+        opaqueReserveSlices.push({
+          coinId: coin.id,
+          symbol: coin.symbol,
+          reserveIndex,
+          reserveName: reserve.name,
+          pct: reserve.pct,
+          disposition: disposition?.disposition ?? null,
+        });
+      }
+    }
+
+    if (coin.proofOfReserves) {
+      activeWithProofOfReservesCount += 1;
+      if (coin.proofOfReserves.type === "independent-audit") {
+        activeIndependentAuditCount += 1;
+        if (!coin.proofOfReserves.latestReport) {
+          independentAuditMissingLatestReport.push(
+            evidenceGap(coin, "independent-audit label has no structured latestReport"),
+          );
+        }
+      }
+      if (coin.proofOfReserves.latestReport) {
+        activeWithLatestProofReportCount += 1;
+        if (coin.proofOfReserves.latestReport.scope === "assets-only") {
+          activeLatestProofAssetsOnlyCount += 1;
+        } else {
+          activeLatestProofAssetsAndLiabilitiesCount += 1;
+        }
+        const cadence = coin.proofOfReserves.cadence ?? "ad-hoc";
+        const maxAgeDays = PROOF_REPORT_MAX_AGE_DAYS[cadence];
+        if (ageDays(coin.proofOfReserves.latestReport.periodEnd, generatedAt) > maxAgeDays) {
+          staleLatestProofReport.push(
+            evidenceGap(
+              coin,
+              `latest report period ended ${coin.proofOfReserves.latestReport.periodEnd}; ${cadence} limit is ${maxAgeDays} days`,
+            ),
+          );
+        }
+      }
+    }
+
+    if (coin.custodyModel) {
+      activeExplicitCustodyModelCount += 1;
+      if (!coin.custodyProfile) {
+        missingCustodyProfile.push(
+          evidenceGap(coin, `explicit custodyModel ${coin.custodyModel} has no custodyProfile`),
+        );
+      }
+    }
+    if (coin.custodyProfile) activeWithCustodyProfileCount += 1;
+    const consistencyReason = custodyConsistencyReason(coin);
+    if (consistencyReason) custodyConsistencyWarnings.push(evidenceGap(coin, consistencyReason));
 
     const evidenceClass = evidenceClassForCoin(coin);
     if (evidenceClass) {
@@ -257,7 +466,7 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
   }
 
   return {
-    generatedAt: input.generatedAt ?? new Date().toISOString(),
+    generatedAt,
     mode: input.mode ?? (input.reportCards === undefined ? "static" : "input"),
     summary: {
       trackedCount: trackedCoins.length,
@@ -271,6 +480,25 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
       activeUnlinkedReserveSlicePctGte10Count,
       activeUnlinkedReserveSlicePctGte50Count,
       activeWithLinkedReserveSliceCount,
+      activeStructuredReserveSliceCount,
+      activeWithReserveReviewCount,
+      activeMissingReserveReviewCount: missingReserveReview.length,
+      activeStaleReserveReviewCount: staleReserveReview.length,
+      activeMissingCompositionDateCount: missingCompositionDate.length,
+      activeStaleCompositionCount: staleComposition.length,
+      activeMaterialUnknownExposureCount: materialUnknownExposure.length,
+      activeOpaqueReserveSliceCount: opaqueReserveSlices.length,
+      activeWithProofOfReservesCount,
+      activeWithLatestProofReportCount,
+      activeLatestProofAssetsOnlyCount,
+      activeLatestProofAssetsAndLiabilitiesCount,
+      activeIndependentAuditCount,
+      activeIndependentAuditMissingLatestReportCount: independentAuditMissingLatestReport.length,
+      activeStaleLatestProofReportCount: staleLatestProofReport.length,
+      activeExplicitCustodyModelCount,
+      activeWithCustodyProfileCount,
+      activeMissingCustodyProfileCount: missingCustodyProfile.length,
+      activeCustodyConsistencyWarningCount: custodyConsistencyWarnings.length,
       liveEnabledActiveCount,
       curatedOnlyActiveCount: curatedOnlyActiveCandidates.length,
       curatedOnlyCandidateRankSource: marketCapById ? "stablecoin-api-market-cap" : "local-canonical-order",
@@ -282,6 +510,16 @@ export function buildReserveCoverageAudit(input: ReserveCoverageAuditInput = {})
     liveEnabledByEvidenceClass,
     independentConfiguredButNotScoreGradeIds,
     curatedOnlyActiveCandidates,
+    missingReserveReview,
+    staleReserveReview,
+    missingCompositionDate,
+    staleComposition,
+    materialUnknownExposure,
+    opaqueReserveSlices,
+    independentAuditMissingLatestReport,
+    staleLatestProofReport,
+    missingCustodyProfile,
+    custodyConsistencyWarnings,
     warnings,
   };
 }
@@ -296,15 +534,41 @@ function renderCuratedOnlyCandidates(rows: readonly CuratedOnlyReserveCandidateR
   return [
     "coin | mcap | rank | quality | score-grade plausible | source / adapter note",
     "--- | ---: | ---: | --- | --- | ---",
-    ...clipped.map((row) => [
-      `${row.symbol} (${row.coinId})`,
-      formatUsd(row.marketCapUsd),
-      row.rank,
-      row.sourceQuality,
-      row.scoreGradePlausible ? "yes" : "no",
-      `${row.sourceUrl ?? "unreviewed"}; ${row.expectedAdapterFamily}; ${row.freshnessEvidence}`,
-    ].map(markdownValue).join(" | ")),
+    ...clipped.map((row) =>
+      [
+        `${row.symbol} (${row.coinId})`,
+        formatUsd(row.marketCapUsd),
+        row.rank,
+        row.sourceQuality,
+        row.scoreGradePlausible ? "yes" : "no",
+        `${row.sourceUrl ?? "unreviewed"}; ${row.expectedAdapterFamily}; ${row.freshnessEvidence}`,
+      ]
+        .map(markdownValue)
+        .join(" | "),
+    ),
     ...(rows.length > clipped.length ? [`_Plus ${rows.length - clipped.length} more rows._`] : []),
+  ];
+}
+
+function renderEvidenceGapRows(rows: readonly ReserveEvidenceGapRow[]): string[] {
+  return rows.length === 0 ? ["_None._"] : rows.map((row) => `- ${row.symbol} (${row.coinId}): ${row.reason}`);
+}
+
+function renderOpaqueReserveSlices(rows: readonly OpaqueReserveSliceRow[]): string[] {
+  if (rows.length === 0) return ["_None._"];
+  return [
+    "coin | slice | pct | review disposition",
+    "--- | --- | ---: | ---",
+    ...rows.map((row) =>
+      [
+        `${row.symbol} (${row.coinId})`,
+        `#${row.reserveIndex} ${row.reserveName}`,
+        `${row.pct.toFixed(2)}%`,
+        row.disposition ?? "unreviewed",
+      ]
+        .map(markdownValue)
+        .join(" | "),
+    ),
   ];
 }
 
@@ -329,6 +593,25 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
     `- Active unlinked reserve slices >=10%: ${audit.summary.activeUnlinkedReserveSlicePctGte10Count}`,
     `- Active unlinked reserve slices >=50%: ${audit.summary.activeUnlinkedReserveSlicePctGte50Count}`,
     `- Active coins with at least one linked reserve slice: ${audit.summary.activeWithLinkedReserveSliceCount}`,
+    `- Active reserve slices with structured backing facts: ${audit.summary.activeStructuredReserveSliceCount}`,
+    `- Active coins with reserve review: ${audit.summary.activeWithReserveReviewCount}`,
+    `- Active coins missing reserve review: ${audit.summary.activeMissingReserveReviewCount}`,
+    `- Active stale reserve reviews (>${RESERVE_REVIEW_STALE_DAYS} days): ${audit.summary.activeStaleReserveReviewCount}`,
+    `- Active reserve reviews missing composition date: ${audit.summary.activeMissingCompositionDateCount}`,
+    `- Active stale reserve compositions (>${RESERVE_COMPOSITION_STALE_DAYS} days): ${audit.summary.activeStaleCompositionCount}`,
+    `- Active material known-unknown exposures (>=${MATERIAL_UNKNOWN_EXPOSURE_PCT}%): ${audit.summary.activeMaterialUnknownExposureCount}`,
+    `- Active opaque reserve slices: ${audit.summary.activeOpaqueReserveSliceCount}`,
+    `- Active coins with proof-of-reserves metadata: ${audit.summary.activeWithProofOfReservesCount}`,
+    `- Active coins with a structured latest proof report: ${audit.summary.activeWithLatestProofReportCount}`,
+    `- Latest proof reports scoped assets-only: ${audit.summary.activeLatestProofAssetsOnlyCount}`,
+    `- Latest proof reports scoped assets-and-liabilities: ${audit.summary.activeLatestProofAssetsAndLiabilitiesCount}`,
+    `- Active independent-audit labels: ${audit.summary.activeIndependentAuditCount}`,
+    `- Independent-audit labels missing latest report: ${audit.summary.activeIndependentAuditMissingLatestReportCount}`,
+    `- Stale latest proof reports: ${audit.summary.activeStaleLatestProofReportCount}`,
+    `- Active explicit custodyModel summaries: ${audit.summary.activeExplicitCustodyModelCount}`,
+    `- Active coins with custody profile: ${audit.summary.activeWithCustodyProfileCount}`,
+    `- Explicit custodyModel summaries missing custody profile: ${audit.summary.activeMissingCustodyProfileCount}`,
+    `- Custody profile/summary advisory warnings: ${audit.summary.activeCustodyConsistencyWarningCount}`,
     `- Live-enabled active coins: ${audit.summary.liveEnabledActiveCount}`,
     `- Curated-only active reserve candidates: ${audit.summary.curatedOnlyActiveCount}`,
     `- Curated-only candidate rank source: ${audit.summary.curatedOnlyCandidateRankSource}`,
@@ -338,9 +621,9 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
     `- Report-card active cards: ${renderNullableCount(audit.summary.reportCardActiveCount)}`,
     `- Active collateralFromLive cards: ${renderNullableCount(audit.summary.collateralFromLiveActiveCount)}`,
     `- Active dependencyFromLive cards: ${renderNullableCount(audit.summary.dependencyFromLiveActiveCount)}`,
-    `- Independent configured but not score-grade: ${
-      renderNullableCount(audit.summary.independentConfiguredButNotScoreGradeCount)
-    }`,
+    `- Independent configured but not score-grade: ${renderNullableCount(
+      audit.summary.independentConfiguredButNotScoreGradeCount,
+    )}`,
     "",
     "## Independent Configured But Not Score-Grade",
     "",
@@ -349,14 +632,47 @@ export function renderReserveCoverageAuditMarkdown(audit: ReserveCoverageAudit):
       : clippedGaps.length === 0
         ? "_None._"
         : clippedGaps.map((id) => `- ${id}`).join("\n"),
-    ...(audit.independentConfiguredButNotScoreGradeIds != null
-        && audit.independentConfiguredButNotScoreGradeIds.length > clippedGaps.length
+    ...(audit.independentConfiguredButNotScoreGradeIds != null &&
+    audit.independentConfiguredButNotScoreGradeIds.length > clippedGaps.length
       ? [`_Plus ${audit.independentConfiguredButNotScoreGradeIds.length - clippedGaps.length} more IDs._`]
       : []),
     "",
     "## Highest-Market-Cap Curated-Only Active Candidates",
     "",
     ...renderCuratedOnlyCandidates(audit.curatedOnlyActiveCandidates),
+    "",
+    "## Reserve Review Gaps",
+    "",
+    ...renderEvidenceGapRows(audit.missingReserveReview),
+    "",
+    "### Stale Reviews",
+    "",
+    ...renderEvidenceGapRows(audit.staleReserveReview),
+    "",
+    "### Composition Dates",
+    "",
+    ...renderEvidenceGapRows([...audit.missingCompositionDate, ...audit.staleComposition]),
+    "",
+    "## Material Known Unknown Exposure",
+    "",
+    ...renderEvidenceGapRows(
+      audit.materialUnknownExposure.map((row) => ({
+        ...row,
+        reason: `${row.pct.toFixed(2)}%: ${row.reason}`,
+      })),
+    ),
+    "",
+    "## Opaque Reserve Slices",
+    "",
+    ...renderOpaqueReserveSlices(audit.opaqueReserveSlices),
+    "",
+    "## Proof Report Gaps",
+    "",
+    ...renderEvidenceGapRows([...audit.independentAuditMissingLatestReport, ...audit.staleLatestProofReport]),
+    "",
+    "## Custody Evidence Gaps",
+    "",
+    ...renderEvidenceGapRows([...audit.missingCustodyProfile, ...audit.custodyConsistencyWarnings]),
     "",
     "## Warnings",
     "",
@@ -481,9 +797,8 @@ export async function runCli(
     ...loaded,
     generatedAt: resolveGeneratedAt(options),
   });
-  const output = options.format === "json"
-    ? `${JSON.stringify(audit, null, 2)}\n`
-    : renderReserveCoverageAuditMarkdown(audit);
+  const output =
+    options.format === "json" ? `${JSON.stringify(audit, null, 2)}\n` : renderReserveCoverageAuditMarkdown(audit);
 
   if (options.reportPath) {
     writeOutput(options.reportPath, output, cwd);
@@ -495,8 +810,10 @@ export async function runCli(
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  runCli().then((code) => process.exit(code)).catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  });
+  runCli()
+    .then((code) => process.exit(code))
+    .catch((error: unknown) => {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    });
 }

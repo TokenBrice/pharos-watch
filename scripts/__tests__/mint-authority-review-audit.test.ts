@@ -4,6 +4,7 @@ import {
   renderMintAuthorityReviewAuditMarkdown,
 } from "../lib/mint-authority-review-audit";
 import { parseArgs } from "../maintenance/generate-mint-authority-review-audit";
+import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "../../shared/types";
 
 function coin(overrides: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id" | "symbol">): StablecoinMeta {
@@ -73,7 +74,8 @@ describe("mint-authority-review-audit", () => {
             mintPath: "issuer-direct-mint",
             authorityPosture: "concentrated-admin",
             confidence: "manual-review",
-            summary: "Reserve assets are held with an institutional custodian; privileged signer controls are not described.",
+            summary:
+              "Reserve assets are held with an institutional custodian; privileged signer controls are not described.",
             controls: [
               {
                 label: "Issuer EOA",
@@ -103,7 +105,7 @@ describe("mint-authority-review-audit", () => {
       unresolvedQuestionProfiles: 1,
       verifiedWithUnresolvedQuestions: 1,
       sourceFreeProfiles: 1,
-      custodyAttestationQueue: 1,
+      custodyAttestationQueue: 0,
       sourceUrls: {
         totalLinks: 1,
         uniqueUrls: 1,
@@ -117,7 +119,7 @@ describe("mint-authority-review-audit", () => {
       controlLabel: "Bridge admin key",
       reason: "missing routeChecks",
     });
-    expect(audit.custodyAttestationQueue[0]?.reason).toContain("lacks attestation");
+    expect(audit.custodyAttestationQueue).toEqual([]);
   });
 
   it("renders markdown summaries and queues", () => {
@@ -154,5 +156,15 @@ describe("mint-authority-review-audit", () => {
     });
     expect(() => parseArgs(["--format", "xml"])).toThrow("--format must be markdown or json");
     expect(() => parseArgs(["--live-limit", "0"])).toThrow("--live-limit must be a positive integer");
+  });
+
+  it("does not leave an explicit upgrade authority without a profile-level record", () => {
+    const missing = TRACKED_STABLECOINS.filter(
+      (meta) =>
+        meta.mintAuthority?.upgradeability == null &&
+        meta.mintAuthority?.controls?.some((control) => control.directMintAbility === "upgrade-only"),
+    ).map((meta) => meta.id);
+
+    expect(missing).toEqual([]);
   });
 });

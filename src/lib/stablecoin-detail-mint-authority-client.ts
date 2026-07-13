@@ -66,11 +66,13 @@ function buildMintIncidents(value: unknown): MintAuthorityClientSummary["mintInc
     if (!isRecord(incident)) continue;
     const date = stringValue(incident.date);
     const summary = stringValue(incident.summary);
-    if (!date || !summary) continue;
+    const status = incident.status === "active" || incident.status === "resolved" ? incident.status : null;
+    const resolvedAt = stringValue(incident.resolvedAt);
+    if (!date || !summary || !status) continue;
     const sources: MintAuthorityClientSourceSummary[] = [];
     appendSources(sources, incident.sources, new Set());
     if (sources.length === 0) continue;
-    incidents.push({ date, summary, sources });
+    incidents.push({ date, status, ...(resolvedAt ? { resolvedAt } : {}), summary, sources });
   }
   return incidents.length > 0 ? incidents : undefined;
 }

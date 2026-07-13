@@ -19,11 +19,7 @@ import {
 import type { BluechipGrade, CustodyModel } from "./core";
 import { RedemptionModelConfidenceSchema, RedemptionRouteFamilySchema } from "./redemption";
 import { DependencyWeightSchema, StablecoinLinkSchema } from "./stablecoin-meta-schemas";
-import {
-  DexExitEvidenceKindSchema,
-  LiquidityCoverageClassSchema,
-  LiquidityEvidenceClassSchema,
-} from "./market";
+import { DexExitEvidenceKindSchema, LiquidityCoverageClassSchema, LiquidityEvidenceClassSchema } from "./market";
 
 export type ReportCardGrade = BluechipGrade | "NR";
 const REPORT_CARD_GRADE_VALUES = [...BLUECHIP_GRADE_VALUES, "NR"] as const;
@@ -159,6 +155,13 @@ const RawDimensionInputsSchema = z.object({
   bridgeRouteRiskTier: BridgeRouteRiskTierSchema.nullable().optional(),
   /** Reviewed bridge-route score used by the v8.12 decentralization blend; absent on pre-v8.12 cached snapshots. */
   bridgeRouteRiskScore: z.number().nullable().optional(),
+  /** P7 route/materiality diagnostics; v8 scoring continues to use bridgeRouteRiskTier until a versioned activation. */
+  bridgeRouteEffectiveTier: BridgeRouteRiskTierSchema.nullable().optional(),
+  bridgeRouteMaterialityStatus: z.enum(["complete", "partial", "unavailable", "not-applicable"]).optional(),
+  bridgeRouteMatchedSupplyRatio: z.number().min(0).max(1).nullable().optional(),
+  bridgeRouteUnknownSupplyRatio: z.number().min(0).max(1).nullable().optional(),
+  bridgeRouteSelectedRouteId: z.string().nullable().optional(),
+  bridgeRouteUnknownChains: z.array(z.string()).optional(),
   dependencies: z.array(DependencyWeightSchema),
   variantParentId: z.string().nullable().optional(),
   variantKind: z.enum(VARIANT_KIND_VALUES).nullable().optional(),
@@ -188,6 +191,36 @@ const ReportCardOracleRiskBranchSchema = z.object({
   summary: z.string(),
   collateralAssets: z.array(z.string()).optional(),
   chains: z.array(z.string()).optional(),
+  feeds: z
+    .array(
+      z.object({
+        provider: z.string(),
+        path: z.string(),
+        address: z.string().optional(),
+        chain: z.string(),
+        heartbeatSec: z.number().optional(),
+        stalenessBoundSec: z.number().optional(),
+      }),
+    )
+    .optional(),
+  fallbackBehavior: z.string().optional(),
+  observedAt: z.string().optional(),
+  observedBlock: z.number().optional(),
+  collateralParameters: z
+    .array(
+      z.object({
+        asset: z.string(),
+        maximumLtvPct: z.number().optional(),
+        minimumCollateralRatioPct: z.number().optional(),
+        shutdownCollateralRatioPct: z.number().optional(),
+        note: z.string().optional(),
+      }),
+    )
+    .optional(),
+  liquidationMechanism: z.string().optional(),
+  liquidationDelaySec: z.number().optional(),
+  backstop: z.string().optional(),
+  shutdownOrBadDebtBehavior: z.string().optional(),
   sources: z.array(StablecoinLinkSchema).optional(),
 });
 
@@ -231,6 +264,17 @@ const ReportCardBridgeRouteRiskSchema = z.object({
   confidence: BridgeRouteRiskConfidenceSchema,
   protocols: z.array(ReportCardBridgeRouteProtocolSchema).optional(),
   sources: z.array(StablecoinLinkSchema).optional(),
+  materiality: z
+    .object({
+      status: z.enum(["complete", "partial", "unavailable", "not-applicable"]),
+      effectiveTier: BridgeRouteRiskTierSchema.nullable(),
+      selectedRouteId: z.string().nullable(),
+      matchedSupplyRatio: z.number().min(0).max(1),
+      unknownSupplyRatio: z.number().min(0).max(1),
+      unknownChains: z.array(z.string()),
+      reason: z.string(),
+    })
+    .optional(),
 });
 
 export type ReportCardOracleRiskBranch = z.infer<typeof ReportCardOracleRiskBranchSchema>;

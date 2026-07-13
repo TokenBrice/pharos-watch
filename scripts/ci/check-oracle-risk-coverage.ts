@@ -25,13 +25,13 @@ const prefix = ENFORCE ? "oracleRisk coverage" : "oracleRisk coverage warning";
 
 process.stdout.write(
   `${prefix}: ${result.withOracleRisk}/${result.totalCryptoCdp} direct active crypto-backed CDPs have oracleRisk; ` +
-    `${result.completeProfiles} complete profiles.\n`,
+    `${result.completeProfiles} complete profiles; ${result.completeBranches}/${result.branches} branches complete.\n`,
 );
 
 if (result.findings.length > 0) {
   process.stdout.write("Findings:\n");
   for (const finding of result.findings) {
-    const tag = finding.kind === "stale-review" ? " (advisory)" : "";
+    const tag = finding.kind === "stale-review" || finding.kind === "stale-branch-observation" ? " (advisory)" : "";
     process.stdout.write(`  - ${finding.id} (${finding.symbol}): ${finding.kind}${tag} — ${finding.detail}\n`);
   }
 }
@@ -39,7 +39,9 @@ if (result.findings.length > 0) {
 // Staleness is a maintenance reminder, not a structural gap — a review past the
 // window still scores. Enforce only on missing/incomplete profiles so the merge
 // gate cannot become a time-bomb that blocks unrelated work as reviews age.
-const blockingFindings = result.findings.filter((finding) => finding.kind !== "stale-review");
+const blockingFindings = result.findings.filter(
+  (finding) => finding.kind !== "stale-review" && finding.kind !== "stale-branch-observation",
+);
 
 if (ENFORCE && blockingFindings.length > 0) {
   process.exit(1);

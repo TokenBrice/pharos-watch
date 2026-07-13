@@ -5,6 +5,7 @@ import {
   type MintAuthorityParentResolver,
 } from "../../shared/lib/mint-authority-scoring";
 import { isActiveStablecoinMeta } from "../../shared/lib/stablecoins/status";
+import { findCommonCriticalControls } from "../../shared/lib/control-identities";
 import type { MintAuthorityControl, MintAuthorityProfile, StablecoinLink, StablecoinMeta } from "../../shared/types";
 
 const ROUTE_CHECK_MINT_PATHS = new Set<MintAuthorityProfile["mintPath"]>([
@@ -44,6 +45,16 @@ export interface MintAuthorityAuditUnscoreableRow extends MintAuthorityAuditCoin
   unresolvedReason: string;
 }
 
+export interface MintAuthorityAuditIncidentRow extends MintAuthorityAuditCoinRow {
+  activeDates: string[];
+}
+
+export interface MintAuthorityAuditCommonControlRow extends MintAuthorityAuditCoinRow {
+  key: string;
+  paths: string[];
+  labels: string[];
+}
+
 export interface MintAuthorityAuditSourceStats {
   totalLinks: number;
   uniqueUrls: number;
@@ -64,6 +75,12 @@ export interface MintAuthorityReviewAudit {
     verifiedWithUnresolvedQuestions: number;
     sourceFreeProfiles: number;
     custodyAttestationQueue: number;
+    explicitUnresolvedProfiles: number;
+    activeIncidentProfiles: number;
+    missingUpgradeabilityProfiles: number;
+    unknownUpgradeabilityProfiles: number;
+    controlsMissingObservation: number;
+    commonCriticalControls: number;
     sourceUrls: MintAuthorityAuditSourceStats;
   };
   activeMissingReviews: MintAuthorityAuditCoinRow[];
@@ -73,6 +90,12 @@ export interface MintAuthorityReviewAudit {
   unresolvedQuestionQueue: MintAuthorityAuditUnresolvedRow[];
   sourceFreeQueue: MintAuthorityAuditSourceFreeRow[];
   custodyAttestationQueue: MintAuthorityAuditControlRow[];
+  explicitUnresolvedProfiles: MintAuthorityAuditUnresolvedRow[];
+  activeIncidentProfiles: MintAuthorityAuditIncidentRow[];
+  missingUpgradeabilityQueue: MintAuthorityAuditCoinRow[];
+  unknownUpgradeabilityQueue: MintAuthorityAuditCoinRow[];
+  controlObservationQueue: MintAuthorityAuditControlRow[];
+  commonControlQueue: MintAuthorityAuditCommonControlRow[];
 }
 
 export interface BuildMintAuthorityReviewAuditOptions {
@@ -103,6 +126,7 @@ function collectMintAuthoritySources(profile: MintAuthorityProfile): StablecoinL
   for (const incident of profile.mintIncidents ?? []) {
     collectLinksFromSources(links, incident.sources);
   }
+  collectLinksFromSources(links, profile.upgradeability?.sources);
   for (const control of profile.controls ?? []) {
     collectLinksFromSources(links, control.sources);
     collectLinksFromSources(links, control.keyCustodyAttestation?.sources);
@@ -149,25 +173,17 @@ function controlRow(
   };
 }
 
-function proseForCustodyScan(profile: MintAuthorityProfile, control: MintAuthorityControl): string {
-  return [
-    profile.summary,
-    profile.review.evidence,
-    profile.review.sourceFreeRationale,
-    ...(profile.review.unresolvedQuestions ?? []),
-    control.evidence,
-    ...(control.sources ?? []).flatMap((source) => [source.label, source.url]),
-    ...(profile.review.sources ?? []).flatMap((source) => [source.label, source.url]),
-  ]
+function proseForCustodyScan(control: MintAuthorityControl): string {
+  return [control.label, control.evidence, ...(control.sources ?? []).flatMap((source) => [source.label, source.url])]
     .filter(Boolean)
     .join("\n");
 }
 
-function shouldQueueCustodyAttestation(profile: MintAuthorityProfile, control: MintAuthorityControl): boolean {
+function shouldQueueCustodyAttestation(control: MintAuthorityControl): boolean {
   if (control.authorityType !== "eoa") return false;
   if (!isMintCapableAbility(control.directMintAbility)) return false;
   if (control.keyCustodyAttestation) return false;
-  return KEY_CUSTODY_PROSE_PATTERN.test(proseForCustodyScan(profile, control));
+  return KEY_CUSTODY_PROSE_PATTERN.test(proseForCustodyScan(control));
 }
 
 function sortRows<T extends { coinId: string }>(rows: T[]): T[] {
@@ -192,6 +208,12 @@ export function buildMintAuthorityReviewAudit({
   const unresolvedQuestionQueue: MintAuthorityAuditUnresolvedRow[] = [];
   const sourceFreeQueue: MintAuthorityAuditSourceFreeRow[] = [];
   const custodyAttestationQueue: MintAuthorityAuditControlRow[] = [];
+  const explicitUnresolvedProfiles: MintAuthorityAuditUnresolvedRow[] = [];
+  const activeIncidentProfiles: MintAuthorityAuditIncidentRow[] = [];
+  const missingUpgradeabilityQueue: MintAuthorityAuditCoinRow[] = [];
+  const unknownUpgradeabilityQueue: MintAuthorityAuditCoinRow[] = [];
+  const controlObservationQueue: MintAuthorityAuditControlRow[] = [];
+  const commonControlQueue: MintAuthorityAuditCommonControlRow[] = [];
   let reviewedProfiles = 0;
 
   for (const coin of coins) {
@@ -205,7 +227,7 @@ export function buildMintAuthorityReviewAudit({
     appendSourceStats(sourceStats, collectMintAuthoritySources(profile));
 
     const score = computeMintAuthorityScore(stablecoinToMintAuthorityScoringInput(coin), resolveParent);
-    if (score.score == null) {
+    if (score.score == null && profile.review.disposition !== "unresolved") {
       reviewedButUnscoreable.push({
         ...coinRow(coin),
         unresolvedReason: score.unresolvedReason ?? "unknown",
@@ -224,6 +246,32 @@ export function buildMintAuthorityReviewAudit({
         questionCount: unresolvedQuestions.length,
         verified: profile.confidence === "verified",
       });
+      if (profile.review.disposition === "unresolved") {
+        explicitUnresolvedProfiles.push({
+          ...coinRow(coin),
+          confidence: profile.confidence,
+          questionCount: unresolvedQuestions.length,
+          verified: false,
+        });
+      }
+    }
+
+    const activeIncidentDates = (profile.mintIncidents ?? [])
+      .filter((incident) => incident.status === "active")
+      .map((incident) => incident.date)
+      .sort();
+    if (activeIncidentDates.length > 0) {
+      activeIncidentProfiles.push({ ...coinRow(coin), activeDates: activeIncidentDates });
+    }
+
+    if (activeCoin(coin) && profile.upgradeability == null) {
+      missingUpgradeabilityQueue.push(coinRow(coin));
+    } else if (activeCoin(coin) && profile.upgradeability?.model === "unknown") {
+      unknownUpgradeabilityQueue.push(coinRow(coin));
+    }
+
+    for (const common of findCommonCriticalControls(coin)) {
+      commonControlQueue.push({ ...coinRow(coin), ...common });
     }
 
     for (const control of profile.controls ?? []) {
@@ -239,9 +287,20 @@ export function buildMintAuthorityReviewAudit({
         capDescriptionQueue.push(controlRow(coin, profile, control, "cap-limited without capDescription"));
       }
 
-      if (shouldQueueCustodyAttestation(profile, control)) {
+      if (shouldQueueCustodyAttestation(control)) {
         custodyAttestationQueue.push(
           controlRow(coin, profile, control, "EOA mint-capable control mentions custody but lacks attestation"),
+        );
+      }
+      if (
+        control.address != null &&
+        control.observedAt == null &&
+        control.observedBlock == null &&
+        control.safe?.observedAt == null &&
+        control.safe?.observedBlock == null
+      ) {
+        controlObservationQueue.push(
+          controlRow(coin, profile, control, "addressed control lacks observedAt/observedBlock"),
         );
       }
     }
@@ -264,6 +323,12 @@ export function buildMintAuthorityReviewAudit({
       verifiedWithUnresolvedQuestions,
       sourceFreeProfiles: sourceFreeQueue.length,
       custodyAttestationQueue: custodyAttestationQueue.length,
+      explicitUnresolvedProfiles: explicitUnresolvedProfiles.length,
+      activeIncidentProfiles: activeIncidentProfiles.length,
+      missingUpgradeabilityProfiles: missingUpgradeabilityQueue.length,
+      unknownUpgradeabilityProfiles: unknownUpgradeabilityQueue.length,
+      controlsMissingObservation: controlObservationQueue.length,
+      commonCriticalControls: commonControlQueue.length,
       sourceUrls: sourceStatsFrom(sourceStats),
     },
     activeMissingReviews: sortRows(activeMissingReviews),
@@ -273,6 +338,12 @@ export function buildMintAuthorityReviewAudit({
     unresolvedQuestionQueue: sortRows(unresolvedQuestionQueue),
     sourceFreeQueue: sortRows(sourceFreeQueue),
     custodyAttestationQueue: sortRows(custodyAttestationQueue),
+    explicitUnresolvedProfiles: sortRows(explicitUnresolvedProfiles),
+    activeIncidentProfiles: sortRows(activeIncidentProfiles),
+    missingUpgradeabilityQueue: sortRows(missingUpgradeabilityQueue),
+    unknownUpgradeabilityQueue: sortRows(unknownUpgradeabilityQueue),
+    controlObservationQueue: sortRows(controlObservationQueue),
+    commonControlQueue: sortRows(commonControlQueue),
   };
 }
 
@@ -311,6 +382,12 @@ export function renderMintAuthorityReviewAuditMarkdown(audit: MintAuthorityRevie
     `- Verified profiles with unresolved questions: ${summary.verifiedWithUnresolvedQuestions}`,
     `- Source-free profiles: ${summary.sourceFreeProfiles}`,
     `- Custody-attestation queue: ${summary.custodyAttestationQueue}`,
+    `- Explicit unresolved dispositions: ${summary.explicitUnresolvedProfiles}`,
+    `- Active incident profiles: ${summary.activeIncidentProfiles}`,
+    `- Missing upgradeability profiles: ${summary.missingUpgradeabilityProfiles}`,
+    `- Unknown upgradeability profiles: ${summary.unknownUpgradeabilityProfiles}`,
+    `- Addressed controls missing an observation point: ${summary.controlsMissingObservation}`,
+    `- Reused critical controls: ${summary.commonCriticalControls}`,
     `- Source URLs: ${summary.sourceUrls.uniqueUrls} unique / ${summary.sourceUrls.totalLinks} links (${summary.sourceUrls.duplicateUrls} duplicate URLs)`,
     "",
     "## Active Missing Reviews",
@@ -334,6 +411,24 @@ export function renderMintAuthorityReviewAuditMarkdown(audit: MintAuthorityRevie
     "## Custody-Attestation Queue",
     "",
     ...renderControlRows(audit.custodyAttestationQueue),
+    "",
+    "## Explicit Unresolved Dispositions",
+    "",
+    ...renderCoinRows(audit.explicitUnresolvedProfiles),
+    "",
+    "## Active Incidents",
+    "",
+    ...(audit.activeIncidentProfiles.length === 0
+      ? ["- None."]
+      : audit.activeIncidentProfiles.map((row) => `- \`${row.coinId}\`: ${row.activeDates.join(", ")}`)),
+    "",
+    "## Upgradeability Backfill Queue",
+    "",
+    ...renderCoinRows(audit.missingUpgradeabilityQueue),
+    "",
+    "## Control Observation Queue",
+    "",
+    ...renderControlRows(audit.controlObservationQueue),
     "",
   ].join("\n");
 }

@@ -377,6 +377,7 @@ describe("stablecoin detail view-model builder", () => {
         mintIncidents: [
           {
             date: "2024-01-01",
+            status: "resolved",
             summary: "Older privileged mint incident.",
             sources: [
               { label: "Postmortem", url: "https://example.com/postmortem" },
@@ -385,6 +386,7 @@ describe("stablecoin detail view-model builder", () => {
           },
           {
             date: "2025-02-01",
+            status: "active",
             summary: "Newer privileged mint incident.",
             sources: [{ label: "Thread", url: "https://example.com/thread" }],
           },

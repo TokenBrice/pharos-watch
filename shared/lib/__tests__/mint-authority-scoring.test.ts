@@ -231,7 +231,9 @@ describe("Mint Authority Score", () => {
       computeMintAuthorityScore(
         input({
           authorityPosture: "unbounded-or-compromised",
-          mintIncidents: [{ date, summary: "Exploit.", sources: [{ label: "S", url: "https://example.com/s" }] }],
+          mintIncidents: [
+            { date, status: "resolved", summary: "Exploit.", sources: [{ label: "S", url: "https://example.com/s" }] },
+          ],
         }),
         undefined,
         0,
@@ -254,8 +256,18 @@ describe("Mint Authority Score", () => {
       input({
         authorityPosture: "unbounded-or-compromised",
         mintIncidents: [
-          { date: "2022-04-02", summary: "Old.", sources: [{ label: "S", url: "https://example.com/a" }] },
-          { date: "2026-03-22", summary: "New.", sources: [{ label: "S", url: "https://example.com/b" }] },
+          {
+            date: "2022-04-02",
+            status: "resolved",
+            summary: "Old.",
+            sources: [{ label: "S", url: "https://example.com/a" }],
+          },
+          {
+            date: "2026-03-22",
+            status: "active",
+            summary: "New.",
+            sources: [{ label: "S", url: "https://example.com/b" }],
+          },
         ],
       }),
       undefined,
@@ -392,6 +404,7 @@ describe("Mint Authority Score", () => {
           mintIncidents: [
             {
               date: new Date(incidentMs).toISOString().slice(0, 10),
+              status: "resolved",
               summary: "Exploit.",
               sources: [{ label: "S", url: "https://example.com/s" }],
             },

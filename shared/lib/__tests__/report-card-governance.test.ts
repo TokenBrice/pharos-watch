@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { scoreDecentralization } from "../report-cards";
+import { resolveOracleRiskScore } from "../report-card-governance";
 
 describe("scoreDecentralization (v6 — 5-band penalty)", () => {
   const makeMeta = (chainTier: string, deploymentModel: string, governanceQuality?: string) => ({
@@ -282,6 +283,34 @@ describe("scoreDecentralization oracle-risk blend (v8.1/v8.11)", () => {
     expect(result.score).toBe(94);
     expect(result.detail).toContain("Oracle setup: LST branch: Standard external feeds");
     expect(result.detailItems?.some((item) => item.label === "Oracle setup" && item.detail === "-6")).toBe(true);
+  });
+
+  it("selects equal-tier weakest branches deterministically by branch id", () => {
+    const branches = [
+      { id: "zeta", label: "Zeta", tier: "standard-external" as const, summary: "Zeta external feed." },
+      { id: "alpha", label: "Alpha", tier: "standard-external" as const, summary: "Alpha external feed." },
+    ];
+    const first = resolveOracleRiskScore(
+      makeMeta({
+        oracleRisk: reviewedOracleRisk({
+          tier: "standard-external",
+          summary: "Branch-aware external feeds.",
+          branches,
+        }),
+      }) as never,
+    );
+    const reordered = resolveOracleRiskScore(
+      makeMeta({
+        oracleRisk: reviewedOracleRisk({
+          tier: "standard-external",
+          summary: "Branch-aware external feeds.",
+          branches: [...branches].reverse(),
+        }),
+      }) as never,
+    );
+
+    expect(first?.selectedBranch?.id).toBe("alpha");
+    expect(reordered?.selectedBranch?.id).toBe("alpha");
   });
 });
 

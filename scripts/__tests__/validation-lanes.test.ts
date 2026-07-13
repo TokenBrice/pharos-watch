@@ -56,6 +56,8 @@ const EXPECTED_PREBUILD_COMMANDS = [
   "npm run check:unused-code",
   "npm run check:verified-doc-links",
   "npm run check:worker-boundary",
+  "npm run check:dependency-coverage",
+  "npm run check:mechanism-archetype-coverage",
 ];
 
 describe("validation lane authority", () => {
@@ -75,16 +77,18 @@ describe("validation lane authority", () => {
       "deploy-promotion-and-rollback",
     ]);
 
-    expect(VALIDATION_LANES.flatMap((lane) => lane.leaves)).toHaveLength(58);
+    expect(VALIDATION_LANES.flatMap((lane) => lane.leaves)).toHaveLength(59);
   });
 
   it("keeps the exact prebuild command order and surface selection", () => {
     expect(VALIDATE_PREBUILD_COMMANDS).toEqual(EXPECTED_PREBUILD_COMMANDS);
     expect(buildValidatePrebuildCommands()).toEqual(EXPECTED_PREBUILD_COMMANDS);
     expect(buildValidatePrebuildCommands({ surface: "full" })).toEqual(EXPECTED_PREBUILD_COMMANDS);
-    expect(buildValidatePrebuildCommands({ surface: "full" })).toHaveLength(40);
-    expect(buildValidatePrebuildCommands({ surface: "pages" })).toHaveLength(35);
-    expect(buildValidatePrebuildCommands({ surface: "worker" })).toHaveLength(38);
+    expect(buildValidatePrebuildCommands({ surface: "full" })).toHaveLength(42);
+    expect(buildValidatePrebuildCommands({ surface: "pages" })).toHaveLength(37);
+    expect(buildValidatePrebuildCommands({ surface: "worker" })).toHaveLength(40);
+    expect(buildValidatePrebuildCommands({ surface: "pages" })).toContain("npm run check:dependency-coverage");
+    expect(buildValidatePrebuildCommands({ surface: "worker" })).toContain("npm run check:dependency-coverage");
     expect(buildValidatePrebuildCommands({ surface: "pages" })).not.toContain("npm run check:migrations");
     expect(buildValidatePrebuildCommands({ surface: "worker" })).not.toContain("npm run check:generated-artifacts");
 
@@ -118,7 +122,7 @@ describe("validation lane authority", () => {
   });
 
   it("keeps lane-owned impact path buckets", () => {
-    expect(VALIDATION_IMPACT_PATHS.full).toHaveLength(35);
+    expect(VALIDATION_IMPACT_PATHS.full).toHaveLength(37);
     expect(VALIDATION_IMPACT_PATHS["validation-only"]).toHaveLength(19);
     expect(VALIDATION_IMPACT_PATHS.pages).toHaveLength(11);
     expect(VALIDATION_IMPACT_PATHS.worker).toHaveLength(9);
@@ -204,7 +208,7 @@ describe("validation lane authority", () => {
   it("rejects missing leaves, duplicate or gapped prebuild orders, invalid phases, and bad surfaces", () => {
     const missingLeaf = structuredClone(VALIDATION_LANES);
     missingLeaf[0].leaves.pop();
-    expect(() => validateValidationLanes(missingLeaf)).toThrow("Expected exactly 58 unique validation leaves");
+    expect(() => validateValidationLanes(missingLeaf)).toThrow("Expected exactly 59 unique validation leaves");
 
     const duplicateLane = structuredClone(VALIDATION_LANES);
     duplicateLane[1].id = duplicateLane[0].id;

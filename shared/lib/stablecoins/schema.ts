@@ -3,6 +3,7 @@ import type { DeadStablecoin, StablecoinMeta } from "../../types";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters-config";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
 import { isCanonicalStablecoinId } from "../stablecoin-id";
+import { fuzzyDateRange } from "../classification/resolve-implementation-launch-date";
 import { DetailProviderSchema, PEG_CURRENCY_VALUES } from "../../types/core";
 import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { FullReserveCompositionSchema } from "../../types/reserves";
@@ -11,6 +12,7 @@ import {
   BlacklistabilityReviewSchema,
   BridgeRouteRiskProfileSchema,
   ContractDeploymentSchema,
+  CustodyProfileSchema,
   DateHistoryEntrySchema,
   DependencyReviewSchema,
   DependencyWeightSchema,
@@ -19,6 +21,7 @@ import {
   GeniusProfileSchema,
   JurisdictionSchema,
   LaunchMilestoneSchema,
+  MechanismArchetypeReviewSchema,
   MintAuthorityProfileSchema,
   MicaProfileSchema,
   OracleRiskProfileSchema,
@@ -31,6 +34,13 @@ import {
 } from "../../types/stablecoin-meta-schemas";
 
 const CommodityOuncesSchema = z.number().finite().positive();
+const REVIEW_QUANTITATIVE_TOLERANCE = 1e-6;
+const UNRESOLVED_RESERVE_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
+
+function canonicalDeploymentPart(value: string): string {
+  const trimmed = value.trim();
+  return /^0x[0-9a-f]+$/i.test(trimmed) ? trimmed.toLowerCase() : trimmed;
+}
 
 export interface StablecoinCatalogIdEntry {
   id: string;
@@ -130,6 +140,8 @@ const StablecoinMetaAssetSchemaShape = {
   collateral: z.string().optional(),
   pegMechanism: z.string().optional(),
   mechanismArchetype: StablecoinMetaEnumSchemas.mechanismArchetype.optional(),
+  mechanismArchetypeReview: MechanismArchetypeReviewSchema.optional(),
+  implementationLaunchDate: FuzzyDateSchema.optional(),
   commodityOunces: CommodityOuncesSchema.optional(),
   geckoId: z.string().optional(),
   cmcSlug: z.string().optional(),
@@ -163,6 +175,7 @@ const StablecoinMetaAssetSchemaShape = {
     .optional(),
   reserves: FullReserveCompositionSchema.optional(),
   reserveReview: ReserveReviewSchema.optional(),
+  custodyProfile: CustodyProfileSchema.optional(),
   liveReservesConfig: LiveReservesConfigSchema.optional(),
   notices: z.array(CoinNoticeSchema).optional(),
   tags: z.array(z.string()).optional(),
@@ -203,13 +216,14 @@ export const StablecoinReservesSidecarSchema = z
     id: StablecoinIdSchema,
     reserves: FullReserveCompositionSchema.optional(),
     reserveReview: ReserveReviewSchema.optional(),
+    custodyProfile: CustodyProfileSchema.optional(),
   })
   .strict()
   .superRefine((sidecar, ctx) => {
-    if (sidecar.reserves != null || sidecar.reserveReview != null) return;
+    if (sidecar.reserves != null || sidecar.reserveReview != null || sidecar.custodyProfile != null) return;
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "reserves sidecars require reserves or reserveReview",
+      message: "reserves sidecars require reserves, reserveReview, or custodyProfile",
       path: ["reserves"],
     });
   });
@@ -283,7 +297,7 @@ export const StablecoinRiskReviewSidecarSchema = z
   });
 
 export const STABLECOIN_SOURCE_DOMAIN_FIELDS = {
-  reserves: ["reserves", "reserveReview"],
+  reserves: ["reserves", "reserveReview", "custodyProfile"],
   "mint-authority": ["mintAuthority"],
   compliance: ["mica", "genius"],
   "risk-review": ["canBeBlacklisted", "blacklistabilityReview", "oracleRisk", "bridgeRouteRisk"],
@@ -300,6 +314,83 @@ const ORACLE_RISK_PROVENANCE_FIELDS = ["reviewedAt", "reviewer", "confidence"] a
 
 export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMetaAssetRawSchema.superRefine(
   (meta, ctx) => {
+    const bridgeRoutes = meta.bridgeRouteRisk?.routes ?? [];
+    const contractKeys = new Set(
+      (meta.contracts ?? []).map(
+        (contract) => `${contract.chain.trim().toLowerCase()}:${canonicalDeploymentPart(contract.address)}`,
+      ),
+    );
+    for (let index = 0; index < bridgeRoutes.length; index += 1) {
+      const route = bridgeRoutes[index]!;
+      const routeKey = `${route.destinationChain.trim().toLowerCase()}:${canonicalDeploymentPart(route.contractAddress)}`;
+      if (contractKeys.has(routeKey)) continue;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "bridge route must match an authored contract deployment exactly",
+        path: ["bridgeRouteRisk", "routes", index, "contractAddress"],
+      });
+    }
+    if (
+      isActiveStablecoinMeta(meta) &&
+      (meta.contracts?.length ?? 0) > 1 &&
+      (meta.bridgeRouteRisk?.routes?.length ?? 0) === 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "active multi-deployment stablecoins require reviewed bridge route deployment rows",
+        path: ["bridgeRouteRisk", "routes"],
+      });
+    }
+    if (meta.mechanismArchetypeReview?.disposition === "resolved" && meta.mechanismArchetype == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "resolved mechanismArchetypeReview requires mechanismArchetype",
+        path: ["mechanismArchetype"],
+      });
+    }
+    if (meta.mechanismArchetypeReview?.disposition === "unresolved" && meta.mechanismArchetype != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "unresolved mechanismArchetypeReview cannot declare mechanismArchetype",
+        path: ["mechanismArchetypeReview", "disposition"],
+      });
+    }
+    if (meta.implementationLaunchDate != null && meta.mechanismArchetypeReview == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "implementationLaunchDate requires a sourced mechanismArchetypeReview",
+        path: ["mechanismArchetypeReview"],
+      });
+    }
+    if (meta.implementationLaunchDate != null) {
+      const implementationRange = fuzzyDateRange(meta.implementationLaunchDate);
+      const projectRange = meta.launchDate ? fuzzyDateRange(meta.launchDate) : null;
+      if (implementationRange && projectRange && implementationRange.end < projectRange.start) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "implementationLaunchDate cannot unambiguously precede launchDate",
+          path: ["implementationLaunchDate"],
+        });
+      }
+      if (
+        implementationRange &&
+        meta.mechanismArchetypeReview?.reviewedAt != null &&
+        meta.mechanismArchetypeReview.reviewedAt < implementationRange.start
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "mechanism review cannot predate the implementation launch period",
+          path: ["mechanismArchetypeReview", "reviewedAt"],
+        });
+      }
+    }
+    if (meta.archetypeOverride === true && meta.mechanismArchetypeReview?.disposition !== "resolved") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "archetypeOverride requires a resolved mechanismArchetypeReview",
+        path: ["mechanismArchetypeReview"],
+      });
+    }
     for (let index = 0; index < (meta.dependencies ?? []).length; index += 1) {
       if (meta.dependencies?.[index]?.id !== meta.id) continue;
       ctx.addIssue({
@@ -333,7 +424,7 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
       });
     }
     if (meta.dependencyReview != null) {
-      const reviewedKeys = new Set<string>();
+      const reviewedRelationships = new Map<string, { index: number; weight: number }>();
       for (let index = 0; index < meta.dependencyReview.relationships.length; index += 1) {
         const relationship = meta.dependencyReview.relationships[index];
         const key = `${relationship.id}::${relationship.type}`;
@@ -344,17 +435,17 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
             path: ["dependencyReview", "relationships", index, "id"],
           });
         }
-        if (reviewedKeys.has(key)) {
+        if (reviewedRelationships.has(key)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: `duplicate dependencyReview relationship ${key}`,
             path: ["dependencyReview", "relationships", index],
           });
         }
-        reviewedKeys.add(key);
+        reviewedRelationships.set(key, { index, weight: relationship.weight });
       }
 
-      const manualKeys = new Set<string>();
+      const manualWeights = new Map<string, number>();
       for (let index = 0; index < manualDependencies.length; index += 1) {
         const dependency = manualDependencies[index];
         if (dependency.type == null) {
@@ -364,18 +455,29 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
             path: ["dependencies", (meta.dependencies ?? []).indexOf(dependency), "type"],
           });
         }
-        manualKeys.add(`${dependency.id}::${dependency.type ?? "collateral"}`);
+        const key = `${dependency.id}::${dependency.type ?? "collateral"}`;
+        manualWeights.set(key, (manualWeights.get(key) ?? 0) + dependency.weight);
       }
-      for (const key of manualKeys) {
-        if (reviewedKeys.has(key)) continue;
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `dependencyReview is missing manual relationship ${key}`,
-          path: ["dependencyReview", "relationships"],
-        });
+      for (const [key, manualWeight] of manualWeights) {
+        const reviewedRelationship = reviewedRelationships.get(key);
+        if (reviewedRelationship == null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `dependencyReview is missing manual relationship ${key}`,
+            path: ["dependencyReview", "relationships"],
+          });
+          continue;
+        }
+        if (Math.abs(reviewedRelationship.weight - manualWeight) > REVIEW_QUANTITATIVE_TOLERANCE) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `dependencyReview relationship ${key} weight must match the authored dependency weight`,
+            path: ["dependencyReview", "relationships", reviewedRelationship.index, "weight"],
+          });
+        }
       }
-      for (const key of reviewedKeys) {
-        if (manualKeys.has(key)) continue;
+      for (const key of reviewedRelationships.keys()) {
+        if (manualWeights.has(key)) continue;
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `dependencyReview relationship ${key} is not manual-only metadata`,
@@ -392,6 +494,7 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
       });
     }
     const reviewedReserveIndices = new Set<number>();
+    let unresolvedDispositionPct = 0;
     for (let index = 0; index < (meta.reserveReview?.nonLinkDispositions ?? []).length; index += 1) {
       const disposition = meta.reserveReview!.nonLinkDispositions![index];
       const reserve = meta.reserves?.[disposition.reserveIndex];
@@ -415,6 +518,15 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
           message: "non-link dispositions cannot target an already linked reserve slice",
           path: ["reserveReview", "nonLinkDispositions", index],
         });
+      } else if (Math.abs(reserve.pct - disposition.pct) > REVIEW_QUANTITATIVE_TOLERANCE) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "reserve review disposition pct must match the current reserve slice",
+          path: ["reserveReview", "nonLinkDispositions", index, "pct"],
+        });
+      }
+      if (UNRESOLVED_RESERVE_DISPOSITIONS.has(disposition.disposition)) {
+        unresolvedDispositionPct += disposition.pct;
       }
       for (let candidateIndex = 0; candidateIndex < (disposition.candidateCoinIds ?? []).length; candidateIndex += 1) {
         if (isCanonicalStablecoinId(disposition.candidateCoinIds![candidateIndex])) continue;
@@ -424,6 +536,16 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
           path: ["reserveReview", "nonLinkDispositions", index, "candidateCoinIds", candidateIndex],
         });
       }
+    }
+    if (
+      meta.reserveReview != null &&
+      Math.abs(meta.reserveReview.knownUnknownExposurePct - unresolvedDispositionPct) > REVIEW_QUANTITATIVE_TOLERANCE
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "reserveReview knownUnknownExposurePct must equal the total pct of unresolved dispositions",
+        path: ["reserveReview", "knownUnknownExposurePct"],
+      });
     }
 
     if (meta.canBeBlacklisted !== undefined && meta.blacklistabilityReview == null) {

@@ -79,6 +79,20 @@ const reserveReview = {
   compositionBasis: "issuer disclosure",
   scope: "full-composition",
   knownUnknownExposure: "None identified in the fixture.",
+  knownUnknownExposurePct: 0,
+};
+
+const custodyProfile = {
+  providers: [{ name: "Fixture Bank", role: "bank", sharePct: 100, jurisdiction: "US" }],
+  segregation: "segregated",
+  bankruptcyRemoteness: "contractual-only",
+  rehypothecation: "prohibited",
+  reviewedAt: "2026-07-12",
+  reviewer: "test",
+  confidence: "verified",
+  sources: [{ label: "Custody report", url: "https://example.com/custody" }],
+  uncertainty: "No material custody allocation is unresolved in the fixture.",
+  knownUnknownExposurePct: 0,
 };
 
 afterEach(() => {
@@ -94,8 +108,9 @@ describe("stablecoin sidecar migration workflow", () => {
       fields: {
         reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
         reserveReview,
+        custodyProfile,
       },
-      expectedFields: ["reserves", "reserveReview"],
+      expectedFields: ["reserves", "reserveReview", "custodyProfile"],
     },
     {
       domain: "mint-authority" as const,

@@ -1,6 +1,12 @@
 import type { OracleRiskProfile, StablecoinMeta } from "../../shared/types";
 
-export type OracleRiskCoverageFindingKind = "missing-profile" | "missing-review-metadata" | "stale-review";
+export type OracleRiskCoverageFindingKind =
+  | "missing-profile"
+  | "missing-review-metadata"
+  | "missing-branches"
+  | "missing-branch-evidence"
+  | "stale-review"
+  | "stale-branch-observation";
 
 export interface OracleRiskCoverageFinding {
   id: string;
@@ -15,6 +21,9 @@ export interface OracleRiskCoverageResult {
   withOracleRisk: number;
   missingOracleRisk: number;
   completeProfiles: number;
+  branchProfiles: number;
+  branches: number;
+  completeBranches: number;
   findings: OracleRiskCoverageFinding[];
 }
 
@@ -50,6 +59,25 @@ function missingReviewFields(profile: OracleRiskProfile): string[] {
   return missing;
 }
 
+const REQUIRED_BRANCH_EVIDENCE_FIELDS = [
+  "feeds",
+  "fallbackBehavior",
+  "observedAt",
+  "collateralParameters",
+  "liquidationMechanism",
+  "liquidationDelaySec",
+  "backstop",
+  "shutdownOrBadDebtBehavior",
+  "sources",
+] as const;
+
+function missingBranchEvidenceFields(branch: NonNullable<OracleRiskProfile["branches"]>[number]): string[] {
+  return REQUIRED_BRANCH_EVIDENCE_FIELDS.filter((field) => {
+    const value = branch[field];
+    return value == null || (Array.isArray(value) && value.length === 0);
+  });
+}
+
 export function analyzeOracleRiskCoverage(
   coins: readonly StablecoinMeta[],
   options: OracleRiskCoverageOptions = {},
@@ -83,6 +111,40 @@ export function analyzeOracleRiskCoverage(
       });
     }
 
+    if (profile.branchModel === "multi-branch" && !profile.branches?.length) {
+      findings.push({
+        id: coin.id,
+        symbol: coin.symbol,
+        name: coin.name,
+        kind: "missing-branches",
+        detail: "multi-branch oracleRisk profile has no branch rows",
+      });
+    }
+
+    for (const branch of profile.branches ?? []) {
+      const missingBranchFields = missingBranchEvidenceFields(branch);
+      if (missingBranchFields.length > 0) {
+        findings.push({
+          id: coin.id,
+          symbol: coin.symbol,
+          name: coin.name,
+          kind: "missing-branch-evidence",
+          detail: `${branch.id} branch missing ${missingBranchFields.join(", ")}`,
+        });
+      }
+
+      const observedAt = parseReviewDate(branch.observedAt);
+      if (observedAt && daysBetween(asOf, observedAt) > staleDays) {
+        findings.push({
+          id: coin.id,
+          symbol: coin.symbol,
+          name: coin.name,
+          kind: "stale-branch-observation",
+          detail: `${branch.id} branch observation is older than ${staleDays} days`,
+        });
+      }
+    }
+
     const reviewedAt = parseReviewDate(profile.reviewedAt);
     if (reviewedAt && daysBetween(asOf, reviewedAt) > staleDays) {
       findings.push({
@@ -98,15 +160,27 @@ export function analyzeOracleRiskCoverage(
   const withOracleRisk = inScope.filter((coin) => coin.oracleRisk != null).length;
   const missingOracleRisk = inScope.length - withOracleRisk;
   const incompleteIds = new Set(
-    findings.filter((finding) => finding.kind !== "stale-review").map((finding) => finding.id),
+    findings
+      .filter((finding) => finding.kind !== "stale-review" && finding.kind !== "stale-branch-observation")
+      .map((finding) => finding.id),
   );
   const completeProfiles = withOracleRisk - incompleteIds.size;
+  const branchProfiles = inScope.filter((coin) => (coin.oracleRisk?.branches?.length ?? 0) > 0).length;
+  const branches = inScope.reduce((sum, coin) => sum + (coin.oracleRisk?.branches?.length ?? 0), 0);
+  const incompleteBranchKeys = new Set(
+    findings
+      .filter((finding) => finding.kind === "missing-branch-evidence")
+      .map((finding) => `${finding.id}:${finding.detail.split(" branch missing", 1)[0]}`),
+  );
 
   return {
     totalCryptoCdp: inScope.length,
     withOracleRisk,
     missingOracleRisk,
     completeProfiles,
+    branchProfiles,
+    branches,
+    completeBranches: branches - incompleteBranchKeys.size,
     findings: findings.sort((left, right) => left.id.localeCompare(right.id) || left.kind.localeCompare(right.kind)),
   };
 }

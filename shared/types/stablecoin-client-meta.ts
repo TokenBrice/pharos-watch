@@ -49,18 +49,24 @@ export interface MintAuthorityClientSummary {
 }
 
 /** Present only on the detail-page projection; the generated cross-coin payload omits labels. */
-export type MintAuthorityCoverageControlSummary = Omit<MintAuthorityClientControlSummary, "chain" | "address" | "role" | "capDescription" | "label"> & { label?: string };
+export type MintAuthorityCoverageControlSummary = Omit<
+  MintAuthorityClientControlSummary,
+  "chain" | "address" | "role" | "capDescription" | "label"
+> & { label?: string };
 
-export type MintAuthorityCoverageSummary = Pick<MintAuthorityClientSummary, "mintPath" | "authorityPosture" | "confidence" | "inheritedFrom" | "mintIncidents"> & {
+export type MintAuthorityCoverageSummary = Pick<
+  MintAuthorityClientSummary,
+  "mintPath" | "authorityPosture" | "confidence" | "inheritedFrom" | "mintIncidents"
+> & {
   controls?: MintAuthorityCoverageControlSummary[];
 };
 
 type BlacklistClientStatus = NonNullable<StablecoinMeta["blacklistabilityReview"]>["reviewedStatus"];
 type GeniusSourceProfile = NonNullable<StablecoinMeta["genius"]>;
 
-export const GENIUS_CLIENT_PROFILE_FIELDS = [
-  "authorizationStatus",
-] as const satisfies ReadonlyArray<keyof GeniusSourceProfile>;
+export const GENIUS_CLIENT_PROFILE_FIELDS = ["authorizationStatus"] as const satisfies ReadonlyArray<
+  keyof GeniusSourceProfile
+>;
 
 export const GENIUS_COMPLIANCE_PROFILE_FIELDS = [
   "applicability",
@@ -88,15 +94,9 @@ export const GENIUS_COMPLIANCE_PROFILE_FIELDS = [
   "reviewedAt",
 ] as const satisfies ReadonlyArray<keyof GeniusSourceProfile>;
 
-export type GeniusClientProfile = Pick<
-  GeniusSourceProfile,
-  (typeof GENIUS_CLIENT_PROFILE_FIELDS)[number]
->;
+export type GeniusClientProfile = Pick<GeniusSourceProfile, (typeof GENIUS_CLIENT_PROFILE_FIELDS)[number]>;
 
-export type GeniusComplianceProfile = Pick<
-  GeniusSourceProfile,
-  (typeof GENIUS_COMPLIANCE_PROFILE_FIELDS)[number]
->;
+export type GeniusComplianceProfile = Pick<GeniusSourceProfile, (typeof GENIUS_COMPLIANCE_PROFILE_FIELDS)[number]>;
 
 /**
  * Slim projection of `StablecoinMeta` for client-side consumers.
@@ -128,6 +128,8 @@ export type StablecoinClientMeta = Pick<
   | "marketAvailability"
   | "flags"
   | "mechanismArchetype"
+  | "mechanismArchetypeReview"
+  | "implementationLaunchDate"
   | "archetypeOverride"
   | "geckoId"
   | "protocolSlug"
@@ -170,6 +172,8 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "marketAvailability",
   "flags",
   "mechanismArchetype",
+  "mechanismArchetypeReview",
+  "implementationLaunchDate",
   "archetypeOverride",
   "geckoId",
   "protocolSlug",

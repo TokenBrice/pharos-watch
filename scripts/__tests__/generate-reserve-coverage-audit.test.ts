@@ -38,6 +38,10 @@ function coin(input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">): Stab
     collateral: input.collateral ?? "Fixture collateral",
     pegMechanism: input.pegMechanism ?? "Fixture mechanism",
     ...(input.reserves ? { reserves: input.reserves } : {}),
+    ...(input.reserveReview ? { reserveReview: input.reserveReview } : {}),
+    ...(input.proofOfReserves ? { proofOfReserves: input.proofOfReserves } : {}),
+    ...(input.custodyModel ? { custodyModel: input.custodyModel } : {}),
+    ...(input.custodyProfile ? { custodyProfile: input.custodyProfile } : {}),
     ...(input.liveReservesConfig ? { liveReservesConfig: input.liveReservesConfig } : {}),
   };
 }
@@ -116,6 +120,10 @@ describe("generate-reserve-coverage-audit", () => {
       activeUnlinkedReserveSlicePctGte10Count: 3,
       activeUnlinkedReserveSlicePctGte50Count: 2,
       activeWithLinkedReserveSliceCount: 3,
+      activeStructuredReserveSliceCount: 0,
+      activeWithReserveReviewCount: 0,
+      activeMissingReserveReviewCount: 5,
+      activeOpaqueReserveSliceCount: 0,
       liveEnabledActiveCount: 3,
       curatedOnlyActiveCount: 2,
       curatedOnlyCandidateRankSource: "stablecoin-api-market-cap",
@@ -135,6 +143,122 @@ describe("generate-reserve-coverage-audit", () => {
       sourceQuality: "independent",
       scoreGradePlausible: true,
     });
+  });
+
+  it("audits backing provenance, proof scope, and custody consistency", () => {
+    const audit = buildReserveCoverageAudit({
+      activeCoins: [
+        coin({
+          id: "reviewed",
+          symbol: "REV",
+          custodyModel: "institutional-top",
+          reserves: [
+            {
+              name: "Other reserve portfolio",
+              pct: 100,
+              risk: "medium",
+              assetClass: "other",
+              riskFactors: ["credit", "liquidity"],
+            },
+          ],
+          reserveReview: {
+            reviewedAt: "2025-01-01",
+            reviewer: "Fixture reviewer",
+            confidence: "manual-review",
+            sources: [{ label: "Review", url: "https://example.com/review" }],
+            rationale: "Fixture review rationale",
+            compositionBasis: "Fixture disclosure",
+            compositionAsOf: "2025-06-01",
+            scope: "full-composition",
+            knownUnknownExposure: "The portfolio constituents are undisclosed.",
+            knownUnknownExposurePct: 100,
+            nonLinkDispositions: [
+              {
+                reserveIndex: 0,
+                reserveName: "Other reserve portfolio",
+                pct: 100,
+                disposition: "basket-needs-split",
+                rationale: "No constituent split is available.",
+              },
+            ],
+          },
+          proofOfReserves: {
+            type: "independent-audit",
+            url: "https://example.com/proof",
+            cadence: "monthly",
+          },
+        }),
+        coin({
+          id: "profiled",
+          symbol: "PRO",
+          custodyModel: "onchain",
+          reserves: [{ name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" }],
+          reserveReview: {
+            reviewedAt: "2026-07-01",
+            reviewer: "Fixture reviewer",
+            confidence: "verified",
+            sources: [{ label: "Review", url: "https://example.com/review" }],
+            rationale: "Fixture review rationale",
+            compositionBasis: "Fixture disclosure",
+            compositionAsOf: "2026-07-01",
+            scope: "full-composition",
+            knownUnknownExposure: "No material known unknown exposure.",
+            knownUnknownExposurePct: 0,
+          },
+          proofOfReserves: {
+            type: "independent-audit",
+            url: "https://example.com/proof",
+            cadence: "monthly",
+            latestReport: {
+              periodEnd: "2026-05-31",
+              publishedAt: "2026-06-20",
+              assuranceMethod: "examination",
+              scope: "assets-and-liabilities",
+              liabilityReconciliation: "full",
+              reviewer: "Fixture reviewer",
+              confidence: "verified",
+              sources: [{ label: "Report", url: "https://example.com/report" }],
+            },
+          },
+          custodyProfile: {
+            providers: [{ name: "Fixture Bank", role: "bank" }],
+            segregation: "segregated",
+            bankruptcyRemoteness: "contractual-only",
+            rehypothecation: "unknown",
+            reviewedAt: "2026-07-01",
+            reviewer: "Fixture reviewer",
+            confidence: "verified",
+            sources: [{ label: "Custody", url: "https://example.com/custody" }],
+            uncertainty: "Provider shares are not disclosed.",
+          },
+        }),
+      ],
+      generatedAt: "2026-07-13T00:00:00.000Z",
+    });
+
+    expect(audit.summary).toMatchObject({
+      activeStructuredReserveSliceCount: 1,
+      activeWithReserveReviewCount: 2,
+      activeMissingReserveReviewCount: 0,
+      activeStaleReserveReviewCount: 1,
+      activeStaleCompositionCount: 1,
+      activeMaterialUnknownExposureCount: 1,
+      activeOpaqueReserveSliceCount: 1,
+      activeIndependentAuditCount: 2,
+      activeIndependentAuditMissingLatestReportCount: 1,
+      activeWithLatestProofReportCount: 1,
+      activeLatestProofAssetsAndLiabilitiesCount: 1,
+      activeExplicitCustodyModelCount: 2,
+      activeWithCustodyProfileCount: 1,
+      activeMissingCustodyProfileCount: 1,
+      activeCustodyConsistencyWarningCount: 1,
+    });
+    expect(audit.opaqueReserveSlices[0]).toMatchObject({
+      coinId: "reviewed",
+      disposition: "basket-needs-split",
+    });
+    expect(audit.independentAuditMissingLatestReport.map((row) => row.coinId)).toEqual(["reviewed"]);
+    expect(audit.custodyConsistencyWarnings[0]?.reason).toContain("onchain custodyModel");
   });
 
   it("renders missing score-grade independent configs when report cards are supplied", () => {
@@ -175,17 +299,19 @@ describe("generate-reserve-coverage-audit", () => {
   });
 
   it("parses CLI options", () => {
-    expect(parseArgs([
-      "--report-cards",
-      "agents/report-cards.json",
-      "--stablecoins",
-      "agents/stablecoins.json",
-      "--json",
-      "--report",
-      "agents/reserve-coverage.json",
-      "--generated-at",
-      "2026-06-03T00:00:00.000Z",
-    ])).toMatchObject({
+    expect(
+      parseArgs([
+        "--report-cards",
+        "agents/report-cards.json",
+        "--stablecoins",
+        "agents/stablecoins.json",
+        "--json",
+        "--report",
+        "agents/reserve-coverage.json",
+        "--generated-at",
+        "2026-06-03T00:00:00.000Z",
+      ]),
+    ).toMatchObject({
       reportCardsPath: "agents/report-cards.json",
       stablecoinsPath: "agents/stablecoins.json",
       format: "json",
@@ -203,20 +329,20 @@ describe("generate-reserve-coverage-audit", () => {
   it("sends site-origin headers when fetching prod site-data", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
       const href = String(url);
-      return new Response(
-        JSON.stringify(href.includes("report-cards") ? { cards: [] } : { peggedAssets: [] }),
-        { status: 200 },
-      );
+      return new Response(JSON.stringify(href.includes("report-cards") ? { cards: [] } : { peggedAssets: [] }), {
+        status: 200,
+      });
     });
     const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
     try {
-      await expect(runCli([
-        "--prod",
-        "--json",
-        "--generated-at",
-        "2026-06-03T00:00:00.000Z",
-      ], process.cwd(), fetchMock as unknown as typeof fetch)).resolves.toBe(0);
+      await expect(
+        runCli(
+          ["--prod", "--json", "--generated-at", "2026-06-03T00:00:00.000Z"],
+          process.cwd(),
+          fetchMock as unknown as typeof fetch,
+        ),
+      ).resolves.toBe(0);
     } finally {
       stdout.mockRestore();
     }

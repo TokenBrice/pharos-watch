@@ -1,10 +1,12 @@
 import { z } from "zod";
 import type {
   BlacklistabilityReview,
+  BridgeRouteDeployment,
   BridgeRouteProtocolEvidence,
   BridgeRouteRiskProfile,
   CoinNotice,
   ContractDeployment,
+  CustodyProfile,
   DateHistoryEntry,
   DependencyReview,
   DependencyWeight,
@@ -16,6 +18,7 @@ import type {
   GeniusReference,
   Jurisdiction,
   LaunchMilestone,
+  MechanismArchetypeReview,
   MicaProfile,
   MintAuthorityControl,
   MintAuthorityDirectMintAbility,
@@ -34,9 +37,13 @@ import type {
 import {
   ATTESTOR_TIER_VALUES,
   BACKING_TYPE_VALUES,
+  BRIDGE_ROUTE_CLASS_VALUES,
+  BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES,
   BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES,
   BRIDGE_ROUTE_RISK_SOURCE_VALUES,
   BRIDGE_ROUTE_RISK_TIER_VALUES,
+  BRIDGE_ROUTE_SCOPE_VALUES,
+  BRIDGE_ROUTE_SEMANTICS_VALUES,
   COIN_NOTICE_TYPE_VALUES,
   DEPENDENCY_TYPE_VALUES,
   FEATURED_CONTENT_TYPE_VALUES,
@@ -54,6 +61,7 @@ import {
   LAUNCH_PHASE_VALUES,
   MARKET_AVAILABILITY_VALUES,
   MECHANISM_ARCHETYPE_VALUES,
+  MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES,
   MINT_AUTHORITY_CONFIDENCE_VALUES,
   MINT_AUTHORITY_CONTROL_ROLE_VALUES,
   MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES,
@@ -63,8 +71,10 @@ import {
   MINT_AUTHORITY_POSTURE_VALUES,
   MINT_AUTHORITY_SAFE_SOURCE_VALUES,
   MINT_AUTHORITY_TYPE_VALUES,
+  MINT_AUTHORITY_UPGRADE_MODEL_VALUES,
   MICA_AUTHORIZATION_TYPE_VALUES,
   ORACLE_RISK_CONFIDENCE_VALUES,
+  ORACLE_RISK_BRANCH_MODEL_VALUES,
   ORACLE_RISK_TIER_VALUES,
   RESEARCH_REVIEW_CONFIDENCE_VALUES,
   RESERVE_NON_LINK_DISPOSITION_VALUES,
@@ -74,6 +84,13 @@ import {
   PEG_CURRENCY_VALUES,
   PROOF_OF_RESERVES_CADENCE_VALUES,
   PROOF_OF_RESERVES_TYPE_VALUES,
+  PROOF_ASSURANCE_METHOD_VALUES,
+  PROOF_ASSURANCE_SCOPE_VALUES,
+  LIABILITY_RECONCILIATION_VALUES,
+  CUSTODY_PROVIDER_ROLE_VALUES,
+  CUSTODY_SEGREGATION_VALUES,
+  CUSTODY_BANKRUPTCY_REMOTENESS_VALUES,
+  CUSTODY_REHYPOTHECATION_VALUES,
   STABLECOIN_STATUS_VALUES,
   VARIANT_KIND_VALUES,
   YIELD_TYPE_VALUES,
@@ -166,6 +183,23 @@ export const StablecoinFlagsSchema: z.ZodType<StablecoinFlags> = z
   })
   .strict();
 
+export const StablecoinLinkSchema: z.ZodType<StablecoinLink> = z
+  .object({
+    label: z.string(),
+    url: HttpUrlSchema,
+  })
+  .strict();
+
+export const MechanismArchetypeReviewSchema: z.ZodType<MechanismArchetypeReview> = z
+  .object({
+    disposition: z.enum(MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES),
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().min(1),
+    rationale: z.string().min(12),
+    sources: z.array(StablecoinLinkSchema).min(1),
+  })
+  .strict();
+
 export const ProofOfReservesSchema: z.ZodType<ProofOfReserves> = z
   .object({
     type: z.enum(PROOF_OF_RESERVES_TYPE_VALUES),
@@ -175,13 +209,38 @@ export const ProofOfReservesSchema: z.ZodType<ProofOfReserves> = z
     cadence: z.enum(PROOF_OF_RESERVES_CADENCE_VALUES).optional(),
     attestorJurisdiction: z.string().optional(),
     attestorLicense: z.string().optional(),
-  })
-  .strict();
-
-export const StablecoinLinkSchema: z.ZodType<StablecoinLink> = z
-  .object({
-    label: z.string(),
-    url: HttpUrlSchema,
+    latestReport: z
+      .object({
+        periodEnd: StrictIsoDateSchema,
+        publishedAt: StrictIsoDateSchema,
+        assuranceMethod: z.enum(PROOF_ASSURANCE_METHOD_VALUES),
+        scope: z.enum(PROOF_ASSURANCE_SCOPE_VALUES),
+        liabilityReconciliation: z.enum(LIABILITY_RECONCILIATION_VALUES),
+        reviewer: z.string().min(1),
+        confidence: z.enum(RESEARCH_REVIEW_CONFIDENCE_VALUES),
+        sources: z.array(StablecoinLinkSchema).min(1),
+      })
+      .strict()
+      .superRefine((report, ctx) => {
+        if (report.publishedAt < report.periodEnd) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "latestReport publishedAt cannot precede periodEnd",
+            path: ["publishedAt"],
+          });
+        }
+        if (
+          report.scope === "assets-and-liabilities" &&
+          (report.liabilityReconciliation === "none" || report.liabilityReconciliation === "unknown")
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "assets-and-liabilities scope requires full or partial liability reconciliation",
+            path: ["liabilityReconciliation"],
+          });
+        }
+      })
+      .optional(),
   })
   .strict();
 
@@ -193,21 +252,115 @@ export const OracleRiskBranchSchema: z.ZodType<OracleRiskBranch> = z
     summary: z.string().min(12),
     collateralAssets: z.array(z.string().min(1)).min(1).optional(),
     chains: z.array(z.string().min(1)).min(1).optional(),
+    feeds: z
+      .array(
+        z
+          .object({
+            provider: z.string().min(1),
+            path: z.string().min(1),
+            address: z.string().min(1).optional(),
+            chain: z.string().min(1),
+            heartbeatSec: z.number().finite().int().positive().optional(),
+            stalenessBoundSec: z.number().finite().int().positive().optional(),
+            observedAt: ReviewDateSchema.optional(),
+            observedBlock: z.number().finite().int().nonnegative().optional(),
+            failureDomainKeys: z.array(z.string().min(1)).min(1).optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .optional(),
+    fallbackBehavior: z.string().min(12).optional(),
+    observedAt: ReviewDateSchema.optional(),
+    observedBlock: z.number().finite().int().nonnegative().optional(),
+    collateralParameters: z
+      .array(
+        z
+          .object({
+            asset: z.string().min(1),
+            maximumLtvPct: z.number().finite().positive().max(100).optional(),
+            minimumCollateralRatioPct: z.number().finite().min(100).optional(),
+            shutdownCollateralRatioPct: z.number().finite().min(100).optional(),
+            note: z.string().min(1).optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .optional(),
+    liquidationMechanism: z.string().min(12).optional(),
+    liquidationDelaySec: z.number().finite().int().nonnegative().optional(),
+    backstop: z.string().min(12).optional(),
+    shutdownOrBadDebtBehavior: z.string().min(12).optional(),
+    failureDomainKeys: z.array(z.string().min(1)).min(1).optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((branch, ctx) => {
+    for (let index = 0; index < (branch.feeds ?? []).length; index += 1) {
+      const feed = branch.feeds![index];
+      if (feed.heartbeatSec != null && feed.stalenessBoundSec != null && feed.stalenessBoundSec < feed.heartbeatSec) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "oracle feed staleness bound cannot be shorter than its heartbeat",
+          path: ["feeds", index, "stalenessBoundSec"],
+        });
+      }
+    }
+    if (branch.observedBlock != null && branch.observedAt == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "observedBlock requires observedAt",
+        path: ["observedAt"],
+      });
+    }
+    if (branch.collateralAssets && branch.collateralParameters) {
+      const parameterAssets = new Set(branch.collateralParameters.map((parameter) => parameter.asset));
+      for (const asset of branch.collateralAssets) {
+        if (parameterAssets.has(asset)) continue;
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `missing collateral parameters for ${asset}`,
+          path: ["collateralParameters"],
+        });
+      }
+    }
+  });
 
 export const OracleRiskProfileSchema: z.ZodType<OracleRiskProfile> = z
   .object({
     tier: z.enum(ORACLE_RISK_TIER_VALUES),
     summary: z.string().min(12),
+    branchModel: z.enum(ORACLE_RISK_BRANCH_MODEL_VALUES).optional(),
     reviewedAt: ReviewDateSchema.optional(),
     reviewer: z.string().min(1).optional(),
     confidence: z.enum(ORACLE_RISK_CONFIDENCE_VALUES).optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     branches: z.array(OracleRiskBranchSchema).min(1).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((profile, ctx) => {
+    if (profile.branchModel === "multi-branch" && !profile.branches?.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "multi-branch oracleRisk profiles require branches",
+        path: ["branches"],
+      });
+    }
+    if (profile.branchModel === "single-path" && profile.branches?.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "single-path oracleRisk profiles cannot declare branches",
+        path: ["branches"],
+      });
+    }
+    if (profile.branches?.length && profile.branchModel !== "multi-branch") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "oracleRisk branches require branchModel multi-branch",
+        path: ["branchModel"],
+      });
+    }
+  });
 
 export const BridgeRouteProtocolEvidenceSchema: z.ZodType<BridgeRouteProtocolEvidence> = z
   .object({
@@ -220,6 +373,38 @@ export const BridgeRouteProtocolEvidenceSchema: z.ZodType<BridgeRouteProtocolEvi
   })
   .strict();
 
+export const BridgeRouteDeploymentSchema: z.ZodType<BridgeRouteDeployment> = z
+  .object({
+    id: z.string().min(1),
+    sourceChain: z.string().min(1).optional(),
+    destinationChain: z.string().min(1),
+    canonicalChain: z.string().min(1).optional(),
+    contractAddress: z.string().min(1),
+    representationId: z.string().min(1).optional(),
+    protocol: z.string().min(1),
+    issuanceModel: z.enum(BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES),
+    routeClass: z.enum(BRIDGE_ROUTE_CLASS_VALUES),
+    riskTier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
+    semantics: z.enum(BRIDGE_ROUTE_SEMANTICS_VALUES),
+    scope: z.enum(BRIDGE_ROUTE_SCOPE_VALUES),
+    controllerChain: z.string().min(1).optional(),
+    controllerAddress: z.string().min(1).optional(),
+    failureDomainKeys: z.array(z.string().min(1)).min(1).optional(),
+    observedAt: ReviewDateSchema.optional(),
+    observedBlock: z.number().finite().int().nonnegative().optional(),
+    sources: z.array(StablecoinLinkSchema).min(1).optional(),
+  })
+  .strict()
+  .superRefine((route, ctx) => {
+    if ((route.controllerChain == null) !== (route.controllerAddress == null)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "bridge route controllerChain and controllerAddress must be authored together",
+        path: [route.controllerChain == null ? "controllerChain" : "controllerAddress"],
+      });
+    }
+  });
+
 export const BridgeRouteRiskProfileSchema: z.ZodType<BridgeRouteRiskProfile> = z
   .object({
     tier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
@@ -230,18 +415,32 @@ export const BridgeRouteRiskProfileSchema: z.ZodType<BridgeRouteRiskProfile> = z
     protocols: z.array(BridgeRouteProtocolEvidenceSchema).min(1).optional(),
     sourceFreeRationale: z.string().min(1).optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
+    routes: z.array(BridgeRouteDeploymentSchema).min(1).optional(),
   })
   .strict()
   .superRefine((profile, ctx) => {
     if ((profile.sources?.length ?? 0) > 0 || profile.sourceFreeRationale || (profile.protocols?.length ?? 0) > 0) {
-      return;
+      // Continue validating route identity below.
+    } else {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "bridgeRouteRisk requires sources, protocols, or sourceFreeRationale",
+        path: ["sources"],
+      });
     }
 
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "bridgeRouteRisk requires sources, protocols, or sourceFreeRationale",
-      path: ["sources"],
-    });
+    const routeIds = new Set<string>();
+    for (let index = 0; index < (profile.routes ?? []).length; index += 1) {
+      const route = profile.routes![index]!;
+      if (routeIds.has(route.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `duplicate bridge route id ${route.id}`,
+          path: ["routes", index, "id"],
+        });
+      }
+      routeIds.add(route.id);
+    }
   });
 
 export const BlacklistabilityReviewSchema: z.ZodType<BlacklistabilityReview> = z
@@ -459,6 +658,7 @@ const MintAuthoritySafeStateSchema: z.ZodType<MintAuthoritySafeState> = z
     fallbackHandler: z.string().min(1).nullable().optional(),
     masterCopy: z.string().min(1).nullable().optional(),
     observedBlock: PositiveIntegerSchema.optional(),
+    observedAt: ReviewDateSchema.optional(),
     source: z.enum(MINT_AUTHORITY_SAFE_SOURCE_VALUES),
   })
   .strict()
@@ -511,6 +711,9 @@ const MintAuthorityControlSchema: z.ZodType<MintAuthorityControl> = z
     safe: MintAuthoritySafeStateSchema.optional(),
     routeChecks: MintAuthorityRouteChecksSchema.optional(),
     keyCustodyAttestation: MintAuthorityKeyCustodyAttestationSchema.optional(),
+    observedAt: ReviewDateSchema.optional(),
+    observedBlock: PositiveIntegerSchema.optional(),
+    failureDomainKeys: z.array(z.string().min(1)).min(1).optional(),
     bypassSurfaces: z.array(z.string().min(1)).optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     evidence: z.string().min(12).optional(),
@@ -561,28 +764,54 @@ const MintAuthorityReviewSchema: z.ZodType<MintAuthorityReview> = z
     evidence: z.string().min(24),
     reviewer: z.string().min(1),
     reviewedAt: ReviewDateSchema,
+    disposition: z.enum(["scoreable", "unresolved"]).optional(),
     unresolvedQuestions: z.array(z.string().min(1)).optional(),
   })
   .strict()
   .superRefine((review, ctx) => {
     if (hasSourceLinks(review.sources) || review.sourceFreeRationale) {
-      return;
+      // Continue validating the explicit unresolved disposition below.
+    } else {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "mintAuthority.review requires sources or sourceFreeRationale",
+        path: ["sources"],
+      });
     }
-
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "mintAuthority.review requires sources or sourceFreeRationale",
-      path: ["sources"],
-    });
+    if (review.disposition === "unresolved" && (review.unresolvedQuestions?.length ?? 0) === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "unresolved mint-authority disposition requires unresolvedQuestions",
+        path: ["unresolvedQuestions"],
+      });
+    }
   });
 
 const MintAuthorityIncidentSchema: z.ZodType<NonNullable<MintAuthorityProfile["mintIncidents"]>[number]> = z
   .object({
     date: ReviewDateSchema,
+    status: z.enum(["active", "resolved"]),
+    resolvedAt: ReviewDateSchema.optional(),
     summary: z.string().min(12),
     sources: z.array(StablecoinLinkSchema).min(1),
   })
-  .strict();
+  .strict()
+  .superRefine((incident, ctx) => {
+    if (incident.status === "active" && incident.resolvedAt != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "active mint incidents cannot carry resolvedAt",
+        path: ["resolvedAt"],
+      });
+    }
+    if (incident.resolvedAt != null && incident.resolvedAt < incident.date) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "mint incident resolvedAt cannot precede its incident date",
+        path: ["resolvedAt"],
+      });
+    }
+  });
 
 export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
   .object({
@@ -591,6 +820,21 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
     confidence: z.enum(MINT_AUTHORITY_CONFIDENCE_VALUES),
     summary: z.string().min(12),
     inheritedFrom: z.string().min(1).optional(),
+    upgradeability: z
+      .object({
+        model: z.enum(MINT_AUTHORITY_UPGRADE_MODEL_VALUES),
+        proxyAddresses: z.array(z.string().min(1)).min(1).optional(),
+        implementationAddresses: z.array(z.string().min(1)).min(1).optional(),
+        adminAddresses: z.array(z.string().min(1)).min(1).optional(),
+        canChangeMintLogic: z.union([z.boolean(), z.literal("unknown")]),
+        delaySec: z.number().finite().int().nonnegative().optional(),
+        controlRef: z.string().min(1).optional(),
+        observedAt: ReviewDateSchema.optional(),
+        observedBlock: PositiveIntegerSchema.optional(),
+        sources: z.array(StablecoinLinkSchema).min(1),
+      })
+      .strict()
+      .optional(),
     mintIncidents: z.array(MintAuthorityIncidentSchema).min(1).optional(),
     controls: z.array(MintAuthorityControlSchema).optional(),
     review: MintAuthorityReviewSchema,
@@ -600,6 +844,33 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
     const controls = profile.controls ?? [];
     const profileHasSourceLinks = hasSourceLinks(profile.review.sources);
     const controlsHaveSourceLinks = controls.some((control) => hasSourceLinks(control.sources));
+
+    if (profile.review.disposition === "unresolved" && profile.confidence !== "unknown") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "unresolved mint-authority disposition requires unknown confidence",
+        path: ["confidence"],
+      });
+    }
+
+    if (profile.upgradeability?.model === "immutable" && profile.upgradeability.canChangeMintLogic !== false) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "immutable upgradeability requires canChangeMintLogic false",
+        path: ["upgradeability", "canChangeMintLogic"],
+      });
+    }
+    if (
+      profile.upgradeability != null &&
+      profile.upgradeability.canChangeMintLogic === true &&
+      !controls.some((control) => control.label === profile.upgradeability?.controlRef)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "upgradeable mint logic must reference an existing reviewed control",
+        path: ["upgradeability", "controlRef"],
+      });
+    }
 
     if (
       (profile.confidence === "verified" || profile.confidence === "probable") &&
@@ -776,13 +1047,14 @@ export const ReserveReviewSchema: z.ZodType<ReserveReview> = z
     compositionAsOf: StrictIsoDateSchema.optional(),
     scope: z.enum(RESERVE_REVIEW_SCOPE_VALUES),
     knownUnknownExposure: z.string().min(1),
-    knownUnknownExposurePct: z.number().finite().min(0).max(100).optional(),
+    knownUnknownExposurePct: z.number().finite().min(0).max(100),
     nonLinkDispositions: z
       .array(
         z
           .object({
             reserveIndex: z.number().int().nonnegative(),
             reserveName: z.string().min(1),
+            pct: z.number().finite().positive().max(100),
             disposition: z.enum(RESERVE_NON_LINK_DISPOSITION_VALUES),
             rationale: z.string().min(1),
             candidateCoinIds: z.array(z.string().min(1)).min(1).optional(),
@@ -792,6 +1064,49 @@ export const ReserveReviewSchema: z.ZodType<ReserveReview> = z
       .optional(),
   })
   .strict();
+
+export const CustodyProfileSchema: z.ZodType<CustodyProfile> = z
+  .object({
+    providers: z
+      .array(
+        z
+          .object({
+            name: z.string().min(1),
+            role: z.enum(CUSTODY_PROVIDER_ROLE_VALUES),
+            sharePct: z.number().finite().min(0).max(100).optional(),
+            jurisdiction: z.string().min(1).optional(),
+          })
+          .strict(),
+      )
+      .min(1),
+    segregation: z.enum(CUSTODY_SEGREGATION_VALUES),
+    bankruptcyRemoteness: z.enum(CUSTODY_BANKRUPTCY_REMOTENESS_VALUES),
+    rehypothecation: z.enum(CUSTODY_REHYPOTHECATION_VALUES),
+    reviewedAt: ReviewDateSchema,
+    reviewer: z.string().min(1),
+    confidence: z.enum(RESEARCH_REVIEW_CONFIDENCE_VALUES),
+    sources: z.array(StablecoinLinkSchema).min(1),
+    uncertainty: z.string().min(1),
+    knownUnknownExposurePct: z.number().finite().min(0).max(100).optional(),
+  })
+  .strict()
+  .superRefine((profile, ctx) => {
+    const knownShares = profile.providers.reduce((sum, provider) => sum + (provider.sharePct ?? 0), 0);
+    if (knownShares > 100.5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "custody provider shares cannot exceed 100%",
+        path: ["providers"],
+      });
+    }
+    if (profile.knownUnknownExposurePct != null && knownShares + profile.knownUnknownExposurePct > 100.5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "custody provider shares plus known unknown exposure cannot exceed 100%",
+        path: ["knownUnknownExposurePct"],
+      });
+    }
+  });
 
 export const DependencyReviewSchema: z.ZodType<DependencyReview> = z
   .object({
@@ -805,6 +1120,7 @@ export const DependencyReviewSchema: z.ZodType<DependencyReview> = z
         z
           .object({
             id: z.string().min(1),
+            weight: DependencyWeightNumberSchema,
             type: z.enum(DEPENDENCY_TYPE_VALUES),
             reason: z.string().min(1),
           })
