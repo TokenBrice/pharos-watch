@@ -312,4 +312,34 @@ describe("fixed report-card input replay", () => {
       "DEX rows do not match the DEX freshness generation",
     );
   });
+
+  it("rejects future-dated exact producer lanes instead of accepting age zero", () => {
+    const complete = exactFixedInput();
+    const futureUpdatedAt = complete.clockSec + 1;
+    const futureDexRows = Object.fromEntries(
+      Object.entries(complete.dexLiqMap).map(([id, row]) => [id, { ...row, updatedAt: futureUpdatedAt }]),
+    );
+    expect(() =>
+      normalizeFixedInput({
+        ...complete,
+        dexGenerationId: `dex-liquidity-${futureUpdatedAt}`,
+        dexLiqMap: futureDexRows,
+        liquidityStale: true,
+        inputFreshness: {
+          ...complete.inputFreshness,
+          dexLiquidity: { updatedAt: futureUpdatedAt, ageSeconds: 0, stale: true },
+        },
+      }),
+    ).toThrow("producer timestamp 1783891201 is later than scoring clock 1783891200");
+
+    expect(() =>
+      normalizeFixedInput({
+        ...complete,
+        inputFreshness: {
+          ...complete.inputFreshness,
+          redemptionBackstops: { updatedAt: futureUpdatedAt, ageSeconds: null, stale: true },
+        },
+      }),
+    ).toThrow("producer timestamp 1783891201 is later than scoring clock 1783891200");
+  });
 });

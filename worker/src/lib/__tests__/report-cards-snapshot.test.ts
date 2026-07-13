@@ -555,6 +555,28 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.dimensions.liquidity.score).toBe(29);
   });
 
+  it("suppresses future-dated redemption backstop rows as stale with unknown age", async () => {
+    const db = makeReportCardsDbWithDexScore("cusd-cap", 29);
+    const futureUpdatedAt = nowSec + 1;
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: { "cusd-cap": makeRedemptionEntry({ updatedAt: futureUpdatedAt }) },
+      latestUpdatedAt: futureUpdatedAt,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+
+    expect(snapshot.redemptionStale).toBe(true);
+    expect(snapshot.inputFreshness.redemptionBackstops).toEqual({
+      updatedAt: futureUpdatedAt,
+      ageSeconds: null,
+      stale: true,
+    });
+    expect(card?.rawInputs.redemptionBackstopScore).toBeNull();
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(false);
+    expect(card?.dimensions.liquidity.score).toBe(29);
+  });
+
   it("keeps redemption backstop rows through normal 4-hourly cron lag", async () => {
     const cacheValue = JSON.stringify({
       peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD" })],
@@ -880,6 +902,34 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.dimensions.liquidity.grade).not.toBe("NR");
     expect(card?.dimensions.liquidity.score).toBe(29);
     expect(card?.dimensions.liquidity.detail).toContain("primary-market exit bonus only");
+  });
+
+  it("marks future-dated DEX data stale without changing stale-but-present route behavior", async () => {
+    const db = makeReportCardsDbWithDexScore("cusd-cap", 29);
+    const futureUpdatedAt = nowSec + 1;
+    loadDexLiquiditySnapshotMock.mockResolvedValueOnce({
+      map: {
+        "cusd-cap": {
+          liquidityScore: 29,
+          concentrationHhi: 1,
+          poolCount: 1,
+          chainCount: 1,
+        },
+      },
+      latestUpdatedAt: futureUpdatedAt,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+
+    expect(snapshot.liquidityStale).toBe(true);
+    expect(snapshot.inputFreshness.dexLiquidity).toEqual({
+      updatedAt: futureUpdatedAt,
+      ageSeconds: null,
+      stale: true,
+    });
+    expect(card?.rawInputs.liquidityScore).toBe(29);
+    expect(card?.dimensions.liquidity.grade).not.toBe("NR");
   });
 
   it("keeps severe-depeg redemption eligibility aligned with scoreLiquidity rules", async () => {

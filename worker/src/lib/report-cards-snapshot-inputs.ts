@@ -94,11 +94,12 @@ function buildFreshnessEntry(
   maxAgeSec: number,
   forceStale = false,
 ): ReportCardsInputFreshnessEntry {
-  const ageSeconds = updatedAt == null ? null : Math.max(0, nowSec - updatedAt);
+  const futureDated = updatedAt != null && updatedAt > nowSec;
+  const ageSeconds = updatedAt == null || futureDated ? null : nowSec - updatedAt;
   return {
     updatedAt,
     ageSeconds,
-    stale: forceStale || ageSeconds == null || ageSeconds > maxAgeSec,
+    stale: forceStale || futureDated || ageSeconds == null || ageSeconds > maxAgeSec,
   };
 }
 
@@ -232,7 +233,8 @@ export function computeDexDeploymentSupplyCoverage(
         !options ||
         (row.observedAt != null &&
           Number.isFinite(row.observedAt) &&
-          Math.max(0, options.asOfSec - row.observedAt) <= options.maxOutcomeAgeSec),
+          row.observedAt <= options.asOfSec &&
+          options.asOfSec - row.observedAt <= options.maxOutcomeAgeSec),
     );
     if (contracts.length !== 1 || freshMatching.length !== 1 || outcomes.length !== 1) {
       unknownSupplyUsd += supplyUsd;
@@ -386,7 +388,10 @@ export async function loadReportCardsSnapshotInputs(
     }
     if (dexLiquiditySnapshot.latestUpdatedAt != null) {
       const ageSec = nowSec - dexLiquiditySnapshot.latestUpdatedAt;
-      if (ageSec > REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC) {
+      if (ageSec < 0) {
+        console.warn(`[report-cards] Liquidity data is future-dated (ahead: ${-ageSec}s)`);
+        liquidityStale = true;
+      } else if (ageSec > REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC) {
         console.warn(`[report-cards] Liquidity data is stale (age: ${ageSec}s)`);
         liquidityStale = true;
       }

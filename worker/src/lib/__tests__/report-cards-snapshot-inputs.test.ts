@@ -108,6 +108,31 @@ describe("report-card DEX deployment supply join", () => {
     });
   });
 
+  it("keeps future-dated deployment outcomes unknown at a fixed scoring clock", () => {
+    const coverage = computeDexDeploymentSupplyCoverage(
+      {
+        chainCirculating: { Ethereum: supplyPoint(10_000_000) },
+        contracts: [{ chain: "ethereum", address: "0x111", decimals: 18 }],
+      },
+      [
+        {
+          chain: "ethereum",
+          contractAddress: "0x111",
+          outcome: "observed_pools",
+          observedAt: 10_001,
+        },
+      ],
+      new Map([["ethereum", 1_000_000]]),
+      { asOfSec: 10_000, maxOutcomeAgeSec: 1_000 },
+    );
+
+    expect(coverage).toMatchObject({
+      observedSupplyUsd: 0,
+      unknownSupplyUsd: 10_000_000,
+      unknownChains: ["ethereum"],
+    });
+  });
+
   it("supersedes an older lowercase non-EVM deployment outcome after identity correction", () => {
     const solanaMint = "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1";
     const coverage = computeDexDeploymentSupplyCoverage(

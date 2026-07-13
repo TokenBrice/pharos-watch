@@ -642,11 +642,16 @@ function assertFreshnessConsistency(input: ReportCardsFixedInput): void {
   }
 
   for (const [lane, freshness] of Object.entries(input.inputFreshness)) {
+    if (freshness.updatedAt != null && freshness.updatedAt > input.clockSec) {
+      throw new Error(
+        `Fixed input ${lane} producer timestamp ${freshness.updatedAt} is later than scoring clock ${input.clockSec}`,
+      );
+    }
     if (freshness.updatedAt == null || freshness.ageSeconds == null) {
       if (!freshness.stale) throw new Error(`Fixed input ${lane} freshness is incomplete but not stale`);
       continue;
     }
-    const expectedAge = Math.max(0, input.clockSec - freshness.updatedAt);
+    const expectedAge = input.clockSec - freshness.updatedAt;
     if (freshness.ageSeconds !== expectedAge) {
       throw new Error(
         `Fixed input ${lane} age ${freshness.ageSeconds} does not match clock-derived age ${expectedAge}`,

@@ -149,10 +149,19 @@ export function resolveExactRedemptionPublicationGeneration(args: {
   return args.runId;
 }
 
-function freshnessAtClock(entry: ReportCardsInputFreshness["dexLiquidity"], clockSec: number) {
+function freshnessAtClock(
+  entry: ReportCardsInputFreshness["dexLiquidity"],
+  clockSec: number,
+  lane: "DEX liquidity" | "redemption backstops",
+) {
+  if (entry.updatedAt != null && entry.updatedAt > clockSec) {
+    throw new Error(
+      `Exact fixed-input ${lane} producer timestamp ${entry.updatedAt} is later than scoring clock ${clockSec}`,
+    );
+  }
   return {
     ...entry,
-    ageSeconds: entry.updatedAt == null ? null : Math.max(0, clockSec - entry.updatedAt),
+    ageSeconds: entry.updatedAt == null ? null : clockSec - entry.updatedAt,
   };
 }
 
@@ -225,8 +234,12 @@ export async function buildReportCardsSnapshot(
   );
   const scoringInputFreshness: ReportCardsInputFreshness = captureFixedInput
     ? {
-        dexLiquidity: freshnessAtClock(inputFreshness.dexLiquidity, pegAnalytics.nowSec),
-        redemptionBackstops: freshnessAtClock(inputFreshness.redemptionBackstops, pegAnalytics.nowSec),
+        dexLiquidity: freshnessAtClock(inputFreshness.dexLiquidity, pegAnalytics.nowSec, "DEX liquidity"),
+        redemptionBackstops: freshnessAtClock(
+          inputFreshness.redemptionBackstops,
+          pegAnalytics.nowSec,
+          "redemption backstops",
+        ),
       }
     : inputFreshness;
 
