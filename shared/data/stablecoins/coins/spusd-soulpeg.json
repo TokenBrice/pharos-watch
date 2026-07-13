@@ -129,6 +129,26 @@
         "evidence": "SoulPeg docs describe an operator that mints sUSDC 1:1 against deposited USDC, routes USDC into Venus lending, and runs a peg market-making bot; mint of the wrapped spUSD is gated behind this operator-controlled flow."
       }
     ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 109836313,
+      "sources": [
+        {
+          "label": "SoulPeg spUSD token source",
+          "url": "https://bscscan.com/address/0x40ff3dea2eec93a7b71879874dc4407918da77a6#code"
+        },
+        {
+          "label": "SoulPeg wrapper source",
+          "url": "https://bscscan.com/address/0x0e8fb2e774b827711e0f86069931c1321113238e#code"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc-rpc.publicnode.com"
+        }
+      ]
+    },
     "review": {
       "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x0e8fb2e…) = true; hasRole(BURNER_ROLE, wrapper) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0xf683ab3…) = true; wrapper owner() = 0xf683ab3… (EOA confirmed via eth_getCode). MAX_SUPPLY() = 1,000,000,000 tokens (immutable constant, no setter function).",
       "reviewer": "Claude Phase 0c continuation",

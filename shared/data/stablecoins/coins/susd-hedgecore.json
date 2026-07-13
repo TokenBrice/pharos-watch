@@ -150,6 +150,26 @@
         "evidence": "HedgeCore docs describe an operator running USDC deposit, Venus lending strategy, and operator-controlled early redemption; wrapper mint is gated behind this operator-controlled flow."
       }
     ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 109836313,
+      "sources": [
+        {
+          "label": "HedgeCore sUSD token source",
+          "url": "https://bscscan.com/address/0xbe1922750760c4cae69edb6fe79a22ae9b62a23d#code"
+        },
+        {
+          "label": "HedgeCore hUSDC wrapper source",
+          "url": "https://bscscan.com/address/0x34eea40fb819bfc762b836dd6269f975227794d3#code"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc-rpc.publicnode.com"
+        }
+      ]
+    },
     "review": {
       "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x34eea40fb…) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0x30829883…) = true; wrapper() = 0x34eea40fb… (confirmed cross-match). 0x30829883… is EOA (empty bytecode). MAX_SUPPLY() = 1B (immutable constant, no setter function). HedgeCore docs confirm soul-bound soul mechanism and operator redemption flow.",
       "reviewer": "Claude Phase 0c continuation",
