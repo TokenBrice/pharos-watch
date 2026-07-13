@@ -1,32 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { MATCHED_V9_INVARIANTS } from "@shared/data/safety-score-v9/matched-invariants-v1";
-import type { ExitRouteObservation } from "@shared/types/market";
-import type { V9ScoringInput } from "@shared/types/safety-score-v9";
+import { MATCHED_V9_INVARIANTS, type MatchedV9Invariant } from "@shared/data/safety-score-v9/matched-invariants-v1";
+import type { ExitRouteObservation } from "@shared/types/exit-route";
+import type { CompiledV9AssetInput, V9ScoringInput, V9StructuralSignal } from "@shared/types/safety-score-v9";
 import { computeEffectiveExitScoreDiagnostics } from "../redemption-backstop-scoring";
-import { resolveV9StructuralCaps, scoreV9Input } from "../safety-score-v9-research";
+import {
+  deriveV9ReserveLossSignal,
+  resolveV9StructuralCaps,
+  scoreCompiledAssetSet,
+  scoreV9Input,
+} from "../safety-score-v9-research";
 
-const AS_OF = 1_780_000_000;
-
-function route(overrides: Partial<ExitRouteObservation> = {}): ExitRouteObservation {
-  return {
-    routeId: "dex:strong",
-    routeFamily: "dex-amm",
-    scope: { kind: "protocol", protocol: "test", chain: "ethereum" },
-    requestedNotionalUsd: 1_000_000,
-    settlementHorizonSec: 300,
-    maxCostBps: 200,
-    executableUsd: 1_000_000,
-    completionRatio: 1,
-    output: { kind: "fiat", currency: "USD" },
-    evidenceKind: "measured-executable-depth",
-    confidence: "high",
-    scoreEligible: true,
-    observedAt: AS_OF,
-    freshnessSeconds: 0,
-    commonModeKeys: ["protocol:test"],
-    ...overrides,
-  };
-}
+const AS_OF_SEC = 1_780_000_000;
+const AS_OF = new Date(AS_OF_SEC * 1_000).toISOString();
 
 function scoringInput(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
   return {
@@ -46,113 +31,151 @@ function scoringInput(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
   };
 }
 
+function scoreSignals(structuralSignals: readonly V9StructuralSignal[], overrides: Partial<V9ScoringInput> = {}) {
+  return scoreV9Input(
+    scoringInput({
+      structuralSignals: [...structuralSignals],
+      structuralCaps: resolveV9StructuralCaps(structuralSignals),
+      ...overrides,
+    }),
+  );
+}
+
+function minimumCap(signals: readonly V9StructuralSignal[]): number {
+  return Math.min(...resolveV9StructuralCaps(signals).map((cap) => cap.limit), Number.POSITIVE_INFINITY);
+}
+
+function compiledInput(
+  assetId: string,
+  pillarScore: number,
+  parent: CompiledV9AssetInput["parent"] = null,
+): CompiledV9AssetInput {
+  const pillar = {
+    score: pillarScore,
+    evidenceLevel: "strong" as const,
+    evidence: [{ sourceId: `matched:${assetId}`, observedAt: AS_OF }],
+    unresolved: [],
+    signals: [],
+  };
+  return {
+    schemaVersion: 1,
+    assetId,
+    asOf: AS_OF,
+    compiledAt: AS_OF,
+    archetype: "fiat-cash",
+    pillars: { backing: pillar, exit: pillar, control: pillar },
+    peg: { applicable: false, score: null, activeDepegBps: null, evidence: [], unresolved: [] },
+    implementationLaunchDate: "2022-01-01",
+    trackRecordMonths: 48,
+    parent,
+    structuralSignals: [],
+    unresolved: [],
+    sourceTimestamps: { matched: AS_OF },
+  };
+}
+
+function executeInvariant(invariant: MatchedV9Invariant): void {
+  switch (invariant.kind) {
+    case "exit-routes": {
+      const evaluate = (routes: readonly ExitRouteObservation[]) => {
+        const dex = routes.filter((route) => route.routeFamily === "dex-amm" || route.routeFamily === "dex-orderbook");
+        const redemption = routes.filter(
+          (route) => route.routeFamily !== "dex-amm" && route.routeFamily !== "dex-orderbook",
+        );
+        return computeEffectiveExitScoreDiagnostics(90, redemption.length > 0 ? 90 : null, {
+          modeledExitSizeUsd: 1_000_000,
+          sameNotionalScoringMode: "active",
+          exitObservationAsOfSec: AS_OF_SEC,
+          dexExitObservationMaxAgeSec: 60,
+          liveRedemptionExitObservationMaxAgeSec: 60,
+          dexExitRouteObservations: dex,
+          redemptionExitRouteObservations: redemption,
+        });
+      };
+      const before = evaluate(invariant.before);
+      const after = evaluate(invariant.after);
+      expect(after.score, invariant.id).not.toBeNull();
+      expect(after.score!, invariant.id).toBeGreaterThanOrEqual(before.score ?? 0);
+      if (invariant.id === "redemption-present") expect(after.score!, invariant.id).toBeGreaterThan(before.score ?? 0);
+      return;
+    }
+    case "reserve-loss": {
+      const before = scoreSignals([deriveV9ReserveLossSignal(invariant.before)]);
+      const after = scoreSignals([deriveV9ReserveLossSignal(invariant.after)]);
+      expect(after.finalScore!, invariant.id).toBeLessThan(before.finalScore ?? 0);
+      expect(after.structuralSignals[0]?.materialSharePct, invariant.id).toBeGreaterThan(
+        before.structuralSignals[0]?.materialSharePct ?? 0,
+      );
+      return;
+    }
+    case "structural-signals": {
+      const before = minimumCap(invariant.before);
+      const after = minimumCap(invariant.after);
+      expect(after, invariant.id).toBeLessThan(before);
+      return;
+    }
+    case "scoring-facts": {
+      const score = (variant: (typeof invariant.variants)[keyof typeof invariant.variants]) =>
+        scoreSignals(variant.structuralSignals, { unresolved: [...variant.unresolved] });
+      const absent = score(invariant.variants.absent);
+      const strong = score(invariant.variants.strong);
+      const weak = score(invariant.variants.weak);
+      const unavailable = score(invariant.variants.unavailable);
+      expect(strong.finalScore, invariant.id).toBe(absent.finalScore);
+      expect(weak.finalScore!, invariant.id).toBeLessThan(strong.finalScore ?? 0);
+      expect(unavailable.finalGrade, invariant.id).toBe("NR");
+      return;
+    }
+    case "evidence-facts": {
+      const score = (variant: (typeof invariant.variants)[keyof typeof invariant.variants]) =>
+        scoreSignals(variant.structuralSignals, {
+          evidenceLevel: variant.evidenceLevel,
+          unresolved: [...variant.unresolved],
+        });
+      const complete = score(invariant.variants.complete);
+      const bounded = score(invariant.variants.boundedUnknown);
+      const noncritical = score(invariant.variants.noncriticalMissing);
+      const critical = score(invariant.variants.criticalMissing);
+      expect(complete.finalScore!, invariant.id).toBeGreaterThanOrEqual(bounded.finalScore ?? 0);
+      expect(bounded.finalScore!, invariant.id).toBeGreaterThanOrEqual(noncritical.finalScore ?? 0);
+      expect(noncritical.finalGrade, invariant.id).not.toBe("NR");
+      expect(critical.finalGrade, invariant.id).toBe("NR");
+      return;
+    }
+    case "parent-graph": {
+      const parent = compiledInput(invariant.parent.assetId, invariant.parent.pillarScore);
+      const child = compiledInput(invariant.child.assetId, invariant.child.pillarScore, {
+        assetId: invariant.parent.assetId,
+        required: true,
+        relationship: "wrapper",
+      });
+      const withParent = scoreCompiledAssetSet([child, parent]);
+      const parentTrace = withParent.traces.find((trace) => trace.assetId === invariant.parent.assetId)!;
+      const childTrace = withParent.traces.find((trace) => trace.assetId === invariant.child.assetId)!;
+      expect(withParent.evaluatedOrder, invariant.id).toEqual([invariant.parent.assetId, invariant.child.assetId]);
+      expect(childTrace.finalScore!, invariant.id).toBeLessThanOrEqual(parentTrace.finalScore ?? 0);
+      expect(childTrace.bindingCap, invariant.id).toMatchObject({ source: "parent", limit: parentTrace.finalScore });
+
+      const missingParent = scoreCompiledAssetSet([child]).traces[0]!;
+      expect(missingParent.finalGrade, invariant.id).toBe("NR");
+      expect(missingParent.nrReasons, invariant.id).toContainEqual(
+        expect.objectContaining({ code: "missing-parent-score" }),
+      );
+      return;
+    }
+  }
+}
+
 describe("separate matched v9 invariant corpus", () => {
-  it("keeps the transformation registry versioned and unique", () => {
+  it("keeps the transformation registry versioned, unique, and fully executable", () => {
     expect(MATCHED_V9_INVARIANTS).toHaveLength(8);
     expect(new Set(MATCHED_V9_INVARIANTS.map((entry) => entry.id)).size).toBe(8);
+    for (const invariant of MATCHED_V9_INVARIANTS) executeInvariant(invariant);
   });
 
-  it("rewards credible redemption at the same request and ignores a weak optional route", () => {
-    const redemption = route({
-      routeId: "redeem:issuer",
-      routeFamily: "issuer-redemption",
-      scope: { kind: "issuer", issuerId: "issuer" },
-      evidenceKind: "documented-terms",
-      commonModeKeys: ["issuer:test"],
-    });
-    const thinDex = route({ executableUsd: 200_000, completionRatio: 0.2 });
-    const weakOptional = { ...redemption, routeId: "redeem:weak", executableUsd: 50_000, completionRatio: 0.05 };
-    const shared = {
-      modeledExitSizeUsd: 1_000_000,
-      sameNotionalScoringMode: "active" as const,
-      exitObservationAsOfSec: AS_OF,
-      dexExitObservationMaxAgeSec: 60,
-      liveRedemptionExitObservationMaxAgeSec: 60,
-    };
-    const thinOnly = computeEffectiveExitScoreDiagnostics(80, null, {
-      ...shared,
-      dexExitRouteObservations: [thinDex],
-    });
-    const withRedemption = computeEffectiveExitScoreDiagnostics(80, 90, {
-      ...shared,
-      dexExitRouteObservations: [thinDex],
-      redemptionExitRouteObservations: [redemption],
-    });
-    const strongOnly = computeEffectiveExitScoreDiagnostics(90, null, {
-      ...shared,
-      dexExitRouteObservations: [route()],
-    });
-    const withWeak = computeEffectiveExitScoreDiagnostics(90, 90, {
-      ...shared,
-      dexExitRouteObservations: [route()],
-      redemptionExitRouteObservations: [weakOptional],
-    });
-    expect(withRedemption.score).toBeGreaterThan(thinOnly.score ?? 0);
-    expect(withWeak.score).toBeGreaterThanOrEqual(strongOnly.score ?? 0);
-  });
-
-  it("orders reserve and bridge materiality without named-asset thresholds", () => {
-    const moderate = scoreV9Input(
-      scoringInput({ structuralCaps: [{ kind: "reserve:moderate", limit: 74, reason: "Moderate loss." }] }),
-    );
-    const material = scoreV9Input(
-      scoringInput({ structuralCaps: [{ kind: "reserve:material", limit: 49, reason: "Material loss." }] }),
-    );
-    const peripheralCaps = resolveV9StructuralCaps([
-      {
-        kind: "material-bridge",
-        severity: "high",
-        reason: "Peripheral route.",
-        materialSharePct: 2,
-        failureDomainKeys: ["bridge:test"],
-        evidence: [],
-      },
-    ]);
-    const materialCaps = resolveV9StructuralCaps([
-      {
-        kind: "material-bridge",
-        severity: "high",
-        reason: "Material route.",
-        materialSharePct: 30,
-        failureDomainKeys: ["bridge:test"],
-        evidence: [],
-      },
-    ]);
-    expect(material.finalScore).toBeLessThan(moderate.finalScore ?? 0);
-    expect(peripheralCaps).toEqual([]);
-    expect(materialCaps).toContainEqual(expect.objectContaining({ limit: 59 }));
-  });
-
-  it("makes unavailable dependencies and critical evidence reason-coded NR", () => {
-    const weak = scoreV9Input(
-      scoringInput({ structuralCaps: [{ kind: "dependency:weak", limit: 64, reason: "Weak dependency." }] }),
-    );
-    const unavailable = scoreV9Input(
-      scoringInput({
-        unresolved: [{ code: "dependency-unavailable", reason: "Required parent unavailable.", critical: true }],
-      }),
-    );
-    const bounded = scoreV9Input(
-      scoringInput({
-        unresolved: [{ code: "bounded-gap", reason: "Bounded noncritical gap.", critical: false }],
-        evidenceLevel: "limited",
-      }),
-    );
-    expect(weak.finalScore).toBe(64);
-    expect(unavailable.finalGrade).toBe("NR");
-    expect(bounded.finalGrade).not.toBe("NR");
-  });
-
-  it("penalizes a shared weak oracle domain below an isolated weak branch", () => {
-    const branch = (reason: string) => ({
-      kind: "weak-oracle-branch" as const,
-      severity: "high" as const,
-      reason,
-      failureDomainKeys: ["oracle:shared"],
-      evidence: [],
-    });
-    const isolated = resolveV9StructuralCaps([branch("One branch.")]);
-    const common = resolveV9StructuralCaps([branch("First branch."), branch("Second branch.")]);
-    expect(Math.min(...common.map((cap) => cap.limit))).toBeLessThan(Math.min(...isolated.map((cap) => cap.limit)));
+  it("validates reserve-loss fact percentages before deriving a signal", () => {
+    expect(() =>
+      deriveV9ReserveLossSignal({ exposurePct: 101, lossAbsorptionPct: 0, failureDomainKey: "reserve:test" }),
+    ).toThrow("exposurePct must be a finite percentage between 0 and 100");
   });
 });

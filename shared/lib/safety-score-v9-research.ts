@@ -105,14 +105,7 @@ const PROVISIONAL_V9_RESEARCH_CONFIG = {
     { grade: "D", minScore: 40 },
     { grade: "F", minScore: 0 },
   ],
-  capTiePriority: [
-    "active-depeg",
-    "structural",
-    "parent",
-    "evidence",
-    "track-record",
-    "bounded-compensability",
-  ],
+  capTiePriority: ["active-depeg", "structural", "parent", "evidence", "track-record", "bounded-compensability"],
   scoreDecimals: 0,
 } as const satisfies V9ScoringConfig;
 
@@ -203,6 +196,43 @@ function signalLimit(signal: V9StructuralSignal): number | null {
     case "peripheral-bridge":
       return null;
   }
+}
+
+export interface V9ReserveLossFacts {
+  exposurePct: number;
+  lossAbsorptionPct: number;
+  failureDomainKey: string;
+}
+
+/** Convert reserve exposure and loss absorption facts into a cap-free structural signal. */
+export function deriveV9ReserveLossSignal(facts: V9ReserveLossFacts): V9StructuralSignal {
+  for (const [field, value] of [
+    ["exposurePct", facts.exposurePct],
+    ["lossAbsorptionPct", facts.lossAbsorptionPct],
+  ] as const) {
+    if (!Number.isFinite(value) || value < 0 || value > 100) {
+      throw new Error(`${field} must be a finite percentage between 0 and 100`);
+    }
+  }
+  if (facts.failureDomainKey.length === 0) throw new Error("failureDomainKey is required");
+
+  const unabsorbedExposurePct = facts.exposurePct * (1 - facts.lossAbsorptionPct / 100);
+  const severity =
+    unabsorbedExposurePct >= 25
+      ? "critical"
+      : unabsorbedExposurePct >= 10
+        ? "high"
+        : unabsorbedExposurePct >= 5
+          ? "moderate"
+          : "low";
+  return {
+    kind: "unsafe-backing",
+    severity,
+    reason: `${facts.exposurePct}% reserve exposure has ${facts.lossAbsorptionPct}% loss absorption, leaving ${roundTo(unabsorbedExposurePct, 4)}% unabsorbed.`,
+    materialSharePct: roundTo(unabsorbedExposurePct, 4),
+    failureDomainKeys: [facts.failureDomainKey],
+    evidence: [],
+  };
 }
 
 /** Resolve fact-shaped structural signals to provisional methodology ceilings. */
