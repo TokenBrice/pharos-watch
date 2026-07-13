@@ -6,6 +6,7 @@ import {
 } from "@shared/types/market";
 import { classifyLiquidityEvidence } from "@shared/lib/dex-liquidity-evidence";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { parseJsonObject } from "./json-parse";
 
 interface DexLiquidityRow {
   stablecoin_id: string;
@@ -97,18 +98,14 @@ function parseCoverageConfidence(value: number | null, stablecoinId: string): nu
 function parseExitRouteDetails(
   json: string | null,
 ): Pick<DexLiquiditySnapshot, "exitRouteObservations" | "exitRouteObservationCoverage"> {
-  if (json == null) return {};
-  try {
-    const raw = JSON.parse(json) as Record<string, unknown>;
-    const observations = ExitRouteObservationSchema.array().safeParse(raw.exitRouteObservations);
-    const coverage = ExitRouteObservationCoverageSchema.safeParse(raw.exitRouteObservationCoverage);
-    return {
-      ...(observations.success ? { exitRouteObservations: observations.data } : {}),
-      ...(coverage.success ? { exitRouteObservationCoverage: coverage.data } : {}),
-    };
-  } catch {
-    return {};
-  }
+  const raw = parseJsonObject(json);
+  if (raw == null) return {};
+  const observations = ExitRouteObservationSchema.array().safeParse(raw.exitRouteObservations);
+  const coverage = ExitRouteObservationCoverageSchema.safeParse(raw.exitRouteObservationCoverage);
+  return {
+    ...(observations.success ? { exitRouteObservations: observations.data } : {}),
+    ...(coverage.success ? { exitRouteObservationCoverage: coverage.data } : {}),
+  };
 }
 
 export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiquidityLoadResult> {

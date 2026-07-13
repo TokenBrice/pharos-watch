@@ -21,6 +21,7 @@ import type { ReserveSlice } from "@shared/types/core";
 import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { LiveReserveSnapshotProvenance } from "./live-reserves-store";
+import { parseJsonObject } from "./json-parse";
 
 export class ReportCardsSnapshotUnavailableError extends Error {
   constructor(message: string) {
@@ -111,20 +112,15 @@ function addFiniteSupply(current: number, value: unknown): number {
 }
 
 function parseChainTvl(value: string | null): Map<string, number> {
-  if (!value) return new Map();
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return new Map();
-    const result = new Map<string, number>();
-    for (const [chain, rawTvl] of Object.entries(parsed as Record<string, unknown>)) {
-      if (typeof rawTvl !== "number" || !Number.isFinite(rawTvl) || rawTvl < 0) continue;
-      const canonical = canonicalChain(chain);
-      result.set(canonical, (result.get(canonical) ?? 0) + rawTvl);
-    }
-    return result;
-  } catch {
-    return new Map();
+  const parsed = parseJsonObject(value);
+  if (parsed == null) return new Map();
+  const result = new Map<string, number>();
+  for (const [chain, rawTvl] of Object.entries(parsed)) {
+    if (typeof rawTvl !== "number" || !Number.isFinite(rawTvl) || rawTvl < 0) continue;
+    const canonical = canonicalChain(chain);
+    result.set(canonical, (result.get(canonical) ?? 0) + rawTvl);
   }
+  return result;
 }
 
 function isDeploymentOutcome(value: string | null): value is DeploymentOutcome {
