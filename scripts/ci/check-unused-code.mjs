@@ -93,6 +93,8 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/redemption-backstop-scoring.ts::REDEMPTION_EXECUTION_LABELS",
   // Consumed by the report-card calibration CLI outside this runtime-only scan.
   "shared/lib/redemption-backstop-scoring.ts::isExitRouteObservationScoreEligible",
+  // Consumed by the P4 activation calibration CLI outside this runtime-only scan.
+  "shared/lib/p4-exit-route-capacity.ts::P4_GENERAL_ACTIVATION_POLICY_V1",
   // Consumed by the v9 readiness CLI outside this runtime-only scan.
   "shared/lib/safety-score-v9-compiler.ts::assertExactReportCardIds",
   // Consumed by scripts/lib/redemption-backstop-validation.ts (out-of-scan-scope).
