@@ -119,20 +119,74 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "U is issuer-operated; Ethereum/BSC token ownership resolves to a 2/4 Safe that controls mint/admin authority.",
+    "summary": "U is issuer-operated on Ethereum, BSC, and Tron. Ethereum/BSC use chain-local instances of the same 2/4 Safe; Tron uses a native 2/4 account permission. Those authorities directly control token minting, AutoOwner mint endpoints, and all mint-critical upgrades without a timelock.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0xce24439f2d9c6a2289f741120fe202248b666666",
+        "TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ",
+        "0x2e3cd2716c220262f7f291e0c766a41e3d047853",
+        "0x80dc47f89ae47be80702d4851b5bde096f01aca8",
+        "TFY9CnbkkbG6mNMCCBX291bZjxdNYXSusD"
+      ],
+      "implementationAddresses": [
+        "0xbef21313c69c009fd7d9510a8d3a481a32473dfc",
+        "TQfL8Ria4VPmXDstVyd7mCXofZA6Kn2PAN",
+        "0x49ab84e050b614af131c18c2be41379a8e77e568",
+        "0x2e3cd2716c220262f7f291e0c766a41e3d047853",
+        "TLSKSUTDjXn8wwkzgY8ZWnQXwvnYpAZmNm"
+      ],
+      "adminAddresses": [
+        "0x36124fa57e049846e9dc181c8caa31a3c5da4e9c",
+        "0x59f94ade4f881f21ea608ad4448bf70b78e37187",
+        "TLpkFF4FSkxYhLYteoFmBUcabSkNJiy6V7",
+        "TCbJRUNYD2tJEwP9wo41whF3DCrZaXgg6A"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "U issuer upgrade authorities - EVM Safe and TRON native multisig",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Ethereum U token and implementation",
+          "url": "https://eth.blockscout.com/address/0xce24439f2d9c6a2289f741120fe202248b666666?tab=contract"
+        },
+        {
+          "label": "Ethereum U token implementation",
+          "url": "https://eth.blockscout.com/address/0xbef21313c69c009fd7d9510a8d3a481a32473dfc?tab=contract"
+        },
+        {
+          "label": "Ethereum U AutoOwner implementation",
+          "url": "https://eth.blockscout.com/address/0x49ab84e050b614af131c18c2be41379a8e77e568?tab=contract"
+        },
+        {
+          "label": "BSC U token",
+          "url": "https://bscscan.com/address/0xce24439f2d9c6a2289f741120fe202248b666666#code"
+        },
+        {
+          "label": "Tron U token proxy",
+          "url": "https://tronscan.org/#/contract/TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ/code"
+        },
+        {
+          "label": "United Stables terms",
+          "url": "https://u.tech/terms/"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x59F94AdE4F881f21ea608AD4448bf70B78e37187",
-        "label": "U token owner Safe",
+        "label": "U Ethereum token owner Safe",
         "role": "direct-minter",
         "authorityType": "safe",
         "directMintAbility": "direct",
         "threshold": 2,
         "signerCount": 4,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "version": "1.4.1",
           "threshold": 2,
           "owners": [
             "0x7A24b3449c8241cbA2129AA97b965200F67FC51A",
@@ -142,10 +196,15 @@
           ],
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "observedBlock": 25294518,
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25526649,
+          "observedAt": "2026-07-13",
           "source": "safe-api"
         },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526649,
         "sources": [
           {
             "label": "U website",
@@ -160,7 +219,177 @@
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x59F94AdE4F881f21ea608AD4448bf70B78e37187/"
           }
         ],
-        "evidence": "Phase 0c Safe verification refreshed current state: 2/4 owners, no enabled modules, zero guard, fallback handler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, observed against Ethereum block 25294518."
+        "evidence": "At Ethereum block 25526649, token owner() and the EVM token ProxyAdmin owner() resolved to this Safe. Safe state was 2/4 with no enabled modules, zero guard and module guard, standard fallback handler, and Safe 1.4.1 master copy. The token owner has unrestricted mint and can change AutoOwner mint limits."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x59f94ade4f881f21ea608ad4448bf70b78e37187",
+        "label": "U BSC token owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1+L2",
+          "threshold": 2,
+          "owners": [
+            "0x7A24b3449c8241cbA2129AA97b965200F67FC51A",
+            "0x42fA2acc689A90D94F807C58b3476788e3605d0f",
+            "0x7D155808c369bD1666D84c512aD98dCFc7399bFD",
+            "0xEFcB5d32dd52Cc58dEF9034c4359db09bE9361cA"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "observedBlock": 109826831,
+          "observedAt": "2026-07-13",
+          "source": "safe-api"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 109826831,
+        "sources": [
+          {
+            "label": "BSC U token",
+            "url": "https://bscscan.com/address/0xce24439f2d9c6a2289f741120fe202248b666666#code"
+          },
+          {
+            "label": "BNB Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/bnb/api/v1/safes/0x59F94AdE4F881f21ea608AD4448bf70B78e37187/"
+          }
+        ],
+        "evidence": "At BSC block 109826831, token owner() and the EVM token ProxyAdmin owner() resolved to this chain-local Safe. Safe state was 2/4 with no enabled modules, zero guard and module guard, standard fallback handler, and Safe 1.4.1+L2 master copy. The token owner has unrestricted mint and can change AutoOwner mint limits."
+      },
+      {
+        "chain": "tron",
+        "address": "TCbJRUNYD2tJEwP9wo41whF3DCrZaXgg6A",
+        "label": "U Tron token owner native multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 84437097,
+        "sources": [
+          {
+            "label": "Tron U token proxy",
+            "url": "https://tronscan.org/#/contract/TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ/code"
+          },
+          {
+            "label": "Tron U owner account permissions",
+            "url": "https://tronscan.org/#/address/TCbJRUNYD2tJEwP9wo41whF3DCrZaXgg6A/permissions"
+          }
+        ],
+        "evidence": "At Tron solidity block 84437097, token owner() and ProxyAdmin owner() resolved to this account. Its owner and active permissions both required weight 2 from four weight-1 keys: TCbJRU..., TJdSR5..., TWb8df..., and TJ2s3e.... The owner has unrestricted mint and can change AutoOwner mint limits."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2e3cd2716c220262f7f291e0c766a41e3d047853",
+        "label": "U Ethereum AutoOwner mint endpoint",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "capDescription": "20,000,000 U per call with no cumulative or time-window cap.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Ethereum U AutoOwner proxy",
+            "url": "https://eth.blockscout.com/address/0x2e3cd2716c220262f7f291e0c766a41e3d047853?tab=contract"
+          },
+          {
+            "label": "Ethereum U AutoOwner implementation",
+            "url": "https://eth.blockscout.com/address/0x49ab84e050b614af131c18c2be41379a8e77e568?tab=contract"
+          }
+        ],
+        "evidence": "The verified AutoOwner can call the token mint path for whitelisted operators. Its 20,000,000 U limit applies per call, with no cumulative or time-window bound, so repeated authorized calls remain economically unbounded; the reviewed 2/4 Safe controls configuration and upgrades."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x80dc47f89ae47be80702d4851b5bde096f01aca8",
+        "label": "U BSC AutoOwner mint endpoint",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "capDescription": "20,000,000 U per call with no cumulative or time-window cap.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "BSC U AutoOwner proxy",
+            "url": "https://bscscan.com/address/0x80dc47f89ae47be80702d4851b5bde096f01aca8#code"
+          },
+          {
+            "label": "BSC U token",
+            "url": "https://bscscan.com/address/0xce24439f2d9c6a2289f741120fe202248b666666#code"
+          }
+        ],
+        "evidence": "The verified AutoOwner can call the token mint path for whitelisted operators. Its 20,000,000 U limit applies per call, with no cumulative or time-window bound, so repeated authorized calls remain economically unbounded; the reviewed 2/4 Safe controls configuration and upgrades."
+      },
+      {
+        "chain": "tron",
+        "address": "TFY9CnbkkbG6mNMCCBX291bZjxdNYXSusD",
+        "label": "U Tron AutoOwner mint endpoint",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "capDescription": "20,000,000 U per call with no cumulative or time-window cap; current operator whitelist is empty.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 84437097,
+        "sources": [
+          {
+            "label": "Tron U AutoOwner proxy",
+            "url": "https://tronscan.org/#/contract/TFY9CnbkkbG6mNMCCBX291bZjxdNYXSusD/code"
+          },
+          {
+            "label": "Tron U token proxy",
+            "url": "https://tronscan.org/#/contract/TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ/code"
+          }
+        ],
+        "evidence": "The AutoOwner owns a mint endpoint with a 20,000,000 U per-call limit and no cumulative or time-window bound. Its operator whitelist was empty at the observation block, so the path was dormant, but the reviewed 2/4 owner can authorize operators and upgrade the implementation immediately."
+      },
+      {
+        "label": "U issuer upgrade authorities - EVM Safe and TRON native multisig",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 2,
+        "signerCount": 4,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "ethereum:0x59f94ade4f881f21ea608ad4448bf70b78e37187",
+          "bsc:0x59f94ade4f881f21ea608ad4448bf70b78e37187",
+          "tron:TCbJRUNYD2tJEwP9wo41whF3DCrZaXgg6A"
+        ],
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Ethereum U token implementation",
+            "url": "https://eth.blockscout.com/address/0xbef21313c69c009fd7d9510a8d3a481a32473dfc?tab=contract"
+          },
+          {
+            "label": "Ethereum Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x59F94AdE4F881f21ea608AD4448bf70B78e37187/"
+          },
+          {
+            "label": "BNB Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/bnb/api/v1/safes/0x59F94AdE4F881f21ea608AD4448bf70B78e37187/"
+          },
+          {
+            "label": "Tron U ProxyAdmin",
+            "url": "https://tronscan.org/#/contract/TLpkFF4FSkxYhLYteoFmBUcabSkNJiy6V7/code"
+          }
+        ],
+        "evidence": "Ethereum and BSC token ProxyAdmins are immediately owned by chain-local instances of the same 2/4 Safe. Tron token ProxyAdmin and AutoOwner upgrade authority are immediately controlled by the native 2/4 account. No deployment enforces a timelock; the failure-domain keys preserve the three independent chain-local authorities."
       }
     ],
     "review": {
@@ -172,11 +401,23 @@
         {
           "label": "Safe Transaction Service",
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x59F94AdE4F881f21ea608AD4448bf70B78e37187/"
+        },
+        {
+          "label": "BNB Safe Transaction Service",
+          "url": "https://api.safe.global/tx-service/bnb/api/v1/safes/0x59F94AdE4F881f21ea608AD4448bf70B78e37187/"
+        },
+        {
+          "label": "Ethereum U token implementation",
+          "url": "https://eth.blockscout.com/address/0xbef21313c69c009fd7d9510a8d3a481a32473dfc?tab=contract"
+        },
+        {
+          "label": "Tron U token proxy",
+          "url": "https://tronscan.org/#/contract/TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ/code"
         }
       ],
-      "evidence": "United Stables presents U as issuer-operated, and token owner reads identify a 2/4 Safe as the on-chain mint/admin owner path. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294518.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Deployment-wide review covered Ethereum, BSC, and Tron token proxies plus their AutoOwner mint endpoints. Ethereum and BSC use chain-local 2/4 Safe instances with identical signers; Tron uses a native 2/4 account permission. The owner paths can mint directly, change AutoOwner limits, and immediately administer the mixed transparent/UUPS upgrade surfaces. AutoOwner's 20,000,000 U limit is per call without a cumulative or time-window bound. Current Safe/API, explorer source, storage, owner, permission, and whitelist reads were pinned on 2026-07-13.",
+      "reviewer": "Codex Safety Score V9 data research",
+      "reviewedAt": "2026-07-13"
     }
   },
   "deploymentModel": "native-multichain",
@@ -238,10 +479,10 @@
   "launchDate": "2025-12-17",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "U is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "U is natively issued on Ethereum, BSC, and Tron. Each deployment has its own issuer-controlled token and mint authority rather than a third-party bridge representation.",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
@@ -266,46 +507,76 @@
         "id": "bsc:0xce24439f2d9c6a2289f741120fe202248b666666",
         "destinationChain": "bsc",
         "contractAddress": "0xce24439f2d9c6a2289f741120fe202248b666666",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "United Stables",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-13",
+        "observedBlock": 109826831,
+        "sources": [
+          {
+            "label": "United Stables BNB launch",
+            "url": "https://www.bnbchain.org/en/blog/united-stables-launches-u-as-a-native-stablecoin-on-bnb-chain"
+          },
+          {
+            "label": "BSC U token",
+            "url": "https://bscscan.com/address/0xce24439f2d9c6a2289f741120fe202248b666666#code"
+          }
+        ]
       },
       {
         "id": "ethereum:0xce24439f2d9c6a2289f741120fe202248b666666",
         "destinationChain": "ethereum",
         "contractAddress": "0xce24439f2d9c6a2289f741120fe202248b666666",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "United Stables",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526649,
+        "sources": [
+          {
+            "label": "United Stables",
+            "url": "https://u.tech/"
+          },
+          {
+            "label": "Ethereum U token",
+            "url": "https://eth.blockscout.com/address/0xce24439f2d9c6a2289f741120fe202248b666666?tab=contract"
+          }
+        ]
       },
       {
         "id": "tron:TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ",
         "destinationChain": "tron",
         "contractAddress": "TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "United Stables",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-13",
+        "observedBlock": 84437097,
+        "sources": [
+          {
+            "label": "United Stables",
+            "url": "https://u.tech/"
+          },
+          {
+            "label": "Tron U token proxy",
+            "url": "https://tronscan.org/#/contract/TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ/code"
+          }
+        ]
       }
     ]
   }
