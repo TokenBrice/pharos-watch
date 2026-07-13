@@ -69,6 +69,22 @@ type RpcLogTarget = {
   scanWindowBlocks: number | null;
 };
 
+function getRpcLogCandidates(
+  chainId: string,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Array<{ url: string; alchemyPrimary: boolean }> {
+  if (!chainRpcs) return [];
+  const rpc = getChainRpc(chainRpcs, chainId);
+  if (!rpc || rpc.type !== "evm") return [];
+  return [
+    { url: rpc.rpcUrl, alchemyPrimary: rpc.alchemyPrimary === true },
+    { url: rpc.fallbackRpcUrl, alchemyPrimary: false },
+  ].filter(
+    (target): target is { url: string; alchemyPrimary: boolean } =>
+      typeof target.url === "string" && target.url.length > 0,
+  );
+}
+
 export interface FetchEvmEventsIncrementalResult {
   rows: BlacklistRow[];
   maxBlock: number;
@@ -275,20 +291,11 @@ export async function resolveRpcLogTarget(
   runBudget: Pick<BlacklistRunBudget, "subrequestBudget">,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  excludedUrls: ReadonlySet<string> = new Set(),
 ): Promise<RpcLogTarget | null> {
-  if (!chainRpcs) return null;
-  const rpc = getChainRpc(chainRpcs, chainId);
-  if (!rpc || rpc.type !== "evm") return null;
-
-  const rpcTargets = [
-    { url: rpc.rpcUrl, alchemyPrimary: rpc.alchemyPrimary === true },
-    { url: rpc.fallbackRpcUrl, alchemyPrimary: false },
-  ].filter(
-    (target): target is { url: string; alchemyPrimary: boolean } =>
-      typeof target.url === "string" && target.url.length > 0,
-  );
-
-  for (const target of rpcTargets) {
+  for (const target of getRpcLogCandidates(chainId, chainRpcs)) {
+    throwIfAborted(signal);
+    if (excludedUrls.has(target.url)) continue;
     const chainHead = await getAlchemyBlockNumber(target.url, runBudget.subrequestBudget, signal);
     if (chainHead != null) {
       const chainWindow = RPC_LOG_SCAN_WINDOWS[chainId];
@@ -438,7 +445,7 @@ export async function fetchEvmEventsIncremental(
     }
 
     if (!fetched) {
-      const rpcTarget = await getRpcTarget();
+      let rpcTarget = await getRpcTarget();
       if (rpcTarget) {
         chainHead = rpcTarget.chainHead;
         safeHead = getEvmSafeHead(evmChainId, rpcTarget.chainHead);
@@ -448,7 +455,7 @@ export async function fetchEvmEventsIncremental(
             ? Math.min(safeHead, fromBlock + rpcTarget.scanWindowBlocks - 1)
             : safeHead;
 
-        const fetchedLogs =
+        let fetchedLogs =
           fromBlock > scanToBlock
             ? { logs: [], complete: true, scannedToBlock: scanToBlock, calls: 0, maxDepth: 0 }
             : await fetchAlchemyLogs(
@@ -461,6 +468,57 @@ export async function fetchEvmEventsIncremental(
                 signal,
                 { deadlineMs: runBudget.deadlineMs },
               );
+
+        if (
+          fetchedLogs
+          && !fetchedLogs.complete
+          && fetchedLogs.scannedToBlock < fromBlock
+          && fromBlock <= scanToBlock
+        ) {
+          const primaryFailureReason = fetchedLogs.failureReason ?? "no-coverage";
+          const fallbackTarget = await resolveRpcLogTarget(
+            config.chain.chainId,
+            runBudget,
+            signal,
+            chainRpcs,
+            new Set([rpcTarget.rpcUrl]),
+          );
+          if (fallbackTarget) {
+            if (failureSamples.length < 4) {
+              failureSamples.push(`primary-failover:${primaryFailureReason}`.slice(0, 120));
+            }
+            const fallbackSafeHead = getEvmSafeHead(evmChainId, fallbackTarget.chainHead);
+            const fallbackScanToBlock = fallbackTarget.scanWindowBlocks != null
+              ? Math.min(fallbackSafeHead, fromBlock + fallbackTarget.scanWindowBlocks - 1)
+              : fallbackSafeHead;
+            const fallbackLogs = fromBlock > fallbackScanToBlock
+              ? { logs: [], complete: true, scannedToBlock: fallbackScanToBlock, calls: 0, maxDepth: 0 }
+              : await fetchAlchemyLogs(
+                  fallbackTarget.rpcUrl,
+                  config.contractAddress,
+                  [{ index: 0, value: rpcTopicHashes.length === 1 ? topicHash : rpcTopicHashes }],
+                  fromBlock,
+                  fallbackScanToBlock,
+                  runBudget.subrequestBudget,
+                  signal,
+                  { deadlineMs: runBudget.deadlineMs },
+                );
+            if (fallbackLogs && fallbackLogs.scannedToBlock > fetchedLogs.scannedToBlock) {
+              providerCalls += fetchedLogs.calls;
+              maxSplitDepth = Math.max(maxSplitDepth, fetchedLogs.maxDepth);
+              rpcTarget = fallbackTarget;
+              chainHead = fallbackTarget.chainHead;
+              safeHead = fallbackSafeHead;
+              fetchedLogs = fallbackLogs;
+            } else if (fallbackLogs) {
+              providerCalls += fallbackLogs.calls;
+              maxSplitDepth = Math.max(maxSplitDepth, fallbackLogs.maxDepth);
+              if (fallbackLogs.failureReason && failureSamples.length < 4) {
+                failureSamples.push(`fallback:${fallbackLogs.failureReason}`.slice(0, 120));
+              }
+            }
+          }
+        }
 
         if (fetchedLogs) {
           providerCalls += fetchedLogs.calls;

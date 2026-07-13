@@ -1,6 +1,14 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.9972` plus methodology-neutral ingestion hardening (2026-02-09 -> 2026-07-10).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.9972` plus methodology-neutral ingestion hardening (2026-02-09 -> 2026-07-13).
+
+---
+
+## Operational provider failover hardening (2026-07-13, methodology unchanged)
+
+- **Zero-frontier RPC failover** - when the primary RPC cannot prove coverage for even the first requested block, the blacklist scanner retries the same bounded range through the configured secondary RPC before pinning the cursor and degrading the run.
+- **Conservative partial handling** - a primary provider that proves a partial contiguous frontier remains authoritative for that prefix; failover is reserved for zero-coverage failures so overlapping provider results cannot advance the cursor ambiguously.
+- **Visible recovery evidence** - per-config telemetry preserves the primary failure class and counts both providers' calls even when the secondary proves complete coverage.
 
 ---
 

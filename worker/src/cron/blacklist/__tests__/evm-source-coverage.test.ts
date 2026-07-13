@@ -315,6 +315,62 @@ describe("EVM blacklist contiguous coverage", () => {
     expect(result).toMatchObject({ coverageOutcome: "quiet", usedRpcLogs: true });
   });
 
+  it("fails over to the secondary RPC when the primary proves zero log coverage", async () => {
+    const config = makeConfig("base");
+    const chainRpcs = new Map<string, ChainRpcConfig>();
+    chainRpcs.set("base", {
+      chainId: "base",
+      chainName: "Base",
+      type: "evm",
+      rpcUrl: "https://primary.example",
+      fallbackRpcUrl: "https://fallback.example",
+      alchemyPrimary: true,
+      explorerUrl: "https://basescan.org",
+    });
+    vi.mocked(getChainRpc).mockReturnValue(chainRpcs.get("base"));
+    vi.mocked(getAlchemyBlockNumber).mockResolvedValue(1_000);
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: false,
+        scannedToBlock: 99,
+        calls: 9,
+        maxDepth: 8,
+        failureReason: "split-limit",
+      })
+      .mockImplementationOnce(async (_url, _address, _topics, _from, toBlock) => ({
+        logs: [],
+        complete: true,
+        scannedToBlock: toBlock,
+        calls: 1,
+        maxDepth: 0,
+      }));
+
+    const result = await fetchEvmEventsIncremental(
+      mockD1(),
+      config,
+      null,
+      100,
+      new Map(),
+      makeBudget(),
+      limiter,
+      undefined,
+      chainRpcs,
+    );
+
+    expect(vi.mocked(fetchAlchemyLogs).mock.calls.map((call) => call[0])).toEqual([
+      "https://primary.example",
+      "https://fallback.example",
+    ]);
+    expect(result).toMatchObject({
+      coverageOutcome: "quiet",
+      usedRpcLogs: true,
+      providerCalls: 10,
+      maxSplitDepth: 8,
+      failureSamples: ["primary-failover:split-limit"],
+    });
+  });
+
   it("honors an already-aborted run before opening a provider request", async () => {
     const controller = new AbortController();
     controller.abort(new Error("lease lost"));
