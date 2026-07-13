@@ -1,18 +1,12 @@
 /**
- * score.upgraded / score.downgraded projectors. Source: `safety_grade_history`
- * (explicit transition table — rows are written ONLY on grade change).
+ * score.upgraded / score.downgraded projectors. Sources: the version-aware
+ * Safety Score history plus legacy rows that have not been dual-written.
+ * Methodology-boundary baselines are never projected as organic movements.
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import {
-  buildTapeEventId,
-  deriveIssuerId,
-  gradeRank,
-  severityForScoreDowngrade,
-} from "../tape-event-helpers";
-import {
-  insertTapeEvents,
-  setProjectorWatermark,
-} from "../tape-event-store";
+import { SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL } from "../safety-score-history-v2";
+import { buildTapeEventId, deriveIssuerId, gradeRank, severityForScoreDowngrade } from "../tape-event-helpers";
+import { insertTapeEvents, setProjectorWatermark } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
   fetchRowsWithTieExpansion,
@@ -29,7 +23,10 @@ interface SafetyGradeSourceRow {
   prev_grade: string | null;
   prev_score: number | null;
   methodology_version: string;
-  rowid: number;
+  transition_kind: "organic-grade-change";
+  source_table: "safety_grade_history" | "safety_score_history_v2";
+  source_row_id: string;
+  row_sort_id: string;
 }
 
 function coinSourceUrl(coinId: string): string {
@@ -44,11 +41,12 @@ async function fetchGradeRowsSince(
 ): Promise<SafetyGradeSourceRow[]> {
   return fetchRowsWithTieExpansion<SafetyGradeSourceRow>(db, {
     selectSql: `SELECT stablecoin_id, recorded_at, grade, score, prev_grade, prev_score,
-                      methodology_version, rowid as rowid`,
-    fromSql: "safety_grade_history",
+                      methodology_version, transition_kind, source_table, source_row_id,
+                      row_sort_id`,
+    fromSql: SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL,
     timePredicatePrefix: "prev_grade IS NOT NULL AND ",
     timeColumn: "recorded_at",
-    orderBySql: "recorded_at ASC, rowid ASC",
+    orderBySql: "recorded_at ASC, row_sort_id ASC",
     since,
     until,
     limit,
@@ -71,6 +69,7 @@ async function projectScoreByVariant(
   let maxCursor = since;
   for (const row of rows) {
     if (row.recorded_at > maxCursor) maxCursor = row.recorded_at;
+    if (row.transition_kind !== "organic-grade-change") continue;
     if (!row.prev_grade) continue;
     const prevRank = gradeRank(row.prev_grade);
     const newRank = gradeRank(row.grade);
@@ -81,17 +80,15 @@ async function projectScoreByVariant(
 
     const tsMs = row.recorded_at * 1000;
     const type = variant === "upgraded" ? "score.upgraded" : "score.downgraded";
-    const severity = variant === "upgraded"
-      ? "info" as const
-      : severityForScoreDowngrade(row.prev_grade, row.grade);
+    const severity = variant === "upgraded" ? ("info" as const) : severityForScoreDowngrade(row.prev_grade, row.grade);
     const transition = "updated";
-    const sourceRowId = `${row.stablecoin_id}:${row.recorded_at}`;
+    const sourceRowId = row.source_row_id;
 
     events.push({
       eventId: buildTapeEventId({
         tsMs,
         type,
-        sourceTable: "safety_grade_history",
+        sourceTable: row.source_table,
         sourceRowId,
         transition,
       }),
@@ -111,7 +108,7 @@ async function projectScoreByVariant(
         prevScore: row.prev_score,
         newScore: row.score,
       },
-      sourceTable: "safety_grade_history",
+      sourceTable: row.source_table,
       sourceRowId,
       transition,
       sourceUrl: coinSourceUrl(row.stablecoin_id),

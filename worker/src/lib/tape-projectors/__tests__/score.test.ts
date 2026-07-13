@@ -14,7 +14,10 @@ function gradeRow(overrides: Record<string, unknown> = {}): Record<string, unkno
     prev_grade: "B",
     prev_score: 75,
     methodology_version: "8.11",
-    rowid: 1,
+    transition_kind: "organic-grade-change",
+    source_table: "safety_grade_history",
+    source_row_id: `usdt-tether:${SEC}`,
+    row_sort_id: `legacy:usdt-tether:${SEC}`,
     ...overrides,
   };
 }
@@ -41,8 +44,7 @@ function extractCacheWriteBinds(db: MockD1Database, cursorKey: string): unknown[
     .getHistory()
     .filter(
       (entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-        entry.binds[0] === `tape-projector:cursor:${cursorKey}`,
+        entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === `tape-projector:cursor:${cursorKey}`,
     )
     .map((entry) => entry.binds);
 }
@@ -62,9 +64,9 @@ describe("score projector", () => {
   });
 
   it("routes grade downgrades and scales severity by rank delta", async () => {
-    const db = mockD1(tables([
-      gradeRow({ grade: "B-", score: 65, prev_grade: "A", prev_score: 85 }),
-    ])) as MockD1Database;
+    const db = mockD1(
+      tables([gradeRow({ grade: "B-", score: 65, prev_grade: "A", prev_score: 85 })]),
+    ) as MockD1Database;
 
     const result = await projectScoreDowngraded(db);
 
@@ -87,12 +89,12 @@ describe("score projector", () => {
 
   it("expands a full batch through same-timestamp grade rows before advancing the watermark", async () => {
     const limitedRows = [
-      gradeRow({ stablecoin_id: "usdt-tether", rowid: 1 }),
-      gradeRow({ stablecoin_id: "usdc-circle", rowid: 2 }),
+      gradeRow({ stablecoin_id: "usdt-tether", source_row_id: `usdt-tether:${SEC}`, row_sort_id: "1" }),
+      gradeRow({ stablecoin_id: "usdc-circle", source_row_id: `usdc-circle:${SEC}`, row_sort_id: "2" }),
     ];
     const expandedRows = [
       ...limitedRows,
-      gradeRow({ stablecoin_id: "dai-makerdao", rowid: 3 }),
+      gradeRow({ stablecoin_id: "dai-makerdao", source_row_id: `dai-makerdao:${SEC}`, row_sort_id: "3" }),
     ];
     const db = mockD1([
       { match: "FROM cache WHERE key", rows: [] },
@@ -112,7 +114,9 @@ describe("score projector", () => {
   });
 
   it("treats unknown grades as lower than NR for guarded fallback ordering", async () => {
-    const db = mockD1(tables([gradeRow({ grade: "NR", score: null, prev_grade: "UNKNOWN", prev_score: null })])) as MockD1Database;
+    const db = mockD1(
+      tables([gradeRow({ grade: "NR", score: null, prev_grade: "UNKNOWN", prev_score: null })]),
+    ) as MockD1Database;
 
     const result = await projectScoreUpgraded(db);
 
@@ -120,6 +124,42 @@ describe("score projector", () => {
     const inserts = extractInsertBinds(db);
     expect(inserts).toHaveLength(1);
     expect(inserts[0]![1]).toBe("score.upgraded");
+  });
+
+  it("preserves V2 source identity for organic rows", async () => {
+    const db = mockD1(
+      tables([
+        gradeRow({
+          source_table: "safety_score_history_v2",
+          source_row_id: "safety-score-history:v2:event:123",
+          row_sort_id: "v2:safety-score-history:v2:event:123",
+        }),
+      ]),
+    ) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result.projected).toBe(1);
+    const inserts = extractInsertBinds(db);
+    expect(inserts[0]?.[12]).toBe("safety_score_history_v2");
+    expect(inserts[0]?.[13]).toBe("safety-score-history:v2:event:123");
+  });
+
+  it("does not project methodology-boundary baselines as organic movements", async () => {
+    const db = mockD1(
+      tables([
+        gradeRow({
+          transition_kind: "methodology-boundary-baseline",
+          prev_grade: null,
+          prev_score: null,
+        }),
+      ]),
+    ) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result).toEqual({ projected: 0, advanced: SEC });
+    expect(extractInsertBinds(db)).toHaveLength(0);
   });
 
   it("does not insert events or advance the cursor during dry runs", async () => {

@@ -1,12 +1,14 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { batchExecute } from "../lib/db";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import type { ReportCardGrade } from "@shared/types/report-cards";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import type { ReportCardsSnapshot } from "../lib/report-cards-snapshot";
+import type { ReportCardsResponse } from "@shared/types/report-cards";
+import {
+  loadActiveV8SafetyScoreHistorySource,
+  prepareV8OrganicSafetyScoreHistoryWrites,
+} from "../lib/safety-score-history-v2";
 
 interface LatestSafetyGradeRow {
   stablecoin_id: string;
@@ -15,68 +17,37 @@ interface LatestSafetyGradeRow {
   recorded_at: number;
 }
 
-function hasDegradedReportCardInputs(snapshot: ReportCardsSnapshot): boolean {
+function hasDegradedReportCardInputs(snapshot: ReportCardsResponse): boolean {
+  if (!snapshot.inputFreshness) return true;
   return Boolean(
-    snapshot.liquidityStale
-    || snapshot.redemptionStale
-    || snapshot.inputFreshness.dexLiquidity.stale
-    || snapshot.inputFreshness.redemptionBackstops.stale,
+    snapshot.liquidityStale ||
+    snapshot.redemptionStale ||
+    snapshot.inputFreshness?.dexLiquidity.stale ||
+    snapshot.inputFreshness?.redemptionBackstops.stale,
   );
 }
 
-function buildHistoryInsert(
-  db: D1Database,
-  input: {
-    stablecoinId: string;
-    snapshotDay: number;
-    grade: ReportCardGrade;
-    score: number | null;
-    prevGrade: ReportCardGrade | null;
-    prevScore: number | null;
-    methodologyVersion: string;
-  },
-): D1PreparedStatement {
-  return db
-    .prepare(
-      `INSERT OR IGNORE INTO safety_grade_history
-       (stablecoin_id, recorded_at, grade, score, prev_grade, prev_score, methodology_version)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .bind(
-      input.stablecoinId,
-      input.snapshotDay,
-      input.grade,
-      input.score,
-      input.prevGrade,
-      input.prevScore,
-      input.methodologyVersion,
-    );
-}
-
-export async function snapshotSafetyGradeHistory(
-  db: D1Database,
-  signal?: AbortSignal,
-): Promise<CronResult> {
+export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
 
   const nowSec = Math.floor(Date.now() / 1000);
   const snapshotDay = Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS;
-  const methodologyVersion = SAFETY_SCORE_METHODOLOGY_VERSION;
-
-  let snapshot;
+  let source;
   try {
-    snapshot = await buildReportCardsSnapshot(db);
+    source = await loadActiveV8SafetyScoreHistorySource(db, signal);
   } catch (err) {
-    recordCronFailure("snapshot-safety-grade-history", err, { metadata: { stage: "buildReportCardsSnapshot" } });
+    recordCronFailure("snapshot-safety-grade-history", err, {
+      metadata: { stage: "loadActiveV8SafetyScoreHistorySource" },
+    });
     return {
       status: "error" as const,
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "snapshot-build-failed", error: String(err).slice(0, 200) }),
+      metadata: JSON.stringify({ reason: "active-model-source-unavailable", error: String(err).slice(0, 200) }),
     };
   }
-  const liveCards = snapshot.cards.filter(
-    (card) => card.isDefunct !== true && !FROZEN_IDS.has(card.id),
-  );
+  const { snapshot, identity } = source;
+  const methodologyVersion = identity.methodologyVersion;
+  const liveCards = snapshot.cards.filter((card) => card.isDefunct !== true && !FROZEN_IDS.has(card.id));
   const degradedReportCardInputs = hasDegradedReportCardInputs(snapshot);
 
   const latestRows = await db
@@ -117,14 +88,16 @@ export async function snapshotSafetyGradeHistory(
       }
       seeded++;
       stmts.push(
-        buildHistoryInsert(db, {
+        ...prepareV8OrganicSafetyScoreHistoryWrites(db, {
           stablecoinId: card.id,
-          snapshotDay,
+          recordedAt: snapshotDay,
           grade: card.overallGrade,
           score: card.overallScore,
           prevGrade: null,
           prevScore: null,
-          methodologyVersion,
+          transitionKind: "initial-baseline",
+          identity,
+          createdAt: nowSec,
         }),
       );
       continue;
@@ -137,14 +110,16 @@ export async function snapshotSafetyGradeHistory(
       }
       changed++;
       stmts.push(
-        buildHistoryInsert(db, {
+        ...prepareV8OrganicSafetyScoreHistoryWrites(db, {
           stablecoinId: card.id,
-          snapshotDay,
+          recordedAt: snapshotDay,
           grade: card.overallGrade,
           score: card.overallScore,
           prevGrade: latest.grade,
           prevScore: latest.score,
-          methodologyVersion,
+          transitionKind: "organic-grade-change",
+          identity,
+          createdAt: nowSec,
         }),
       );
       continue;
@@ -158,12 +133,18 @@ export async function snapshotSafetyGradeHistory(
   }
   return {
     ...(degradedReportCardInputs ? { status: "degraded" as const } : {}),
-    itemCount: stmts.length,
+    itemCount: seeded + changed,
     metadata: JSON.stringify({
       snapshotDay,
       methodologyVersion,
+      model: identity.model,
+      evaluationBuildDigest: identity.evaluationBuildDigest,
+      baseInputGenerationId: identity.baseInputGenerationId,
+      modelPublicationGenerationId: identity.modelPublicationGenerationId,
+      publicationEpoch: identity.publicationEpoch,
       seeded,
       changed,
+      v2RowsWritten: seeded + changed,
       skipped,
       degradedReportCardInputs,
       gradeHistorySuppressed: degradedReportCardInputs,

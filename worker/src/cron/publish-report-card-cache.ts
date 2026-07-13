@@ -1,12 +1,15 @@
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
+import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import { ALERT_SAFETY_SOURCE_CACHE_KEY, buildAlertSafetySourceEnvelope } from "../lib/alert-safety-source-cache";
-import { setCacheMany } from "../lib/db-cache";
 import { buildReportCardCacheEntry } from "../lib/report-card-cache";
 import { buildPublishedReportCardsSnapshotCacheEntry } from "../lib/report-cards-snapshot-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { buildReportCardPublicationPlan } from "../lib/report-card-publication";
 import { buildReportCardsFixedInputCacheEntry } from "../lib/report-cards-fixed-input";
+import { recordCronFailure } from "../lib/cron-logger";
+import { runSafetyScoreV9ShadowAfterV8Publication } from "../lib/safety-score-v9-shadow-runner";
+import { publishSafetyScoreV8ModelFamily } from "../lib/safety-score-model-publication-store";
 
 export async function publishReportCardCache(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
@@ -50,11 +53,46 @@ export async function publishReportCardCache(db: D1Database, signal?: AbortSigna
       ),
     ),
   };
-  await setCacheMany(
+  const v8PublicationState = await publishSafetyScoreV8ModelFamily({
     db,
-    [buildPublishedReportCardsSnapshotCacheEntry(publishedSnapshot), compactEntry, alertEntry, fixedInputEntry],
+    generationId: publication.completeness.generationId,
+    baseInputGenerationId: fixedInput.baseInputGenerationId,
+    publishedAtSec: snapshot.updatedAt,
+    methodologyVersion: snapshot.methodology.version,
+    evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+    payloads: {
+      full: buildPublishedReportCardsSnapshotCacheEntry(publishedSnapshot),
+      compact: compactEntry,
+      alert: alertEntry,
+      fixedInput: fixedInputEntry,
+    },
     signal,
-  );
+  });
+
+  let v9Shadow: Record<string, unknown>;
+  try {
+    v9Shadow = await runSafetyScoreV9ShadowAfterV8Publication({
+      db,
+      fixedInput,
+      v8Cards: publication.activeCards,
+      v8Publication: publication.completeness,
+      v8MethodologyVersion: snapshot.methodology.version,
+      signal,
+    });
+  } catch (error) {
+    const failure = recordCronFailure("publish-report-card-cache:v9-shadow", error, {
+      metadata: {
+        v8PublicationGenerationId: publication.completeness.generationId,
+        baseInputGenerationId: fixedInput.baseInputGenerationId,
+      },
+    });
+    v9Shadow = {
+      status: "failed",
+      stage: "scheduler",
+      code: failure.errorName,
+      message: failure.errorMessage,
+    };
+  }
 
   return {
     itemCount: publication.completeness.expectedCount,
@@ -89,6 +127,14 @@ export async function publishReportCardCache(db: D1Database, signal?: AbortSigna
       redemptionStale: snapshot.redemptionStale,
       fixedInputCacheBytes: fixedInputEntry.storedBytes,
       fixedInputUncompressedBytes: fixedInputEntry.uncompressedBytes,
+      safetyScorePublicationState: {
+        status: v8PublicationState.status,
+        state: v8PublicationState.manifest.selection.state,
+        transitionEpoch: v8PublicationState.manifest.selection.transitionEpoch,
+        activeModel: v8PublicationState.manifest.selection.activeModel,
+        activeAliasesAdvanced: v8PublicationState.activeAliasesAdvanced,
+      },
+      v9Shadow,
     }),
   };
 }

@@ -2,14 +2,16 @@ import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleSafetyScoreHistory } from "../safety-score-history";
 
-function makeHistoryRow(overrides: Partial<{
-  recorded_at: number;
-  grade: string;
-  score: number | null;
-  prev_grade: string | null;
-  prev_score: number | null;
-  methodology_version: string;
-}> = {}) {
+function makeHistoryRow(
+  overrides: Partial<{
+    recorded_at: number;
+    grade: string;
+    score: number | null;
+    prev_grade: string | null;
+    prev_score: number | null;
+    methodology_version: string;
+  }> = {},
+) {
   return {
     recorded_at: overrides.recorded_at ?? 1_772_000_000,
     grade: overrides.grade ?? "B+",
@@ -49,9 +51,7 @@ describe("handleSafetyScoreHistory", () => {
     const db = mockD1([
       {
         match: "safety_grade_history",
-        rows: [
-          makeHistoryRow(),
-        ],
+        rows: [makeHistoryRow()],
       },
       {
         match: "cron_runs",
@@ -66,7 +66,7 @@ describe("handleSafetyScoreHistory", () => {
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json() as Array<Record<string, unknown>>;
+    const body = (await res.json()) as Array<Record<string, unknown>>;
     expect(body).toHaveLength(1);
     expect(body[0]).toEqual({
       date: body[0].date,
@@ -78,6 +78,10 @@ describe("handleSafetyScoreHistory", () => {
     });
     expect(body[0]).not.toHaveProperty("recorded_at");
     expect(body[0]).not.toHaveProperty("prev_grade");
+    expect(body[0]).not.toHaveProperty("transitionKind");
+    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("safety_score_history_v2"));
+    expect(historyQuery?.sql).toContain("FROM safety_grade_history legacy");
+    expect(historyQuery?.sql).toContain("'initial-baseline', 'organic-grade-change'");
   });
 
   it("returns empty array when no rows exist", async () => {

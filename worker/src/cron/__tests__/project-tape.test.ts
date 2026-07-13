@@ -57,7 +57,12 @@ describe("projectTape", () => {
       0,
       jobs.length,
       { name: "test.success", run: async () => ({ projected: 2, advanced: null }) },
-      { name: "test.failure", run: async () => { throw new Error("projector failed"); } },
+      {
+        name: "test.failure",
+        run: async () => {
+          throw new Error("projector failed");
+        },
+      },
     );
 
     try {
@@ -201,9 +206,7 @@ describe("projectTape", () => {
     const dbWorsened = mockD1([
       {
         match: "FROM cache WHERE key",
-        rows: [
-          { key: "tape-projector:peak-worsened-seen", value: JSON.stringify({ "7": 1500 }) },
-        ],
+        rows: [{ key: "tape-projector:peak-worsened-seen", value: JSON.stringify({ "7": 1500 }) }],
       },
       {
         match: MATCH_DEPEG_OPEN_PEAK,
@@ -214,7 +217,7 @@ describe("projectTape", () => {
             symbol: "USDC",
             peg_type: "peggedUSD",
             direction: "below",
-            peak_deviation_bps: -2700,  // grew past 1500 → critical (>=2500)
+            peak_deviation_bps: -2700, // grew past 1500 → critical (>=2500)
             started_at: SEC,
             ended_at: null,
             peg_reference: 1,
@@ -295,7 +298,10 @@ describe("projectTape", () => {
           prev_grade: "B",
           prev_score: 70,
           methodology_version: "5.0",
-          rowid: 1,
+          transition_kind: "organic-grade-change",
+          source_table: "safety_grade_history",
+          source_row_id: `usdt-tether:${SEC}`,
+          row_sort_id: `legacy:usdt-tether:${SEC}`,
         },
       ],
     });
@@ -317,7 +323,10 @@ describe("projectTape", () => {
           prev_grade: "B+",
           prev_score: 81,
           methodology_version: "5.0",
-          rowid: 1,
+          transition_kind: "organic-grade-change",
+          source_table: "safety_grade_history",
+          source_row_id: `usdt-tether:${SEC}`,
+          row_sort_id: `legacy:usdt-tether:${SEC}`,
         },
       ],
     });
@@ -378,10 +387,13 @@ describe("projectTape", () => {
           recorded_at: SEC,
           grade: "B",
           score: 75,
-          prev_grade: "B",      // same rank — should be skipped
+          prev_grade: "B", // same rank — should be skipped
           prev_score: 76,
           methodology_version: "5.0",
-          rowid: 1,
+          transition_kind: "organic-grade-change",
+          source_table: "safety_grade_history",
+          source_row_id: `usdt-tether:${SEC}`,
+          row_sort_id: `legacy:usdt-tether:${SEC}`,
         },
       ],
     });
@@ -396,8 +408,8 @@ describe("projectTape", () => {
     const db = mockD1(baseTables()) as MockD1Database;
     await projectTape(db);
     // Each domain emits ≥ 1 entry on a fresh DB.
-    const inserts = extractInsertBinds(db).filter((binds) =>
-      typeof binds[1] === "string" && (binds[1] as string).startsWith("methodology.bumped:"),
+    const inserts = extractInsertBinds(db).filter(
+      (binds) => typeof binds[1] === "string" && (binds[1] as string).startsWith("methodology.bumped:"),
     );
     expect(inserts.length).toBeGreaterThan(0);
   });
