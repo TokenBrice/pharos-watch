@@ -163,14 +163,13 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "QCAD token owner on both Ethereum and Base is a 6-of-6 Gnosis Safe (threshold 3) at 0x4ff9ace9. The proxy-admin on both chains is a separate 6-signer multisig (threshold 3, same signers) at different addresses. No modules or guards are enabled on either multisig. Stablecorp's issuance backend mints through the Safe-controlled token contract.",
+    "summary": "QCAD token ownership and immediate proxy upgrades on Ethereum and Base use distinct chain-local 3/6 Safe instances. The token-owner Safes and proxy-admin Safes have different signer compositions; no modules or guards were detected. Stablecorp's issuance backend mints through the Safe-controlled token contracts.",
     "controls": [
       {
         "label": "Stablecorp issuance backend (servicer to QCAD Digital Trust)",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
         "evidence": "Stablecorp (FINTRAC MSB) administers the QCAD Program as servicer; authorized dealers/qualified holders mint QCAD 1:1 on CAD deposit and redeem at par against trust-held reserves, so Stablecorp controls supply creation."
       },
       {
@@ -178,10 +177,13 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "ethereum:0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9",
+          "base:0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9"
+        ],
         "safe": {
           "owners": [
             "0x17780da7ab5481b01d9ca0db45ead47dd19fb3cb",
@@ -214,25 +216,51 @@
       {
         "label": "Proxy-admin upgrade authority — Ethereum and Base",
         "role": "minter-admin",
-        "authorityType": "multisig",
+        "authorityType": "safe",
         "directMintAbility": "upgrade-only",
-        "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295037, EIP-1967 proxy-admin slot on QCAD ETH = 0xcf09e8de...; owner() on that ProxyAdmin = 0x6c4c5c74 (contract, 344 bytes). getOwners() on 0x6c4c5c returned the same 6 addresses as the token owner Safe; getThreshold() = 3; getModulesPaginated returned empty array. Same proxy-admin owner on Base (confirmed at Base block 47200812). This is a separate legacy multisig from the token owner Safe.",
+        "failureDomainKeys": [
+          "ethereum:0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e",
+          "base:0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e"
+        ],
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x17780dA7aB5481B01D9cA0DB45ead47dd19FB3cb",
+            "0x4A2D43746509754AaC7E69d8e8fE96278D95E135",
+            "0x10daB7A725b39c46280DB77fB284e36D88bc9dEd",
+            "0x5aFB77a4F308fF9235535C77727C86360a5F159b",
+            "0x6868Cd7751d8Efc07f0F5A2Dd9a114831C231bc6",
+            "0x6753fAb90471597BD4F776d0279A13799cf0FF95"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-07-13",
+          "observedBlock": 25526458,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526458,
+        "evidence": "On Ethereum and Base, the EIP-1967 proxy-admin slots resolve to ProxyAdmins 0xcf09e8de3086678557dca73d7e4de7763cfdbbdd and 0x3037bd16377c89fcdffe785bec945b8e383db599. Each ProxyAdmin is owned by its chain-local Safe instance at 0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e. Current on-chain reads returned Safe v1.4.1, threshold 3, six owners, no enabled modules, and zero guard; the signer set differs from the token-owner Safe at its second signer.",
         "sources": [
           {
             "label": "QCAD Ethereum proxy-admin owner",
             "url": "https://etherscan.io/address/0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e"
+          },
+          {
+            "label": "QCAD Base proxy-admin owner",
+            "url": "https://basescan.org/address/0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e"
           }
         ]
       }
     ],
     "review": {
-      "evidence": "Ethereum block 25295037, Base block 47200812: QCAD token owner on both chains = Gnosis Safe 0x4ff9ace9 (6 owners, threshold 3, VERSION 1.4.1, no modules, no guard). Proxy-admin on both chains owned by separate legacy multisig 0x6c4c5c (same 6 signers, threshold 3, no modules). All mint-capable on-chain surfaces resolved.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Ethereum and Base reads resolve chain-local QCAD token-owner Safes at 0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9 and separate chain-local proxy-admin Safes at 0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e. Each Safe is 3/6 with no enabled modules or guard. The proxy-admin Safe signer set was refreshed on 2026-07-13 and differs from the token-owner Safe. Both transparent-proxy implementations and immediate ProxyAdmin paths are identified.",
+      "reviewer": "Codex mint-authority review",
+      "reviewedAt": "2026-07-13",
       "sources": [
         {
           "label": "Stablecorp QCAD",
@@ -245,14 +273,31 @@
         {
           "label": "QCAD Ethereum token",
           "url": "https://etherscan.io/address/0x3fa142dd3f384414e05e71ad0939274edc82ec0a"
+        },
+        {
+          "label": "QCAD Base token",
+          "url": "https://basescan.org/address/0xa15705e6fc8b3e08e7253f3758de1a754baa0761"
         }
       ]
     },
     "upgradeability": {
       "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x3fa142dd3f384414e05e71ad0939274edc82ec0a",
+        "0xa15705e6fc8b3e08e7253f3758de1a754baa0761"
+      ],
+      "implementationAddresses": [
+        "0xa2b0b95310be62e67fc46d33610187f827c90890",
+        "0x4f5f7e6c5cda08ecca56b58340dbe13485db1ea9"
+      ],
+      "adminAddresses": [
+        "0xcf09e8de3086678557dca73d7e4de7763cfdbbdd",
+        "0x3037bd16377c89fcdffe785bec945b8e383db599"
+      ],
       "canChangeMintLogic": true,
+      "delaySec": 0,
       "controlRef": "Proxy-admin upgrade authority — Ethereum and Base",
-      "observedAt": "2026-06-11",
+      "observedAt": "2026-07-13",
       "sources": [
         {
           "label": "QCAD Ethereum proxy-admin owner",
@@ -269,6 +314,26 @@
         {
           "label": "QCAD Ethereum token",
           "url": "https://etherscan.io/address/0x3fa142dd3f384414e05e71ad0939274edc82ec0a"
+        },
+        {
+          "label": "QCAD Ethereum implementation",
+          "url": "https://etherscan.io/address/0xa2b0b95310be62e67fc46d33610187f827c90890#code"
+        },
+        {
+          "label": "QCAD Ethereum ProxyAdmin",
+          "url": "https://etherscan.io/address/0xcf09e8de3086678557dca73d7e4de7763cfdbbdd#code"
+        },
+        {
+          "label": "QCAD Base token",
+          "url": "https://basescan.org/address/0xa15705e6fc8b3e08e7253f3758de1a754baa0761#code"
+        },
+        {
+          "label": "QCAD Base implementation",
+          "url": "https://basescan.org/address/0x4f5f7e6c5cda08ecca56b58340dbe13485db1ea9#code"
+        },
+        {
+          "label": "QCAD Base ProxyAdmin",
+          "url": "https://basescan.org/address/0x3037bd16377c89fcdffe785bec945b8e383db599#code"
         }
       ]
     }
