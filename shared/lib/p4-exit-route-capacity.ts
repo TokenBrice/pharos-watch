@@ -8,7 +8,7 @@ import type {
   ExitRouteObservationCoverage,
   ExitRouteOutput,
   LiquidityPoolSourceFamily,
-} from "@shared/types/market";
+} from "../types/market";
 
 export const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.2";
 
