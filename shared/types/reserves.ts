@@ -5,7 +5,7 @@ export const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-h
 export type ReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
 export const ReserveRiskSchema = z.enum(RESERVE_RISK_VALUES);
 
-export const RESERVE_ASSET_CLASS_VALUES = [
+const RESERVE_ASSET_CLASS_VALUES = [
   "cash",
   "bank-deposit",
   "treasury-bill",
@@ -23,9 +23,9 @@ export const RESERVE_ASSET_CLASS_VALUES = [
   "other",
 ] as const;
 export type ReserveAssetClass = (typeof RESERVE_ASSET_CLASS_VALUES)[number];
-export const ReserveAssetClassSchema = z.enum(RESERVE_ASSET_CLASS_VALUES);
+const ReserveAssetClassSchema = z.enum(RESERVE_ASSET_CLASS_VALUES);
 
-export const RESERVE_RISK_FACTOR_VALUES = [
+const RESERVE_RISK_FACTOR_VALUES = [
   "credit",
   "duration",
   "liquidity",
@@ -38,11 +38,11 @@ export const RESERVE_RISK_FACTOR_VALUES = [
   "concentration",
 ] as const;
 export type ReserveRiskFactor = (typeof RESERVE_RISK_FACTOR_VALUES)[number];
-export const ReserveRiskFactorSchema = z.enum(RESERVE_RISK_FACTOR_VALUES);
+const ReserveRiskFactorSchema = z.enum(RESERVE_RISK_FACTOR_VALUES);
 
-export const RESERVE_LIQUIDITY_HORIZON_VALUES = ["immediate", "one-day", "seven-days", "over-seven-days", "unknown"] as const;
+const RESERVE_LIQUIDITY_HORIZON_VALUES = ["immediate", "one-day", "seven-days", "over-seven-days", "unknown"] as const;
 export type ReserveLiquidityHorizon = (typeof RESERVE_LIQUIDITY_HORIZON_VALUES)[number];
-export const ReserveLiquidityHorizonSchema = z.enum(RESERVE_LIQUIDITY_HORIZON_VALUES);
+const ReserveLiquidityHorizonSchema = z.enum(RESERVE_LIQUIDITY_HORIZON_VALUES);
 
 export interface ReserveSlice {
   name: string;

@@ -10,7 +10,7 @@ import {
   type V9UnresolvedFact,
 } from "../types/safety-score-v9";
 
-export const V9_QUALITY_PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];
+const V9_QUALITY_PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];
 
 export interface V9StructuralCap {
   kind: string;
@@ -35,7 +35,7 @@ export interface V9ScoringConfig {
   scoreDecimals: number;
 }
 
-export const PROVISIONAL_V9_RESEARCH_CONFIG = {
+const PROVISIONAL_V9_RESEARCH_CONFIG = {
   name: "v9-readiness-shadow-1",
   pillarWeights: { backing: 0.4, exit: 0.35, control: 0.25 },
   compensabilityHeadroom: 20,

@@ -2,7 +2,7 @@ import { resolveChainId } from "./chains";
 import { BRIDGE_ROUTE_RISK_SCORE } from "./report-card-governance";
 import type { BridgeRouteRiskTier, StablecoinMeta } from "../types/core";
 
-export const BRIDGE_ROUTE_MATERIAL_SHARE_THRESHOLD = 0.1;
+const BRIDGE_ROUTE_MATERIAL_SHARE_THRESHOLD = 0.1;
 
 export type BridgeRouteMaterialityStatus = "complete" | "partial" | "unavailable" | "not-applicable";
 

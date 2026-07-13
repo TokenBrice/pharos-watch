@@ -10,7 +10,7 @@ import type {
   LiquidityPoolSourceFamily,
 } from "../types/market";
 
-export const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.2";
+const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.2";
 
 const DEFAULT_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 const REFERENCE_NOTIONAL_USD = 1_000_000;

@@ -34,7 +34,7 @@ const EVIDENCE_CEILINGS: Readonly<Record<DexExitEvidenceKind, number | null>> = 
   unobserved: null,
 };
 
-export function classifyReportCardDexEvidence(
+function classifyReportCardDexEvidence(
   input: Omit<ReportCardDexEvidenceInput, "liquidityScore">,
 ): DexExitEvidenceKind | null {
   const hasNewEvidence =

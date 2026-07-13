@@ -373,7 +373,7 @@ export const BridgeRouteProtocolEvidenceSchema: z.ZodType<BridgeRouteProtocolEvi
   })
   .strict();
 
-export const BridgeRouteDeploymentSchema: z.ZodType<BridgeRouteDeployment> = z
+const BridgeRouteDeploymentSchema: z.ZodType<BridgeRouteDeployment> = z
   .object({
     id: z.string().min(1),
     sourceChain: z.string().min(1).optional(),
