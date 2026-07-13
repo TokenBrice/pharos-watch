@@ -76,7 +76,42 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
-    "summary": "AA_FalconXUSDC is an IdleCDOTranche token whose shares are minted exclusively by the IdleCDO contract (0x433d5b175148da32ffe1e1a37a939e1b7e79be4d) against USDC deposits. The CDO is a TransparentUpgradeableProxy; upgrades require 24h OZ Timelock (0xda86e15d0cda3a05db930b248d7a2f775e575a44). CDO owner is Idle Finance Safe 8/3. Tranche tokens cannot be minted independently of CDO deposits. Base USDC supply is inherited from Circle.",
+    "summary": "AA_FalconXUSDC is a direct IdleCDOTranche token whose shares are minted exclusively by IdleCDO 0x433d5b17... against USDC deposits. The IdleCDO mint logic is a transparent proxy controlled by an 86,400-second timelock; the tranche has no independent proxy or privileged mint key. Base USDC supply is inherited from Circle.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
+      ],
+      "implementationAddresses": [
+        "0xdd596250f838af8862d30e9c78a143356894a18d"
+      ],
+      "adminAddresses": [
+        "0x9438904abc7d8944a6e2a89671fef51c629af351"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 86400,
+      "controlRef": "Idle Finance 24-hour upgrade timelock",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526837,
+      "sources": [
+        {
+          "label": "Ethereum IdleCDO transparent proxy",
+          "url": "https://etherscan.io/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d#code"
+        },
+        {
+          "label": "Ethereum IdleCDO ProxyAdmin",
+          "url": "https://etherscan.io/address/0x9438904abc7d8944a6e2a89671fef51c629af351#code"
+        },
+        {
+          "label": "Idle Finance upgrade timelock",
+          "url": "https://etherscan.io/address/0xda86e15d0cda3a05db930b248d7a2f775e575a44#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -98,7 +133,9 @@
             "url": "https://eth.blockscout.com/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c"
           }
         ],
-        "evidence": "At Ethereum block 25295212, eth_call minter() on 0xc26a6fa2c37b38e549a4a1807543801db684f99c returned 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d (IdleCDO). Blockscout confirms contractName=IdleCDOTranche. Slot0-8 show no independent owner or mint key."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "evidence": "At Ethereum block 25526837, minter() returned IdleCDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d. The tranche's EIP-1967 implementation, admin, and beacon slots were all zero, so the tracked token itself has no proxy upgrade path."
       },
       {
         "chain": "ethereum",
@@ -114,9 +151,51 @@
           {
             "label": "Ethereum Blockscout - IdleCDO",
             "url": "https://eth.blockscout.com/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
+          },
+          {
+            "label": "Ethereum IdleCDO ProxyAdmin",
+            "url": "https://etherscan.io/address/0x9438904abc7d8944a6e2a89671fef51c629af351#code"
           }
         ],
-        "evidence": "At Ethereum block 25295212: eth_getStorageAt EIP-1967 proxy_admin slot returned 0x9438904abc7d8944a6e2a89671fef51c629af351 (ProxyAdmin); impl slot returned 0x8016e6f35a4b32a5ea4c3919418039c7daffccaf. owner() = 0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814 (Idle Finance Safe 8/3, v1.3.0). ProxyAdmin owner = OZ Timelock 0xda86e15d with minDelay=86400s (24h, confirmed slot2=0x15180)."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "evidence": "At Ethereum block 25526837, the IdleCDO implementation slot resolved to 0xdd596250f838af8862d30e9c78a143356894a18d and the proxy-admin slot to ProxyAdmin 0x9438904a.... IdleCDO owner() returned the Idle Finance 3/8 Safe 0xfb3bd022...."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xda86e15d0cda3a05db930b248d7a2f775e575a44",
+        "label": "Idle Finance 24-hour upgrade timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "failureDomainKeys": [
+          "ethereum:0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814"
+        ],
+        "routeChecks": {
+          "signingModel": "The sole current proposer is Idle Finance Safe 0xfb3bd022..., threshold 3 of 8; the original deployer no longer holds PROPOSER_ROLE.",
+          "rateLimits": "getMinDelay() returned 86,400 seconds. ProxyAdmin ownership points directly to this timelock, so implementation changes must traverse that queue.",
+          "pausersAdminsUpgraders": "The Safe remains proposer, canceller, executor, and timelock admin; one Safe module is enabled, but execution of a scheduled upgrade remains subject to the timelock's minimum delay."
+        },
+        "sources": [
+          {
+            "label": "Idle Finance upgrade timelock",
+            "url": "https://etherscan.io/address/0xda86e15d0cda3a05db930b248d7a2f775e575a44#code"
+          },
+          {
+            "label": "Idle Finance proposer Safe",
+            "url": "https://etherscan.io/address/0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814#code"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25526837, ProxyAdmin owner() returned this timelock and getMinDelay() returned 86,400 seconds. Current role reads showed the 3/8 Idle Finance Safe as proposer, canceller, and executor, while the original deployer's proposer role was revoked."
       },
       {
         "label": "Inherited USDC (Circle) issuer mint path",
@@ -135,9 +214,9 @@
       }
     ],
     "review": {
-      "evidence": "AA_FalconXUSDC is an IdleCDOTranche (confirmed Blockscout). Shares minted only by IdleCDO (0x433d5b175...) on USDC deposit. CDO is TransparentUpgradeableProxy; ProxyAdmin (0x9438904...) owned by OZ Timelock (0xda86e15d..., 24h minDelay confirmed). CDO owner = Idle Finance Safe 8/3 v1.3.0 (0xfb3bd022...). All reads at Ethereum block 25295212.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25526837, AA_FalconXUSDC minter() still returned IdleCDO 0x433d5b175.... The direct tranche had zero EIP-1967 implementation, admin, and beacon slots. IdleCDO's transparent proxy had implementation 0xdd596250..., ProxyAdmin 0x9438904a..., and ProxyAdmin owner timelock 0xda86e15d... with an 86,400-second minimum delay.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
       "sources": [
         {
           "label": "Pareto docs - credit vaults",
@@ -150,6 +229,10 @@
         {
           "label": "Ethereum Blockscout - IdleCDO proxy",
           "url": "https://eth.blockscout.com/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
+        },
+        {
+          "label": "Idle Finance upgrade timelock",
+          "url": "https://etherscan.io/address/0xda86e15d0cda3a05db930b248d7a2f775e575a44#code"
         }
       ]
     }

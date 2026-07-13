@@ -33,7 +33,38 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "CHFAU is single-chain (Ethereum). UUPS proxy with no ProxyAdmin — upgradeToAndCall gated by DEFAULT_ADMIN_ROLE. One EOA minter (MINTER_ROLE) and one EOA admin (DEFAULT_ADMIN_ROLE), both confirmed active at block 25295047 via hasRole reads. Implementation verified via Sourcify (match confirmed). No RoleRevoked events. Issuer-operated EOAs consistent with AllUnity's BaFin-licensed issuer model.",
+    "summary": "CHFAU is single-chain on Ethereum. Its ERC1967 proxy uses a UUPS implementation with no separate ProxyAdmin; upgrade authorization is held immediately by the same AllUnity EOA that holds DEFAULT_ADMIN_ROLE. A second EOA holds MINTER_ROLE.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78"
+      ],
+      "implementationAddresses": [
+        "0x5cad3aaaef687009665d15fed23ded57862ee003"
+      ],
+      "adminAddresses": [
+        "0xddaca43e3ae3a1485880a835edbf8924ab142b5f"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "CHFAU default admin",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526837,
+      "sources": [
+        {
+          "label": "CHFAU Ethereum UUPS proxy",
+          "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#code"
+        },
+        {
+          "label": "CHFAU Ethereum implementation",
+          "url": "https://etherscan.io/address/0x5cad3aaaef687009665d15fed23ded57862ee003#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -50,11 +81,13 @@
             "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
           },
           {
-            "label": "Sourcify CHFAU implementation match",
-            "url": "https://sourcify.dev/server/v2/contract/1/0x5cad3aaaef687009665d15fed23ded57862ee003"
+            "label": "CHFAU Ethereum implementation",
+            "url": "https://etherscan.io/address/0x5cad3aaaef687009665d15fed23ded57862ee003#code"
           }
         ],
-        "evidence": "At Ethereum block 25295047, hasRole(MINTER_ROLE, 0xd443f046...) returned true; eth_getCode returned no bytecode (EOA). RoleGranted logs confirm initial grant; zero RoleRevoked events."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "evidence": "At Ethereum block 25526837, hasRole(MINTER_ROLE, 0xd443f046...) returned true and eth_getCode returned no bytecode, resolving the active minter as an EOA."
       },
       {
         "chain": "ethereum",
@@ -71,7 +104,9 @@
             "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25295047, hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) returned true; eth_getCode returned no bytecode (EOA). Also holds PAUSER_ROLE. UUPS upgradeToAndCall gated by DEFAULT_ADMIN_ROLE — no separate ProxyAdmin (proxy admin EIP-1967 slot is zero)."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "evidence": "At Ethereum block 25526837, hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) returned true and eth_getCode returned no bytecode. The proxy implementation slot resolved to 0x5cad3aaa..., its admin and beacon slots were zero, and the implementation returned the standard UUPS proxiable UUID. The verified token interface gates the UUPS upgrade path through the default admin, with no separate on-chain delay."
       }
     ],
     "review": {
@@ -89,17 +124,17 @@
           "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
         },
         {
-          "label": "Sourcify CHFAU implementation",
-          "url": "https://sourcify.dev/server/v2/contract/1/0x5cad3aaaef687009665d15fed23ded57862ee003"
+          "label": "CHFAU Ethereum implementation",
+          "url": "https://etherscan.io/address/0x5cad3aaaef687009665d15fed23ded57862ee003#code"
         },
         {
           "label": "CHFAU RoleGranted logs",
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78&fromBlock=24319783&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "At Ethereum block 25295047: hasRole confirmed MINTER_ROLE (0xd443f046...) and DEFAULT_ADMIN_ROLE (0xddaca43e...) both active EOAs. Sourcify match confirmed for impl 0x5cad3aaa.... EIP-1967 proxy-admin slot is zero (UUPS). Zero RoleRevoked events. Single-chain deployment — no multichain surfaces to verify.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25526837, hasRole confirmed MINTER_ROLE (0xd443f046...) and DEFAULT_ADMIN_ROLE (0xddaca43e...) remain active EOAs. The ERC1967 implementation is 0x5cad3aaa..., the proxy-admin and beacon slots are zero, and the implementation returns the UUPS proxiable UUID. CHFAU remains a single-chain deployment.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13"
     }
   },
   "proofOfReserves": {
