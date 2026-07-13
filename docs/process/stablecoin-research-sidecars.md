@@ -6,20 +6,30 @@ Research-heavy metadata can move independently from a coin's scalar identity and
 
 | Domain         | Sidecar path                                               | Owned fields                                                                  |
 | -------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Reserves       | `shared/data/stablecoins/domains/reserves/<id>.json`       | `reserves`, `reserveReview`                                                   |
+| Reserves       | `shared/data/stablecoins/domains/reserves/<id>.json`       | `reserves`, `reserveReview`, `custodyProfile`                                 |
 | Mint authority | `shared/data/stablecoins/domains/mint-authority/<id>.json` | `mintAuthority`                                                               |
 | Compliance     | `shared/data/stablecoins/domains/compliance/<id>.json`     | `mica`, `genius`                                                              |
 | Risk review    | `shared/data/stablecoins/domains/risk-review/<id>.json`    | `canBeBlacklisted`, `blacklistabilityReview`, `oracleRisk`, `bridgeRouteRisk` |
 
 Sidecars are selective. Fields such as identity, flags, contracts, links, jurisdiction, classification overrides, notices, launch metadata, and other scalar catalog metadata remain in `coins/<id>.json`.
 
-`reserveReview` records the human review of a reserve composition: review date and reviewer, confidence, sources, composition basis and optional as-of date, reviewed scope, known-unknown exposure, and fingerprinted dispositions for selected unlinked slices. A disposition stores the current reserve index and exact name, so changing or reordering a reviewed slice makes validation fail until the review is revisited. Candidate IDs are research leads only; they do not create dependency edges. The reserves sidecar may contain `reserveReview`, `reserves`, or both, but a merged coin may only carry a review when it also has reserve composition.
+`reserveReview` records the human review of a reserve composition: review date and reviewer, confidence, sources, composition basis and optional as-of date, reviewed scope, known-unknown exposure, and fingerprinted dispositions for selected unlinked slices. A disposition stores the current reserve index, exact name, and percentage, so changing, resizing, or reordering a reviewed slice makes validation fail until the review is revisited. Candidate IDs are research leads only; they do not create dependency edges. The reserves sidecar may contain any of `reserves`, `reserveReview`, and `custodyProfile`, but a merged coin may only carry a review when it also has reserve composition.
+
+Reserve slices may carry only review-useful structured backing facts: `assetClass`, `issuerOrObligor`, `riskFactors`, `liquidityHorizon`, and `maturityDaysMax`. These supplement the existing risk, dependency-link, and blacklistability fields. Do not infer a maturity maximum from weighted-average maturity, preserve false precision in an opaque basket, or assign issuer/custodian shares that the source does not disclose.
+
+`custodyProfile` is the reviewed evidence behind the current `custodyModel` summary. It records named providers and their roles, optional sourced shares and jurisdictions, segregation, bankruptcy remoteness, rehypothecation, provenance, and explicit uncertainty. Unknown safeguards stay `unknown`; a provider share is omitted rather than estimated. The reserve coverage audit reports advisory inconsistencies between this profile and `custodyModel`, but does not automatically replace the v8 summary tier.
+
+`proofOfReserves.latestReport` remains inside the base `proofOfReserves` object because proof configuration was already base-owned. A latest report records period end, publication date, assurance method, assets-only versus assets-and-liabilities scope, liability reconciliation, and review provenance. An `independent-audit` label without a verifiable current report remains valid metadata but is surfaced in the audit backfill queue.
 
 `dependencyReview` remains base metadata. It is required only for authored `dependencies` relationships that are not already represented by a linked reserve slice. Its relationship list must exactly match those manual-only edges, including an explicit dependency type. Reserve-derived dependencies use the reserve composition and `reserveReview` provenance instead of duplicating evidence per edge.
 
 Once a coin has a sidecar for a domain, all fields owned by that domain must stay out of its base file. This keeps the evidence and its coupled decision fields together. In particular, an explicit `canBeBlacklisted` value moves with `blacklistabilityReview`.
 
-Research review envelopes remain server/repository evidence and are intentionally omitted from `coins.client.generated.json`. The full generated registry retains them for audits and report-card compilation.
+Research review envelopes, including `reserveReview` and `custodyProfile`, remain server/repository evidence and are intentionally omitted from `coins.client.generated.json`. Structured reserve-slice facts travel with the already client-visible `reserves` field. The global client registry does not project `proofOfReserves`, so `latestReport` remains on full/server paths. The full generated registry retains all P5 evidence for audits and report-card compilation.
+
+`bridgeRouteRisk.routes` belongs to the risk-review domain. Each route row joins an exact authored `contracts` chain/address pair and records route class, issuance model, transfer semantics, scope, controllers, failure-domain keys, and an observation point. Active assets with multiple deployments require complete route rows. Runtime report-card compilation compares those rows with DefiLlama chain-level circulating supply: global and canonical rows are always material, while peripheral and unresolved rows become material at 10% of circulating supply. Missing or incomplete runtime supply is surfaced as `partial` or `unavailable`; v8 scoring still uses the reviewed profile tier until a methodology version explicitly activates the derived effective tier.
+
+`mintAuthority` remains mint-authority-domain evidence. Controls may record observation points and reviewed failure-domain keys; `upgradeability` records the proxy model, implementation/admin path, delay, and the exact control that can change mint logic. Incidents have explicit `active` or `resolved` state, with `resolvedAt` only for resolved incidents. A deliberately unscoreable review uses `review.disposition: "unresolved"` and retains its unresolved questions instead of being mistaken for an accidental coverage gap. Shared controller analysis joins normalized onchain addresses and reviewed failure-domain keys across mint, upgrade, bridge, and oracle paths.
 
 ## Updating Research
 
@@ -37,7 +47,7 @@ Preview a move:
 
 ```bash
 npx tsx scripts/maintenance/migrate-stablecoin-sidecar.ts \
-  --domain compliance \
+  --domain reserves \
   --id usdc-circle \
   --dry-run
 ```

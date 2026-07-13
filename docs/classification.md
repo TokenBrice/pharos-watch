@@ -47,12 +47,14 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `collateral?: string` — description of the collateral backing
 - `pegMechanism?: string` — description of the peg maintenance mechanism
 - `mechanismArchetype?: MechanismArchetype` — one of `"fiat-cash" | "tbill" | "cdp" | "synthetic-delta-neutral" | "algorithmic" | "rwa-credit-fund"` (defined in `shared/types/core.ts`). When set, the coin detail page renders an SVG mechanism diagram in `KeyInfoCard` plus a "Learn how X stablecoins work" link to the matching `/learn/mechanisms/<slug>/` explainer. Slug helpers live in `shared/lib/classification/mechanism-archetypes.ts`; the dedicated explainer route contract is [learn-mechanisms-page.md](./learn-mechanisms-page.md).
-- `archetypeOverride?: boolean` — when `true`, this coin's `mechanismArchetype` is an intentional departure from its parent variant's archetype (schema-validated)
+- `mechanismArchetypeReview?: MechanismArchetypeReview` — sourced base-metadata review with a `resolved` or `unresolved` disposition, reviewer, review date, rationale, and sources. A reviewed unresolved row deliberately blocks v9 classification instead of silently guessing an archetype.
+- `implementationLaunchDate?: string` — launch boundary for the currently deployed mechanism when it materially differs from the product's `launchDate`. The same fuzzy formats are supported, but track-record consumers use the latest possible date in the stated period as a conservative age lower bound.
+- `archetypeOverride?: boolean` — when `true`, this coin's `mechanismArchetype` is an intentional, sourced departure from its parent variant's archetype. Redundant same-archetype overrides are invalid.
 - `commodityOunces?: number` — troy ounces per token (for gold- and silver-pegged stablecoins)
 - `geckoId?: string` — CoinGecko coin ID for price/mcap lookups (commodity and non-DefiLlama tokens)
 - `cmcSlug?: string` — CoinMarketCap slug for fallback price lookups
 - `protocolSlug?: string` — DefiLlama protocol slug for TVL/mcap data (commodity tokens)
-- `proofOfReserves?: ProofOfReserves` — proof of reserves configuration
+- `proofOfReserves?: ProofOfReserves` — proof configuration plus an optional sourced `latestReport` that distinguishes assurance method, assets-only versus assets-and-liabilities scope, and liability reconciliation
 - `links?: StablecoinLink[]` — external links (website, docs, twitter)
 - `jurisdiction?: Jurisdiction` — regulatory jurisdiction
 - `mica?: MicaProfile` — EU MiCA authorization status, EMT/ART token type, competent authority, issuer entity, significance flag, and sourced register/reference links. See [mica-tracker.md](./mica-tracker.md).
@@ -63,13 +65,14 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `canBeBlacklisted?: boolean | "possible"` — direct freeze/blacklist capability override (reported descriptively); upstream exposure is computed
 - `blacklistabilityReview?: BlacklistabilityReview` — required for every explicit `canBeBlacklisted` value and used for reviewed inherited/No rationale; `reviewedStatus` must match the authored status
 - `chainTier? / deploymentModel? / collateralQuality? / custodyModel? / governanceQuality?` — report card resilience/decentralization overrides
-- `oracleRisk?: OracleRiskProfile` — reviewed CDP oracle / collateral price-feed setup, with optional review provenance and collateral-branch rows. Safety Score v8.11 reads this only for crypto-backed `mechanismArchetype: "cdp"` assets, applying a penalty-only Decentralization blend to direct non-variant CDPs; missing reviews and non-CDP rows stay neutral, while resolvable variants display inherited parent oracle exposure without a duplicate direct blend.
-- `bridgeRouteRisk?: BridgeRouteRiskProfile` — reviewed cross-chain route setup, with route tier, summary, provenance, confidence, optional protocol evidence, and sources. Safety Score v8.12 reads this as a penalty-only Decentralization blend for curated profiles; missing reviews stay neutral. L2BEAT Interop can support review evidence and candidate queues, but queue output is not curated metadata until a reviewer writes a sourced profile.
+- `oracleRisk?: OracleRiskProfile` — reviewed CDP oracle / collateral price-feed setup, with optional review provenance and collateral-branch rows. Branch evidence can record feed provider/path/address/chain, heartbeat and staleness bounds, fallback behavior, observation block/date, collateral parameters, liquidation behavior, backstops, shutdown/bad-debt handling, and sources. Safety Score v8.11 reads only the existing tier for direct crypto-backed CDPs; the added evidence is score-neutral preparation for v9.
+- `bridgeRouteRisk?: BridgeRouteRiskProfile` — reviewed cross-chain route setup, with route tier, summary, provenance, confidence, optional protocol evidence, sources, and deployment-level `routes[]`. Each route identifies its exact chain/contract representation, issuance/transfer semantics, reviewed tier, scope (`global`, `canonical`, `peripheral`, or `unknown`), and optional controller/failure-domain evidence. Safety Score v8.12 still reads the legacy reviewed profile tier; runtime route materiality is exposed as pre-v9 diagnostics and is not score-active without a versioned methodology release.
 - `infrastructures?: Infrastructure[]` — structured infrastructure-lineage list (`"liquity-v1"` / `"liquity-v2"` / `"m0"`) used for UI badges, cohort filters, and discovery hubs. An array so a coin can belong to more than one infrastructure simultaneously, though in practice each coin currently has zero or one entry.
 - `variantOf?: string` / `variantKind?: "savings-passthrough" | "strategy-vault" | "risk-absorption" | "bond-maturity"` — active-only parent-variant metadata for tracked wrapper, strategy-vault, or bond-leg products whose user expectation is still direct exposure to another tracked stablecoin
 - `pegReferenceId?: string` — id of the tracked stablecoin used as this coin's peg-deviation reference (drives severe active-depeg cap inheritance from a parent). For tracked variants it is invariant-bound to equal `variantOf` (enforced in `shared/lib/stablecoins/schema.ts` and `validate-variants.ts`)
-- `reserves?: ReserveSlice[]` — reserve composition data
+- `reserves?: ReserveSlice[]` — reserve composition data; slices may add structured asset class, obligor, risk factors, liquidity horizon, or evidenced maximum maturity without encoding a score
 - `reserveReview?: ReserveReview` — sourced, dated review of the reserve composition and its known unknown exposure; optional per-slice non-link dispositions are fingerprinted by current index and name and remain non-scoring until a real `coinId` is authored
+- `custodyProfile?: CustodyProfile` — reviewed providers, optional sourced shares, legal safeguards, reuse posture, provenance, and uncertainty behind the current `custodyModel`; consistency checks are advisory and do not auto-derive the v8 tier
 - `yieldConfig?: YieldConfig` — yield intelligence configuration
 - `pythFeedId?: string` — Pyth Network oracle feed ID (used for gold/commodity stablecoins)
 - `tradedContracts?: ContractDeployment[]` — traded contract addresses separate from `contracts`
@@ -78,8 +81,14 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `status?: "pre-launch" | "active" | "frozen"` — lifecycle state; omitted rows are active
 - `frozenAt?: string` / `obituary?: StablecoinObituary` — freeze date and cemetery/detail-page obituary content required for frozen tracked coins
 - `launchDate?`, `announcedDate?`, `expectedLaunchDate?`, `launchPhase?`, `launchPhaseDetail?`, `featuredContent?`, `milestones?`, `dateHistory?` — launch/upcoming timeline metadata for pre-launch and newly launched assets
-- `mintAuthority?: MintAuthorityProfile` — reviewed mint/burn authority posture used by the Mint Authority Score and detail-page authority summaries
+- `mintAuthority?: MintAuthorityProfile` — reviewed mint/burn authority posture used by the Mint Authority Score and detail-page authority summaries; profiles can also carry structured upgradeability, active/resolved incident state, observation points, and reviewed common failure-domain keys
 - `tags?: string[]` — freeform tag array for filtering and categorization
+
+### Implementation Age Policy
+
+`launchDate` remains the product or project launch. Author `implementationLaunchDate` only when a later deployed mechanism, relaunch, or critical implementation boundary makes the product date misleading. The field requires a sourced `mechanismArchetypeReview` and cannot unambiguously predate `launchDate` or its own review.
+
+For `YYYY`, `YYYY-MM`, `YYYY-Qn`, and `YYYY-Hn`, track-record age uses the inclusive end of that period. When the period end is later than the fixed scoring `asOf` date, the `asOf` date is used, yielding zero claimed age for the unresolved part of the period. Tracked variants resolve effective implementation age from the newest required layer across the child and parent chain, with cycle detection; they do not blindly inherit either endpoint.
 
 ### Mint Authority Taxonomy
 
@@ -104,6 +113,8 @@ Mint path labels:
 | `unknown`                       | Not reviewed or insufficient evidence.                                                                                                       |
 
 Authority posture labels are descriptive bands only: `none-resolved`, `bounded-admin`, `partially-bounded-admin`, `concentrated-admin`, `unbounded-or-compromised`, and `unknown`. Do not color or rank these like report-card grades.
+
+Mint controls derive a stable controller identity from `chain + address`; EVM addresses are case-normalized while case-sensitive non-EVM addresses are preserved. `failureDomainKeys` are reserved for reviewed off-chain common modes that an address cannot express. `upgradeability` records proxy model, implementation/admin addresses, mint-logic mutability, delay, observation point, sources, and the exact existing control label that owns an upgradeable path. `mintIncidents.status` is required; `resolvedAt` is optional for historical remediation and forbidden on an active incident. These fields enrich control-path evidence without changing the current Mint Authority or Safety Score formulas.
 
 ### Infrastructure Tagging
 
