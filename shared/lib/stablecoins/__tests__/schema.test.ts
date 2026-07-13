@@ -7,7 +7,7 @@ import {
   StablecoinMintAuthoritySidecarSchema,
   StablecoinRiskReviewSidecarSchema,
 } from "../schema";
-import { OracleRiskProfileSchema } from "@shared/types/stablecoin-meta-schemas";
+import { OracleRiskProfileSchema } from "../../../types/stablecoin-meta-schemas";
 
 const baseFlags = {
   pegCurrency: "USD",
