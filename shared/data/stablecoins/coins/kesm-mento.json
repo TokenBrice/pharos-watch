@@ -26,36 +26,20 @@
   },
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "KESm's current Celo StableTokenV2 issuance uses configured Mento broker and validator authorities, while the associated Mento oracle and breaker path remains an external rate dependency.",
+    "summary": "Mento documents non-USDm/EURm FX stables as USDm-collateralized CDP assets; KESm's complete production oracle and liquidation branch remains unverified.",
     "branchModel": "single-path",
-    "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "At Celo block 72129709, KESm's EIP-1967 implementation is StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e, broker() is 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, and validators() is 0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58. The current Mento reserve API reports active CDP troves only for GBPm, JPYm, and CHFm, with no KESm trove; the current StableToken documentation identifies GBPm as the CDP-backed example. KESm therefore has no current borrower-specific liquidation branch to inventory under V9.",
-      "sources": [
-        {
-          "label": "Mento stable token contracts",
-          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
-        },
-        {
-          "label": "Mento deployment addresses",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
-        },
-        {
-          "label": "KESm Celo token",
-          "url": "https://celo.blockscout.com/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"
-        },
-        {
-          "label": "Mento reserve analytics API",
-          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
-        }
-      ]
-    },
     "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
-    "confidence": "verified",
+    "reviewer": "SOL-3 adversarial verification",
+    "confidence": "limited",
     "sources": [
+      {
+        "label": "Mento CDP architecture",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+      },
+      {
+        "label": "Mento Reserve backing-model split",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+      },
       {
         "label": "Mento stable token contracts",
         "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"

@@ -2,53 +2,69 @@
   "id": "reusd-re-protocol",
   "name": "Re Protocol reUSD",
   "symbol": "reUSD",
-  "oneLiner": "reUSD is Re Protocol's NAV-based yield token deploying USDC and USDe/sUSDe into delta-neutral ETH basis trades and short-duration U.S. T-bills (Cayman Islands).",
+  "oneLiner": "reUSD is Re Protocol's senior NAV-based tranche, backed by onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral (Cayman Islands).",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
+    "rwa": true,
     "navToken": true
   },
-  "collateral": "USDC, USDe, and sUSDe deployed into delta-neutral ETH basis trades or short-duration U.S. Treasury bills via the Re Protocol Insurance Capital Layer",
-  "pegMechanism": "NAV-based token price recalculated daily at UTC 00:00 via Chainlink price feed; yield accrues from delta-neutral ETH basis trade or T-bill returns plus 250 bps protocol spread; atomic redemptions when instant liquidity available, otherwise queue mode",
-  "mechanismArchetype": "synthetic-delta-neutral",
+  "collateral": "At least 50% of the high-water-mark capital remains onchain as redemption liquidity, primarily sUSDe; up to 50% is deployed offchain into Regulation 114 trust accounts as collateral supporting reinsurance contracts",
+  "pegMechanism": "NAV-based token price recalculated daily at UTC 00:00 from a blend of the offchain SOFR-based return and the onchain trailing sUSDe basis rate, plus 250 bps; instant redemptions are liquidity-limited and fall back to a quarterly queue",
+  "mechanismArchetype": "rwa-credit-fund",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "rationale": "Current Re documentation describes reUSD as the senior tranche of a reinsurance-capital structure, with up to half of capital deployed into Regulation 114 trust accounts. That architecture is a real-world credit/fund exposure rather than the prior synthetic delta-neutral classification.",
+    "sources": [
+      {
+        "label": "Re Protocol About reUSD",
+        "url": "https://docs.re.xyz/products/about-reusd.md"
+      },
+      {
+        "label": "Re Protocol reUSD and reUSDe comparison",
+        "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
+      }
+    ]
+  },
   "llamaId": "339",
   "detailProvider": "defillama",
   "geckoId": "re-protocol-reusd",
   "cmcSlug": "re-protocol-reusd",
   "oracleRisk": {
     "tier": "oracleless-or-internal",
-    "summary": "reUSD is a NAV-based strategy token rather than a collateralized debt position, so it has no collateral health factor or oracle-triggered liquidation branch.",
+    "summary": "reUSD is a senior NAV-based tranche token rather than a collateralized debt position, so it has no borrower health factor or oracle-triggered collateral liquidation branch.",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
       "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Re Protocol documents reUSD as a token received for deposits whose backing is allocated to delta-neutral ETH basis trades or short-duration Treasury bills, with daily NAV updates and liquidity-dependent redemptions. It does not document user debt positions, collateral ratios, or oracle-triggered collateral liquidations, so CDP collateral branches are not applicable.",
+      "reviewer": "owner-triage",
+      "rationale": "Re Protocol documents reUSD as a senior NAV-based tranche minted against accepted stablecoin deposits, with capital split between onchain liquidity and offchain Regulation 114 trust collateral. It does not create borrower-specific debt positions, collateral ratios, or oracle-triggered collateral liquidations, so CDP collateral branches are not applicable.",
       "sources": [
         {
-          "label": "Re Protocol reUSD docs",
-          "url": "https://docs.re.xyz/insurance-capital-layers/what-is-reusd"
+          "label": "Re Protocol About reUSD",
+          "url": "https://docs.re.xyz/products/about-reusd.md"
         },
         {
-          "label": "Re Protocol FAQs",
-          "url": "https://docs.re.xyz/"
+          "label": "Re Protocol reUSD and reUSDe comparison",
+          "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
         }
       ]
     },
     "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Re Protocol reUSD docs",
-        "url": "https://docs.re.xyz/insurance-capital-layers/what-is-reusd"
+        "label": "Re Protocol About reUSD",
+        "url": "https://docs.re.xyz/products/about-reusd.md"
       },
       {
-        "label": "Re Protocol FAQs",
-        "url": "https://docs.re.xyz/"
+        "label": "Re Protocol reUSD and reUSDe comparison",
+        "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
       }
     ]
   },
@@ -80,7 +96,7 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "reUSD is a NAV-based yield-accruing token issued exclusively to non-U.S. persons under Regulation S (Securities Act of 1933). It accrues yield from delta-neutral ETH basis trades and T-bills, carries significant risk including total loss of principal, offers gated/queue redemptions, and is not marketed or used as a 1:1 fiat payment instrument. These features place it outside GENIUS payment-stablecoin scope.",
+      "summary": "reUSD is a senior, NAV-based yield token issued exclusively to eligible non-U.S. persons. Its backing combines onchain stablecoin liquidity with offchain reinsurance collateral in Regulation 114 trust accounts; redemptions become queued when instant capacity is unavailable. These investment and yield features place it outside GENIUS payment-stablecoin scope.",
       "references": [
         {
           "label": "Re Protocol disclosure page",
@@ -89,10 +105,10 @@
           "accessedAt": "2026-06-07"
         },
         {
-          "label": "Re Protocol docs — What is reUSD",
-          "url": "https://docs.re.xyz/insurance-capital-layers/what-is-reusd",
+          "label": "Re Protocol About reUSD",
+          "url": "https://docs.re.xyz/products/about-reusd.md",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-07-14"
         }
       ]
     },
@@ -116,10 +132,10 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Re Protocol docs — What is reUSD",
-        "url": "https://docs.re.xyz/insurance-capital-layers/what-is-reusd",
+        "label": "Re Protocol About reUSD",
+        "url": "https://docs.re.xyz/products/about-reusd.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-07-14"
       },
       {
         "label": "Re Protocol disclaimers",
@@ -128,8 +144,8 @@
         "accessedAt": "2026-06-07"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewer": "owner-triage",
+    "reviewedAt": "2026-07-14"
   },
   "contracts": [
     {
@@ -366,30 +382,56 @@
       }
     }
   },
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Re Protocol About reUSD",
+        "url": "https://docs.re.xyz/products/about-reusd.md"
+      },
+      {
+        "label": "Re Protocol complete documentation",
+        "url": "https://docs.re.xyz/llms-full.txt"
+      }
+    ],
+    "rationale": "Current Re documentation establishes an architecture-level allocation: at least 50% of high-water-mark deposits remains onchain, primarily as sUSDe, while up to 50% may be moved into Regulation 114 trust accounts supporting reinsurance. It does not establish a current point-in-time split or support the prior 25/25/30/20 weights.",
+    "compositionBasis": "Current Re architecture disclosure; no point-in-time portfolio allocation was published in the reviewed sources",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The onchain and offchain reserve categories are identified, but their current weights, temporary onchain asset mix, trust-account assets, banking partners, and reinsurance exposures are not fully enumerated.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The documentation identifies sUSDe as the primary onchain asset and Regulation 114 trust collateral as the offchain component, but does not publish a current reconciled allocation suitable for separate dependency weights.",
+        "candidateCoinIds": [
+          "susde-ethena"
+        ]
+      }
+    ]
+  },
   "reserves": [
     {
-      "name": "Delta-neutral ETH basis trade positions (via USDe)",
-      "pct": 25,
+      "name": "Onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral",
+      "pct": 100,
       "risk": "high",
-      "coinId": "usde-ethena"
-    },
-    {
-      "name": "Delta-neutral ETH basis trade positions (via sUSDe)",
-      "pct": 25,
-      "risk": "high",
-      "coinId": "susde-ethena",
-      "depType": "collateral"
-    },
-    {
-      "name": "Short-duration U.S. Treasury bills",
-      "pct": 30,
-      "risk": "very-low"
-    },
-    {
-      "name": "USDC reserves (instant redemption buffer)",
-      "pct": 20,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "assetClass": "other",
+      "issuerOrObligor": "Ethena and Re Protocol's partner reinsurers, trust accounts, custodians, and banking counterparties",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "market",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "yieldConfig": {

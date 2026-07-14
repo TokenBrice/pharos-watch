@@ -2,39 +2,38 @@
   "id": "a7a5-old-vector",
   "reserves": [
     {
-      "name": "Russian-ruble deposits at a sanctioned major state-owned bank",
+      "name": "Russian-ruble deposits",
       "pct": 100,
       "risk": "very-high",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed sanctioned major Russian state-owned bank",
+      "issuerOrObligor": "Undisclosed reserve banks",
       "riskFactors": ["credit", "liquidity", "custody", "counterparty", "legal", "concentration"],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "confidence": "probable",
     "sources": [
       {
         "label": "A7A5 reserve transparency documentation",
         "url": "https://docs.a7a5.io/legal/transparency"
       },
       {
-        "label": "A7A5 reasonable-assurance reserves report",
-        "url": "https://www.a7a5.io/audit.pdf"
+        "label": "A7A5 terms of use",
+        "url": "https://docs.a7a5.io/legal/terms-of-use"
       }
     ],
-    "rationale": "A7A5 states that every token is backed one-for-one by Russian-ruble deposits. The July 4, 2025 reasonable-assurance report describes the complete reserve as immediately available rubles in a current account at one sanctioned major Russian state-owned bank; no provider name or internal instrument split is disclosed in the reviewed artifact.",
-    "compositionBasis": "A7A5 issuer disclosures and reasonable-assurance reserve report as of July 4, 2025",
-    "compositionAsOf": "2025-07-04",
+    "rationale": "A7A5's current transparency documentation states that each token is backed one-for-one by Russian-ruble deposits, and its terms describe a basket of fiat deposits held at banks. The reviewed pages do not identify a reserve bank, account type, institution allocation, or usable current assurance artifact.",
+    "compositionBasis": "Current A7A5 issuer disclosure of one-for-one Russian-ruble deposit backing",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve asset class, currency, liquidity, and single-bank concentration are disclosed, but the report does not name the reserve bank or provide account-level terms.",
+    "knownUnknownExposure": "The issuer identifies the reserve currency and deposit asset class but does not disclose reserve-bank identities, allocations, account terms, or liquidity details on the reviewed pages.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Russian-ruble deposits at a sanctioned major state-owned bank",
+        "reserveName": "Russian-ruble deposits",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Russian-ruble bank deposits are external reserve assets rather than tracked stablecoin dependencies."
@@ -44,10 +43,8 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed sanctioned major Russian state-owned bank",
-        "role": "bank",
-        "sharePct": 100,
-        "jurisdiction": "Russia"
+        "name": "Undisclosed reserve banks",
+        "role": "bank"
       }
     ],
     "segregation": "unknown",
@@ -55,13 +52,14 @@
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "confidence": "manual-review",
     "sources": [
       {
-        "label": "A7A5 reasonable-assurance reserves report",
-        "url": "https://www.a7a5.io/audit.pdf"
+        "label": "A7A5 terms of use",
+        "url": "https://docs.a7a5.io/legal/terms-of-use"
       }
     ],
-    "uncertainty": "The assurance report identifies a single sanctioned major Russian state-owned reserve bank and an unrestricted current account, but does not name the bank or disclose segregation, bankruptcy-remoteness, or rehypothecation terms."
+    "uncertainty": "A7A5 refers generally to deposits held at banks but does not identify the institutions, jurisdictions, provider shares, segregation, bankruptcy remoteness, rehypothecation terms, or account restrictions.",
+    "knownUnknownExposurePct": 100
   }
 }

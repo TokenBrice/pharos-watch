@@ -4,7 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento Brazilian Real",
   "symbol": "BRLm",
-  "oneLiner": "BRLm is Mento's Brazilian real stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
+  "oneLiner": "BRLm is Mento's reserve-backed Brazilian real stablecoin on Celo, issued and retired through the oracle-priced USDm/BRLm Broker pool.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "BRL",
@@ -13,9 +13,24 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-  "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing BRLm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the BRLm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
-  "mechanismArchetype": "cdp",
+  "collateral": "Shared Mento Reserve: Mento's current analytics configuration classifies BRLm as reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve, not USDm locked in a BRLm-specific trove.",
+  "pegMechanism": "BRLm is issued through Mento v2's USDm/BRLm Broker and BiPoolManager exchange. A USDm-to-BRLm swap burns incoming USDm and mints outgoing BRLm; the reverse burns BRLm and mints USDm. The constant-sum virtual pool prices swaps from the BRL/USD SortedOracles feed and applies spread, trading-limit, report-count, freshness, and BreakerBox checks.",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex mechanism review",
+    "rationale": "Primary evidence resolves BRLm as a reserve-backed legacy Broker stable with no borrower CDP. Pharos's current closed archetype enum has no protocol-reserve-backed FX category: fiat-cash is defined as custodial off-chain cash issuance, algorithmic as reflexive or unbacked, and cdp requires borrower vaults. The false cdp value is removed rather than replaced with another materially inaccurate label.",
+    "sources": [
+      {
+        "label": "Pinned Mento stablecoin backing config",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Pinned Mento Broker source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+      }
+    ]
+  },
   "geckoId": "celo-real-creal",
   "proofOfReserves": {
     "type": "real-time",
@@ -25,19 +40,44 @@
     "cadence": "real-time"
   },
   "oracleRisk": {
-    "tier": "redundant-with-failover",
-    "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
-    "reviewedAt": "2026-06-12",
+    "tier": "single-source-or-laggy",
+    "summary": "BRLm's live Celo USDm/BRLm Broker exchange uses one Mento SortedOracles BRL/USD reporter with a 360-second freshness/reset window. MedianDeltaBreaker and MarketHoursBreaker gate trading; no alternate provider or fallback path is configured.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "At Celo block 72138428, BRLm used the Mento v2 Broker/BiPoolManager constant-sum USDm/BRLm exchange with minimumReports 1 and a 360-second reset/expiry window. The current deployment registry has no BRLm CDP contracts, Mento's backing config classifies BRLm as reserve-backed, and the reserve API lists active troves only for GBPm, JPYm, and CHFm. BRLm therefore has no borrower-specific oracle or liquidation branch; its oracle governs swap pricing and trading validity.",
+      "sources": [
+        {
+          "label": "Pinned Mento Celo deployment registry",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
+        },
+        {
+          "label": "Pinned Mento stablecoin backing config",
+          "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+        },
+        {
+          "label": "Mento reserve analytics API",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Mento V3 smart contracts docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        "label": "Pinned Mento BiPoolManager source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
       },
       {
-        "label": "Mento BreakerBox docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        "label": "Pinned Mento Broker source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+      },
+      {
+        "label": "BRLm on Celo Blockscout",
+        "url": "https://celo.blockscout.com/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
       }
     ]
   },
@@ -95,10 +135,10 @@
     "reviewedAt": "2026-05-12"
   },
   "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
+    "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "BRLm is minted via the Mento Broker (0x777A...) which is the sole authorized minter (broker() getter confirmed). The Broker's proxy admin and the BRLm token owner and proxy admin all resolve to the Mento Timelock (0x890DB...) with a 2-day delay.",
+    "summary": "Operational BRLm issuance runs through the Mento Broker, which burns incoming Mento stable tokens and mints the outgoing token during the USDm/BRLm swap. StableTokenV2 also authorizes the Celo ValidatorsProxy, but its current implementation only mints registry USDm for EpochManager; its Celo-Governance-owned proxy is therefore a latent upgrade-controlled BRLm mint surface. exchange() is zero, and the two-day Mento Timelock can change the token's broker, validators, and exchange slots and upgrade the BRLm token and Broker.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -114,9 +154,9 @@
       ],
       "canChangeMintLogic": true,
       "delaySec": 172800,
-      "controlRef": "Mento Timelock — BRLm token owner and proxy admin",
-      "observedAt": "2026-07-13",
-      "observedBlock": 72084007,
+      "controlRef": "Mento Timelock - BRLm token and Broker administrator",
+      "observedAt": "2026-07-14",
+      "observedBlock": 72138428,
       "sources": [
         {
           "label": "Mento V3 stablecoin docs",
@@ -140,57 +180,112 @@
       {
         "chain": "celo",
         "address": "0x777A8255cA72412f0d706dc03C9D1987306B4CaD",
-        "label": "Mento Broker — authorized minter for BRLm",
+        "label": "Mento Broker - operational BRLm swap minter",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 72138428,
         "sources": [
           {
-            "label": "BRLm token broker() on-chain read",
-            "url": "https://celo.blockscout.com/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
+            "label": "Pinned Mento Broker source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+          },
+          {
+            "label": "Pinned Mento BiPoolManager source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
           }
         ],
-        "evidence": "At Celo block 69287341, broker() on BRLm (0xe8537a3d056da446677b9e9d6c5db704eaab4787) returned 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy). The Broker's EIP-1967 proxy admin slot returned 0x890DB8A597940165901372Dd7DB61C9f246e2147 (Mento Timelock)."
+        "evidence": "At Celo block 72138428, broker() on BRLm returned this Broker. Broker swaps call transferIn to burn the incoming Mento stable and transferOut to mint the outgoing stable only through registered exchanges subject to exchange and trading-limit checks."
       },
       {
         "chain": "celo",
         "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
-        "label": "Mento Timelock — BRLm token owner and proxy admin",
+        "label": "Mento Timelock - BRLm token and Broker administrator",
         "role": "minter-admin",
         "authorityType": "timelock",
         "directMintAbility": "can-authorize",
         "timelockDelaySec": 172800,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 72138428,
         "sources": [
           {
-            "label": "Mento V3 stablecoin docs",
-            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            "label": "Pinned StableTokenV2 source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
           },
           {
             "label": "BRLm token on Celo Blockscout",
             "url": "https://celo.blockscout.com/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
           }
         ],
-        "evidence": "At Celo block 69287341, owner() on BRLm returned 0x890DB8A597940165901372Dd7DB61C9f246e2147; EIP-1967 proxy admin slot returned the same address. getMinDelay() on the Timelock returned 0x2a300 = 172800 seconds (48 hours)."
+        "evidence": "At Celo block 72138428, this 172800-second Timelock was the BRLm token and Broker owner and proxy admin. StableTokenV2 ownership can change broker, validators, and exchange authorization slots, while the proxy-admin role can replace token and Broker mint-critical logic."
+      },
+      {
+        "chain": "celo",
+        "address": "0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58",
+        "label": "Celo ValidatorsProxy - authorized BRLm minter slot",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 72138428,
+        "sources": [
+          {
+            "label": "Pinned StableTokenV2 source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+          },
+          {
+            "label": "Celo ValidatorsProxy verified source",
+            "url": "https://celo.blockscout.com/address/0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58?tab=contract"
+          }
+        ],
+        "evidence": "At Celo block 72138428, validators() returned this proxy and StableTokenV2 admitted it in onlyMinter. The current Validators implementation can only mint the Registry StableToken (USDm) to EpochManager and has no generic or BRLm-targeting call, so it is authorized at token level but cannot currently issue BRLm."
+      },
+      {
+        "chain": "celo",
+        "address": "0xD533Ca259b330c7A88f74E000a3FaEa2d63B7972",
+        "label": "Celo GovernanceProxy - Validators proxy upgrade owner",
+        "role": "proxy-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 72138428,
+        "sources": [
+          {
+            "label": "Celo ValidatorsProxy verified source",
+            "url": "https://celo.blockscout.com/address/0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58?tab=contract"
+          }
+        ],
+        "evidence": "At Celo block 72138428, ValidatorsProxy _getOwner() returned this GovernanceProxy and _getImplementation() returned 0x13B0B89F3242f815C1FC6C9CF56e1Ab5aEA4dC58. Governance can change the authorized proxy's implementation, creating a latent BRLm mint path, but does not currently have a direct BRLm call."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Mento V3 stablecoin docs",
-          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          "label": "Pinned StableTokenV2 source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
         },
         {
           "label": "BRLm token on Celo Blockscout",
           "url": "https://celo.blockscout.com/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
+        },
+        {
+          "label": "Celo ValidatorsProxy verified source",
+          "url": "https://celo.blockscout.com/address/0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58?tab=contract"
         }
       ],
-      "evidence": "At Celo block 69287341: owner() = Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147 (confirmed); EIP-1967 proxy admin slot = same Timelock; getMinDelay() = 172800s (48h); broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy, confirmed as sole authorized minter); Broker EIP-1967 proxy admin = same Timelock. Celo Registry confirms Broker = 0x777A... All mint-capable surfaces resolved.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Celo block 72138428, broker() returned 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, validators() returned 0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58, and exchange() was zero. The Broker is the live swap mint/burn path. The current Validators implementation can only mint registry USDm for EpochManager, but its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface. The 172800-second Mento Timelock owns and administers the BRLm token and Broker.",
+      "reviewer": "Codex data review",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable"
     }
   },
   "chainTier": "established-alt-l1",
@@ -200,12 +295,58 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "USDm (Mento Dollar) CDP collateral",
+      "name": "Mento Reserve collateral basket (dynamic composition)",
       "pct": 100,
-      "risk": "low",
-      "coinId": "cusd-celo"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Mento Reserve governance and constituent issuers",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Pinned Mento stablecoin backing config",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      }
+    ],
+    "rationale": "Mento's current backing registry explicitly classifies BRLm as reserve-backed. Exact constituent weights are mutable and belong to the existing live Mento adapter rather than durable static metadata.",
+    "compositionBasis": "Mento's documented reserve-backed classification with exact allocation supplied at runtime by the Mento adapter",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Static metadata identifies the shared reserve envelope but intentionally leaves changing constituent weights to timestamp-validated live telemetry.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Mento Reserve collateral basket (dynamic composition)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The mutable reserve API exposes current constituents, but no immutable report supports durable static weights across the mixed reserve basket.",
+        "candidateCoinIds": [
+          "ausd-agora",
+          "susds-sky",
+          "usdt-tether",
+          "eurc-circle",
+          "usdc-circle"
+        ]
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,
@@ -233,10 +374,12 @@
             "counterAsset": { "address": "0x765De816845861e75A25fCA122bb6898B8B1282a", "label": "USDm" }
           }
         ],
-        "sourceUrls": ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"]
+        "sourceUrls": [
+          "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol",
+          "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
+        ]
       }
     }
   },
-  "infrastructures": ["liquity-v2"],
   "launchDate": "2022-01-27"
 }

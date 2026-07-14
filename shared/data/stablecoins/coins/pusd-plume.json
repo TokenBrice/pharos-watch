@@ -192,6 +192,30 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "pUSD is a Nucleus BoringVault (non-upgradeable) on both Ethereum and Plume; owner()=3-of-6 Plume Safe (0xa08a…) on both chains; a RolesAuthority (0x97bc…, same Safe as owner) gates enter(). Teller at 0x41bdb4 (Plume) is the OFAC-gated deposit gateway confirmed by live mint transactions.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25531116,
+      "sources": [
+        {
+          "label": "pUSD BoringVault on Etherscan",
+          "url": "https://etherscan.io/address/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "pUSD BoringVault on Plume Explorer",
+          "url": "https://explorer.plume.org/address/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+        },
+        {
+          "label": "Plume RPC",
+          "url": "https://rpc.plume.org"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "BoringVault Safe owner (3-of-6)",
@@ -199,7 +223,14 @@
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
+        "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
         "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531116,
+        "failureDomainKeys": [
+          "ethereum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+          "plume:0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
+        ],
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
@@ -238,8 +269,14 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "chain": "plume",
+        "address": "0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-14",
+        "observedBlock": 81049017,
+        "failureDomainKeys": [
+          "plume:0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d"
+        ],
         "evidence": "At Plume block 74171811 (2026-06-11), live mint transactions (e.g. 0xcf58692fa0f5…) showed callers invoking 0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d (Teller, 2304 bytes) which in turn triggered Transfer-from-zero on the BoringVault. The Teller is the OFAC-gated predicate proxy deposit gateway; RolesAuthority owned by same 3-of-6 Safe controls which addresses can call enter().",
         "sources": [
           {
@@ -254,9 +291,9 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295054 and Plume block 74171811 (2026-06-11): pUSD BoringVault (0xdddd…) is non-upgradeable on both ETH and Plume. owner()=3-of-6 GnosisSafeL2 (0xa08a…, no modules) on both chains. authority()=RolesAuthority (0x97bc…), also owned by same Safe. The Teller at 0x41bdb4aa on Plume (not deployed on ETH) is confirmed as the deposit gateway via live mint TX trace (45 mints on Plume). No permissionless mint path. pUSD total supply on Plume confirmed active (45 historical mints).",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25531116 and Plume block 81049017 (2026-07-14), the pUSD BoringVault at 0xdddd… has zero EIP-1967 implementation, admin, and beacon slots on both tracked deployments, confirming an immutable mint-critical vault. owner() remains the 3-of-6 GnosisSafeL2 at 0xa08a… with no enabled modules; authority() remains RolesAuthority 0x97bc…, owned by the same Safe. The Plume Teller at 0x41bdb4aa remains the deposit gateway and is the only reviewed direct mint route.",
+      "reviewer": "Codex CTRL curation",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Plume pUSD docs",

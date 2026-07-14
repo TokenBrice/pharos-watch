@@ -19,18 +19,39 @@
   "geckoId": "decentralized-euro",
   "oracleRisk": {
     "tier": "oracleless-or-internal",
-    "summary": "dEURO follows the Frankencoin/dEURO auction-based collateral model, where auctions establish collateral value instead of an external liquidation oracle.",
-    "reviewedAt": "2026-06-12",
+    "summary": "dEURO's permanent V2 and V3 MintingHub modules use permissionless challenge auctions instead of external price feeds. A V3 price reference can only be another valid same-collateral dEURO position and does not import an oracle provider.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "dEURO documents both permanent MintingHub generations as oracle-free. At finalized Ethereum block 25531509, PositionOpened logs covered 96 V2 and two V3 positions; direct reads found debt-bearing V2 positions across WETH, WBTC, cbBTC, kBTC, and WFPS, while both V3 positions had zero principal. Every position stores its owner-selected liquidation price and challenge period. V3's optional price reference must be a live, same-hub, same-collateral position with meaningful debt and only allows the cooldown on a price increase to be skipped; it is not an external oracle or provider fallback. Liquidation-price feed branches are therefore not applicable even though position-specific auction parameters remain material protocol risk.",
+      "sources": [
+        {
+          "label": "dEURO V2 and V3 module documentation",
+          "url": "https://docs.deuro.com/smart-contracts"
+        },
+        {
+          "label": "Pinned dEURO V3 Position implementation",
+          "url": "https://github.com/d-EURO/smartContracts/blob/10bd18a605410b89cec4d4769389bdce47a283b8/contracts/MintingHubV3/Position.sol"
+        },
+        {
+          "label": "Pinned dEURO V3 MintingHub implementation",
+          "url": "https://github.com/d-EURO/smartContracts/blob/10bd18a605410b89cec4d4769389bdce47a283b8/contracts/MintingHubV3/MintingHub.sol"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "dEURO docs",
-        "url": "https://docs.deuro.com/"
+        "label": "dEURO V2 and V3 module documentation",
+        "url": "https://docs.deuro.com/smart-contracts"
       },
       {
-        "label": "Frankencoin auction docs",
-        "url": "https://docs.frankencoin.com/positions/auctions"
+        "label": "dEURO reserve and liquidation loss waterfall",
+        "url": "https://docs.deuro.com/reserve"
       }
     ]
   },

@@ -2,11 +2,11 @@
   "id": "paxg-paxos",
   "reserves": [
     {
-      "name": "Physical gold bars (LBMA Good Delivery, Brink's London vaults)",
+      "name": "Physical gold bars (London Good Delivery, LBMA-accredited London vaults)",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "other",
-      "issuerOrObligor": "Paxos Trust Company, N.A. and allocated gold held in Brink's London vaults",
+      "issuerOrObligor": "Paxos Trust Company, N.A. and allocated gold held in LBMA-accredited London vaults",
       "riskFactors": [
         "custody",
         "legal",
@@ -32,7 +32,7 @@
       },
       {
         "label": "Paxos PAXG documentation",
-        "url": "https://docs.paxos.com/guides/dashboard/paxg"
+        "url": "https://docs.paxos.com/guides/stablecoin/paxg"
       }
     ],
     "rationale": "Paxos states that each PAXG represents one fine troy ounce of allocated LBMA Good Delivery gold held in London vaults and publishes monthly independent attestations. The reviewed product and transparency materials support a complete physical-gold reserve category without a separate asset-type split.",
@@ -43,7 +43,7 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Physical gold bars (LBMA Good Delivery, Brink's London vaults)",
+        "reserveName": "Physical gold bars (London Good Delivery, LBMA-accredited London vaults)",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Allocated physical gold is an exogenous commodity reserve rather than a tracked stablecoin dependency."
@@ -58,7 +58,7 @@
         "jurisdiction": "United States"
       },
       {
-        "name": "Brink's London vaults",
+        "name": "Undisclosed LBMA-accredited London vault providers",
         "role": "subcustodian",
         "jurisdiction": "United Kingdom"
       }
@@ -79,6 +79,6 @@
         "url": "https://www.paxos.com/paxg-transparency"
       }
     ],
-    "uncertainty": "Paxos and Brink's custody, allocated storage, and monthly KPMG attestations are disclosed, but provider-level gold shares and explicit rehypothecation terms were not established in the reviewed sources."
+    "uncertainty": "Paxos custody, allocated storage in LBMA-accredited London vaults, and monthly KPMG attestations are disclosed, but current vault providers, provider-level gold shares, and explicit rehypothecation terms were not established in the reviewed sources."
   }
 }

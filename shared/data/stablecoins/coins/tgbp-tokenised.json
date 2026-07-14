@@ -20,10 +20,29 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.tokenisedgbp.com/transparency",
-    "provider": "Launch Accounts (Joseph Murphy, ICAEW)",
+    "provider": "Andersen LLP",
     "attestorTier": "niche",
     "cadence": "monthly",
-    "attestorJurisdiction": "United Kingdom"
+    "attestorJurisdiction": "United Kingdom",
+    "latestReport": {
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-14",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "SOL-8 Safety Score V9 blocker challenge",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Andersen tGBP independent accountants report - June 2026",
+          "url": "https://hypzwtzgiiobtwtrskfq.supabase.co/storage/v1/object/public/Website%20Files/Independent%20Accounts%20Report%20-%20BCP%20Technologies%20Ltd%20-%20%2030%20June%202026.pdf"
+        },
+        {
+          "label": "Tokenised GBP reserve transparency page",
+          "url": "https://www.tokenisedgbp.com/transparency"
+        }
+      ]
+    }
   },
   "links": [
     {

@@ -25,19 +25,120 @@
     "cadence": "real-time"
   },
   "oracleRisk": {
-    "tier": "redundant-with-failover",
-    "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "tier": "standard-external",
+    "summary": "CHFm's sole Celo CDP branch values USDm through one Mento SortedOracles CHF/USD report, inverted by FXPriceFeed. OracleAdapter enforces FX market hours, BreakerBox bidirectional mode, and a 360-second report expiry; there is no alternate provider. An invalid or unavailable rate freezes price-dependent operations until the authorized watchdog permanently shuts the branch and pins the last valid price.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "Mento's pinned Celo deployment registry exposes one CHFm Liquity branch. At finalized Celo block 72135701, its live CollateralRegistry returned one collateral, USDm as token 0, and the CHFm TroveManager as manager 0; no additional CHFm collateral branch exists.",
+      "sources": [
+        {
+          "label": "Mento current Celo deployments",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
+        },
+        {
+          "label": "Celo Forno RPC",
+          "url": "https://forno.celo.org"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Mento V3 smart contracts docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        "label": "Mento current Celo deployments",
+        "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
       },
       {
-        "label": "Mento BreakerBox docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        "label": "Mento FXPriceFeed source",
+        "url": "https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/PriceFeeds/FXPriceFeed.sol"
+      },
+      {
+        "label": "Mento TroveManager source",
+        "url": "https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/TroveManager.sol"
+      }
+    ],
+    "branches": [
+      {
+        "id": "mento-chfm-usdm",
+        "label": "Mento CHFm / USDm branch",
+        "tier": "standard-external",
+        "summary": "The live CHFm branch uses one Mento SortedOracles CHF/USD report with a 360-second token expiry, a 110% MCR, Stability Pool offset, and active-Trove redistribution. Price-dependent calls freeze on invalid data until watchdog shutdown; there is no alternate oracle provider.",
+        "collateralAssets": [
+          "USDm"
+        ],
+        "chains": [
+          "celo"
+        ],
+        "feeds": [
+          {
+            "provider": "Mento SortedOracles",
+            "path": "One CHF/USD SortedOracles report -> OracleAdapter market-hours, BreakerBox, and 360-second freshness validation -> FXPriceFeed inversion -> USDm-backed CHFm Trove collateral ratio",
+            "address": "0x8a94073809E9Ae55626c2FD413826bF93f755a73",
+            "chain": "celo",
+            "stalenessBoundSec": 360,
+            "observedAt": "2026-07-14",
+            "observedBlock": 72135701,
+            "failureDomainKeys": [
+              "mento-sorted-oracles-chf-usd",
+              "mento-breaker-box",
+              "mento-fx-market-hours",
+              "celo"
+            ]
+          }
+        ],
+        "fallbackBehavior": "FXPriceFeed reads rateFeedID 0x0f61BA9c30ef7CaEE7E5CC1F96BFFCb0f52ccD64 through OracleAdapter 0xa472fBBF4b890A54381977ac392BdF82EeC4383a and inverts it. At finalized block 72135701, one report was live, its timestamp was 51 seconds old against a 360-second expiry, trading was bidirectional, and the FX market was open. No alternate provider exists: stale, closed-market, suspended, or invalid data makes price reads revert until watchdog 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 irreversibly shuts the branch, after which FXPriceFeed returns lastValidPrice.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 72135701,
+        "collateralParameters": [
+          {
+            "asset": "USDm",
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 110,
+            "note": "The live SystemParams proxy returned MCR 110%, CCR 135%, SCR 110%, and BCR 10%; TroveManager shutdownTime was zero at finalized Celo block 72135701."
+          }
+        ],
+        "liquidationMechanism": "Any caller can submit Trove IDs to public batchLiquidateTroves; each active or zombie Trove with ICR below the 110% MCR is liquidated immediately, except that the implementation prevents liquidating the branch's final Trove. The Stability Pool offsets available debt and receives USDm collateral, while uncovered debt and collateral are redistributed to active Troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "Stability Pool 0xc415cA43aB6Ab246E64559696b8DCAcdd08A39e8 is the first backstop. It held 5,000 CHFm at finalized block 72135701; liquidation logic leaves the configured 1 CHFm minimum untouched. Debt beyond available offsets is redistributed with collateral across active Troves through DefaultPool; the branch graph and pinned implementation expose no separate insurance or reserve absorber.",
+        "shutdownOrBadDebtBehavior": "Residual liquidation debt beyond the Stability Pool is assigned pro rata to active Troves, and the last Trove cannot be liquidated. If branch TCR falls below the 110% SCR, anyone can shut the branch down; the authorized watchdog can also permanently shut it after oracle failure. Shutdown stops new borrowing and interest accrual and enables urgent redemption at the last valid price, burning CHFm for USDm even against the final Trove.",
+        "failureDomainKeys": [
+          "mento-sorted-oracles-chf-usd",
+          "mento-breaker-box",
+          "mento-fx-market-hours",
+          "mento-chfm-stability-pool",
+          "mento-chfm-active-troves",
+          "celo"
+        ],
+        "sources": [
+          {
+            "label": "Mento current Celo deployments",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
+          },
+          {
+            "label": "Mento FXPriceFeed ABI",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/abis/FXPriceFeed.json"
+          },
+          {
+            "label": "Mento OracleAdapter ABI",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/abis/OracleAdapterv300.json"
+          },
+          {
+            "label": "Mento TroveManager source",
+            "url": "https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/TroveManager.sol"
+          },
+          {
+            "label": "Mento BorrowerOperations source",
+            "url": "https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/BorrowerOperations.sol"
+          },
+          {
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
+          }
+        ]
       }
     ]
   },

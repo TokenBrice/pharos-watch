@@ -251,57 +251,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
-  "reserves": [
-    {
-      "name": "sfrxUSD (Staked Frax USD)",
-      "pct": 42,
-      "risk": "medium",
-      "coinId": "sfrxusd-frax"
-    },
-    {
-      "name": "Curve AMO positions (dUSD/sfrxUSD LP)",
-      "pct": 35,
-      "risk": "high",
-      "coinId": "sfrxusd-frax",
-      "depType": "mechanism"
-    },
-    {
-      "name": "frxUSD (Fraxtal)",
-      "pct": 4,
-      "risk": "low",
-      "coinId": "frxusd-frax"
-    },
-    {
-      "name": "DAI (Fraxtal)",
-      "pct": 5,
-      "risk": "low",
-      "coinId": "dai-makerdao"
-    },
-    {
-      "name": "sDAI (Fraxtal)",
-      "pct": 5,
-      "risk": "medium",
-      "coinId": "sdai-sky"
-    },
-    {
-      "name": "vbUSDT (Katana Vault Bridge)",
-      "pct": 3,
-      "risk": "medium",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "vbUSDC (Katana Vault Bridge)",
-      "pct": 3,
-      "risk": "medium",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "sUSDS (Sky Savings Rate)",
-      "pct": 3,
-      "risk": "medium",
-      "coinId": "susds-sky"
-    }
-  ],
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "concentrated-admin",

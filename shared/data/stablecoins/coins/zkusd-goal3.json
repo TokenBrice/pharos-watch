@@ -2,7 +2,7 @@
   "id": "zkusd-goal3",
   "name": "zkUSD Dollar",
   "symbol": "zkUSD",
-  "oneLiner": "zkUSD is a Goal3 sportsbook dollar token on ZKsync Era, redeemed 1:1 to USDC; the protocol claims overcollateralization but composition is undisclosed.",
+  "oneLiner": "zkUSD is an issuer-controlled ZKsync token minted through Goal3's verified portal; current reserve, redemption, and peg-maintenance evidence is unavailable.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Collateralized assets held within the Goal3 sportsbook on ZKsync Era; backing is asserted as algorithmically over-collateralized and provable on-chain, but the exact composition of accepted collateral is not publicly itemized.",
-  "pegMechanism": "Issued and redeemed through the Goal3 Portal at 1 zkUSD = 1 USDC; the protocol claims to maintain over-collateralization of zkUSD circulating supply against assets held by Goal3 on ZKsync Era.",
+  "collateral": "Reserve assets, counterparties, and custody arrangements are not established by a current primary source; the deployed zkUSD token contract does not by itself prove collateralization.",
+  "pegMechanism": "Verified portal code accepts owner-configured stable tokens, transfers deposits to a treasury, and mints a configured return token through a vesting flow. That code establishes an issuer-controlled deposit-and-mint path, but not 1:1 USDC redemption, current reserve coverage, or a peg-maintenance mechanism.",
   "llamaId": "151",
   "detailProvider": "defillama",
   "oracleRisk": {
@@ -89,8 +89,8 @@
   "notices": [
     {
       "type": "info",
-      "title": "Reserve composition not publicly itemized",
-      "message": "Goal3 documents zkUSD as algorithmically over-collateralized by assets held in the sportsbook, but the specific accepted collateral assets and collateralization ratio are not published. The only documented holder exit is 1:1 redemption to USDC through the Goal3 Portal."
+      "title": "Current reserve and redemption evidence unavailable",
+      "message": "The verified portal establishes an issuer-controlled deposit-and-mint path. It does not establish current collateral assets or coverage, 1:1 USDC redemption, custody arrangements, or a durable peg-maintenance route."
     }
   ],
   "mintAuthority": {

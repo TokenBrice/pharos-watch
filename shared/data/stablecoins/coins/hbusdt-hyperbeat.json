@@ -39,74 +39,230 @@
     "reviewedAt": "2026-05-12"
   },
   "mintAuthority": {
-    "mintPath": "wrapped-or-variant-inherited",
+    "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "hbUSDT is a Hyperbeat vault/share token that accepts USDT0, USDe, and USR into a Hyperbeat insurance/vault flow; wrapper minting is share accounting while the USDT/USDT0 leg still inherits Tether's reviewed mint authority.",
+    "confidence": "verified",
+    "summary": "hbUSDT is a Midas-built vault share (contract hbUSDT extends mTBILL) whose mint() is gated by HB_USDT_MINT_OPERATOR_ROLE on MidasAccessControl. The sole role holder is Hyperbeat's permissionless Depositor: any user can call deposit() with an enabled deposit token and the Depositor mints shares at the pricer rate. depositCap is 0, which disables the cap check entirely, so user minting is currently unbounded. A 3/5 Hyperbeat Safe controls the Depositor through a Solmate RolesAuthority and can set the deposit cap, swap the pricer, pause deposits, and change accepted tokens. A single Midas EOA holds DEFAULT_ADMIN_ROLE on MidasAccessControl and can grant HB_USDT_MINT_OPERATOR_ROLE to any address. Token upgrades run through a Midas ProxyAdmin owned by a 2-day OpenZeppelin timelock.",
     "inheritedFrom": "usdt-tether",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x5e105266db42f78fa814322bce7f388b4c2e61eb"
+      ],
+      "implementationAddresses": [
+        "0x77b13307d6a36511ee7d887ae7ae9eb28e78e690"
+      ],
+      "adminAddresses": [
+        "0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Midas HyperEVM ProxyAdmin timelock",
+      "observedAt": "2026-07-14",
+      "observedBlock": 40439370,
+      "sources": [
+        {
+          "label": "hbUSDT token proxy and verified implementation (Hyperscan)",
+          "url": "https://www.hyperscan.com/address/0x5e105266db42f78FA814322Bce7f388B4C2e61eb"
+        },
+        {
+          "label": "Midas HyperEVM ProxyAdmin timelock (Hyperscan)",
+          "url": "https://www.hyperscan.com/address/0x76613bdDB3D89393B4Bd70d6894b1C85F6c37d5f"
+        },
+        {
+          "label": "HyperEVM public RPC",
+          "url": "https://rpc.hyperliquid.xyz/evm"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "hyperevm",
-        "address": "0x5e105266db42f78fa814322bce7f388b4c2e61eb",
-        "label": "Hyperbeat hbUSDT vault token",
-        "role": "wrapper",
+        "address": "0x6261f30144b259c74243d5f5d9230941186ac936",
+        "label": "Hyperbeat hbUSDT Depositor (user deposit mint)",
+        "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "none",
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "hbUSDT shares are minted through Hyperbeat deposit contracts against supported strategy assets including USDT0, USDe, and USR; the share token does not create base USDT supply.",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Depositor.depositCap() returns 0 at block 40439370; the verified source only enforces a cap when depositCap > 0, so hbUSDT minting through deposit() is uncapped. Only the Hyperbeat admin Safe can set or raise the cap.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40439370,
         "sources": [
           {
-            "label": "Hyperbeat hbUSDT docs",
+            "label": "Hyperbeat Depositor verified source (Hyperscan)",
+            "url": "https://www.hyperscan.com/address/0x6261f30144b259c74243d5f5d9230941186ac936"
+          },
+          {
+            "label": "Hyperbeat hbUSDT vault docs",
             "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt"
           },
           {
-            "label": "Accountable Hyperbeat reserves",
-            "url": "https://accountable.hyperbeat.org/"
+            "label": "HyperEVM public RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
           }
         ],
-        "evidence": "Hyperbeat docs list the hbUSDT vault token, insurance contract, redemption contract, and supported deposit assets USDT0, USDe, and USR. At HyperEVM block 37552574: EIP-1967 impl slot = 0x77b13307d6a36511ee7d887ae7ae9eb28e78e690 confirmed; admin slot = 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac (ProxyAdmin contract, len 3382 bytes). ProxyAdmin.owner() = 0x76613bdDB3D89393B4Bd70d6894b1C85F6c37d5f (contract, len 15944 bytes); that contract exposes no owner()/admin()/getOwners() — signer/governance structure unresolved."
+        "evidence": "At HyperEVM block 40439370 (eth_call, https://rpc.hyperliquid.xyz/evm): MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b hasRole(keccak(HB_USDT_MINT_OPERATOR_ROLE)=0x4708f1ddf76bb2ba71756e83ce9cafa1a90b46a12e0e8a4dd2ecdc08032c845b, 0x6261f301...) = true; it is the only holder. Hyperscan-verified source (contract Depositor) shows deposit(address,address,uint256,bytes32) is external with no auth modifier and calls VaultToken(vaultToken).mint(_receiver, vaultTokenAmount); vaultToken() = 0x5e105266db42f78fa814322bce7f388b4c2e61eb, isPaused() = false, depositCap() = 0, depositFee() = 0, isDepositToken(USDT0) = true. owner() = 0x0 (renounced); all admin functions are requiresAuth through the RolesAuthority."
       },
       {
-        "chain": "ethereum",
-        "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
-        "label": "Inherited Ethereum USDT token owner multisig",
-        "role": "direct-minter",
-        "authorityType": "multisig",
-        "directMintAbility": "direct",
+        "chain": "hyperevm",
+        "address": "0x582195604f449df55219d707e0b4f9bdb3095b65",
+        "label": "Hyperbeat vault admin Safe",
+        "role": "cap-admin",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
         "threshold": 3,
-        "signerCount": 6,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Sole authorized caller of Depositor.setDepositCap; can also swap the pricer that sets shares-per-deposit, pause deposits, and toggle accepted deposit tokens.",
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "owners": [
+            "0x43f17abc6fa021eaf607cbe39dc56dd208b67b7f",
+            "0xf790fea5b25d433c5077c57688b889ee7c0940a6",
+            "0xbeb7a26ebc333d4909d9261ddf8411f6becc6785",
+            "0x2efe068f1b0606c5d35647852a4723450538281b",
+            "0xfed34139a3114291a80dd07d24cd518811442d5b"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 40439370,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 40439370,
         "sources": [
           {
-            "label": "Tether transparency",
-            "url": "https://tether.to/en/transparency/"
+            "label": "Hyperbeat admin Safe (Hyperscan)",
+            "url": "https://www.hyperscan.com/address/0x582195604f449df55219d707e0b4f9bdb3095b65"
           },
           {
-            "label": "Ethereum USDT contract",
-            "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
+            "label": "Hyperbeat Depositor verified source (Hyperscan)",
+            "url": "https://www.hyperscan.com/address/0x6261f30144b259c74243d5f5d9230941186ac936"
+          },
+          {
+            "label": "HyperEVM public RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
           }
         ],
-        "evidence": "hbUSDT inherits base USDT issuance risk from the reviewed USDT parent, whose Ethereum owner path resolves to a 3/6 multisig-style contract."
+        "evidence": "At HyperEVM block 40439370: Depositor.authority() = RolesAuthority 0x6278d7d6e57db17d002bc9b13e3284f58d05099a, whose owner() = 0x582195604f449df55219d707e0b4f9bdb3095b65. That address is a Safe v1.4.1 (VERSION() = 1.4.1, getThreshold() = 3, getOwners() = 5 owners, getModulesPaginated = empty, guard slot = 0x0, masterCopy slot0 = 0x29fcb43b46531bca003ddc8fcb67ffe91900c762). RolesAuthority.canCall(Safe, Depositor, sig) = true for setDepositCap(uint256), togglePaused(), setPricer(address), and toggleDepositToken(address,bool); eth_call of setDepositCap from the Safe succeeds while the same call from the Midas admin EOA, the two role-holding ops addresses, and a random address all revert with UNAUTHORIZED. The Safe cannot mint hbUSDT directly and holds no MidasAccessControl mint role."
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+        "label": "Midas HyperEVM access-control admin EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Can grant HB_USDT_MINT_OPERATOR_ROLE to any address with no cap or delay; cannot set the Depositor's deposit cap.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40439370,
+        "sources": [
+          {
+            "label": "MidasAccessControl on HyperEVM (Hyperscan)",
+            "url": "https://www.hyperscan.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          },
+          {
+            "label": "HyperEVM public RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ],
+        "evidence": "At HyperEVM block 40439370: MidasAccessControl.hasRole(DEFAULT_ADMIN_ROLE, 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227) = true (negative control 0x...dEaD returns false), and eth_getCode returns empty, so it is an EOA. getRoleAdmin(HB_USDT_MINT_OPERATOR_ROLE) = 0x00..00 (DEFAULT_ADMIN_ROLE), so this EOA can grant or revoke the mint role immediately. Hyperscan RoleGranted history shows it as the sender of every HB_USDT role grant. Deployer 0xa0819ae43115420beb161193b8d8ba64c9f9facc no longer holds DEFAULT_ADMIN_ROLE (hasRole = false)."
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0x76613bddb3d89393b4bd70d6894b1c85f6c37d5f",
+        "label": "Midas HyperEVM ProxyAdmin timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Owns the ProxyAdmin that can replace the hbUSDT implementation, and therefore its mint logic, after a two-day delay.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40439370,
+        "sources": [
+          {
+            "label": "Midas HyperEVM ProxyAdmin timelock (Hyperscan)",
+            "url": "https://www.hyperscan.com/address/0x76613bdDB3D89393B4Bd70d6894b1C85F6c37d5f"
+          },
+          {
+            "label": "hbUSDT token proxy and verified implementation (Hyperscan)",
+            "url": "https://www.hyperscan.com/address/0x5e105266db42f78FA814322Bce7f388B4C2e61eb"
+          },
+          {
+            "label": "HyperEVM public RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ],
+        "evidence": "At HyperEVM block 40439370: hbUSDT EIP-1967 admin slot (0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103) = ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac; ProxyAdmin.owner() = 0x76613bddb3d89393b4bd70d6894b1c85f6c37d5f. That contract is an OpenZeppelin TimelockController: getMinDelay() = 172800 (2 days), and PROPOSER_ROLE(), EXECUTOR_ROLE(), CANCELLER_ROLE(), TIMELOCK_ADMIN_ROLE() all return the standard OZ hashes. This resolves the previously unresolved owner contract flagged in the 2026-06-11 review."
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0xbe8a4f1a312b94a712f8e5367b02ae6e378e6f19",
+        "label": "Retired Midas hbUSDT deposit vault",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40439370,
+        "sources": [
+          {
+            "label": "Hyperbeat hbUSDT vault docs",
+            "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt"
+          },
+          {
+            "label": "HyperEVM public RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ],
+        "evidence": "The Midas DepositVault at 0xbE8A4f1a312b94A712F8E5367B02ae6E378E6F19 (mToken() = hbUSDT) minted every hbUSDT Transfer-from-zero observed up to block ~12.8M via depositInstant. At block 40439370 it is paused() = true and MidasAccessControl.hasRole(HB_USDT_MINT_OPERATOR_ROLE, vault) = false, so it can no longer mint; the mint role moved to the Hyperbeat Depositor at block 22639928. Hyperbeat docs still list this address as the deposit contract."
       }
     ],
     "review": {
+      "disposition": "scoreable",
       "sources": [
         {
-          "label": "Hyperbeat hbUSDT docs",
+          "label": "Hyperbeat hbUSDT vault docs",
           "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt"
         },
         {
-          "label": "Tether transparency",
-          "url": "https://tether.to/en/transparency/"
+          "label": "hbUSDT token proxy and verified implementation (Hyperscan)",
+          "url": "https://www.hyperscan.com/address/0x5e105266db42f78FA814322Bce7f388B4C2e61eb"
+        },
+        {
+          "label": "Hyperbeat Depositor verified source (Hyperscan)",
+          "url": "https://www.hyperscan.com/address/0x6261f30144b259c74243d5f5d9230941186ac936"
+        },
+        {
+          "label": "MidasAccessControl on HyperEVM (Hyperscan)",
+          "url": "https://www.hyperscan.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+        },
+        {
+          "label": "Hyperbeat admin Safe (Hyperscan)",
+          "url": "https://www.hyperscan.com/address/0x582195604f449df55219d707e0b4f9bdb3095b65"
+        },
+        {
+          "label": "Midas HyperEVM ProxyAdmin timelock (Hyperscan)",
+          "url": "https://www.hyperscan.com/address/0x76613bdDB3D89393B4Bd70d6894b1C85F6c37d5f"
+        },
+        {
+          "label": "HyperEVM public RPC",
+          "url": "https://rpc.hyperliquid.xyz/evm"
         }
       ],
-      "evidence": "Hyperbeat docs establish hbUSDT as wrapper/share accounting over supported strategy assets including USDT0, USDe, and USR; the USDT/USDT0 dependency inherits reviewed Tether mint authority. At HyperEVM block 37552574: proxy admin = 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac (ProxyAdmin), owned by 0x76613bdDB3D89393B4Bd70d6894b1C85F6c37d5f (non-upgradeable contract, 15944 bytes). That owner contract responds to no standard ownership or multisig interface (owner/admin/getOwners all revert); signer composition unconfirmable on-chain without ABI or Hyperbeat disclosure.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "ProxyAdmin (0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac) is owned by 0x76613bdDB3D89393B4Bd70d6894b1C85F6c37d5f — a non-upgradeable contract with no standard ownership interface visible on HyperEVM RPC. Need ABI or Hyperbeat disclosure to confirm the upgrade-admin signer structure before promoting."
-      ]
+      "evidence": "Full control graph resolved on HyperEVM at block 40439370 via eth_call, eth_getStorageAt, and eth_getCode against https://rpc.hyperliquid.xyz/evm, plus Hyperscan-verified sources for hbUSDT (contract hbUSDT is mTBILL) and the Hyperbeat Depositor. Mint path: hbUSDT.mint is gated by HB_USDT_MINT_OPERATOR_ROLE; the only holder is Depositor 0x6261f30144b259c74243d5f5d9230941186ac936, whose deposit() is permissionless and uncapped (depositCap() = 0 disables the cap check). Parameter control: Depositor.owner() is renounced and authority() = RolesAuthority 0x6278d7d6e57db17d002bc9b13e3284f58d05099a owned by 3/5 Safe 0x582195604f449df55219d707e0b4f9bdb3095b65, the only address whose setDepositCap/setPricer/togglePaused/toggleDepositToken calls simulate successfully. Role admin: DEFAULT_ADMIN_ROLE on MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b is held by EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227, which can regrant the mint role at will. Upgrades: EIP-1967 admin = ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac owned by OZ TimelockController 0x76613bddb3d89393b4bd70d6894b1c85f6c37d5f with getMinDelay() = 172800. The prior review's unresolved question about that owner contract is answered: it is the 2-day timelock. Note for data curation: only USDT0 is currently an enabled deposit token (isDepositToken(USDe) and isDepositToken(USR) both return false).",
+      "reviewer": "Claude V9 CTRL batch (hbusdt-hyperbeat)",
+      "reviewedAt": "2026-07-14"
     }
   },
   "links": [

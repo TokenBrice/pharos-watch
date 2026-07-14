@@ -170,85 +170,6 @@
   },
   "chainTier": "established-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "reserves": [
-    {
-      "name": "AUSD (Agora Dollar)",
-      "pct": 27,
-      "risk": "low",
-      "coinId": "ausd-agora"
-    },
-    {
-      "name": "sUSDS (Sky savings USDS)",
-      "pct": 24.2,
-      "risk": "low",
-      "coinId": "susds-sky"
-    },
-    {
-      "name": "CELO",
-      "pct": 17.6,
-      "risk": "high"
-    },
-    {
-      "name": "USDT",
-      "pct": 13,
-      "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "EURC (Circle euro stablecoin)",
-      "pct": 11.9,
-      "risk": "low",
-      "coinId": "eurc-circle"
-    },
-    {
-      "name": "USDC",
-      "pct": 4,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "stETH (Lido staked ETH)",
-      "pct": 2.3,
-      "risk": "low"
-    }
-  ],
-  "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex dependency review",
-    "confidence": "verified",
-    "sources": [
-      {
-        "label": "Mento reserve analytics API",
-        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
-      },
-      {
-        "label": "Mento reserve documentation",
-        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
-      }
-    ],
-    "rationale": "Weights are the current USD-value percentages published by Mento's official reserve API, with chain variants consolidated by the repository's reviewed Mento adapter. AUSD, sUSDS, USDT, EURC, and USDC are exact tracked reserve dependencies; CELO and stETH are identified exogenous collateral.",
-    "compositionBasis": "Current shared Mento reserve asset USD values, consolidated by canonical asset through the reviewed Mento adapter",
-    "compositionAsOf": "2026-07-14",
-    "scope": "full-composition",
-    "knownUnknownExposure": "All reserve API asset rows are identified and mapped or explicitly dispositioned.",
-    "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 2,
-        "reserveName": "CELO",
-        "pct": 17.6,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "CELO is native crypto collateral rather than a stablecoin dependency."
-      },
-      {
-        "reserveIndex": 6,
-        "reserveName": "stETH (Lido staked ETH)",
-        "pct": 2.3,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "stETH is liquid-staking collateral rather than a stablecoin dependency."
-      }
-    ]
-  },
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,
@@ -279,7 +200,9 @@
             }
           }
         ],
-        "sourceUrls": ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"]
+        "sourceUrls": [
+          "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+        ]
       }
     }
   },

@@ -67,53 +67,158 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
-    "summary": "KRWO is a non-upgradeable Ownable ERC-20 (not a FiatToken) on both BSC and Klaytn/Kaia. On BSC the owner is EOA 0xc34e0d2b73e5c5a826fa4a86c240cac9fd347c1c; on Klaytn the owner is a distinct EOA 0xbe025edc4499c0e50a2c14655ba360a840f47c39. No multisig or timelock; single-EOA custody on each chain warrants unbounded-or-compromised posture.",
+    "summary": "KRWO is a non-upgradeable ERC-20 whose mint() is gated on a single immutable MINTER_ADDRESS on each chain — a GimSwap voucher-swap contract that mints KRWO against Open Voucher (OV) deposits. The owner EOA cannot mint: mint() from the owner reverts UnauthorizedAccount(owner), and setMinter() reverts MinterAlreadySet() for every caller, so the minter is permanently locked and cannot be replaced or added to. The owner retains only transferOwnership/renounceOwnership/setMetadata. Neither the token nor the BSC minter is a proxy; the Kaia minter's owner has been burned to 0x…01, leaving its fee setters unreachable.",
     "controls": [
       {
-        "label": "KRWO owner (BSC) — EOA",
+        "chain": "bsc",
+        "address": "0x88cbe5d0088db1dfb302e5c58242153b6171f50b",
+        "label": "KRWO minter contract (BSC) — GimSwap voucher swap",
         "role": "direct-minter",
-        "authorityType": "eoa",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
+        "capDescription": "The token enforces no cap: cap()/maxSupply() are absent from the bytecode and a simulated mint of 1e30 units from this address succeeds. Any bound lives inside the swap contract's voucher accounting.",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 109940975,
         "sources": [
           {
-            "label": "BscScan contract",
+            "label": "BscScan — KRWO token",
+            "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1"
+          },
+          {
+            "label": "BscScan — KRWO minter (GimSwap voucher swap)",
+            "url": "https://bscscan.com/address/0x88cbe5d0088db1dfb302e5c58242153b6171f50b"
+          },
+          {
+            "label": "GimSwap docs — what is KRWO",
+            "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
+          }
+        ],
+        "evidence": "At BSC block 109,940,975: MINTER_ADDRESS() on the KRWO token returns 0x88cbe5d0088db1dfb302e5c58242153b6171f50b; eth_getCode returns 4,462 bytes (a contract) and its EIP-1967 implementation slot is zero, so it is not a proxy. eth_call of mint(0x…dEaD, 1) from this address succeeds, and from every other sender — including the owner EOA — it reverts with UnauthorizedAccount(caller) (custom error 0x32b2baa3). A simulated mint of 1e30 units from this address also succeeds, proving the token applies no cap. The contract exposes TOKEN_CONTRACT()=0x5868a0bc… (KRWO), VOUCHER_CONTRACT()=0x872c7eb7f46ece69c9db74f91ce249c2e1b3c2ea and transferVoucherCallback(address,address,uint256,bytes), i.e. it mints on OV voucher deposit. It has no owner() and no reachable admin setter. Contract source is not verified on BscScan, so its internal voucher accounting is asserted by GimSwap docs rather than read."
+      },
+      {
+        "chain": "klaytn",
+        "address": "0x663e9d64cdd9b8cc7b0f073bbfb927aa8d154be0",
+        "label": "KRWO minter contract (Klaytn/Kaia) — GimSwap voucher swap",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "capDescription": "The token enforces no cap: cap()/maxSupply() are absent from the bytecode and a simulated mint of 1e30 units from this address succeeds. Any bound lives inside the swap contract's voucher accounting.",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 221835246,
+        "sources": [
+          {
+            "label": "Kaiascan — KRWO token",
+            "url": "https://kaiascan.io/token/0x7fc692699f2216647a0e06225d8bdf8cdee40e7f"
+          },
+          {
+            "label": "Kaiascan — KRWO minter (GimSwap voucher swap)",
+            "url": "https://kaiascan.io/account/0x663e9d64cdd9b8cc7b0f073bbfb927aa8d154be0"
+          },
+          {
+            "label": "GimSwap docs — what is KRWO",
+            "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
+          }
+        ],
+        "evidence": "At Klaytn/Kaia block 221,835,246: MINTER_ADDRESS() on the KRWO token returns 0x663e9d64cdd9b8cc7b0f073bbfb927aa8d154be0; eth_getCode returns 6,056 bytes and its EIP-1967 implementation slot is zero, so it is not a proxy. eth_call of mint(0x…dEaD, 1) and of mint(0x…dEaD, 1e30) from this address both succeed; from any other sender, including the owner EOA, mint() reverts. The contract exposes TOKEN_CONTRACT()=0x7fc69269… (KRWO), VOUCHER_CONTRACT()=0x51ac6833805ac16bc10db649b84128b321b53820 and transferVoucherCallback(...). Its owner() reads 0x0000000000000000000000000000000000000001 — a burn sentinel — so its setFee/resetFeeReceiver/transferOwnership entrypoints are permanently unreachable (feeNumerator() is currently 0 of FEE_DENOMINATOR 10000). Source is not verified on Kaiascan, so internal voucher accounting is asserted by docs rather than read."
+      },
+      {
+        "chain": "bsc",
+        "address": "0xc34e0d2b73e5c5a826fa4a86c240cac9fd347c1c",
+        "label": "KRWO owner (BSC) — EOA",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 109940975,
+        "sources": [
+          {
+            "label": "BscScan — KRWO token",
             "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1"
           }
         ],
-        "evidence": "At BSC block 103,631,986, owner() returned 0xc34e0d2b73e5c5a826fa4a86c240cac9fd347c1c; eth_getCode returned 0x (EOA). EIP-1967 proxy slots are zero — non-upgradeable. masterMinter() reverts; contract is a simple Ownable ERC-20, not FiatToken."
+        "evidence": "At BSC block 109,940,975: owner() returns 0xc34e0d2b73e5c5a826fa4a86c240cac9fd347c1c and eth_getCode returns 0x (EOA). This EOA has NO mint authority: a simulated mint(0x…dEaD, 1) from it reverts with UnauthorizedAccount(0xc34e0d2b…), and setMinter(address) reverts with MinterAlreadySet() (0xf119708d) for every candidate argument and every caller, so it cannot appoint, replace or add a minter. Its remaining powers are transferOwnership, renounceOwnership and setMetadata(string,string) (token name/symbol). It is also the bonusReceiver() of the BSC minter contract. This corrects the prior record, which listed the owner as a direct-minter."
       },
       {
+        "chain": "klaytn",
+        "address": "0xbe025edc4499c0e50a2c14655ba360a840f47c39",
         "label": "KRWO owner (Klaytn/Kaia) — EOA",
-        "role": "direct-minter",
+        "role": "other",
         "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
+        "directMintAbility": "none",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 221835246,
         "sources": [
           {
-            "label": "Kaiascan contract",
+            "label": "Kaiascan — KRWO token",
             "url": "https://kaiascan.io/token/0x7fc692699f2216647a0e06225d8bdf8cdee40e7f"
           }
         ],
-        "evidence": "At Klaytn/Kaia block 218,849,661, owner() returned 0xbe025edc4499c0e50a2c14655ba360a840f47c39; eth_getCode returned 0x (EOA). Non-upgradeable. masterMinter() reverts — same simple Ownable pattern as BSC."
+        "evidence": "At Klaytn/Kaia block 221,835,246: owner() returns 0xbe025edc4499c0e50a2c14655ba360a840f47c39 and eth_getCode returns 0x (EOA), distinct from the BSC owner. It has NO mint authority: mint() simulated from it reverts, and setMinter(address) reverts for every caller because the minter is already set. Remaining powers are transferOwnership, renounceOwnership and setMetadata. It is the feeReceiver() of the Kaia minter contract. This corrects the prior record, which listed the owner as a direct-minter."
       }
     ],
-    "review": {
-      "evidence": "At BSC block 103,631,986 and Klaytn block 218,849,661: both KRWO deployments are non-upgradeable Ownable ERC-20s. BSC owner is EOA 0xc34e0d2b73e5c5a826fa4a86c240cac9fd347c1c; Klaytn owner is EOA 0xbe025edc4499c0e50a2c14655ba360a840f47c39. masterMinter() reverts on both — prior 'FiatToken' characterization was inaccurate. Single-EOA ownership on both chains with no multisig or timelock; posture remains unbounded-or-compromised.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 109940975,
       "sources": [
         {
-          "label": "BscScan contract",
+          "label": "BscScan — KRWO token",
           "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1"
         },
         {
-          "label": "Kaiascan contract",
+          "label": "BscScan — KRWO minter (GimSwap voucher swap)",
+          "url": "https://bscscan.com/address/0x88cbe5d0088db1dfb302e5c58242153b6171f50b"
+        },
+        {
+          "label": "Kaiascan — KRWO token",
           "url": "https://kaiascan.io/token/0x7fc692699f2216647a0e06225d8bdf8cdee40e7f"
+        },
+        {
+          "label": "Kaiascan — KRWO minter (GimSwap voucher swap)",
+          "url": "https://kaiascan.io/account/0x663e9d64cdd9b8cc7b0f073bbfb927aa8d154be0"
+        },
+        {
+          "label": "GimSwap docs — what is KRWO",
+          "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
+        }
+      ]
+    },
+    "review": {
+      "evidence": "Read at BSC block 109,940,975 and Klaytn/Kaia block 221,835,246. Both KRWO deployments are non-upgradeable: EIP-1967 implementation, admin and beacon slots all read 0x0, and neither runtime bytecode contains upgradeTo(address) or upgradeToAndCall(address,bytes). Contract source is verified on neither BscScan nor Kaiascan (Sourcify has no entry and returned 503 during this review), so authority was established directly on-chain: the full selector set was recovered from the runtime bytecode and resolved against the OpenChain signature database, and each authority claim was then proved by eth_call simulation. The dispatch surface is transfer/transferFrom/approve/allowance/balanceOf/totalSupply/name/symbol/decimals plus mint(address,uint256), burn(uint256), owner(), transferOwnership, renounceOwnership, setMinter(address), setMetadata(string,string), MINTER_ADDRESS(), transferCallback and transferAndCall. There is no cap(), maxSupply(), pause(), blacklist(), grantRole() or configureMinter(). mint() is gated exclusively on MINTER_ADDRESS(): BSC 0x88cbe5d0088db1dfb302e5c58242153b6171f50b, Kaia 0x663e9d64cdd9b8cc7b0f073bbfb927aa8d154be0, both contracts, neither a proxy. Simulated mint from those addresses succeeds (including 1e30 units, so the token applies no cap); simulated mint from any other sender — the owner EOA included — reverts with UnauthorizedAccount(caller). setMinter(address) reverts with MinterAlreadySet() for every caller and every argument, so the minter is permanently locked: no party can replace, add or remove a minter. The owner EOAs (BSC 0xc34e0d2b73e5c5a826fa4a86c240cac9fd347c1c, Kaia 0xbe025edc4499c0e50a2c14655ba360a840f47c39) therefore hold no mint authority at all, only transferOwnership/renounceOwnership/setMetadata. This overturns the previous record, which characterised both owners as direct-minters with unbounded mint ability. Residual limit: because neither minter's source is verified, the voucher-collateral bound enforced inside the swap contract is asserted by GimSwap documentation rather than read; the token-level facts above are all direct on-chain reads.",
+      "reviewer": "Claude V9 CTRL clearing (on-chain)",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "BscScan — KRWO token",
+          "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1"
+        },
+        {
+          "label": "BscScan — KRWO minter (GimSwap voucher swap)",
+          "url": "https://bscscan.com/address/0x88cbe5d0088db1dfb302e5c58242153b6171f50b"
+        },
+        {
+          "label": "Kaiascan — KRWO token",
+          "url": "https://kaiascan.io/token/0x7fc692699f2216647a0e06225d8bdf8cdee40e7f"
+        },
+        {
+          "label": "Kaiascan — KRWO minter (GimSwap voucher swap)",
+          "url": "https://kaiascan.io/account/0x663e9d64cdd9b8cc7b0f073bbfb927aa8d154be0"
+        },
+        {
+          "label": "GimSwap docs — what is KRWO",
+          "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
         }
       ]
     }

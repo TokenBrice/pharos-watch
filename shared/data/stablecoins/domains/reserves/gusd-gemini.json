@@ -2,38 +2,35 @@
   "id": "gusd-gemini",
   "reserves": [
     {
-      "name": "USD bank deposits, Treasury-only money market funds, and U.S. Treasury obligations",
+      "name": "USD cash deposits",
       "pct": 100,
       "risk": "very-low",
-      "assetClass": "other",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
-      "liquidityHorizon": "unknown"
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "State Street Bank and Trust Company and Western Alliance Bank",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "SOL-8 Safety Score V9 blocker challenge",
     "confidence": "probable",
     "sources": [
       {
         "label": "Gemini Dollar reserve and attestation disclosures",
         "url": "https://www.gemini.com/dollar"
+      },
+      {
+        "label": "BPM GUSD reserves examination - May 2026",
+        "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf"
       }
     ],
-    "rationale": "Gemini identifies three eligible reserve categories and states that each GUSD is fully backed, but its current public product page does not disclose the allocation among bank deposits, Treasury-only money market funds, and Treasury obligations. The prior 62/38 split was therefore replaced with one evidenced aggregate basket.",
-    "compositionBasis": "Current Gemini Dollar issuer disclosure; asset-class weights undisclosed",
+    "rationale": "The May 29, 2026 BPM examination reports the reserve holdings as cash deposits at State Street and Western Alliance Bank. A separate net cash payable from timing and settlement differences reconciles the gross deposits to circulating GUSD and is not treated as a reserve asset slice.",
+    "compositionBasis": "May 29, 2026 BPM independent examination",
+    "compositionAsOf": "2026-05-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer identifies the full eligible reserve basket but does not publish current asset-class or provider weights on the reviewed page.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "USD bank deposits, Treasury-only money market funds, and U.S. Treasury obligations",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "Current reserve category weights are not disclosed by the issuer."
-      }
-    ]
+    "knownUnknownExposure": "The examination discloses the complete reserve asset class and names both banks, but does not disclose the allocation between them.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
@@ -43,12 +40,7 @@
         "jurisdiction": "United States"
       },
       {
-        "name": "Goldman Sachs",
-        "role": "bank",
-        "jurisdiction": "United States"
-      },
-      {
-        "name": "Fidelity",
+        "name": "Western Alliance Bank",
         "role": "bank",
         "jurisdiction": "United States"
       }
@@ -57,14 +49,18 @@
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "SOL-8 Safety Score V9 blocker challenge",
     "confidence": "probable",
     "sources": [
       {
         "label": "Gemini Dollar reserve and custody disclosures",
         "url": "https://www.gemini.com/dollar"
+      },
+      {
+        "label": "BPM GUSD reserves examination - May 2026",
+        "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf"
       }
     ],
-    "uncertainty": "Gemini says the cash portion may be held at State Street, Goldman Sachs, or Fidelity and states that reserves are segregated. It does not disclose provider shares, identify the Treasury money market funds, establish statutory bankruptcy remoteness on the reviewed page, or state rehypothecation terms."
+    "uncertainty": "The May 2026 examination names State Street and Western Alliance Bank as the current reserve banks but does not disclose provider shares, establish statutory bankruptcy remoteness, or state rehypothecation terms."
   }
 }

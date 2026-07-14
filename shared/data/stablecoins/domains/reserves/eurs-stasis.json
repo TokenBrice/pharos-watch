@@ -13,7 +13,7 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
@@ -48,30 +48,21 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Cyprus SEC-licensed investment services company (not named in report)",
-        "role": "bank",
-        "sharePct": 0.08,
-        "jurisdiction": "Cyprus"
-      },
-      {
-        "name": "MFSA Category 3 investment services company (not named in report)",
-        "role": "bank",
-        "sharePct": 59,
-        "jurisdiction": "Malta"
-      },
-      {
-        "name": "Central Bank of Lithuania-authorized electronic money institution (not named in report)",
-        "role": "bank",
-        "sharePct": 40.92,
+        "name": "NexPay UAB (identified in the December 2025 statement)",
+        "role": "other",
         "jurisdiction": "Lithuania"
+      },
+      {
+        "name": "Other current EURS reserve providers (not disclosed)",
+        "role": "other"
       }
     ],
-    "segregation": "segregated",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
     "sources": [
       {
         "label": "BDO Malta EURS Cash Reserves Report - August 1, 2024",
@@ -82,6 +73,7 @@
         "url": "https://api-site.stasis.net/api/dailyStatement/download?id=2301"
       }
     ],
-    "uncertainty": "BDO identifies the three providers only by license category and jurisdiction, so their names are intentionally not inferred. The report calls the accounts designated cash reserve accounts but does not establish statutory bankruptcy remoteness or disclose rehypothecation terms; the later daily statement identifies NexPay but covers only one account."
+    "uncertainty": "The December 2025 statement identifies NexPay for one EURS reserve account, but it does not establish the complete current provider set or allocation. The three provider categories in the August 2024 BDO report are historical and are not carried forward as current providers. Current segregation across all accounts, statutory bankruptcy remoteness, provider shares, and rehypothecation terms remain unknown.",
+    "knownUnknownExposurePct": 100
   }
 }

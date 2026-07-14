@@ -2,7 +2,7 @@
   "id": "m-m0",
   "name": "M by M0",
   "symbol": "M",
-  "oneLiner": "M is M0's institutional dollar stablecoin, minted 1:1 by permissioned Minters against short-term U.S. T-bill collateral with on-chain Validator attestations.",
+  "oneLiner": "M is M0's institutional dollar stablecoin, minted by permissioned Minters against eligible collateral with on-chain Validator attestations.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -178,8 +178,8 @@
   "infrastructures": [
     "m0"
   ],
-  "collateral": "Short-term U.S. Treasury bills (30–90 day) held in bankruptcy-remote SPVs by permissioned Minters; Validators independently attest collateral sufficiency on-chain before minting",
-  "pegMechanism": "Permissioned Minters lock eligible T-bill collateral in bankruptcy-remote SPVs; Validators cryptographically attest off-chain collateral sufficiency, enabling on-chain minting of M 1:1 against attested reserves; POWER token holders govern eligible collateral and Minter/Validator permissions",
+  "collateral": "Eligible cash, Treasury, and token collateral reported by M0's protocol API; static category, token, and minter weights remain unresolved and are supplied dynamically by the configured live-reserve adapter",
+  "pegMechanism": "Permissioned Minters pledge eligible collateral; Validators attest collateral sufficiency before on-chain minting, while POWER token holders govern eligible collateral and Minter/Validator permissions",
   "mechanismArchetype": "tbill",
   "llamaId": "213",
   "detailProvider": "defillama",

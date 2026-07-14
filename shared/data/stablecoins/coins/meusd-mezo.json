@@ -25,7 +25,7 @@
     "branchApplicability": {
       "disposition": "branches-required",
       "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
+      "reviewer": "owner-triage",
       "rationale": "MUSD is issued from BTC-backed borrower troves with a 110% minimum collateral ratio. Mezo's published contracts use one shared PriceFeed, TroveManager, StabilityPool, and redistribution engine for that BTC collateral path, so one complete branch row covers the liquidation surface.",
       "sources": [
         {
@@ -39,7 +39,7 @@
       ]
     },
     "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
@@ -53,6 +53,22 @@
       {
         "label": "Mezo MUSD contracts",
         "url": "https://github.com/mezo-org/musd"
+      },
+      {
+        "label": "Mezo mainnet chain ID",
+        "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/artifacts/deployments/mainnet/.chainId"
+      },
+      {
+        "label": "Mezo PriceFeed mainnet deployment artifact",
+        "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/artifacts/deployments/mainnet/PriceFeed.json"
+      },
+      {
+        "label": "Mezo PriceFeed contract source",
+        "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/contracts/PriceFeed.sol"
+      },
+      {
+        "label": "Mezo mainnet RPC",
+        "url": "https://jsonrpc-mezo.boar.network"
       }
     ],
     "branches": [
@@ -71,9 +87,11 @@
           {
             "provider": "Mezo PriceFeed with Chainlink-compatible Skip Connect BTC/USD oracle",
             "path": "Skip Connect BTC/USD answer -> Mezo PriceFeed.fetchPrice -> TroveManager ICR",
+            "address": "0xc5aC5A8892230E0A3e1c473881A2de7353fFcA88",
             "chain": "mezo",
             "stalenessBoundSec": 60,
             "observedAt": "2026-07-14",
+            "observedBlock": 10393034,
             "failureDomainKeys": [
               "mezo-price-feed",
               "skip-connect-btc-usd",
@@ -114,6 +132,22 @@
           {
             "label": "Mezo MUSD contracts",
             "url": "https://github.com/mezo-org/musd"
+          },
+          {
+            "label": "Mezo mainnet chain ID",
+            "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/artifacts/deployments/mainnet/.chainId"
+          },
+          {
+            "label": "Mezo PriceFeed mainnet deployment artifact",
+            "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/artifacts/deployments/mainnet/PriceFeed.json"
+          },
+          {
+            "label": "Mezo PriceFeed contract source",
+            "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/contracts/PriceFeed.sol"
+          },
+          {
+            "label": "Mezo mainnet RPC",
+            "url": "https://jsonrpc-mezo.boar.network"
           }
         ]
       }

@@ -20,7 +20,7 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "probable",
     "sources": [
       {
@@ -45,28 +45,31 @@
   "custodyProfile": {
     "providers": [
       {
+        "name": "Zodia Custody",
+        "role": "custodian"
+      },
+      {
         "name": "Brix iTRY/wiTRY staking contracts",
-        "role": "other",
-        "jurisdiction": "British Virgin Islands"
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Brix documentation",
-        "url": "https://docs.brix.money/"
+        "label": "Brix iTRY product and custody disclosure",
+        "url": "https://brix.money/itry"
       },
       {
         "label": "Brix proof-of-solvency portal",
         "url": "https://accountable.brix.money/"
       }
     ],
-    "uncertainty": "The wrapper and its TRY-denominated fund exposure are identified, but the reviewed public material does not establish legal segregation, insolvency remoteness, or collateral reuse restrictions.",
+    "uncertainty": "Brix names Zodia Custody as the institutional custodian of the underlying reserves, while the staking contracts hold iTRY for the wrapper. Brix does not publish provider shares or establish legal segregation, insolvency remoteness, or collateral reuse restrictions. The British Virgin Islands disclosure identifies wiTRY Limited, not the on-chain contracts or Zodia.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -84,46 +84,103 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "KAG is a Fireblocks ERC20F UUPS token on Ethereum; minting requires a role granted through the AccessRegistry. The token's admin EOAs (0xe560c473 x2, 0x3e96eb2e) are confirmed Fireblocks MPC/HSM EOAs — no on-chain code. Upgrade authority is embedded in the UUPS impl and gated by the same roles. Issuer-backend minting model fully corroborated on-chain.",
+    "summary": "KAG is a Fireblocks ERC20F UUPS proxy on Ethereum. mint() is onlyRole(MINTER_ROLE) with no on-chain cap, held by a single EOA (0xe560c473…). A separate single EOA (0x24945ec1…) holds DEFAULT_ADMIN_ROLE, which is the role admin for every role, so it can grant itself UPGRADER_ROLE and replace the implementation. No UPGRADER_ROLE holder currently exists. KAG and KAU use the same ERC20F implementation but distinct minter/admin EOAs and distinct DenyList registries. Minting is operationally gated off-chain by Kinesis deposits of allocated silver bullion, not by contract logic.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+      ],
+      "implementationAddresses": [
+        "0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "adminAddresses": [
+        "0x24945ec1be35c11c1fc13c72c910851541afb10f"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Kinesis KAG default-admin EOA",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530887,
+      "sources": [
+        {
+          "label": "KAG token proxy on Etherscan",
+          "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+        },
+        {
+          "label": "ERC20F verified implementation source (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x0f25045d15C163478bb67C56c5d9D602628F4F62?tab=contract"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "Kinesis issuance backend (Fireblocks MPC/EOA admin)",
+        "chain": "ethereum",
+        "address": "0xe560c473dee7b1d1d5ae316f4c1cba7157de498e",
+        "label": "Kinesis KAG minter EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "keyCustodyAttestation": {
-          "kind": "mpc",
-          "sources": [
-            {
-              "label": "KAG proxy on Etherscan (Fireblocks Proxy, ERC1967)",
-              "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
-            },
-            {
-              "label": "ERC20F implementation (Fireblocks)",
-              "url": "https://etherscan.io/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
-            }
-          ]
-        },
-        "evidence": "At Ethereum block 25296044: KAG proxy (0x56ba8b58) is a Fireblocks ERC1967Proxy (UUPS pattern, no ProxyAdmin — admin slot = 0x0). Implementation = 0x0f25045d15c163478bb67c56c5d9d602628f4f62 (ERC20F by Fireblocks). Constructor args decoded show admin addresses 0xe560c473dee7b1d1d5ae316f4c1cba7157de498e (x2) and 0x3e96eb2e94485712d0970c471d31ac3d8054b493 — all confirmed EOAs (eth_getCode returns 0x). owner() and DEFAULT_ADMIN_ROLE direct calls revert (no standard Ownable; access via AccessRegistrySubscription). No ProxyAdmin — upgrades controlled by UUPS role held by same Fireblocks EOA set."
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530887,
+        "sources": [
+          {
+            "label": "KAG token proxy on Etherscan",
+            "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+          },
+          {
+            "label": "ERC20F verified implementation source (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x0f25045d15C163478bb67C56c5d9D602628F4F62?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25530887, hasRole(MINTER_ROLE, 0xe560c473dee7b1d1d5ae316f4c1cba7157de498e) on the KAG proxy returns true and eth_getCode returns 0x (EOA). The verified ERC20F source defines mint(address,uint256) as onlyRole(MINTER_ROLE) with no supply cap or per-minter allowance, so this key can mint an unbounded amount; canRaiseCap is true because no numeric cap exists to raise. Role granted at deployment block 23337287 and never revoked."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x24945ec1be35c11c1fc13c72c910851541afb10f",
+        "label": "Kinesis KAG default-admin EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530887,
+        "sources": [
+          {
+            "label": "KAG token proxy on Etherscan",
+            "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
+          },
+          {
+            "label": "ERC20F verified implementation source (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x0f25045d15C163478bb67C56c5d9D602628F4F62?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25530887, hasRole(DEFAULT_ADMIN_ROLE, 0x24945ec1be35c11c1fc13c72c910851541afb10f) and hasRole(CONTRACT_ADMIN_ROLE, 0x24945ec1be35c11c1fc13c72c910851541afb10f) both return true; eth_getCode returns 0x (EOA). getRoleAdmin() for MINTER_ROLE, UPGRADER_ROLE, CONTRACT_ADMIN_ROLE and PAUSER_ROLE all return DEFAULT_ADMIN_ROLE, so this single key can grant MINTER_ROLE to any address and can grant itself UPGRADER_ROLE, whose sole power in ERC20F is _authorizeUpgrade. No timelock, multisig, or guard sits in front of it."
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25296044, the KAG proxy at 0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e is a Fireblocks ERC1967Proxy (UUPS) pointing to ERC20F impl 0x0f25045d15c163478bb67c56c5d9d602628f4f62. EIP-1967 proxy admin slot = 0x0 (UUPS, no ProxyAdmin). Constructor args confirm Fireblocks EOA admins: 0xe560c473dee7b1d1d5ae316f4c1cba7157de498e and 0x3e96eb2e94485712d0970c471d31ac3d8054b493 — all three EOAs confirmed (eth_getCode = 0x). Kinesis issues KAG against Bureau Veritas-audited allocated silver bullion in ABX vaults; issuer backend holds the UUPS admin role.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [],
+      "evidence": "At Ethereum block 25530887 the KAG proxy 0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e has EIP-1967 implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 (ERC20F, verified) and an EIP-1967 admin slot of zero; proxiableUUID() reverts with the UUPSUpgradeable delegatecall guard, confirming UUPS rather than a transparent proxy with a ProxyAdmin. A full RoleGranted/RoleRevoked replay from deployment block 23337287 to 25530887 gives the complete current role set: MINTER_ROLE = 0xe560c473dee7b1d1d5ae316f4c1cba7157de498e (EOA); DEFAULT_ADMIN_ROLE = CONTRACT_ADMIN_ROLE = 0x24945ec1be35c11c1fc13c72c910851541afb10f (EOA); PAUSER_ROLE = one EOA; UPGRADER_ROLE = no holder. Because DEFAULT_ADMIN_ROLE is the role admin of UPGRADER_ROLE, the admin EOA can self-grant it and change mint logic, so canChangeMintLogic is true. The verified ERC20F source imposes no mint cap. Kinesis states it issues KAG against allocated silver bullion audited by Bureau Veritas; that constraint is contractual and off-chain, not enforced on-chain.",
+      "reviewer": "Claude CTRL kinesis batch",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
-          "label": "KAG proxy on Etherscan (Fireblocks Proxy, ERC1967)",
+          "label": "KAG token proxy on Etherscan",
           "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
         },
         {
-          "label": "ERC20F implementation (Fireblocks)",
-          "url": "https://etherscan.io/address/0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+          "label": "ERC20F verified implementation source (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x0f25045d15C163478bb67C56c5d9D602628F4F62?tab=contract"
         },
         {
           "label": "Kinesis trust & security",
           "url": "https://kinesis.money/trust-security/"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
     }

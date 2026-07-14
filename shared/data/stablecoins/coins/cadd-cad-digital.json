@@ -35,7 +35,37 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "CADD uses ERC20F with role-gated minting and UUPS upgrades. Both ETH and Base deploy the same contract address with the same role holders: EIP-7702 delegated-account minter (0x4b37dd8b) and EIP-7702 delegated-account admin (0xb3a77dd7). EIP-7702 delegation target cannot be confirmed from chain state.",
+    "summary": "CADD uses ERC20F with role-gated minting and UUPS upgrades. Ethereum and Base share the same implementation and EIP-7702 delegated role holders: minter 0x4b37dd8b, default admin 0xb3a77dd7, and upgrader 0x9367b51c. All three delegate to Fireblocks' verified UniversalGaslessDelegate; the off-chain signer custody policy remains undisclosed.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x16f93ebc5320c89efc8701577efe49d14a276a06"
+      ],
+      "implementationAddresses": [
+        "0x0f25045d15c163478bb67c56c5d9d602628f4f62"
+      ],
+      "adminAddresses": [
+        "0x9367b51c7833f4ea32898079e7f4318e4f412b78"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "CADD UPGRADER_ROLE holder (ETH and Base)",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "CADD Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
+        },
+        {
+          "label": "CADD Ethereum RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "CADD Base RoleGranted logs",
+          "url": "https://base.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -56,7 +86,7 @@
             "url": "https://base.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=47200457&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           }
         ],
-        "evidence": "RoleGranted logs on both ETH and Base confirm this address holds MINTER_ROLE (0x9f2df0fed...). eth_getCode on both chains returns prefix 0xef0100... (EIP-7702 delegated account, not a standard EOA or Safe). Delegation target unresolvable from chain state."
+        "evidence": "RoleGranted logs on both ETH and Base confirm this address holds MINTER_ROLE (0x9f2df0fed...). eth_getCode on both chains returns 0xef0100 || 0x0000fb7702036ff9f76044a501ac1aa74cbab16b, the EIP-7702 delegation indicator for Fireblocks' verified UniversalGaslessDelegate. The delegate validates signatures but does not disclose the private-key custody policy behind this role holder."
       },
       {
         "chain": "ethereum",
@@ -73,7 +103,37 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
           }
         ],
-        "evidence": "RoleGranted logs on ETH and Base confirm DEFAULT_ADMIN_ROLE held by this address. eth_getCode returns 0xef0100... (EIP-7702) on both chains. Also controls UUPS upgradeToAndCall path (DEFAULT_ADMIN is upgrade authority). Delegation target unresolvable from chain state."
+        "evidence": "RoleGranted logs on ETH and Base confirm DEFAULT_ADMIN_ROLE held by this address. eth_getCode returns the same Fireblocks UniversalGaslessDelegate indicator on both chains. The verified implementation assigns upgrades to a distinct UPGRADER_ROLE rather than DEFAULT_ADMIN_ROLE."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9367b51c7833f4ea32898079e7f4318e4f412b78",
+        "label": "CADD UPGRADER_ROLE holder (ETH and Base)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "CADD Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
+          },
+          {
+            "label": "CADD Ethereum RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "Fireblocks UniversalGaslessDelegate",
+            "url": "https://eth.blockscout.com/address/0x0000fb7702036ff9f76044a501ac1aa74cbab16b?tab=contract"
+          },
+          {
+            "label": "EIP-7702 delegation indicator specification",
+            "url": "https://eips.ethereum.org/EIPS/eip-7702"
+          }
+        ],
+        "evidence": "The verified ERC20F implementation gates _authorizeUpgrade() with UPGRADER_ROLE 0x189ab7a9.... RoleGranted history and current hasRole calls identify 0x9367b51c... as the holder on both Ethereum and Base. Both proxies resolve to implementation 0x0f25045d.... The upgrader account delegates to Fireblocks UniversalGaslessDelegate; no timelock is present and the underlying signer custody remains undisclosed."
       }
     ],
     "review": {
@@ -99,11 +159,11 @@
           "url": "https://base.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=47200457&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "Base role holders confirmed: same addresses as Ethereum (0x4b37dd8b MINTER_ROLE, 0xb3a77dd7 DEFAULT_ADMIN). Both are EIP-7702 delegated accounts on both chains. EIP-7702 code prefix 0xef0100 confirmed on ETH and Base for both accounts. Blocker: EIP-7702 delegation target (the executing signer policy) cannot be verified from chain state — this caps confidence at manual-review.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Ethereum and Base share the same UUPS implementation and role graph. Current calls confirm 0x4b37dd8b holds MINTER_ROLE, 0xb3a77dd7 holds DEFAULT_ADMIN_ROLE, and 0x9367b51c holds UPGRADER_ROLE on both chains. EIP-7702 code identifies Fireblocks UniversalGaslessDelegate as the common delegate implementation. That resolves the on-chain delegate and upgrade authority, but not the signer custody policy behind any of the three delegated EOAs, so confidence remains manual-review.",
+      "reviewer": "SOL-7 blocker challenge batch 01",
+      "reviewedAt": "2026-07-14",
       "unresolvedQuestions": [
-        "EIP-7702 delegation target for both minter (0x4b37dd8b) and admin (0xb3a77dd7) cannot be resolved from chain state; custody policy (multisig, HSM, etc.) is unknown."
+        "The minter, default admin, and upgrader all delegate to Fireblocks UniversalGaslessDelegate, but primary public evidence does not disclose the signer custody policy (approval quorum, HSM/MPC policy, or operator separation) behind those EIP-7702 accounts."
       ]
     }
   },

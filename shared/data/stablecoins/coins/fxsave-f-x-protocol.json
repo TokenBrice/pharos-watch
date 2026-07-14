@@ -28,22 +28,39 @@
   "geckoId": "fx-usd-saving",
   "oracleRisk": {
     "tier": "redundant-with-failover",
-    "summary": "fxSAVE inherits the f(x) V2 fxUSD oracle path, where ETH/WBTC pricing combines Chainlink, DEX, and anchor feeds with threshold fallback to anchor pricing.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "fxSAVE is an ERC-4626 vault over the f(x) Stability Pool and has no borrower-owned collateral positions or token-level liquidation engine. Its required fxUSD parent carries the separately reviewed WBTC and wstETH oracle and liquidation branches.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "f(x) documents fxSAVE as a tokenized ERC-4626 Stability Pool vault that compounds rewards into fxUSD and USDC. Holders mint and redeem vault shares; fxSAVE does not create borrower debt positions or collateral-ratio-triggered liquidation markets. The variantOf relationship preserves the complete fxUSD parent branch review.",
+      "sources": [
+        {
+          "label": "f(x) Stability Pool documentation",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool"
+        },
+        {
+          "label": "f(x) fxSAVE integration documentation",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "f(x) ETH oracle docs",
-        "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/eth.md"
+        "label": "f(x) Stability Pool documentation",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool"
       },
       {
-        "label": "f(x) WBTC oracle docs",
-        "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/wbtc.md"
+        "label": "f(x) fxSAVE integration documentation",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave"
       },
       {
-        "label": "fxSAVE integration docs",
-        "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave.md"
+        "label": "f(x) parent protocol contracts",
+        "url": "https://github.com/AladdinDAO/fx-protocol-contracts"
       }
     ]
   },

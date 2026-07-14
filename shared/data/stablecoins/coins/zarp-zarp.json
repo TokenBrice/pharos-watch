@@ -23,7 +23,22 @@
     "attestorTier": "niche",
     "cadence": "quarterly",
     "attestorJurisdiction": "South Africa",
-    "attestorLicense": "IRBA-registered auditors"
+    "attestorLicense": "IRBA-registered auditors",
+    "latestReport": {
+      "periodEnd": "2026-02-27",
+      "publishedAt": "2026-03-03",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "SOL-3 adversarial verification",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Kempen ZARP agreed-upon procedures report - February 2026",
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -254,13 +269,13 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "ZAR treasury at Old Mutual Wealth (Kempen audited)",
+      "name": "ZAR cash and cash-equivalent accounts at Old Mutual Wealth and Standard Bank",
       "pct": 100,
       "risk": "low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "ZARP Stablecoin (Pty) Ltd.; Old Mutual Wealth",
+      "issuerOrObligor": "ZARP Stablecoin (Pty) Ltd.; Old Mutual Wealth Trust Company; Standard Bank",
       "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -277,7 +292,7 @@
         "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
       }
     ],
-    "rationale": "ZARP's documentation states that each token represents one rand supported by a treasury of actual rand currency equivalents managed by Old Mutual Wealth. The existing 100% treasury envelope is retained, with the current Kempen agreed-upon-procedures report kept as the assurance source rather than decomposing undisclosed bank or cash-equivalent balances.",
+    "rationale": "ZARP's documentation states that each token represents one rand supported by a treasury of actual rand currency equivalents. Kempen's February 2026 agreed-upon procedures verified balances in an Old Mutual Wealth trust account and ZARP's Standard Bank call-deposit/current accounts and reconciled liabilities across Ethereum, Solana, Base, and Polygon. The report does not establish a redemption settlement time or a complete cash-versus-cash-equivalent split.",
     "compositionBasis": "ZARP treasury and Kempen reserve-assurance disclosures",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve is identified as rand currency equivalents, but the reviewed sources do not provide a current bank-account or cash-equivalent category split, provider shares, or legal segregation terms.",
@@ -291,12 +306,17 @@
         "jurisdiction": "South Africa"
       },
       {
+        "name": "The Standard Bank of South Africa",
+        "role": "bank",
+        "jurisdiction": "South Africa"
+      },
+      {
         "name": "ZARP Stablecoin (Pty) Ltd.",
         "role": "other",
         "jurisdiction": "South Africa"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
@@ -312,7 +332,7 @@
         "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
       }
     ],
-    "uncertainty": "ZARP identifies Old Mutual Wealth as treasury manager and Kempen as assurance provider, but the reviewed materials do not establish the reserve account structure, statutory segregation, bankruptcy remoteness, or rehypothecation safeguards."
+    "uncertainty": "Kempen verified the Old Mutual Wealth trust account and ZARP Standard Bank accounts, while management states that reserve funds are free of other debts, liens, and encumbrances and reserved exclusively for redemption. The materials do not establish statutory bankruptcy remoteness, rehypothecation terms, or a redemption settlement time."
   },
   "liveReservesConfig": {
     "adapter": "single-asset",

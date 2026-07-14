@@ -86,6 +86,8 @@
         "evidence": "Gold DAO docs state the GLDT swap canister has minting rights to the GLDT ledger and mints new GLDT when GLD NFTs are locked at a fixed 100 GLDT per gram ratio."
       },
       {
+        "chain": "icp",
+        "address": "tw2vt-hqaaa-aaaaq-aab6a-cai",
         "label": "Gold DAO SNS governance (canister controller)",
         "role": "governor",
         "authorityType": "dao-governor",
@@ -93,33 +95,66 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The Internet Computer SNS DAO is the controlling authority of the GLDT swap and ledger canisters and can upgrade their code; GLDT is issued and governed by the Gold DAO.",
-        "evidence": "Gold DAO docs state the SNS holds the controller key for the swap/ledger canisters and can push code upgrades, making GLDT a DAO-issued and DAO-governed token."
+        "sources": [
+          {
+            "label": "Internet Computer API — GLDT ledger",
+            "url": "https://ic-api.internetcomputer.org/api/v3/canisters/6c7su-kiaaa-aaaar-qaira-cai"
+          },
+          {
+            "label": "Internet Computer API — Gold DAO Root",
+            "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tw2vt-hqaaa-aaaaq-aab6a-cai"
+          },
+          {
+            "label": "Internet Computer API — Gold DAO Governance",
+            "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tr3th-kiaaa-aaaaq-aab6q-cai"
+          }
+        ],
+        "evidence": "The Internet Computer API identifies 6c7su... as the Gold DAO GLDT Ledger controlled by Gold DAO Root tw2vt.... Gold DAO Root is controlled by Gold DAO Governance tr3th..., and Governance is in turn controlled by Root, confirming the live SNS controller loop for ledger upgrades."
       }
     ],
     "review": {
-      "evidence": "Gold DAO documentation describes GLDT minting via an SNS-controlled swap canister that mints against locked GLD NFTs at a fixed gold ratio; there is no centralized off-chain issuer minter, but the SNS DAO can upgrade the canisters.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Gold DAO documentation describes GLDT minting via an SNS-controlled swap canister against locked GLD NFTs. Current Internet Computer API state confirms the GLDT ledger is controlled by Gold DAO Root and closes the Root/Governance controller loop. The public key-canister directory still does not identify the swap-canister principal that holds ledger minting rights.",
+      "reviewer": "SOL-7 blocker challenge batch 02",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Gold DAO key canisters",
           "url": "https://docs.gold-dao.org/other/key-canisters"
+        },
+        {
+          "label": "Internet Computer API — GLDT ledger",
+          "url": "https://ic-api.internetcomputer.org/api/v3/canisters/6c7su-kiaaa-aaaar-qaira-cai"
+        },
+        {
+          "label": "Internet Computer API — Gold DAO Root",
+          "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tw2vt-hqaaa-aaaaq-aab6a-cai"
         }
       ],
-      "sourceFreeRationale": "Mint and SNS-governance model confirmed from Gold DAO docs. The canonical GLDT issuance is on the Internet Computer Protocol (ICP) as canister 6c7su-kiaaa-aaaar-qaira-cai. ICP canisters cannot be queried via EVM-compatible keyless RPC; standard tooling (publicnode, Blockscout) does not support ICP canister state reads.",
       "unresolvedQuestions": [
-        "ICP chain has no accessible EVM-compatible keyless RPC; confirming live SNS controller state, GLDT swap canister principal, and ledger canister minting rights requires ICP-native tooling (dfx CLI or ic-agent querying the NNS/SNS canister at canister ID 6c7su-kiaaa-aaaar-qaira-cai). EVM bridge contracts on Ethereum/Base/Arbitrum are the bridged representations; native issuance verification is blocked."
+        "The live SNS controller state is now confirmed, but Gold DAO's public key-canister directory and the Internet Computer canister API do not identify the GLDT swap-canister principal that holds ledger minting rights. EVM bridge contracts on Ethereum, Base, and Arbitrum are bridged representations, not the native issuer."
       ]
     },
     "upgradeability": {
       "model": "custom",
+      "adminAddresses": [
+        "tw2vt-hqaaa-aaaaq-aab6a-cai",
+        "tr3th-kiaaa-aaaaq-aab6q-cai"
+      ],
       "canChangeMintLogic": true,
       "controlRef": "Gold DAO SNS governance (canister controller)",
-      "observedAt": "2026-06-11",
+      "observedAt": "2026-07-14",
       "sources": [
         {
           "label": "Gold DAO key canisters",
           "url": "https://docs.gold-dao.org/other/key-canisters"
+        },
+        {
+          "label": "Internet Computer API — GLDT ledger",
+          "url": "https://ic-api.internetcomputer.org/api/v3/canisters/6c7su-kiaaa-aaaar-qaira-cai"
+        },
+        {
+          "label": "Internet Computer API — Gold DAO Root",
+          "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tw2vt-hqaaa-aaaaq-aab6a-cai"
         }
       ]
     }

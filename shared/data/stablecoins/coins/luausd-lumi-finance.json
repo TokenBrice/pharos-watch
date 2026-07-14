@@ -16,31 +16,11 @@
   "mechanismArchetype": "algorithmic",
   "oracleRisk": {
     "tier": "oracleless-or-internal",
-    "summary": "LUAUSD uses Lumi's internal bonding-curve, AMO, reserve-backed liquidity, and LUA floor-price mechanics rather than borrower-specific collateral valuation and liquidation oracles.",
+    "summary": "LUAUSD is minted by users staking LUA against Lumi's internal floor-price mechanism; the reviewed material does not establish the position-level collateral checks or liquidation path.",
     "branchModel": "single-path",
-    "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex ORCL curation batch 24",
-      "rationale": "Lumi documents LUAUSD as an over-collateralized stablecoin mechanism backed by LUA staked at an internal floor price and supported by protocol-owned liquidity. Its minting, reserve-backed AMM, and early-redemption materials describe internal price-curve and treasury operations, not user borrower positions with collateral ratios, oracle-triggered liquidations, liquidation backstops, or shutdown branches.",
-      "sources": [
-        {
-          "label": "Lumi staking and stablecoin documentation",
-          "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin"
-        },
-        {
-          "label": "Lumi reserve-backed AMM documentation",
-          "url": "https://lumi-finance.gitbook.io/docs/how-it-works/reserve-back-amm-mechanism"
-        },
-        {
-          "label": "Lumi LUA minting documentation",
-          "url": "https://lumi-finance.gitbook.io/docs/lua-minting"
-        }
-      ]
-    },
     "reviewedAt": "2026-07-14",
-    "reviewer": "Codex ORCL curation batch 24",
-    "confidence": "verified",
+    "reviewer": "SOL-3 adversarial verification",
+    "confidence": "limited",
     "sources": [
       {
         "label": "Lumi staking and stablecoin documentation",
@@ -48,7 +28,7 @@
       },
       {
         "label": "Lumi reserve-backed AMM documentation",
-        "url": "https://lumi-finance.gitbook.io/docs/how-it-works/reserve-back-amm-mechanism"
+        "url": "https://lumi-finance.gitbook.io/docs/legacy/lua-minting-secondary-market/reserve-back-amm-mechanism"
       },
       {
         "label": "Lumi LUA minting documentation",

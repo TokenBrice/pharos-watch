@@ -71,6 +71,57 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "WARS is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+      ],
+      "implementationAddresses": [
+        "0xba0030bba7112171a8a5bcc417ee1994051321b9"
+      ],
+      "adminAddresses": [
+        "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Ripio shared WARS admin and MINTER_ROLE holder (EOA)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530827,
+      "sources": [
+        {
+          "label": "Ethereum WARS proxy (ERC-1967 slots)",
+          "url": "https://etherscan.io/address/0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d#code"
+        },
+        {
+          "label": "WARS implementation contract",
+          "url": "https://etherscan.io/address/0xba0030bba7112171a8a5bcc417ee1994051321b9#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base.publicnode.com"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor.publicnode.com"
+        },
+        {
+          "label": "Gnosis PublicNode RPC",
+          "url": "https://gnosis.publicnode.com"
+        },
+        {
+          "label": "Worldchain RPC",
+          "url": "https://worldchain-mainnet.gateway.tenderly.co"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "multichain",
@@ -79,9 +130,9 @@
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true. eth_getCode returned 0x (EOA). Same role confirmed via hasRole on Base, BSC, Polygon, Gnosis, and Worldchain at same block range."
+        "evidence": "At Ethereum block 25530827, hasRole(DEFAULT_ADMIN_ROLE), hasRole(MINTER_ROLE) and hasRole(UPGRADER_ROLE) all returned true for 0x466c02e2; eth_getCode returned 0x (EOA). Same three roles returned true on Base 48621041, BSC 109938002, Polygon 90217624, Gnosis 47198266 and Worldchain 32347913. The WARS token exposes no supply cap: cap(), maxSupply(), mintCap() and maxTotalSupply() all revert on the Ethereum proxy at block 25530890, so mint by this MINTER_ROLE holder is unbounded and no cap constrains it."
       },
       {
         "chain": "ethereum",
@@ -90,7 +141,7 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "threshold": 4,
         "signerCount": 7,
         "modulesOrGuardsStatus": "none-detected",
@@ -112,7 +163,7 @@
           "observedBlock": 25295015,
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) returned true. getOwners() returned 7 owners; getThreshold() returned 4. getModulesPaginated returned empty array (no modules). slot0 masterCopy = 0x41675c...61a (Safe v1.4.1 singleton). fallbackHandler storage slot = 0xfd0732...ec99 (standard CompatibilityFallbackHandler). getGuard() reverted (no guard)."
+        "evidence": "At Ethereum block 25530827, hasRole(DEFAULT_ADMIN_ROLE) returned true for the Safe (MINTER_ROLE and UPGRADER_ROLE returned false), so the Safe can grant itself or any address MINTER_ROLE and UPGRADER_ROLE. The token exposes no supply cap (cap(), maxSupply(), mintCap(), maxTotalSupply() all revert at Ethereum block 25530890), so mint authorised by this Safe is unbounded."
       },
       {
         "chain": "multichain",
@@ -121,9 +172,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(MINTER_ROLE) returned true on WARS token. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe). Not deployed on other chains (eth_getCode = 0x on Base)."
+        "evidence": "At Ethereum block 25530893, hasRole(MINTER_ROLE) returned true for 0xd168cfbb and eth_getCode returned 10.9kB of bytecode. The token exposes no supply cap (cap(), maxSupply(), mintCap(), maxTotalSupply() all revert at Ethereum block 25530890), so mint through this router is unbounded."
       },
       {
         "chain": "multichain",
@@ -132,9 +183,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At block 25295015, hasRole(MINTER_ROLE) returned true on WARS token on Ethereum, Base, BSC, Polygon, and Gnosis. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe)."
+        "evidence": "At Ethereum block 25530893, hasRole(MINTER_ROLE) returned true for 0x46167cb0, also true on Base 48621435, BSC 109939751, Polygon 90218149, Gnosis 47198418 and Worldchain 32348290. The token exposes no supply cap (cap(), maxSupply(), mintCap(), maxTotalSupply() all revert at Ethereum block 25530890), so mint through this router is unbounded."
       }
     ],
     "review": {

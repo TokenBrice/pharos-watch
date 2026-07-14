@@ -56,16 +56,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "reserves": [
-    {
-      "name": "USDC / USDC.e on Polygon",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "blacklistable": true
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "pusd-vault",
     "version": 1,
@@ -100,7 +90,9 @@
         "coinId": "usdc-circle",
         "depType": "collateral"
       },
-      "sourceUrls": ["https://docs.polymarket.com/concepts/pusd"]
+      "sourceUrls": [
+        "https://docs.polymarket.com/concepts/pusd"
+      ]
     }
   },
   "mintAuthority": {

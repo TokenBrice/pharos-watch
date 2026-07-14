@@ -24,6 +24,56 @@
   "llamaId": "305",
   "detailProvider": "defillama",
   "geckoId": "unity-2",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "UTY's documented Base mint path deposits USDC 1:1 and sweeps the backing to a custodian-managed strategy. XSY discloses exchange-level liquidation risk for managed short hedges, but public sources do not identify the strategy price-feed topology, freshness bounds, or fallback controls.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "YieldPoint documents one Base hub vault: users deposit USDC to mint UTY, backing is swept to a custodian, and redemption uses an asynchronous withdrawal queue. XSY describes protocol-managed strategy modules rather than borrower-owned debt positions. Therefore per-collateral oracle and liquidation branches do not apply; exchange liquidation of managed hedges remains strategy risk.",
+      "sources": [
+        {
+          "label": "YieldPoint core flows",
+          "url": "https://docs.yieldpoint.io/protocol/architecture/flows"
+        },
+        {
+          "label": "YieldPoint contracts",
+          "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
+        },
+        {
+          "label": "XSY protocol mechanics",
+          "url": "https://xsy-1.gitbook.io/xsy-main/protocol-mechanics"
+        },
+        {
+          "label": "XSY risks",
+          "url": "https://xsy-1.gitbook.io/xsy-main/risks"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "YieldPoint core flows",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/flows"
+      },
+      {
+        "label": "YieldPoint contracts",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
+      },
+      {
+        "label": "XSY protocol mechanics",
+        "url": "https://xsy-1.gitbook.io/xsy-main/protocol-mechanics"
+      },
+      {
+        "label": "XSY risks",
+        "url": "https://xsy-1.gitbook.io/xsy-main/risks"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

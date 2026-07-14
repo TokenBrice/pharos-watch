@@ -22,22 +22,7 @@
     "attestorTier": "niche",
     "cadence": "monthly",
     "provider": "BHR México",
-    "attestorJurisdiction": "Mexico",
-    "latestReport": {
-      "periodEnd": "2026-05-26",
-      "publishedAt": "2026-05-26",
-      "assuranceMethod": "examination",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
-      "confidence": "verified",
-      "sources": [
-        {
-          "label": "BHR México Etherfuse reasonable-assurance report - May 2026",
-          "url": "https://api.etherfuse.com/statement/attestation/latest"
-        }
-      ]
-    }
+    "attestorJurisdiction": "Mexico"
   },
   "links": [
     {

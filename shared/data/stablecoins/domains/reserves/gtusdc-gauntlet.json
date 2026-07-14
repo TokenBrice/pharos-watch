@@ -21,7 +21,7 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
@@ -47,8 +47,7 @@
     "providers": [
       {
         "name": "Gauntlet USDC Prime MetaMorpho vault",
-        "role": "custodian",
-        "jurisdiction": "United States"
+        "role": "other"
       },
       {
         "name": "Morpho lending markets",
@@ -59,7 +58,7 @@
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "probable",
     "sources": [
       {
@@ -69,8 +68,12 @@
       {
         "label": "Morpho curation docs",
         "url": "https://docs.morpho.org/curate/"
+      },
+      {
+        "label": "Morpho terms - noncustodial Vaults",
+        "url": "https://morpho.org/terms-of-use"
       }
     ],
-    "uncertainty": "The vault and Morpho markets are on-chain, but the reviewed materials do not establish legal segregation, bankruptcy remoteness, or rehypothecation treatment for deposited USDC."
+    "uncertainty": "MetaMorpho Vaults and Morpho markets are noncustodial smart contracts, not legal custodians. The reviewed materials do not establish legal segregation, bankruptcy remoteness, or rehypothecation treatment for deposited USDC."
   }
 }

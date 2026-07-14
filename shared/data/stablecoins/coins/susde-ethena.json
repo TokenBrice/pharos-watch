@@ -20,6 +20,44 @@
   "detailProvider": "coingecko",
   "geckoId": "ethena-staked-usde",
   "pythFeedId": "0xca3ba9a619a4b3755c10ac7d5e760275aa95e9823d38a84fedd416856cdba37c",
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "sUSDe is an ERC-4626 savings wrapper over USDe and has no borrower-owned collateral positions or token-level liquidation engine. It inherits the parent USDe offchain oracle and hedging-system risk.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "Ethena documents sUSDe as a vault where users deposit USDe, receive shares, and burn shares for proportionate USDe. sUSDe does not create borrower-owned debt positions or collateral-liquidation markets; the underlying USDe parent carries the separately reviewed offchain pricing and hedging-system exposure.",
+      "sources": [
+        {
+          "label": "Ethena staking USDe documentation",
+          "url": "https://docs.ethena.fi/solution-design/staking-usde"
+        },
+        {
+          "label": "Ethena oracle documentation",
+          "url": "https://docs.ethena.fi/solution-design/use-of-oracles"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ethena staking USDe documentation",
+        "url": "https://docs.ethena.fi/solution-design/staking-usde"
+      },
+      {
+        "label": "Ethena oracle documentation",
+        "url": "https://docs.ethena.fi/solution-design/use-of-oracles"
+      },
+      {
+        "label": "Ethena hedging-system documentation",
+        "url": "https://docs.ethena.fi/solution-design/hedging-system"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

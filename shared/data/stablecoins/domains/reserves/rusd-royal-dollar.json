@@ -13,7 +13,7 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
@@ -25,9 +25,9 @@
         "url": "https://www.rcoins.digital/RUSD"
       }
     ],
-    "rationale": "RIB Digital's May 24, 2026 RUSD transparency snapshot classifies 100% of reserves as cash and cash equivalents, then identifies 100% of that category as cash and bank deposits and zero exposure to Treasury bills or repos. This current issuer disclosure replaces the prior opaque cash-and-liquid-asset basket without estimating bank-level allocations.",
+    "rationale": "RIB Digital's April 23, 2026 RUSD transparency snapshot classifies 100% of reserves as cash and cash equivalents, then identifies 100% of that category as cash and bank deposits and zero exposure to Treasury bills or repos. This issuer disclosure replaces the prior opaque cash-and-liquid-asset basket without estimating bank-level allocations.",
     "compositionBasis": "RIB Digital RUSD reserve-composition snapshot",
-    "compositionAsOf": "2026-05-24",
+    "compositionAsOf": "2026-04-23",
     "scope": "full-composition",
     "knownUnknownExposure": "The disclosed reserve asset class is fully classified as cash and bank deposits; individual deposit banks, account balances, and liquidity terms are not public.",
     "knownUnknownExposurePct": 0,
@@ -57,7 +57,7 @@
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "probable",
     "sources": [
       {

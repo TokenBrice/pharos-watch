@@ -2,11 +2,44 @@
   "id": "nusd-nexus",
   "reserves": [
     {
-      "name": "Synapse nexus-pool stablecoin liquidity basket (DAI, USDC, and USDT)",
-      "pct": 100,
+      "name": "DAI in the Ethereum Synapse nexus pool",
+      "pct": 19.145714,
       "risk": "low",
+      "coinId": "dai-makerdao",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Maker, Circle, and Tether through the Synapse nexus pool",
+      "issuerOrObligor": "Sky Protocol through the Synapse nexus pool",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDC in the Ethereum Synapse nexus pool",
+      "pct": 19.103762,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial through the Synapse nexus pool",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDT in the Ethereum Synapse nexus pool",
+      "pct": 61.750524,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether through the Synapse nexus pool",
       "riskFactors": [
         "counterparty",
         "liquidity",
@@ -19,38 +52,29 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "manual-review",
+    "reviewer": "SOL-5 dependency review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Synapse documentation",
-        "url": "https://docs.synapseprotocol.com/"
+        "label": "Synapse mainnet NexusPool configuration",
+        "url": "https://github.com/synapsecns/synapse-contracts/blob/master/script/configs/mainnet/LinkedPool.CCTP.USDC.dc.json"
       },
       {
-        "label": "DefiLlama NUSD reserve reference",
-        "url": "https://wiki.defillama.com/wiki/NUSD"
+        "label": "Synapse Ethereum nexus pool contract",
+        "url": "https://etherscan.io/address/0x1116898dda4015ed8ddefb84b6e8bc24528af2d8#readContract"
       }
     ],
-    "rationale": "NUSD is the Synapse nexus-pool LP token and its documented reserve model is a basket of DAI, USDC, and USDT liquidity. The reviewed sources do not publish a current asset-value snapshot or a defensible weight split, so the former 34% / 33% / 33% allocation is represented as one identified basket.",
-    "compositionBasis": "Synapse NUSD pool architecture and reserve disclosures",
+    "rationale": "At Ethereum block 25530890, the official Synapse nexus pool reported 454,421.440754979759935790 DAI, 453,425.730071 USDC, and 1,465,641.983743 USDT. Normalizing those same-notional balances produces the exact authored dependency weights.",
+    "compositionBasis": "Fixed-block getToken and getTokenBalance reads from the official Ethereum Synapse nexus pool",
+    "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The underlying stablecoin categories are identified, but current pool balances, issuer-level weights, reserve custody, and redemption liquidity are not independently evidenced.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Synapse nexus-pool stablecoin liquidity basket (DAI, USDC, and USDT)",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The reserve categories are named, but no current balance report supports individual DAI, USDC, and USDT percentages.",
-        "candidateCoinIds": ["dai-makerdao", "usdc-circle", "usdt-tether"]
-      }
-    ]
+    "knownUnknownExposure": "All three nexus-pool assets are identified by the official deployment and reconciled from fixed-block balances.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Synapse nexus pool contracts",
+        "name": "Synapse nexus pool contract",
         "role": "other"
       },
       {
@@ -62,19 +86,19 @@
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "SOL-5 dependency review",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Synapse documentation",
-        "url": "https://docs.synapseprotocol.com/"
+        "label": "Synapse mainnet NexusPool configuration",
+        "url": "https://github.com/synapsecns/synapse-contracts/blob/master/script/configs/mainnet/LinkedPool.CCTP.USDC.dc.json"
       },
       {
-        "label": "DefiLlama NUSD reserve reference",
-        "url": "https://wiki.defillama.com/wiki/NUSD"
+        "label": "Synapse Ethereum nexus pool contract",
+        "url": "https://etherscan.io/address/0x1116898dda4015ed8ddefb84b6e8bc24528af2d8#readContract"
       }
     ],
-    "uncertainty": "NUSD is a legacy on-chain liquidity asset. The reviewed materials do not identify custody accounts, issuer-level reserve protections, segregation, bankruptcy treatment, or rehypothecation terms for the basket.",
+    "uncertainty": "The reserve assets are held transparently in the Synapse nexus pool contract, but the reviewed sources do not establish legal segregation, bankruptcy treatment, or protections beyond the on-chain contract design.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -2,7 +2,7 @@
   "id": "dusd-fluid",
   "name": "Fluid DigitalDollar",
   "symbol": "DUSD",
-  "oneLiner": "DUSD is Fluid Finance's USD stablecoin on Arbitrum, redeemable 1:1 against USD safeguarded at regulated European banks with on-chain balance attestations.",
+  "oneLiner": "DUSD is a legacy Fluid Finance USD token on Arbitrum whose current reserve composition, custody, and redemption operability are not publicly verified.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "1:1 USD cash held in client-safeguarded accounts at regulated European banks; accounts are ring-fenced and bankruptcy-remote from Fluid Finance SA, with theft and fraud cover via Lloyd's of London. The DUSD smart contract enforces a verifiedOffchainAssetBalance ceiling so minted supply cannot exceed the attested treasury balance.",
-  "pegMechanism": "1:1 mint and redemption against USD wired from a user IBAN to a Fluid Finance treasury account; an oracle publishes the safeguarded-bank balance on-chain and the contract refuses to mint above that balance. Redemption burns DUSD on-chain and credits USD back to the user's IBAN.",
+  "collateral": "Current reserve assets and custodians are not established by a recent issuer disclosure. Fluid Finance's December 2021 launch FAQ described 1:1 USD cash backing in safeguarded partner-bank accounts, but that future-oriented design is not a current reserve report.",
+  "pegMechanism": "Fluid Finance's 2021 launch design described issuer-operated mint and redemption against USD plus an oracle-published offchain balance ceiling. Current redemption availability, oracle operation, reserve balances, and banking counterparties are evidence-blocked.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "70",
   "cmcSlug": "digitaldollar",
@@ -70,7 +70,7 @@
     ]
   },
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "curated-validated",
@@ -92,31 +92,16 @@
   "notices": [
     {
       "type": "info",
-      "title": "Self-reported on-chain reserves",
-      "message": "Fluid Finance publishes the safeguarded-bank balance to Arbitrum via an oracle; reserves are not independently audited in real time."
+      "title": "Current reserve operation unverified",
+      "message": "Fluid's 2021 materials described safeguarded cash and an on-chain balance ceiling, but no current reserve report, oracle operation, banking provider, or redemption route was verified in this review."
     }
   ],
   "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "mintPath": "unknown",
+    "authorityPosture": "unknown",
     "confidence": "manual-review",
-    "summary": "DUSD is issued by Fluid Finance SA; mint/redeem run through the issuer's whitelisted-wallet flow against USD safeguarded at European banks, with supply capped by an oracle-published verifiedOffchainAssetBalance.",
+    "summary": "The DUSD TransparentUpgradeableProxy has an EOA proxy admin that can change mint logic. The implementation is unverified, so the current direct minter, reserve-cap mechanism, issuer backend, and redemption operation remain unresolved; the 2021 issuer design is not treated as current evidence.",
     "controls": [
-      {
-        "label": "Fluid Finance issuance + reserve-balance oracle",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
-        "capDescription": "Contract refuses to mint above verifiedOffchainAssetBalance, an oracle-published figure controlled by the issuer reflecting the attested treasury balance.",
-        "evidence": "Fluid materials describe a whitelisted-wallet mint/redeem against the issuer treasury; an issuer-controlled oracle publishes the safeguarded-bank balance on-chain, and the contract caps minted supply at that balance.",
-        "sources": [
-          {
-            "label": "Fluid DUSD",
-            "url": "https://fluid.ch/dusd/"
-          }
-        ]
-      },
       {
         "label": "TransparentUpgradeableProxy admin EOA",
         "role": "proxy-admin",
@@ -134,13 +119,13 @@
       }
     ],
     "review": {
-      "evidence": "Fluid Finance SA centrally issues DUSD against off-chain USD reserves; minting is bounded by an issuer-controlled oracle (verifiedOffchainAssetBalance) and redemption burns DUSD on-chain crediting USD to the user's IBAN. No permissionless or user-collateralized mint route exists. The TransparentUpgradeableProxy admin is EOA 0xdeab81c9ff7528de932890058579c0c2341f7223 (Arbitrum block 472412309). The implementation 0xe825f4f14b93a329fbae230ef6b222f26cca4028 is unverified; the token's internal mint owner/role is not readable from public ABI.",
+      "evidence": "At Arbitrum block 472412309, the DUSD TransparentUpgradeableProxy admin slot resolved EOA 0xdeab81c9ff7528de932890058579c0c2341f7223. The implementation at 0xe825f4f14b93a329fbae230ef6b222f26cca4028 is unverified, so its internal minter, any current reserve-balance cap, and the issuer redemption backend cannot be established from public code. The 2021 FAQ is retained only as historical design context.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
-          "label": "Fluid DUSD",
-          "url": "https://fluid.ch/dusd/"
+          "label": "Fluid Finance DUSD reserve FAQ (December 2021)",
+          "url": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8"
         },
         {
           "label": "DUSD contract on Arbiscan",
@@ -148,7 +133,7 @@
         }
       ],
       "unresolvedQuestions": [
-        "The implementation contract 0xe825f4f14b93a329fbae230ef6b222f26cca4028 is unverified; the internal mint-capable owner/role address cannot be read. Verify or obtain the ABI to confirm the mint-surface owner before raising confidence."
+        "Verify or obtain the implementation ABI and current issuer documentation to identify the direct minter, determine whether a reserve-balance cap still operates, and establish current redemption and banking-provider status."
       ]
     }
   }

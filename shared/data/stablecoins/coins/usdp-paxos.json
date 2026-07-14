@@ -26,7 +26,22 @@
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
-    "attestorLicense": "PCAOB-registered"
+    "attestorLicense": "PCAOB-registered",
+    "latestReport": {
+      "periodEnd": "2026-05-29",
+      "publishedAt": "2026-06-25",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "KPMG USDP Redemption Assets Report - May 2026",
+          "url": "https://framerusercontent.com/assets/aEYkxLoItegSVUhVudrg5lQZQEQ.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {

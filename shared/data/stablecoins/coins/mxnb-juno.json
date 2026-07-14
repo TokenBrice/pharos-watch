@@ -18,9 +18,30 @@
   "geckoId": "mxnb",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://mxnb.mx/transparency",
-    "attestorTier": "big4",
-    "cadence": "quarterly"
+    "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf",
+    "provider": "BDO Mexico (Castillo Miranda y Compania)",
+    "attestorTier": "regional",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Mexico",
+    "latestReport": {
+      "periodEnd": "2026-03-31",
+      "publishedAt": "2026-06-23",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "SOL-8",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "BDO Mexico MXNB Q1 2026 valuation report",
+          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
+        },
+        {
+          "label": "MXNB attestation index",
+          "url": "https://mxnb.mx/en-US/transparency"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -192,7 +213,7 @@
       "pct": 100,
       "risk": "low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed Mexican financial institutions and MXNB issuer",
+      "issuerOrObligor": "Nvio, Hey Banco, and MXNB issuer",
       "riskFactors": ["counterparty", "liquidity", "custody", "concentration", "legal"],
       "liquidityHorizon": "unknown"
     }
@@ -213,19 +234,28 @@
       {
         "label": "MXNB whitepaper",
         "url": "https://mxnb.mx/whitepaper.pdf"
+      },
+      {
+        "label": "BDO Mexico MXNB Q1 2026 valuation report",
+        "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
       }
     ],
-    "rationale": "MXNB's current transparency page reports 35.3 million MXN of reserves and 34.8 million MXNB in circulation as of July 1, 2026, and states that quarterly third-party assurance reports cover MXN reserves versus circulation. The reviewed page does not expose a reserve asset split or the underlying institution names, so the existing 100% MXN fiat and cash-equivalent envelope is retained as one bank-deposit slice.",
+    "rationale": "MXNB's current transparency page reports 35.3 million MXN of reserves and 34.8 million MXNB in circulation as of July 1, 2026. Its published BDO Mexico report examined the March 31 Nvio and Hey Banco statements and reconciled 26.95 million MXN of bank reserves against 24.82 million MXNB across the five tracked chains. The report identifies bank deposits but does not publish an account-by-account split, so the 100% MXN fiat and cash-equivalent envelope remains one slice.",
     "compositionBasis": "MXNB issuer transparency balance disclosure and whitepaper reserve policy",
     "compositionAsOf": "2026-07-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve class is identified as MXN fiat and cash-equivalents, but the current page does not identify bank counterparties, account structure, or a category split within that envelope.",
+    "knownUnknownExposure": "The reserve class and March 31 counterparties are identified, but neither the report nor the current balance page publishes an account-by-account allocation or legal account structure.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed Mexican financial institutions",
+        "name": "Nvio",
+        "role": "bank",
+        "jurisdiction": "Mexico"
+      },
+      {
+        "name": "Hey Banco",
         "role": "bank",
         "jurisdiction": "Mexico"
       },
@@ -254,9 +284,13 @@
       {
         "label": "MXNB whitepaper",
         "url": "https://mxnb.mx/whitepaper.pdf"
+      },
+      {
+        "label": "BDO Mexico MXNB Q1 2026 valuation report",
+        "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
       }
     ],
-    "uncertainty": "MXNB describes fiat and cash-equivalent reserves and periodic third-party assurance but does not name the custodial institutions or establish legal segregation, bankruptcy remoteness, or rehypothecation treatment in the reviewed public sources."
+    "uncertainty": "The March 31 BDO Mexico report names Nvio and Hey Banco from issuer-supplied statements, but explicitly says it did not confirm balances with those institutions. Reviewed sources do not establish legal segregation, bankruptcy remoteness, provider shares, or rehypothecation treatment."
   },
   "liveReservesConfig": {
     "adapter": "curated-validated",

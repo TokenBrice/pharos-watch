@@ -100,89 +100,181 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "JPYT is a non-upgradeable OpenZeppelin AccessControlEnumerable ERC-20. On Optimism, MINTER_ROLE is held by a single contract (0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9, likely the DepositManager) and DEFAULT_ADMIN_ROLE by an EOA. On Base, MINTER_ROLE is held by a distinct contract (0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) and DEFAULT_ADMIN_ROLE by a separate EOA. No supply cap is enforced on the token itself.",
+    "summary": "JPYT is a non-upgradeable OpenZeppelin AccessControlEnumerable ERC-20 with mint() gated on MINTER_ROLE and no supply cap. On each chain MINTER_ROLE is held by exactly one contract — the DePhaser DepositManager, itself an ERC-1967/UUPS proxy that mints JPYT against USDT (Optimism) or USDC (Base) deposits routed into Aave. DEFAULT_ADMIN_ROLE is the role admin of MINTER_ROLE and is held by a single EOA per chain, so that EOA can grant MINTER_ROLE to any address (including itself) in one transaction and then mint without bound. Each DepositManager proxy is separately upgradeable by its own DEFAULT_ADMIN EOA, which can self-grant UPGRADER_ROLE and replace the mint implementation.",
     "controls": [
       {
+        "chain": "optimism",
+        "address": "0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9",
         "label": "JPYT MINTER_ROLE holder — Optimism",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
+        "capDescription": "No cap: DephaserJPY exposes no cap()/maxSupply() and mint() calls _mint() unconditionally.",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 154216813,
         "sources": [
           {
-            "label": "Sourcify Optimism contract source",
-            "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+            "label": "DephaserJPY verified source (Optimism, Blockscout)",
+            "url": "https://optimism.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
           },
           {
-            "label": "Optimism explorer — JPYT token",
-            "url": "https://optimistic.etherscan.io/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+            "label": "DephaserJPY verified source (Base, Blockscout)",
+            "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+          },
+          {
+            "label": "UsdtDepositManager verified implementation (Optimism)",
+            "url": "https://optimism.blockscout.com/address/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5?tab=contract"
           }
         ],
-        "evidence": "At Optimism block 152,830,546, getRoleMember(MINTER_ROLE, 0) returned 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9; eth_getCode confirmed it is a contract. getRoleMemberCount(MINTER_ROLE) = 1. The token is non-upgradeable (EIP-1967 proxy slots zero)."
+        "evidence": "At Optimism block 154,216,813: getRoleMemberCount(MINTER_ROLE)=1 and getRoleMember(MINTER_ROLE,0)=0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9, confirmed current with hasRole(MINTER_ROLE, addr)=true. eth_getCode returns 135 bytes — an ERC-1967 proxy whose implementation slot holds 0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5 (verified as UsdtDepositManager); EIP-1967 admin slot is zero and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\", i.e. an OZ v5 UUPS proxy. Verified source: mint(address,uint256) is onlyRole(MINTER_ROLE) and there is no cap, so this minter is unbounded at the token level. The same address also holds BURNER_ROLE (count=1)."
       },
       {
+        "chain": "optimism",
+        "address": "0xbdeb54641a23e2716a2978cde3cdeb1aed335479",
         "label": "JPYT DEFAULT_ADMIN_ROLE holder — Optimism",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
+        "capDescription": "No cap exists on the token; an appointed minter mints without bound.",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 154216813,
         "sources": [
           {
-            "label": "Optimism explorer — JPYT token",
-            "url": "https://optimistic.etherscan.io/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+            "label": "DephaserJPY verified source (Optimism, Blockscout)",
+            "url": "https://optimism.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
           }
         ],
-        "evidence": "At Optimism block 152,830,546, getRoleMember(DEFAULT_ADMIN_ROLE, 0) returned 0xbdeb54641a23e2716a2978cde3cdeb1aed335479; eth_getCode returned 0x (EOA). Count = 1."
+        "evidence": "At Optimism block 154,216,813: getRoleMemberCount(DEFAULT_ADMIN_ROLE)=1, getRoleMember(DEFAULT_ADMIN_ROLE,0)=0xbdeb54641a23e2716a2978cde3cdeb1aed335479, confirmed current with hasRole=true; eth_getCode returns 0x (EOA). getRoleAdmin(MINTER_ROLE)=0x00..00 (DEFAULT_ADMIN_ROLE), so this EOA can grantRole(MINTER_ROLE, any address) unilaterally, with no timelock, multisig or cap. This EOA does NOT hold DEFAULT_ADMIN_ROLE or UPGRADER_ROLE on the DepositManager (hasRole=false for both)."
       },
       {
+        "chain": "base",
+        "address": "0x0eab9d66adb8527cd7c0e7e7c1782580431ec276",
         "label": "JPYT MINTER_ROLE holder — Base",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
+        "capDescription": "No cap: DephaserJPY exposes no cap()/maxSupply() and mint() calls _mint() unconditionally.",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48621528,
         "sources": [
           {
-            "label": "Base explorer — JPYT token",
-            "url": "https://basescan.org/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+            "label": "DephaserJPY verified source (Base, Blockscout)",
+            "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
           }
         ],
-        "evidence": "getRoleMember(MINTER_ROLE, 0) on Base returned 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276; eth_getCode confirmed it is a contract. Count = 1."
+        "evidence": "At Base block 48,621,528: getRoleMemberCount(MINTER_ROLE)=1 and getRoleMember(MINTER_ROLE,0)=0x0eab9d66adb8527cd7c0e7e7c1782580431ec276, confirmed current with hasRole(MINTER_ROLE, addr)=true. eth_getCode returns 100 bytes — an ERC-1967 proxy whose implementation slot holds 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb; EIP-1967 admin slot is zero and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\" (OZ v5 UUPS). Same address also holds BURNER_ROLE (count=1). This is the USDC DepositManager on Base — a distinct deployment from the Optimism minter."
       },
       {
+        "chain": "base",
+        "address": "0x2db58fcae002ae16963f122dd657bb360398c54c",
         "label": "JPYT DEFAULT_ADMIN_ROLE holder — Base",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
+        "capDescription": "No cap exists on the token; an appointed minter mints without bound.",
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48621528,
         "sources": [
           {
-            "label": "Base explorer — JPYT token",
-            "url": "https://basescan.org/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+            "label": "DephaserJPY verified source (Base, Blockscout)",
+            "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
           }
         ],
-        "evidence": "getRoleMember(DEFAULT_ADMIN_ROLE, 0) on Base returned 0x2db58fcae002ae16963f122dd657bb360398c54c; eth_getCode returned 0x (EOA). Count = 1."
+        "evidence": "At Base block 48,621,528: getRoleMemberCount(DEFAULT_ADMIN_ROLE)=1, getRoleMember(DEFAULT_ADMIN_ROLE,0)=0x2db58fcae002ae16963f122dd657bb360398c54c, confirmed current with hasRole=true; eth_getCode returns 0x (EOA). Distinct from the Optimism admin EOA. getRoleAdmin(MINTER_ROLE)=DEFAULT_ADMIN_ROLE, so this EOA can appoint any minter unilaterally. It holds neither DEFAULT_ADMIN_ROLE nor UPGRADER_ROLE on the Base DepositManager (hasRole=false for both)."
+      },
+      {
+        "chain": "optimism",
+        "address": "0x32d55717901ac132049de8a3e82db03b255091e0",
+        "label": "JPYT DepositManager upgrade admin — Optimism",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 154217078,
+        "sources": [
+          {
+            "label": "UsdtDepositManager verified implementation (Optimism)",
+            "url": "https://optimism.blockscout.com/address/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5?tab=contract"
+          }
+        ],
+        "evidence": "At Optimism block 154,217,078: the UsdtDepositManager implementation gates _authorizeUpgrade(address) with onlyRole(UPGRADER_ROLE). Enumerating RoleGranted/RoleRevoked logs on the DepositManager proxy (0x77c1e4…) shows UPGRADER_ROLE has never been granted, but DEFAULT_ADMIN_ROLE is currently held by EOA 0x32d55717901ac132049de8a3e82db03b255091e0 (granted at block 151,189,060; the earlier holder 0xd012c3d2… was revoked at block 151,189,090 — hasRole confirms only 0x32d5… is current). getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE, so this EOA can self-grant UPGRADER_ROLE and upgrade the mint implementation. Upgrade-only: it holds no role on the JPYT token itself."
+      },
+      {
+        "chain": "base",
+        "address": "0x5642c7c728b10c0ddb258783e242833871b5352b",
+        "label": "JPYT DepositManager upgrade admin — Base",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48621794,
+        "sources": [
+          {
+            "label": "DephaserJPY verified source (Base, Blockscout)",
+            "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+          }
+        ],
+        "evidence": "At Base block 48,621,794: UPGRADER_ROLE has never been granted on the Base DepositManager (0x0eab9d…), and DEFAULT_ADMIN_ROLE is currently held by EOA 0x5642c7c728b10c0ddb258783e242833871b5352b (granted at block 45,594,302; the earlier holder 0xc584ac10… was revoked at block 45,594,338 — hasRole confirms only 0x5642… is current). getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE, so this EOA can self-grant UPGRADER_ROLE and replace implementation 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb. Upgrade-only: it holds no role on the JPYT token itself."
       }
     ],
-    "review": {
-      "evidence": "At Optimism block 152,830,546: non-upgradeable OZ AccessControlEnumerable token. MINTER_ROLE (1 holder): contract 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9 (DepositManager). DEFAULT_ADMIN_ROLE (1 holder): EOA 0xbdeb54641a23e2716a2978cde3cdeb1aed335479. Base deployment has distinct contract minter (0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) and EOA admin (0x2db58fcae002ae16963f122dd657bb360398c54c). No proxy or upgrade mechanism; authorityPosture downgraded from unbounded-or-compromised to concentrated-admin as mint is routed through a contract, not a raw EOA.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+    "upgradeability": {
+      "model": "custom",
+      "canChangeMintLogic": true,
+      "controlRef": "JPYT DEFAULT_ADMIN_ROLE holder — Optimism",
+      "observedAt": "2026-07-14",
+      "observedBlock": 154216813,
       "sources": [
         {
-          "label": "Sourcify Optimism contract source",
-          "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+          "label": "DephaserJPY verified source (Optimism, Blockscout)",
+          "url": "https://optimism.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
         },
         {
-          "label": "Optimism explorer — JPYT token",
-          "url": "https://optimistic.etherscan.io/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+          "label": "DephaserJPY verified source (Base, Blockscout)",
+          "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
         },
         {
-          "label": "Base explorer — JPYT token",
-          "url": "https://basescan.org/token/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+          "label": "UsdtDepositManager verified implementation (Optimism)",
+          "url": "https://optimism.blockscout.com/address/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5?tab=contract"
+        },
+        {
+          "label": "DePhaser money flow docs",
+          "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
+        }
+      ]
+    },
+    "review": {
+      "evidence": "Read at Optimism block 154,216,813 and Base block 48,621,528 (token roles), Optimism block 154,217,078 and Base block 48,621,794 (DepositManager roles). The JPYT token at 0xc47da4cb96ce65a96844a01bfae509f9d5454534 (same address on both chains) is NOT a proxy: EIP-1967 implementation, admin and beacon slots all read 0x0, and the Blockscout-verified source is a plain constructor-deployed `DephaserJPY is AccessControlEnumerable, ERC20, ERC20Permit` with mint(address,uint256) onlyRole(MINTER_ROLE) and no cap()/maxSupply(). Role holders were enumerated with getRoleMemberCount/getRoleMember and each was re-confirmed with a current hasRole() call. Optimism: MINTER_ROLE = contract 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9 (count 1), DEFAULT_ADMIN_ROLE = EOA 0xbdeb54641a23e2716a2978cde3cdeb1aed335479 (count 1). Base: MINTER_ROLE = contract 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276 (count 1), DEFAULT_ADMIN_ROLE = EOA 0x2db58fcae002ae16963f122dd657bb360398c54c (count 1). PAUSER_ROLE has zero members on both. Both MINTER_ROLE holders are ERC-1967/UUPS proxies (OZ v5, UPGRADE_INTERFACE_VERSION \"5.0.0\") over DePhaser DepositManager implementations (Optimism impl 0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5, verified as UsdtDepositManager, which calls jpyToken.mint(recipient, jpyAmount) and holds the Aave V3 Pool at storage slot 3; Base impl 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb). The token is immutable, but mint logic is changeable in substance on two vectors: (1) getRoleAdmin(MINTER_ROLE)=DEFAULT_ADMIN_ROLE, so the single admin EOA per chain can grant MINTER_ROLE to any address, including itself, and then mint JPYT without any cap or delay; (2) each DepositManager's own DEFAULT_ADMIN EOA (Optimism 0x32d55717901ac132049de8a3e82db03b255091e0, Base 0x5642c7c728b10c0ddb258783e242833871b5352b) can self-grant UPGRADER_ROLE (getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE; UPGRADER_ROLE currently has no holders) and replace the mint implementation. No multisig, timelock or guard was found on any of these four EOAs. Upgradeability model recorded as `custom` rather than `immutable`: the JPYT token is not a proxy, but DEFAULT_ADMIN_ROLE can grant MINTER_ROLE and the DepositManager is an upgradeable proxy, so mint-critical logic is mutable without a token upgrade.",
+      "reviewer": "Claude V9 CTRL clearing (on-chain)",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "DephaserJPY verified source (Optimism, Blockscout)",
+          "url": "https://optimism.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+        },
+        {
+          "label": "DephaserJPY verified source (Base, Blockscout)",
+          "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+        },
+        {
+          "label": "UsdtDepositManager verified implementation (Optimism)",
+          "url": "https://optimism.blockscout.com/address/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5?tab=contract"
+        },
+        {
+          "label": "DePhaser money flow docs",
+          "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
         }
       ]
     }

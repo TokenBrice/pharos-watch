@@ -173,6 +173,40 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM) in wind-down: pooled new borrows are suspended and settlement targets July 15, 2026. The token's GHO AccessControl roles have no members (facilitator set and bucket caps are frozen); the only remaining mint-relevant control is the 2/2 proxy-admin Safe's upgrade power.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+      ],
+      "implementationAddresses": [
+        "0xce23355599cdbe5dca05186c5d9d5b37d959b27f"
+      ],
+      "adminAddresses": [
+        "0xf050623d497be7ea6653fd205a537d10300b4c6e"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "HypurrFi / Last proxy admin Safe (upgrade authority)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 40440697,
+      "sources": [
+        {
+          "label": "USDXL token proxy on HyperEVM Blockscout",
+          "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+        },
+        {
+          "label": "USDXL implementation on HyperEVM Blockscout",
+          "url": "https://hyperliquid.blockscout.com/address/0xce23355599cdbe5dca05186c5d9d5b37d959b27f"
+        },
+        {
+          "label": "USDXL proxy admin Safe on HyperEVM Blockscout",
+          "url": "https://hyperliquid.blockscout.com/address/0xf050623d497be7ea6653fd205a537d10300b4c6e"
+        },
+        {
+          "label": "HyperEVM JSON-RPC",
+          "url": "https://rpc.hyperliquid.xyz/evm"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "HypurrFi USDXL facilitator / borrow contracts (Aave-v3 fork, GHO model; role set frozen)",
@@ -181,8 +215,15 @@
         "directMintAbility": "cap-limited",
         "chain": "hyperevm",
         "canRaiseCap": false,
+        "failureDomainKeys": [
+          "hyperevm:0x7911c2c9c5f5a6f4bef58d7df35903abd3ee9dd6",
+          "hyperevm:0xd12f1c402197224339d5a324ac7ef4df5d2142e9",
+          "hyperevm:0xcb17105f6a7a75d1f1c91317a4621d9aaafe96fd"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 40441129,
         "capDescription": "Mint bounded by overcollateralized borrow positions and GHO-style facilitator bucket capacity within the HypurrFi pooled market. DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE on the token have zero members, so facilitators cannot be added/removed and bucket capacities cannot be raised short of a proxy upgrade.",
-        "evidence": "At HyperEVM block 37556224: getFacilitatorsList() returned exactly 3 facilitators (0x7911c2…, 0xd12f1c…, 0xcb1710… — HypurrFi market loans, flash loans, USDT0 PSM); hasRole returned false for DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE across the proxy-admin Safe, all 3 facilitators, the implementation, and HypurrFi governance addresses; no RoleGranted events exist (genesis-deployed contract, role storage empty). mint() reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down in progress, settlement target July 15 2026)."
+        "evidence": "At HyperEVM block 40441129, getFacilitatorsList() returned exactly 3 current facilitators: 0x7911c2c9c5f5a6f4Bef58d7dF35903abd3EE9DD6, 0xD12f1c402197224339D5A324AC7ef4DF5d2142E9, and 0xcb17105F6A7A75D1F1C91317a4621d9AaAfe96Fd. The proxy-admin Safe had no DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, or BUCKET_MANAGER_ROLE membership; the previously reviewed role set remains empty and the facilitator buckets remain exhausted. Minting remains bounded by facilitator bucket capacity and reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED during the wind-down."
       },
       {
         "label": "HypurrFi / Last proxy admin Safe (upgrade authority)",
@@ -212,17 +253,25 @@
       }
     ],
     "review": {
-      "evidence": "At HyperEVM block 37547570: USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 proxy admin = Safe 2/2 (0xf050623d497be7ea6653fd205a537d10300b4c6e); Safe owners [0x67a6d918..., 0xae04ce2f...], threshold=2, no modules, no guard, masterCopy=0xfb1bffc9... Implementation at 0xce23355599cdbe5dca05186c5d9d5b37d959b27f. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down active). At block 37556224 the facilitator-bucket ACL was resolved: getFacilitatorsList() = 3 facilitators (market loans, flash loans, USDT0 PSM) and hasRole(DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE) = false for the Safe, all facilitators, the implementation, and HypurrFi governance addresses, with no RoleGranted events in history — the GHO role set has zero members and the facilitator/bucket configuration is frozen. The sole remaining mint-capable authority is the 2/2 proxy-admin Safe via implementation upgrade.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At HyperEVM block 40440697: the USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 implementation slot returned 0xce23355599cdbe5dca05186c5d9d5b37d959b27f and the admin slot returned Safe 0xf050623d497be7ea6653fd205a537d10300b4c6e. Safe getOwners() returned [0x67a6d918..., 0xae04ce2f...] and getThreshold() returned 2; getModulesPaginated() returned no enabled modules, and the guard storage slot was zero. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down active). At block 37556224 the facilitator-bucket ACL was resolved: getFacilitatorsList() = 3 facilitators (market loans, flash loans, USDT0 PSM) and hasRole(DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE) = false for the Safe, all facilitators, the implementation, and HypurrFi governance addresses, with no RoleGranted events in history — the GHO role set has zero members and the facilitator/bucket configuration is frozen. The sole remaining mint-capable authority is the 2/2 proxy-admin Safe via implementation upgrade.",
+      "reviewer": "Codex CTRL curation batch 18",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
-          "label": "USDXL token on HyperEVM",
+          "label": "USDXL token proxy on HyperEVM Blockscout",
           "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+        },
+        {
+          "label": "USDXL proxy admin Safe on HyperEVM Blockscout",
+          "url": "https://hyperliquid.blockscout.com/address/0xf050623d497be7ea6653fd205a537d10300b4c6e"
         },
         {
           "label": "HypurrFi USDXL docs",
           "url": "https://docs.hypurrfi.com/products/usdxl"
+        },
+        {
+          "label": "HyperEVM JSON-RPC",
+          "url": "https://rpc.hyperliquid.xyz/evm"
         }
       ]
     }

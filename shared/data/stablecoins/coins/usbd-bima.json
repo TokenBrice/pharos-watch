@@ -480,18 +480,18 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "USBD is a Liquity-v1-fork CDP minted via BorrowerOperations against overcollateralized BTC LST/LRT vaults (150% MCR). BimaCore (0x227E9323D692578Ca3dF92b87d06625Df22380Ab) is owned by EOA 0xaca5d659364636284041b8d3acad8a57f6e7b8a5. USBD token is owned by a separate EOA (0xe3fbba95bb35be804696624dd1e9344a86e3cbc4). No proxy/upgrade paths on any of the core contracts. Posture upgraded to concentrated-admin (single EOA controls).",
+    "summary": "USBD is a Liquity-v1-fork CDP minted via BorrowerOperations against overcollateralized BTC LST/LRT vaults (150% MCR, per-collateral maxSystemDebt ceilings). No contract in the mint path is a proxy, but mint logic remains mutable by privilege: the BimaCore owner EOA (0xaca5d659364636284041b8d3acad8a57f6e7b8a5) can call DebtToken.authorizedMint() for an unbounded amount, repoint setLendingVaultAdapterAddress() at any contract (which then gets unbounded mint()), deploy new minting TroveManagers through the owner-gated Factory, and raise maxSystemDebt via TroveManager.setParameters(). The USBD token/OFT owner is a separate EOA (0xe3fbba95bb35be804696624dd1e9344a86e3cbc4).",
     "controls": [
       {
         "label": "BIMA BorrowerOperations (Liquity-v1 fork)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "chain": "ethereum",
         "address": "0x87FED36c032EE7289a1d2f3C48798e4C7fCDfAEc",
         "capDescription": "Mint gated by per-collateral debt ceilings and a 150% minimum collateral ratio enforced by the TroveManager/Factory.",
-        "evidence": "At Ethereum block 25295203: BorrowerOperations.owner() = 0xaca5d659364636284041b8d3acad8a57f6e7b8a5 (EOA, eth_getCode = '0x'); EIP-1967 proxy admin slot = 0x0 (non-upgradeable). BIMA docs confirm Liquity-fork BorrowerOperations mints USBD DebtToken.",
+        "evidence": "At Ethereum block 25530822: BorrowerOperations.owner() = 0xaca5d659364636284041b8d3acad8a57f6e7b8a5 (EOA, eth_getCode = 0x); EIP-1967 implementation, admin, and beacon slots all 0x0 (not a proxy). DebtToken.borrowerOperationsAddress() = 0x87FED36c032EE7289a1d2f3C48798e4C7fCDfAEc and DebtToken.mintWithGasCompensation/mint are gated on it, so this contract is the user-facing CDP minter. It cannot raise its own ceiling: maxSystemDebt is set only by TroveManager.setParameters, which requires msg.sender == owner().",
         "sources": [
           {
             "label": "BIMA Mainnet Addresses",
@@ -501,45 +501,61 @@
             "label": "BorrowerOperations on Etherscan",
             "url": "https://etherscan.io/address/0x87FED36c032EE7289a1d2f3C48798e4C7fCDfAEc"
           }
-        ]
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530822
       },
       {
         "label": "BimaCore governance / parameter admin",
         "role": "minter-admin",
         "authorityType": "eoa",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
         "chain": "ethereum",
         "address": "0xaca5d659364636284041b8d3acad8a57f6e7b8a5",
-        "evidence": "At Ethereum block 25295203: BimaCore.owner() = BimaCore.guardian() = 0xaca5d659364636284041b8d3acad8a57f6e7b8a5; eth_getCode = '0x' (EOA). BimaCore EIP-1967 proxy admin slot = 0x0; impl slot = 0x0 — non-upgradeable. Same EOA owns BorrowerOperations. Concentration of authority in a single EOA.",
+        "evidence": "At Ethereum block 25530822: BimaCore.owner() = BimaCore.guardian() = 0xaca5d659364636284041b8d3acad8a57f6e7b8a5, eth_getCode = 0x (EOA). The deployed USBD DebtToken runtime code contains authorizedMint(address,uint256) [selector 0x73b8d9c7] and setLendingVaultAdapterAddress(address) [0xecfa0872], both guarded by require(msg.sender == _bimaCore.owner()) — so this EOA can mint USBD directly without limit and can grant unbounded mint() rights to any contract it names as the lending-vault adapter (currently 0x0). Factory 0xc5790164d3CCB6533b241EeE3Fd7f56862759376 (DebtToken.factory(), immutable) has owner() = the same EOA and can enableTroveManager new minters. TroveManager.setParameters (maxSystemDebt) requires msg.sender == owner(). BimaCore EIP-1967 implementation/admin/beacon slots all 0x0 (not a proxy).",
         "sources": [
           {
             "label": "BimaCore on Etherscan",
             "url": "https://etherscan.io/address/0x227E9323D692578Ca3dF92b87d06625Df22380Ab"
+          },
+          {
+            "label": "Bima DebtToken source (authorizedMint / setLendingVaultAdapterAddress)",
+            "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/DebtToken.sol"
+          },
+          {
+            "label": "Bima TroveManager source (setParameters / maxSystemDebt)",
+            "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/TroveManager.sol"
           }
-        ]
+        ],
+        "capDescription": "Unbounded: DebtToken.authorizedMint() has no cap, and this EOA can also raise each collateral maxSystemDebt via TroveManager.setParameters().",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530822
       },
       {
         "label": "USBD token owner (EOA)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "chain": "ethereum",
         "address": "0xe3fbba95bb35be804696624dd1e9344a86e3cbc4",
-        "evidence": "At Ethereum block 25295203: USBD token.owner() = 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4; eth_getCode = '0x' (EOA). USBD token EIP-1967 proxy admin slot = 0x0 (non-upgradeable). Separate EOA from BimaCore owner.",
+        "evidence": "At Ethereum block 25530822: USBD token.owner() = 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4, eth_getCode = 0x (EOA). USBD DebtToken EIP-1967 implementation, admin, and beacon slots all 0x0 (not a proxy). This is the OFT owner/delegate, so it controls LayerZero peers and endpoint config (which can authorize cross-chain mints) but holds no mint or cap function on the token itself: authorizedMint and setLendingVaultAdapterAddress check _bimaCore.owner(), and maxSystemDebt is a TroveManager owner parameter.",
         "sources": [
           {
             "label": "USBD token on Etherscan",
             "url": "https://etherscan.io/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
           }
-        ]
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530822
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295203: BimaCore (0x227E9323...) owner() = guardian() = EOA 0xaca5d659...; BorrowerOperations (0x87FED36c...) owner() = same EOA; USBD token (0x6bede1c6...) owner() = EOA 0xe3fbba95.... All three contract EIP-1967 proxy admin slots = 0x0 (non-upgradeable). eth_getCode = '0x' for both EOAs. Full EOA control with no multisig or timelock.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "disposition": "scoreable",
+      "evidence": "Ethereum block 25530822: EIP-1967 implementation (0x3608...), admin (0xb531...), and beacon (0xa3f0...) slots all read 0x0 on DebtToken 0x6bede1c6..., BimaCore 0x227E9323..., BorrowerOperations 0x87FED36c..., and Factory 0xc5790164... (eth_getStorageAt) — no proxy anywhere in the mint path, so the deployed mint code cannot be swapped by an upgrade. Mint logic is nonetheless owner-mutable without a proxy: eth_getCode on the token shows the live runtime contains authorizedMint(address,uint256) [0x73b8d9c7], setLendingVaultAdapterAddress(address) [0xecfa0872], and lendingVaultAdapterAddress() [0xfe834ae0], matching the verified bima-v1-core mainnet-v2 DebtToken source where all three are gated on _bimaCore.owner(); mint(address,uint256) accepts borrowerOperationsAddress, any enabled troveManager, or the lending-vault adapter. lendingVaultAdapterAddress() = 0x0 today, and factory() = 0xc5790164... (immutable) whose owner() is the same EOA, so the owner can both mint directly and install new mint-capable code. BimaCore.owner() = guardian() = 0xaca5d659... and DebtToken.owner() = 0xe3fbba95...; eth_getCode = 0x for both (EOAs). No timelock, multisig, or Safe anywhere in the path.",
+      "reviewer": "Pharos V9 CTRL upgrade-authority review",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Minting USBD",
@@ -550,8 +566,40 @@
           "url": "https://docs.bima.money/security/mainnet-addresses"
         },
         {
+          "label": "Bima DebtToken source",
+          "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/DebtToken.sol"
+        },
+        {
+          "label": "Bima TroveManager source (setParameters / maxSystemDebt)",
+          "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/TroveManager.sol"
+        },
+        {
           "label": "BimaCore on Etherscan",
           "url": "https://etherscan.io/address/0x227E9323D692578Ca3dF92b87d06625Df22380Ab"
+        }
+      ]
+    },
+    "upgradeability": {
+      "model": "custom",
+      "adminAddresses": [
+        "0xaca5d659364636284041b8d3acad8a57f6e7b8a5"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "BimaCore governance / parameter admin",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530822,
+      "sources": [
+        {
+          "label": "Bima DebtToken source (authorizedMint / setLendingVaultAdapterAddress / immutable factory)",
+          "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/DebtToken.sol"
+        },
+        {
+          "label": "USBD DebtToken on Etherscan",
+          "url": "https://etherscan.io/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        },
+        {
+          "label": "BIMA Mainnet Addresses",
+          "url": "https://docs.bima.money/security/mainnet-addresses"
         }
       ]
     }

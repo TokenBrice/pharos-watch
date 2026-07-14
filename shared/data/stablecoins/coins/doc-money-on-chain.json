@@ -51,7 +51,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "DOC is minted permissionlessly against rBTC locked in Money On Chain's overcollateralized contracts on Rootstock, with permissionless DOC-for-rBTC redemption. The DoCToken is Ownable and its owner is the MoCExchange proxy, which is the only direct minter. MoCExchange is a zeppelinOS transparent proxy whose admin is the published Admin contract, owned by the Upgrade Delegator, which is governed by the Money On Chain Governor. The Governor authorizes Changer contracts and can therefore upgrade mint-critical logic, so the mint bound is governance-revocable rather than immutable. The Governor's own owner is an on-chain changer-authorizing contract; the off-chain keyholder set behind that contract is not publicly enumerable, which is why the posture is partially-bounded rather than bounded.",
+    "summary": "DOC is minted permissionlessly against rBTC locked in Money On Chain's overcollateralized contracts on Rootstock, with permissionless DOC-for-rBTC redemption. The DoCToken is Ownable and its owner is the MoCExchange proxy, which is the only direct minter. MoCExchange is a zeppelinOS transparent proxy whose admin is the published Admin contract, owned by the Upgrade Delegator, which is governed by the Money On Chain Governor. The Governor authorizes Changer contracts and can therefore upgrade mint-critical logic, so the mint bound is governance-revocable rather than immutable. The Governor's owner is the verified Money On Chain VotingMachine proxy: token holders vote on proposals, and an accepted proposal calls the Governor to execute its Changer. The VotingMachine is itself upgradeable through a ProxyAdmin and UpgradeDelegator governed by that same Governor. The posture remains partially bounded because governance can alter collateral parameters and replace mint-critical logic, not because of an unidentified off-chain signer set.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -146,29 +146,49 @@
       {
         "chain": "rootstock",
         "address": "0x65a5681be95d212f0c90ead40170d8277de81169",
-        "label": "Money On Chain Governor owner (changer-authorizing contract)",
-        "role": "other",
+        "label": "Money On Chain VotingMachine",
+        "role": "governor",
         "authorityType": "contract",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Rootstock explorer: Money On Chain Governor 0x3b8853df",
             "url": "https://rootstock.blockscout.com/address/0x3b8853DF65AfBd94853E6D77ee0Ab5590F41bB08"
           },
           {
+            "label": "Rootstock explorer API: VotingMachine proxy 0x65a5681b",
+            "url": "https://rootstock.blockscout.com/api/v2/addresses/0x65a5681be95d212f0c90ead40170d8277de81169"
+          },
+          {
+            "label": "Rootstock explorer API: verified VotingMachine implementation 0x00594d54",
+            "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x00594D5456c4650d10Edbb62D7a482d8Fa9a5b53"
+          },
+          {
+            "label": "Rootstock explorer API: VotingMachine ProxyAdmin 0x1a1824f3",
+            "url": "https://rootstock.blockscout.com/api/v2/addresses/0x1a1824F39d79937DCB80c9D9938AE77E431c2DEF"
+          },
+          {
+            "label": "Rootstock explorer API: VotingMachine UpgradeDelegator proxy 0x13156470",
+            "url": "https://rootstock.blockscout.com/api/v2/addresses/0x131564703310a294C1bFDC09D10EC0659f18E253"
+          },
+          {
+            "label": "Rootstock explorer API: verified UpgradeDelegator implementation 0x6d1cca35",
+            "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x6D1cCA35Aa431F2AF0f0F2b9050c582B823ac731"
+          },
+          {
             "label": "Rootstock public RPC node (eth_call / eth_getStorageAt reads)",
             "url": "https://public-node.rsk.co"
           }
         ],
-        "evidence": "At Rootstock block 9051085, Governor.owner() = 0x65a5681be95d212f0c90ead40170d8277de81169, a contract (2,240 bytes) that is itself Governed (its governor() returns the Governor 0x3b8853df). It is the root authority that can drive the Governor's change authorization and is therefore the effective upgrade root. Money On Chain's published contract list does not name this contract, and its off-chain keyholder or signer set is not enumerable from public RPC, so its internal quorum is not claimed here; its on-chain identity is nevertheless fully resolved."
+        "evidence": "At Rootstock block 9051414, Governor.owner() = 0x65a5681be95d212f0c90ead40170d8277de81169. Explorer metadata and storage resolve that address as an AdminUpgradeabilityProxy to the verified VotingMachine implementation 0x00594d5456c4650d10edbb62d7a482d8fa9a5b53, with EIP-1967 admin 0x1a1824f39d79937dcb80c9d9938ae77e431c2def. That verified ProxyAdmin's owner is UpgradeDelegator proxy 0x131564703310a294c1bfdc09d10ec0659f18e253; its verified implementation returns the same Money On Chain Governor 0x3b8853df, and it shares that ProxyAdmin. VotingMachine controlledGovernor() and governor() also return 0x3b8853df. Verified source shows stake-weighted preVote/vote/veto handling; acceptedStep() calls controlledGovernor.executeChange(winnerProposal). The result is a cyclic on-chain governance and upgrade path, not an unenumerated off-chain signer set."
       }
     ],
     "review": {
       "disposition": "scoreable",
-      "evidence": "Full authority graph re-derived on-chain at Rootstock block 9051085 (2026-07-14) via eth_call and eth_getStorageAt on https://public-node.rsk.co, then cross-checked against Money On Chain's published mainnet contract list: DoCToken 0xe700691d (not a proxy; owner() = MoCExchange 0x6acb83bb) -> MoCExchange transparent proxy (zeppelinOS implementation slot = 0x9bfbbdb1, admin slot = Admin 0x009c51e1) -> Admin.owner() = Upgrade Delegator 0x5ce577f6 -> UpgradeDelegator.governor() = Governor 0x3b8853df -> Governor.owner() = 0x65a5681b. Every address in that chain is a contract and every hop was read at the cited block. The published contract list independently names the Governor, Upgrade Delegator, Admin, MoCExchange, and DoCToken at exactly these addresses. This review corrects the 2026-06-11 entry, which read the zeppelinOS implementation slot and recorded its value (0x36d1dc7b) as the Governor. Remaining limitation, recorded rather than resolved: the Governor's owner contract is identified on-chain but its off-chain signer set is not publicly enumerable, so the authority posture stays partially-bounded.",
-      "reviewer": "Claude Opus V9 CTRL curation (OPUS batch 01)",
+      "evidence": "Authority graph re-derived on-chain on 2026-07-14 via eth_call and eth_getStorageAt on https://public-node.rsk.co, then cross-checked against Money On Chain's published mainnet contract list and verified explorer source: DoCToken 0xe700691d (not a proxy; owner() = MoCExchange 0x6acb83bb) -> MoCExchange transparent proxy (zeppelinOS implementation slot = 0x9bfbbdb1, admin slot = Admin 0x009c51e1) -> Admin.owner() = Upgrade Delegator 0x5ce577f6 -> UpgradeDelegator.governor() = Governor 0x3b8853df -> Governor.owner() = VotingMachine proxy 0x65a5681b. At block 9051414, the VotingMachine points back to that Governor, verified source shows stake-weighted voting followed by executeChange(winnerProposal), and its EIP-1967 admin is ProxyAdmin 0x1a1824f3. ProxyAdmin.owner() is UpgradeDelegator proxy 0x13156470, whose verified implementation is governed by that same Governor and which shares the ProxyAdmin, completing a cyclic on-chain governance/upgrade path. This review corrects both the 2026-06-11 implementation-slot error and the later misclassification of the VotingMachine as an unidentified off-chain keyholder contract. The posture remains partially-bounded because an accepted governance proposal can change collateral parameters or mint-critical logic.",
+      "reviewer": "owner-triage",
       "reviewedAt": "2026-07-14",
       "sources": [
         {
@@ -190,6 +210,26 @@
         {
           "label": "Rootstock explorer: Money On Chain Governor 0x3b8853df",
           "url": "https://rootstock.blockscout.com/address/0x3b8853DF65AfBd94853E6D77ee0Ab5590F41bB08"
+        },
+        {
+          "label": "Rootstock explorer API: VotingMachine proxy 0x65a5681b",
+          "url": "https://rootstock.blockscout.com/api/v2/addresses/0x65a5681be95d212f0c90ead40170d8277de81169"
+        },
+        {
+          "label": "Rootstock explorer API: verified VotingMachine implementation 0x00594d54",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x00594D5456c4650d10Edbb62D7a482d8Fa9a5b53"
+        },
+        {
+          "label": "Rootstock explorer API: VotingMachine ProxyAdmin 0x1a1824f3",
+          "url": "https://rootstock.blockscout.com/api/v2/addresses/0x1a1824F39d79937DCB80c9D9938AE77E431c2DEF"
+        },
+        {
+          "label": "Rootstock explorer API: VotingMachine UpgradeDelegator proxy 0x13156470",
+          "url": "https://rootstock.blockscout.com/api/v2/addresses/0x131564703310a294C1bFDC09D10EC0659f18E253"
+        },
+        {
+          "label": "Rootstock explorer API: verified UpgradeDelegator implementation 0x6d1cca35",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x6D1cCA35Aa431F2AF0f0F2b9050c582B823ac731"
         },
         {
           "label": "Rootstock public RPC node (eth_call / eth_getStorageAt reads)",

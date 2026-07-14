@@ -168,6 +168,30 @@
           "url": "https://docs.ring.exchange/protocol-core/ring-stablecoin"
         }
       ]
+    },
+    "upgradeability": {
+      "model": "custom",
+      "adminAddresses": [
+        "0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Ring Protocol Core / GOVERN_ROLE (minter-admin)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530907,
+      "sources": [
+        {
+          "label": "USDR AssetToken verified source (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x4ea40dcee961675683e0a2e1721bd49cb9bca913?tab=contract"
+        },
+        {
+          "label": "Ring Protocol Core / Permissions (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
     }
   },
   "launchDate": "2025-09-12"

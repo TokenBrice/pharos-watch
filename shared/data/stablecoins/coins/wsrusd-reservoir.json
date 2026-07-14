@@ -411,20 +411,25 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "wsrUSD (Savingcoin ERC-4626, non-upgradeable) is minted only via deposit() of rUSD. DEFAULT_ADMIN = EOA 0xb7570e32.... MANAGER role not granted to any address (setCap/update currently uncallable). No upgrade path. Base mint authority inherited from rUSD controls.",
+    "summary": "wsrUSD is a non-upgradeable Savingcoin ERC-4626 wrapper minted by depositing rUSD. Its active MANAGER role is held by Reservoir Safe 0x4E8a4894... (3-of-5), while DEFAULT_ADMIN_ROLE remains with EOA 0xb7570e32... and can grant or revoke MANAGER. Base mint authority is inherited from rUSD.",
     "inheritedFrom": "rusd-reservoir",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
       "observedAt": "2026-07-14",
+      "observedBlock": 25531314,
       "sources": [
         {
-          "label": "Reservoir smart contract addresses",
-          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          "label": "Reservoir wsrUSD product docs",
+          "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
         },
         {
           "label": "Blockscout verified wsrUSD Savingcoin source",
           "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
         }
       ]
     },
@@ -434,36 +439,122 @@
         "address": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
         "label": "wsrUSD Savingcoin ERC-4626 wrapper (non-upgradeable)",
         "role": "wrapper",
-        "authorityType": "eoa",
+        "authorityType": "contract",
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531314,
         "sources": [
           {
-            "label": "Reservoir docs",
+            "label": "Reservoir wsrUSD product docs",
             "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
           },
           {
-            "label": "wsrUSD Ethereum contract",
-            "url": "https://etherscan.io/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+            "label": "Blockscout verified wsrUSD Savingcoin source",
+            "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
           }
         ],
-        "evidence": "At Ethereum block 25295219: Blockscout confirms Savingcoin contract (not a proxy, no EIP-1967 slots). asset() = 0x09D4214C03D01F49544C0448DBE3A27f768F2b34 (rUSD). Creation block 22275492 RoleGranted: DEFAULT_ADMIN to EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 (eth_getCode = 0x). hasRole(DEFAULT_ADMIN, 0xb7570e32) = true. MANAGER role (0x16ce8ca6...) getRoleAdmin = DEFAULT_ADMIN, but no RoleGranted event for MANAGER was found across full history scan (setCap/update currently uncallable by any address). Minting is deposit-only via ERC-4626 share accounting."
+        "evidence": "At Ethereum block 25531314, Blockscout and RPC evidence confirm a constructor-deployed Savingcoin contract with no proxy or upgrade path. asset() returns rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34, and wrapper shares are minted through ERC-4626 deposits rather than a privileged net-claim mint surface."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4E8a4894275780f571AaD53122e641D9f50Ff04f",
+        "label": "wsrUSD MANAGER role Safe",
+        "role": "cap-admin",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "capDescription": "The MANAGER role can call the wrapper's setCap() and update() functions.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x5d2DDd8F998f95EAa77742907744149A7b16f9A7",
+            "0xf8E42F2cF5Beea920D7e7A71ca30b62F978CA8d5",
+            "0xA295fDB1d6a1107d99fbC7E489fB5D7E96F99ff1",
+            "0x9E2C1dEFDa18E17e9E68Fb64914027D5d584b98D",
+            "0x33c3EeA787Cd02f23d14E1481558A6E5A3298b3e"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+          "observedBlock": 25531314,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531314,
+        "sources": [
+          {
+            "label": "Blockscout wsrUSD MANAGER Safe",
+            "url": "https://eth.blockscout.com/address/0x4E8a4894275780f571AaD53122e641D9f50Ff04f"
+          },
+          {
+            "label": "Safe Transaction Service wsrUSD MANAGER Safe",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x4E8a4894275780f571AaD53122e641D9f50Ff04f/"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25531314, wsrUSD hasRole(MANAGER, 0x4E8a4894275780f571AaD53122e641D9f50Ff04f) returned true. Fixed-block Safe calls returned the five listed owners, threshold 3, and no enabled modules; the Safe service also reported a zero guard and module guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+        "label": "wsrUSD DEFAULT_ADMIN_ROLE EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531314,
+        "sources": [
+          {
+            "label": "Blockscout verified wsrUSD Savingcoin source",
+            "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25531314, hasRole(DEFAULT_ADMIN_ROLE, 0xb7570e32ded63b25163369d5eb4d8e89e70e5602) returned true and eth_getCode returned 0x, confirming an EOA. MANAGER is administered by DEFAULT_ADMIN_ROLE, so this EOA can grant or revoke the active MANAGER Safe."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Reservoir docs",
+          "label": "Reservoir wsrUSD product docs",
           "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
         },
         {
-          "label": "wsrUSD Ethereum contract",
-          "url": "https://etherscan.io/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+          "label": "Reservoir smart contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        },
+        {
+          "label": "Blockscout verified wsrUSD Savingcoin source",
+          "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+        },
+        {
+          "label": "Blockscout wsrUSD MANAGER Safe",
+          "url": "https://eth.blockscout.com/address/0x4E8a4894275780f571AaD53122e641D9f50Ff04f"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
         }
       ],
-      "evidence": "At Ethereum block 25530817, wsrUSD is a constructor-deployed Savingcoin ERC-4626 wrapper whose verified source contains no upgrade function and whose EIP-1967 implementation, admin, and beacon slots are all zero. Its asset() is rUSD. The existing role review found DEFAULT_ADMIN = EOA 0xb7570e32... and no MANAGER role grant; the wrapper has no privileged net-claim mint surface, while rUSD controls are tracked separately.",
-      "reviewer": "Codex Safety Score V9 CTRL curation",
+      "evidence": "At Ethereum block 25531314, wsrUSD remains an immutable constructor-deployed Savingcoin ERC-4626 wrapper over rUSD. Reservoir Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f actively holds MANAGER and is 3-of-5 with no enabled modules, while EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 still holds DEFAULT_ADMIN_ROLE and can grant or revoke MANAGER. The wrapper has no privileged net-claim mint surface; base rUSD controls remain tracked on the parent.",
+      "reviewer": "owner-triage",
       "reviewedAt": "2026-07-14"
     }
   },

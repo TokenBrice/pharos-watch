@@ -1,0 +1,78 @@
+{
+  "id": "tbill-openeden",
+  "reserves": [
+    {
+      "name": "Short-dated U.S. Treasury bills and USD",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury and regulated USD custodians",
+      "riskFactors": ["duration", "liquidity", "custody", "counterparty", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex reserve curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "OpenEden TBILL introduction",
+        "url": "https://docs.openeden.com/tbill/introduction"
+      },
+      {
+        "label": "OpenEden trust and transparency",
+        "url": "https://docs.openeden.com/tbill/trust-and-transparency"
+      },
+      {
+        "label": "OpenEden TBILL transparency",
+        "url": "https://openeden.com/tbill/transparency"
+      }
+    ],
+    "rationale": "OpenEden documents one-to-one backing by short-dated U.S. Treasury bills and a small USD component, with BNY managing and custodying the Treasury portfolio and daily/monthly NAV reporting. None of the reviewed current pages provides a dated percentage allocation, so the prior 95/5 split is replaced by one unresolved two-constituent basket.",
+    "compositionBasis": "OpenEden TBILL fund, FAQ, and trust-and-transparency disclosures without current category weights",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The Treasury and USD constituents are identified, but their current weights and the USD provider allocation are not published in a pinned report.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-dated U.S. Treasury bills and USD",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "OpenEden identifies both reserve constituents but does not publish a current dated Treasury-versus-USD allocation."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "BNY",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Regulated TBILL Fund cash custodians and service providers",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex reserve curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "OpenEden TBILL FAQ",
+        "url": "https://docs.openeden.com/tbill/faq"
+      },
+      {
+        "label": "OpenEden TBILL introduction",
+        "url": "https://docs.openeden.com/tbill/introduction"
+      }
+    ],
+    "uncertainty": "OpenEden documents BNY for the Treasury portfolio and segregated Treasury custody, but the reviewed sources do not identify the cash custodian, provider shares, or complete rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

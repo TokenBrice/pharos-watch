@@ -314,6 +314,38 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "USDz is minted when SPCT holders call deposit() or depositBySPCT() on the USDz contract; the contract is permissioned via AccessControl roles. DEFAULT_ADMIN is a 6-owner 2/6 GnosisSafe (Safe v1.3, no modules, no guard). POOL_MANAGER_ROLE is held by a separate GnosisSafeProxy (0x604e831…). Earlier admin addresses (0x3def017, 0x20b15ee) had both DEFAULT_ADMIN and POOL_MANAGER_ROLE revoked.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530822,
+      "sources": [
+        {
+          "label": "USDz Ethereum verified source (non-proxy)",
+          "url": "https://eth.blockscout.com/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067?tab=contract"
+        },
+        {
+          "label": "ChildUSDz Base verified source (non-proxy)",
+          "url": "https://base.blockscout.com/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938?tab=contract"
+        },
+        {
+          "label": "ChildUSDzV2 Arbitrum verified source (non-proxy)",
+          "url": "https://arbitrum.blockscout.com/address/0x5018609ab477cc502e170a5accf5312b86a4b94f?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base-rpc.publicnode.com"
+        },
+        {
+          "label": "Manta Pacific RPC",
+          "url": "https://pacific-rpc.manta.network/http"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Anzen DEFAULT_ADMIN Safe (upgrade/role authority)",
@@ -370,9 +402,9 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295203: USDz Ethereum contract (0xa469b7ee) confirmed as 'USDz' on Blockscout with AccessControl roles. owner() = 0xc88729a8… (GnosisSafeProxy); hasRole(DEFAULT_ADMIN, 0xc88729a8…) = true. Safe: 6 owners, 2/6 threshold, Safe v1.3, no modules, no guard. POOL_MANAGER_ROLE (0x6077685…) held by 0x604e831… (GnosisSafeProxy, 344 bytes). Earlier admin addresses (0x3def017 EOA and 0x20b15ee contract) had both roles revoked. Mint path: deposit()/depositBySPCT() functions on token contract, gated by SPCT availability.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25295203: USDz Ethereum contract (0xa469b7ee) confirmed as 'USDz' on Blockscout with AccessControl roles. owner() = 0xc88729a8… (GnosisSafeProxy); hasRole(DEFAULT_ADMIN, 0xc88729a8…) = true. Safe: 6 owners, 2/6 threshold, Safe v1.3, no modules, no guard. POOL_MANAGER_ROLE (0x6077685…) held by 0x604e831… (GnosisSafeProxy, 344 bytes). Earlier admin addresses (0x3def017 EOA and 0x20b15ee contract) had both roles revoked. Mint path: deposit()/depositBySPCT() functions on token contract, gated by SPCT availability. Upgrade review 2026-07-14: eth_getStorageAt on the EIP-1967 implementation (0x360894a1…), admin (0xb5312768…), and beacon (0xa3f0ad74…) slots plus the legacy zeppelinos slot returned 0x0 on all five deployments (ethereum block 25530822, base 48621010, arbitrum 483761706, blast 37610776, manta 8980741); eth_getCode opcode scans found no DELEGATECALL in any of the five runtimes, and Blockscout reports proxy_type None with empty implementations. USDz mint logic is not upgradeable.",
+      "reviewer": "Claude CTRL upgrade review",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "USDz token (Blockscout)",

@@ -70,18 +70,35 @@
   "pythFeedId": "0x710659c5a68e2416ce4264ca8d50d34acc20041d91289110eea152c52ff3dc39",
   "oracleRisk": {
     "tier": "medianized-with-delay",
-    "summary": "Savings Dai/USDS wrappers use internal share accounting but inherit the parent Maker/Sky CDP oracle path of medianized feeds routed through the Oracle Security Module delay.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "sDAI is an ERC-4626 savings wrapper over DAI and has no borrower-owned collateral positions or local liquidation engine. Its required DAI parent carries the separately reviewed Sky Vault oracle, auction, backstop, and bad-debt branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "The sDAI contract is an ERC-4626 wrapper whose shares are minted against deposited DAI and redeemed back to DAI as the savings rate accrues. It does not originate borrower debt or liquidate collateral. The variantOf relationship preserves the complete DAI parent branch review.",
+      "sources": [
+        {
+          "label": "Spark sDAI token documentation",
+          "url": "https://docs.spark.fi/dev/savings/sdai-token"
+        },
+        {
+          "label": "Sky Oracle Security Module documentation",
+          "url": "https://developers.skyeco.com/protocol/core/osm/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Maker Oracle Module docs",
-        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module"
+        "label": "Spark sDAI token documentation",
+        "url": "https://docs.spark.fi/dev/savings/sdai-token"
       },
       {
-        "label": "Maker Oracle Security Module docs",
-        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module/oracle-security-module-osm-detailed-documentation"
+        "label": "Sky Oracle Security Module documentation",
+        "url": "https://developers.skyeco.com/protocol/core/osm/"
       }
     ]
   },

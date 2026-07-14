@@ -31,7 +31,7 @@
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-only",
       "liabilityReconciliation": "partial",
-      "reviewer": "OpenAI Codex backing review",
+        "reviewer": "owner-triage",
       "confidence": "verified",
       "sources": [
         {

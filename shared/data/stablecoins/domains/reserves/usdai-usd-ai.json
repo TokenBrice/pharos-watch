@@ -1,0 +1,48 @@
+{
+  "id": "usdai-usd-ai",
+  "reserves": [
+    {
+      "name": "Unresolved USDai backing (PYUSD, M, and DEAL evidence conflict)",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "USD.AI and unresolved upstream reserve counterparties",
+      "riskFactors": ["credit", "counterparty", "smart-contract", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "USDai Arbitrum implementation",
+        "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
+      },
+      {
+        "label": "USD.AI technical protocol overview",
+        "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+      },
+      {
+        "label": "USD.AI proof-of-reserves API",
+        "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
+      }
+    ],
+    "rationale": "The deployed USDai implementation identifies PYUSD as baseToken, while USD.AI's technical documentation describes supported deposits being converted into M and the mutable proof-of-reserves feed exposes PYUSD and DEAL rows without explaining whether DEAL exposure belongs to USDai, sUSDai, or another protocol accounting layer. These primary sources are not reconciled, so the static record does not select one backing model or assign constituent weights.",
+    "compositionBasis": "Conflicting deployed-contract, architecture-documentation, and proof-of-reserves evidence",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete reserve model, PYUSD/M relationship, DEAL liability scope, constituent weights, valuation basis, and reconciliation to USDai liabilities remain unresolved.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Unresolved USDai backing (PYUSD, M, and DEAL evidence conflict)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Primary sources conflict on PYUSD, M, and DEAL scope and do not establish a complete current backing composition.",
+        "candidateCoinIds": ["pyusd-paypal", "m-m0"]
+      }
+    ]
+  }
+}

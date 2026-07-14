@@ -195,6 +195,36 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "USDCV Ethereum mint is gated by the registrar EOA (0x7de0bb…da69) immutable in the shared SmartCoin V4 implementation (same as EURCV); no proxy admin; Solana deployment is issuer-controlled and not separately scored.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x5422374b27757da72d5265cc745ea906e0446634"
+      ],
+      "implementationAddresses": [
+        "0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b"
+      ],
+      "adminAddresses": [
+        "0x54124a6834af252a0f9ac7f478001aa500428955"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDCV SmartCoin technical upgrade EOA",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530874,
+      "sources": [
+        {
+          "label": "USDCV Ethereum token",
+          "url": "https://etherscan.io/address/0x5422374b27757da72d5265cc745ea906e0446634"
+        },
+        {
+          "label": "SmartCoin V4 implementation source",
+          "url": "https://eth.blockscout.com/address/0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "SG-FORGE issuance backend",
@@ -227,6 +257,29 @@
           }
         ],
         "evidence": "At Ethereum block 25294784: EIP-1967 impl = 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b (same SmartCoin V4 as EURCV); proxy admin slot = zero. Immutable operators from implementation bytecode (PUSH32 scan): registrar (minter) = 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69 (EOA), operations = 0xc98cb9f53e20afbbeb75caf6456ed52d5d7903f6 (EOA), technical (upgrade admin) = 0x54124a6834af252a0f9ac7f478001aa500428955 (EOA). All confirmed as EOAs via eth_getCode."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x54124a6834af252a0f9ac7f478001aa500428955",
+        "label": "USDCV SmartCoin technical upgrade EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530874,
+        "sources": [
+          {
+            "label": "SmartCoin V4 implementation source",
+            "url": "https://eth.blockscout.com/address/0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b"
+          },
+          {
+            "label": "USDCV Ethereum token",
+            "url": "https://etherscan.io/address/0x5422374b27757da72d5265cc745ea906e0446634"
+          }
+        ],
+        "evidence": "The verified SmartCoin V4 implementation exposes proxiableUUID(), upgradeTo(), and upgradeToAndCall(), and gates _authorizeUpgrade to the technical operator. At Ethereum block 25530874, technical() returned 0x54124a6834af252a0f9ac7f478001aa500428955; eth_getCode at that block returned no bytecode. The proxy's EIP-1967 admin slot is zero, so this EOA is the UUPS upgrade authority rather than a ProxyAdmin contract."
       }
     ],
     "review": {

@@ -401,13 +401,6 @@
   "infrastructures": [
     "liquity-v1"
   ],
-  "reserves": [
-    {
-      "name": "ETH",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "liquity-v1",
     "version": 2,

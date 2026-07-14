@@ -14,10 +14,10 @@
   "reserveReview": {
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "BHR México Etherfuse reasonable-assurance report - May 2026",
+        "label": "Etherfuse current monthly attestation endpoint (mutable)",
         "url": "https://api.etherfuse.com/statement/attestation/latest"
       },
       {
@@ -25,9 +25,8 @@
         "url": "https://app.etherfuse.com/bonds/CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
       }
     ],
-    "rationale": "The May 26, 2026 BHR México report records MXN 86,588,388 of CETES backing assets against MXN 81,601,707.08 of circulating token value, a 106.11% reserve ratio. Etherfuse identifies the product's reserve asset as short-term Mexican federal government CETES.",
-    "compositionBasis": "BHR México reasonable-assurance report and Etherfuse CETES product disclosure as of May 26, 2026",
-    "compositionAsOf": "2026-05-26",
+    "rationale": "Etherfuse identifies this product's reserve asset as short-term Mexican federal government CETES, and its mutable monthly attestation endpoint corroborates that asset class. Because the endpoint replaces its report over time, this static record deliberately omits report-period balances, reserve ratios, and a pinned composition date.",
+    "compositionBasis": "Etherfuse CETES product disclosure corroborated by a mutable monthly attestation endpoint",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve asset class and brokerage balances are disclosed, but the report does not provide individual security identifiers or maturities for the CETES holdings.",
     "knownUnknownExposurePct": 0,
@@ -46,19 +45,16 @@
       {
         "name": "Banco Bilbao Vizcaya Argentaria, S.A.",
         "role": "custodian",
-        "sharePct": 91.56,
         "jurisdiction": "Mexico"
       },
       {
         "name": "Casa de Bolsa BASE",
         "role": "custodian",
-        "sharePct": 5.35,
         "jurisdiction": "Mexico"
       },
       {
         "name": "Grupo Financiero Actinver, S.A. de C.V.",
         "role": "custodian",
-        "sharePct": 3.09,
         "jurisdiction": "Mexico"
       }
     ],
@@ -67,10 +63,10 @@
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "BHR México Etherfuse reasonable-assurance report - May 2026",
+        "label": "Etherfuse current monthly attestation endpoint (mutable)",
         "url": "https://api.etherfuse.com/statement/attestation/latest"
       },
       {
@@ -78,6 +74,6 @@
         "url": "https://app.etherfuse.com/bonds/CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
       }
     ],
-    "uncertainty": "The report confirms that Stablebond issuance transactions use segregated reserve accounts and names the three financial institutions holding CETES assets, while Etherfuse states that Mexican brokerages use INDEVAL custody. It does not establish bankruptcy remoteness or disclose rehypothecation terms."
+    "uncertainty": "The mutable report endpoint names the three financial institutions and confirms that Stablebond issuance transactions use segregated reserve accounts, while Etherfuse states that Mexican brokerages use INDEVAL custody. Provider shares are deliberately omitted because the endpoint replaces its report over time. The disclosures do not establish bankruptcy remoteness or rehypothecation terms."
   }
 }

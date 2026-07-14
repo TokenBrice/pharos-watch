@@ -140,83 +140,11 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Morpho vaults (Ethereum, Base, Arbitrum, Unichain)",
-      "pct": 39,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "YO Protocol and whitelisted Morpho vaults",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "Auto Finance (autoUSD, baseUSD)",
-      "pct": 21,
+      "name": "Dynamic YO Protocol cross-chain DeFi strategy portfolio",
+      "pct": 100,
       "risk": "high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Auto Finance and YO Protocol",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Aave markets (sGHO)",
-      "pct": 4.5,
-      "risk": "medium",
-      "coinId": "sgho-aave",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Aave Protocol (sGHO)",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "Aave markets (RLUSD)",
-      "pct": 4.5,
-      "risk": "medium",
-      "coinId": "rlusd-ripple",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Ripple (RLUSD); YO Protocol",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "InfiniFi liUSD (1-week lock)",
-      "pct": 8,
-      "risk": "high",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "InfiniFi and YO Protocol",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
-      "liquidityHorizon": "over-seven-days",
-      "maturityDaysMax": 7
-    },
-    {
-      "name": "Liquid USDC buffer (undeployed)",
-      "pct": 7,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial (USDC); YO Protocol",
-      "riskFactors": ["counterparty", "liquidity", "custody"],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "Avantis avUSDC (perpetuals collateral)",
-      "pct": 6,
-      "risk": "high",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Avantis and YO Protocol",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Other DeFi (Fluid, Resolv RLP, Euler, Revert Lend)",
-      "pct": 10,
-      "risk": "high",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "YO Protocol and other whitelisted DeFi venues",
+      "issuerOrObligor": "YO Protocol and whitelisted cross-chain DeFi venues",
       "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
       "liquidityHorizon": "unknown"
     }
@@ -237,13 +165,26 @@
       {
         "label": "YO vault and allocation API documentation",
         "url": "https://docs.yo.xyz/integrations/api"
+      },
+      {
+        "label": "YO live yoUSD vault allocation API",
+        "url": "https://api.yo.xyz/api/v1/vault/base/0x0000000f2eb9f69274678c76222b35eec7588a65"
       }
     ],
-    "rationale": "YO documents yoUSD as a USDC-denominated ERC-4626 vault that rebalances across whitelisted DeFi pools using risk-adjusted allocation. The existing eight-slice registry envelope is retained unchanged and each slice is classified by its documented protocol or stablecoin exposure; changing live weights are not inferred from a static source.",
-    "compositionBasis": "YO yoUSD underlying-asset and strategy-allocation disclosures",
+    "rationale": "YO documents yoUSD as a USDC-denominated ERC-4626 vault that rebalances across whitelisted DeFi pools using risk-adjusted allocation. The first-party API reports current live pools and allocations that materially differ from the former 39/21/4.5/4.5/8/7/6/10 authored split. Because YO recalculates allocations daily, the reserve is represented as one dynamic strategy envelope rather than another unpinned static snapshot.",
+    "compositionBasis": "YO protocol documentation and live yoUSD vault-allocation API",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reviewed envelope covers the recorded strategy categories, but current pool weights within the dynamic categories and legal custody safeguards are not fixed by the public documentation.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "YO publishes live pool and allocation data, but the strategy set and weights are recalculated daily and cannot be represented as durable authored percentages. Legal custody safeguards also remain unknown.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Dynamic YO Protocol cross-chain DeFi strategy portfolio",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The first-party API exposes current positions, but YO recalculates allocations daily; fixed venue and asset weights require a pinned snapshot or a live composition adapter."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

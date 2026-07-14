@@ -7,14 +7,27 @@
       "archetype": "cdp",
       "reviewedAt": "2026-07-13",
       "sources": [
-        { "label": "Liquity V2 protocol stats API (total_coll_value, total_bold_supply, total_sp_deposits)", "url": "https://api.liquity.org/v2/ethereum.json" },
-        { "label": "Liquity V2 documentation (per-branch MCR, Stability Pool liquidation mechanics, branch isolation)", "url": "https://docs.liquity.org/" }
+        {
+          "label": "Liquity V2 protocol stats API (total_coll_value, total_bold_supply, total_sp_deposits)",
+          "url": "https://api.liquity.org/v2/ethereum.json"
+        },
+        {
+          "label": "Liquity V2 documentation (per-branch MCR, Stability Pool liquidation mechanics, branch isolation)",
+          "url": "https://docs.liquity.org/"
+        }
       ],
       "notes": "Measured 2026-07-13 from the protocol's own stats API: total collateral value $71,324,392 against total BOLD supply 29,047,740 gives a system collateralization ratio of 2.455; Stability Pool deposits of 19,111,283 BOLD against the same supply give a liquidation capacity ratio of 0.658. Collateralization parameters and Stability Pool liquidation mechanics are documented protocol design reviewed against the docs; backstop, branch isolation, shutdown/bad-debt, and structural redemption are left bounded-unknown pending a dedicated review even though redemption and per-branch isolation are documented features.",
-      "metrics": { "collateralizationRatio": 2.455, "liquidationCapacityRatio": 0.658 },
+      "metrics": {
+        "collateralizationRatio": 2.455,
+        "liquidationCapacityRatio": 0.658
+      },
       "components": {
-        "collateralizationParameters": { "quality": "adequate" },
-        "liquidationMechanics": { "quality": "adequate" }
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        }
       }
     },
     {
@@ -22,18 +35,198 @@
       "archetype": "cdp",
       "reviewedAt": "2026-07-14",
       "sources": [
-        { "label": "Liquity V1 TroveManager 0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2 (getTCR, getEntireSystemColl, getEntireSystemDebt, MCR, CCR, checkRecoveryMode)", "url": "https://etherscan.io/address/0xa39739ef8b0231dbfa0dcda07d7e29faabcf4bb2#readContract" },
-        { "label": "Liquity V1 StabilityPool 0x66017D22b0f8556afDd19FC67041899Eb65a21bb (getTotalLUSDDeposits)", "url": "https://etherscan.io/address/0x66017d22b0f8556afdd19fc67041899eb65a21bb#readContract" },
-        { "label": "Liquity V1 PriceFeed 0x4c517D4e2C851CA76d7eC94B805269Df0f2201De (lastGoodPrice)", "url": "https://etherscan.io/address/0x4c517d4e2c851ca76d7ec94b805269df0f2201de#readContract" },
-        { "label": "Ethereum PublicNode RPC used for the eth_call reads at block 25530791", "url": "https://ethereum-rpc.publicnode.com" },
-        { "label": "Liquity V1 documentation (110% MCR, Stability Pool liquidation, redistribution fallback)", "url": "https://docs.liquity.org/liquity-v1/faq/stability-pool-and-liquidations" },
-        { "label": "Liquity V1 documentation (150% CCR / Recovery Mode)", "url": "https://docs.liquity.org/liquity-v1/faq/recovery-mode" }
+        {
+          "label": "Liquity V1 TroveManager 0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2 (getTCR, getEntireSystemColl, getEntireSystemDebt, MCR, CCR, checkRecoveryMode)",
+          "url": "https://etherscan.io/address/0xa39739ef8b0231dbfa0dcda07d7e29faabcf4bb2#readContract"
+        },
+        {
+          "label": "Liquity V1 StabilityPool 0x66017D22b0f8556afDd19FC67041899Eb65a21bb (getTotalLUSDDeposits)",
+          "url": "https://etherscan.io/address/0x66017d22b0f8556afdd19fc67041899eb65a21bb#readContract"
+        },
+        {
+          "label": "Liquity V1 PriceFeed 0x4c517D4e2C851CA76d7eC94B805269Df0f2201De (lastGoodPrice)",
+          "url": "https://etherscan.io/address/0x4c517d4e2c851ca76d7ec94b805269df0f2201de#readContract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC used for the eth_call reads at block 25530791",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Liquity V1 documentation (110% MCR, Stability Pool liquidation, redistribution fallback)",
+          "url": "https://docs.liquity.org/liquity-v1/faq/stability-pool-and-liquidations"
+        },
+        {
+          "label": "Liquity V1 documentation (150% CCR / Recovery Mode)",
+          "url": "https://docs.liquity.org/liquity-v1/faq/recovery-mode"
+        }
       ],
       "notes": "Measured on-chain 2026-07-14 at Ethereum block 25530791 via eth_call. The contract graph was derived on-chain from the LUSD token (troveManagerAddress(), stabilityPoolAddress(), then TroveManager.priceFeed()) rather than from a published address list. TroveManager.getTCR(PriceFeed.lastGoodPrice() = 1780.21673094 USD/ETH) returned 4.776, which cross-checks exactly against getEntireSystemColl() 73,493.400 ETH valued at that price ($130,834,180) over getEntireSystemDebt() 27,391,435.164 LUSD. StabilityPool.getTotalLUSDDeposits() of 7,627,015.234 LUSD over the same debt gives a liquidation capacity ratio of 0.278; LUSD totalSupply() equals getEntireSystemDebt() exactly at this block, so the ratio is identical against supply. checkRecoveryMode() was false, MCR 110%, CCR 150%. Collateralization parameters and liquidation mechanics are documented, immutable protocol design reviewed against the V1 docs. Backstop, branch isolation, shutdown/bad-debt, and structural redemption are left bounded-unknown pending a dedicated review, even though redistribution-to-Troves and permissionless redemption are documented features: the Stability Pool covers only 27.8% of system debt, and the redistribution fallback that absorbs the remainder has not been reviewed here.",
-      "metrics": { "collateralizationRatio": 4.776, "liquidationCapacityRatio": 0.278 },
+      "metrics": {
+        "collateralizationRatio": 4.776,
+        "liquidationCapacityRatio": 0.278
+      },
       "components": {
-        "collateralizationParameters": { "quality": "adequate" },
-        "liquidationMechanics": { "quality": "adequate" }
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "feusd-felix",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Felix CollateralRegistry 0x9de1e57049c475736289cb006212f3e1dce4711b (totalCollaterals, getToken, getTroveManager) — branch graph derived on-chain",
+          "url": "https://explorer.hyperliquid.xyz/address/0x9de1e57049c475736289cb006212f3e1dce4711b"
+        },
+        {
+          "label": "Felix WHYPE TroveManager 0x3100F4e7BDA2ED2452d9A57EB30260ab071BBe62 (getEntireBranchColl, getEntireBranchDebt, stabilityPool, activePool, shutdownTime)",
+          "url": "https://explorer.hyperliquid.xyz/address/0x3100f4e7bda2ed2452d9a57eb30260ab071bbe62"
+        },
+        {
+          "label": "Felix WHYPE StabilityPool 0x576c9c501473e01ae23748de28415a74425efd6b (getTotalfeUSDDeposits, getYieldGainsOwed)",
+          "url": "https://explorer.hyperliquid.xyz/address/0x576c9c501473e01ae23748de28415a74425efd6b"
+        },
+        {
+          "label": "Felix WHYPE BorrowerOperations 0x5b271dc20ba7beb8eee276eb4f1644b6a217f0a3 (MCR, CCR, SCR)",
+          "url": "https://explorer.hyperliquid.xyz/address/0x5b271dc20ba7beb8eee276eb4f1644b6a217f0a3"
+        },
+        {
+          "label": "HyperEVM public RPC used for all eth_call reads at block 40440545",
+          "url": "https://rpc.hyperliquid.xyz/evm"
+        },
+        {
+          "label": "Felix docs — Market 1 feUSD CDP (Liquity V2 build, per-branch isolation, Stability Pool offset then redistribution, interest-rate-ordered redemption via CollateralRegistry)",
+          "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp"
+        },
+        {
+          "label": "Felix docs — Risk management (RedStone primary oracle, Anthias Labs parameterization and bad-debt monitoring)",
+          "url": "https://usefelix.gitbook.io/docs/advanced/risk-management"
+        },
+        {
+          "label": "DefiLlama peggedAsset 251 (independent circulating cross-check: 11,563,600.69 feUSD)",
+          "url": "https://stablecoins.llama.fi/stablecoin/251"
+        }
+      ],
+      "notes": "Measured on-chain 2026-07-14 at HyperEVM block 40440545 via eth_call. The contract graph was derived on-chain: the feUSD token exposes no Liquity getters (it is a role-gated upgradeable ERC20, not Liquity's BoldToken), so the graph was taken from the CollateralRegistry proxy 0x9de1e57 (impl 0xD06DfC33), whose totalCollaterals() = 4 and getTroveManager(i)/getToken(i) enumerate exactly four branches: WHYPE (TM 0x3100F4e7), UBTC (TM 0xbbe5f227), kHYPE (TM 0x7c07bB77), wstHYPE (TM 0x58446C58). The registry address is corroborated by Felix's own docs, and each TroveManager's activePool() matches the four holders already in the coin file's liveReservesConfig. Per branch, getEntireBranchColl() x PriceFeed.lastGoodPrice() over getEntireBranchDebt(): WHYPE 430,173.636 WHYPE @ $65.20795344 = $28,050,742 vs debt 9,522,352.500 (CR 2.946); UBTC 28.055 @ $62,449.56855 = $1,752,006 vs debt 569,059.981 (CR 3.079); kHYPE 75,231.740 @ $64.98626 = $4,889,029 vs debt 1,123,782.912 (CR 4.351); wstHYPE 10,395.891 @ $65.41448 = $680,042 vs debt 348,425.553 (CR 1.952). System totals: collateral $35,371,819 over total branch debt 11,563,620.946 feUSD = collateralizationRatio 3.059. Cross-checks: (1) Felix's TroveManager has no getTCR(uint256), so collateral was verified three ways — TroveManager.getEntireBranchColl() equals ActivePool.getCollBalance() equals the collateral ERC20's balanceOf(ActivePool) for all four branches (exact, to within 1 wei on WHYPE); (2) re-valuing the same collateral at the live PriceFeed.fetchPrice() instead of lastGoodPrice() gives CR 3.070, agreeing to within 0.4%; (3) total branch debt 11,563,620.946 versus feUSD totalSupply() 11,563,588.435 agree to 0.0003% — supply is 32.51 feUSD BELOW debt, which is the expected direction for Liquity V2 (branch debt includes interest accrued but not yet minted), not a discrepancy. DefiLlama independently reports 11,563,600.69 circulating. liquidationCapacityRatio = sum of StabilityPool.getTotalfeUSDDeposits() (the fork's rename of getTotalBoldDeposits) 9,915,239.353 over total debt = 0.857; each pool's deposits plus getYieldGainsOwed() reconcile exactly against feUSD.balanceOf(StabilityPool), confirming the deposit figure is committed capital actually held, not an accounting claim. IMPORTANT QUALIFIER: Stability Pools are branch-local and cannot cross-subsidize, and coverage is very uneven — UBTC's pool holds 3.572x its own branch debt while wstHYPE holds only 0.238x and WHYPE 0.703x. Capping each branch's usable pool at its own debt gives a branch-isolation-adjusted ratio of 0.731; the reported 0.857 is the brief's uncapped sum-over-total definition and is the optimistic bound. Parameters read on-chain from each BorrowerOperations: MCR 135% / CCR 170% / SCR 120% for WHYPE, kHYPE and wstHYPE, and MCR 125% / CCR 150% / SCR 120% for UBTC. All four branches are live (shutdownTime() = 0) and on their primary oracle (PriceFeed priceSource = 0, i.e. not fallen back to lastGoodPrice). Liquidation penalties are not exposed by any public getter. Collateralization parameters and the two-stage liquidation cascade (Stability Pool offset, then redistribution of residual debt and collateral to active troves in the same branch) are reviewed against Felix's docs and confirmed on-chain. Backstop, branch isolation, shutdown/bad-debt and structural redemption are left bounded-unknown: the redistribution fallback that must absorb the 27% of debt the pools do not cover has not been reviewed, and Felix's docs state bad-debt monitoring is delegated to Anthias Labs without documenting a bad-debt resolution mechanism.",
+      "metrics": {
+        "collateralizationRatio": 3.059,
+        "liquidationCapacityRatio": 0.857
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "fxusd-f-x-protocol",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "fxUSD token (FxUSDRegeneracy) — totalSupply, legacyTotalSupply, poolManager()",
+          "url": "https://etherscan.io/address/0x085780639CC2cACd35E474e71f4d000e2405d8f6#readProxyContract"
+        },
+        {
+          "label": "f(x) PoolManager — RegisterPool events, fxBASE(), reservePool(), getPoolInfo()",
+          "url": "https://etherscan.io/address/0x250893CA4Ba5d05626C785e8da758026928FCD24#readProxyContract"
+        },
+        {
+          "label": "f(x) WBTC long pool — getTotalRawCollaterals/getTotalRawDebts/priceOracle",
+          "url": "https://etherscan.io/address/0xAB709e26Fa6B0A30c119D8c55B887DeD24952473#readProxyContract"
+        },
+        {
+          "label": "f(x) wstETH long pool — getTotalRawCollaterals/getTotalRawDebts/priceOracle",
+          "url": "https://etherscan.io/address/0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8#readProxyContract"
+        },
+        {
+          "label": "FxUSDBasePool (fxBASE) — totalYieldToken/totalStableToken/nav",
+          "url": "https://etherscan.io/address/0x65C9A641afCEB9C0E6034e558A319488FA0FA3be#readProxyContract"
+        },
+        {
+          "label": "f(x) Protocol documentation",
+          "url": "https://fxprotocol.gitbook.io/fx-docs"
+        }
+      ],
+      "notes": "Measured on-chain at Ethereum block 25531000 (2026-07-14T12:51:47Z). Contract graph derived on-chain: fxUSD.poolManager() -> PoolManager 0x250893CA...FCD24; pool set enumerated from PoolManager RegisterPool logs = exactly two pools (wstETH-long 0x6Ecfa38F...22E8, WBTC-long 0xAB709e26...2473); PoolManager.fxBASE() -> 0x65C9A641...A3be. collateralizationRatio: wstETH pool getTotalRawCollaterals()=5543.712255 (stETH-denominated; = accounted wstETH x Lido stEthPerToken 1.239355) x oracle anchor 1836.2618 = $10,179,707; WBTC pool 1197.801749 x anchor 63489.7307 = $76,048,110; total $86,227,817 / fxUSD totalSupply 58,676,356.139 = 1.4695. Oracle anchors cross-checked against Chainlink independently: ETH/USD 1836.416 (0.008% delta) and BTC/USD 63,493.716 (0.006% delta) - this also confirms the wstETH pool oracle returns the ETH price, hence raw collateral is stETH-denominated. Second independent collateral read from custody: PoolManager holds 4455.705 wstETH x 1.239355 x Chainlink ETH + 1195.9057 WBTC x Chainlink BTC = $86,073,557 -> CR 1.4669, i.e. 0.18% below the accounted figure. GAP DISCLOSED: PoolManager's own accounting (getPoolInfo collateralBalance: 4473.54 wstETH / 1197.86 WBTC) exceeds its actual token custody by 17.84 wstETH and 1.96 WBTC (~$165k, 0.19% of collateral). No Aave strategy deployment (aWstETH/aWBTC balances are 0) and accumulatedPoolOpenFees/CloseFees are 0, so the gap is not explained by a strategy or fee accrual; the ReservePool (0xE93F5DD5...45Ed) holds 17.707 wstETH + 0.4247 WBTC, which covers the wstETH side almost exactly but not the WBTC side. Immaterial to the ratio; flagged for a future curator. COMPLETENESS PROOF (the USDD test): sum of pool debts 5,890,682.051290619336 + 52,785,410.029922129280 = 58,676,092.081212748616, plus legacyTotalSupply 264.058184281645855 = 58,676,356.139397030262 = fxUSD.totalSupply() to the wei. No fxUSD is minted outside the two pools, so a system-wide CR is legitimately applicable to total supply. liquidationCapacityRatio: fxBASE is the committed liquidation counterparty (PoolManager.fxBASE()); it holds 52,299,016.076 fxUSD + 10,793.78 USDC @ 0.99972819 = $52,309,806.92 of instantly-committed absorbing capital / 58,676,356.139 = 0.8915. Cross-checked against fxBASE.totalSupply() 51,784,044.438 shares x nav 1.009888862 = $52,296,129.72 (0.026% delta). This is committed capital in the Liquity Stability Pool sense, not a governance cap: liquidation/rebalance draws directly on the pool. Parameters read on-chain: max debt ratio 0.866667 (min CR 1.1538), rebalance trigger 0.88 (bonus 2.5%), liquidate trigger 0.95 (bonus 4%, i.e. only ~5% buffer to insolvency), maxRedeemRatioPerTick 0.2, isBorrowPaused=false, isRedeemPaused=false. Concentration: 90% of debt (52.79M of 58.68M) sits on the WBTC branch, and WBTC is a custodial wrapper. ReservePool bad-debt backstop is ~$71k, immaterial. shutdownAndBadDebt not reviewed - left bounded-unknown.",
+      "metrics": {
+        "collateralizationRatio": 1.4695,
+        "liquidationCapacityRatio": 0.8915
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "strong"
+        },
+        "backstop": {
+          "quality": "strong"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "reusd-resupply",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "reUSD token — totalSupply, core()",
+          "url": "https://etherscan.io/address/0x57aB1E0003F623289CD798B1824Be09a793e4Bec#readContract"
+        },
+        {
+          "label": "ResupplyRegistry — getAllPairAddresses(), insurancePool(), liquidationHandler()",
+          "url": "https://etherscan.io/address/0x10101010E0C3171D894B71B3400668aF311e7D94#readContract"
+        },
+        {
+          "label": "Resupply InsurancePool — totalAssets(), convertToAssets(), withdrawTime()",
+          "url": "https://etherscan.io/address/0x00000000efe883b3304aFf71eaCf72Dbc3e1b577#readContract"
+        },
+        {
+          "label": "Resupply LiquidationHandler — insurancePool() wiring",
+          "url": "https://etherscan.io/address/0x88888888c227c36401493Ed9F3e3Dcc3800B2634#readContract"
+        },
+        {
+          "label": "Largest pair (CurveLend crvUSD/sfrxUSD) — totalBorrow/totalCollateral/maxLTV/convexPid",
+          "url": "https://etherscan.io/address/0xC5184cccf85b81EDdc661330acB3E41bd89F34A1#readContract"
+        },
+        {
+          "label": "Resupply protocol documentation",
+          "url": "https://docs.resupply.finance/"
+        }
+      ],
+      "notes": "Measured on-chain at Ethereum block 25531000 (2026-07-14T12:51:47Z). Contract graph derived on-chain: reUSD.core() -> 0xc07e0000...0a7d; candidate registry verified by round-trip (Registry.core() == reUSD.core() AND Registry.token() == reUSD), then Registry.getAllPairAddresses() -> 19 pairs (registeredPairsLength()==19). collateralizationRatio: for each pair, collateral is an ERC4626 lending-market receipt (Curve Lend 'Curve Vault for crvUSD' shares, or Fraxlend frxUSD pair shares). Value = collateralToken.convertToAssets(pair.totalCollateral()), denominated in the underlying (crvUSD or frxUSD, taken at par to USD). Summed across all 19 pairs = 34,522,682 underlying units; total reUSD debt = sum of pair totalBorrow().amount = 31,995,499. CR = 1.0790. LAYERED-CLAIM CAVEAT (this materially qualifies the number): the collateral is not an asset Resupply holds, it is a *lender-side claim on another lending market*. Its par value is only realizable if Curve Lend / Fraxlend remain solvent and borrowers repay. Two quantified consequences. (1) Exit is not liquid: Resupply owns 99.8% / 99.7% / 92.7% / 99.0% / 86.4% of the lender side of the crvUSD-sfrxUSD, -WBTC, -sUSDe, -wstETH and -WETH markets respectively, so it effectively *is* the market and cannot redeem its claim for crvUSD faster than borrowers repay; idle withdrawable underlying across the top markets is ~$13.8M against a $34.5M claim. (2) Reflexivity: $8,440,577 (24.5% of all collateral) is the CurveLend crvUSD/sreUSD market - a claim on a market whose borrowers post *staked reUSD* as their collateral, so reUSD partially backs itself; a further $108k sits in crvUSD/fxSAVE. Cross-check 1 (debt/completeness): sum of pair debt 31,995,499 vs reUSD.totalSupply() 31,986,803.374 = 0.027% apart, the difference being accrued-but-unminted interest. No reUSD is minted outside the 19 registry pairs. Cross-check 2 (collateral): convertToAssets() reproduced manually as shares x vault.totalAssets()/vault.totalSupply() - matched to the cent on the four largest pairs. Cross-check 3 (custody): pairs hold 0 collateral tokens directly - the shares are staked in Convex. Verified on 7/7 pairs checked that ConvexBooster.poolInfo(convexPid()).crvRewards.balanceOf(pair) + collateralToken.balanceOf(pair) == pair.totalCollateral() exactly. liquidationCapacityRatio: InsurancePool.totalAssets() = 3,219,784.519 reUSD, cross-checked exactly against reUSD.balanceOf(insurancePool) = 3,219,784.519. / 31,995,499 debt = 0.1006. This IS committed slashable capital, not a governance cap: LiquidationHandler.insurancePool() points at the pool (both share the same registry), liquidations burn its reUSD in exchange for seized collateral, deposits carry a 7-day withdraw cooldown (withdrawTime 604801s) plus a 3-day claim window (withdrawTimeLimit 259201s), and the pool's share price is convertToAssets(1e18) = 0.8752 reUSD - i.e. below par because it has *already absorbed realised losses*, which is empirical proof of slashability. Parameters: pair maxLTV 95,000/100,000 = 95% (min CR 1.0526), liquidationFee 5%, per-pair borrowLimit 50M. The 7.9% system overcollateralization is thin given the collateral is a par-valued claim on an external market: a small NAV impairment in Curve Lend or Fraxlend consumes the buffer. structuralRedemption (a redemptionHandler exists at 0x5eeB063d...A025 but its fee/caps were not measured) and shutdownAndBadDebt were not reviewed - left bounded-unknown.",
+      "metrics": {
+        "collateralizationRatio": 1.079,
+        "liquidationCapacityRatio": 0.1006
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        }
       }
     }
   ]

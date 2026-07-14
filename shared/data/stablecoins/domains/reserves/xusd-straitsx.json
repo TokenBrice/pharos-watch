@@ -2,17 +2,36 @@
   "id": "xusd-straitsx",
   "reserves": [
     {
-      "name": "USD cash, cash equivalents, and permitted government-backed liquid instruments",
-      "pct": 100,
+      "name": "USD cash",
+      "pct": 64.16989,
       "risk": "very-low",
-      "assetClass": "other",
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed safeguarding institution",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USD fixed deposits",
+      "pct": 4.007484,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed safeguarding institution",
       "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "U.S. Treasury securities with no more than three months residual maturity",
+      "pct": 31.822626,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "SOL-8 Safety Score V9 blocker challenge",
     "confidence": "probable",
     "sources": [
       {
@@ -26,22 +45,18 @@
       {
         "label": "StraitsX XUSD reserve asset description",
         "url": "https://www.straitsx.com/blog-post/straitsxs-xusd-marks-first-anniversary-with-unprecedented-growth-expanding-utility-and-global-reach"
+      },
+      {
+        "label": "KK Yap XUSD reserve account examination - May 31, 2026",
+        "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a44bd73219d7e8e1139a331_XUSD_SCS_Reserve_Account_Report_(31_May_2026).docx.pdf"
       }
     ],
-    "rationale": "StraitsX states that XUSD is fully backed by approved liquid assets such as cash, cash equivalents, and government bonds, with at least 100% reserve coverage. No current public disclosure reviewed in this pass provides the asset-class weights, so the reserve is retained as one aggregate basket rather than assigning an estimated cash/securities split.",
-    "compositionBasis": "Issuer reserve policy and current attestation index; asset-class weights undisclosed",
+    "rationale": "The May 31, 2026 independent examination reports the marked-to-market reserve as USD 40,031,286 cash, USD 2,500,000 fixed deposits, and USD 19,852,000 short-dated U.S. Treasury securities. Percentages are calculated against the report's USD 62,383,286 total reserve.",
+    "compositionBasis": "May 31, 2026 KK Yap independent examination",
+    "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full reserve is covered by the disclosed eligible-asset basket, but the current allocation among cash, cash equivalents, and government-backed instruments is not public.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "USD cash, cash equivalents, and permitted government-backed liquid instruments",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The issuer discloses eligible reserve categories but not their current weights."
-      }
-    ]
+    "knownUnknownExposure": "The examination discloses the complete reserve asset-class allocation. The safeguarding institution and any provider-level allocation remain undisclosed.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

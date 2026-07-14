@@ -18,7 +18,22 @@
     "url": "https://rib.digital/transparency",
     "provider": "RIB Digital signed PoR snapshots",
     "attestorTier": "self",
-    "cadence": "real-time"
+    "cadence": "real-time",
+    "latestReport": {
+      "periodEnd": "2026-04-08",
+      "publishedAt": "2026-04-20",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "RIB Digital REUR signed PoR snapshot - April 2026",
+          "url": "https://ribstatic.com/public_sanitized/2026-04-20/REUR_sanitized_PoR_snapshot_20260420_1.json"
+        }
+      ]
+    }
   },
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
@@ -130,13 +145,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "Euro cash reserves at top-tier international banks",
-      "pct": 100,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

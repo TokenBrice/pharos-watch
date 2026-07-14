@@ -144,7 +144,7 @@
             ]
           }
         ],
-        "fallbackBehavior": "The PriceFeed rejects reverted, zero, or stale oracle answers and triggers branch shutdown; after shutdown it retains the lastGoodPrice for urgent redemption pricing rather than switching to a live secondary market feed.",
+        "fallbackBehavior": "The PriceFeed rejects reverted, zero, or stale inputs and shuts down the branch. If only the kHYPE/HYPE market feed fails while HYPE/USD and the canonical staking rate remain live, it switches to HYPE/USD multiplied by that canonical rate; failure of HYPE/USD, USDC/USD, or the canonical rate instead falls back to lastGoodPrice.",
         "observedAt": "2026-07-14",
         "collateralParameters": [
           {
@@ -155,7 +155,7 @@
         "liquidationMechanism": "Any caller may liquidate a Trove once ICR is below MCR. Branch Stability Pool feUSD first offsets and burns debt for seized kHYPE; any uncovered debt and collateral are redistributed across active Troves in the same branch.",
         "liquidationDelaySec": 0,
         "backstop": "The branch-local Stability Pool is the first-loss liquidation backstop; just-in-time feUSD or branch-local redistribution to active Troves handles debt not covered by Stability Pool deposits.",
-        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below SCR can shut the branch, freeze borrower operations, and enable fee-free urgent redemptions at a collateral bonus using lastGoodPrice. Felix documents that uncleared debt may remain after shutdown and that a separate bad-debt solution is not implemented.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below SCR can shut the branch, freeze borrower operations, and enable fee-free urgent redemptions at a collateral bonus. After an isolated kHYPE/HYPE feed failure, redemption pricing uses live HYPE/USD multiplied by the canonical staking rate; failures that also prevent that calculation use lastGoodPrice. Felix documents that uncleared debt may remain after shutdown and that a separate bad-debt solution is not implemented.",
         "failureDomainKeys": [
           "felix-khype-price-feed",
           "felix-khype-stability-pool",
@@ -175,6 +175,10 @@
           {
             "label": "Felix contracts repository",
             "url": "https://github.com/felixprotocol/felix-contracts"
+          },
+          {
+            "label": "Felix kHYPE PriceFeed contract",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/PriceFeeds/KHYPEPriceFeed.sol"
           }
         ]
       },
@@ -264,7 +268,7 @@
             ]
           }
         ],
-        "fallbackBehavior": "The PriceFeed rejects reverted, zero, or stale oracle answers and triggers branch shutdown; after shutdown it retains the lastGoodPrice for urgent redemption pricing rather than switching to a live secondary market feed.",
+        "fallbackBehavior": "The PriceFeed rejects reverted, zero, or stale inputs and shuts down the branch. If only the stHYPE/USD feed fails while HYPE/USD and the canonical staking rate remain live, it switches to HYPE/USD multiplied by that canonical rate; failure of HYPE/USD, USDC/USD, or the canonical rate instead falls back to lastGoodPrice.",
         "observedAt": "2026-07-14",
         "collateralParameters": [
           {
@@ -275,7 +279,7 @@
         "liquidationMechanism": "Any caller may liquidate a Trove once ICR is below MCR. Branch Stability Pool feUSD first offsets and burns debt for seized wstHYPE; any uncovered debt and collateral are redistributed across active Troves in the same branch.",
         "liquidationDelaySec": 0,
         "backstop": "The branch-local Stability Pool is the first-loss liquidation backstop; just-in-time feUSD or branch-local redistribution to active Troves handles debt not covered by Stability Pool deposits.",
-        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below SCR can shut the branch, freeze borrower operations, and enable fee-free urgent redemptions at a collateral bonus using lastGoodPrice. Felix documents that uncleared debt may remain after shutdown and that a separate bad-debt solution is not implemented.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below SCR can shut the branch, freeze borrower operations, and enable fee-free urgent redemptions at a collateral bonus. After an isolated stHYPE/USD feed failure, redemption pricing uses live HYPE/USD multiplied by the canonical staking rate; failures that also prevent that calculation use lastGoodPrice. Felix documents that uncleared debt may remain after shutdown and that a separate bad-debt solution is not implemented.",
         "failureDomainKeys": [
           "felix-wsthype-price-feed",
           "felix-wsthype-stability-pool",
@@ -295,6 +299,10 @@
           {
             "label": "Felix contracts repository",
             "url": "https://github.com/felixprotocol/felix-contracts"
+          },
+          {
+            "label": "Felix wstHYPE PriceFeed contract",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/PriceFeeds/WSTHYPEPriceFeed.sol"
           }
         ]
       }

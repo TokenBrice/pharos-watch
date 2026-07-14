@@ -2,7 +2,7 @@
   "id": "brl1-brl1",
   "name": "BRL1",
   "symbol": "BRL1",
-  "oneLiner": "BRL1 is a centralized Brazilian real stablecoin, targeting a 1:1 peg with a BRL reserve mix of Brazilian Treasury ETFs, repo agreements, and cash equivalents.",
+  "oneLiner": "BRL1 is a centralized Brazilian real stablecoin, targeting a 1:1 peg with a BRL reserve mix of Brazilian federal LFT bonds, repo agreements, and cash.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Brazilian-real reserve portfolio backing BRL1 at a 1:1 target, including Brazilian Treasury ETFs, repo agreements, and cash equivalents",
+  "collateral": "Brazilian-real reserve portfolio backing BRL1 at a 1:1 target, including Brazilian federal LFT bonds, repo agreements, and cash",
   "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 BRL1 = 1 BRL through Brazilian-real backing",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
@@ -63,11 +63,11 @@
     "url": "https://brl1.io/en/como_funciona",
     "provider": "BRL1 self-published proof of reserves",
     "attestorTier": "self",
-    "cadence": "real-time",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Brazil",
     "latestReport": {
-      "periodEnd": "2025-04-14",
-      "publishedAt": "2025-04-14",
+      "periodEnd": "2026-05-01",
+      "publishedAt": "2026-05-01",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -75,8 +75,8 @@
       "confidence": "probable",
       "sources": [
         {
-          "label": "BRL1 proof-of-reserves report - April 2025",
-          "url": "https://drive.google.com/file/d/1q6arJKrt3wWta7kYCnppD1awhgzsz8AW/view?usp=sharing"
+          "label": "BRL1 proof-of-reserves report - May 2026",
+          "url": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
         }
       ]
     }
@@ -98,7 +98,7 @@
       }
     },
     "params": {
-      "label": "Brazilian Treasury ETFs, repo agreements, and cash equivalents",
+      "label": "Brazilian federal LFT bonds, repo agreements, and cash",
       "risk": "medium"
     }
   },

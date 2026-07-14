@@ -172,6 +172,106 @@
       ]
     }
   },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "JPYm's sole Celo CDP branch prices its USDm collateral through Mento's onchain SortedOracles median and BreakerBox controls; an invalid rate permanently shuts down borrowing rather than switching to another provider.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "SOL-8",
+      "rationale": "Mento's current deployment registry exposes one JPYm Liquity V2 branch backed by USDm, with one Trove Manager, Stability Pool, FXPriceFeed, and parameter set. No additional JPYm collateral branch appears in the registry.",
+      "sources": [
+        {
+          "label": "Mento current Celo deployments",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SOL-8",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento current Celo deployments",
+        "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
+      },
+      {
+        "label": "Mento FXPriceFeed ABI",
+        "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/abis/FXPriceFeed.json"
+      }
+    ],
+    "branches": [
+      {
+        "id": "mento-jpym-usdm",
+        "label": "Mento JPYm / USDm branch",
+        "tier": "standard-external",
+        "summary": "The live JPYm branch uses a one-reporter Mento SortedOracles JPY/USD feed with a five-minute report-expiry bound, a 110% MCR, Stability Pool offset, and active-Trove redistribution.",
+        "collateralAssets": [
+          "USDm"
+        ],
+        "chains": [
+          "celo"
+        ],
+        "feeds": [
+          {
+            "provider": "Mento SortedOracles",
+            "path": "Mento JPY/USD SortedOracles rate (inverted) -> OracleAdapter and BreakerBox validation -> FXPriceFeed -> USDm-backed JPYm Trove collateral ratio",
+            "address": "0x8409587c8BA4f6850AEE09A32B86022C3E88AD33",
+            "chain": "celo",
+            "stalenessBoundSec": 300,
+            "observedAt": "2026-07-14",
+            "observedBlock": 72133274,
+            "failureDomainKeys": [
+              "mento-sorted-oracles-jpy-usd",
+              "mento-breaker-box",
+              "celo"
+            ]
+          }
+        ],
+        "fallbackBehavior": "FXPriceFeed reads the inverted JPY/USD rate through Mento's OracleAdapter. At Celo block 72133274 the adapter reported one live oracle report, a valid bidirectional trading mode, and a five-minute expiry; there is no alternate provider path. An invalid oracle rate invokes the branch's permanent oracle-failure shutdown path.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 72133274,
+        "collateralParameters": [
+          {
+            "asset": "USDm",
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 110,
+            "note": "The live SystemParams proxy returned MCR 110%, CCR 135%, and SCR 110%; TroveManager shutdownTime was zero at Celo block 72133274."
+          }
+        ],
+        "liquidationMechanism": "Any caller can batch-liquidate eligible USDm-backed JPYm Troves below the 110% MCR. The Stability Pool offsets available debt and receives collateral; uncovered debt and collateral are redistributed to active Troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "The JPYm Stability Pool is the first liquidation backstop. Debt beyond available pool JPYm is redistributed with collateral across active Troves.",
+        "shutdownOrBadDebtBehavior": "Oracle validation failure or a branch TCR at the 110% SCR permanently shuts down new borrowing. Shutdown enables urgent redemption, while liquidation debt not offset by the Stability Pool is redistributed to active Troves.",
+        "failureDomainKeys": [
+          "mento-sorted-oracles-jpy-usd",
+          "mento-breaker-box",
+          "mento-jpym-stability-pool",
+          "mento-jpym-active-troves",
+          "celo"
+        ],
+        "sources": [
+          {
+            "label": "Mento current Celo deployments",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
+          },
+          {
+            "label": "Mento FXPriceFeed ABI",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/abis/FXPriceFeed.json"
+          },
+          {
+            "label": "Mento OracleAdapter ABI",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/abis/OracleAdapterv300.json"
+          },
+          {
+            "label": "Mento TroveManager ABI",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/abis/TroveManager.json"
+          }
+        ]
+      }
+    ]
+  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

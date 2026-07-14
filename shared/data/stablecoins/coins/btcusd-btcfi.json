@@ -154,6 +154,40 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
     "summary": "BtcUSD on Base is an ERC20_Bridged (Vyper) contract whose canonical issuance lives on the Bifrost network. The Base bridge token has 2 owners: a contract (0x26fce52a..., not a Safe) and an EOA (0xf98e8601...). The native BtcUSD CDP on Bifrost cannot be verified: no publicly accessible keyless EVM-compatible RPC exists for the Bifrost chain.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+      ],
+      "implementationAddresses": [
+        "0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9"
+      ],
+      "adminAddresses": [
+        "0x55506bcc5fa9b2e702848aa110b5a6987a735060"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "BtcUSD Base proxy admin (unverified contract)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 48621895,
+      "sources": [
+        {
+          "label": "BtcUSD Base token proxy",
+          "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+        },
+        {
+          "label": "BtcUSD Base verified implementation",
+          "url": "https://basescan.org/address/0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9#code"
+        },
+        {
+          "label": "BtcUSD Base proxy admin contract",
+          "url": "https://basescan.org/address/0x55506bcc5fa9b2e702848aa110b5a6987a735060#code"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "BTCfi CDP vault on Bifrost (collateral mint — unverifiable)",
@@ -165,18 +199,56 @@
         "evidence": "Native BtcUSD is minted on the Bifrost chain via Liquity-v1-style CDP vaults; chain state is not accessible via keyless EVM RPC from this environment."
       },
       {
-        "label": "BtcUSD Base bridge owners (EOA + unverified contract)",
+        "chain": "base",
+        "address": "0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe",
+        "label": "BtcUSD Base bridge owner contract",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 48621895,
+        "sources": [
+          {"label": "BtcUSD Base token", "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"}
+        ],
+        "evidence": "At Base block 48621895, get_owners() on the ERC20_Bridged token returned this contract as one of two current owners. The verified bridge implementation permits token owners to mint bridged BtcUSD directly; the owner contract is not verified as a Safe or bounded multisig."
+      },
+      {
+        "chain": "base",
+        "address": "0xf98e8601a1eef3bce943f9b002e83db8a0951aa5",
+        "label": "BtcUSD Base bridge owner EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "At Base block 47201995, get_owners() on ERC20_Bridged token (0xe4b20925...) returned 2 owners: 0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe (unverified contract, not a Safe) and 0xf98e8601a1eef3bce943f9b002e83db8a0951aa5 (EOA). The proxy admin (EIP-1967, 0x55506bcc...) is an unverified contract. These bridge token owners can mint the bridged BtcUSD on Base directly."
+        "observedAt": "2026-07-14",
+        "observedBlock": 48621895,
+        "sources": [
+          {"label": "BtcUSD Base token", "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"}
+        ],
+        "evidence": "At Base block 48621895, get_owners() on the ERC20_Bridged token returned this EOA as one of two current owners. The verified bridge implementation permits token owners to mint bridged BtcUSD directly."
+      },
+      {
+        "chain": "base",
+        "address": "0x55506bcc5fa9b2e702848aa110b5a6987a735060",
+        "label": "BtcUSD Base proxy admin (unverified contract)",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48621895,
+        "sources": [
+          {"label": "BtcUSD Base proxy admin contract", "url": "https://basescan.org/address/0x55506bcc5fa9b2e702848aa110b5a6987a735060#code"},
+          {"label": "BtcUSD Base token", "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"}
+        ],
+        "evidence": "At Base block 48621895, the EIP-1967 admin slot of the BtcUSD bridge proxy returned this deployed contract and the implementation slot returned 0x6e9070b8. The admin contract is not source-verified, so its owner, delay, and signer policy remain unknown."
       }
     ],
     "review": {
-      "evidence": "At Base block 47201995: BtcUSD (0xe4b20925...) is a TransparentUpgradeableProxy (EIP-1967 admin=0x55506bcc..., impl=0x6e9070...) wrapping an ERC20_Bridged Vyper contract. get_owners() returned 2 owners (one contract, one EOA). Bifrost network (the canonical issuance chain) has no accessible keyless EVM RPC; the CDP vault admin on Bifrost cannot be verified.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Base block 48621895: BtcUSD (0xe4b20925...) is a TransparentUpgradeableProxy with EIP-1967 admin 0x55506bcc5fa9b2e702848aa110b5a6987a735060 and implementation 0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9. get_owners() returned 0x26fce52a (contract) and 0xf98e8601 (EOA), both direct bridge-token mint owners. The proxy-admin contract is unverified, and the canonical Bifrost CDP issuance path remains unverifiable without accessible chain state.",
+      "reviewer": "Codex CTRL batch 17",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "BTCfi docs",

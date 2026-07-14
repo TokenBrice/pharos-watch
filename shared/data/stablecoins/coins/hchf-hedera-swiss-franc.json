@@ -72,14 +72,15 @@
         "feeds": [
           {
             "provider": "Pyth primary with Supra fallback",
-            "path": "Pyth HBAR/USD and USD/CHF composite, or Supra HBAR/CHF fallback -> HLiquity PriceFeed -> Trove collateral ratio",
+            "path": "Pyth HBAR/USD and USD/CHF composite, or Supra HBAR/USD and USD/CHF composite -> HLiquity PriceFeed -> Trove collateral ratio",
             "chain": "hedera",
             "stalenessBoundSec": 14400,
             "observedAt": "2026-07-14",
             "failureDomainKeys": [
               "pyth-hbar-usd",
               "pyth-usd-chf",
-              "supra-hbar-chf",
+              "supra-hbar-usd",
+              "supra-usd-chf",
               "hedera"
             ]
           }
@@ -100,7 +101,8 @@
         "failureDomainKeys": [
           "pyth-hbar-usd",
           "pyth-usd-chf",
-          "supra-hbar-chf",
+          "supra-hbar-usd",
+          "supra-usd-chf",
           "hliquity-stability-pool",
           "hliquity-active-troves",
           "hedera"

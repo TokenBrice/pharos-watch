@@ -101,6 +101,33 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "suiUSDe minting is controlled via a Treasury shared object that wraps the TreasuryCap. The single AdminRole holder (0xe3dbc438…) also holds the package UpgradeCap, giving one EOA full mint and upgrade authority.",
+    "upgradeability": {
+      "model": "custom",
+      "implementationAddresses": [
+        "0x341079b42e21bb7996a515d7dd1e6b11f845e71e03aa647fbb37f5188b864d42"
+      ],
+      "adminAddresses": [
+        "0xe3dbc438a73460dba6442cbefeab033462fb8a97302a6cc28b8ad7ef08b2440d"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "suiUSDe AdminRole holder (mints via Treasury) and UpgradeCap owner",
+      "observedAt": "2026-07-14",
+      "observedBlock": 298482440,
+      "sources": [
+        {
+          "label": "Sui fullnode RPC — suiUSDe package UpgradeCap",
+          "url": "https://fullnode.mainnet.sui.io:443"
+        },
+        {
+          "label": "Suiscan — suiUSDe UpgradeCap object",
+          "url": "https://suiscan.xyz/mainnet/object/0x764653924d7bc3b889809de7ca077f5dd69ec378cb5d52be448c15613a5116c8"
+        },
+        {
+          "label": "Sui package upgrade documentation",
+          "url": "https://docs.sui.io/concepts/sui-move-concepts/packages/upgrade"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "suiUSDe Treasury shared object (wraps TreasuryCap)",
@@ -134,7 +161,7 @@
             "url": "https://fullnode.mainnet.sui.io:443"
           }
         ],
-        "evidence": "At Sui checkpoint 285785957: suix_queryEvents for RoleAuthorized<AdminRole> returns a single event (tx 97LB9KNbTjNFwq2QXdA6HzSe4RjSXa63Y2WFP6fBaBfx) granting AdminRole to 0xe3dbc438…. Additional events confirm this address also holds EpochPeriodManagerRole, GlobalDisablerRole, CollateralManagerRole, CollateralDisablerRole, BenefactorManagerRole, BenefactorDisablerRole, PegManagerRole, OracleManagerRole, and DenylistManagerRole. suix_getOwnedObjects confirms UpgradeCap 0x764653924d7bc3b8… for package 0x41d587… (policy=0, version=1) is also owned by this address. sui_getObject for the address returns notExists confirming it is an EOA (Sui address, not a smart contract)."
+        "evidence": "At Sui checkpoint 285785957: suix_queryEvents for RoleAuthorized<AdminRole> returns a single event (tx 97LB9KNbTjNFwq2QXdA6HzSe4RjSXa63Y2WFP6fBaBfx) granting AdminRole to 0xe3dbc438…. Additional events confirm this address also holds EpochPeriodManagerRole, GlobalDisablerRole, CollateralManagerRole, CollateralDisablerRole, BenefactorManagerRole, BenefactorDisablerRole, PegManagerRole, OracleManagerRole, and DenylistManagerRole. suix_getOwnedObjects confirms UpgradeCap 0x764653924d7bc3b8… (policy=0 COMPATIBLE, version=2, current package 0x341079b4…) is also owned by this address; re-read at checkpoint 298482440. sui_getObject for the address returns notExists confirming it is an EOA (Sui address, not a smart contract)."
       }
     ],
     "review": {

@@ -26,7 +26,22 @@
     "attestorTier": "regional",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
-    "attestorLicense": "PCAOB-registered"
+    "attestorLicense": "PCAOB-registered",
+    "latestReport": {
+      "periodEnd": "2026-05-29",
+      "publishedAt": "2026-06-29",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "SOL-8 Safety Score V9 blocker challenge",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "BPM GUSD reserves examination - May 2026",
+          "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {

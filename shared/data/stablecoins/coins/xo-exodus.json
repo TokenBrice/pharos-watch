@@ -2,7 +2,7 @@
   "id": "xo-exodus",
   "name": "XO Cash",
   "symbol": "XO",
-  "oneLiner": "XO is MoonPay's MTL-licensed dollar token on Solana, issued via M0 Protocol with USD deposits and short-term Treasury bills held in bankruptcy-remote SPVs.",
+  "oneLiner": "XO is MoonPay's Solana dollar token, issued through M0 infrastructure and backed by segregated U.S. dollars and other high-quality liquid assets.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -14,18 +14,11 @@
   "infrastructures": [
     "m0"
   ],
-  "collateral": "Fully reserved 1:1 by U.S. dollar deposits and short-term U.S. Treasury bills held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; reserves issued and managed by MoonPay under U.S. Money Transmitter Licenses; native M0 yield is retained by MoonPay/Exodus rather than passed through to XO holders",
-  "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay via M0 Protocol infrastructure on Solana; collateral cryptographically attested on-chain by independent M0 Validators before minting; consumer access is gated through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails (cards, Apple/Google Pay, PayPal); the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
+  "collateral": "Fully reserved 1:1 by U.S. dollars and other high-quality liquid USD-denominated assets held in segregated accounts for stablecoin holders; MoonPay's terms allow depository institutions, qualified custodians, and secure virtual-currency wallets but do not publish XO's current asset allocation",
+  "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay using M0 infrastructure on Solana; consumer access is provided through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails; the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "xo-cash",
-  "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://dashboard.m0.org/",
-    "provider": "M0 Protocol",
-    "attestorTier": "niche",
-    "cadence": "real-time"
-  },
   "links": [
     {
       "label": "Website",
@@ -64,7 +57,7 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://dashboard.m0.org/",
+    "reserveDisclosureUrl": "https://www.moonpay.com/legal/stablecoin_terms",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
     "notes": "MoonPay holds an NYDFS Limited Purpose Trust Company (LPTC) charter (MoonPay Trust Company, LLC, authorized Nov 2025), BitLicense, and money transmitter licenses across 49 states. The NYDFS LPTC is the state regulatory pathway most aligned with the GENIUS Act state-qualified issuer track. No PPSI approval has been granted to any issuer as of 2026-06-18; the state-qualified certification framework is still in proposed rulemaking (Treasury NPRM, Apr 2026). issuerPathway reflects the anticipated regulatory track, not an active approval.",

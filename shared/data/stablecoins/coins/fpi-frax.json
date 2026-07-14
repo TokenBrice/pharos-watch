@@ -92,6 +92,39 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "FPI mint/admin authority is Frax-governed; the FPI Controller Pool is owned by a 3/5 Frax Comptroller Safe.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x9033bAd7aA130a2466060a2da71fAE2219781B4B"
+      ],
+      "implementationAddresses": [
+        "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
+        "0x2063961F26019B588F48007D1CC43770e8B7383C"
+      ],
+      "adminAddresses": [
+        "0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502",
+        "0x8412EBf45bAC1B340BbE8F318b928C466c4E39CA",
+        "0x223a681fC5c5522c85c96157c0EFa18cd6C5405C"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "FPI Comptroller Safe",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530823,
+      "sources": [
+        {
+          "label": "FPI token verified source",
+          "url": "https://eth.blockscout.com/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?tab=contract"
+        },
+        {
+          "label": "FPI OFT mintable adapter proxy",
+          "url": "https://eth.blockscout.com/address/0x9033bAd7aA130a2466060a2da71fAE2219781B4B?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -156,6 +189,10 @@
     "review": {
       "sources": [
         {
+          "label": "FPI token verified source",
+          "url": "https://eth.blockscout.com/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?tab=contract"
+        },
+        {
           "label": "Frax AMO docs",
           "url": "https://docs.frax.finance/amo/overview"
         },
@@ -164,9 +201,9 @@
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502/"
         }
       ],
-      "evidence": "Phase 0c refreshed FPI Controller Pool owner() and FPI Comptroller Safe state at Ethereum block 25294518; the controller owner resolves to the 3/5 FPI Safe with no enabled modules or guard.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25530823 the FPI token had zero EIP-1967 implementation and admin slots, so the token bytecode is not upgradeable. Its verified source guards addMinter/removeMinter with onlyByOwnGov (owner OR timelock) and minter_mint is uncapped, so mint logic can change without a bytecode upgrade. owner() returned the 3/5 FPI Comptroller Safe 0x6A7efa96..., and timelock_address() returned the 172800-second Frax Timelock 0x8412EBf4... whose admin() is the Frax Comptroller Safe 0xB1748C79.... minters_array held two live minters: the FPI Controller Pool 0x2397321b... (non-proxy, owner() = FPI Comptroller Safe) and 0x9033bAd7..., a TransparentUpgradeableProxy running FraxOFTMintableAdapterUpgradeable 0x2063961F... whose EIP-1967 admin is ProxyAdmin 0x223a681f..., owned by the 86400-second Timelock 0xb898Ad29.... The Safe can raise or replace minters without delay. No mint-authority incident is recorded in the reviewed sources.",
+      "reviewer": "Codex V9 control curation",
+      "reviewedAt": "2026-07-14"
     }
   },
   "bridgeRouteRisk": {
