@@ -58,20 +58,8 @@
     "compositionBasis": "Hyperbeat hbUSDT vault documentation and current curated reserve snapshot",
     "scope": "selected-slices",
     "knownUnknownExposure": "The disclosed strategy names and headline percentages do not establish the current USDT0/USDe/USR mix, masterUSD underlying composition, or custody-provider shares.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposurePct": 39.5,
     "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "hoUSDT strategy exposure (Hyperbeat USDT strategy product)",
-        "pct": 60.5,
-        "disposition": "basket-needs-split",
-        "rationale": "Hyperbeat lists USDT0, USDe, and USR as accepted deposit assets but publishes no current allocation among them.",
-        "candidateCoinIds": [
-          "usdt-tether",
-          "usde-ethena",
-          "usr-resolv"
-        ]
-      },
       {
         "reserveIndex": 1,
         "reserveName": "masterUSD strategy exposure (Hyperbeat masterUSD product)",

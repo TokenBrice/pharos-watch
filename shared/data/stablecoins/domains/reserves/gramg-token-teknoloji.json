@@ -39,16 +39,7 @@
     "compositionBasis": "Token Teknoloji GRAMG collateral and proof-of-reserves disclosures",
     "scope": "full-composition",
     "knownUnknownExposure": "The PAXG dependency is identified at 100%, but current reserve-wallet balances, wallet ownership details, and any separate physical-gold allocation are not published.",
-    "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "PAXG (Paxos Gold) on-chain reserve wallet",
-        "pct": 100,
-        "disposition": "not-applicable",
-        "rationale": "The disclosed reserve is a tracked PAXG dependency rather than an untracked exogenous reserve asset."
-      }
-    ]
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
