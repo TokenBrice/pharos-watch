@@ -186,39 +186,140 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "TUSD is issuer-backed; Ethereum mint control resolves through the token controller/mint-key path, with controller ownership held by a confirmed 2/3 Gnosis Safe (no modules, no guard).",
+    "summary": "TUSD has four independently mintable issuer-native deployments. Ethereum uses a 2/3 Safe, BSC and Avalanche use chain-local 2/3 Safes with the same three owners, and Tron uses a single native account. Each final owner can bypass the configured mint pools and approvals, replace the mint key, and immediately upgrade both the token and controller proxies.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x0000000000085d4780b73119b644ae5ecd22b376",
+        "0x0000000000075efbee23fe2de1bd0b7690883cc9",
+        "TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4",
+        "TTfLBC7hVJMbHxiBqmKFUaW5dtoPfUWaMA",
+        "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9",
+        "0xb25e3c3493fc61bdd02661bcc27058022716c66a",
+        "0x1c20e891bab6b1727d14da358fae2984ed9b59eb",
+        "0xc3a247ace92a6a36fb69f70873a85fb8a66adc1c"
+      ],
+      "implementationAddresses": [
+        "0xdbc97a631c2fee80417d5d69f32b198c8c39c27e",
+        "0x3c394f54df0d8db742d67952c4236e41ae343776",
+        "TCRA7Y4JktPyHFFmJcGioBKdi6jmuVFSDk",
+        "TMSHy3tqvcWpz756KvbZA1FEXLu4dr6sJz",
+        "0x0d7adc70a18a5aef0bd6ecb098e1da0244c57711",
+        "0xcac1b4a5b0a3400cbdb12ec0cf9e772e17f04677",
+        "0x1bd4babe9fa4c9116858b1a1a8a44afa3d65c315",
+        "0x0008fad7b0eac3f863498a864c037dc4a6a113e1"
+      ],
+      "adminAddresses": [
+        "0x0000000000075efbee23fe2de1bd0b7690883cc9",
+        "0x93fde11c8107127a80ce95100df611790e4413c9",
+        "TTfLBC7hVJMbHxiBqmKFUaW5dtoPfUWaMA",
+        "TTYymuCMsVEGpGKasgVowppBufuvDGnXaY",
+        "0xb25e3c3493fc61bdd02661bcc27058022716c66a",
+        "0x48261f89e4d0b70632e0f46f20124b7da27d5885",
+        "0xc3a247ace92a6a36fb69f70873a85fb8a66adc1c",
+        "0x17189844773712e89954cf01b71f724d473bdbb1"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "TUSD issuer-native owner authority set",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "TrueUSD supported contracts and native deployments",
+          "url": "https://tusd.io/"
+        },
+        {
+          "label": "TrueUSD Ethereum token proxy",
+          "url": "https://eth.blockscout.com/address/0x0000000000085d4780b73119b644ae5ecd22b376"
+        },
+        {
+          "label": "TrueUSD Tron token proxy",
+          "url": "https://tronscan.org/#/contract/TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4/code"
+        },
+        {
+          "label": "TrueUSD BSC token proxy",
+          "url": "https://bscscan.com/address/0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9#code"
+        },
+        {
+          "label": "TrueUSD Avalanche token proxy",
+          "url": "https://snowscan.xyz/address/0x1c20e891bab6b1727d14da358fae2984ed9b59eb#code"
+        },
+        {
+          "label": "TrustToken proxy and TokenController source",
+          "url": "https://github.com/smartcontractkit/trusttoken-smart-contracts/tree/da82d843e58429faf77e320c51f245e4dc03c4ec/contracts"
+        }
+      ]
+    },
     "controls": [
       {
-        "chain": "ethereum",
-        "address": "0x0000000000075efbee23fe2de1bd0b7690883cc9",
-        "label": "TUSD token controller",
+        "label": "TUSD issuer-native owner authority set",
         "role": "direct-minter",
-        "authorityType": "contract",
+        "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Unbounded at zero on-chain delay. Any one of the three independent effective authority domains can request and finalize an owner mint without pool subtraction, reset limits or mint keys, or replace mint-critical logic.",
+        "observedAt": "2026-07-13",
+        "failureDomainKeys": [
+          "safe:ethereum:0x93fde11c8107127a80ce95100df611790e4413c9",
+          "eoa:tron:ttyymucmsvegpgkasgvowppbufuvdgnxay",
+          "safe-signers:tusd-bsc-avalanche:0x13873fa4b7771f3492825b00d1c37301ff41c348:0x9f8413454c182369c0200f6cc1031903477f752e:0x621fe33ccf74038db90b18365cb450d677d4b3d8"
+        ],
+        "bypassSurfaces": [
+          "Ethereum Safe can use owner-only requestMint/finalizeMint and upgrade both custom proxies.",
+          "Tron controller owner is a single native account with the same direct-mint and upgrade bypass.",
+          "BSC and Avalanche use separate Safes but the same 2-of-3 signer set, which can mint and upgrade on either chain."
+        ],
         "sources": [
           {
-            "label": "TrueUSD",
+            "label": "TrueUSD supported contracts and native deployments",
             "url": "https://tusd.io/"
           },
           {
-            "label": "Ethereum TUSD contract",
-            "url": "https://etherscan.io/address/0x0000000000085d4780B73119b644AE5ecd22b376#code"
+            "label": "TrustToken TokenController source",
+            "url": "https://github.com/smartcontractkit/trusttoken-smart-contracts/blob/da82d843e58429faf77e320c51f245e4dc03c4ec/contracts/true-currencies/TokenController.sol"
           }
         ],
-        "evidence": "Ethereum source/RPC review resolved the proxy owner/token-controller path to this controller address; the implementation exposes mint limits and mintKey controls."
+        "evidence": "This umbrella record exists because the upgradeability schema accepts one controlRef. It does not represent one shared signer or quorum. It preserves three effective failure domains: the Ethereum 2/3 Safe, the Tron 1/1 native account, and the common 2/3 signer set behind the BSC and Avalanche Safes. Each deployment's controller owner can request any amount and finalize it as owner without approval or pool checks."
+      },
+      {
+        "chain": "tron",
+        "address": "TTYymuCMsVEGpGKasgVowppBufuvDGnXaY",
+        "label": "Tron TUSD controller owner and proxy-admin account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 84434937,
+        "failureDomainKeys": ["eoa:tron:ttyymucmsvegpgkasgvowppbufuvdgnxay"],
+        "bypassSurfaces": [
+          "Owner-only requestMint/finalizeMint bypasses ratifier approvals and all three mint pools.",
+          "The same account owns the controller proxy and can route token-proxy upgrades through the controller."
+        ],
+        "sources": [
+          {
+            "label": "Tron TUSD token proxy",
+            "url": "https://tronscan.org/#/contract/TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4/code"
+          },
+          {
+            "label": "Tron TUSD TokenController proxy",
+            "url": "https://tronscan.org/#/contract/TTfLBC7hVJMbHxiBqmKFUaW5dtoPfUWaMA/code"
+          }
+        ],
+        "evidence": "At Tron block 84434937 (hash 0000000005085ff97a3afa7219319c9162619288c967ceafb0c4adcec7491a2e, timestamp 2026-07-13T20:34:39Z), token owner/proxyOwner resolved to TokenController proxy TTfL...WaMA. Its implementation owner and proxyOwner were both TTYy...nXaY, a native threshold-one account; pending owners were zero. The latest indexed controller transaction was block 83560002, before the cutoff, so the directly read state was unchanged through the anchor."
       },
       {
         "chain": "ethereum",
         "address": "0x93fde11c8107127A80ce95100dF611790E4413c9",
-        "label": "TUSD controller owner Safe",
-        "role": "minter-admin",
+        "label": "Ethereum TUSD controller owner and proxy-admin Safe",
+        "role": "direct-minter",
         "authorityType": "safe",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "direct",
         "threshold": 2,
         "signerCount": 3,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
@@ -229,38 +330,163 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xd5D82B6aDDc9027B22dCA772Aa68D5d74cdBdF44",
-          "observedBlock": 25294735,
-          "source": "safe-api",
+          "masterCopy": "0x34CfAC646f301356fAa8B21e94227e3583Fe3F5F",
+          "observedBlock": 25526129,
+          "observedAt": "2026-07-13",
+          "source": "onchain",
           "version": "1.1.1"
         },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": ["safe:ethereum:0x93fde11c8107127a80ce95100df611790e4413c9"],
+        "bypassSurfaces": [
+          "Owner-only requestMint/finalizeMint bypasses approvals and pool limits.",
+          "Safe directly owns the controller proxy; the controller owns and upgrades the token proxy."
+        ],
         "sources": [
           {
-            "label": "Safe transaction service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x93fde11c8107127A80ce95100dF611790E4413c9/"
+            "label": "Ethereum TUSD TokenController proxy",
+            "url": "https://eth.blockscout.com/address/0x0000000000075efbee23fe2de1bd0b7690883cc9"
+          },
+          {
+            "label": "Ethereum TUSD owner Safe",
+            "url": "https://etherscan.io/address/0x93fde11c8107127A80ce95100dF611790E4413c9#readProxyContract"
           }
         ],
-        "evidence": "Safe API returned threshold=2, owners=[0xdb13f2A1..., 0x3e6bF90E..., 0x382D7a2A...], modules=[], guard=0x0, masterCopy=0x34CfAC64... (Gnosis Safe 1.1.1), nonce=42. Token controller owner() confirmed as this Safe at Ethereum block 25294735."
+        "evidence": "At Ethereum block 25526129 (hash 0xd2eca668433c517ab710c73c244a2545203f12b35a83e4fb521595be762bdc3f), the token proxy used implementation 0xdbc9...c27e and owner 0x0000...3cc9; that controller proxy used implementation 0x3c39...3776 and both owner/proxyOwner were this 2/3 Safe. On-chain Safe reads returned the listed owners, no modules, zero guard/module guard, and the recorded fallback handler."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x48261f89e4d0B70632e0f46f20124b7Da27d5885",
+        "label": "BSC TUSD controller owner and proxy-admin Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x13873fa4B7771F3492825B00D1c37301fF41C348",
+            "0x9F8413454C182369c0200F6cC1031903477F752E",
+            "0x621Fe33CCF74038dB90B18365cb450d677D4b3D8"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534E402487b3ee7C18c33AeC0Fe5e4",
+          "masterCopy": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
+          "observedBlock": 109812367,
+          "observedAt": "2026-07-13",
+          "source": "onchain",
+          "version": "1.3.0"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "failureDomainKeys": [
+          "safe-signers:tusd-bsc-avalanche:0x13873fa4b7771f3492825b00d1c37301ff41c348:0x9f8413454c182369c0200f6cc1031903477f752e:0x621fe33ccf74038db90b18365cb450d677d4b3d8"
+        ],
+        "bypassSurfaces": [
+          "Owner-only requestMint/finalizeMint bypasses approvals and pool limits.",
+          "This Safe directly owns the controller proxy; the controller owns and upgrades the token proxy."
+        ],
+        "sources": [
+          {
+            "label": "BSC TUSD token proxy",
+            "url": "https://bscscan.com/address/0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9#code"
+          },
+          {
+            "label": "BSC TUSD TokenController proxy",
+            "url": "https://bscscan.com/address/0xb25e3c3493fc61bdd02661bcc27058022716c66a#code"
+          }
+        ],
+        "evidence": "At BSC block 109812367 (hash 0x958afa5b82a24f0ee89387646d589882bf448dbb5fac8dce521b4911ae834202), the token proxy implementation was 0x0d7a...7711 and owner was controller 0xb25e...c66a. The controller implementation was 0xcac1...4677 and both owner/proxyOwner were this 2/3 Safe. On-chain reads found the listed owners, no modules, zero guard/module guard, and no execution delay."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x17189844773712e89954CF01B71f724d473BDBB1",
+        "label": "Avalanche TUSD controller owner and proxy-admin Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x13873fa4B7771F3492825B00D1c37301fF41C348",
+            "0x9F8413454C182369c0200F6cC1031903477F752E",
+            "0x621Fe33CCF74038dB90B18365cb450d677D4b3D8"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062A1dE2fE6b99Be3d9D37841fED19f573804",
+          "masterCopy": "0xfb1bffC9d739B8D520DaF37dF666da4C687191EA",
+          "observedBlock": 90233120,
+          "observedAt": "2026-07-13",
+          "source": "onchain",
+          "version": "1.3.0"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 90233120,
+        "failureDomainKeys": [
+          "safe-signers:tusd-bsc-avalanche:0x13873fa4b7771f3492825b00d1c37301ff41c348:0x9f8413454c182369c0200f6cc1031903477f752e:0x621fe33ccf74038db90b18365cb450d677d4b3d8"
+        ],
+        "bypassSurfaces": [
+          "Owner-only requestMint/finalizeMint bypasses approvals and pool limits.",
+          "This Safe directly owns the controller proxy; the controller owns and upgrades the token proxy."
+        ],
+        "sources": [
+          {
+            "label": "Avalanche TUSD token proxy",
+            "url": "https://snowscan.xyz/address/0x1c20e891bab6b1727d14da358fae2984ed9b59eb#code"
+          },
+          {
+            "label": "Avalanche TUSD TokenController proxy",
+            "url": "https://snowscan.xyz/address/0xc3a247ace92a6a36fb69f70873a85fb8a66adc1c#code"
+          },
+          {
+            "label": "TrustToken Avalanche TokenController source",
+            "url": "https://github.com/smartcontractkit/trusttoken-smart-contracts/blob/da82d843e58429faf77e320c51f245e4dc03c4ec/contracts/avalanche/AvalancheTokenController.sol"
+          }
+        ],
+        "evidence": "At Avalanche block 90233120 (hash 0xf877fd5e314a603d15a48db4b8775613f9efe1979911875c2e2922c1ddaa4651), the token proxy implementation was 0x1bd4...c315 and owner was controller 0xc3a2...dc1c. The controller implementation was 0x0008...13e1 and both owner/proxyOwner were this 2/3 Safe. On-chain reads found the same signer set as BSC, no modules, zero guard/module guard, and no execution delay."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "TrueUSD",
+          "label": "TrueUSD supported contracts and native deployments",
           "url": "https://tusd.io/"
         },
         {
-          "label": "Ethereum TUSD contract",
-          "url": "https://etherscan.io/address/0x0000000000085d4780B73119b644AE5ecd22b376#code"
+          "label": "TrustToken proxy and TokenController source",
+          "url": "https://github.com/smartcontractkit/trusttoken-smart-contracts/tree/da82d843e58429faf77e320c51f245e4dc03c4ec/contracts"
         },
         {
-          "label": "Safe transaction service",
-          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x93fde11c8107127A80ce95100dF611790E4413c9/"
+          "label": "Tron TUSD TokenController proxy",
+          "url": "https://tronscan.org/#/contract/TTfLBC7hVJMbHxiBqmKFUaW5dtoPfUWaMA/code"
+        },
+        {
+          "label": "BSC TUSD TokenController proxy",
+          "url": "https://bscscan.com/address/0xb25e3c3493fc61bdd02661bcc27058022716c66a#code"
+        },
+        {
+          "label": "Avalanche TUSD TokenController proxy",
+          "url": "https://snowscan.xyz/address/0xc3a247ace92a6a36fb69f70873a85fb8a66adc1c#code"
         }
       ],
-      "evidence": "At Ethereum block 25294735: TUSD token controller owner() = 0x93fde11c8107127A80ce95100dF611790E4413c9 (Safe, confirmed). Safe API: threshold=2, 3 owners, no modules, no guard. Controller code confirmed (nonzero). All mint-capable controls verified.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Exact-cutoff review used Ethereum block 25526129, Tron block 84434937, BSC block 109812367, and Avalanche block 90233120. On every native deployment the token proxy owner was its TokenController proxy, while the final controller owner also owned the controller proxy. The controller source permits owner requestMint/finalizeMint without approval or pool subtraction and owner-controlled mint-key, threshold, limit, and proxy upgrades. Ethereum was a 2/3 Safe; Tron was a 1/1 native account; BSC and Avalanche were separate 2/3 Safes sharing all three owners. No enabled Safe modules, guards, module guards, or timelocks were found. The smaller Polygon, Arbitrum, Optimism, and Fantom contracts remain separately scoped as unresolved bridge routes rather than being asserted as issuer-native mint paths.",
+      "reviewer": "Codex Safety Score V9 TUSD authority audit",
+      "reviewedAt": "2026-07-13",
+      "disposition": "scoreable"
     }
   },
   "deploymentModel": "native-multichain",
