@@ -65,6 +65,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "ousd-origin-protocol": defineStablecoinRedeemConfig({
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: fixedFee(25, "Origin docs list a 0.25% exit fee on OUSD redemptions"),
     docs: [
@@ -162,6 +163,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "yousd-yield-optimizer": defineStablecoinRedeemConfig({
+    outputAssets: ["usdc-circle"],
     settlementModel: "immediate",
     executionModel: "rules-based-nav",
     capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.2, basis: "strategy-buffer" },
@@ -679,6 +681,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "usdsc-startale": defineStablecoinRedeemConfig({
+    outputAssets: ["m-m0"],
     capacityModel: { kind: "reserve-sync-metadata" },
     reviewedAt: "2026-04-16",
     accessModel: "whitelisted-onchain",
@@ -803,6 +806,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "srusd-reservoir": defineStablecoinRedeemConfig({
+    outputAssets: ["rusd-reservoir"],
     capacityModel: {
       kind: "reserve-sync-metadata",
       fallbackRatio: 0.0025,
@@ -923,6 +927,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usdcx-movement": defineStablecoinRedeemConfig({
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    outputAssets: ["usdc-circle"],
     executionModel: "deterministic-onchain",
     costModel: undisclosedReviewedFee(
       "Circle xReserve docs describe 1:1 USDCx burn/release against USDC; public materials reviewed do not publish a separate fixed redemption fee",
@@ -1182,6 +1187,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "said-gaib": defineStablecoinRedeemConfig({
+    outputAssets: ["aid-gaib"],
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
     capacityModel: { kind: "reserve-sync-metadata" },
     settlementModel: "queued",
@@ -1262,6 +1268,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usdb-blast": defineStablecoinRedeemConfig({
     ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+    outputAssets: ["dai-makerdao"],
     settlementModel: "days",
     outputAssetType: "stable-single",
     costModel: undisclosedReviewedFee(
@@ -1310,6 +1317,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "weusd-picwe": defineStablecoinRedeemConfig({
     ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    outputAssets: ["usdc-circle"],
     costModel: fixedFee(100, "PicWe docs describe a 1% WEUSD redemption fee"),
     docs: [
       sourceRef("PicWe WEUSD", "https://docs.picwe.org/what-is-weusd", [

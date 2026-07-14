@@ -493,6 +493,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "usp-pikudao": {
     ...queueRedeemBase,
+    outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
@@ -616,6 +617,8 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "usdh-hermetica": {
     ...queueRedeemBase,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
@@ -811,6 +814,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "inalpha-nest": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    outputAssets: ["usdc-circle", "pusd-plume"],
     accessModel: "issuer-api",
     settlementModel: "days",
     executionModel: "rules-based-nav",

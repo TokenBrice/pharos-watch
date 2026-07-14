@@ -102,6 +102,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "xusd-babelfish": {
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_YIELD_COVERAGE_WAVE_AT),
+    outputAssetType: "stable-basket",
+    outputAssets: ["dllr-sovryn", "doc-money-on-chain", "usdt-tether", "usdc-circle", "dai-makerdao", "usdrif-rif"],
     costModel: documentedVariableFee(
       "BabelFish uses basket-balancing withdrawal fees rather than one fixed public redemption fee",
     ),
@@ -333,6 +335,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "xmd-metal-dollar": {
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+    outputAssets: ["usdc-circle", "pyusd-paypal", "usdp-paxos"],
     accessModel: "whitelisted-onchain",
     outputAssetType: "stable-basket",
     costModel: fixedFee(
