@@ -54,6 +54,30 @@ export interface EthCallSpec {
   args?: readonly bigint[];
 }
 
+const WAD = 10n ** 18n;
+
+/** Format a WAD-scaled bigint as a decimal number rounded to three places (overlay convention). */
+export function wadToRounded(value: bigint): number {
+  return Number((value * 1000n) / WAD) / 1000;
+}
+
+export function relativeDeltaPct(measured: bigint, reference: bigint): number {
+  if (reference === 0n) return Number.POSITIVE_INFINITY;
+  return Number(((measured - reference) * 1_000_000n) / reference) / 10_000;
+}
+
+export interface MeasurementCheck {
+  id: string;
+  status: "pass";
+  detail: string;
+}
+
+/** Record a passing check, or abort the whole measurement — a failed check never writes evidence. */
+export function requireCheck(checks: MeasurementCheck[], id: string, condition: boolean, detail: string): void {
+  if (!condition) throw new Error(`Check failed: ${id} — ${detail}`);
+  checks.push({ id, status: "pass", detail });
+}
+
 /** Journaling eth_call transport contract; tests substitute a recorded-returndata stub. */
 export interface EthCallJournal {
   readonly calls: MeasurementCall[];
