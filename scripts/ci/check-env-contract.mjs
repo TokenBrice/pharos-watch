@@ -364,7 +364,7 @@ function collectShellEnvKeys(source) {
   return keys;
 }
 
-function collectSourceEnvKeys(filePaths) {
+export function collectSourceEnvKeys(filePaths) {
   const keys = new Set();
 
   for (const filePath of filePaths) {
@@ -373,11 +373,18 @@ function collectSourceEnvKeys(filePaths) {
     addRegexMatches(keys, source, /(?:^|[^A-Za-z0-9_])env\.([A-Z][A-Z0-9_]+)/g);
     addRegexMatches(keys, source, /\b(?:secrets|vars)\.([A-Z][A-Z0-9_]+)/g);
     addRegexMatches(keys, source, /\bread[A-Za-z0-9]*Env\(\s*"([A-Z][A-Z0-9_]+)"/g);
+    addRegexMatches(keys, source, /\brequireEnv\(\s*"([A-Z][A-Z0-9_]+)"/g);
     addRegexMatches(keys, source, /\breadEnvFirst\(\s*"([A-Z][A-Z0-9_]+)"/g);
     for (const match of source.matchAll(/\breadEnvFirst\(\s*\[([^\]]*)\]/g)) {
       addRegexMatches(keys, match[1], /"([A-Z][A-Z0-9_]+)"/g);
     }
     for (const match of source.matchAll(/\benvNames\s*:\s*\[([^\]]*)\]/g)) {
+      addRegexMatches(keys, match[1], /"([A-Z][A-Z0-9_]+)"/g);
+    }
+    for (const match of source.matchAll(/\bapiFetchHeaders\(\s*\[([^\]]*)\]/g)) {
+      addRegexMatches(keys, match[1], /"([A-Z][A-Z0-9_]+)"/g);
+    }
+    for (const match of source.matchAll(/\b[A-Z][A-Z0-9_]*_ENV_NAMES\s*=\s*\[([^\]]*)\]/g)) {
       addRegexMatches(keys, match[1], /"([A-Z][A-Z0-9_]+)"/g);
     }
     addRegexMatches(keys, source, /\bapiKeyEnv\s*:\s*"([A-Z][A-Z0-9_]+)"/g);

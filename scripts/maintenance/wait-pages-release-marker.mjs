@@ -11,18 +11,16 @@ import {
 } from "../lib/cli-args.mjs";
 import { isDirectRun, parsePositiveInt, sleep } from "../lib/smoke-runtime.mjs";
 
-const DEFAULT_ATTEMPTS = 60;
+const DEFAULT_ATTEMPTS = 24;
 const DEFAULT_DELAY_MS = 5_000;
-const DEFAULT_STABLE_COUNT = 10;
 const DEFAULT_TIMEOUT_MS = 8_000;
 const USAGE = `Usage: node scripts/maintenance/wait-pages-release-marker.mjs [options]
 
 Options:
-  --url <url>         Release marker URL (repeatable; at least one required)
+  --url <url>         Release marker URL (required)
   --marker <path>     Expected local marker (default: out/__pharos_release.json)
-  --attempts <count>  Poll attempts (default: 60)
+  --attempts <count>  Poll attempts (default: 24)
   --delay-ms <ms>     Delay between attempts (default: 5000)
-  --stable-count <n>  Consecutive matching responses required (default: 10)
   --timeout-ms <ms>   Per-request timeout (default: 8000)
   -h, --help          Show this help`;
 
@@ -33,9 +31,8 @@ export function parseReleaseMarkerArgs(argv, env = process.env) {
       attempts: { type: "string" },
       "delay-ms": { type: "string" },
       marker: { type: "string" },
-      "stable-count": { type: "string" },
       "timeout-ms": { type: "string" },
-      url: { type: "string", multiple: true },
+      url: { type: "string" },
     },
   });
   const args = {
@@ -46,9 +43,8 @@ export function parseReleaseMarkerArgs(argv, env = process.env) {
       typeof values.marker === "string"
         ? values.marker
         : (env.PHAROS_RELEASE_MARKER_PATH ?? "out/__pharos_release.json"),
-    stableCount: parsePositiveInt(env.PHAROS_RELEASE_MARKER_STABLE_COUNT, DEFAULT_STABLE_COUNT),
     timeoutMs: parsePositiveInt(env.PHAROS_RELEASE_MARKER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
-    urls: Array.isArray(values.url) ? values.url : [],
+    url: typeof values.url === "string" ? values.url.trim() : "",
   };
   if (typeof values.attempts === "string") {
     args.attempts = parseCliInteger(values.attempts, { name: "--attempts", min: 1 });
@@ -56,108 +52,68 @@ export function parseReleaseMarkerArgs(argv, env = process.env) {
   if (typeof values["delay-ms"] === "string") {
     args.delayMs = parseCliInteger(values["delay-ms"], { name: "--delay-ms", min: 0 });
   }
-  if (typeof values["stable-count"] === "string") {
-    args.stableCount = parseCliInteger(values["stable-count"], { name: "--stable-count", min: 1 });
-  }
   if (typeof values["timeout-ms"] === "string") {
     args.timeoutMs = parseCliInteger(values["timeout-ms"], { name: "--timeout-ms", min: 1 });
   }
   return args;
 }
 
-function buildAccessHeaders() {
-  const clientId = (process.env.OPS_SMOKE_CF_ACCESS_CLIENT_ID ?? "").trim();
-  const clientSecret = (process.env.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET ?? "").trim();
-  if (!clientId || !clientSecret) {
-    return {};
-  }
-  return {
-    "CF-Access-Client-Id": clientId,
-    "CF-Access-Client-Secret": clientSecret,
-  };
-}
-
-async function loadExpectedMarker(markerPath) {
-  const text = await readFile(markerPath, "utf8");
-  const marker = JSON.parse(text);
+async function loadExpectedCommit(markerPath) {
+  const marker = JSON.parse(await readFile(markerPath, "utf8"));
   const commit = typeof marker.commit === "string" ? marker.commit.trim() : "";
   if (!commit) {
     throw new Error(`Release marker ${markerPath} is missing a commit field`);
   }
-  return { commit, text };
+  return commit;
 }
 
-async function fetchMarker(url, { headers, timeoutMs }) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+async function fetchMarker(rawUrl, commit, attempt, timeoutMs) {
+  const url = new URL(rawUrl);
+  url.searchParams.set("expected", commit);
+  url.searchParams.set("attempt", String(attempt));
+  url.searchParams.set("cache", String(Date.now()));
+  const response = await fetch(url, {
+    cache: "no-store",
+    headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const text = await response.text();
+  let body = null;
   try {
-    const response = await fetch(url, {
-      cache: "no-store",
-      headers: { Accept: "application/json", ...headers },
-      signal: controller.signal,
-    });
-    const text = await response.text();
-    let body = null;
-    try {
-      body = JSON.parse(text);
-    } catch {
-      body = null;
-    }
-    return { body, response, text };
-  } finally {
-    clearTimeout(timeout);
+    body = JSON.parse(text);
+  } catch {
+    // The status and body prefix below are enough to diagnose a non-JSON edge response.
   }
-}
-
-async function waitForUrl(url, expectedCommit, options) {
-  let lastDetail = "not attempted";
-  let consecutiveMatches = 0;
-  for (let attempt = 1; attempt <= options.attempts; attempt += 1) {
-    try {
-      const result = await fetchMarker(url, options);
-      const liveCommit = typeof result.body?.commit === "string" ? result.body.commit.trim() : "";
-      if (result.response.ok && liveCommit === expectedCommit) {
-        consecutiveMatches += 1;
-        if (consecutiveMatches >= options.stableCount) {
-          console.log(
-            `[release-marker] OK ${url} commit=${liveCommit} stable=${consecutiveMatches}/${options.stableCount}`,
-          );
-          return;
-        }
-        lastDetail = `matching commit, stability=${consecutiveMatches}/${options.stableCount}`;
-      } else {
-        consecutiveMatches = 0;
-        lastDetail = `HTTP ${result.response.status}, commit=${liveCommit || "(missing)"}, body=${result.text.slice(0, 120)}`;
-      }
-    } catch (error) {
-      consecutiveMatches = 0;
-      lastDetail = error instanceof Error ? error.message : String(error);
-    }
-
-    console.log(`[release-marker] waiting for ${url} (${attempt}/${options.attempts}): ${lastDetail}`);
-    if (attempt < options.attempts) {
-      await sleep(options.delayMs);
-    }
-  }
-
-  throw new Error(`Timed out waiting for ${url} to serve commit ${expectedCommit}: ${lastDetail}`);
+  return { body, response, text };
 }
 
 export async function run(argv = process.argv.slice(2)) {
   const args = parseReleaseMarkerArgs(argv);
   if (writeCliHelpIfRequested(args, USAGE)) return;
-  const urls = args.urls.map((url) => url.trim()).filter(Boolean);
-  assertCliUsage(urls.length > 0, "at least one --url is required");
-  assertCliUsage(args.attempts >= args.stableCount, "--attempts must be greater than or equal to --stable-count");
+  assertCliUsage(args.url !== "", "--url is required");
 
-  const expected = await loadExpectedMarker(args.markerPath);
-  const headers = buildAccessHeaders();
-  await Promise.all(urls.map((url) => waitForUrl(url, expected.commit, { ...args, headers })));
+  const expectedCommit = await loadExpectedCommit(args.markerPath);
+  let lastDetail = "not attempted";
+  for (let attempt = 1; attempt <= args.attempts; attempt += 1) {
+    try {
+      const result = await fetchMarker(args.url, expectedCommit, attempt, args.timeoutMs);
+      const liveCommit = typeof result.body?.commit === "string" ? result.body.commit.trim() : "";
+      if (result.response.ok && liveCommit === expectedCommit) {
+        console.log(`[release-marker] OK ${args.url} commit=${liveCommit}`);
+        return;
+      }
+      lastDetail = `HTTP ${result.response.status}, commit=${liveCommit || "(missing)"}, body=${result.text.slice(0, 120)}`;
+    } catch (error) {
+      lastDetail = error instanceof Error ? error.message : String(error);
+    }
+
+    console.log(`[release-marker] waiting (${attempt}/${args.attempts}): ${lastDetail}`);
+    if (attempt < args.attempts) await sleep(args.delayMs);
+  }
+
+  throw new Error(`Timed out waiting for ${args.url} to serve commit ${expectedCommit}: ${lastDetail}`);
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  void runCliEntrypoint(() => run(), {
-    label: "release-marker",
-    usage: USAGE,
-  });
+  void runCliEntrypoint(() => run(), { label: "release-marker", usage: USAGE });
 }

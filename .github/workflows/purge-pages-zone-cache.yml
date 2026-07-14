@@ -19,6 +19,9 @@ jobs:
   purge-pages-zone-cache:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    environment:
+      name: production
+      url: https://pharos.watch
     steps:
       - name: Require main and explicit production confirmation
         env:

@@ -204,10 +204,11 @@ This app protects the admin API host used by the Pages Functions proxy.
 Create at least one Access service token for:
 
 - Pages Functions -> `ops-api.pharos.watch`
-- CI smoke checks
-- admin scripts
+- explicit operator diagnostics or admin scripts, when needed
 
-The Pages Functions proxy already uses the service token pair; create separate tokens only when you need distinct scopes for CI or operator tooling.
+The Pages Functions proxy already uses the service token pair; create a separate
+short-lived token only when operator tooling needs direct Access-protected origin
+access.
 
 ### Service-token ownership and rotation
 
@@ -224,22 +225,24 @@ The Pages Functions proxy already uses the service token pair; create separate t
   - restore the previous Pages secrets if the new token fails before the old token is revoked
   - if the old token was already revoked, mint another replacement token and repeat the sequence
 
-#### CI `smoke-ops` service token
+#### Operator `smoke-ops` service token
 
-- owner: GitHub repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` / `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
-- CI contract:
+- owner: the operator's secure credential store; export
+  `OPS_SMOKE_CF_ACCESS_CLIENT_ID` / `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET` only
+  for the explicit diagnostic command
+- diagnostic contract:
   - direct `ops-api.pharos.watch` smoke uses the raw service-token headers
   - same-origin `ops.pharos.watch/api/admin/*` smoke first tries the raw token path, then retries with any `CF_Authorization` cookie returned by the Access-protected UI host
-  - when that same-origin proxy path returns transient `502`/`504` gateway responses immediately after deploy, CI retries it up to twice before failing so warm operator-status reads do not flap the post-deploy gate
-  - if the UI host only exposes the interactive Access redirect, if the service-token UI flow renders the shell without yielding a browser session cookie, or if the proxied request remains `401 Unauthorized` even after best-effort cookie replay, the CI smoke records that the shell is gated correctly and skips the same-origin proxy assertion rather than failing on a non-browser auth shape
+  - transient `502`/`504` same-origin proxy responses are retried up to twice
+  - interactive-only Access redirects or unavailable proxy-session cookies are reported as a skipped same-origin assertion rather than a deployment gate
 - rotation sequence:
-  1. create a new Access service token scoped for CI smoke against `ops.pharos.watch` / `ops-api.pharos.watch`
-  2. update the GitHub repository secrets with the new client id / secret
-  3. run the `smoke-ops` lane through workflow dispatch or an equivalent local invocation
-  4. revoke the old token only after the smoke lane succeeds with the new credentials
+  1. create a new Access service token scoped for diagnostics against `ops.pharos.watch` / `ops-api.pharos.watch`
+  2. update the operator credential store with the new client id / secret
+  3. run `npm run test:smoke-ops` with the new credentials
+  4. revoke the old token only after the diagnostic succeeds
 - rollback:
-  - restore the prior GitHub secrets if the new token fails and the old token still exists
-  - otherwise create another CI token and re-run the smoke lane before revoking anything else
+  - restore the prior operator credentials if the new token fails and the old token still exists
+  - otherwise create another diagnostic token before revoking anything else
 
 ### 6. Record the Access values
 

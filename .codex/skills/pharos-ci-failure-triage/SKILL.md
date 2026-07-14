@@ -13,13 +13,13 @@ Use this skill from the Pharos repository root for:
 - failed GitHub Actions runs
 - failed `Deploy to Cloudflare`
 - failed `Rebuild Pages`
-- failed `pages-release`, worker deploy, smoke, SEO, build-size, generated-artifact, or docs checks
+- failed `pages-release`, Worker migration/deploy/health, Pages build/marker, generated-artifact, or docs checks
 - requests to retrigger a workflow and keep iterating until it clears
 
 ## Core Rules
 
 - Start from logs and the exact failing command. Do not guess from the workflow name alone.
-- Classify the failing lane before editing: generated artifact, docs, tests, Pages build/smoke, Worker typecheck/smoke, migration, deploy infra, or external transient.
+- Classify the failing lane before editing: generated artifact, docs, tests, Pages build/marker, Worker migration/deploy/health, deploy infra, or external transient.
 - Reproduce locally with the narrowest equivalent command before broad gates when possible.
 - For large local batches, use diagnostic discovery to collect failures across independent lanes; it is not a final gate and does not create release proof.
 - Preserve unrelated dirty work. If other agents are editing, patch only the failing lane and do not push unless explicitly requested.
@@ -68,7 +68,7 @@ npm run build
 npm run seo:check
 npm run typecheck
 npm run typecheck:worker
-npm run test:noncritical -- --shard=1/4
+npm run test:noncritical -- --shard=1/2
 npm run coverage:critical
 npm run test:a11y
 npm run validate:pages-smoke
@@ -91,6 +91,8 @@ Preferred fixes:
 - Pages smoke/SEO failure: inspect built `out/` and the route source; rebuild before rerunning `seo:check`.
 - Worker type/smoke failure: inspect shared/worker imports and runtime env contracts; avoid adding frontend-only imports to shared Worker paths.
 - External transient: rerun only after proving the failure is network/provider/transient, and report the evidence.
+
+The production deploy workflow does not automatically roll back. A failed Worker health or Pages marker proof requires causal assessment first; use Cloudflare deployment history for operator-led rollback and remember that Worker rollback does not revert D1 or other bound resources.
 
 Avoid broad rewrites while fixing CI. Make the smallest root-cause patch.
 
@@ -115,7 +117,7 @@ For manual workflow dispatch, use the repo workflow file/name and `main` ref. Co
 Examples:
 
 ```bash
-gh workflow run "Deploy to Cloudflare" --repo TokenBrice/pharos-watch --ref main
+gh workflow run "Deploy to Cloudflare" --repo TokenBrice/pharos-watch --ref main -f surface=both
 gh workflow run "Rebuild Pages" --repo TokenBrice/pharos-watch --ref main
 ```
 

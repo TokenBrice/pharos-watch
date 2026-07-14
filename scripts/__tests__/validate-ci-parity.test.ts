@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 import {
   buildNoncriticalTestShardCommands,
   NONCRITICAL_TEST_SHARD_COUNT,
@@ -10,9 +11,7 @@ import {
   GENERATED_ARTIFACT_REGISTRY,
   buildGeneratedArtifactCommands,
   buildGeneratedArtifactPhases,
-  deriveWorkerRuntimePackageClosure,
   findDuplicateDeployImpactExactPaths,
-  DEPLOY_IMPACT_REGISTRY,
   selectGeneratedArtifacts,
 } from "../lib/automation-registry.mjs";
 import {
@@ -32,6 +31,45 @@ import {
   runGeneratedArtifacts,
 } from "../maintenance/run-generated-artifacts.mjs";
 
+type WorkflowStep = {
+  env?: Record<string, string>;
+  if?: string;
+  name?: string;
+  run?: string;
+};
+
+type WorkflowJob = {
+  environment?: { name: string; url?: string };
+  if?: string;
+  name?: string;
+  needs?: string | string[];
+  outputs?: Record<string, string>;
+  "runs-on"?: string;
+  secrets?: Record<string, string>;
+  steps?: WorkflowStep[];
+  uses?: string;
+  with?: Record<string, unknown>;
+};
+
+type WorkflowDocument = {
+  jobs: Record<string, WorkflowJob>;
+  on: {
+    schedule: Array<{ cron: string }>;
+    workflow_call: {
+      inputs: Record<string, Record<string, unknown>>;
+      secrets: Record<string, Record<string, unknown>>;
+    };
+    workflow_dispatch: {
+      inputs: Record<string, { options: string[] }>;
+    };
+  };
+  permissions: Record<string, string>;
+};
+
+function readWorkflow(file: string): WorkflowDocument {
+  return parseYaml(readFileSync(resolve(process.cwd(), file), "utf8")) as WorkflowDocument;
+}
+
 function extractJobBlock(yaml: string, jobName: string, nextJobName?: string): string {
   const startMarker = `  ${jobName}:`;
   const start = yaml.indexOf(startMarker);
@@ -44,15 +82,6 @@ function extractJobBlock(yaml: string, jobName: string, nextJobName?: string): s
   const endMarker = `  ${nextJobName}:`;
   const end = yaml.indexOf(endMarker, start);
   return end === -1 ? yaml.slice(start) : yaml.slice(start, end);
-}
-
-function expectTextInOrder(text: string, snippets: readonly string[]): void {
-  let lastIndex = -1;
-  for (const snippet of snippets) {
-    const index = text.indexOf(snippet);
-    expect(index, snippet).toBeGreaterThan(lastIndex);
-    lastIndex = index;
-  }
 }
 
 function extractFeatureFlagEnvReads(source: string): string[] {
@@ -453,15 +482,6 @@ describe("validate-ci parity", () => {
     expect(findDuplicateDeployImpactExactPaths()).toEqual([]);
   });
 
-  it("derives the Worker root runtime package set from the lockfile", () => {
-    const packageLock = JSON.parse(readFileSync(resolve(process.cwd(), "package-lock.json"), "utf8"));
-
-    expect(DEPLOY_IMPACT_REGISTRY.workerRootRuntimePackages).toEqual(deriveWorkerRuntimePackageClosure(packageLock));
-    expect(DEPLOY_IMPACT_REGISTRY.workerRootRuntimePackages).toEqual(
-      expect.arrayContaining(["@cf-wasm/resvg", "react", "satori", "viem", "zod"]),
-    );
-  });
-
   it("requires all normal Vitest shards in the reusable validate workflow", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
     const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "typecheck-worker");
@@ -498,249 +518,121 @@ describe("validate-ci parity", () => {
     expect(validateJob).not.toContain("- coverage-critical");
   });
 
-  it("keeps PR Pages build validation but lets production deploy overlap safe prep with validation", () => {
-    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
-    const pagesBuildJob = extractJobBlock(workflow, "pages-build", "test-noncritical");
-    const validateJob = extractJobBlock(workflow, "validate");
+  it("provides one required PR gate for full and docs-only validation paths", () => {
+    const workflow = readWorkflow(".github/workflows/pull-request-checks.yml");
+    const gate = workflow.jobs["pr-gate"];
 
-    expect(workflow).toContain("run_pages_build_and_seo:");
-    expect(pagesBuildJob).toContain("if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}");
-    expect(pagesBuildJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
-    expect(validateJob).toContain(
-      "PAGES_BUILD_EXPECTED: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}",
-    );
-
-    const deployWorkflow = readFileSync(resolve(process.cwd(), ".github/workflows/deploy-cloudflare.yml"), "utf8");
-    const productionRefGuardJob = extractJobBlock(deployWorkflow, "guard-production-ref", "detect-changes");
-    expect(productionRefGuardJob).toContain('if [ "${GITHUB_REF}" != "refs/heads/main" ]; then');
-    expect(extractJobBlock(deployWorkflow, "detect-changes", "validate")).toContain("needs: guard-production-ref");
-
-    const deployValidateJob = extractJobBlock(deployWorkflow, "validate", "no-deploy-required");
-    expect(deployValidateJob).toContain("run_pages_build_and_seo: false");
-    expect(deployValidateJob).toContain("include_advisory_prebuild: true");
-
-    const uploadWorkerJob = extractJobBlock(deployWorkflow, "upload-worker-version", "deploy-worker");
-    expect(uploadWorkerJob).toContain("- validate");
-    expect(uploadWorkerJob).not.toContain("Apply production D1 migrations");
-    expect(uploadWorkerJob).not.toContain("Smoke uploaded preview worker");
-    expect(uploadWorkerJob).toContain("uses: ./.github/actions/setup-workspace");
-    expect(uploadWorkerJob).not.toContain("node-version:");
-    expect(uploadWorkerJob).toContain("node .github/scripts/retry-wrangler-control-plane.mjs");
-    expect(uploadWorkerJob).toContain("--operation deployment-status");
-    expect(uploadWorkerJob).toContain("--operation version-upload");
-    expect(uploadWorkerJob).toContain("--attempts 4");
-    expect(uploadWorkerJob).toContain("entitlements.not_available \\\\[code: 10007\\\\]");
-    expect(uploadWorkerJob).toContain("version_upload_unavailable=true");
-    expect(uploadWorkerJob).toContain("reduced rollback safety");
-
-    const deployWorkerJob = extractJobBlock(deployWorkflow, "deploy-worker", "pages-release");
-    expect(deployWorkerJob).toContain(
-      "runs-on: ${{ vars.CI_WORKER_DEPLOY_RUNNER != '' && vars.CI_WORKER_DEPLOY_RUNNER || vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}",
-    );
-    expect(deployWorkerJob).not.toContain("Wait for validation gate");
-    expect(deployWorkerJob).toContain("Rehearse D1 migrations locally");
-    expect(deployWorkerJob).toContain("Capture previous worker trigger config for rollback");
-    expect(deployWorkerJob).toContain("Require previous worker version for automatic rollback");
-    expect(deployWorkerJob).toContain("Worker rollback is not armed");
-    expect(deployWorkerJob).toContain("Apply production D1 migrations");
-    expect(deployWorkerJob).toContain("Smoke uploaded preview worker");
-    expect(deployWorkerJob).toContain("needs.upload-worker-version.outputs.version_upload_unavailable != 'true'");
-    expect(deployWorkerJob).toContain("node .github/scripts/deploy-worker-version.mjs");
-    expect(deployWorkerJob).not.toContain("wrangler versions deploy");
-    expect(deployWorkerJob).toContain("id: sync-worker-triggers");
-    expect(deployWorkerJob).toContain("continue-on-error: true");
-    expect(deployWorkerJob).toContain("Smoke production worker");
-    expect(deployWorkerJob).toContain("Restore worker triggers after rollback");
-    expect(deployWorkerJob).toContain("steps.sync-worker-triggers.outcome == 'failure'");
-    expect(deployWorkerJob).toContain("wrangler triggers deploy --config .rollback-wrangler.toml");
-    expect(deployWorkerJob).toContain("Deploy worker with legacy Wrangler deploy fallback");
-    expect(deployWorkerJob).toContain("cd worker && npx --no-install wrangler deploy");
-    expect(deployWorkerJob).toContain('SMOKE_API_SCOPE: "canary"');
-    expect(deployWorkerJob).toContain("Run worker-only live smokes");
-    expect(deployWorkerJob).toContain("needs.detect-changes.outputs.pages_deploy_required != 'true'");
-    expect(deployWorkerJob).not.toContain("needs.detect-changes.outputs.pages_changed != 'true'");
-    expect(deployWorkerJob).toContain("id: worker-only-live-smokes");
-    expect(deployWorkerJob).toContain("continue-on-error: true");
-    expect(deployWorkerJob).toContain("SMOKE_UI_OVERFLOW_ROUTES: /depeg/");
-    expect(deployWorkerJob).toContain("npm run test:smoke-ui -- --url https://pharos.watch --mode live");
-    expect(deployWorkerJob).toContain("steps.worker-only-live-smokes.outcome == 'failure'");
-    expect(deployWorkerJob).not.toContain("--mode live --skip-overflow");
-
-    const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
-    expect(pagesReleaseJob).toContain("needs:");
-    expect(pagesReleaseJob).toContain("- detect-changes");
-    // The secret-bearing Pages release job must not start until validation succeeds.
-    expect(pagesReleaseJob).toContain("- validate");
-    expect(pagesReleaseJob).not.toContain("- upload-worker-version");
-    expect(pagesReleaseJob).toContain("uses: ./.github/workflows/pages-release.yml");
-    expect(pagesReleaseJob).not.toContain("pages_ui_changed:");
-    expect(pagesReleaseJob).toContain("if: ${{ needs.detect-changes.outputs.pages_deploy_required == 'true' }}");
-    expect(pagesReleaseJob).not.toContain("wait_for_validate_job");
-    expect(pagesReleaseJob).toContain(
-      "wait_for_worker_promotion: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}",
-    );
-    expect(pagesReleaseJob).not.toContain("Fetch digests from the target API environment");
-    expect(pagesReleaseJob).not.toContain("needs.upload-worker-version.outputs.preview_url");
-
-    const pagesReleaseWorkflow = readFileSync(resolve(process.cwd(), ".github/workflows/pages-release.yml"), "utf8");
-    const consolidatedPagesReleaseJob = extractJobBlock(pagesReleaseWorkflow, "pages-release");
-    expect(consolidatedPagesReleaseJob).toContain("DEPEG_EVENTS_API_URL:");
-    expect(consolidatedPagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
-    expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
-    expect(consolidatedPagesReleaseJob).toContain('PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE: "1"');
-    expect(consolidatedPagesReleaseJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
-    expect(consolidatedPagesReleaseJob).toContain("timeout-minutes: 30");
-    expect(consolidatedPagesReleaseJob).toContain("Install Chromium and fetch deploy data concurrently");
-    expect(consolidatedPagesReleaseJob).toContain("Generate public dataset mirrors from the target API environment");
-    expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
-    expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
-    expect(consolidatedPagesReleaseJob).toContain("Start local export smoke server");
-    expect(consolidatedPagesReleaseJob).toContain(
-      "STATIC_EXPORT_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}",
-    );
-    expect(consolidatedPagesReleaseJob).toContain(
-      "STATIC_EXPORT_SITE_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://site-api.pharos.watch' }}",
-    );
-    expect(consolidatedPagesReleaseJob).toContain(
-      "STATIC_EXPORT_SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}",
-    );
-    expect(consolidatedPagesReleaseJob).toContain("Run local static pre-publish checks");
-    expect(consolidatedPagesReleaseJob).toContain("Run local artifact canary smoke");
-    expect(consolidatedPagesReleaseJob).not.toContain("PAGES_UI_CHANGED:");
-    expect(consolidatedPagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "1"');
-    expect(consolidatedPagesReleaseJob).not.toContain("SMOKE_PAGES_ASSET_WORKERS");
-    expect(consolidatedPagesReleaseJob).not.toContain("SMOKE_PAGES_ASSET_TIMEOUT_MS");
-    expect(consolidatedPagesReleaseJob).not.toContain(
-      "npm run test:smoke-pages-assets -- --url http://127.0.0.1:4173 --mode local",
-    );
-    expect(consolidatedPagesReleaseJob).not.toContain("npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173");
-    expect(consolidatedPagesReleaseJob).not.toContain("npm run test:a11y");
-    expect(consolidatedPagesReleaseJob).not.toContain("npm run test:a11y:hydrated");
-    expect(consolidatedPagesReleaseJob).not.toContain("Wait for validation gate");
-    expect(consolidatedPagesReleaseJob).not.toContain("wait_for_validate_job");
-    expect(consolidatedPagesReleaseJob).toContain("Wait for worker promotion gate");
-    expect(consolidatedPagesReleaseJob).toContain("if: ${{ inputs.wait_for_worker_promotion }}");
-    expect(consolidatedPagesReleaseJob).not.toContain("Run local artifact smoke against promoted worker");
-    expect(
-      consolidatedPagesReleaseJob.match(/npm run test:smoke-ui -- --url http:\/\/127\.0\.0\.1:4173 --mode local/g),
-    ).toHaveLength(1);
-    expect(consolidatedPagesReleaseJob).toContain("Deploy Pages with retry");
-    expect(consolidatedPagesReleaseJob).toContain("Capture Pages release metrics");
-    expect(consolidatedPagesReleaseJob).toContain("Fail because automated Pages rollback is not armed");
-    expect(consolidatedPagesReleaseJob).not.toContain("Warn that automated Pages rollback is disabled");
-    expect(consolidatedPagesReleaseJob).toContain("Run post-publish smokes in parallel");
-    expect(consolidatedPagesReleaseJob).toContain("SMOKE_UI_OVERFLOW_ROUTES: /depeg/");
-    expect(consolidatedPagesReleaseJob).toContain(
-      "OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}",
-    );
-    expect(consolidatedPagesReleaseJob).toContain(
-      "OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}",
-    );
-    expect(consolidatedPagesReleaseJob).toContain("npm run test:smoke-ui -- --url https://pharos.watch --mode live");
-    expect(consolidatedPagesReleaseJob).not.toContain(
-      "npm run test:smoke-pages-assets -- --url https://pharos.watch --mode live",
-    );
-    expect(consolidatedPagesReleaseJob).not.toContain("waiting for Pages asset propagation");
-    expect(consolidatedPagesReleaseJob).not.toContain("--mode live --skip-overflow");
-    expect(consolidatedPagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
-    expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ui_status != 'success'");
-    expect(consolidatedPagesReleaseJob).not.toContain("steps.post-publish-smokes.outputs.asset_status");
-    expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ops_status != 'success'");
-    expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.transport_status != 'success'");
-    expectTextInOrder(consolidatedPagesReleaseJob, [
-      "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
-      "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",
-      "npm run generate:public-datasets",
-      "npm run build",
-      "npm run check:feature-flag-inlining",
-      "npm run check:phishing-signatures",
-      "npm run check:classifier-sensitive-copy",
-      "npm run check:build-size",
-      "Capture Pages release metrics",
-      "npm run check:build-attribution",
-      "Capture current production Pages deployment id",
-      "Fail because automated Pages rollback is not armed",
-      "Start local export smoke server",
-      "Run local static pre-publish checks",
-      "npm run seo:check",
-      "Wait for worker promotion gate",
-      "Run local artifact canary smoke",
-      "npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local",
-      "Deploy Pages with retry",
-    ]);
-    expect(deployWorkflow).not.toContain("  smoke-api:");
-    expect(deployWorkflow).not.toContain("  rollback-worker:");
+    expect(gate.name).toBe("PR gate");
+    expect(gate.if).toBe("${{ always() }}");
+    expect(gate.needs).toEqual(["detect-changes", "validate", "validate-docs", "gitleaks"]);
+    expect(JSON.stringify(gate)).toContain("Exactly one validation path must succeed");
   });
 
-  it("keeps consolidated Pages release aligned with required production prebuild sync and guardrails", () => {
-    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/pages-release.yml"), "utf8");
-    const pagesReleaseJob = extractJobBlock(workflow, "pages-release");
+  it("keeps production deployment on one native DAG with one Worker mutation path", () => {
+    const workflow = readWorkflow(".github/workflows/deploy-cloudflare.yml");
 
-    expect(workflow).toContain("DEPEG_EVENTS_API_KEY:");
-    expect(workflow).toContain("PUBLIC_DATASETS_API_KEY:");
-    expect(pagesReleaseJob).toContain("https://pharos.watch/_site-data");
-    expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_URL:");
-    expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
-    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
-    expect(pagesReleaseJob).toContain('PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE: "1"');
-    expect(pagesReleaseJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
-    expect(pagesReleaseJob).toContain("fetch-depth: 0");
-    expect(pagesReleaseJob).toContain("git-history-derived sitemap/docs metadata");
-    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
-    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
-    expect(pagesReleaseJob).toContain(
-      "STATIC_EXPORT_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}",
-    );
-    expect(pagesReleaseJob).toContain(
-      "STATIC_EXPORT_SITE_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://site-api.pharos.watch' }}",
-    );
-    expect(pagesReleaseJob).toContain("STATIC_EXPORT_SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}");
-    expectTextInOrder(pagesReleaseJob, [
-      "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
-      "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",
-      "npm run generate:public-datasets",
-      "npm run build",
-      "npm run check:feature-flag-inlining",
-      "npm run check:phishing-signatures",
-      "npm run check:classifier-sensitive-copy",
-      "npm run check:build-size",
-      "Capture Pages release metrics",
-      "npm run check:build-attribution",
-      "Capture current production Pages deployment id",
-      "Fail because automated Pages rollback is not armed",
-      "Start local export smoke server",
-      "Run local static pre-publish checks",
-      "npm run seo:check",
-      "Wait for worker promotion gate",
-      "Run local artifact canary smoke",
+    expect(Object.keys(workflow.jobs)).toEqual(["plan", "deploy-worker", "pages-release"]);
+    expect(workflow.permissions).toEqual({ contents: "read" });
+    expect(workflow.on.workflow_dispatch.inputs.surface.options).toEqual(["both", "pages", "worker"]);
+
+    const plan = workflow.jobs.plan;
+    expect(plan.outputs).toEqual({
+      pages_required: "${{ steps.classify.outputs.pages_deploy_required }}",
+      worker_required: "${{ steps.classify.outputs.worker_promotion_required }}",
+    });
+
+    const worker = workflow.jobs["deploy-worker"];
+    expect(worker.needs).toBe("plan");
+    expect(worker.environment).toMatchObject({ name: "production", url: "https://api.pharos.watch" });
+    expect(worker["runs-on"]).toBe("ubuntu-latest");
+    const workerText = JSON.stringify(worker);
+    expect(workerText.match(/wrangler deploy/g)).toHaveLength(1);
+    expect(workerText).toContain("wrangler deploy --strict");
+    expect(workerText).toContain("wrangler d1 migrations apply stablecoin-db --remote");
+    expect(workerText).toContain("https://site-api.pharos.watch/api/health");
+    expect(workerText).toContain("X-Pharos-Site-Proxy-Secret");
+    expect(workerText).not.toContain("versions upload");
+    expect(workerText).not.toContain("triggers deploy");
+    expect(workerText).not.toContain("continue-on-error");
+    expect(workerText).not.toContain("test:smoke-ui");
+    expect(workerText).not.toContain("test:smoke-ops");
+    expect(workerText).not.toContain("test:smoke-transport");
+    expect(workerText).not.toContain("Auto rollback");
+
+    const pages = workflow.jobs["pages-release"];
+    expect(pages.needs).toEqual(["plan", "deploy-worker"]);
+    expect(pages.uses).toBe("./.github/workflows/pages-release.yml");
+    expect(pages.with).toEqual({ refresh_data: false });
+    expect(Object.keys(pages.secrets ?? {}).sort()).toEqual([
+      "CLOUDFLARE_ACCOUNT_ID",
+      "CLOUDFLARE_API_TOKEN",
     ]);
+    expect(pages.if).toContain("needs.deploy-worker.result == 'success'");
+    expect(pages.if).toContain("needs.plan.outputs.worker_required != 'true'");
   });
 
-  it("forwards dedicated Pages data-sync secrets through the scheduled rebuild workflow", () => {
-    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/rebuild-pages.yml"), "utf8");
-    const guardJob = extractJobBlock(workflow, "guard-production-ref", "plan-release");
-    const planJob = extractJobBlock(workflow, "plan-release", "pages-release");
-    const pagesReleaseJob = extractJobBlock(workflow, "pages-release");
+  it("keeps Pages publication deterministic and separates scheduled data refresh", () => {
+    const workflow = readWorkflow(".github/workflows/pages-release.yml");
+    const workflowCall = workflow.on.workflow_call;
+    expect(workflowCall.inputs.refresh_data).toMatchObject({ default: false, type: "boolean" });
+    expect(Object.keys(workflowCall.secrets).sort()).toEqual([
+      "CLOUDFLARE_ACCOUNT_ID",
+      "CLOUDFLARE_API_TOKEN",
+      "SITE_API_SHARED_SECRET",
+    ]);
 
-    expect(guardJob).toContain('if [ "${GITHUB_REF}" != "refs/heads/main" ]; then');
-    expect(planJob).toContain('if [ "${EVENT_NAME}" != "schedule" ] || [ "${SCHEDULE}" != "25 8 * * *" ]; then');
-    expect(planJob).toContain("https://pharos.watch/__pharos_release.json");
-    expect(planJob).toContain("${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${marker_run_id}");
-    expect(planJob).toContain('run?.event === "schedule"');
-    expect(planJob).toContain('run?.conclusion === "success"');
-    expect(planJob).toContain('String(run?.path ?? "").startsWith(".github/workflows/rebuild-pages.yml")');
-    expect(planJob).toContain("runCreatedAt >= primaryWindowStart");
-    expect(pagesReleaseJob).toContain("- guard-production-ref");
-    expect(pagesReleaseJob).toContain("- plan-release");
-    expect(pagesReleaseJob).toContain("needs.plan-release.outputs.release_required == 'true'");
-    expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_KEY:");
-    expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_KEY:");
+    const job = workflow.jobs["pages-release"];
+    expect(job.environment).toMatchObject({ name: "production", url: "https://pharos.watch" });
+    expect(job["runs-on"]).toBe("ubuntu-latest");
+    const steps = job.steps ?? [];
+    const refresh = steps.find((step) => step.name === "Refresh API-backed release data");
+    const build = steps.find((step) => step.name === "Build clean production export");
+    const deploy = steps.find((step) => step.name === "Deploy Pages");
+    const marker = steps.find((step) => step.name === "Verify published release marker");
+    expect(refresh?.if).toBe("${{ inputs.refresh_data }}");
+    expect(refresh?.env).toMatchObject({
+      DIGEST_API_URL: "https://site-api.pharos.watch",
+      DEPEG_EVENTS_API_URL: "https://site-api.pharos.watch",
+      PUBLIC_DATASETS_API_URL: "https://site-api.pharos.watch",
+      PUBLIC_DATASETS_REQUIRE_API: "1",
+    });
+    expect(refresh?.run).toContain("npm run generate:public-datasets");
+    expect(build?.run).toContain("npm run build");
+    expect(build?.env?.PUBLIC_DATASETS_API_URL).toBe("");
+    expect(deploy?.run).toContain("wrangler pages deploy out");
+    expect(marker?.run).toContain("wait-pages-release-marker.mjs");
 
-    const markerWaiter = readFileSync(
-      resolve(process.cwd(), "scripts/maintenance/wait-pages-release-marker.mjs"),
-      "utf8",
-    );
-    expect(markerWaiter).toContain("await Promise.all(urls.map");
+    const jobText = JSON.stringify(job);
+    expect(jobText.match(/wrangler pages deploy/g)).toHaveLength(1);
+    expect(jobText).toContain("npm run check:feature-flag-inlining");
+    expect(jobText).toContain("npm run check:build-size");
+    expect(jobText).toContain("npm run check:build-attribution");
+    expect(jobText).toContain("npm run seo:check");
+    expect(jobText).not.toContain("playwright");
+    expect(jobText).not.toContain("serve:static-export");
+    expect(jobText).not.toContain("test:smoke-ui");
+    expect(jobText).not.toContain("test:smoke-ops");
+    expect(jobText).not.toContain("test:smoke-transport");
+    expect(jobText).not.toContain("PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE");
+    expect(jobText).not.toContain("pages deployment list");
+    expect(jobText).not.toContain("rollback-pages");
+  });
+
+  it("uses one main-only daily Pages refresh without fallback planning", () => {
+    const workflow = readWorkflow(".github/workflows/rebuild-pages.yml");
+
+    expect(workflow.permissions).toEqual({ contents: "read" });
+    expect(workflow.on.schedule).toEqual([{ cron: "17 8 * * *" }]);
+    expect(Object.keys(workflow.jobs)).toEqual(["pages-release"]);
+    const release = workflow.jobs["pages-release"];
+    expect(release.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+    expect(release.uses).toBe("./.github/workflows/pages-release.yml");
+    expect(release.with).toEqual({ refresh_data: true });
+    expect(Object.keys(release.secrets ?? {}).sort()).toEqual([
+      "CLOUDFLARE_ACCOUNT_ID",
+      "CLOUDFLARE_API_TOKEN",
+      "SITE_API_SHARED_SECRET",
+    ]);
   });
 
   it("keeps the critical coverage baseline aligned with the ratchet target list", () => {

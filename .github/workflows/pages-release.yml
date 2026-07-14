@@ -3,58 +3,32 @@ name: Pages Release
 on:
   workflow_call:
     inputs:
-      api_base_url:
-        description: Optional API base used for digest sync and local artifact smoke.
-        required: false
-        default: ""
-        type: string
-      wait_for_worker_promotion:
-        description: Whether the release should wait for deploy-worker before publishing.
+      refresh_data:
+        description: Refresh API-backed release data before building.
         required: false
         default: false
         type: boolean
     secrets:
-      DIGEST_API_KEY:
-        required: true
-      DEPEG_EVENTS_API_KEY:
-        required: false
-      PUBLIC_DATASETS_API_KEY:
-        required: false
-      SITE_API_SHARED_SECRET:
-        required: true
-      SMOKE_API_KEY:
-        required: true
       CLOUDFLARE_API_TOKEN:
         required: true
       CLOUDFLARE_ACCOUNT_ID:
         required: true
-      OPS_SMOKE_CF_ACCESS_CLIENT_ID:
-        required: true
-      OPS_SMOKE_CF_ACCESS_CLIENT_SECRET:
-        required: true
-      ACTIONS_CHECKOUT_TOKEN:
+      SITE_API_SHARED_SECRET:
         required: false
 
 permissions:
-  actions: read
   contents: read
 
 jobs:
   pages-release:
-    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://pharos.watch
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      DIGEST_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://pharos.watch/_site-data' }}
-      DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
-      DEPEG_EVENTS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://pharos.watch/_site-data' }}
-      DEPEG_EVENTS_API_KEY: ${{ secrets.DEPEG_EVENTS_API_KEY || secrets.DIGEST_API_KEY }}
-      PUBLIC_DATASETS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://pharos.watch/_site-data' }}
-      PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY || secrets.DIGEST_API_KEY }}
-      PUBLIC_DATASETS_REQUIRE_API: "1"
-      PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE: "1"
-      SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
       NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
       NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"
       NEXT_PUBLIC_PHAROS_HERO_VERDICT: ${{ vars.NEXT_PUBLIC_PHAROS_HERO_VERDICT }}
@@ -67,284 +41,65 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          # Full history is required because the build prehook regenerates
-          # git-history-derived sitemap/docs metadata before Next builds.
-          fetch-depth: 0
           persist-credentials: false
-          token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
         with:
           tooling-cache: "true"
           tooling-cache-save: "true"
-      - name: Install Chromium and fetch deploy data concurrently
-        run: |
-          set +e
-
-          # The API fetches need only Node deps (already installed), not a browser, so
-          # run them in the background while Chromium (used by the a11y check) installs
-          # in the foreground. This overlaps the network fetch with the browser install.
-          npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json > /tmp/sync-digests.log 2>&1 &
-          digests_pid=$!
-          npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json > /tmp/sync-depeg-events.log 2>&1 &
-          depeg_pid=$!
-
-          # --with-deps deliberately omitted: the Chromium binary restores from
-          # the tooling cache and GitHub's Ubuntu runners already carry the
-          # browser system libraries, so the apt pass was ~60-90s of deploy
-          # critical path for nothing. If a runner-image bump ever drops a lib,
-          # this fails loudly at browser launch before anything publishes —
-          # re-add --with-deps then.
-          npx --no-install playwright install chromium
-          chromium_status=$?
-
-          wait "$digests_pid"
-          digests_status=$?
-          wait "$depeg_pid"
-          depeg_status=$?
-
-          echo "----- sync-digests -----"
-          cat /tmp/sync-digests.log
-          echo "----- sync-depeg-events -----"
-          cat /tmp/sync-depeg-events.log
-
-          if [ "$chromium_status" -ne 0 ] || [ "$digests_status" -ne 0 ] || [ "$depeg_status" -ne 0 ]; then
-            echo "concurrent setup failed: chromium=${chromium_status} digests=${digests_status} depeg=${depeg_status}"
-            exit 1
-          fi
-      - name: Generate public dataset mirrors from the target API environment
-        run: npm run generate:public-datasets
-      - name: Build clean production export
-        run: |
-          # Production artifacts must not inherit compiled references from a
-          # restored Next cache (for example retired, gitignored font files).
-          rm -rf .next
-          npm run build
+      - name: Refresh API-backed release data
+        if: ${{ inputs.refresh_data }}
         env:
-          # Every id here is materialized by workspace bootstrap or retained in
-          # Git, then verified by check:generated-artifacts in the blocking
-          # validate-prebuild gate. Regenerating them during this build is no-op
-          # work on the deploy critical path.
-          # depeg-event-search-data and llms-txt are deliberately NOT skipped:
-          # they consume the freshly synced data/depeg-events.json + digests,
-          # so their in-build regen intentionally ships fresher-than-committed
-          # output. public-datasets self-preserves its API-backed mirrors in
-          # offline mode, so skipping it only removes a validation no-op.
+          DIGEST_API_URL: https://site-api.pharos.watch
+          DEPEG_EVENTS_API_URL: https://site-api.pharos.watch
+          PUBLIC_DATASETS_API_URL: https://site-api.pharos.watch
+          PUBLIC_DATASETS_REQUIRE_API: "1"
+          SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
+        run: |
+          npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
+          npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json
+          npm run generate:public-datasets
+      - name: Build clean production export
+        env:
           GENERATED_ARTIFACTS_SKIP: stablecoin-catalog,world-map,agent-code-map,sitemap-dates,case-study-client-index,docs-metadata,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,stablecoin-prevalidated-registry,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
           PUBLIC_DATASETS_API_URL: ""
           PUBLIC_DATASETS_API_KEY: ""
           PUBLIC_DATASETS_REQUIRE_API: ""
           SMOKE_API_BASE: ""
           API_BASE_URL: ""
+        run: |
+          rm -rf .next
+          npm run build
       - run: npm run check:feature-flag-inlining
-      - run: npm run check:phishing-signatures
-      - run: npm run check:classifier-sensitive-copy
       - run: npm run check:build-size
-      - name: Capture Pages release metrics
-        id: pages-release-metrics
-        run: |
-          total_files="$(find out -type f | wc -l | tr -d ' ')"
-          output_size="$(du -sh out | awk '{print $1}')"
-          depeg_pages="0"
-          if [ -d out/depeg ]; then
-            depeg_pages="$(find out/depeg -mindepth 2 -maxdepth 2 -name index.html | wc -l | tr -d ' ')"
-          fi
-
-          echo "total_files=${total_files}" >> "$GITHUB_OUTPUT"
-          echo "output_size=${output_size}" >> "$GITHUB_OUTPUT"
-          echo "depeg_pages=${depeg_pages}" >> "$GITHUB_OUTPUT"
-
-          {
-            echo "## Pages Release Artifact"
-            echo ""
-            echo "| Metric | Value |"
-            echo "| --- | --- |"
-            echo "| Output files | ${total_files} / 20000 |"
-            echo "| Output size | ${output_size} |"
-            echo "| Depeg event pages | ${depeg_pages} |"
-            echo "| Commit | ${GITHUB_SHA} |"
-          } >> "$GITHUB_STEP_SUMMARY"
       - run: npm run check:build-attribution
-      - id: capture-pages
-        name: Capture current production Pages deployment id
-        continue-on-error: true
-        run: |
-          cd worker
-          npx --no-install wrangler pages deployment list --project-name=stablecoin-dashboard --environment=production --json > /tmp/wrangler-pages-deployments.json
-          cd ..
-          node .github/scripts/parse-pages-deployment-id.mjs >> "$GITHUB_OUTPUT"
-      - if: ${{ steps.capture-pages.outcome == 'failure' || steps.capture-pages.outputs.deployment_id == '' }}
-        name: Fail because automated Pages rollback is not armed
-        run: |
-          {
-            echo "## Automated Pages rollback is not armed"
-            echo ""
-            echo "The \`capture-pages\` step could not record the previous production Pages deployment id."
-            echo "Stopping before publish so a broken deploy cannot be left live without an automated rollback target."
-          } >> "$GITHUB_STEP_SUMMARY"
-          exit 1
-      - name: Start local export smoke server
-        env:
-          STATIC_EXPORT_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
-          STATIC_EXPORT_SITE_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://site-api.pharos.watch' }}
-          STATIC_EXPORT_SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
-          STATIC_EXPORT_API_KEY: ${{ secrets.SMOKE_API_KEY }}
-          STATIC_EXPORT_HOST: 127.0.0.1
-          STATIC_EXPORT_PORT: "4173"
-        run: |
-          npm run serve:static-export > /tmp/pages-smoke-server.log 2>&1 &
-          echo $! > /tmp/pages-smoke-server.pid
-          for attempt in $(seq 1 30); do
-            if node -e "fetch('http://127.0.0.1:4173/').then((res) => process.exit(res.ok ? 0 : 1)).catch(() => process.exit(1));"; then
-              exit 0
-            fi
-            sleep 1
-          done
-          cat /tmp/pages-smoke-server.log
-          exit 1
-      - name: Run local static pre-publish checks
-        run: |
-          npm run seo:check
-      - name: Wait for worker promotion gate
-        if: ${{ inputs.wait_for_worker_promotion }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          node .github/scripts/wait-for-workflow-job.mjs
-          --job "deploy-worker"
-          --attempts 180
-          --sleep-sec 5
-          --stop-message "stopping production Pages deployment."
-          --timeout-message "Timed out waiting for deploy-worker to finish."
-      - name: Run local artifact canary smoke
-        env:
-          SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
-          SMOKE_UI_BROWSER_CHANNEL: chrome
-          SMOKE_UI_OVERFLOW_ROUTES: /
-          SMOKE_UI_OVERFLOW_WORKERS: "1"
-        run: |
-          npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
-      - name: Dump local export smoke server log
-        if: failure()
-        run: |
-          if [ -f /tmp/pages-smoke-server.log ]; then
-            cat /tmp/pages-smoke-server.log
-          fi
-      - name: Stop local export smoke server
-        if: always()
-        run: |
-          if [ -f /tmp/pages-smoke-server.pid ]; then
-            kill "$(cat /tmp/pages-smoke-server.pid)" || true
-          fi
-      - name: Deploy Pages with retry
-        id: deploy-pages
+      - run: npm run seo:check
+      - name: Write release marker
         run: |
           cat > out/__pharos_release.json <<EOF
           {"commit":"${GITHUB_SHA}","runId":"${GITHUB_RUN_ID}","runAttempt":"${GITHUB_RUN_ATTEMPT}","createdAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
           EOF
-          max_attempts=6
-          for attempt in $(seq 1 "$max_attempts"); do
-            echo "[deploy-pages] Attempt ${attempt}/${max_attempts}"
-            if npx --no-install wrangler pages deploy out --project-name=stablecoin-dashboard --commit-dirty=true --commit-message="${{ github.sha }}"; then
-              exit 0
-            fi
-            if [ "$attempt" -eq "$max_attempts" ]; then
-              echo "[deploy-pages] Exhausted retries"
-              exit 1
-            fi
-            sleep $((attempt * 45))
-          done
-      - name: Run post-publish smokes in parallel
-        id: post-publish-smokes
-        if: ${{ steps.deploy-pages.outcome == 'success' }}
-        continue-on-error: true
-        env:
-          SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
-          SMOKE_UI_BROWSER_CHANNEL: chrome
-          SMOKE_UI_OVERFLOW_ROUTES: /depeg/
-          SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
-          SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
-          SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
-          SMOKE_OPS_SCOPE: "canary"
-          OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
-          OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
+      - name: Capture release artifact metrics
         run: |
-          set +e
-
-          node scripts/maintenance/wait-pages-release-marker.mjs \
-            --url https://pharos.watch/__pharos_release.json \
-            --url https://ops.pharos.watch/__pharos_release.json
-          marker_status=$?
-
-          if [ "$marker_status" -ne 0 ]; then
-            echo "ui_status=failure" >> "$GITHUB_OUTPUT"
-            echo "ops_status=failure" >> "$GITHUB_OUTPUT"
-            echo "transport_status=failure" >> "$GITHUB_OUTPUT"
-            echo "post-publish smoke statuses: release-marker=failure"
-            exit "$marker_status"
-          fi
-
-          npm run test:smoke-ui -- --url https://pharos.watch --mode live &
-          ui_pid=$!
-          OPS_SMOKE_CF_ACCESS_CLIENT_ID='${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}' \
-            OPS_SMOKE_CF_ACCESS_CLIENT_SECRET='${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}' \
-            npm run test:smoke-ops &
-          ops_pid=$!
-          npm run test:smoke-transport &
-          transport_pid=$!
-
-          wait "$ui_pid"
-          ui_status=$?
-          wait "$ops_pid"
-          ops_status=$?
-          wait "$transport_pid"
-          transport_status=$?
-
-          to_result() {
-            if [ "$1" -eq 0 ]; then
-              echo "success"
-            else
-              echo "failure"
-            fi
-          }
-
-          UI_STATUS="$(to_result "$ui_status")"
-          OPS_STATUS="$(to_result "$ops_status")"
-          TRANSPORT_STATUS="$(to_result "$transport_status")"
-
-          echo "ui_status=${UI_STATUS}" >> "$GITHUB_OUTPUT"
-          echo "ops_status=${OPS_STATUS}" >> "$GITHUB_OUTPUT"
-          echo "transport_status=${TRANSPORT_STATUS}" >> "$GITHUB_OUTPUT"
-
+          total_files="$(find out -type f | wc -l | tr -d ' ')"
+          output_size="$(du -sh out | awk '{print $1}')"
           {
-            echo "## Post-Publish Smokes"
+            echo "## Pages release"
             echo ""
-            echo "| Check | Status | Rollback trigger |"
-            echo "| --- | --- | --- |"
-            echo "| Live public UI | ${UI_STATUS} | yes |"
-            echo "| Ops canary | ${OPS_STATUS} | yes |"
-            echo "| Transport redirects | ${TRANSPORT_STATUS} | yes |"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Output: ${total_files} files, ${output_size}"
+            echo "- Data refreshed: \`${{ inputs.refresh_data }}\`"
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- Rollback: select the prior successful deployment in Cloudflare Pages deployment history."
           } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$ui_status" -ne 0 ] || [ "$ops_status" -ne 0 ] || [ "$transport_status" -ne 0 ]; then
-            echo "post-publish smoke statuses: ui=${UI_STATUS}, ops=${OPS_STATUS}, transport=${TRANSPORT_STATUS}"
-            exit 1
-          fi
-      - name: Roll back Pages production to previous successful deployment
-        if: >-
-          ${{
-            steps.post-publish-smokes.outcome == 'failure'
-            && steps.deploy-pages.outcome == 'success'
-            && steps.capture-pages.outputs.deployment_id != ''
-            && (
-              steps.post-publish-smokes.outputs.ui_status != 'success'
-              || steps.post-publish-smokes.outputs.ops_status != 'success'
-              || steps.post-publish-smokes.outputs.transport_status != 'success'
-            )
-          }}
-        env:
-          CF_PAGES_PROJECT_NAME: stablecoin-dashboard
-          CF_PAGES_DEPLOYMENT_ID: ${{ steps.capture-pages.outputs.deployment_id }}
-        run: node scripts/maintenance/rollback-pages-deployment.mjs
-      - name: Fail after post-publish smoke failure
-        if: ${{ steps.post-publish-smokes.outcome == 'failure' }}
-        run: exit 1
+      - name: Deploy Pages
+        run: >-
+          npx --no-install wrangler pages deploy out
+          --project-name=stablecoin-dashboard
+          --commit-dirty=true
+          --commit-message="${GITHUB_SHA}"
+      - name: Verify published release marker
+        run: >-
+          node scripts/maintenance/wait-pages-release-marker.mjs
+          --url https://pharos.watch/__pharos_release.json
+          --attempts 24
+          --delay-ms 5000

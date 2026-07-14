@@ -8,9 +8,9 @@ This document defines the production deploy flow, the GitHub Actions release gat
 
 ## Core Rules
 
-1. Pull requests into `main` run the shared validation gate in GitHub Actions; production deploys still ship from pushes to `main`, while a separate Pages-only rebuild workflow refreshes the static export daily. Manual production deploy dispatch is main-only: choose `main` as the workflow ref, and cancel the run if GitHub was opened on another ref.
+1. Pull requests into protected `main` must pass the aggregate validation gate. The resulting merge push triggers production deployment, while a separate Pages-only rebuild workflow refreshes the static export daily. Manual production dispatch is main-only.
 2. Agents and routine maintenance default to the current `main` checkout. Do not create a branch, worktree, or PR unless the maintainer explicitly asks for one.
-3. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. After merging that branch into local `main`, run focused checks; GitHub Actions owns the authoritative release gate. Use `PHAROS_PRE_PUSH_GATE=main git push origin main` only when you want an explicit local merge-gate rehearsal before the push.
+3. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. Run focused checks before opening its PR; GitHub Actions owns the authoritative release gate.
 
 ## Optional Worktree Flow
 
@@ -24,19 +24,14 @@ git worktree add ".worktrees/$FEATURE_NAME" -b "$BRANCH_NAME" origin/main
 ```
 
 2. Implement and test in that worktree branch.
-3. Merge the branch into local `main`.
+3. Push the branch and open a pull request into `main`.
 
 ```bash
-git checkout main
-git pull --ff-only origin main
-git merge --no-ff "$BRANCH_NAME"
+git push -u origin "$BRANCH_NAME"
+gh pr create --base main --head "$BRANCH_NAME"
 ```
 
-4. Push `main`. By default the local pre-push hook is advisory-only; use `PHAROS_PRE_PUSH_GATE=main git push origin main` when you want the exact-range local merge gate before GitHub Actions.
-
-```bash
-git push origin main
-```
+4. Merge only after the required `PR gate` status succeeds. The merge push triggers deployment.
 
 ## Repo Pre-Push Hook
 
@@ -48,7 +43,7 @@ git config core.hooksPath .githooks
 
 Hook behavior:
 
-1. Pushes that update `refs/heads/main` are advisory-only by default. The hook prints that GitHub Actions is the authoritative release gate and lets the push continue.
+1. The local hook is advisory-only by default. GitHub branch protection rejects direct `main` pushes; GitHub Actions is the authoritative PR gate.
 2. Set `PHAROS_PRE_PUSH_GATE=main` to run `npm run test:merge-gate` against the exact `remote_sha...local_sha` range Git sends to the hook, matching the `github.event.before...github.sha` range used by `.github/workflows/deploy-cloudflare.yml`. Pages smoke is on by default; override with `MERGE_GATE_PAGES_SMOKE=0`.
 3. A new remote `main` push, where Git has no previous remote SHA, forces the full local deploy validate path only when `PHAROS_PRE_PUSH_GATE=main` or `PHAROS_PRE_PUSH_GATE=all` is set.
 4. Other pushes skip the full local gate by default because they cannot deploy production. Set `PHAROS_PRE_PUSH_GATE=all` to opt into exact-range gating for branch pushes.
@@ -63,7 +58,7 @@ Hook behavior:
 Default policy:
 
 1. If the diff does not touch Pages or worker deploy surfaces, print the changed-file set and skip the gate.
-2. For deploy-impacting diffs, run the shared validate pre-build command set from `scripts/lib/validation-lanes.mjs`. The default blocking set is intentionally small: lint, typed lint, root/test typecheck, env/import boundaries, surface-scoped Worker migration/cron/SQL/config checks, Pages CSP/client-registry/generated-artifact checks, and stablecoin data validation. Advisory maintenance checks (dependency/provider audits, docs/agent infrastructure, hotspot/stale-flag/unused-code/script-entrypoint ratchets, provider/dependency/mechanism/oracle coverage, and similar long-tail hygiene) are skipped by default and can be restored with `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1`. The production deploy workflow enables that advisory mode during the transition release cycle; PR validation and ordinary command-line runs use the reduced blocking set.
+2. For deploy-impacting diffs, run the shared validate pre-build command set from `scripts/lib/validation-lanes.mjs`. The default blocking set is intentionally small: lint, typed lint, root/test typecheck, env/import boundaries, surface-scoped Worker migration/cron/SQL/config checks, Pages CSP/client-registry/generated-artifact checks, and stablecoin data validation. Advisory maintenance checks are skipped by default and can be restored with `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1`.
 3. If Pages-impacting files changed, additionally run:
    - `npm run build` with the same static-export env contract as the production Pages job (`NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` and public-dataset/API source env cleared so the prebuild hook preserves already-synced mirrors)
    - `npm run check:feature-flag-inlining`
@@ -89,7 +84,7 @@ npm run test:merge-gate:discover
 
 `scripts/maintenance/run-merge-gate-discovery.mjs` uses the same diff, deploy-surface classifier, node_modules freshness check, and deploy-impact command plan as `test:merge-gate`, but it is optimized for diagnostics rather than release proof. It runs the reduced blocking `validate:prebuild` surface with `VALIDATE_PREBUILD_CONTINUE_ON_ERROR=1`; advisory prebuild checks stay skipped unless `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1` is set. It then keeps independent postbuild groups running after failures so one pass can expose static-check, build/test, and Worker-validation failures together. Discovery mode skips smoke by default; set `MERGE_GATE_DISCOVERY_SMOKE=1` when smoke failures are the current target, and use `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` to cap local fan-out (default max: 3). Discovery success or failure does not create a release proof, does not write a reusable receipt, and does not replace GitHub Actions as the authoritative release gate.
 
-Pages-impacting files now use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation when `test:merge-gate` is run. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, including Worker operational scripts and shared validate/guardrail infrastructure, but `shared/` is classified by subpath so known Pages-only shared helpers do not request Worker validation or promotion. `test:merge-gate` runs Pages smoke by default for Pages-impacting diffs so an explicit local rehearsal uses the same pre-publish artifact smoke path as production deploys; Worker smoke remains explicit via `MERGE_GATE_WORKER_SMOKE=1`. When Pages smoke runs, desktop overflow smoke uses the deploy-lane canary routes with 6 workers, and local mobile smoke follows the same UI-impact matcher and canary profile as production deploys.
+Pages-impacting files use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation when `test:merge-gate` is run. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, but `shared/` is classified by subpath so known Pages-only helpers do not request Worker validation or promotion. `test:merge-gate` runs Pages browser smoke by default as an intentionally deeper local rehearsal than the deterministic production publish job; Worker smoke remains explicit via `MERGE_GATE_WORKER_SMOKE=1`.
 
 Useful merge-gate controls:
 
@@ -103,8 +98,8 @@ Useful merge-gate controls:
 - `npm run test:merge-gate:discover` to run the local deploy-impact plan in failure-discovery mode while debugging large batches or CI failures
 - `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` to cap discovery-mode postbuild fan-out (default max: 3)
 - `MERGE_GATE_DISCOVERY_SMOKE=1` to include smoke commands in discovery mode; smoke stays on by default only in the final merge gate
-- Production Pages environment rehearsal is opt-in: set `MERGE_GATE_PRODUCTION_ENV=1` and export the production `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_PHAROS_*`, `STATIC_EXPORT_API_BASE`, `STATIC_EXPORT_SITE_API_BASE`, `PHAROS_API_KEY` or `STATIC_EXPORT_API_KEY`, and `SITE_API_SHARED_SECRET` values before `npm run test:merge-gate`. With `NEXT_PUBLIC_GA_ID` present, the local Pages smoke expects the same GA measurement ID as the production Pages release smoke. Without that opt-in, the gate clears public production feature-flag env locally while applying the same static-export build contract as CI.
-- `MERGE_GATE_PAGES_SMOKE=0` to skip default `npm run validate:pages-smoke` after build for Pages-impacting diffs. By default this serves the static export and runs desktop/local `smoke-ui` on the canary routes with 6 workers. Local merge-gate rehearsals can still run strict mobile canaries for UI-impacting diffs, but the production Pages release no longer runs mobile smoke by default.
+- Production Pages environment rehearsal is opt-in: set `MERGE_GATE_PRODUCTION_ENV=1` and export the production `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_PHAROS_*`, `STATIC_EXPORT_API_BASE`, `STATIC_EXPORT_SITE_API_BASE`, `PHAROS_API_KEY` or `STATIC_EXPORT_API_KEY`, and `SITE_API_SHARED_SECRET` values before `npm run test:merge-gate`. With `NEXT_PUBLIC_GA_ID` present, the local browser smoke verifies that measurement ID. Without the opt-in, the gate clears production feature-flag env locally while applying the same static-export build contract as CI.
+- `MERGE_GATE_PAGES_SMOKE=0` to skip default `npm run validate:pages-smoke` after build for Pages-impacting diffs. By default this serves the static export and runs desktop/local `smoke-ui` on the canary routes with 6 workers. The production Pages release does not run a browser.
 - `MERGE_GATE_WORKER_SMOKE=1` to opt in to `npm run validate:worker-smoke` after worker validation for worker-impacting diffs (slow, ~1-2 min). Local worker smoke defaults to `SMOKE_API_SCOPE=canary` unless `SMOKE_API_SCOPE` is explicitly set
 - `MERGE_GATE_NO_FETCH=1` to skip the best-effort `git fetch origin main` that keeps the diff base honest (use when offline)
 - `MERGE_GATE_NATIVE_ENV=1` to skip the `TZ=UTC` / `LANG=C.UTF-8` / `CI=true` env injection (use when debugging TZ-specific bugs)
@@ -123,128 +118,78 @@ The tracked savings-wrapper ownership cleanup uses `worker/scripts/yield-history
 
 ## CI Deploy Sequence
 
-Defined across:
+Production responsibility is split deliberately:
 
-- `.github/workflows/validate-ci.yml` for the shared validate gate
-- `.github/workflows/critical-coverage-ratchet.yml` for the weekly/manual all-critical coverage ratchet
-- `.github/workflows/dependency-audit.yml` for the scheduled full dependency audit
-- `.github/workflows/pull-request-checks.yml` for pull-request validation on `main`, including a pinned gitleaks scan (`v8.30.0`, SHA256-verified) over the PR commit range (`--log-opts="--no-merges <base>..<head>"`); full-history scans still run weekly via `.github/workflows/secret-scan.yml`
-- `.github/workflows/pharos-change-contract.yml` for the pull-request deploy-surface contract summary
-- `.github/workflows/deploy-cloudflare.yml` for push/manual production deploys that reuse the same validate gate
-- `.github/workflows/pages-release.yml` for the consolidated Pages build/local-smoke/publish/live-smoke path
-- `.github/workflows/rebuild-pages.yml` for the scheduled/manual Pages-only rebuild path
-- `.github/workflows/og-refresh.yml` for scheduled (weekly Monday, cron `23 4 * * 1`) and manual refresh of checked-in OG image artifacts
-- `.github/workflows/zizmor.yml` for GitHub Actions workflow security scanning into Code Scanning
+- `.github/workflows/pull-request-checks.yml` and `.github/workflows/validate-ci.yml` own source validation before merge.
+- `.github/workflows/deploy-cloudflare.yml` selects and deploys the changed production surfaces after a protected `main` merge.
+- `.github/workflows/pages-release.yml` builds and publishes one exact Pages artifact.
+- `.github/workflows/rebuild-pages.yml` performs the one daily API-backed Pages data refresh.
+- Broad UI, accessibility, ops, analytics, asset-coherence, and transport checks remain PR, scheduled-monitor, or explicit operator commands; they do not control production mutation or automatic rollback.
 
 Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
-1. `detect-changes`
-   - diffs `github.event.before...github.sha` on `push` (three-dot, merge-base-resolved; identical to two-dot on push-to-main but robust if the base is ever not a strict ancestor)
-   - emits `deploy_required`, `worker_changed`, `worker_promotion_required`, `pages_changed`, `pages_deploy_required`, and `pages_ui_changed`
-   - decides separately whether Worker validation, Worker production promotion, and Pages deploy work are actually required for that push
-   - treats Pages release workflow changes (`.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`) as Pages-impacting so workflow-only changes still rehearse the Pages path
-   - keeps `worker_changed=true` broad for Worker validation/guardrail coverage, but classifies `shared/` by subpath so known Pages-only helpers skip Worker validation; only sets `worker_promotion_required=true` for deployed Worker runtime/config, D1 migrations, Worker assets, shared runtime files, and root package/lock changes that can change the production Worker bundle
-   - keeps `pages_changed=true` broad enough to validate Pages tests and tooling, while `pages_deploy_required=true` excludes test-only diffs and includes Markdown sources rendered by the public docs route; `pages_ui_changed=true` remains available for explicit/manual UI-heavy browser checks, but it no longer widens the default production Pages release
-   - defaults to the full deploy path on `workflow_dispatch`; manual production dispatch must target the `main` ref
-2. `validate`
-   - runs only when `deploy_required=true`
-   - always includes the reduced blocking `validate:prebuild` set and sharded `npm run test:noncritical`; the production deploy caller also sets `include_advisory_prebuild: true` for the transition window so dependency/provider/docs/agent/ratchet checks still run before production mutation while PRs use the slimmer default
-   - includes `npm run build`, `npm run check:feature-flag-inlining`, `npm run seo:check`, `npm run check:phishing-signatures`, and `npm run check:classifier-sensitive-copy` only for pull requests with `pages_deploy_required=true`; the push/manual production deploy path runs Pages build/SEO/static-export guardrails inside `pages-release`, not the validate gate
-   - includes `npm run typecheck:worker` only when `worker_changed=true`; the scheduled Worker entrypoint suite is covered by the normal Vitest shards and the scheduled/manual critical coverage ratchet
-   - CI runs `validate-prebuild`, `pages-build`, `test-noncritical`, and `typecheck-worker` as independent parallel GitHub jobs, with the aggregate `validate` job waiting on all required results. `pages-build` invokes the fixed `validate:pages` phase and `typecheck-worker` invokes `validate:worker`; both read their ordered commands from `scripts/lib/validation-lanes.mjs`. The local merge gate consumes those same lane-owned leaf lists through `buildCommandPlan`, retaining per-command environment/timing and auto-enabling parallel execution when at least 12 cores are available; `MERGE_GATE_PARALLEL=1` or `0` overrides the automatic choice.
-   - installs Node 24.16.0 through the shared workspace setup action, matching the primary repo baseline; pull-request checks also run a non-blocking Node 26 proof lane because the engine range allows Node 26
-   - internal-docs-only pull requests run the focused verified-link, source-path, sync, and count checks; other pull requests call the reusable workflow with diff-derived Pages validation, Pages publish, and Worker inputs
-3. `no-deploy-required`
-   - runs only when `deploy_required=false`
-   - records an explicit no-op outcome for docs-only or other non-deploy pushes to `main`
-4. `deploy-worker`
-   - split into early non-mutating candidate preparation and gated production promotion:
-     - `upload-worker-version` captures the currently live production version ID and uploads the candidate with the lockfile-installed Wrangler CLI (`npx --no-install wrangler ...`) only after `detect-changes` confirms Worker promotion is required and the aggregate `validate / validate` job has succeeded. The status read and upload preflight use bounded exponential retries for transient Cloudflare control-plane failures; the upload command retries only the known pre-upload service-metadata `GET`, so ambiguous failures and requests after candidate creation still fail closed. This keeps Cloudflare credentials and Worker-version mutation behind the validation gate while still using the shared `setup-workspace` install path so upload and deploy run against the same dependency graph. If Cloudflare returns `entitlements.not_available [code: 10007]` for Workers Versions, the prep lane records `version_upload_unavailable=true` instead of failing and the deploy summary calls out the reduced rollback safety of the legacy fallback.
-     - `deploy-worker` waits for the aggregate `validate / validate` job, reruns `npm run check:migrations`, fails closed before production D1 mutation when Worker Versions are available but no previous production version was captured, applies D1 migrations via `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`, runs deploy-canary `smoke-api` checks against the uploaded preview URL with `SMOKE_API_KEY` when Workers Versions are available, and then promotes that exact preview-smoked version through the Cloudflare Workers Deployments API (`POST /workers/scripts/<name>/deployments`) without asking Wrangler to sync non-versioned script settings during promotion. When the account lacks Workers Versions entitlement, `deploy-worker` uses the legacy `cd worker && npx --no-install wrangler deploy` fallback after the same validation and migration gates.
-   - runs `cd worker && npx --no-install wrangler triggers deploy` after promotion to explicitly sync cron/routes/domain triggers and other non-versioned trigger settings
-   - keeps Worker candidate upload, remote D1 apply, and production promotion behind the aggregate validation result, with `check:migrations` still rerun immediately before remote D1 mutation
-   - relies on the `check:migrations` rollout-safety contract for new migrations: standard deploy only supports backward-compatible D1 changes because the old worker can still receive traffic until the promoted version is live
-   - runs production `npm run test:smoke-api` in the same job after promotion; on worker-only deploys, it then runs live UI, ops, and transport smokes before the rollback decision. Trigger-sync, production API smoke, or worker-only live-smoke failure automatically rolls back to the captured previous Worker version on the Workers Versions path. The legacy fallback cannot automatically re-promote a preview-smoked version, so it still fails visibly on post-deploy smoke failure and requires operator-led rollback from Cloudflare deployment history.
-   - skipped on Pages-only, validation-only, or non-deploy `push` events where `detect-changes` reports `worker_promotion_required=false`
-5. `pages-release`
-   - production deploy job in `.github/workflows/deploy-cloudflare.yml`
-   - runs only when `detect-changes` reports `pages_deploy_required=true`; test-only Pages changes still receive validation but do not publish
-   - starts after Pages changes are detected and the aggregate `validate / validate` job succeeds (no hard dependency on `upload-worker-version`)
-   - uses an explicit Pages release `api_base_url` input when supplied; otherwise production digest sync, depeg-event sync, and public dataset generation read through `https://pharos.watch/_site-data/*` with a same-site caller header, while local artifact smoke sends direct `/api/*` probes to the configured public API base (`vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`) and same-origin `/_site-data/*` browser reads to `https://site-api.pharos.watch` with `SITE_API_SHARED_SECRET`
-   - executes the Pages build/local-smoke/publish path in one job:
-   - fetches `/api/digest-archive` once into `data/digests.json`, fetches confirmed depeg events into `data/depeg-events.json`, generates `public/datasets/*` and `public/sheets/*`, and forwards `NEXT_PUBLIC_GA_ID` plus `NEXT_PUBLIC_PHAROS_*` repo variables into `npm run build`; production builds first use the browser-facing `https://pharos.watch/_site-data/*` GET-only lane with `Origin: https://pharos.watch` so the sync path matches browser reads instead of direct internal `site-api` edge paths, while an explicit preview API input still takes precedence and receives the configured API credentials. If GitHub-hosted shared egress is still edge-blocked, the release sync scripts preserve validated non-empty checked-in `data/digests.json`, `data/depeg-events.json`, and current public dataset mirrors rather than failing the deploy before build; invalid or missing mirrors remain fatal. Production public-API smoke retains bounded `403` retries for transient edge blocks. The build step clears the public-dataset fetch env so the prebuild hook preserves those synced mirrors instead of re-fetching, and depeg event SSG is bounded to the newest indexable archive entries plus pinned authored incidents so full production history cannot breach the repo's conservative Pages upload budget. Pages CI builds also set `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` so the local `127.0.0.1` artifact smoke uses the production `/_site-data/*` browser lane. The job then runs `npm run check:feature-flag-inlining`, `npm run check:phishing-signatures`, `npm run check:classifier-sensitive-copy`, `npm run check:build-size`, `npm run check:build-attribution`, `npm run seo:check`, and one local `npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local` canary before publish. Bare/hydrated a11y, strict mobile smoke, and broad Yield asset coherence sweeps are scheduled/manual concerns instead of default release blockers. Live smoke requires GA4 `page_view` collect delivery; local artifact smoke accepts either successful delivery or a Playwright `net::ERR_ABORTED` report for an issued collect URL with the configured measurement id.
-   - limits per-coin yield workbench SSG to intrinsic yield coins and curated deterministic lending overrides. Known coins outside that durable set redirect to filtered `/yield/`, restoring more than 25% direct-upload file headroom without leaving runtime lending discoveries at dead links.
-   - the local static-export server treats exact `/api` and `/api/` as the public API access page, serves checked-in/static route payload artifacts below `/api/` when present, proxies endpoint-like `/api/*` requests including JSON `POST` bodies to the selected public API base, and mirrors the production Pages Function redirect for intentionally omitted known-coin Yield workbenches
-   - catch-all document responses use `max-age=0, must-revalidate`; deploy-versioned HTML has no shared-cache lifetime or stale-while-revalidate window that can outlive its referenced Next.js chunks. Hashed `/_next/static/*` assets retain their one-year immutable policy through the more-specific header rule.
-   - uses `SMOKE_UI_BROWSER_CHANNEL=chrome`, `SMOKE_UI_OVERFLOW_ROUTES=/`, and one local smoke worker for the pre-publish canary so the release still catches an unbootable artifact without running the broad overflow sweep on every deploy
-   - starts only after the aggregate `validate / validate` job succeeds. On combined Worker + Pages deploys, static checks can run while Worker promotion is in flight, then the workflow waits for `deploy-worker` before running the local artifact UI canary once against the promoted Worker and publishing Pages.
-   - writes a Pages release summary after `check:build-size` with the total output file count, static export size, and depeg-event static page count, then captures the current Cloudflare Pages production deployment id as the required rollback target; if that id cannot be captured, the job fails before publishing so a broken deploy cannot be left live without an automated rollback target. With rollback armed, it publishes the already verified local artifact through Wrangler with the existing retry loop, and runs live public UI, ops, and transport smokes concurrently in one post-publish step while still emitting per-smoke status outputs in the summary
-   - requires ten consecutive target-SHA release-marker responses per public/ops host before live smoke, resetting the convergence counter on any regression. Broad live asset-coherence sweeps now belong to scheduled/manual browser validation instead of the default production release.
-   - calls `scripts/maintenance/rollback-pages-deployment.mjs` when `deploy-pages` succeeded but any fatal post-publish smoke (live public UI, ops, or transport) failed; the overall workflow still surfaces as failed so the incident is visible
-   - leaves broad zone-cache invalidation outside the normal deploy path. If a custom-domain edge continues serving pre-release HTML after publish or rollback, an operator can dispatch `purge-pages-zone-cache.yml` from `main` with the exact `purge pharos.watch` confirmation; the workflow shares the production deploy lock and the script refuses ambiguous zone lookups before issuing the idempotent purge
-6. `smoke-ui-live`
-   - worker-only deploy path runs inside `deploy-worker` after production API smoke
-   - Pages-including deploy path runs inside `pages-release` after `deploy-pages`
-   - verifies the live Pages frontend works against the production API, including expected GA runtime initialization when configured
-7. `smoke-pages-assets`
-   - runs against the exact local artifact before publish and against the public host after the release marker propagates
-   - validates representative Yield deep routes, their HTML cache contract, every referenced first-party script response, browser-loaded script/style/font status and MIME, fresh-browser runtime integrity, and warm-cache USDC/USDT behavior
-   - uses `SMOKE_API_KEY` only to discover the current top 25 ranked IDs from the protected public rankings API; the browser still exercises normal public page data transport
-   - fails the shared post-publish step and arms automated Pages rollback on any coherence error
-8. `smoke-ops`
-   - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
-   - runs inside `pages-release` after `deploy-pages` on Pages-including deploys, or inside `deploy-worker` on worker-only deploys
-   - for Pages-including deploys, runs inside the shared parallel post-publish smoke step alongside live UI and transport checks, with its own status emitted to step outputs and the summary table
-   - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
-   - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
-   - same-origin `ops.pharos.watch/api/admin/status` starts as soon as the UI Access cookie is available and retries transient `502`/`504` gateway responses up to twice to absorb operator-status warmup immediately after promotion, but persistent proxy failures still fail the deploy
-   - production deploys use `SMOKE_OPS_SCOPE=canary` to keep ops shell/access plus direct and same-origin status checks on the critical path; the default full scope still covers slower status-history, admin-list, audit, and blacklist dry-run probes when run manually
+1. `plan`
+   - rejects any ref other than `refs/heads/main`;
+   - diffs `github.event.before...github.sha` for pushes and consumes only `pages_deploy_required` and `worker_promotion_required`;
+   - treats root `package.json` or `package-lock.json` changes conservatively as both-surface changes instead of parsing lockfile hunks;
+   - accepts an explicit manual `surface` choice: `both` (default), `pages`, or `worker`;
+   - produces a successful no-op when neither surface needs deployment. There is no separate guard or no-op job.
+2. `deploy-worker`
+   - runs only when `worker_required=true`, on `ubuntu-latest`, with the protected `production` environment;
+   - installs the lockfile workspace, runs `npm run check:migrations`, and applies remote D1 migrations;
+   - deploys once with `cd worker && npx --no-install wrangler deploy --strict --message ...`; Wrangler synchronizes the checked-in Worker configuration and triggers as part of that supported path;
+   - verifies `/api/health` through `https://site-api.pharos.watch` using `SITE_API_SHARED_SECRET`, isolating the Worker from public-edge challenge policy;
+   - fails visibly on migration, deploy, or health-proof failure. It does not preview-upload, poll deployment status, run browser/ops/transport checks, or automatically roll back.
+3. `pages-release`
+   - calls the reusable Pages workflow only when `pages_required=true`;
+   - uses native `needs: [plan, deploy-worker]` ordering. Pages proceeds when Worker was legitimately skipped, and stops when a required Worker deployment failed;
+   - passes `refresh_data: false`, so ordinary code releases build committed data without making pre-publish requests to the existing production site or API.
 
-9. `smoke-transport`
-   - runs after the same production-changing gates as `smoke-ops`
-   - runs `npm run test:smoke-transport`
-   - verifies `http://api.pharos.watch/...` and `http://site-api.pharos.watch/...` return `308` with a scheme-only upgrade before any application auth or worker logic responds
-   - intentionally fails the workflow on redirect regressions once the zone-level transport rule is configured
+Reusable Pages sequence in `.github/workflows/pages-release.yml`:
 
-Separate from the deploy path, `.github/workflows/dependency-audit.yml` runs `npm audit --audit-level=high` on the full lockfile weekly and on manual dispatch so devDependency advisories are surfaced without turning them into a blocking production deploy gate.
+1. Check out at the default shallow depth and install the workspace without a browser.
+2. When `refresh_data=true`, refresh digests, confirmed depeg events, and public dataset mirrors through authenticated `https://site-api.pharos.watch`; invalid or missing inputs fail before build and publish.
+3. Clear `.next`, build once with the production feature-flag environment, and preserve the selected committed or freshly refreshed data through the prebuild hook.
+4. Run artifact-specific checks: feature-flag inlining, build size, build attribution, and static SEO.
+5. Write `out/__pharos_release.json`, publish that exact `out/` directory with one `wrangler pages deploy` command, then require one cache-busted target-SHA marker match from `https://pharos.watch` within the bounded polling window.
+6. Record the commit, run URL, artifact size/file count, refresh mode, and the manual Cloudflare Pages deployment-history rollback pointer in the job summary.
+
+There is no Pages browser installation, local proxy, prior-deployment query, GitHub Jobs API polling, deploy retry loop, broad live smoke suite, or automatic rollback in this path. A failed marker proof leaves the failed deployment and its evidence visible for operator assessment instead of automatically changing production again.
 
 ## GitHub Deploy Inputs
 
-Repository secrets required by the production deploy path:
+Repository settings:
+
+- `main` requires pull requests and the aggregate `PR gate` status check, including administrators. That job accepts either the full reusable validation path or the focused docs-only path and always requires the PR secret scan.
+- The GitHub `production` environment is restricted to `main` and is attached only to the Worker and Pages mutating jobs.
+- Production-changing workflows share the `production-deploy` concurrency group and do not cancel an active release.
+
+Repository secrets consumed only by jobs attached to the production environment:
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
-- `SMOKE_API_KEY`
-- `DIGEST_API_KEY`
 - `SITE_API_SHARED_SECRET`
-- `OPS_SMOKE_CF_ACCESS_CLIENT_ID`
-- `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
 
-The manual zone-cache recovery workflow also requires `CLOUDFLARE_API_TOKEN` to grant `Zone Read` and `Cache Purge` for the `pharos.watch` zone. Normal Pages and Worker deploy permissions alone do not imply either zone permission.
+The Cloudflare credentials authorize Worker/D1 and Pages deployment. `SITE_API_SHARED_SECRET` authenticates the Worker health proof and the scheduled Pages refresh. Ordinary Pages code releases receive only the Cloudflare credentials. Re-enter these values as environment-scoped secrets before deleting their repository-scoped copies; GitHub does not expose existing secret values for automated migration. Secret values are never recorded in the repository.
 
-Optional dedicated Pages data-sync secrets:
-
-- `DEPEG_EVENTS_API_KEY` (falls back to `DIGEST_API_KEY`)
-- `PUBLIC_DATASETS_API_KEY` (falls back to `DIGEST_API_KEY`)
-
-Optional GitHub Actions checkout fallback:
-
-- `ACTIONS_CHECKOUT_TOKEN` — a repo-scoped read token used by production deploy checkout steps only when the default `github.token` fetch path is rejected by GitHub. Push/manual production deploys pass this optional secret into `pages-release`; the reusable Pages workflow falls back to `github.token` when the secret is absent. Scheduled/manual `rebuild-pages.yml` calls do not pass the fallback token today and use the default `github.token` checkout path.
+The manual zone-cache recovery workflow additionally requires the Cloudflare token to grant `Zone Read` and `Cache Purge` for `pharos.watch`. Normal Pages and Worker deployment permissions do not imply those zone permissions.
 
 Scheduled artifact PR secret:
 
-- `OG_REFRESH_GITHUB_TOKEN` — a bot or PAT token used by `.github/workflows/og-refresh.yml` to push `automated/og-refresh` and open checked PRs. The workflow fails closed when this secret is absent and OG screenshots have changed, because PRs created with the default `GITHUB_TOKEN` do not trigger the normal pull-request workflows. When `npm run og:capture` produces no image diff, the workflow completes without requiring the secret.
+- `OG_REFRESH_GITHUB_TOKEN` - bot/PAT used by `.github/workflows/og-refresh.yml` when generated OG assets changed.
 
-Repository variables:
+Repository variables used by the Pages build:
 
-- Required: `API_BASE_URL`
-- Optional: `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_PHAROS_*`, `CI_VALIDATE_RUNNER`, `CI_WORKER_DEPLOY_RUNNER`
+- Optional: `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_PHAROS_*`
 
-Scheduled monitor secrets:
+Manual dispatch examples:
 
-- `GOOGLE_SAFE_BROWSING_API_KEY` for `.github/workflows/safe-browsing-monitor.yml`
-
-`SMOKE_API_KEY` is required because the smoke suite exercises protected public API routes on `api.pharos.watch`, and those non-exempt `/api/*` routes require a valid `X-API-Key`.
+```bash
+gh workflow run "Deploy to Cloudflare" --repo TokenBrice/pharos-watch --ref main -f surface=both
+gh workflow run "Deploy to Cloudflare" --repo TokenBrice/pharos-watch --ref main -f surface=pages
+gh workflow run "Deploy to Cloudflare" --repo TokenBrice/pharos-watch --ref main -f surface=worker
+gh workflow run "Rebuild Pages" --repo TokenBrice/pharos-watch --ref main
+```
 
 ## Dependency Refresh Cadence
 
@@ -269,74 +214,49 @@ Current explicitly deferred major cohort:
 
 Current risk-accepted transitive advisories (triage reference for the weekly `dependency-audit.yml` run):
 
-None as of 2026-06-26. The production-scope gate is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`), which runs in the deploy `validate` set and reflects the deployed surface (a static Pages export plus the Worker runtime). The weekly `dependency-audit.yml` job deliberately runs the broader `npm audit --audit-level=high` over the full lockfile (dev + build chain) as advisory input and is expected to stay green.
+None as of 2026-06-26. The production-scope check is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`) and reflects the deployed surface. Run it directly for dependency changes. The weekly `dependency-audit.yml` job deliberately runs the broader `npm audit --audit-level=high` over the full lockfile as advisory input.
 
 When the weekly job finds a new high/critical full-lockfile advisory, fix it, pin it away, or document the reviewed unreachable/dev-only risk acceptance here before treating the red job as accepted. Do not run `npm audit fix --force` outside a dedicated dependency tranche; forced fixes can downgrade or cross major lines.
 
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 
-Schedule: `10 8 * * *` and `25 8 * * *` UTC. The first slot follows the 08:05 UTC daily digest cron closely; the second is a catch-up for slower digest generation or a missed GitHub schedule tick.
-
-The 08:25 fallback skips its full release only when the live marker points to the current commit and the GitHub Actions API confirms that marker came from a successful same-day scheduled `Rebuild Pages` run after the 08:05 data refresh. Missing, stale, ordinary deploy, manual, or failed-run markers all fail closed into the full fallback release.
-
-1. `pages-release`
-   - reuses the same consolidated `.github/workflows/pages-release.yml` job as push/manual production deploys
-   - fetches data, builds, runs local SEO plus one UI canary smoke, publishes, and runs post-publish live public-host, ops, and transport smokes in that one reusable job
-
-This workflow intentionally skips `validate`, `deploy-worker`, and `smoke-api`; it exists to refresh the Pages export after digest, depeg-event, and public-dataset sync without redeploying unchanged worker code. It still runs the ops and transport post-deploy smoke lanes so custom-domain regressions fail visibly.
-
-GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bumping an action version, resolve the tag against the upstream action repo and pin that real commit SHA, not an unavailable tarball or transient hash.
+- Schedule: `17 8 * * *` UTC, after the 08:05 UTC daily digest slot.
+- The workflow has one main-only reusable job and calls `pages-release.yml` with `refresh_data: true`.
+- It refreshes all three API-backed datasets through authenticated `site-api.pharos.watch`, builds and checks the exact artifact, publishes once, and verifies the public release marker.
+- It intentionally skips Worker deployment and broad live smoke lanes. Missing or invalid refresh data fails before publication.
+- Manual rebuild dispatch uses the same path and the shared `production-deploy` lock.
 
 ### Wrangler and Workspace Layout
 
-- Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`.
-- Production custom-domain `routes` remain root-owned before the first `[[rules]]` table, and asset rules explicitly set `fallthrough = true`. `npm run check:worker-config` blocks releases when TOML table ownership or the three-domain contract drifts.
-- The repo uses a root npm workspace, so the workflows install the shared toolchain from the root `package-lock.json` and run Wrangler from the `worker` workspace with `npx --no-install`, keeping worker deploys insulated from GitHub Actions runtime deprecations in third-party JS actions.
-- Worker production releases prefer Wrangler Versions plus Preview URLs: CI uploads a candidate version early, captures the current production version as the required rollback target, waits for validation before D1 mutation, smokes that preview inside `deploy-worker`, then promotes that exact version to production traffic through the Cloudflare Workers Deployments API. If the previous version cannot be captured while Worker Versions are available, the workflow stops before production D1 mutation or promotion. If Cloudflare rejects Workers Versions with `entitlements.not_available [code: 10007]`, CI falls back to `wrangler deploy` after the same validation and migration gates and keeps the production smoke as the deployment proof; this legacy fallback has reduced rollback safety and any failure requires operator-led Worker rollback from Cloudflare deployment history.
-- The validate and Pages release lanes restore `.next/cache`, `.cache/eslint`, and `*.tsbuildinfo` outputs so unchanged build/lint/typecheck work can be reused across runs.
-- The repo engine floor is Node 24 LTS for the primary local/runtime baseline, with CI and `.nvmrc` pinned to Node 24.16.0. `package.json#engines.node` allows Node 26, and pull-request checks run a non-blocking Node 26 typecheck proof lane.
+- Cloudflare deployment uses the lockfile-installed local Wrangler CLI rather than `cloudflare/wrangler-action`.
+- Worker production custom-domain routes, bindings, and cron triggers remain declared in `worker/wrangler.toml` and deploy together through `wrangler deploy --strict`.
+- The root npm workspace installs one shared dependency graph; Worker commands run from `worker/` with `npx --no-install`.
+- The Pages release restores build cache state but does not install Playwright. Cold-cache runs remain valid.
 
 ### Failure Stop and Surface Classification
 
-- Deployment stops on the first failed job.
-- Pull requests run the shared validate gate with the same deploy-surface classifier used by push deploys: shared guardrails and the full deploy test surface always run, while Pages build/SEO and Worker validation run only when the PR diff touches those surfaces.
-- Push/manual deploy validation skips Pages build/SEO on worker-only pushes, skips Worker validation on Pages-only pushes, and skips the production workflow entirely for non-deploy pushes.
-
-### Validate Lane Fan-out and Deploy Ordering
-
-- The Node 24.16.0 validate lane starts `validate:prebuild`, Vitest shards, and conditional Worker validation as independent jobs, then uses the aggregate `validate / validate` job to require every needed result. The pull-request Node 26 proof lane is separate and non-blocking; failures there should be triaged before widening Node-dependent behavior.
-- Worker candidate upload waits for the aggregate `validate / validate` result before any Cloudflare-secret-bearing preparation. The `pages-release` job has the same authoritative `needs: validate` edge in `.github/workflows/deploy-cloudflare.yml`, avoiding a second API polling gate inside the reusable workflow.
-- Production D1 mutation and Worker promotion remain behind the aggregate `validate / validate` result; Pages publish also waits for validation and, on combined deploys, successful Worker promotion.
-
-### Pages Path Behavior
-
-- The production Pages path fetches digests, depeg events, and public dataset mirrors once inside `pages-release` and requires local SEO plus one `smoke-ui` canary before `deploy-pages`, so a broken static export is blocked before Cloudflare Pages production publish without running the broader browser lab on every release. The build step clears the public-dataset source env before `npm run build`, so the prebuild hook uses the already synced mirrors and the build itself no longer depends on mutable static input endpoints. The local artifact is built with `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` so browser reads go through `/_site-data/*` instead of the protected direct `/api/*` lane while the smoke server runs on `127.0.0.1`; that local `/_site-data/*` proxy targets the canonical site API origin with `SITE_API_SHARED_SECRET`, mirroring the production Pages Function rather than the public API edge. `check:feature-flag-inlining` verifies configured `NEXT_PUBLIC_PHAROS_*` flags were statically inlined after build, and `check:build-size` enforces the repo's 20,000-file upload budget before Wrangler deploys the artifact. That conservative budget matches Cloudflare's current Free-plan and legacy Wrangler ceiling; current paid Pages projects can allow more, so consult the [Pages limits](https://developers.cloudflare.com/pages/platform/limits/) before changing the checked-in budget. Pages deploy retries use six attempts with increasing backoff because Cloudflare Pages asset uploads can return transient 500/no-healthy-upstream responses.
-- On combined Worker-promotion + Pages deploys, the prepublish Pages path starts after validation and can overlap with the gated Worker release path using the configured target API base.
-- After publish, `pages-release` runs live public UI, ops canary, and transport smokes concurrently inside one post-publish step, then writes a Markdown summary with per-smoke outcomes. The homepage/GA/data-state live public-host smoke targets `https://pharos.watch`, and the live route canary includes `/depeg/`. The live GA smoke allows one reload retry only when the first browser context sees no analytics runtime or GA/GTM network evidence and no analytics-specific CSP violation, so Pages propagation gaps do not mask concrete analytics failures while unrelated first-party CSP events do not suppress the retry.
-- `.github/workflows/purge-pages-zone-cache.yml` is a manual recovery path for persistent stale custom-domain HTML, not a routine deploy step. It accepts only `main`, requires the exact production confirmation string, shares the `production-deploy` concurrency group, and uses the repository Cloudflare token only after an exact active-zone lookup.
-- The production ops smoke runs in canary scope on the deploy critical path, keeping shell/access and status coverage while leaving the slower deep admin probes for explicit full smoke runs.
-
-### Skip Rules
-
-- On `push`, Worker deploy and API smoke are skipped entirely when the diff does not touch deployed Worker runtime/config, D1 migrations, Worker assets, Worker-consumed shared runtime files, or root package/lock entries that can affect the Worker bundle, even if broader Worker validation still runs for package/tooling changes. Known Pages-only shared helpers are excluded from Worker validation and promotion by `scripts/lib/automation-registry.mjs`.
-- Pages build/deploy are skipped when the diff does not touch publishable Pages paths. Test-only Pages diffs still receive Pages-aware validation without a redundant build or production publish; Markdown sources rendered by the public docs route remain publishable inputs.
-- Strict mobile, hydrated a11y, and broad asset-coherence browser checks are no longer part of the default production Pages release; run them through scheduled/manual browser validation or explicit local commands for UI-heavy changes.
+- Deployment stops on the first failed required step.
+- Pull requests own full source/test validation. The post-merge workflow reruns only the focused Worker migration check and Pages artifact checks that are adjacent to production mutation.
+- Worker deploy is skipped unless deployed Worker/runtime/config/shared inputs changed. Root package and lockfile changes conservatively deploy both surfaces.
+- Pages publish is skipped for non-publishable or test-only Pages changes.
+- A combined deployment publishes Pages only after the required Worker job succeeds; Pages-only deployment treats the skipped Worker job as expected.
 
 ### Concurrency and Rollback Scope
 
-- Production-changing workflows share one global `concurrency` group (`production-deploy`): push/manual deploys, Pages rebuilds, and the manual zone-cache recovery workflow queue behind any active production operation instead of canceling or overlapping post-promotion smoke or rollback work. Manual production dispatches are guarded to `refs/heads/main`.
-- The worker release path applies D1 migrations before preview smoke and production promotion, so the normal path explicitly supports only backward-compatible D1 migrations; the release runner reruns `check:migrations` immediately before remote apply, writes the replayed schema fingerprint to the job summary for drift triage, and still requires a separate coordinated rollout for destructive cleanup after the new worker code is serving.
-- Automatic worker rollback changes traffic back to the previous Worker version when Workers Versions are available; missing previous-version capture fails closed before production mutation. Before promotion, the workflow captures the previous `worker/wrangler.toml` when the push base exists; if trigger sync, production API smoke, or worker-only live smokes fail, it also attempts `wrangler triggers deploy --config .rollback-wrangler.toml` to restore non-versioned route/domain/cron trigger settings. D1 schema/data rollback remains a separate D1 recovery step.
-- Treat the report-card snapshot gzip codec as an independent forward-compatible production fix when rolling back V9. After any compressed `report-cards:snapshot` row has been written, retain a reader that supports gzip/base64 plus legacy plain rows: older readers cannot decode the compressed row, while restoring the older plain writer would again exceed D1's 2,000,000-byte row limit.
-- Treat the first production promotion that introduces this codec as forward-only. If post-promotion automation restores the pre-codec Worker after a compressed row may have been written, immediately re-promote the codec-bearing version instead of leaving the incompatible reader and oversized writer active.
+- Production-changing workflows share the global `production-deploy` concurrency group and queue instead of canceling one another.
+- New D1 migrations must remain backward-compatible because migrations apply before the new Worker is live. Destructive cleanup requires a separate coordinated rollout.
+- The default workflow never automatically rolls back from a broad or non-causal signal.
+- Worker rollback is an operator decision using Cloudflare deployment history or `wrangler rollback [VERSION-ID] --yes`. It does not reverse D1 migrations, KV/R2/D1 data, secrets, bindings, or other resources.
+- Pages rollback is an operator decision in Cloudflare Pages deployment history. Use the failed run's commit, marker response, and Wrangler output to identify the target.
+- Persistent stale custom-domain HTML can use the guarded `purge-pages-zone-cache.yml` recovery workflow after the correct Pages deployment is confirmed.
 
 ## Runtime Measurement Notes
 
 When reviewing deploy runtime after optimization work, separate queue time from job execution time because the shared `production-deploy` concurrency group can make a healthy run appear slow while it waits for another production-changing workflow. Compare like-for-like paths: combined worker + Pages deploys, worker-only deploys, Pages-only deploys, and scheduled Pages rebuilds have different expected critical paths.
 
-For combined deploys, `pages-release` starts after the aggregate validation result and runs its static checks while Worker promotion is in flight. When `wait_for_worker_promotion` is enabled, it waits before running the local artifact UI canary once against the promoted Worker, then publishes Pages.
+For combined deploys, the native job graph runs `pages-release` only after the required Worker deployment succeeds. Pages-only deploys do not wait on a nonexistent Worker mutation.
 
-Tooling cache restores are best-effort acceleration for `.next/cache`, `.cache/eslint`, and TypeScript build info. Cold-cache runs should remain valid and may be slower; investigate cache behavior only when repeated warm-cache deploys fail to reuse unchanged build, lint, or typecheck work. Only jobs that produce new tooling state upload a fresh cache (`tooling-cache-save: "true"` on validate-prebuild, pages-build, and pages-release); restore-only jobs use a deterministic key whose exact hit suppresses the post-job save, protecting the repo's 10 GB cache quota from per-run churn. The pages-release Chromium install runs without `--with-deps` (the binary restores from cache and GitHub's Ubuntu runners carry the system libraries); if a runner-image change ever drops a library, the browser launch fails loudly before anything publishes — re-add the flag then.
+Tooling cache restores are best-effort acceleration for `.next/cache`, `.cache/eslint`, and TypeScript build info. Cold-cache runs remain valid and may be slower. Only jobs that produce new tooling state upload a fresh cache; the Pages release restores and saves build state but carries no browser cache dependency.
 
 ## Runtime Origins
 
@@ -448,3 +368,11 @@ If an explicit local `test:merge-gate` rehearsal fails:
 3. Re-run the narrow failing command(s) until clean.
 4. Re-run `npm run test:merge-gate`.
 5. Push after the relevant focused checks or local rehearsal pass; GitHub Actions remains the authoritative release gate.
+
+If a production deployment fails after mutation:
+
+1. Preserve the failed run, Wrangler output, target commit, and failing health/marker response.
+2. Determine whether the failure is causal to the deployed surface before changing traffic again. Public WAF challenges, unrelated ops degradation, analytics, redirects, or browser-only signals are not automatic rollback evidence.
+3. For a Worker code regression, choose the prior version in Cloudflare deployment history or run `wrangler rollback [VERSION-ID] --yes`. Do not claim that this reverts D1 migrations or bound-resource state.
+4. For a Pages artifact regression, select the prior successful production deployment in Cloudflare Pages deployment history.
+5. Run the narrow manual smoke that proves the affected surface after recovery. Broad live checks remain diagnostic evidence, not mutation triggers.

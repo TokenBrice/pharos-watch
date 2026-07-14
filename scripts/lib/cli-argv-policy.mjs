@@ -21,9 +21,6 @@ export const CLI_ARGV_EXEMPTION_CATEGORIES = Object.freeze({
 
 export const CLI_ARGV_POLICY = Object.freeze({
   strict: Object.freeze([
-    strict(".github/scripts/deploy-worker-version.mjs"),
-    strict(".github/scripts/retry-wrangler-control-plane.mjs"),
-    strict(".github/scripts/wait-for-workflow-job.mjs"),
     strict("scripts/ci/guard-worker-deploy.mjs"),
     strict("scripts/maintenance/backfill-ai-summary-provenance.mjs"),
     strict("scripts/maintenance/compare-report-card-snapshots.ts"),
@@ -36,7 +33,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/migrate-stablecoin-sidecar.ts"),
     strict("scripts/maintenance/purge-cloudflare-zone-cache.mjs"),
     strict("scripts/maintenance/register-telegram.ts"),
-    strict("scripts/maintenance/rollback-pages-deployment.mjs"),
     strict("scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts"),
     strict("scripts/maintenance/sync-depeg-events.ts"),
     strict("scripts/maintenance/sync-digests.ts"),
@@ -59,7 +55,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("worker/scripts/yield-history-cleanup.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
   ]),
   exemptions: Object.freeze([
-    exempt(".github/scripts/parse-pages-deployment-id.mjs", "read-only"),
     exempt("scripts/build-data/build-client-registry.mjs", "build"),
     exempt("scripts/ci/check-build-attribution.mjs", "read-only"),
     exempt("scripts/ci/check-critical-coverage.mjs", "test"),
