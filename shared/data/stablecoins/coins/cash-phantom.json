@@ -123,87 +123,391 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "CASH is minted by Bridge Open Issuance via an immutable Solana program (BkP8vo1p...). The mint authority is a PDA of that program; the permanent-delegate/close/confidential-transfer authority is a Bridge-operated EOA; the freeze authority is a separate Bridge EOA. All mint-capable controls are confirmed on-chain.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm",
+        "2UvSehbvxnufkbY9VYmDpKFriXVbb5rQ5unrcCqDqB1G",
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+        "76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6",
+        "0xd457960ad4a14ab3dd984cb5fb161664afcb7821",
+        "0x061af032ccf1ce35a39b556e0f442bf2dbe1ed06"
+      ],
+      "implementationAddresses": [
+        "H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu",
+        "CYVLd3XvpowaKGG4Q521uu261Jhcao2WSGiYb889UXoL",
+        "DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY",
+        "9RJbAS28AVA4WamkGMHBA3eymx4AsoPWAbJkN28CqJCz",
+        "0x1d2dbfd7b4b6be108550eb57d59323b2a486b03d",
+        "0x1d83d3a4923f8d9efb57ddf9fffc0c24d58c3744"
+      ],
+      "adminAddresses": [
+        "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
+        "4WcHbcWDb65Fr9odQnCJYLKKQsPz2dHCG2CEcuGqzBeR",
+        "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz",
+        "4QMpxbFQpupw6QzteuYnjgnfaP6BGZx4fW3PZTfBzTuY",
+        "0x79c6631fa15cda38777fb9dd7a6348baee794a4e"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "CASH Bridge program single-key upgrade authority",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Solana Bridge program",
+          "url": "https://explorer.solana.com/address/BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm"
+        },
+        {
+          "label": "Bridge program authority transfer",
+          "url": "https://explorer.solana.com/tx/23biLsrUSuYhnDDvRhQUu7u7bnHNVB5nhE5nVDEJHLFvzztHKb5h4DXBmA5gWosN9v1FcmLqTMaJQCkihwWnpSHa"
+        },
+        {
+          "label": "LayerZero V2 source",
+          "url": "https://github.com/LayerZero-Labs/LayerZero-v2"
+        },
+        {
+          "label": "Token-2022 source",
+          "url": "https://github.com/solana-program/token-2022"
+        },
+        {
+          "label": "HyperEVM CASH OFT source",
+          "url": "https://hyperevmscan.io/address/0x1b64c96e52a61504d5f42dfb3b25295d0313afd6#code"
+        },
+        {
+          "label": "HyperEVM CASH TokenAuthority source",
+          "url": "https://hyperevmscan.io/address/0xD457960aD4a14AB3Dd984Cb5fb161664AFcB7821#code"
+        },
+        {
+          "label": "HyperEVM inner CASH source",
+          "url": "https://hyperevmscan.io/address/0x061Af032cCf1CE35A39b556e0F442bF2DBe1Ed06#code"
+        }
+      ]
+    },
+    "summary": "CASH's Token-2022 mint authority is a PDA of Bridge program BkP8..., which has two active mint routes under allowances and a 20-million-CASH per-call limit. A single Bridge governance EOA can change roles, allowances, and limits immediately, while a separate single EOA can upgrade the Bridge program and bypass those checks. HyperEVM CASH can reach the Solana OFTStore through LayerZero; its token administrator can create source CASH, while route owners alone cannot. The OApp, Token-2022, LayerZero Endpoint, and two HyperEVM proxies add independent upgrade domains.",
     "controls": [
       {
         "chain": "solana",
         "address": "HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7",
-        "label": "CASH Token-2022 mint authority (PDA of Bridge minting program)",
+        "label": "CASH Bridge program two-route mint surface",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Bridge enforces a 20,000,000-CASH per-call limit. Backend EOA 3ZGf... had 228,398,515.21 CASH remaining allowance at the cutoff; LayerZero OFTStore 3cQm... had 999,999,997.993 CASH. Governance EOA E7Jd... can change roles, allowances, the per-call limit, and the 1-billion-CASH maximum allowance immediately.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:3ZGf3ERiitfTR9RCChchfo7QWmSfH1WArJ3jjrtMXnKa",
+          "solana:3cQmk45EJhd1WhNU9PP14ihZ27JzKtsFwy3fwXBT7Dty"
+        ],
+        "bypassSurfaces": [
+          "Governance EOA E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw can change roles and limits immediately.",
+          "Program upgrader 76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q can replace Bridge mint logic with no delay."
+        ],
         "sources": [
           {
-            "label": "Phantom CASH docs",
-            "url": "https://docs.phantom.com/cash"
-          },
-          {
-            "label": "Bridge Open Issuance docs",
-            "url": "https://apidocs.bridge.xyz/platform/issuance"
-          },
-          {
-            "label": "Solana RPC getAccountInfo",
+            "label": "Solana RPC",
             "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Solana Bridge program",
+            "url": "https://explorer.solana.com/address/BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm"
+          },
+          {
+            "label": "Last pre-cutoff backend mint",
+            "url": "https://explorer.solana.com/tx/4wSaUZudjrVBYbdHCiYuP4gpxgzZxUemachxPeMdHVQ5Myi6Xzuom7k97ht9oh9e9pbHbVJ7M8LKNHujmrG1Eyiy"
           }
         ],
-        "evidence": "At Solana slot 425781207, getAccountInfo for HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7 returned null (unfunded PDA). A live mint transaction (slot 425580577, sig 3SSnyy...QwF) shows program BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm invoking MintToChecked, confirming this address is a PDA of the Bridge minting program. BkP8vo1p programData H79Ws... has upgradeAuthority: None (immutable at slot 425780651)."
+        "evidence": "At Solana slot 432714278, this PDA was CASH mintAuthority and Bridge GlobalConfig DNGzc... named governance EOA E7Jd.... Exactly two active minter roles existed: backend EOA 3ZGf... with reconstructed cutoff allowance 228,398,515.21 CASH, and LayerZero OFTStore 3cQm... with 999,999,997.993 CASH. Each mint also required an active recipient role, reserve-ledger mint RD1S..., an unpaused config, remaining allowance, and the 20-million per-call bound. The last pre-cutoff backend mint at slot 432709220 corroborates the live path."
       },
       {
         "chain": "solana",
         "address": "E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw",
-        "label": "CASH permanent delegate / close / confidential-transfer authority (Bridge EOA)",
+        "label": "CASH Bridge governance and mint-policy EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw"
+        ],
         "sources": [
           {
-            "label": "Solana RPC getAccountInfo",
+            "label": "Solana RPC",
             "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Solana Bridge program",
+            "url": "https://explorer.solana.com/address/BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm"
           }
         ],
-        "evidence": "At Solana slot 425780460, getAccountInfo for E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw returned owner: 11111111111111111111111111111111 (System Program), executable: false, lamports: 964017580. This is a funded EOA (Bridge/Phantom backend wallet). It holds permanentDelegate, mintCloseAuthority, and confidentialTransferMint authority on the Token-2022 mint."
+        "evidence": "At the cutoff, Bridge GlobalConfig named this on-curve funded system account as governance. It can immediately transfer governance, grant or revoke minter and recipient roles, reset allowances, change per-transaction and maximum-allowance limits, and pause minting. The same address is the CASH permanent-delegate, mint-close, and confidential-transfer authority; separate token-extension authorities do not add mint capability."
       },
       {
         "chain": "solana",
-        "address": "AyCP3oW19DHZKvx8oU6mvseW2qn7XfmQ5STrXPa6prY5",
-        "label": "CASH freeze authority",
-        "role": "other",
-        "authorityType": "unknown",
-        "directMintAbility": "none",
-        "canRaiseCap": false,
+        "address": "76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q",
+        "label": "CASH Bridge program single-key upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:76m8dWSAYTuNWMfZS5tR1Az8sYnCGkEJ8WYWJhxAhQ5Q"
+        ],
         "sources": [
           {
-            "label": "Solana RPC getAccountInfo",
+            "label": "Solana RPC",
             "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Bridge program authority transfer",
+            "url": "https://explorer.solana.com/tx/23biLsrUSuYhnDDvRhQUu7u7bnHNVB5nhE5nVDEJHLFvzztHKb5h4DXBmA5gWosN9v1FcmLqTMaJQCkihwWnpSHa"
           }
         ],
-        "evidence": "At Solana slot 425780651, getAccountInfo for AyCP3oW19DHZKvx8oU6mvseW2qn7XfmQ5STrXPa6prY5 confirmed it is the freezeAuthority on the CASH Token-2022 mint. directMintAbility is none (freeze-only)."
+        "evidence": "At slot 432714278, Bridge ProgramData H79WsaPgtctdpmhykRQZ91r8HNr5uqxUWEBe6DZXuhMu retained this on-curve system account as upgrade authority. The executable was last deployed at slot 398305763; authority-transfer transaction 23bi... at slot 401157588 changed the prior authority to this key, with no later change. The program bytecode hash was e8c6010b00363865407339574716f4c25c7042408611c75f0569521391abbfc5. It can replace mint logic immediately and invalidate every current allowance check."
+      },
+      {
+        "chain": "solana",
+        "address": "8w2yN64sHyhu6FTy5wJPmXNjDSaCVEAgCPzSqUSYhbwy",
+        "label": "CASH Solana OApp route administrator",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:8w2yN64sHyhu6FTy5wJPmXNjDSaCVEAgCPzSqUSYhbwy"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "LayerZero V2 source",
+            "url": "https://github.com/LayerZero-Labs/LayerZero-v2"
+          }
+        ],
+        "evidence": "At the cutoff, OFTStore 3cQmk45EJhd1WhNU9PP14ihZ27JzKtsFwy3fwXBT7Dty named this on-curve funded system account as admin. It can change admin, delegate, trusted peer, route maximum, token-authority configuration, pause state, and frozen receiver. It cannot mint by itself: the OApp signer remains bounded by the current Bridge minter role, allowance, and 20-million per-call limit."
+      },
+      {
+        "chain": "solana",
+        "address": "4WcHbcWDb65Fr9odQnCJYLKKQsPz2dHCG2CEcuGqzBeR",
+        "label": "CASH Solana OApp single-key upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:4WcHbcWDb65Fr9odQnCJYLKKQsPz2dHCG2CEcuGqzBeR"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "LayerZero V2 source",
+            "url": "https://github.com/LayerZero-Labs/LayerZero-v2"
+          }
+        ],
+        "evidence": "At slot 432714278, OApp program 2UvSehbvxnufkbY9VYmDpKFriXVbb5rQ5unrcCqDqB1G used ProgramData CYVLd3XvpowaKGG4Q521uu261Jhcao2WSGiYb889UXoL, last deployed at slot 402512195, and retained this single EOA upgrader. It can rewrite receive logic and use the OFTStore signer immediately, but the separate Bridge program still enforces its allowance and per-call limit unless another authority acts."
+      },
+      {
+        "chain": "solana",
+        "address": "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz",
+        "label": "Solana Token-2022 shared-program upgrade authority",
+        "role": "other",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "platform:solana-token-2022-program"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Squads V3 source",
+            "url": "https://github.com/Squads-Protocol/squads-mpl"
+          },
+          {
+            "label": "Latest Token-2022 upgrade transaction",
+            "url": "https://explorer.solana.com/tx/2cM3S25AJnHyy4shW7zsoqz5W8JPXPvXiUxk545n5ANf6BET9VvBRfsnSNYi9MqogjVWNBxNfaZpE9QBJX4XCbfn"
+          }
+        ],
+        "evidence": "At the cutoff, Token-2022 ProgramData DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY named this authority. It is authority index 1 of immutable Squads V3 multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ with threshold 4, six members, and no execution delay."
+      },
+      {
+        "chain": "solana",
+        "address": "4QMpxbFQpupw6QzteuYnjgnfaP6BGZx4fW3PZTfBzTuY",
+        "label": "Solana LayerZero Endpoint shared-program upgrade authority",
+        "role": "other",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 4,
+        "signerCount": 5,
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "platform:solana-layerzero-endpoint"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Squads V3 source",
+            "url": "https://github.com/Squads-Protocol/squads-mpl"
+          },
+          {
+            "label": "LayerZero V2 source",
+            "url": "https://github.com/LayerZero-Labs/LayerZero-v2"
+          }
+        ],
+        "evidence": "At the cutoff, LayerZero Endpoint program 76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6 used ProgramData 9RJbAS28AVA4WamkGMHBA3eymx4AsoPWAbJkN28CqJCz and retained authority 4QMp.... That PDA is authority index 1 of immutable Squads V3 multisig DazbcrVYizBrecec7vHJnSrhinc6y3nMWtkPj76hudui, threshold 4 of 5 with no timelock. Replacing Endpoint verification does not by itself raise the separate Bridge OFTStore allowance."
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+        "label": "CASH HyperEVM token and TokenAuthority administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 40381118,
+        "failureDomainKeys": [
+          "hyperevm:0x79c6631fa15cda38777fb9dd7a6348baee794a4e"
+        ],
+        "sources": [
+          {
+            "label": "HyperEVM CASH TokenAuthority source",
+            "url": "https://hyperevmscan.io/address/0xD457960aD4a14AB3Dd984Cb5fb161664AFcB7821#code"
+          },
+          {
+            "label": "HyperEVM inner CASH source",
+            "url": "https://hyperevmscan.io/address/0x061Af032cCf1CE35A39b556e0F442bF2DBe1Ed06#code"
+          }
+        ],
+        "evidence": "At HyperEVM block 40381118, this no-code EOA solely held DEFAULT_ADMIN_ROLE on TokenAuthority proxy 0xD457... and inner CASH proxy 0x061A..., and solely held MINT_RATE_LIMIT_SETTER_ROLE. Inner CASH granted MINTER_ROLE only to TokenAuthority and had a 1-billion-CASH max supply. The EOA can grant roles, raise that maximum, and create source CASH that the valid OFT can burn and route to Solana; destination minting remains bounded by the current Solana allowance and per-call limit unless a Solana authority also acts."
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+        "label": "CASH HyperEVM token and TokenAuthority upgrade EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 40381118,
+        "failureDomainKeys": [
+          "hyperevm:0x79c6631fa15cda38777fb9dd7a6348baee794a4e"
+        ],
+        "sources": [
+          {
+            "label": "HyperEVM CASH TokenAuthority source",
+            "url": "https://hyperevmscan.io/address/0xD457960aD4a14AB3Dd984Cb5fb161664AFcB7821#code"
+          },
+          {
+            "label": "HyperEVM inner CASH source",
+            "url": "https://hyperevmscan.io/address/0x061Af032cCf1CE35A39b556e0F442bF2DBe1Ed06#code"
+          }
+        ],
+        "evidence": "At block 40381118, TokenAuthority UUPS proxy 0xD457... used implementation 0x1d2dbfd7b4b6be108550eb57d59323b2a486b03d and inner CASH UUPS proxy 0x061A... used implementation 0x1d83d3a4923f8d9efb57ddf9fffc0c24d58c3744. Verified source requires DEFAULT_ADMIN_ROLE for both upgrades; this sole EOA can replace either path immediately."
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0x242a7a7f0275c881f5014ea1d6dcc73021807709",
+        "label": "CASH HyperEVM OFT route owner",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 40381118,
+        "failureDomainKeys": [
+          "hyperevm:0x242a7a7f0275c881f5014ea1d6dcc73021807709"
+        ],
+        "sources": [
+          {
+            "label": "HyperEVM CASH OFT source",
+            "url": "https://hyperevmscan.io/address/0x1b64c96e52a61504d5f42dfb3b25295d0313afd6#code"
+          }
+        ],
+        "evidence": "At block 40381118, direct verified OFT 0x1b64... named this no-code EOA as owner and trusted Solana OFTStore 3cQm... for destination EID 30168. The owner can change peers, tokenAuthority, and destination limits, but cannot create source supply: _debit first transfers real inner CASH and then burns it, so a no-op tokenAuthority does not manufacture tokens."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Bridge token metadata",
-          "url": "https://token-metadata.bridge.xyz/solana/cash.json"
-        },
-        {
-          "label": "Bridge Open Issuance overview",
-          "url": "https://www.bridge.xyz/news/introducing-open-issuance"
-        },
-        {
-          "label": "Phantom Cash docs",
-          "url": "https://docs.phantom.com/cash"
-        },
-        {
-          "label": "Solana RPC getAccountInfo",
+          "label": "Solana RPC",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Solana Bridge program",
+          "url": "https://explorer.solana.com/address/BkP8vo1p69Wj1ZfduswNvyQvKEaMpRtXFY1bYdSmaQVm"
+        },
+        {
+          "label": "Bridge program authority transfer",
+          "url": "https://explorer.solana.com/tx/23biLsrUSuYhnDDvRhQUu7u7bnHNVB5nhE5nVDEJHLFvzztHKb5h4DXBmA5gWosN9v1FcmLqTMaJQCkihwWnpSHa"
+        },
+        {
+          "label": "LayerZero V2 source",
+          "url": "https://github.com/LayerZero-Labs/LayerZero-v2"
+        },
+        {
+          "label": "HyperEVM CASH OFT source",
+          "url": "https://hyperevmscan.io/address/0x1b64c96e52a61504d5f42dfb3b25295d0313afd6#code"
+        },
+        {
+          "label": "HyperEVM CASH TokenAuthority source",
+          "url": "https://hyperevmscan.io/address/0xD457960aD4a14AB3Dd984Cb5fb161664AFcB7821#code"
+        },
+        {
+          "label": "HyperEVM inner CASH source",
+          "url": "https://hyperevmscan.io/address/0x061Af032cCf1CE35A39b556e0F442bF2DBe1Ed06#code"
         }
       ],
-      "evidence": "At Solana slot 425781207: CASH mint CASHx9... confirmed Token-2022 with mintAuthority HJT2... (PDA of immutable Bridge program BkP8vo1p), freezeAuthority AyCP3... (separate Bridge EOA), permanentDelegate+closeAuthority+confidentialTransferMint.authority all at E7JdFMP5... (funded EOA). transferHook.programId is null (no active hook). Bridge minting program BkP8vo1p has upgradeAuthority: None (immutable). All mint-capable addressable controls confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At the fixed cutoff, Solana slot 432714278 and HyperEVM block 40381118 resolved the complete CASH supply graph. The Bridge program had exactly two active minter routes and one immediate governance EOA, but its ProgramData retained a separate single-key upgrader, correcting the prior false immutable conclusion. The Solana OApp and shared Token-2022 and LayerZero Endpoint runtimes were independently upgradeable. The sole HyperEVM token administrator could create source CASH and upgrade both inner proxies; the direct OFT owner and Solana OApp admin could change route parameters but could not manufacture supply alone.",
+      "reviewer": "Codex Safety Score V9 evidence audit",
+      "reviewedAt": "2026-07-13"
     }
   },
   "chainTier": "mature-alt-l1",
