@@ -44,11 +44,11 @@
           "url": "https://etherscan.io/address/0x66017d22b0f8556afdd19fc67041899eb65a21bb#readContract"
         },
         {
-          "label": "Liquity V1 PriceFeed 0x4c517D4e2C851CA76d7eC94B805269Df0f2201De (lastGoodPrice)",
+          "label": "Liquity V1 PriceFeed 0x4c517D4e2C851CA76d7eC94B805269Df0f2201De (fetchPrice eth_call simulation; stale lastGoodPrice superseded)",
           "url": "https://etherscan.io/address/0x4c517d4e2c851ca76d7ec94b805269df0f2201de#readContract"
         },
         {
-          "label": "Ethereum PublicNode RPC used for the eth_call reads at block 25530791",
+          "label": "Ethereum PublicNode RPC used for the journaled eth_call reads at finalized block 25533257",
           "url": "https://ethereum-rpc.publicnode.com"
         },
         {
@@ -60,9 +60,9 @@
           "url": "https://docs.liquity.org/liquity-v1/faq/recovery-mode"
         }
       ],
-      "notes": "Measured on-chain 2026-07-14 at Ethereum block 25530791 via eth_call. The contract graph was derived on-chain from the LUSD token (troveManagerAddress(), stabilityPoolAddress(), then TroveManager.priceFeed()) rather than from a published address list. TroveManager.getTCR(PriceFeed.lastGoodPrice() = 1780.21673094 USD/ETH) returned 4.776, which cross-checks exactly against getEntireSystemColl() 73,493.400 ETH valued at that price ($130,834,180) over getEntireSystemDebt() 27,391,435.164 LUSD. StabilityPool.getTotalLUSDDeposits() of 7,627,015.234 LUSD over the same debt gives a liquidation capacity ratio of 0.278; LUSD totalSupply() equals getEntireSystemDebt() exactly at this block, so the ratio is identical against supply. checkRecoveryMode() was false, MCR 110%, CCR 150%. Collateralization parameters and liquidation mechanics are documented, immutable protocol design reviewed against the V1 docs. Backstop, branch isolation, shutdown/bad-debt, and structural redemption are left bounded-unknown pending a dedicated review, even though redistribution-to-Troves and permissionless redemption are documented features: the Stability Pool covers only 27.8% of system debt, and the redistribution fallback that absorbs the remainder has not been reviewed here.",
+      "notes": "Measured on-chain 2026-07-14 at finalized Ethereum block 25533257 via journaled eth_call (evidence: shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-07-14-block-25533257.json; producer scripts/maintenance/measure-cdp-mechanism-metrics.ts, byte-replay verified). The contract graph was derived on-chain from the LUSD token (troveManagerAddress(), stabilityPoolAddress(), then TroveManager.priceFeed()) rather than from a published address list. TroveManager.getTCR at the canonical protocol price - an eth_call simulation of PriceFeed.fetchPrice() = 1875.88242714 USD/ETH, agreeing 0.0000% with the Chainlink ETH/USD feed - returned 5.033 (derivation check: getTCR == floor(coll x price / debt), exact). An earlier same-day read at block 25530791 used the frozen lastGoodPrice (1780.21673094, ~5.1% stale in the quiet system) and gave 4.776; superseded by owner decision D2 on 2026-07-14. StabilityPool.getTotalLUSDDeposits() over getEntireSystemDebt() gives a liquidation capacity ratio of 0.278; LUSD totalSupply() equals getEntireSystemDebt() exactly at the pinned block, so the ratio is identical against supply. checkRecoveryMode() was false, MCR 110%, CCR 150%. Collateralization parameters and liquidation mechanics are documented, immutable protocol design reviewed against the V1 docs. Backstop, branch isolation, shutdown/bad-debt, and structural redemption are left bounded-unknown pending a dedicated review, even though redistribution-to-Troves and permissionless redemption are documented features: the Stability Pool covers only 27.8% of system debt, and the redistribution fallback that absorbs the remainder has not been reviewed here.",
       "metrics": {
-        "collateralizationRatio": 4.776,
+        "collateralizationRatio": 5.033,
         "liquidationCapacityRatio": 0.278
       },
       "components": {
