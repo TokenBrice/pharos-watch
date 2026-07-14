@@ -149,7 +149,7 @@ export function adaptUsddLatestCollateral(
       value: bucketValues.psmUsdtUsd,
       risk: "low",
       coinId: "usdt-tether",
-      depType: "mechanism",
+      depType: "collateral",
     },
     {
       name: "TRX",

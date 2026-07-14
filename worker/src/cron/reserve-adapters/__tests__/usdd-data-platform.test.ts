@@ -67,7 +67,7 @@ describe("adaptUsddLatestCollateral", () => {
     expect(result.slices).toEqual([
       { name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 50.4, risk: "medium" },
       { name: "TRX", pct: 39.7, risk: "high" },
-      { name: "USDT (PSM vaults)", pct: 8, risk: "low", coinId: "usdt-tether", depType: "mechanism" },
+      { name: "USDT (PSM vaults)", pct: 8, risk: "low", coinId: "usdt-tether", depType: "collateral" },
       { name: "sTRX (direct vaults)", pct: 1.8, risk: "high" },
       { name: "USDT (direct vaults)", pct: 0.1, risk: "high", coinId: "usdt-tether" },
     ]);

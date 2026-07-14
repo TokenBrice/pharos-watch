@@ -81,7 +81,7 @@ const TOKEN_DISPLAY: Record<string, TokenDisplayConfig> = {
   RAM: { label: "RAM", risk: "very-high" },
   SDT: { label: "SDT", risk: "very-high" },
   THE: { label: "THE", risk: "very-high" },
-  USDB: { label: "USDB (Bridge)", risk: "low", coinId: "usdb-bridge" },
+  USDB: { label: "USDB (Bridge)", risk: "low" },
   USDC: { label: "USDC (Circle)", risk: "low", coinId: "usdc-circle" },
   USCC: { label: "USCC (Superstate crypto arbitrage)", risk: "medium" },
   USDS: { label: "USDS", risk: getCanonicalReserveAssetRisk("USDS") ?? "low", coinId: "usds-sky" },

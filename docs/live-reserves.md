@@ -73,7 +73,7 @@ The adapter normally fetches issuer index pages with browser-style `Origin`, `Re
 - If the adapter throws, the orchestrator retries the same adapter against each fallback by temporarily swapping that fallback into `inputs.primary`.
 - If every fallback fails, the attempt history records the primary and fallback failure chain, and the cron-run metadata includes per-coin `attemptFailureSummaries` for automated triage.
 
-USDD currently uses this path: the cron retries `latest-collateral` on Ethereum if the Tron source fails, and the adapter now derives the matching `collateral-history` URL from whichever chain endpoint is active so fallback freshness stays chain-consistent.
+USDD currently uses this path: the cron retries `latest-collateral` on Ethereum if the Tron source fails, and the adapter now derives the matching `collateral-history` URL from whichever chain endpoint is active so fallback freshness stays chain-consistent. USDT held in USDD PSM vaults is emitted as proportional `collateral` exposure; the `mechanism` relationship type is reserved for serial dependencies rather than fractional reserve inventory.
 
 Supported input kinds:
 

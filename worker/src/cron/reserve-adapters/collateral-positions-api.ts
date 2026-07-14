@@ -70,7 +70,7 @@ const PROTOCOL_ASSET_CONFIG: Record<string, ProtocolAssetConfig> = {
   // Stablecoins not in canonical map
   VCHF: { risk: "low" },
   CHFAU: { risk: "low" },
-  YSYBOLD: { risk: "medium", coinId: "bold-liquity", depType: "collateral" },
+  YSYBOLD: { risk: "medium", coinId: "ybold-yearn", depType: "collateral" },
   // Wrapped BTC variants
   BBTC: { risk: "medium" },
   // Tokenized equities / RWA
@@ -116,6 +116,10 @@ function inferCoinId(symbol: string): string | undefined {
       return "zchf-frankencoin";
     case "CHFAU":
       return "chfau-allunity";
+    case "PAXG":
+      return "paxg-paxos";
+    case "XAUT":
+      return "xaut-tether";
     default:
       return undefined;
   }

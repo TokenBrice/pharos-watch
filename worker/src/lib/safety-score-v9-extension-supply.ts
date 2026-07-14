@@ -1,4 +1,5 @@
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import { resolveChainId } from "@shared/lib/chains";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
 
@@ -9,9 +10,13 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
+function canonicalChainKey(raw: string): string {
+  return resolveChainId(raw) ?? raw.toLowerCase();
+}
+
 function routeChain(routeId: string): string | null {
   const separator = routeId.indexOf(":");
-  return separator > 0 ? routeId.slice(0, separator) : null;
+  return separator > 0 ? canonicalChainKey(routeId.slice(0, separator)) : null;
 }
 
 /**
@@ -45,7 +50,7 @@ export function buildSafetyScoreV9SupplyReview(
   const failureDomains: SupplyReview["failureDomains"][number][] = [];
   for (const chain of chains) {
     const supplyUsd = chainRows[chain]!.current;
-    const chainRoutes = routesByChain.get(chain) ?? [];
+    const chainRoutes = routesByChain.get(canonicalChainKey(chain)) ?? [];
     if (chainRoutes.length !== 1) {
       // Zero rows means the chain has no reviewed route; multiple rows cannot
       // be split with per-chain supply alone. Both stay unknown.
@@ -65,12 +70,15 @@ export function buildSafetyScoreV9SupplyReview(
       failureDomains.push({ kind: "bridge-route", key });
     }
   }
-  const selectedUsd = selectedBridgeRoutes.reduce((sum, route) => sum + route.supplyUsd, 0);
+  const reviewedSelectedUsd = selectedBridgeRoutes.reduce(
+    (sum, route) => sum + (route.reviewState === "selected-reviewed" ? route.supplyUsd : 0),
+    0,
+  );
   return {
     selectedBridgeRoutes: selectedBridgeRoutes.sort((left, right) =>
       compareText(left.deploymentRouteKey, right.deploymentRouteKey),
     ),
-    selectedRouteSupplyShare: Math.min(1, selectedUsd / totalUsd),
+    selectedRouteSupplyShare: Math.min(1, reviewedSelectedUsd / totalUsd),
     unknownRouteSupplyShare: Math.min(1, unknownUsd / totalUsd),
     unreviewedRouteSupplyShare: Math.min(1, unreviewedUsd / totalUsd),
     failureDomains: [...new Map(failureDomains.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values()].sort(

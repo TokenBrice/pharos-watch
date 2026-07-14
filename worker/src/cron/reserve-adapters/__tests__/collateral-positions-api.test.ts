@@ -165,9 +165,40 @@ describe("adaptCollateralPositions", () => {
       name: "ysyBOLD (Staked yBOLD)",
       pct: 0.1,
       risk: "medium",
-      coinId: "bold-liquity",
+      coinId: "ybold-yearn",
       depType: "collateral",
     });
+  });
+
+  it("maps tracked gold collateral to active dependency targets", () => {
+    const result = adaptCollateralPositions(
+      {
+        "0xpaxg": {
+          address: "0xPAXG",
+          name: "Paxos Gold",
+          symbol: "PAXG",
+          decimals: 18,
+          positions: [{ collateralBalance: "60000000000000000000" }],
+        },
+        "0xxaut": {
+          address: "0xXAUT",
+          name: "Tether Gold",
+          symbol: "XAUt",
+          decimals: 18,
+          positions: [{ collateralBalance: "40000000000000000000" }],
+        },
+      },
+      {
+        "0xpaxg": { price: { usd: 1 } },
+        "0xxaut": { price: { usd: 1 } },
+      },
+      0,
+    );
+
+    expect(result.slices).toEqual([
+      { name: "PAXG (Paxos Gold)", pct: 60, risk: "medium", coinId: "paxg-paxos" },
+      { name: "XAUt (Tether Gold)", pct: 40, risk: "medium", coinId: "xaut-tether" },
+    ]);
   });
 
   it("recognizes CHFAU as a low-risk protocol stablecoin when it appears in collateral positions", () => {
