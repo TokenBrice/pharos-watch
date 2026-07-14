@@ -58,6 +58,7 @@ jobs:
       PUBLIC_DATASETS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://pharos.watch/_site-data' }}
       PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY || secrets.DIGEST_API_KEY }}
       PUBLIC_DATASETS_REQUIRE_API: "1"
+      PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE: "1"
       SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
       NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
       NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"

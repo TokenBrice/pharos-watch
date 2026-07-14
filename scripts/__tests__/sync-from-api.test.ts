@@ -1,10 +1,24 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiFetchHeaders, fetchWithRetry, resolveApiPathUrl } from "../lib/sync-from-api";
+import {
+  apiFetchHeaders,
+  fetchWithRetry,
+  preserveExistingJsonArrayOnFetchFailure,
+  resolveApiPathUrl,
+  shouldAllowExistingDataOnFetchFailure,
+} from "../lib/sync-from-api";
+
+const tempRoots: string[] = [];
 
 describe("fetchWithRetry", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+    for (const root of tempRoots.splice(0)) {
+      rmSync(root, { force: true, recursive: true });
+    }
   });
 
   it("adds the site API credential for deploy-time internal reads", () => {
@@ -66,5 +80,43 @@ describe("fetchWithRetry", () => {
 
     expect(response.status).toBe(401);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("recognizes the release fallback switch for existing data mirrors", () => {
+    vi.stubEnv("PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE", "1");
+
+    expect(shouldAllowExistingDataOnFetchFailure()).toBe(true);
+  });
+
+  it("preserves a valid existing JSON array after a release-time fetch failure", () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-sync-fallback-"));
+    tempRoots.push(root);
+    const outputPath = join(root, "snapshot.json");
+    writeFileSync(outputPath, JSON.stringify([{ id: "existing" }]));
+
+    expect(
+      preserveExistingJsonArrayOnFetchFailure({
+        allow: true,
+        error: new Error("API returned 403"),
+        label: "test-sync",
+        outputPath: new URL(`file://${outputPath}`),
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects the existing-data fallback when the checked-in JSON is empty", () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-sync-fallback-"));
+    tempRoots.push(root);
+    const outputPath = join(root, "snapshot.json");
+    writeFileSync(outputPath, "[]");
+
+    expect(
+      preserveExistingJsonArrayOnFetchFailure({
+        allow: true,
+        error: new Error("API returned 403"),
+        label: "test-sync",
+        outputPath: new URL(`file://${outputPath}`),
+      }),
+    ).toBe(false);
   });
 });

@@ -6,14 +6,10 @@
  * sync-digests.ts and sync-depeg-events.ts.
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import {
-  SITE_DATA_PATH_PREFIX,
-  SITE_DATA_PROXY_SECRET_HEADER,
-  toSiteDataPath,
-} from "@shared/lib/site-data-lane";
+import { SITE_DATA_PATH_PREFIX, SITE_DATA_PROXY_SECRET_HEADER, toSiteDataPath } from "@shared/lib/site-data-lane";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 
 import { sleep } from "./smoke-runtime.mjs";
@@ -48,9 +44,7 @@ export function resolveApiUrl(options: ResolveApiUrlOptions): string {
     envNames.map((name) => process.env[name]).find((value) => value != null && value !== "") ||
     null;
   if (!explicit) {
-    throw new Error(
-      `Provide ${argName} or set ${envNames.join(" / ")} before running ${scriptName}.`,
-    );
+    throw new Error(`Provide ${argName} or set ${envNames.join(" / ")} before running ${scriptName}.`);
   }
   return resolveApiPathUrl(explicit, apiPath);
 }
@@ -161,6 +155,8 @@ export const GENERATOR_API_KEY_ENV_NAMES = [
   "PHAROS_API_KEY",
 ] as const;
 
+export const RELEASE_DATA_FALLBACK_ENV_NAME = "PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE";
+
 /**
  * Resolve an API base from the first non-empty value among `envNames`, with the
  * trailing slash trimmed. Returns null when none are configured (callers decide
@@ -216,10 +212,7 @@ export function resolveApiPathUrl(apiBaseOrEndpoint: string, apiPath: string): s
  * Build request headers (`Accept` + optional `X-API-Key`) from the first
  * non-empty API key among `envNames`.
  */
-export function apiFetchHeaders(
-  envNames: readonly string[],
-  options: { url?: string } = {},
-): Record<string, string> {
+export function apiFetchHeaders(envNames: readonly string[], options: { url?: string } = {}): Record<string, string> {
   const apiKey = envNames.map((name) => process.env[name]?.trim()).find((value) => value);
   const siteApiSharedSecret = process.env.SITE_API_SHARED_SECRET?.trim();
   const isSiteDataRequest = isSiteDataRequestUrl(options.url);
@@ -246,4 +239,41 @@ export function resolveGeneratorApiBase(): string | null {
  */
 export function generatorFetchHeaders(url?: string): Record<string, string> {
   return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES, { url });
+}
+
+export function shouldAllowExistingDataOnFetchFailure(envNames: readonly string[] = []): boolean {
+  return [RELEASE_DATA_FALLBACK_ENV_NAME, ...envNames].some((name) => {
+    const value = process.env[name]?.trim().toLowerCase();
+    return value === "1" || value === "true";
+  });
+}
+
+export function preserveExistingJsonArrayOnFetchFailure(options: {
+  allow: boolean;
+  error: unknown;
+  label: string;
+  minEntries?: number;
+  outputPath: URL;
+}): boolean {
+  const { allow, error, label, minEntries = 1, outputPath } = options;
+  if (!allow) return false;
+
+  const outputFile = fileURLToPath(outputPath);
+  let parsed: unknown;
+  try {
+    if (!existsSync(outputFile)) return false;
+    parsed = JSON.parse(readFileSync(outputFile, "utf8"));
+  } catch {
+    return false;
+  }
+
+  if (!Array.isArray(parsed) || parsed.length < minEntries) {
+    return false;
+  }
+
+  const reason = error instanceof Error ? error.message : String(error);
+  console.warn(
+    `[${label}] Live fetch failed (${reason}); preserving existing ${outputFile} (${parsed.length} entries).`,
+  );
+  return true;
 }

@@ -106,6 +106,28 @@ describe("generate-public-datasets", () => {
     expect(stderr).toContain("No public dataset API source configured");
   });
 
+  it("preserves checked-in mirrors during release when the configured live source is blocked", async () => {
+    const { stderr } = await execFileAsync(
+      path.join(process.cwd(), "node_modules/.bin/tsx"),
+      ["scripts/maintenance/generate-public-datasets.ts"],
+      {
+        env: {
+          ...process.env,
+          API_BASE_URL: "",
+          PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE: "1",
+          PUBLIC_DATASETS_ALLOW_STUB: "",
+          PUBLIC_DATASETS_API_URL: "http://127.0.0.1:9",
+          PUBLIC_DATASETS_DATE: "2026-05-16",
+          PUBLIC_DATASETS_REQUIRE_API: "1",
+          SMOKE_API_BASE: "",
+        },
+        timeout: 15_000,
+      },
+    );
+
+    expect(stderr).toContain("preserving checked-in public dataset mirrors");
+  });
+
   it("uses the effective snapshot date after falling back to the latest snapshot", async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
       const href = String(url);
@@ -359,10 +381,7 @@ describe("generate-public-datasets", () => {
   it("uses source coverage instead of a volatile fixed floor for rolling depeg history", () => {
     expect(() => testExports.validateTopicRowFloor("depeg-history", [makeEvent(null)])).not.toThrow();
     expect(() =>
-      testExports.validateDepegHistoryCoverage(
-        [makeEvent(null), makeCoverageSentinel("2026-05-16")],
-        "2026-05-16",
-      ),
+      testExports.validateDepegHistoryCoverage([makeEvent(null), makeCoverageSentinel("2026-05-16")], "2026-05-16"),
     ).not.toThrow();
   });
 
@@ -399,5 +418,4 @@ describe("generate-public-datasets", () => {
       reason: expect.stringContaining("rowCount 0 below required floor 493"),
     });
   });
-
 });

@@ -20,6 +20,7 @@
  *   PUBLIC_DATASETS_API_KEY   — optional `X-API-Key` header
  *   PUBLIC_DATASETS_DATE      — optional ISO date to fetch (default: today UTC)
  *   PUBLIC_DATASETS_REQUIRE_API=1 — fail if no API base is configured
+ *   PUBLIC_DATASETS_ALLOW_EXISTING_ON_FETCH_FAILURE=1 — preserve valid mirrors if live fetch fails
  *
  * When no API base is configured, valid checked-in mirrors are preserved for
  * local/PR validation builds. Production Pages workflows set
@@ -43,9 +44,11 @@ import { getCirculatingRaw } from "../../shared/lib/supply";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
 import { type CsvColumn, escapeCsvField } from "../lib/csv-helpers";
 import {
+  RELEASE_DATA_FALLBACK_ENV_NAME,
   generatorFetchHeaders,
   resolveApiPathUrl,
   resolveGeneratorApiBase,
+  shouldAllowExistingDataOnFetchFailure,
 } from "../lib/sync-from-api";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -65,8 +68,7 @@ const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
   "scores-latest": 493,
   "peg-mechanism-distribution": 99,
 };
-const FRESHNESS_CONTRACT =
-  "point-in-time sample; not guaranteed to track production freshness";
+const FRESHNESS_CONTRACT = "point-in-time sample; not guaranteed to track production freshness";
 
 interface SnapshotEnvelope {
   snapshotDate: string;
@@ -259,9 +261,7 @@ function preambleLine(p: Preamble): string {
 function buildCsv<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): string {
   const head = `# ${preambleLine(preamble)}`;
   const header = columns.map((c) => c.header).join(",");
-  const body = rows.map((row, rowIndex) =>
-    columns.map((c) => escapeCsvField(c.accessor(row, rowIndex))).join(","),
-  );
+  const body = rows.map((row, rowIndex) => columns.map((c) => escapeCsvField(c.accessor(row, rowIndex))).join(","));
   return [head, header, ...body].join("\n") + "\n";
 }
 
@@ -674,10 +674,7 @@ function cutoffSecForSnapshotDate(snapshotDate: string): number {
 
 function validateDepegHistoryCoverage(events: readonly DepegEvent[], snapshotDate: string): void {
   const cutoffSec = cutoffSecForSnapshotDate(snapshotDate);
-  const oldestStartedAt = events.reduce(
-    (oldest, event) => Math.min(oldest, event.startedAt),
-    Number.POSITIVE_INFINITY,
-  );
+  const oldestStartedAt = events.reduce((oldest, event) => Math.min(oldest, event.startedAt), Number.POSITIVE_INFINITY);
   if (oldestStartedAt > cutoffSec) {
     throw new Error(
       `Depeg event source does not cover the ${RETENTION_DAYS}-day export window for ${snapshotDate}; ` +
@@ -722,9 +719,7 @@ export async function loadPublicDatasetLiveInputs(
     envelope = await fetchLiveEndpointEnvelope(apiBase, effectiveSnapshotDate);
   }
   if (!envelope) {
-    throw new Error(
-      `Unable to fetch public snapshot or live endpoint fallback for ${requestedSnapshotDate}.`,
-    );
+    throw new Error(`Unable to fetch public snapshot or live endpoint fallback for ${requestedSnapshotDate}.`);
   }
   effectiveSnapshotDate = envelope.snapshotDate || effectiveSnapshotDate;
   const asOfISO = asOfIsoFromEnvelope(envelope, effectiveSnapshotDate);
@@ -792,6 +787,29 @@ function checkAllTopics(dirs: ArtifactDirs = DEFAULT_ARTIFACT_DIRS): { ok: boole
   return { ok: true };
 }
 
+function shouldPreserveExistingDatasetMirrorsAfterFetchFailure(): boolean {
+  return shouldAllowExistingDataOnFetchFailure(["PUBLIC_DATASETS_ALLOW_EXISTING_ON_FETCH_FAILURE"]);
+}
+
+function preserveExistingDatasetMirrorsAfterFetchFailure(error: unknown): boolean {
+  if (!shouldPreserveExistingDatasetMirrorsAfterFetchFailure()) {
+    return false;
+  }
+  const existing = checkAllTopics();
+  if (!existing.ok) {
+    console.error(
+      `[generate-public-datasets] Live API fetch failed and checked-in mirrors are not current: ${existing.reason}`,
+    );
+    return false;
+  }
+  const reason = error instanceof Error ? error.message : String(error);
+  console.warn(
+    `[generate-public-datasets] Live API fetch failed (${reason}); preserving checked-in public dataset mirrors. ` +
+      `Unset ${RELEASE_DATA_FALLBACK_ENV_NAME} / PUBLIC_DATASETS_ALLOW_EXISTING_ON_FETCH_FAILURE to fail closed.`,
+  );
+  return true;
+}
+
 // --- Main -------------------------------------------------------------------
 
 async function main(): Promise<void> {
@@ -818,15 +836,22 @@ async function main(): Promise<void> {
   let asOfISO = `${snapshotDate}T00:00:00.000Z`;
 
   if (apiBase) {
-    const liveInputs = await loadPublicDatasetLiveInputs(apiBase, requestedSnapshotDate);
-    envelope = liveInputs.envelope;
-    depegEvents = liveInputs.depegEvents;
-    snapshotDate = liveInputs.effectiveSnapshotDate;
-    asOfISO = liveInputs.asOfISO;
-    if (snapshotDate !== requestedSnapshotDate) {
-      console.log(
-        `[generate-public-datasets] Requested snapshot ${requestedSnapshotDate} unavailable; using latest snapshot ${snapshotDate}.`,
-      );
+    try {
+      const liveInputs = await loadPublicDatasetLiveInputs(apiBase, requestedSnapshotDate);
+      envelope = liveInputs.envelope;
+      depegEvents = liveInputs.depegEvents;
+      snapshotDate = liveInputs.effectiveSnapshotDate;
+      asOfISO = liveInputs.asOfISO;
+      if (snapshotDate !== requestedSnapshotDate) {
+        console.log(
+          `[generate-public-datasets] Requested snapshot ${requestedSnapshotDate} unavailable; using latest snapshot ${snapshotDate}.`,
+        );
+      }
+    } catch (err) {
+      if (preserveExistingDatasetMirrorsAfterFetchFailure(err)) {
+        return;
+      }
+      throw err;
     }
   } else {
     if (REQUIRE_API_SOURCE) {

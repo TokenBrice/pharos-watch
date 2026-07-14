@@ -5,13 +5,16 @@
  */
 
 import { formatIsoDate } from "@shared/lib/format";
-import {
-  parseStrictCliArgs,
-  runCliEntrypoint,
-  writeCliHelpIfRequested,
-} from "../lib/cli-args.mjs";
+import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import { apiFetchHeaders, fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
+import {
+  apiFetchHeaders,
+  fetchWithRetry,
+  preserveExistingJsonArrayOnFetchFailure,
+  resolveApiUrl,
+  shouldAllowExistingDataOnFetchFailure,
+  syncJson,
+} from "../lib/sync-from-api";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/sync-digests.ts [options]
 
@@ -19,6 +22,8 @@ Options:
   --api-url <url>   Digest API base or endpoint (overrides environment)
   --output <path>   Output path (default: data/digests.json)
   --dry-run         Fetch and validate without writing the output file
+  --allow-existing-on-fetch-failure
+                   Preserve a valid existing output file if the live fetch fails
   --check           Verify script wiring without network or file writes
   -h, --help        Show this help`;
 
@@ -42,6 +47,7 @@ interface DigestEntry {
 }
 
 export interface DigestSyncCliOptions {
+  allowExistingOnFetchFailure: boolean;
   apiUrl: string | null;
   check: boolean;
   dryRun: boolean;
@@ -54,12 +60,14 @@ export function parseDigestSyncArgs(argv: string[]): DigestSyncCliOptions {
     conflicts: [["check", "dry-run"]],
     options: {
       "api-url": { type: "string" },
+      "allow-existing-on-fetch-failure": { type: "boolean" },
       check: { type: "boolean" },
       "dry-run": { type: "boolean" },
       output: { type: "string" },
     },
   });
   return {
+    allowExistingOnFetchFailure: values["allow-existing-on-fetch-failure"] === true,
     apiUrl: typeof values["api-url"] === "string" ? values["api-url"] : null,
     check: values.check === true,
     dryRun: values["dry-run"] === true,
@@ -107,36 +115,57 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
   headers.set("Cache-Control", "no-cache");
   headers.set("Pragma", "no-cache");
 
-  const { entries, outputFile, written } = await syncJson<DigestEntry>({
-    writeTo: outputPath,
-    parse: async () => {
-      const res = await fetchWithRetry(fetchUrl, { headers }, {
-        logLabel: "sync-digests",
-        retryStatuses: [403],
-        backoffMs: [12_000, 12_000],
-      });
-      if (!res.ok) throw new Error(`API returned ${res.status}`);
-      const { digests } = (await res.json()) as { digests: ApiDigest[] };
-      console.log(`Fetched ${digests.length} digests`);
-      return digests
-        .map((d) => ({
-          date: formatIsoDate(d.generatedAt) + (d.digestType === "weekly" ? "-weekly" : ""),
-          title: d.digestTitle || "Signal & Noise",
-          text: d.digestText,
-          extended: d.digestExtended || "",
-          generatedAt: d.generatedAt,
-          digestType: d.digestType ?? ("daily" as const),
-          editionNumber: d.editionNumber ?? 0,
-        }))
-        .sort((a, b) => b.generatedAt - a.generatedAt);
-    },
-    write: !options.dryRun,
-  });
-  console.log(
-    written
-      ? `Wrote ${entries.length} digests to ${outputFile}`
-      : `[sync-digests] Dry run: would write ${entries.length} digests to ${outputFile}`,
-  );
+  try {
+    const { entries, outputFile, written } = await syncJson<DigestEntry>({
+      writeTo: outputPath,
+      parse: async () => {
+        const res = await fetchWithRetry(
+          fetchUrl,
+          { headers },
+          {
+            logLabel: "sync-digests",
+            retryStatuses: [403],
+            backoffMs: [12_000, 12_000],
+          },
+        );
+        if (!res.ok) throw new Error(`API returned ${res.status}`);
+        const { digests } = (await res.json()) as { digests: ApiDigest[] };
+        console.log(`Fetched ${digests.length} digests`);
+        return digests
+          .map((d) => ({
+            date: formatIsoDate(d.generatedAt) + (d.digestType === "weekly" ? "-weekly" : ""),
+            title: d.digestTitle || "Signal & Noise",
+            text: d.digestText,
+            extended: d.digestExtended || "",
+            generatedAt: d.generatedAt,
+            digestType: d.digestType ?? ("daily" as const),
+            editionNumber: d.editionNumber ?? 0,
+          }))
+          .sort((a, b) => b.generatedAt - a.generatedAt);
+      },
+      write: !options.dryRun,
+    });
+    console.log(
+      written
+        ? `Wrote ${entries.length} digests to ${outputFile}`
+        : `[sync-digests] Dry run: would write ${entries.length} digests to ${outputFile}`,
+    );
+  } catch (err) {
+    const allowExisting =
+      options.allowExistingOnFetchFailure ||
+      shouldAllowExistingDataOnFetchFailure(["DIGEST_SYNC_ALLOW_EXISTING_ON_FETCH_FAILURE"]);
+    if (
+      preserveExistingJsonArrayOnFetchFailure({
+        allow: allowExisting && !options.dryRun,
+        error: err,
+        label: "sync-digests",
+        outputPath,
+      })
+    ) {
+      return;
+    }
+    throw err;
+  }
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {

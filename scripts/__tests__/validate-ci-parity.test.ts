@@ -533,6 +533,7 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).toContain("DEPEG_EVENTS_API_URL:");
     expect(consolidatedPagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
+    expect(consolidatedPagesReleaseJob).toContain('PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE: "1"');
     expect(consolidatedPagesReleaseJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
     expect(consolidatedPagesReleaseJob).toContain("Install Chromium and fetch deploy data concurrently");
     expect(consolidatedPagesReleaseJob).toContain("Generate public dataset mirrors from the target API environment");
@@ -620,6 +621,7 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_URL:");
     expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
+    expect(pagesReleaseJob).toContain('PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE: "1"');
     expect(pagesReleaseJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
     expect(pagesReleaseJob).toContain("fetch-depth: 0");
     expect(pagesReleaseJob).toContain("git-history-derived sitemap/docs metadata");
