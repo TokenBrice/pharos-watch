@@ -160,15 +160,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "USDC deposited into Smokehouse-curated Morpho lending markets with wider/exotic collateral exposure",
-      "pct": 100,
-      "risk": "high",
-      "coinId": "usdc-circle",
-      "depType": "wrapper"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Smokehouse USDC MetaMorpho vault",
     "yieldType": "lending-vault"

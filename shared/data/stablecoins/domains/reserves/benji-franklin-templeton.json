@@ -1,0 +1,70 @@
+{
+  "id": "benji-franklin-templeton",
+  "reserves": [
+    {
+      "name": "U.S. government securities, fully collateralized repos, and cash",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Franklin OnChain U.S. Government Money Fund portfolio",
+      "riskFactors": ["duration", "liquidity", "counterparty", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Franklin OnChain U.S. Government Money Fund",
+        "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29386/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+      },
+      {
+        "label": "FOBXX prospectus",
+        "url": "https://www.franklintempleton.com/forms-literature/download-preview/9001-P"
+      }
+    ],
+    "rationale": "Franklin Templeton states that FOBXX invests at least 99.5% of assets in U.S. government securities, cash, and repurchase agreements fully collateralized by U.S. government securities or cash. The prior 60/35/5 allocation is not supported by the current fund page, so the changing portfolio remains one aggregate policy basket rather than an estimated split.",
+    "compositionBasis": "Current FOBXX investment policy; category weights change and are not stated on the reviewed fund overview",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The permitted reserve categories are known, but their current portfolio weights and any residual receivables or payables are not represented by a stable category split.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. government securities, fully collateralized repos, and cash",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The official fund disclosure supports the aggregate basket but not the prior fixed category weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "JPMorgan Chase Bank",
+        "role": "custodian",
+        "jurisdiction": "United States",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "FOBXX statement of additional information",
+        "url": "https://www.franklintempleton.com/forms-literature/download-preview/9001-SAI"
+      },
+      {
+        "label": "FOBXX prospectus",
+        "url": "https://www.franklintempleton.com/forms-literature/download-preview/9001-P"
+      }
+    ],
+    "uncertainty": "The current SAI names JPMorgan Chase Bank as custodian of all fund assets and the registered-fund structure separates portfolio assets from the adviser. The reviewed materials do not state a general rehypothecation prohibition, and repo collateral and counterparties remain governed by the fund's investment procedures."
+  }
+}

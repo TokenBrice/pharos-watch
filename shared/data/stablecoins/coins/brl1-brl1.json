@@ -64,15 +64,23 @@
     "provider": "BRL1 self-published proof of reserves",
     "attestorTier": "self",
     "cadence": "real-time",
-    "attestorJurisdiction": "Brazil"
-  },
-  "reserves": [
-    {
-      "name": "Brazilian Treasury ETFs, repo agreements, and cash equivalents",
-      "pct": 100,
-      "risk": "medium"
+    "attestorJurisdiction": "Brazil",
+    "latestReport": {
+      "periodEnd": "2025-04-14",
+      "publishedAt": "2025-04-14",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "BRL1 proof-of-reserves report - April 2025",
+          "url": "https://drive.google.com/file/d/1q6arJKrt3wWta7kYCnppD1awhgzsz8AW/view?usp=sharing"
+        }
+      ]
     }
-  ],
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

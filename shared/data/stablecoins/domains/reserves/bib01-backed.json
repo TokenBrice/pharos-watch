@@ -1,0 +1,84 @@
+{
+  "id": "bib01-backed",
+  "reserves": [
+    {
+      "name": "iShares IB01 0-1 year U.S. Treasury bond ETF shares",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "iShares $ Treasury Bond 0-1yr UCITS ETF",
+      "riskFactors": ["duration", "liquidity", "custody", "counterparty", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Backed bIB01 product disclosure",
+        "url": "https://assets.backed.fi/products/bib01"
+      },
+      {
+        "label": "Backed proof-of-reserves documentation",
+        "url": "https://docs.backed.fi/backed-ecosystem/proof-of-reserves"
+      }
+    ],
+    "rationale": "Backed identifies bIB01 as a tracker certificate whose sole underlying is the iShares IB01 UCITS ETF. The reserve is recorded as one fund-share position; the Chainlink reserve feed verifies the Backed-held share balance but does not justify decomposing the ETF's changing security-level holdings.",
+    "compositionBasis": "Backed bIB01 product and proof-of-reserves disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The certificate's underlying fund is fully identified; the ETF's changing security-level portfolio and Backed custodian allocations are outside this single-underlying composition.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "iShares IB01 0-1 year U.S. Treasury bond ETF shares",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The reserve is a regulated ETF share rather than another tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Alpaca Securities LLC",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "InCore Bank AG",
+        "role": "custodian",
+        "jurisdiction": "Switzerland"
+      },
+      {
+        "name": "Maerki Baumann & Co. AG",
+        "role": "custodian",
+        "jurisdiction": "Switzerland"
+      },
+      {
+        "name": "Security Agent Services AG",
+        "role": "other",
+        "jurisdiction": "Switzerland"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Backed bIB01 product and service-provider disclosure",
+        "url": "https://assets.backed.fi/products/bib01"
+      },
+      {
+        "label": "Backed proof-of-reserves documentation",
+        "url": "https://docs.backed.fi/backed-ecosystem/proof-of-reserves"
+      }
+    ],
+    "uncertainty": "Backed names three possible brokers and custodians plus the security agent but does not publish which provider holds the current bIB01 reserve or any provider shares. The reviewed product page and reserve-feed description do not establish current product-specific segregation, insolvency, or rehypothecation terms, so those safeguards remain unknown."
+  }
+}
