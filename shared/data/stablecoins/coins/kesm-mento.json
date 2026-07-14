@@ -155,6 +155,27 @@
       "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento V3 CDP documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+      },
+      {
+        "label": "Mento V3 stablecoin acquisition documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "rationale": "Mento documents every V3 FX CDP instance as an independent Liquity-style system that uses USDm as its sole collateral asset. The configured on-chain broker pool also identifies USDm as the direct counterasset, so the reserve-derived dependency is exactly 100% Mento Dollar.",
+    "compositionBasis": "Documented single-collateral Mento V3 FX CDP architecture",
+    "compositionAsOf": "2026-07-14",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "No unidentified direct stablecoin dependency remains in the documented USDm-only CDP path; USDm's reserve look-through is reviewed on the upstream asset.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,

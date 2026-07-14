@@ -137,26 +137,46 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "Pareto credit vaults",
-      "pct": 95,
-      "risk": "high"
-    },
-    {
-      "name": "USDC liquid buffer",
-      "pct": 2.5,
-      "risk": "low",
+      "name": "USDC credit-vault allocation and liquid buffer",
+      "pct": 80,
+      "risk": "high",
       "coinId": "usdc-circle",
       "depType": "collateral",
       "blacklistable": true
     },
     {
-      "name": "USDS liquid buffer",
-      "pct": 2.5,
+      "name": "sUSDS instant-liquidity allocation",
+      "pct": 20,
       "risk": "low",
-      "coinId": "usds-sky",
+      "coinId": "susds-sky",
       "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pareto USP documentation",
+        "url": "https://docs.pareto.credit/product/usp"
+      },
+      {
+        "label": "Pareto USP allocation documentation",
+        "url": "https://docs.pareto.credit/product/usp/allocation"
+      },
+      {
+        "label": "ParetoDollarQueue on Blockscout",
+        "url": "https://eth.blockscout.com/address/0xa7780086ab732c110e9e71950b9fb3cb2ea50d89"
+      }
+    ],
+    "rationale": "Pareto documents USP collateral as USDC and USDS deployed through the ParetoDollarQueue. At Ethereum block 25530498, the queue reported 606,934,667.535566 USDC-equivalent in its only positive USDC credit-vault source, a 3,994,905.919 USDC liquid balance, and 152,387,517.015965 USDS-equivalent in sUSDS. Normalized to total collateral, those direct upstream positions round to 80.0% USDC and 20.0% sUSDS.",
+    "compositionBasis": "ParetoDollarQueue yield-source allocations and liquid collateral balances",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All positive queue allocations and liquid collateral balances are attributed to their direct upstream stablecoin positions.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
