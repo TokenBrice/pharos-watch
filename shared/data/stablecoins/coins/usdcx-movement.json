@@ -65,14 +65,18 @@
         "name": "CCTP v2",
         "slug": "cctpv2",
         "url": "https://l2beat.com/interop/protocols/cctpv2",
-        "bridgeTypes": ["burnAndMint"]
+        "bridgeTypes": [
+          "burnAndMint"
+        ]
       },
       {
         "source": "l2beat",
         "name": "Circle Gateway",
         "slug": "circlegateway",
         "url": "https://l2beat.com/interop/protocols/circlegateway",
-        "bridgeTypes": ["burnAndMint"]
+        "bridgeTypes": [
+          "burnAndMint"
+        ]
       }
     ],
     "sources": [
@@ -93,15 +97,6 @@
   "collateralQuality": "native",
   "custodyModel": "institutional-top",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Circle USDC held in xReserve smart contract",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "wrapper"
-    }
-  ],
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",

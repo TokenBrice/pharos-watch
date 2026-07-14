@@ -46,13 +46,33 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       "ethereum:native",
       "tron:bridge",
     ]);
-    expect(review!.selectedRouteSupplyShare).toBeCloseTo(0.85, 6);
+    expect(review!.selectedRouteSupplyShare).toBeCloseTo(0.6, 6);
     expect(review!.unknownRouteSupplyShare).toBeCloseTo(0.15, 6);
     expect(review!.unreviewedRouteSupplyShare).toBeCloseTo(0.25, 6);
     expect(review!.failureDomains).toContainEqual({ kind: "bridge-route", key: "chain:Ethereum" });
     expect(safetyScoreV9RouteSupplyShare(review, "ethereum:native")).toBeCloseTo(0.6, 6);
     expect(safetyScoreV9RouteSupplyShare(review, "unknown:route")).toBe(0);
     expect(safetyScoreV9RouteSupplyShare(null, "ethereum:native")).toBeNull();
+  });
+
+  it("normalizes captured display names to route chain ids", () => {
+    const review = buildSafetyScoreV9SupplyReview(
+      fixedInputStub({ Ethereum: { current: 60 }, "OP Mainnet": { current: 25 }, BSC: { current: 15 } }),
+      "alpha",
+      profile([
+        ETH_ROUTE,
+        { id: "optimism:bridge", reviewDisposition: "reviewed" } as unknown as BridgeRoutes[number],
+        { id: "bsc:bridge", reviewDisposition: "reviewed" } as unknown as BridgeRoutes[number],
+      ]),
+    );
+
+    expect(review!.selectedBridgeRoutes.map((route) => route.deploymentRouteKey)).toEqual([
+      "bsc:bridge",
+      "ethereum:native",
+      "optimism:bridge",
+    ]);
+    expect(review!.selectedRouteSupplyShare).toBe(1);
+    expect(review!.unknownRouteSupplyShare).toBe(0);
   });
 
   it("keeps chains with multiple route rows unknown rather than splitting supply", () => {

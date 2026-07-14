@@ -14,6 +14,28 @@
   "collateral": "Over-collateralized by LUA staked at the protocol floor price, plus a diversified stablecoin reserve of USDT and USDC held as protocol-owned liquidity (including Lumi's Curve pool)",
   "pegMechanism": "Lumi's AMO (Algorithmic Market Operations) Protocol mints or redeems LUAUSD to rebalance its Curve pool toward the dollar, with the stablecoin reserve and rising LUA floor price as backing; it is not a hard 1:1 redeemable fiat stablecoin and has traded persistently below $1",
   "mechanismArchetype": "algorithmic",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "LUAUSD is minted by users staking LUA against Lumi's internal floor-price mechanism; the reviewed material does not establish the position-level collateral checks or liquidation path.",
+    "branchModel": "single-path",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SOL-3 adversarial verification",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Lumi staking and stablecoin documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin"
+      },
+      {
+        "label": "Lumi reserve-backed AMM documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/legacy/lua-minting-secondary-market/reserve-back-amm-mechanism"
+      },
+      {
+        "label": "Lumi LUA minting documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/lua-minting"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "lumi-finance-luausd",
   "cmcSlug": "lumi-finance-luausd",

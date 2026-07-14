@@ -27,6 +27,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "cusd-cap": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
+    outputAssets: ["usdc-circle", "wtgxx-wisdomtree"],
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: documentedVariableFee(
       "The cUSD vault's inherited Minter sets a flat on-chain redeem fee, queryable via getRedeemFee() (currently 0 ray / 0 bps; whitelisted users pay 0%); dynamic mint/burn fees do not apply to proportional redemption beyond this flat fee",
@@ -42,11 +43,13 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "Cap docs describe cUSD as always redeemable against the underlying reserve basket, with dynamic interest rates preventing full utilization so withdrawals remain atomic",
+      "At Ethereum block 25530449, the cUSD vault assets() list contained only USDC and wWTGXX; the live reserve config maps those contracts to usdc-circle and wtgxx-wisdomtree",
     ],
   },
   "honey-berachain": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
+    outputAssets: ["usdc-circle", "usdt-tether", "pyusd-paypal", "usde-ethena"],
     costModel: documentedVariableFee(
       "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead",
     ),
@@ -63,6 +66,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "dai-makerdao": {
     ...psmSwapBase,
+    outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.33, basis: "psm-balance-share" },
     costModel: fixedFee(0, "LitePSM docs show fees are not activated for DAI <-> USDC"),
     notes: [
@@ -71,6 +75,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "usds-sky": {
     ...psmSwapBase,
+    outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.33, basis: "psm-balance-share" },
     costModel: fixedFee(
       0,
@@ -142,6 +147,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "usdd-tron-dao-reserve": {
     ...psmSwapBase,
+    outputAssets: ["usdt-tether"],
     capacityModel: { kind: "supply-ratio", ratio: 0.16, confidence: "documented-bound" },
     costModel: fixedFee(0, "USDD docs describe 1:1 PSM conversions between USDD and USDT/USDC/TUSD"),
     reviewedAt: REVIEWED_BASKET_REDEMPTION_AT,
@@ -174,6 +180,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "pmusd-precious-metals": {
     ...psmSwapBase,
+    outputAssets: ["susds-sky"],
     capacityModel: { kind: "supply-ratio", ratio: 0.001, confidence: "heuristic", basis: "psm-balance-share" },
     costModel: fixedFee(25, "RAAC PSM docs specify a 25 bps swap fee for pmUSD → sUSDS exits"),
     reviewedAt: "2026-05-02",
@@ -189,6 +196,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "dola-inverse-finance": {
     ...psmSwapBase,
+    outputAssets: ["usds-sky"],
     capacityModel: { kind: "supply-ratio", ratio: 0.08, confidence: "documented-bound" },
     costModel: fixedFee(20, "Inverse FiRM docs list a 20 bps DOLA -> USDS exit fee"),
     reviewedAt: "2026-03-23",
@@ -206,10 +214,18 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "buck-bucket-protocol": {
     ...psmSwapBase,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
     capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound" },
     costModel: fixedFee(30, "Modeled route uses PSM OUT at 30 bps; collateral redemptions use a separate dynamic fee"),
-    reviewedAt: REVIEWED_BASKET_REDEMPTION_AT,
-    docs: [sourceRef("Bucket Protocol docs", "https://docs.bucketprotocol.io/", ["route", "capacity", "fees"])],
+    reviewedAt: "2026-07-14",
+    docs: [
+      sourceRef("Bucket Protocol PSM", "https://docs.bucketprotocol.io/mechanisms/peg-stability-module", [
+        "route",
+        "capacity",
+        "fees",
+      ]),
+    ],
     notes: [
       "The reviewed 25% bound matches the tracked USDC/USDT PSM reserve share rather than assuming the full BUCK supply is instantly redeemable through the stablecoin module",
     ],
@@ -233,6 +249,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "dusd-alto": {
     ...psmSwapBase,
+    outputAssets: ["usdc-circle"],
     ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
     costModel: fixedFee(
       20,
@@ -262,6 +279,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "eusd-electronic-usd": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
+    outputAssets: ["usdc-circle", "usdt-tether"],
     costModel: documentedVariableFee(
       "Reserve Index docs describe mint and TVL fees, but do not document a separate redemption fee",
     ),
@@ -285,6 +303,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "usd3-reserve-protocol": {
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_RESERVE_PROTOCOL_DTF_AT),
+    outputAssets: ["susds-sky", "usdc-circle", "steakusdc-steakhouse"],
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",
     costModel: undisclosedReviewedFee(

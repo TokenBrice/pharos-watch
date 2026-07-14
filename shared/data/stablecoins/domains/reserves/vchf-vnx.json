@@ -1,0 +1,84 @@
+{
+  "id": "vchf-vnx",
+  "reserves": [
+    {
+      "name": "Aggregate CHF-value reserve (composition undisclosed)",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "VNX Commodities AG and undisclosed reserve counterparties",
+      "riskFactors": [
+        "legal",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AREVA VNX reserve report as of December 31, 2024",
+        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+      },
+      {
+        "label": "VNX Reserves Management Policy",
+        "url": "https://vnx.li/wp-content/uploads/2023/05/2023.04.30-VNX-staiblecoins-Reserves-Management-Policy.pdf"
+      },
+      {
+        "label": "VNX current transparency page",
+        "url": "https://vnx.li/transparency/"
+      }
+    ],
+    "rationale": "AREVA reconciled the December 31, 2024 circulating VCHF liability to at least the same aggregate CHF value held in bank accounts or securities custody accounts. The report does not disclose constituents or weights, while VNX's non-binding policy permits a broader mix of debt securities, ETFs, derivatives, deposits, repos, money-market instruments, and currency hedges. The current VNX transparency page publishes no later VCHF reserve report.",
+    "compositionBasis": "AREVA aggregate reserve-value reconciliation and VNX non-binding reserve policy",
+    "compositionAsOf": "2024-12-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All reserve value is reported only as an aggregate. The bank-account versus securities-custody allocation, underlying holdings, issuers, maturities, custodians, and liquidity terms are undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Aggregate CHF-value reserve (composition undisclosed)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The AUP report confirms aggregate CHF-value coverage but does not disclose reserve constituents or weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed banks and securities custodians",
+        "role": "custodian"
+      },
+      {
+        "name": "VNX Commodities AG",
+        "role": "other",
+        "jurisdiction": "Liechtenstein"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "AREVA VNX reserve report as of December 31, 2024",
+        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+      },
+      {
+        "label": "VNX current transparency page",
+        "url": "https://vnx.li/transparency/"
+      }
+    ],
+    "uncertainty": "The report confirms bank accounts or securities custody accounts at aggregate CHF value but does not identify the institutions, account segregation, bankruptcy treatment, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

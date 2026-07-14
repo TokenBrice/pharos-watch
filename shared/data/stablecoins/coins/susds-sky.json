@@ -22,18 +22,35 @@
   "pythFeedId": "0x6968a8641208463d17ae3b9cfa0e4841a7aa7a5d54122b9f692b84fe9ce3409f",
   "oracleRisk": {
     "tier": "medianized-with-delay",
-    "summary": "Savings Dai/USDS wrappers use internal share accounting but inherit the parent Maker/Sky CDP oracle path of medianized feeds routed through the Oracle Security Module delay.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "sUSDS is an ERC-4626 savings wrapper over USDS and has no borrower-owned collateral positions or local liquidation engine. Its required USDS parent carries the separately reviewed Sky Vault oracle, auction, backstop, and bad-debt branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "Sky documents sUSDS as an ERC-4626 savings token whose users deposit USDS for shares and withdraw USDS without protocol fees. It does not originate borrower debt or operate collateral-ratio-triggered liquidations. The variantOf relationship preserves the complete USDS parent branch review.",
+      "sources": [
+        {
+          "label": "Sky sUSDS documentation",
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+        },
+        {
+          "label": "Sky Oracle Security Module documentation",
+          "url": "https://developers.skyeco.com/protocol/core/osm/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Maker Oracle Module docs",
-        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module"
+        "label": "Sky sUSDS documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
       },
       {
-        "label": "Maker Oracle Security Module docs",
-        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module/oracle-security-module-osm-detailed-documentation"
+        "label": "Sky Oracle Security Module documentation",
+        "url": "https://developers.skyeco.com/protocol/core/osm/"
       }
     ]
   },

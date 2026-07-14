@@ -2,7 +2,7 @@
   "id": "ussd-sonic-labs",
   "name": "US Sonic Dollar",
   "symbol": "USSD",
-  "oneLiner": "USSD is Sonic Labs's permissionless 1:1 dollar built on Frax's frxUSD infrastructure, backed by tokenized U.S. Treasury products and approved stablecoins.",
+  "oneLiner": "USSD is Sonic Labs's permissionless 1:1 dollar directly backed by Sonic frxUSD and therefore inherits Frax's upstream reserve exposure.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -11,8 +11,8 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Short-duration tokenized U.S. Treasury products held by approved custodians: BlackRock BUIDL (USD Institutional Digital Liquidity Fund), Superstate USTB (Short Duration U.S. Government Securities Fund), and WisdomTree WTGXX (Government Money Market Digital Fund); supported minting collateral also includes USDC, USDT, PYUSD, and USDB",
-  "pegMechanism": "1:1 permissionless mint and redemption via non-custodial smart contracts built on Frax's frxUSD infrastructure; users mint with any approved USD asset (USDC, USDT, PYUSD, USDB, BUIDL, USTB, WTGXX) at zero fee; redeem into any supported USD asset at any time with no lockup or withdrawal delay; cross-chain via CCTP; yield from Treasury reserves flows to the Sonic ecosystem rather than to USSD holders",
+  "collateral": "Sonic frxUSD held 1:1 by the USSD BrandedCustodian contract on Sonic. USSD inherits frxUSD's upstream reserve exposure rather than directly holding Frax's tokenized Treasury and approved-stablecoin portfolio.",
+  "pegMechanism": "USSD is minted and redeemed 1:1 against Sonic frxUSD through Frax-derived permissionless contracts. Broader approved-asset and tokenized-Treasury routes belong to the upstream frxUSD reserve layer; cross-chain USSD additionally relies on its omnichain infrastructure.",
   "mechanismArchetype": "tbill",
   "llamaId": "356",
   "detailProvider": "coingecko",
@@ -294,83 +294,213 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "BlackRock BUIDL (USD Institutional Digital Liquidity Fund)",
-      "pct": 50,
-      "risk": "low",
-      "coinId": "buidl-blackrock"
-    },
-    {
-      "name": "Superstate USTB (Short Duration U.S. Government Securities Fund)",
-      "pct": 30,
-      "risk": "low",
-      "coinId": "ustb-superstate"
-    },
-    {
-      "name": "WisdomTree WTGXX (Government Money Market Digital Fund)",
-      "pct": 20,
-      "risk": "low",
-      "coinId": "wtgxx-wisdomtree"
+      "name": "Sonic frxUSD held by the USSD BrandedCustodian",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "frxusd-frax",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Finance and the Sonic USSD BrandedCustodian contract",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     }
   ],
-  "liveReservesConfig": {
-    "adapter": "frax-balance-sheet",
-    "version": 1,
-    "semantics": "attestation-mix",
-    "breakerScope": "ussd-sonic-labs",
-    "display": {
-      "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf",
-      "label": "Frax Balance Sheet"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USSD BrandedCustodian verified contract",
+        "url": "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+      },
+      {
+        "label": "Sonic public RPC",
+        "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "Frax frxUSD balance sheet",
         "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
       }
-    }
+    ],
+    "rationale": "At Sonic block 75932905, BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 held 2198089373918331893881173 units of Sonic frxUSD, exactly equal to USSD totalSupply. USSD's direct reserve is therefore 100% frxUSD; Frax's WTGXX, USTB, BUIDL, and other reserve rows are inherited look-through exposure and must not be duplicated as direct USSD slices.",
+    "compositionBasis": "Fixed-block Sonic frxUSD balanceOf the USSD BrandedCustodian reconciled to USSD totalSupply",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The direct reserve asset is fully identified as frxUSD. Asset-level reserve and custody risks beneath frxUSD remain inherited from the linked upstream record rather than repeated here.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "USSD BrandedCustodian contract",
+        "role": "other",
+        "jurisdiction": "Sonic"
+      },
+      {
+        "name": "Frax frxUSD reserve infrastructure",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USSD BrandedCustodian verified contract",
+        "url": "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+      },
+      {
+        "label": "Sonic public RPC",
+        "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "Frax frxUSD balance sheet",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      }
+    ],
+    "uncertainty": "The direct onchain holder is the USSD BrandedCustodian contract, which is not a legal custodian. Legal custody, segregation, bankruptcy remoteness, rehypothecation, and provider shares beneath frxUSD are inherited upstream and are not established independently for USSD."
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "USSD is a Sonic Labs dollar built on Frax's frxUSD infrastructure: users mint/redeem 1:1 and non-custodially against an issuer-administered set of approved USD assets, while the issuer/Frax framework custodies tokenized U.S. Treasury reserves (BUIDL/USTB/WTGXX) and manages reserve deployment.",
+    "summary": "USSD is a Sonic Labs dollar built on Frax's frxUSD infrastructure. The tracked direct mint path is a BrandedCustodian that accepts local frxUSD and calls the USSD token's MINTER_ROLE; external Frax routes expose a broader issuer-administered set of approved USD assets and tokenized Treasury reserves.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x000000000eccff26b795f73fb0a70d48da657fef"
+      ],
+      "implementationAddresses": [
+        "0x155384be16fa171e6d97e4136643a9ac31678d04"
+      ],
+      "adminAddresses": [
+        "0x95081db6a3ae3e1d14d66e68c703e463e4faf912"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USSD Frax ProxyAdmin (mint implementation upgrade)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 75932905,
+      "sources": [
+        {
+          "label": "USSD proxy verified source",
+          "url": "https://etherscan.io/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
+        },
+        {
+          "label": "USSD implementation verified source",
+          "url": "https://etherscan.io/address/0x155384be16fa171e6d97e4136643a9ac31678d04#code"
+        },
+        {
+          "label": "Sonic RPC",
+          "url": "https://rpc.soniclabs.com"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "frxUSD-based USSD mint/redeem contract",
+        "label": "Sonic BrandedCustodian (USSD direct mint gateway)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "chain": "sonic",
-        "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
-        "capDescription": "Permissionless 1:1 mint against an issuer-administered approved-collateral set (USDC, USDT, PYUSD, USDB, BUIDL, USTB, WTGXX); the approved-asset list and parameters are controlled by the issuer/Frax framework.",
-        "evidence": "Sonic Labs docs state USSD is built on Frax's frxUSD infrastructure with non-custodial 1:1 mint/redeem and zero fees; the set of approved minting collateral is defined by the issuer.",
+        "address": "0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+        "capDescription": "BrandedCustodian.mintCap() returned uint256.max at Sonic block 75932905. Its public deposit/mint path takes local frxUSD, calls USSD mint(), and enforces the cap after minting; the custodian owner controls setMintCap().",
+        "observedAt": "2026-07-14",
+        "observedBlock": 75932905,
+        "failureDomainKeys": [
+          "sonic:0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03"
+        ],
+        "evidence": "At Sonic block 75932905, the USSD proxy's MINTER_ROLE holder is 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03. The verified BrandedCustodian source shows deposit() and mint() transfer in custodianTkn, call brandedStablecoin.mint(), and enforce mintCap; live reads returned brandedStablecoin()=0x000000000eccff26b795f73fb0a70d48da657fef, custodianTkn()=0x80eede496655fb9047dd39d9f418d5483ed600df, mintCap()=uint256.max, and owner()=0x63e89638743a409e2389f06a3f778a4570314d7d.",
         "sources": [
           {
-            "label": "USSD docs",
-            "url": "https://docs.soniclabs.com/sonic/ussd"
+            "label": "Sonic BrandedCustodian verified source",
+            "url": "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+          },
+          {
+            "label": "USSD token on SonicScan",
+            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
+          },
+          {
+            "label": "Sonic RPC",
+            "url": "https://rpc.soniclabs.com"
           }
         ]
       },
       {
-        "label": "Sonic Labs / Frax reserve custodian + treasury management",
-        "role": "custodian",
-        "authorityType": "custodian",
+        "label": "Sonic BrandedFactory (USSD MINTER_ROLE admin and custodian owner)",
+        "role": "minter-admin",
+        "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Reserves are custodied tokenized U.S. Treasury products (BlackRock BUIDL, Superstate USTB, WisdomTree WTGXX) with deployment/management run through Frax's infrastructure; yield is directed to the Sonic ecosystem, indicating issuer/custodian control over reserves and the approved-asset roster.",
+        "canRaiseCap": true,
+        "chain": "sonic",
+        "address": "0x63e89638743a409e2389f06a3f778a4570314d7d",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The live BrandedCustodian owner is this BrandedFactory, so it is the on-chain owner authority for setMintCap(). The token's FACTORY_ROLE is also held by this address, and the verified GeniusDollar source sets FACTORY_ROLE as MINTER_ROLE's admin role.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 75932905,
+        "failureDomainKeys": [
+          "sonic:0x63e89638743a409e2389f06a3f778a4570314d7d"
+        ],
+        "evidence": "At Sonic block 75932905, FACTORY_ROLE() returned 0xdfbefbf47cfe66b701d8cfdbce1de81c821590819cb07e71cb01b6602fb0ee27 and its sole RoleGranted account was 0x63e89638743a409e2389f06a3f778a4570314d7d. The same address is owner() of the direct BrandedCustodian. Verified BrandedFactory source grants MINTER_ROLE to each deployed custodian, while verified BrandedCustodian source gates setMintCap() with onlyOwner.",
         "sources": [
           {
-            "label": "Frax balance sheet",
-            "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf"
+            "label": "Sonic BrandedFactory verified source",
+            "url": "https://sonicscan.org/address/0x63e89638743a409e2389f06a3f778a4570314d7d#code"
+          },
+          {
+            "label": "Sonic BrandedCustodian verified source",
+            "url": "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+          },
+          {
+            "label": "USSD token on SonicScan",
+            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
+          },
+          {
+            "label": "Sonic RPC",
+            "url": "https://rpc.soniclabs.com"
+          }
+        ]
+      },
+      {
+        "label": "USSD Frax ProxyAdmin (mint implementation upgrade)",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "chain": "sonic",
+        "address": "0x95081db6a3ae3e1d14d66e68c703e463e4faf912",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 75932905,
+        "failureDomainKeys": [
+          "sonic:0x95081db6a3ae3e1d14d66e68c703e463e4faf912",
+          "sonic:0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
+        ],
+        "evidence": "At Sonic block 75932905, the USSD proxy's EIP-1967 admin slot returned ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912. ProxyAdmin.owner() returned 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac; the verified OpenZeppelin ProxyAdmin source exposes upgradeAndCall with no timelock or delay mechanism. The same proxy admin and owner are present on the Ethereum, Base, Arbitrum, Optimism, and Scroll deployments at their current blocks.",
+        "sources": [
+          {
+            "label": "USSD proxy verified source",
+            "url": "https://etherscan.io/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
+          },
+          {
+            "label": "USSD ProxyAdmin on SonicScan",
+            "url": "https://sonicscan.org/address/0x95081db6a3ae3e1d14d66e68c703e463e4faf912#code"
+          },
+          {
+            "label": "Sonic RPC",
+            "url": "https://rpc.soniclabs.com"
           }
         ]
       }
     ],
     "review": {
-      "evidence": "USSD's mint/redeem is permissionless 1:1 against approved USD assets via Frax frxUSD smart contracts, but the approved-collateral set, RWA reserve custody (BUIDL/USTB/WTGXX), and reserve deployment are administered by Sonic Labs / the Frax framework. This is an AMO/custodian-hybrid rather than a pure user-collateralized or pure fiat-issuer model.",
-      "reviewer": "DeepSeek-verified mint-authority sweep",
-      "reviewedAt": "2026-05-25",
+      "evidence": "At current blocks on Sonic (75932905), Ethereum (25531120), Base (48622804), Arbitrum (483776104), Optimism (154218090), and Scroll (34361168), all six tracked USSD deployments resolve to implementation 0x155384be… and ProxyAdmin 0x95081db6…. On Sonic, the verified implementation and role-grant logs resolve MINTER_ROLE to BrandedCustodian 0x54e144…, FACTORY_ROLE and the custodian owner to BrandedFactory 0x63e896…, and the ProxyAdmin owner to 0x87c7…. The token-side mint, cap, role-admin, and upgrade surfaces are therefore structured and current; the broader approved-collateral roster used by external Frax frxUSD routes remains a separate unresolved governance surface.",
+      "reviewer": "Codex CTRL curation",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "USSD docs",
@@ -381,9 +511,9 @@
           "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf"
         }
       ],
-      "sourceFreeRationale": "frxUSD-based mechanism and reserve composition confirmed from Sonic/Frax materials; the on-chain owner/admin of the USSD contract and the controller of the approved-collateral roster were not independently resolved.",
+      "sourceFreeRationale": "The current token-side on-chain minter, mint-cap owner, role administrator, and proxy upgrade controller are resolved from verified contract source and RPC reads. The approved-collateral roster for external Frax frxUSD routes is outside the USSD token contract and was not exhaustively resolved.",
       "unresolvedQuestions": [
-        "Resolve the on-chain admin/owner of 0x000000000eccff26b795f73fb0a70d48da657fef and who can modify the approved-collateral set (Sonic Labs multisig vs Frax governance) before raising confidence."
+        "Resolve the mutable approved-collateral roster and reserve-deployment controllers for the external Frax frxUSD mint/redeem routes; the tracked USSD token's direct minter, cap owner, role administrator, and proxy upgrade controller are resolved."
       ]
     }
   },

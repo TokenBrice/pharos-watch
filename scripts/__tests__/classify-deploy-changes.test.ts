@@ -8,7 +8,7 @@ import {
   hasPagesPublishImpact,
   hasPagesUiImpact,
   hasWorkerDeployImpact,
-  hasWorkerPromotionImpact,
+  hasWorkerReleaseImpact,
   normalizeChangedFiles,
 } from "../ci/classify-deploy-changes.mjs";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
@@ -45,7 +45,7 @@ describe("hasWorkerDeployImpact", () => {
 
     for (const file of pagesOnlySharedFiles) {
       expect(hasWorkerDeployImpact([file]), file).toBe(false);
-      expect(hasWorkerPromotionImpact([file]), file).toBe(false);
+      expect(hasWorkerReleaseImpact([file]), file).toBe(false);
       expect(hasPagesDeployImpact([file]), file).toBe(true);
     }
   });
@@ -125,27 +125,27 @@ describe("hasPagesUiImpact", () => {
   });
 });
 
-describe("hasWorkerPromotionImpact", () => {
+describe("hasWorkerReleaseImpact", () => {
   it("returns true for Worker runtime, config, D1 migrations, root packages, and shared runtime changes", () => {
-    expect(hasWorkerPromotionImpact(["worker/src/api/health.ts"])).toBe(true);
-    expect(hasWorkerPromotionImpact(["worker/wrangler.toml"])).toBe(true);
-    expect(hasWorkerPromotionImpact(["worker/migrations/0107_example.sql"])).toBe(true);
-    expect(hasWorkerPromotionImpact(["shared/data/stablecoins/usd-major.json"])).toBe(true);
-    expect(hasWorkerPromotionImpact(["shared/lib/classification.ts"])).toBe(true);
-    expect(hasWorkerPromotionImpact(["package.json", "package-lock.json"])).toBe(true);
+    expect(hasWorkerReleaseImpact(["worker/src/api/health.ts"])).toBe(true);
+    expect(hasWorkerReleaseImpact(["worker/wrangler.toml"])).toBe(true);
+    expect(hasWorkerReleaseImpact(["worker/migrations/0107_example.sql"])).toBe(true);
+    expect(hasWorkerReleaseImpact(["shared/data/stablecoins/usd-major.json"])).toBe(true);
+    expect(hasWorkerReleaseImpact(["shared/lib/classification.ts"])).toBe(true);
+    expect(hasWorkerReleaseImpact(["package.json", "package-lock.json"])).toBe(true);
   });
 
   it("returns false for validation, tests, and known Pages-only shared changes", () => {
-    expect(hasWorkerPromotionImpact(["scripts/lib/validation-lanes.mjs"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["scripts/maintenance/smoke-ui.mjs"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["worker/migrations/MANIFEST.md"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["worker/src/api/__tests__/health.test.ts"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["shared/lib/public-docs.ts"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["shared/lib/__tests__/public-docs.test.ts"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["shared/lib/pharosville-api-contract.ts"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["shared/types/pharosville.ts"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["shared/lib/selector/engine.ts"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["shared/data/funding/donations.json"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["scripts/lib/validation-lanes.mjs"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["scripts/maintenance/smoke-ui.mjs"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["worker/migrations/MANIFEST.md"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["worker/src/api/__tests__/health.test.ts"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["shared/lib/public-docs.ts"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["shared/lib/__tests__/public-docs.test.ts"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["shared/lib/pharosville-api-contract.ts"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["shared/types/pharosville.ts"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["shared/lib/selector/engine.ts"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["shared/data/funding/donations.json"])).toBe(false);
   });
 });
 
@@ -180,7 +180,7 @@ describe("hasDeployImpact", () => {
     for (const file of deploySupportFiles) {
       expect(hasDeployImpact([file]), file).toBe(true);
       expect(hasWorkerDeployImpact([file]), file).toBe(true);
-      expect(hasWorkerPromotionImpact([file]), file).toBe(false);
+      expect(hasWorkerReleaseImpact([file]), file).toBe(false);
       expect(hasPagesDeployImpact([file]), file).toBe(true);
     }
   });
@@ -190,7 +190,7 @@ describe("hasDeployImpact", () => {
 
     expect(hasDeployImpact(files)).toBe(false);
     expect(hasWorkerDeployImpact(files)).toBe(false);
-    expect(hasWorkerPromotionImpact(files)).toBe(false);
+    expect(hasWorkerReleaseImpact(files)).toBe(false);
     expect(hasPagesDeployImpact(files)).toBe(false);
   });
 
@@ -207,7 +207,7 @@ describe("hasDeployImpact", () => {
       expect(hasDeployImpact([file]), file).toBe(true);
       expect(hasPagesDeployImpact([file]), file).toBe(true);
       expect(hasWorkerDeployImpact([file]), file).toBe(false);
-      expect(hasWorkerPromotionImpact([file]), file).toBe(false);
+      expect(hasWorkerReleaseImpact([file]), file).toBe(false);
     }
   });
 
@@ -230,7 +230,7 @@ describe("classifyDeployChanges", () => {
     const result = classifyDeployChanges({ eventName: "workflow_dispatch" });
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
-    expect(result.workerPromotionRequired).toBe(true);
+    expect(result.workerDeployRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
     expect(result.pagesDeployRequired).toBe(true);
     expect(result.docsOnly).toBe(false);
@@ -244,7 +244,7 @@ describe("classifyDeployChanges", () => {
     });
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
-    expect(result.workerPromotionRequired).toBe(true);
+    expect(result.workerDeployRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
     expect(result.pagesDeployRequired).toBe(true);
   });
@@ -261,7 +261,7 @@ describe("classifyDeployChanges", () => {
 
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(false);
-    expect(result.workerPromotionRequired).toBe(false);
+    expect(result.workerDeployRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "docs/testing.md"]);
   });
@@ -278,7 +278,7 @@ describe("classifyDeployChanges", () => {
 
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
-    expect(result.workerPromotionRequired).toBe(true);
+    expect(result.workerDeployRequired).toBe(true);
     expect(result.pagesChanged).toBe(false);
     expect(result.changedFiles).toEqual(["worker/src/api/health.ts", "docs/testing.md"]);
   });
@@ -295,12 +295,12 @@ describe("classifyDeployChanges", () => {
 
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
-    expect(result.workerPromotionRequired).toBe(true);
+    expect(result.workerDeployRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "shared/lib/classification.ts"]);
   });
 
-  it("conservatively promotes both surfaces for root package changes", () => {
+  it("conservatively deploys both surfaces for root package changes", () => {
     const execFile = () => [
         "package.json",
         "package-lock.json",
@@ -320,7 +320,7 @@ describe("classifyDeployChanges", () => {
 
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
-    expect(result.workerPromotionRequired).toBe(true);
+    expect(result.workerDeployRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
   });
 
@@ -336,7 +336,7 @@ describe("classifyDeployChanges", () => {
 
     expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(false);
-    expect(result.workerPromotionRequired).toBe(false);
+    expect(result.workerDeployRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual([".github/workflows/pages-release.yml"]);
   });
@@ -354,7 +354,7 @@ describe("classifyDeployChanges", () => {
     expect(result.deployRequired).toBe(false);
     expect(result.docsOnly).toBe(true);
     expect(result.workerChanged).toBe(false);
-    expect(result.workerPromotionRequired).toBe(false);
+    expect(result.workerDeployRequired).toBe(false);
     expect(result.pagesChanged).toBe(false);
     expect(result.pagesDeployRequired).toBe(false);
     expect(result.changedFiles).toEqual(["docs/testing.md", "docs/process/notes.md"]);

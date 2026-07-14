@@ -66,97 +66,6 @@
       "decimals": 18
     }
   ],
-  "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "WPEN is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
-    "controls": [
-      {
-        "chain": "multichain",
-        "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
-        "label": "Ripio shared WPEN admin and MINTER_ROLE holder (EOA)",
-        "role": "minter-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true. eth_getCode returned 0x (EOA). Same role confirmed via hasRole on Base, BSC, Polygon, Gnosis, and Worldchain at same block range."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
-        "label": "Ripio WPEN Safe multisig (DEFAULT_ADMIN_ROLE)",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "threshold": 4,
-        "signerCount": 7,
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "owners": [
-            "0x067823401127ca6647481c68011805b90d42231e",
-            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
-            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
-            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
-            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
-            "0x00a74411ddbc50c04353543d5d3f4296936da645",
-            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
-          ],
-          "threshold": 4,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "version": "1.4.1",
-          "observedBlock": 25295015,
-          "source": "onchain"
-        },
-        "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) returned true. getOwners() returned 7 owners; getThreshold() returned 4. getModulesPaginated returned empty array (no modules). slot0 masterCopy = 0x41675c...61a (Safe v1.4.1 singleton). fallbackHandler = 0xfd0732...ec99 (standard CompatibilityFallbackHandler). getGuard() reverted (no guard)."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
-        "label": "Ripio WPEN Ethereum minter-router contract",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295015, hasRole(MINTER_ROLE) returned true on WPEN token. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe). Not deployed on other chains (eth_getCode = 0x on Base)."
-      },
-      {
-        "chain": "multichain",
-        "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
-        "label": "Ripio WPEN cross-chain minter-router contract",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At block 25295015, hasRole(MINTER_ROLE) returned true on WPEN token on Ethereum, Base, BSC, Polygon, and Gnosis. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe)."
-      }
-    ],
-    "review": {
-      "sources": [
-        {
-          "label": "Ripio local stablecoins",
-          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
-        },
-        {
-          "label": "Ethereum WPEN contract",
-          "url": "https://etherscan.io/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
-        },
-        {
-          "label": "Ripio Safe multisig",
-          "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
-        }
-      ],
-      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
-    }
-  },
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
@@ -298,13 +207,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Peruvian-sol cash and local-currency liquid instruments",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "notices": [
     {
       "type": "info",

@@ -1,0 +1,84 @@
+{
+  "id": "kag-kinesis",
+  "reserves": [
+    {
+      "name": "Physical silver bullion (999 fine, ABX global vaults)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Kinesis Monetary System and Allocated Bullion Exchange",
+      "riskFactors": [
+        "market",
+        "custody",
+        "liquidity",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Kinesis trust and security",
+        "url": "https://kinesis.money/trust-security/"
+      },
+      {
+        "label": "Kinesis April 2026 audit page",
+        "url": "https://kinesis.money/audit-april-2026/"
+      }
+    ],
+    "rationale": "Kinesis states that KAG represents one ounce of fully allocated 999-fine silver, with biannual Bureau Veritas physical audits checked against the blockchain record and redemption through Brinks and Loomis. The April 2026 audit page identifies the latest listed gold-and-silver audit, but does not publish a KAG-only quantity split in the reviewed text.",
+    "compositionBasis": "Kinesis allocated-bullion and April 2026 audit disclosures",
+    "compositionAsOf": "2026-04-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve category is fully allocated physical silver, but the reviewed page does not expose current KAG-only bar quantities, vault-level shares, or redemption inventory.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Physical silver bullion (999 fine, ABX global vaults)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Allocated physical silver is an exogenous commodity reserve rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Allocated Bullion Exchange vault network",
+        "role": "custodian"
+      },
+      {
+        "name": "Brinks",
+        "role": "subcustodian"
+      },
+      {
+        "name": "Loomis Zurich",
+        "role": "subcustodian",
+        "jurisdiction": "Switzerland"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Kinesis trust and security",
+        "url": "https://kinesis.money/trust-security/"
+      },
+      {
+        "label": "Kinesis April 2026 audit page",
+        "url": "https://kinesis.money/audit-april-2026/"
+      }
+    ],
+    "uncertainty": "Kinesis describes fully allocated bullion, legal ownership, and vault partners, but the reviewed materials do not establish a statutory bankruptcy-remote vehicle or rehypothecation prohibition."
+  }
+}

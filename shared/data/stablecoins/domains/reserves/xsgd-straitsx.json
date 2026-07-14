@@ -1,0 +1,75 @@
+{
+  "id": "xsgd-straitsx",
+  "reserves": [
+    {
+      "name": "SGD reserve assets in permitted financial-institution trust accounts",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "CIMB, DBS, Standard Chartered Singapore, or other MAS-permitted financial institutions",
+      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "StraitsX XSGD reserve attestations",
+        "url": "https://www.straitsx.com/xsgd"
+      },
+      {
+        "label": "StraitsX reserve-backing disclosures",
+        "url": "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
+      }
+    ],
+    "rationale": "StraitsX states that XSGD is fully backed at all times by reserve assets in segregated trust accounts at named or otherwise MAS-permitted financial institutions. The issuer does not publish current provider-level weights or a current asset-class split, so the full reserve is represented as one evidenced aggregate bank-account basket rather than preserving an unsupported provider allocation.",
+    "compositionBasis": "Current StraitsX reserve policy and attestation index; provider-level allocation undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer identifies the permitted reserve institutions and trust-account structure but does not publish the current provider allocation, account terms, or liquidity profile.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "SGD reserve assets in permitted financial-institution trust accounts",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Current provider-level reserve weights are not disclosed by StraitsX."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "CIMB Bank Berhad Singapore Branch",
+        "role": "bank",
+        "jurisdiction": "Singapore"
+      },
+      {
+        "name": "DBS Bank Ltd",
+        "role": "bank",
+        "jurisdiction": "Singapore"
+      },
+      {
+        "name": "Standard Chartered Bank (Singapore) Ltd",
+        "role": "bank",
+        "jurisdiction": "Singapore"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "StraitsX reserve-backing disclosures",
+        "url": "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
+      }
+    ],
+    "uncertainty": "StraitsX names CIMB, DBS, and Standard Chartered Singapore and permits other MAS-approved institutions, but does not publish provider shares, the current complete provider set, or rehypothecation terms. The trust structure and exclusion from the issuer's unsecured-creditor estate are explicit."
+  }
+}

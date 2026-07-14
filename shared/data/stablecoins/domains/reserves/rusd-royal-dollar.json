@@ -1,0 +1,74 @@
+{
+  "id": "rusd-royal-dollar",
+  "reserves": [
+    {
+      "name": "USD cash and bank deposits",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Reserve banks administered through The Royal Investment Bank of Kelantan",
+      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RIB Digital RUSD transparency",
+        "url": "https://rib.digital/transparency?product=RUSD"
+      },
+      {
+        "label": "RCOINS RUSD reserve framework",
+        "url": "https://www.rcoins.digital/RUSD"
+      }
+    ],
+    "rationale": "RIB Digital's April 23, 2026 RUSD transparency snapshot classifies 100% of reserves as cash and cash equivalents, then identifies 100% of that category as cash and bank deposits and zero exposure to Treasury bills or repos. This issuer disclosure replaces the prior opaque cash-and-liquid-asset basket without estimating bank-level allocations.",
+    "compositionBasis": "RIB Digital RUSD reserve-composition snapshot",
+    "compositionAsOf": "2026-04-23",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The disclosed reserve asset class is fully classified as cash and bank deposits; individual deposit banks, account balances, and liquidity terms are not public.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USD cash and bank deposits",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The reserve consists of off-chain USD cash and bank deposits rather than another tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Royal Investment Bank of Kelantan",
+        "role": "other",
+        "jurisdiction": "Malaysia"
+      },
+      {
+        "name": "Undisclosed reserve bank or banks",
+        "role": "bank"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "RIB Digital RUSD transparency",
+        "url": "https://rib.digital/transparency?product=RUSD"
+      },
+      {
+        "label": "RCOINS RUSD reserve framework",
+        "url": "https://www.rcoins.digital/RUSD"
+      }
+    ],
+    "uncertainty": "RIB Digital states that reserve capital is administered through The Royal Investment Bank of Kelantan, but it does not name the deposit bank accounts or publish provider shares. RCOINS says reserves may include segregated accounts, which does not establish that the current RUSD deposits are segregated; insolvency and rehypothecation protections are also undisclosed."
+  }
+}

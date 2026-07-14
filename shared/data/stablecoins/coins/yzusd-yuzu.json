@@ -25,15 +25,40 @@
     "cadence": "real-time"
   },
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Yuzu Money documents RedStone yzUSD/syzUSD feeds and lists Chainlink, Pyth, and RedStone for underlying strategy oracles, without failover handling documented.",
-    "reviewedAt": "2026-06-12",
+    "tier": "oracleless-or-internal",
+    "summary": "Yuzu documents yzUSD as a pooled, overcollateralized product minted and redeemed against USDT0, with yzPP as a first-loss tranche; it does not describe borrower-owned collateral positions with oracle-triggered liquidations.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Yuzu describes yzUSD as a senior pool tranche minted against pooled backing assets and protected by the separate yzPP first-loss pool. Minting, redemption, and loss absorption are pool-level operations rather than borrower-specific debt positions with collateral-ratio liquidations, so no liquidation-oracle branch applies to yzUSD.",
+      "sources": [
+        {
+          "label": "Yuzu Money overview",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money"
+        },
+        {
+          "label": "Yuzu Protection Pool",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/yuzu-protection-pool-yzpp"
+        },
+        {
+          "label": "Yuzu stablecoin app",
+          "url": "https://app.yuzu.money/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Yuzu oracles",
-        "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/oracles.md"
+        "label": "Yuzu Protection Pool",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/yuzu-protection-pool-yzpp"
+      },
+      {
+        "label": "Yuzu staked yzUSD wrapper",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/staked-yzusd-syzusd"
       }
     ]
   },
@@ -63,6 +88,81 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "yzUSD's only material deployment is native issuance on Plasma. DefiLlama still reports 23.772 yzUSD on a legacy Monad LayerZero OFT, but the Plasma adapter and Monad OFT both returned zero peers at the observation blocks, and Yuzu subsequently announced that it had replaced LayerZero with Chainlink CCIP as its exclusive cross-chain infrastructure. The dormant Monad residue is below Pharos deployment and route-materiality thresholds, so it is not promoted as an active catalog route.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex bridge-route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero V2 OFT (retired yzUSD route)",
+        "slug": "layerzero-v2",
+        "url": "https://metadata.layerzero-api.com/v1/metadata",
+        "bridgeTypes": ["external-lock-mint", "oft-adapter"],
+        "note": "LayerZero metadata maps the Plasma adapter and Monad NativeOFT at 0x9dcb...3858 to canonical Plasma yzUSD. Both endpoint peer mappings were zero at Plasma block 27084996 and Monad block 87683087; the Monad token retained 23.772 yzUSD of residual supply."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Yuzu announcement - migration from LayerZero to Chainlink CCIP",
+        "url": "https://x.com/YuzuMoneyX/status/2074480433233027222"
+      },
+      {
+        "label": "LayerZero deployment metadata - yzUSD Plasma adapter and Monad OFT",
+        "url": "https://metadata.layerzero-api.com/v1/metadata"
+      },
+      {
+        "label": "DefiLlama yzUSD adapter - Monad representation bridged from Plasma",
+        "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/yuzu-usd/index.ts"
+      },
+      {
+        "label": "Plasma yzUSD token contract",
+        "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc#code"
+      },
+      {
+        "label": "Plasma legacy yzUSD OFT adapter",
+        "url": "https://plasmascan.to/address/0x9dcb0d17edde04d27f387c89fecb78654c373858#code"
+      },
+      {
+        "label": "Monad legacy yzUSD OFT contract",
+        "url": "https://monadscan.com/address/0x9dcb0d17edde04d27f387c89fecb78654c373858#code"
+      },
+      {
+        "label": "Monad transaction clearing the Plasma OFT peer",
+        "url": "https://monadscan.com/tx/0xbf550ea959a1b075bc1227103d534dc90be8ad8c24afd7dc2f942a14ccd167f8"
+      }
+    ],
+    "routes": [
+      {
+        "id": "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc",
+        "destinationChain": "plasma",
+        "canonicalChain": "plasma",
+        "contractAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc",
+        "protocol": "Yuzu Money",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The authored contract registry contains only the material native Plasma deployment. The retired Monad OFT residue is documented at profile level and is not treated as an active route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedBlock": 27084996,
+        "sources": [
+          {
+            "label": "Plasma yzUSD token contract",
+            "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc#code"
+          },
+          {
+            "label": "Yuzu announcement - migration from LayerZero to Chainlink CCIP",
+            "url": "https://x.com/YuzuMoneyX/status/2074480433233027222"
+          }
+        ]
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -247,9 +347,7 @@
         "[Strata]_srUSDe_Pendle_PT_Loop": "Strata srUSDe Pendle PT loop",
         "[Agora]_PT_AUSD": "Agora AUSD Pendle PT"
       },
-      "allowNegativeBuckets": [
-        "[Strata]_srUSDe_Pendle_PT_Loop"
-      ],
+      "allowNegativeBuckets": ["[Strata]_srUSDe_Pendle_PT_Loop"],
       "skipTotalReservesValidation": true
     }
   },
@@ -261,7 +359,48 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "yzUSD is Yuzu's KYC-gated overcollateralized dollar on Plasma; primary mint/redeem at 1:1 with USDT0 is restricted to eligible (accredited/qualified/institutional) investors via the issuer, and deposited collateral is managed in a Fordefi MPC workspace limited by policy to whitelisted protocols.",
+    "summary": "yzUSD is Yuzu's KYC-gated overcollateralized dollar on Plasma. Its token is a transparent proxy upgraded through a 48-hour timelock proposed by a 4-of-5 Safe. LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE are each held by a 3-of-5 Safe and a separate 12-hour timelock proposed by that Safe. Current MINTER_ROLE membership is not yet exhaustively reconciled, so the graph remains unresolved despite the now-verified upgrade and manager paths. Primary mint/redeem at 1:1 with USDT0 is restricted to eligible investors, and deposited collateral is managed in a Fordefi MPC workspace limited by policy to whitelisted protocols.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+      ],
+      "implementationAddresses": [
+        "0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe"
+      ],
+      "adminAddresses": [
+        "0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa",
+        "0x2130457539612ae9838e0314cda1a8abbdb7cfbc",
+        "0xa2a9700407934e913c840556b3d29f19cf6f203d"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "yzUSD upgrade timelock (48 hours)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 27099366,
+      "sources": [
+        {
+          "label": "Plasmascan yzUSD proxy",
+          "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc#code"
+        },
+        {
+          "label": "Plasmascan yzUSD implementation",
+          "url": "https://plasmascan.to/address/0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe#code"
+        },
+        {
+          "label": "Routescan API - yzUSD ProxyAdmin",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa"
+        },
+        {
+          "label": "Routescan API - 48-hour upgrade timelock",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x2130457539612ae9838e0314cda1a8abbdb7cfbc"
+        },
+        {
+          "label": "Plasma RPC fixed-block reads",
+          "url": "https://plasma.drpc.org"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Yuzu issuer / eligible-investor primary mint",
@@ -269,9 +408,163 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "chain": "plasma",
+        "canRaiseCap": "unknown",
+        "sources": [
+          {
+            "label": "Yuzu Stablecoin (yzUSD) docs",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+          }
+        ],
+        "evidence": "Yuzu docs state only Eligible Investors (KYC/AML/KYB screened) may mint/redeem yzUSD 1:1 with USDT0 through the protocol; once issued, yzUSD trades freely on secondary markets. The backend-to-token authorization path is not inferred from that product description."
+      },
+      {
+        "label": "yzUSD MINTER_ROLE holder set (unresolved)",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "chain": "plasma",
         "address": "0x6695c0f8706c5ace3bdf8995073179cca47926dc",
         "canRaiseCap": "unknown",
-        "evidence": "Yuzu docs and coverage state only Eligible Investors (KYC/AML/KYB screened) may mint/redeem yzUSD 1:1 with USDT0 through the protocol; once issued, yzUSD trades freely on secondary markets."
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-07-14",
+        "observedBlock": 27099366,
+        "sources": [
+          {
+            "label": "Plasmascan yzUSD token",
+            "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc#code"
+          },
+          {
+            "label": "Routescan yzUSD RoleGranted logs",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=logs&action=getLogs&address=0x6695c0f8706c5ace3bdf8995073179cca47926dc&fromBlock=0&toBlock=27099366&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "Plasma RPC fixed-block role reads",
+            "url": "https://plasma.drpc.org"
+          }
+        ],
+        "evidence": "MINTER_ROLE is 0x9f2df0fe...c8956a6. The token has many historical grant and revoke events; the complete current holder set was not exhaustively reconciled at block 27099366. This unresolved direct-mint surface prevents a complete-graph claim."
+      },
+      {
+        "label": "yzUSD upgrade timelock (48 hours)",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "chain": "plasma",
+        "address": "0x2130457539612ae9838e0314cda1a8abbdb7cfbc",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 27099366,
+        "sources": [
+          {
+            "label": "Routescan API - 48-hour upgrade timelock",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x2130457539612ae9838e0314cda1a8abbdb7cfbc"
+          },
+          {
+            "label": "Plasma RPC fixed-block timelock reads",
+            "url": "https://plasma.drpc.org"
+          }
+        ],
+        "evidence": "At block 27099366, ProxyAdmin.owner() is this TimelockController and getMinDelay() is 172800 seconds. Safe 0xa2a9...203d holds PROPOSER_ROLE and CANCELLER_ROLE; EOA 0x1eC4...0483 is an additional canceller; EXECUTOR_ROLE is open to the zero address; DEFAULT_ADMIN_ROLE is held by the timelock itself."
+      },
+      {
+        "label": "yzUSD upgrade proposer Safe (4-of-5)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "chain": "plasma",
+        "address": "0xa2a9700407934e913c840556b3d29f19cf6f203d",
+        "threshold": 4,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0x1c6aCBdC24f88cc538ca9b2A4f872019e8d39F95",
+            "0x87B39bacc760A39822807e358BF21Bd5772D7CE2",
+            "0xA92Cb0695913B0FAC4Dc87048f958105d2E2ca7c",
+            "0x1eC4d0023c89c34903026AB8A3056e5b21490483",
+            "0x0939DC5CC492C4Ba54ba1fAb0EE3B3e1B4adb60f"
+          ],
+          "threshold": 4,
+          "observedBlock": 27099366,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Plasmascan 4-of-5 upgrade proposer Safe",
+            "url": "https://plasmascan.to/address/0xa2a9700407934e913c840556b3d29f19cf6f203d#readContract"
+          },
+          {
+            "label": "Plasma RPC fixed-block Safe reads",
+            "url": "https://plasma.drpc.org"
+          }
+        ],
+        "evidence": "At block 27099366, getOwners() returned five EOAs and getThreshold() returned 4. The Safe can propose upgrades through the 48-hour timelock but cannot execute an unscheduled upgrade."
+      },
+      {
+        "label": "yzUSD limit/restriction manager Safe (3-of-5)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "chain": "plasma",
+        "address": "0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0x1c6aCBdC24f88cc538ca9b2A4f872019e8d39F95",
+            "0x87B39bacc760A39822807e358BF21Bd5772D7CE2",
+            "0xA92Cb0695913B0FAC4Dc87048f958105d2E2ca7c",
+            "0x1eC4d0023c89c34903026AB8A3056e5b21490483",
+            "0x0939DC5CC492C4Ba54ba1fAb0EE3B3e1B4adb60f"
+          ],
+          "threshold": 3,
+          "observedBlock": 27099366,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 27099366,
+        "sources": [
+          {
+            "label": "Plasmascan 3-of-5 manager Safe",
+            "url": "https://plasmascan.to/address/0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d#readContract"
+          },
+          {
+            "label": "Plasma RPC fixed-block role and Safe reads",
+            "url": "https://plasma.drpc.org"
+          }
+        ],
+        "evidence": "RoleGranted/RoleRevoked logs reconciled with current hasRole calls at block 27099366 show this 3-of-5 Safe directly holds both LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE. Its five owners are the same as the 4-of-5 upgrade Safe's, but its threshold is 3."
+      },
+      {
+        "label": "yzUSD limit/restriction timelock (12 hours)",
+        "role": "minter-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "chain": "plasma",
+        "address": "0x5f3d29ef17700f8658c566dac7fbd76e0d86b78c",
+        "timelockDelaySec": 43200,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 27099366,
+        "sources": [
+          {
+            "label": "Routescan API - 12-hour manager timelock",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x5f3d29ef17700f8658c566dac7fbd76e0d86b78c"
+          },
+          {
+            "label": "Plasma RPC fixed-block role and timelock reads",
+            "url": "https://plasma.drpc.org"
+          }
+        ],
+        "evidence": "At block 27099366, this TimelockController has getMinDelay() = 43200 seconds and directly holds both LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE. Safe 0xe61a...530d is proposer and canceller; EOA 0x0939...b60f is an additional canceller; execution is open and DEFAULT_ADMIN_ROLE is held by the timelock itself."
       },
       {
         "label": "Fordefi MPC treasury workspace (collateral operations)",
@@ -280,25 +573,51 @@
         "directMintAbility": "none",
         "chain": "plasma",
         "canRaiseCap": "unknown",
-        "evidence": "Deposited USDT0 is pulled into a Fordefi MPC workspace whose policy only permits interaction with whitelisted protocols/contracts; overcollateralization (~103%) and a yzPP junior tranche backstop the senior yzUSD."
+        "sources": [
+          {
+            "label": "Yuzu Stablecoin (yzUSD) docs",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+          }
+        ],
+        "evidence": "Deposited USDT0 is pulled into a Fordefi MPC workspace whose policy only permits interaction with whitelisted protocols/contracts; overcollateralization and a yzPP junior tranche backstop the senior yzUSD."
       }
     ],
     "review": {
-      "evidence": "At Plasma block 24247237 (via plasma.drpc.org): yzUSD (0x6695c0f8706c5ace3bdf8995073179cca47926dc) is a UUPS proxy; implementation slot = 0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe; EIP-1967 proxy admin slot = 0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa (ProxyAdmin contract); owner() on the UUPS proxy returned 0x2130457539612ae9838e0314cda1a8abbdb7cfbc (contract, 10898 bytes); ProxyAdmin.owner() also returns the same address. The owner contract reverts on owner(), getOwners(), and getRoleMemberCount() — it is not a Safe and not standard AccessControl; identity unresolvable from on-chain reads alone.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Plasma block 27099366, yzUSD is a TransparentUpgradeableProxy with implementation 0x32d7...5cfe and ProxyAdmin 0x6ccf...d2aa. ProxyAdmin.owner() is a 172800-second TimelockController proposed by a 4-of-5 Safe. LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE are each currently held by a 3-of-5 Safe and a 43200-second TimelockController proposed by that Safe; both Safes have the same five EOA owners. This corrects the prior UUPS classification and the false claim that the 48-hour timelock was an unresolvable custom contract. The remaining blocker is narrower: historical MINTER_ROLE grants/revokes have not yet been exhaustively reconciled to a complete current holder set.",
+      "reviewer": "owner-triage",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Yuzu Stablecoin (yzUSD) docs",
           "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
         },
         {
-          "label": "yzUSD token (Plasmascan)",
-          "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          "label": "Plasmascan yzUSD proxy",
+          "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc#code"
+        },
+        {
+          "label": "Plasmascan yzUSD implementation",
+          "url": "https://plasmascan.to/address/0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe#code"
+        },
+        {
+          "label": "Routescan API - yzUSD ProxyAdmin",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa"
+        },
+        {
+          "label": "Routescan API - 48-hour upgrade timelock",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x2130457539612ae9838e0314cda1a8abbdb7cfbc"
+        },
+        {
+          "label": "Routescan API - 12-hour manager timelock",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x5f3d29ef17700f8658c566dac7fbd76e0d86b78c"
+        },
+        {
+          "label": "Plasma RPC fixed-block reads",
+          "url": "https://plasma.drpc.org"
         }
       ],
       "unresolvedQuestions": [
-        "Identify the custom governance contract at 0x2130457539612ae9838e0314cda1a8abbdb7cfbc on Plasma: it owns both the yzUSD UUPS proxy and its ProxyAdmin but reverts on all standard owner/role queries. Confirm its signer set and quorum before promotion."
+        "Reconcile every MINTER_ROLE grant and revoke against fixed-block hasRole calls, then enumerate the complete current direct-minter set before promoting this authority graph to verified."
       ]
     }
   }

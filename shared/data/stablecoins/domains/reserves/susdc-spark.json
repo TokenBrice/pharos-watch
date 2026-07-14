@@ -1,0 +1,85 @@
+{
+  "id": "susdc-spark",
+  "reserves": [
+    {
+      "name": "USDC deposited in Spark Savings vault",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Spark Liquidity Layer / Sky ecosystem",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Spark Documentation Portal",
+        "url": "https://docs.spark.fi/"
+      },
+      {
+        "label": "Spark Vaults V2 source",
+        "url": "https://github.com/sparkdotfi/spark-vaults-v2"
+      },
+      {
+        "label": "Spark Data Hub savings dashboard",
+        "url": "https://data.spark.fi/savings"
+      }
+    ],
+    "rationale": "Spark documents spUSDC as a Savings V2 ERC-4626 position whose permissioned Spark Liquidity Layer taker can pull vault liquidity and deploy it into yield-bearing strategies. The 100% slice therefore identifies the aggregate protocol position rather than assuming that idle USDC remains the complete current backing allocation.",
+    "compositionBasis": "Spark Savings V2 product and vault architecture",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current split between idle vault USDC and Spark Liquidity Layer deployments, including venue-level strategy allocations, is not published as a spUSDC-specific percentage table.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USDC deposited in Spark Savings vault",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Spark confirms the USDC vault and SLL deployment role but does not publish the current spUSDC-specific mix of idle USDC and downstream strategies.",
+        "candidateCoinIds": [
+          "usdc-circle"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Spark Savings USDC vault contract",
+        "role": "other"
+      },
+      {
+        "name": "Spark Liquidity Layer and downstream strategies",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Spark Vaults V2 source",
+        "url": "https://github.com/sparkdotfi/spark-vaults-v2"
+      },
+      {
+        "label": "Spark Liquidity Layer source",
+        "url": "https://github.com/sparkdotfi/spark-alm-controller"
+      }
+    ],
+    "uncertainty": "The vault source permits SLL to take liquidity into yield strategies, but the current vault-versus-SLL split, downstream custody venues, legal segregation, and insolvency treatment are not published for spUSDC.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -19,13 +19,26 @@
   "protocolSlug": "cod3x",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Cod3x USD do not identify the collateral oracle setup or failure handling.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
-    "confidence": "limited",
+    "summary": "cdxUSD supply is created through governance-limited Facilitator credit buckets rather than user CDPs whose collateral health is continuously priced for liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Cod3x documents cdxUSD as a GHO-style system in which approved Facilitators receive bounded lines of credit and mint or burn under protocol limits. The token layer does not expose borrower-owned collateral positions, per-collateral health factors, or permissionless liquidation branches; any strategy risk belongs to the individual Facilitator rather than a shared cdxUSD liquidation engine.",
+      "sources": [
+        {
+          "label": "Cod3x tech stack: cdxUSD Facilitators",
+          "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Cod3x USD docs",
+        "label": "Cod3x tech stack: cdxUSD Facilitators",
         "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
       }
     ]
@@ -63,6 +76,22 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "cdxUSD uses a GHO-style facilitator bucket model on Base. The active 3/9 Safe facilitator mints within a finite bucket. The owner contract is a TimelockController (24h delay) with the 3/9 Safe as PROPOSER and 1/8 guardian Safe as EXECUTOR. The OFT LayerZero extension is present in code but has zero configured peers — no cross-chain mint surface active.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 48620890,
+      "sources": [
+        {
+          "label": "Sourcify cdxUSD verified source",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi"
+        },
+        {
+          "label": "Base public RPC",
+          "url": "https://base-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "base",

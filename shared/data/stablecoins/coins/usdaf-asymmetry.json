@@ -18,19 +18,445 @@
   "detailProvider": "defillama",
   "geckoId": "asymmetry-usdaf-2",
   "oracleRisk": {
-    "tier": "redundant-with-failover",
-    "summary": "USDaf is documented as a Liquity V2 fork using Chainlink primary feeds with Curve fallback feeds for some collaterals.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "tier": "standard-external",
+    "summary": "Six debt-bearing Ethereum Trove branches use immutable branch-local price feeds. ysyBOLD uses nested ERC-4626 conversion rates; scrvUSD, tBTC, and WBTC18 have active Curve-based fallback paths; sUSDS and sfrxUSD rely on single Chainlink paths. Invalid required prices irreversibly shut only the affected branch onto its last good price.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 ORCL curation",
+      "rationale": "The pinned official API registry enumerates six current branches. At finalized Ethereum block 25531806 every branch had a callable PriceFeed and TroveManager, shutdownTime zero, and debt; the scrvUSD and WBTC18 branches retained dust debt and therefore remain liquidation-active rather than exclusions. The WBTC registry row's current ActivePool resolves to the verified WBTC18 wrapper over canonical WBTC.",
+      "sources": [
+        {
+          "label": "Pinned USDaf V2 registry",
+          "url": "https://github.com/asymmetryfinance/api.usdafv2/blob/394afe37705c011326ff84299c6d3b2966b18a6f/src/v2MainnetDeployment.json"
+        },
+        {
+          "label": "Finalized Ethereum block 25531806",
+          "url": "https://eth.blockscout.com/block/25531806"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 ORCL curation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Asymmetry docs",
-        "url": "https://docs.asymmetry.finance/"
+        "label": "Pinned USDaf V2 contracts",
+        "url": "https://github.com/asymmetryfinance/USDaf-v2/tree/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts"
       },
       {
-        "label": "Asymmetry USDaf v2 audit scope",
-        "url": "https://cantina.xyz/competitions/3765f098-ef5c-47be-beb9-3f4ce9dcb407"
+        "label": "Pinned USDaf oracle implementations",
+        "url": "https://github.com/asymmetryfinance/USDaf-v2/tree/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts/src/PriceFeeds/USDaf"
+      },
+      {
+        "label": "Pinned USDaf V2 registry",
+        "url": "https://github.com/asymmetryfinance/api.usdafv2/blob/394afe37705c011326ff84299c6d3b2966b18a6f/src/v2MainnetDeployment.json"
+      }
+    ],
+    "branches": [
+      {
+        "id": "ysybold",
+        "label": "ysyBOLD Trove branch",
+        "tier": "oracleless-or-internal",
+        "summary": "The branch prices st-yBOLD from its ERC-4626 conversion into yBOLD and yBOLD's ERC-4626 conversion into USDaf/BOLD; the implementation explicitly assumes BOLD remains solvent and has no external market feed or fallback.",
+        "collateralAssets": [
+          "ysyBOLD (st-yBOLD)"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "USDaf nested ERC-4626 conversion oracle",
+            "path": "st-yBOLD 0x23346B04a7f55b8760E5860AA5A77383D63491cD convertToAssets -> yBOLD 0x9F4330700a36B29952869fac9b33f45EEdd8A3d8 convertToAssets -> USDaf/BOLD par assumption",
+            "address": "0x7F575323DDEDFbad449fEf5459FaD031FE49520b",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531806,
+            "failureDomainKeys": [
+              "usdaf:erc4626:st-ybold",
+              "usdaf:erc4626:ybold",
+              "usdaf:bold-solvency-assumption",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider. The outer WETHPriceFeed uses a uint256.max staleness threshold for the block-timestamped nested conversion response; an invalid or reverting nested aggregator call is caught and, when adequate gas remains, irreversibly shuts the branch and returns lastGoodPrice rather than selecting another source.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531806,
+        "collateralParameters": [
+          {
+            "asset": "ysyBOLD (st-yBOLD)",
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 105,
+            "note": "AddressesRegistry 0x3414bd84dff0900a9046a987f4df2e0ef08fa1ce; TroveManager 0xF8a25a2E4c863bb7CEa7e4B4eeb3866BB7f11718; ActivePool 0xB87E1e1c4CC2DEcaDa13025a8DC8A94bdB77fB63; CCR 120%, BCR 10%, SP penalty 5%, redistribution penalty 10%; debt was 225403.478025211254609384 USDaf and shutdownTime was zero."
+          }
+        ],
+        "liquidationMechanism": "Anyone may call batchLiquidateTroves with Trove IDs; an ICR below the 110% MCR is immediately liquidatable. Debt is offset against the branch Stability Pool first and any remainder is redistributed with seized collateral to active Troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "Branch Stability Pool 0x83e5BDe77d7477eCd972E338541b90Af57675536 absorbs debt first and permits just-in-time deposits; uncovered debt and collateral are redistributed to remaining active Troves. No external insurance or committed auction capital exists.",
+        "shutdownOrBadDebtBehavior": "Anyone can irreversibly shut the branch when TCR falls below 105%; required-oracle failure also invokes shutdown and freezes lastGoodPrice. Borrowing and interest stop while closing, liquidations, Stability Pool operations, and 2%-bonus urgent redemptions remain. The implementation has no final bad-debt cure, so debt can remain if collateral is exhausted.",
+        "failureDomainKeys": [
+          "usdaf:ysybold-pricefeed",
+          "usdaf:ysybold-stability-pool",
+          "usdaf:branch-redistribution",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Verified ysyBOLD PriceFeed",
+            "url": "https://eth.blockscout.com/address/0x7F575323DDEDFbad449fEf5459FaD031FE49520b?tab=contract"
+          },
+          {
+            "label": "Pinned USDaf liquidation and shutdown design",
+            "url": "https://github.com/asymmetryfinance/USDaf-v2/blob/c51caef00ccd2d42ec7ed569009e53e7537d1546/README.md"
+          }
+        ]
+      },
+      {
+        "id": "scrvusd",
+        "label": "scrvUSD Trove branch",
+        "tier": "redundant-with-failover",
+        "summary": "scrvUSD is priced from Chainlink crvUSD/USD times the ERC-4626 share rate, with an enabled Curve AggregateStablePrice fallback before the branch's last-good-price shutdown path.",
+        "collateralAssets": [
+          "scrvUSD"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink plus scrvUSD ERC-4626 rate",
+            "path": "Chainlink crvUSD/USD 0xEEf0C605546958c1f899b6fB336C20671f9cD49F -> scrvUSD 0x0655977FEb2f289a4aB78af67BAB0d17aAb84367 convertToAssets",
+            "address": "0x5a0605eFB3a50ADC9F81Dd456812953655aA4Ec9",
+            "chain": "ethereum",
+            "stalenessBoundSec": 172800,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531806,
+            "failureDomainKeys": [
+              "chainlink:ethereum:crvusd-usd",
+              "scrvusd-share-rate",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Curve AggregateStablePrice fallback",
+            "path": "enabled fallback 0x2b36d82bFB9EA09BBEd084bE34Df942AAd0EEb35 -> Curve aggregate 0x18672b1b0c623a30089A280Ed9256379fb0E4E62 -> scrvUSD share rate",
+            "address": "0x2b36d82bFB9EA09BBEd084bE34Df942AAd0EEb35",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531806,
+            "failureDomainKeys": [
+              "curve:ethereum:aggregate-stable-price",
+              "scrvusd-share-rate",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "If the primary answer is non-positive or at least 172800 seconds old, the custom oracle selects its enabled Curve fallback, whose timestamp is block.timestamp. If the required share-rate or selected custom oracle path reverts or the outer 172800-second validation fails, the branch irreversibly shuts down and thereafter serves lastGoodPrice.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531806,
+        "collateralParameters": [
+          {
+            "asset": "scrvUSD",
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 105,
+            "note": "Registry 0x0c7b6c6a60ae2016199d393695667c1482719c82; TroveManager 0x7aFf0173e3D7C5416D8cAa3433871Ef07568220d; ActivePool 0x244c422663328233A5D1BD5045Ff943BA97d046E; CCR 120%, BCR 10%, SP/redistribution penalties 5%/10%; positive dust debt 6896 wei and shutdownTime zero."
+          }
+        ],
+        "liquidationMechanism": "Permissionless immediate batch liquidation below 110% MCR; branch Stability Pool offset precedes redistribution to remaining Troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "Branch Stability Pool 0xd48dC7cDdc481F596BD9A97755c7Ac696aD4eA87 accepts normal or JIT deposits; uncovered debt is redistributed to active Troves, with no external insurance or auction backstop.",
+        "shutdownOrBadDebtBehavior": "TCR below 105% or unrecoverable required-price failure irreversibly freezes the branch onto lastGoodPrice; interest and borrowing stop, while closing, liquidation, SP operations, and urgent redemption remain. Residual unbacked debt has no automatic cure.",
+        "failureDomainKeys": [
+          "usdaf:scrvusd-pricefeed",
+          "chainlink:ethereum:crvusd-usd",
+          "curve:ethereum:aggregate-stable-price",
+          "usdaf:scrvusd-stability-pool",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Verified scrvUSD PriceFeed",
+            "url": "https://eth.blockscout.com/address/0xF125C72aE447eFDF3fA3601Eda9AC0Ebec06CBB8?tab=contract"
+          },
+          {
+            "label": "Pinned scrvUSD oracle source",
+            "url": "https://github.com/asymmetryfinance/USDaf-v2/blob/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts/src/PriceFeeds/USDaf/ScrvUsdOracle.sol"
+          }
+        ]
+      },
+      {
+        "id": "susds",
+        "label": "sUSDS Trove branch",
+        "tier": "standard-external",
+        "summary": "sUSDS uses one Chainlink USDS/USD answer multiplied by the sUSDS ERC-4626 conversion rate; no alternate provider is configured.",
+        "collateralAssets": [
+          "sUSDS"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink plus sUSDS ERC-4626 rate",
+            "path": "Chainlink USDS/USD 0xfF30586cD0F29eD462364C7e81375FC0C71219b1 -> sUSDS 0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD convertToAssets",
+            "address": "0x9D09d5175783f0CAA56D6D1e7590c2B935082d10",
+            "chain": "ethereum",
+            "stalenessBoundSec": 172800,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531806,
+            "failureDomainKeys": [
+              "chainlink:ethereum:usds-usd",
+              "susds-share-rate",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "FALLBACK_ORACLE was zero. A non-positive or at least 172800-second-old Chainlink answer becomes invalid; required-call failure, share-rate failure, or invalid outer response shuts the branch and switches to lastGoodPrice rather than another provider.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531806,
+        "collateralParameters": [
+          {
+            "asset": "sUSDS",
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 105,
+            "note": "Registry 0x330a0fdfc1818be022fedce96a041293e16dc6d1; TroveManager 0x53ce82AC43660AaB1F80FEcd1D74Afe7a033D505; ActivePool 0x08EAafd8FbB12cF12D6765E80C5b0FF8490C232D; CCR 120%, BCR 10%, SP/redistribution penalties 5%/10%; debt 28779.495429673329534996 USDaf; shutdownTime zero."
+          }
+        ],
+        "liquidationMechanism": "Permissionless immediate batch liquidation below 110% MCR; Stability Pool offset precedes same-branch redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Branch Stability Pool 0xb571781CEdf07257d60d6b252a3D8b24150Ded97 accepts normal or JIT deposits; uncovered debt is redistributed to active Troves; no external insurance or auction backstop.",
+        "shutdownOrBadDebtBehavior": "TCR below 105% or oracle failure irreversibly shuts the branch onto lastGoodPrice; urgent redemption remains but no automatic mechanism cures residual debt after collateral exhaustion.",
+        "failureDomainKeys": [
+          "usdaf:susds-pricefeed",
+          "chainlink:ethereum:usds-usd",
+          "usdaf:susds-stability-pool",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Verified sUSDS PriceFeed",
+            "url": "https://eth.blockscout.com/address/0x2113468843CF2d0FD976690F4Ec6e4213Df46911?tab=contract"
+          },
+          {
+            "label": "Pinned sUSDS oracle source",
+            "url": "https://github.com/asymmetryfinance/USDaf-v2/blob/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts/src/PriceFeeds/USDaf/SusdsOracle.sol"
+          }
+        ]
+      },
+      {
+        "id": "sfrxusd",
+        "label": "sfrxUSD Trove branch",
+        "tier": "standard-external",
+        "summary": "sfrxUSD uses one Chainlink frxUSD/USD answer multiplied by the sfrxUSD ERC-4626 conversion rate; no alternate provider is configured.",
+        "collateralAssets": [
+          "sfrxUSD"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink plus sfrxUSD ERC-4626 rate",
+            "path": "Chainlink frxUSD/USD 0x9B4a96210bc8D9D55b1908B465D8B0de68B7fF83 -> sfrxUSD 0xcf62F905562626CfcDD2261162a51fd02Fc9c5b6 convertToAssets",
+            "address": "0x48Ba7B711a8d5Dadc6690dE2e86533f70EE5B433",
+            "chain": "ethereum",
+            "stalenessBoundSec": 172800,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531806,
+            "failureDomainKeys": [
+              "chainlink:ethereum:frxusd-usd",
+              "sfrxusd-share-rate",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "FALLBACK_ORACLE was zero. A non-positive or at least 172800-second-old primary answer is invalid; a required-call/share-rate failure or invalid outer response irreversibly shuts the branch and uses lastGoodPrice.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531806,
+        "collateralParameters": [
+          {
+            "asset": "sfrxUSD",
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 105,
+            "note": "Registry 0x0ad1c302203f0fbb6ca34641bdfef0bf4182377c; TroveManager 0x478E7c27193Aca052964C3306D193446027630b0; ActivePool 0x20f29569566020d8E49c9843033c370772A93774; CCR 120%, BCR 10%, SP/redistribution penalties 5%/10%; debt 28475.412514529152259077 USDaf; shutdownTime zero."
+          }
+        ],
+        "liquidationMechanism": "Permissionless immediate batch liquidation below 110% MCR; Stability Pool offset precedes same-branch redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Branch Stability Pool 0x446F358e3a927cc68F342141d78Aa2d1C54e18F0 accepts normal or JIT deposits; uncovered debt is redistributed to active Troves; no external insurance or auction backstop.",
+        "shutdownOrBadDebtBehavior": "TCR below 105% or oracle failure irreversibly shuts the branch onto lastGoodPrice; urgent redemption remains but residual debt after collateral exhaustion is not automatically cured.",
+        "failureDomainKeys": [
+          "usdaf:sfrxusd-pricefeed",
+          "chainlink:ethereum:frxusd-usd",
+          "usdaf:sfrxusd-stability-pool",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Verified sfrxUSD PriceFeed",
+            "url": "https://eth.blockscout.com/address/0x653DF748Bf7A692555dCdbF4c504a8c84807f7C7?tab=contract"
+          },
+          {
+            "label": "Pinned sfrxUSD oracle source",
+            "url": "https://github.com/asymmetryfinance/USDaf-v2/blob/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts/src/PriceFeeds/USDaf/SfrxUsdOracle.sol"
+          }
+        ]
+      },
+      {
+        "id": "tbtc",
+        "label": "tBTC Trove branch",
+        "tier": "redundant-with-failover",
+        "summary": "tBTC uses Chainlink tBTC/USD with an enabled Curve tBTC/USD fallback, then takes the lower of that market route and Chainlink BTC/USD for normal pricing.",
+        "collateralAssets": [
+          "tBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink tBTC/USD with Curve fallback",
+            "path": "Chainlink tBTC/USD 0x8350b7De6a6a2C1368E7D4Bd968190e13E354297; if invalid, enabled fallback 0x193B7da0F8036709774054dfd7539cA36654AbA5 -> Curve tBTC/USD aggregate 0xbeF434E2aCF0FBaD1f0579d2376fED0d1CfC4217",
+            "address": "0x39fCA0F77BA22926E8e5EC5DF68271EB49a3a775",
+            "chain": "ethereum",
+            "stalenessBoundSec": 172800,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531806,
+            "failureDomainKeys": [
+              "chainlink:ethereum:tbtc-usd",
+              "curve:ethereum:tbtc-usd",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Chainlink BTC/USD canonical clamp",
+            "path": "Chainlink BTC/USD 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c; normal price is min(tBTC market route, BTC/USD), while this canonical feed is ignored rather than substituted if invalid",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531806,
+            "failureDomainKeys": [
+              "chainlink:ethereum:btc-usd",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "A non-positive or at least 172800-second-old tBTC Chainlink answer selects the enabled Curve fallback. The outer PriceFeed rejects a required market answer older than 172800 seconds; BTC/USD canonical failure is ignored, not failover. Unrecoverable market-route failure irreversibly shuts the branch to lastGoodPrice.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531806,
+        "collateralParameters": [
+          {
+            "asset": "tBTC",
+            "minimumCollateralRatioPct": 120,
+            "shutdownCollateralRatioPct": 110,
+            "note": "Registry 0xbd9f75471990041a3e7c22872c814a273485e999; TroveManager 0xfb17d0402ae557e3Efa549812b95e931B2B63bCE; ActivePool 0xb00d1d5dfd72a440b8C04A5f7b5Bc3C8159a7f44; CCR 150%, BCR 10%, SP/redistribution penalties 5%/10%; debt 19993.420546384433866565 USDaf; shutdownTime zero."
+          }
+        ],
+        "liquidationMechanism": "Permissionless immediate batch liquidation below 120% MCR; Stability Pool offset precedes same-branch redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Branch Stability Pool 0x545a7dDFd863bd7EA0BFc689125169598085f75e accepts normal or JIT deposits; uncovered debt is redistributed to active Troves; no external insurance or auction backstop.",
+        "shutdownOrBadDebtBehavior": "TCR below 110% or unrecoverable market-oracle failure irreversibly shuts the branch to lastGoodPrice; urgent redemption remains, but residual unbacked debt has no automatic cure.",
+        "failureDomainKeys": [
+          "usdaf:tbtc-pricefeed",
+          "chainlink:ethereum:tbtc-usd",
+          "curve:ethereum:tbtc-usd",
+          "chainlink:ethereum:btc-usd",
+          "usdaf:tbtc-stability-pool",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Verified tBTC PriceFeed",
+            "url": "https://eth.blockscout.com/address/0xeaF3b36748D89d64EF1B6B3E1d7637C3E4745094?tab=contract"
+          },
+          {
+            "label": "Pinned tBTC oracle source",
+            "url": "https://github.com/asymmetryfinance/USDaf-v2/blob/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts/src/PriceFeeds/USDaf/TbtcOracle.sol"
+          }
+        ]
+      },
+      {
+        "id": "wbtc18",
+        "label": "WBTC18 Trove branch",
+        "tier": "redundant-with-failover",
+        "summary": "The current branch collateral is the verified 18-decimal WBTC18 wrapper over canonical WBTC. Pricing composes Chainlink WBTC/BTC and BTC/USD with an enabled Curve WBTC/USD fallback, then compares the market route with Chainlink BTC/USD.",
+        "collateralAssets": [
+          "WBTC18 wrapper over WBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink WBTC/BTC and BTC/USD with Curve fallback",
+            "path": "Chainlink WBTC/BTC 0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23 times BTC/USD 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c; if the composite is invalid, enabled fallback 0x66871DB0Ca840aC3e9cB2DbBfcFF8Ec060661b4B -> Curve WBTC/USD aggregate 0xBe83fD842DB4937C0C3d15B2aBA6AF7E854f8dcb",
+            "address": "0x1919de21635276a80aA3384a852df8189E1B7205",
+            "chain": "ethereum",
+            "stalenessBoundSec": 172800,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531806,
+            "failureDomainKeys": [
+              "chainlink:ethereum:wbtc-btc",
+              "chainlink:ethereum:btc-usd",
+              "curve:ethereum:wbtc-usd",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Chainlink BTC/USD canonical clamp",
+            "path": "Chainlink BTC/USD 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c; normal price is min(WBTC market route, BTC/USD), while invalid canonical data is ignored rather than substituted",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531806,
+            "failureDomainKeys": [
+              "chainlink:ethereum:btc-usd",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The WBTC/BTC leg is invalid after 172800 seconds and BTC/USD after 86400 seconds; either invalidates the composite and selects the enabled Curve fallback. The outer feed accepts that market route for 172800 seconds; canonical BTC/USD failure is ignored. Unrecoverable market-route failure irreversibly shuts the branch to lastGoodPrice.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531806,
+        "collateralParameters": [
+          {
+            "asset": "WBTC18 wrapper over WBTC",
+            "minimumCollateralRatioPct": 120,
+            "shutdownCollateralRatioPct": 110,
+            "note": "Verified collateral 0xe065Bc161b90C9C4Bba2de7F1E194b70A3267c47 wraps canonical WBTC 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599 at 10^10 units. Registry 0x2c5a85a3fd181857d02baff169d1e1cb220ead6d; TroveManager 0x7bd47Eca45ee18609D3D64Ba683Ce488ca9320A3; ActivePool 0xf507E264d507ef64a72aeaf4CC8C270D008FC48a; CCR 150%, BCR 10%, SP/redistribution penalties 5%/10%; positive dust debt 3444 wei; shutdownTime zero."
+          }
+        ],
+        "liquidationMechanism": "Permissionless immediate batch liquidation below 120% MCR; Stability Pool offset precedes same-branch redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Branch Stability Pool 0x922faA141e95e43A9deEab8DaDe3Ac8d4a32AD5c accepts normal or JIT deposits; uncovered debt is redistributed to active Troves; no external insurance or auction backstop.",
+        "shutdownOrBadDebtBehavior": "TCR below 110% or unrecoverable market-oracle failure irreversibly shuts the branch to lastGoodPrice; urgent redemption remains, but residual unbacked debt has no automatic cure.",
+        "failureDomainKeys": [
+          "usdaf:wbtc18-pricefeed",
+          "chainlink:ethereum:wbtc-btc",
+          "chainlink:ethereum:btc-usd",
+          "curve:ethereum:wbtc-usd",
+          "usdaf:wbtc18-stability-pool",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Verified WBTC18 PriceFeed",
+            "url": "https://eth.blockscout.com/address/0x4B74D043336678D2F62dae6595bc42DcCabC3BB1?tab=contract"
+          },
+          {
+            "label": "Verified WBTC18 wrapper",
+            "url": "https://eth.blockscout.com/address/0xe065Bc161b90C9C4Bba2de7F1E194b70A3267c47?tab=contract"
+          },
+          {
+            "label": "Pinned WBTC oracle source",
+            "url": "https://github.com/asymmetryfinance/USDaf-v2/blob/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts/src/PriceFeeds/USDaf/WbtcOracle.sol"
+          }
+        ]
       }
     ]
   },

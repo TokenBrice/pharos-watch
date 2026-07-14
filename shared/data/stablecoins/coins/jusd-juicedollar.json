@@ -18,14 +18,43 @@
   "geckoId": "juice-dollar",
   "oracleRisk": {
     "tier": "oracleless-or-internal",
-    "summary": "JuiceDollar docs describe JUSD as an over-collateralized stablecoin with no oracles, so collateral accounting is protocol-internal.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "JuiceDollar's tracked WCBTC CDP path uses permissionless challenges and Dutch auctions to discover collateral price and liquidate positions, explicitly replacing an external oracle.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "JuiceDollar documents the WCBTC position path as an oracle-free challenge system: a challenger starts an auction, the Dutch auction discovers the collateral market price, and a bid below the position liquidation price completes liquidation. The tracked stablecoin bridge routes are separate 1:1 conversions and do not create borrower collateral branches, so there is no external feed branch to inventory.",
+      "sources": [
+        {
+          "label": "JuiceDollar challenges and auctions",
+          "url": "https://docs.juicedollar.com/positions/auctions"
+        },
+        {
+          "label": "JuiceDollar opening positions",
+          "url": "https://docs.juicedollar.com/positions/open"
+        },
+        {
+          "label": "JuiceDollar smart-contract functions",
+          "url": "https://docs.juicedollar.com/smart-contracts/functions"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "JuiceDollar docs",
-        "url": "https://docs.juicedollar.com/"
+        "label": "JuiceDollar challenges and auctions",
+        "url": "https://docs.juicedollar.com/positions/auctions"
+      },
+      {
+        "label": "JuiceDollar opening positions",
+        "url": "https://docs.juicedollar.com/positions/open"
+      },
+      {
+        "label": "JuiceDollar smart-contract functions",
+        "url": "https://docs.juicedollar.com/smart-contracts/functions"
       }
     ]
   },

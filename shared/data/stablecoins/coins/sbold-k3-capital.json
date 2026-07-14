@@ -21,11 +21,32 @@
   "geckoId": "sbold-by-k3-capital",
   "oracleRisk": {
     "tier": "redundant-with-failover",
-    "summary": "BOLD wrapper vaults use internal share accounting but inherit Liquity V2 collateral-feed staleness checks and branch shutdown behavior from the underlying BOLD system.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "sBOLD is an ERC-4626 allocator over Liquity V2 Stability Pools and has no borrower-owned debt positions or local collateral liquidation thresholds. Its required BOLD parent carries the separately reviewed WETH, wstETH, and rETH oracle and liquidation branches.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "K3 documents sBOLD as an ERC-4626 vault that allocates deposited BOLD across Liquity V2 Stability Pools and swaps liquidation gains back to BOLD. The wrapper has share accounting and swap valuation but does not originate borrower debt or operate collateral-ratio liquidation branches. The variantOf relationship preserves the complete BOLD parent review.",
+      "sources": [
+        {
+          "label": "K3 sBOLD technical details",
+          "url": "https://k3-capital.gitbook.io/sbold/technical-details"
+        },
+        {
+          "label": "Liquity V2 contracts and mainnet addresses",
+          "url": "https://github.com/liquity/bold/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "K3 sBOLD technical details",
+        "url": "https://k3-capital.gitbook.io/sbold/technical-details"
+      },
       {
         "label": "Liquity V2 risk disclosure",
         "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"

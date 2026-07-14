@@ -1,0 +1,69 @@
+{
+  "id": "euri-banking-circle",
+  "reserves": [
+    {
+      "name": "Euro cash in the EURI fiduciary reserve account",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Banking Circle S.A. acting as fiduciary",
+      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Eurite issuer reserve and safeguarding disclosures",
+        "url": "https://www.eurite.com/"
+      },
+      {
+        "label": "EURI MiCA white paper",
+        "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html"
+      }
+    ],
+    "rationale": "Banking Circle states that every EURI is issued against euro cash held one-for-one in a dedicated fiduciary reserve account. The current issuer FAQ supports a single cash reserve rather than the prior unsupported 70/30 cash/securities estimate.",
+    "compositionBasis": "Banking Circle EURI fiduciary cash-backing policy",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material unclassified reserve category is disclosed; the exact account-level placement is not public.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Euro cash in the EURI fiduciary reserve account",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The reserve is euro cash rather than another tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Banking Circle S.A. fiduciary estate",
+        "role": "bank",
+        "jurisdiction": "Luxembourg"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Eurite issuer safeguarding disclosures",
+        "url": "https://www.eurite.com/"
+      },
+      {
+        "label": "EURI MiCA white paper",
+        "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html"
+      }
+    ],
+    "uncertainty": "The Luxembourg fiduciary estate, segregation, and bankruptcy remoteness are explicit. Banking Circle does not publish account-level placement, provider shares, or rehypothecation terms for the safeguarded cash."
+  }
+}

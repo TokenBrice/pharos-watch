@@ -107,6 +107,18 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
     "summary": "GBPSAFO is the GBP share class of Spiko's AMF-authorized UCITS fund; tokens are minted to KYC'd investor addresses by Spiko's in-house 'daily-operator' relayer and burned by a dedicated redemption contract, under a multisig super-admin that can upgrade contracts and manage permissions.",
+    "upgradeability": {
+      "model": "uups",
+      "canChangeMintLogic": true,
+      "controlRef": "Spiko super-admin multisig",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Spiko daily-operator relayer (minter)",

@@ -292,13 +292,6 @@
       ]
     }
   },
-  "reserves": [
-    {
-      "name": "USD cash and cash equivalents at SoFi Bank Federal Reserve master account",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "status": "active",
   "announcedDate": "2025-12",
   "launchDate": "2025-12-18",

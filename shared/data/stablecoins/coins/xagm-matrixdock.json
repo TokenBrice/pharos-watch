@@ -175,13 +175,6 @@
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Physical silver bars (LBMA Good Delivery, Asian vault custody)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

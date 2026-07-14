@@ -1,0 +1,70 @@
+{
+  "id": "wars-argentine-peso",
+  "reserves": [
+    {
+      "name": "Argentine-peso deposits at Argentine financial institutions",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed Argentine financial institutions",
+      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wARS - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+      },
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "rationale": "The March 31, 2026 certification reconciles 973,000,960.19 outstanding wARS across six chains and ARS 1,036,276,284 of collateral to Argentine bank and financial-institution statements, then certifies that all outstanding tokens are backed by Argentine-peso deposits. The engagement is expressly a certification rather than an audit or review, and the institutions and account terms are not disclosed.",
+    "compositionBasis": "Independent public accountant certification of wARS collateral as of March 31, 2026",
+    "compositionAsOf": "2026-03-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset class is unclassified; the Argentine financial institutions, account types, provider allocations, and withdrawal liquidity are undisclosed.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Argentine-peso deposits at Argentine financial institutions",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The reserve consists of off-chain Argentine-peso deposits rather than another tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed Argentine banks and financial institutions",
+        "role": "bank",
+        "jurisdiction": "Argentina"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wARS - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+      },
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "uncertainty": "The accountant reconciled the collateral to Argentine bank and financial-institution statements but did not identify the institutions, provider shares, account segregation, insolvency protections, or rehypothecation terms."
+  }
+}

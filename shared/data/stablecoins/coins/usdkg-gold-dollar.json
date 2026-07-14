@@ -208,15 +208,34 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "probable",
-    "summary": "USDKG is issued by Gold Dollar under a Kyrgyz Republic virtual-asset license. On Ethereum, the non-upgradeable USDKG token's owner() is a 3-of-7 old-style Gnosis multisig (0xcF355ad32abf378F067fa93a28d96a767FeB7377) with no modules/guards; issue() and redeem() are the mint/burn functions. Tron owner not independently confirmed.",
+    "confidence": "verified",
+    "summary": "USDKG is issued natively on Ethereum and Tron through immutable Tether-style contracts whose issue() and redeem() functions are owner-gated. Each deployment is controlled by a separate verified 3-of-7 multisig: 0xcF355a...7377 on Ethereum and TEmt2R...A8jd on Tron.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "USDKG Ethereum token",
+          "url": "https://etherscan.io/address/0xe820c06321e60d36257c666643fa5436643445e3#code"
+        },
+        {
+          "label": "USDKG Tron token",
+          "url": "https://tronscan.org/#/contract/TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG/code"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Gold Dollar issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "issuer:gold-dollar"
+        ],
+        "observedAt": "2026-07-14",
         "evidence": "Gold Dollar operates the centralized 1:1 mint/redeem for USDKG against custodied physical gold, with KYC/AML required for all redemptions; no permissionless or user-collateralized mint route exists.",
         "sources": [
           {
@@ -235,7 +254,9 @@
         "threshold": 3,
         "signerCount": 7,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295047 (2026-06-11), owner() on USDKG token (0xe820c06321e60d36257c666643fa5436643445e3) returned 0xcF355ad32abf378F067fa93a28d96a767FeB7377. getOwners() on that contract returned 7 owner addresses; threshold()=3. The contract ABI (Blockscout) confirms type=Multisig with getOwners/getThreshold/isOwner but no modules-related functions. No proxy admin or impl slot (non-upgradeable). The USDKG token exposes issue() and redeem() as the mint/burn functions callable by the owner.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530817,
+        "evidence": "At Ethereum block 25530817, owner() on USDKG token 0xe820...45e3 returned 0xcF355a...7377. getOwners() returned seven owners and getThreshold() returned 3. The verified token and multisig bytecode expose no upgrade or module path; issue() and redeem() are owner-gated.",
         "sources": [
           {
             "label": "USDKG token on Etherscan",
@@ -246,12 +267,41 @@
             "url": "https://etherscan.io/address/0xcf355ad32abf378f067fa93a28d96a767feb7377"
           }
         ]
+      },
+      {
+        "label": "USDKG Tron token owner (3-of-7 multisig)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "chain": "tron",
+        "address": "TEmt2RaL2w6x51Lkx75hsDpBv63aPYA8jd",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 84453790,
+        "sources": [
+          {
+            "label": "USDKG Tron token",
+            "url": "https://tronscan.org/#/contract/TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG/code"
+          },
+          {
+            "label": "USDKG Tron owner multisig",
+            "url": "https://tronscan.org/#/contract/TEmt2RaL2w6x51Lkx75hsDpBv63aPYA8jd/code"
+          },
+          {
+            "label": "TRON constant-contract API",
+            "url": "https://developers.tron.network/reference/triggerconstantcontract-1"
+          }
+        ],
+        "evidence": "At Tron block 84453790, owner() on TXZo12...nwEG returned 0x34b436...4fd5, the Tron address TEmt2R...A8jd. The verified owner contract ABI and current constant calls returned seven owners (TVZwUL...Jao, TQHTXd...XLU, TXAjos...WDG, TSfP1D...8vB, TZ5KnE...aXL, TMy7WS...bKw, and TEPMSb...AZv) and getThreshold() = 3. The custom multisig has no owner-management, module, or guard functions, and the token's issue() and redeem() functions are owner-gated."
       }
     ],
     "review": {
-      "evidence": "Gold Dollar is the sole issuer of USDKG under Kyrgyz virtual-asset regulation; mint/redeem is centralized and KYC/AML-gated against physical gold reserves audited by Kreston Global. On Ethereum (block 25295047): owner()=0xcF355ad32abf378F067fa93a28d96a767FeB7377, confirmed as a 3-of-7 old-style Gnosis multisig (no modules/guards detected). Ethereum token is non-upgradeable (no proxy). Tron deployment (TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG) owner not independently confirmed due to Tron API format issues.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Gold Dollar is the sole issuer of USDKG and operates native owner-gated issue/redeem contracts on Ethereum and Tron. Current reads resolve separate 3-of-7 multisigs on both deployments. Verified bytecode and storage show direct immutable contracts rather than proxy deployments.",
+      "reviewer": "Codex V9 control curation",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "USDKG transparency",
@@ -264,10 +314,15 @@
         {
           "label": "USDKG token on Etherscan",
           "url": "https://etherscan.io/address/0xe820c06321e60d36257c666643fa5436643445e3"
+        },
+        {
+          "label": "USDKG Tron token",
+          "url": "https://tronscan.org/#/contract/TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG/code"
+        },
+        {
+          "label": "USDKG Tron owner multisig",
+          "url": "https://tronscan.org/#/contract/TEmt2RaL2w6x51Lkx75hsDpBv63aPYA8jd/code"
         }
-      ],
-      "unresolvedQuestions": [
-        "Confirm Tron USDKG (TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG) owner/minter admin address to complete multichain verification."
       ]
     }
   },

@@ -18,11 +18,26 @@
   "geckoId": "crown-brlv",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://crown-brlv.com/en/transparency/",
+    "url": "https://www.crown-brlv.com/transparencia/",
     "provider": "Fact Finance",
     "attestorTier": "niche",
     "cadence": "daily",
-    "attestorJurisdiction": "Brazil"
+    "attestorJurisdiction": "Brazil",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-05-31",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Fact Finance BRLV proof-of-reserves report - May 2026",
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_79d38795ea.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -89,9 +104,7 @@
         "name": "Base Canonical",
         "slug": "base",
         "url": "https://l2beat.com/interop/protocols/base",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
+        "bridgeTypes": ["lockAndMint"]
       }
     ],
     "sources": [
@@ -140,23 +153,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Brazilian Treasury bonds",
-      "pct": 99.9597,
-      "risk": "low"
-    },
-    {
-      "name": "ETFs linked to Tesouro Selic",
-      "pct": 0.0371,
-      "risk": "low"
-    },
-    {
-      "name": "Cash and equivalents",
-      "pct": 0.0032,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "attestation-pdf-index",
     "version": 1,

@@ -25,19 +25,52 @@
     "cadence": "real-time"
   },
   "oracleRisk": {
-    "tier": "redundant-with-failover",
-    "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
-    "reviewedAt": "2026-06-12",
+    "tier": "standard-external",
+    "summary": "Mento's current Celo oracle-priced stable paths use external rate sources through OracleAdapter/SortedOracles and BreakerBox validity gates. The current reserve inventory has no active ZARm borrower-CDP branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Mento's current reserve API reports active CDP troves only for GBPm, JPYm, and CHFm, all against USDm; it reports no active ZARm troves. Mento's current Celo/CDP docs identify GBPm as the live collateralized stable path, while oracle-priced FPMM assets use the swap-rate path. There is therefore no current ZARm borrower-specific liquidation branch to inventory under V9.",
+      "sources": [
+        {
+          "label": "Mento stable assets on Celo",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento stable token contracts",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+        },
+        {
+          "label": "Mento FPMM oracles and circuit breakers",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+        },
+        {
+          "label": "Mento reserve analytics API",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Mento V3 smart contracts docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        "label": "Mento stable assets on Celo",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       },
       {
-        "label": "Mento BreakerBox docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        "label": "Mento stable token contracts",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+      },
+      {
+        "label": "Mento FPMM oracles and circuit breakers",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+      },
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       }
     ]
   },
@@ -68,65 +101,6 @@
     "evidence": "ZARm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
     "reviewer": "Codex coverage expansion",
     "reviewedAt": "2026-05-12"
-  },
-  "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "ZARm uses StableTokenV2 with minting restricted to broker/validator paths; the token owner is the Mento Timelock (2-day delay, MentoGovernor as sole proposer, open executor). BorrowerOperations is immutable.",
-    "controls": [
-      {
-        "chain": "celo",
-        "address": "0x8ec9A81871F816F1EF007a82293703057A943B8A",
-        "label": "Mento BorrowerOperations (immutable CDP minter)",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "ZARm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot — immutable.",
-        "sources": [
-          {
-            "label": "Mento V3 deployments",
-            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
-          }
-        ],
-        "evidence": "At Celo block 69291577, BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A: 46358-byte code, owner() empty, EIP-1967 slots zero — immutable. Prior read also confirmed ZARm broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD."
-      },
-      {
-        "chain": "celo",
-        "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
-        "label": "Mento Timelock (ZARm token owner)",
-        "role": "timelock",
-        "authorityType": "timelock",
-        "directMintAbility": "can-authorize",
-        "timelockDelaySec": 172800,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "Mento V3 deployments",
-            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
-          }
-        ],
-        "evidence": "At Celo block 69291577, ZARm owner() = 0x890DB8A597940165901372Dd7DB61C9f246e2147; confirmed Timelock (getMinDelay() = 172800); hasRole(PROPOSER_ROLE, MentoGovernor 0x47036...) = true; hasRole(EXECUTOR_ROLE, 0x0) = true (open executor)."
-      }
-    ],
-    "review": {
-      "evidence": "At Celo block 69291577: ZARm owner() = Mento Timelock 0x890DB... (confirmed TimelockController, not a Safe or EOA); getMinDelay() = 172800s; MentoGovernor is sole PROPOSER; BorrowerOperations confirmed immutable. All addressable mint surfaces confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "sources": [
-        {
-          "label": "Mento V3 docs",
-          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
-        },
-        {
-          "label": "Mento V3 deployments",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
-        }
-      ]
-    }
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
@@ -179,13 +153,20 @@
         "pools": [
           {
             "selfTokenAddress": "0x4c35853A3B4e647fD266f4de678dCc8fEC410BF6",
-            "counterAsset": { "address": "0x765De816845861e75A25fCA122bb6898B8B1282a", "label": "USDm" }
+            "counterAsset": {
+              "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+              "label": "USDm"
+            }
           }
         ],
-        "sourceUrls": ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"]
+        "sourceUrls": [
+          "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+        ]
       }
     }
   },
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "launchDate": "2025-03-22"
 }

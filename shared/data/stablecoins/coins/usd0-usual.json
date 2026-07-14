@@ -23,7 +23,47 @@
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USD0 issuance runs through Usual's RWA/custody-backed protocol contracts: DaoCollateral and SwapperEngine hold USD0_MINT role on the RegistryAccess contract and mint against eligible collateral; governance controls are two distinct 8-of-15 Gnosis Safes managing role-granting and contract upgrades.",
+    "summary": "USD0 issuance runs through Usual's RWA/custody-backed DaoCollateral contract, which holds USD0_MINT on RegistryAccess; separate 8-of-15 Safes control role grants and the transparent-proxy upgrade path.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5",
+        "0xde6e1F680C4816446C8D515989E2358636A38b04",
+        "0x0d374775e962c3608b8f0a4b8b10567df739bb56"
+      ],
+      "implementationAddresses": [
+        "0xAe12F6F805842e6Dafe71a6d2b41B28BA5fC821e",
+        "0x0eEc861D49f15F585D6Bb4301FC4f89BCe22AF4e",
+        "0x7D355D14b8dE1210ac69EbE3aEbCc5e002cDf63B"
+      ],
+      "adminAddresses": [
+        "0xc15091d3478296fd522b2807a9541578910dcc41",
+        "0xc6b60cbcec7d9f98fdcdef6b9a611a955d7fefd4",
+        "0x77c5d652423dab9b271c47d3d69bf56819327af7"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Usual ProxyAdmin owner (upgrade Safe)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530270,
+      "sources": [
+        {
+          "label": "USD0 token proxy on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5?tab=contract"
+        },
+        {
+          "label": "DaoCollateral proxy on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xde6e1F680C4816446C8D515989E2358636A38b04?tab=contract"
+        },
+        {
+          "label": "RegistryAccess proxy on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x0d374775e962c3608b8f0a4b8b10567df739bb56?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -41,25 +81,7 @@
             "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
           }
         ],
-        "evidence": "At Ethereum block 25294761: RegistryAccess (0x0d374775e962c3608b8f0a4b8b10567df739bb56).hasRole(USD0_MINT role 0xb90c0a1b..., DaoCollateral) returned true. DaoCollateral is an UUPS proxy (implementation 0x0eec861d49f15f585d6bb4301fc4f89bce22af4e, ProxyAdmin 0xc6b60cbcec7d9f98fdcdef6b9a611a955d7fefd4). Minting is bounded by eligible RWA collateral backing requirements in the swap() function."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xB969B0d14F7682bAF37ba7c364b351B830a812B2",
-        "label": "Usual SwapperEngine",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "SwapperEngine minting is bounded by eligible collateral deposit requirements in the swap flow.",
-        "sources": [
-          {
-            "label": "Usual USD0 flow and architecture",
-            "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
-          }
-        ],
-        "evidence": "At Ethereum block 25294761: RegistryAccess.hasRole(USD0_MINT role 0xb90c0a1b..., SwapperEngine) returned true. SwapperEngine is an UUPS proxy (implementation 0xf65b0c88f65d620ea325ffb1ad46a5ba8a6e57d3, ProxyAdmin 0x76ef37555d7c5e2b095f05cf1687641f9b99ca27). Minting bounded by eligible collateral deposit requirements."
+        "evidence": "At Ethereum block 25530270, RegistryAccess.hasRole(keccak256('USD0_MINT'), DaoCollateral) returned true. The transparent proxy resolved to implementation 0x0eEc861D49f15F585D6Bb4301FC4f89BCe22AF4e and ProxyAdmin 0xc6b60cbcec7d9f98fdcdef6b9a611a955d7fefd4. Minting remains bounded by eligible collateral in DaoCollateral."
       },
       {
         "chain": "ethereum",
@@ -73,6 +95,51 @@
         "signerCount": 15,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "owners": [
+            "0xEBc9B8F11Da82cC17ffEC763dE7EB1daa735Bb3C",
+            "0x72E581D9Ac8E98E7732d6E656636dB0c61702fC0",
+            "0x8d08338c592cF18C586C43d6b567cb938614F6b8",
+            "0x6BC737aD5213ea26a3A1Bb73431598AF2167cDBd",
+            "0x23F3967415290fbF7EC6768F562128CdBD351BEE",
+            "0xFe45baf0F18c207152A807c1b05926583CFE2e4b",
+            "0x533C0b7959Eb6F042E19ca40700A7af22F69e2d8",
+            "0x75A10A47f4FbD2E1255c35Be123e30b38abC2798",
+            "0x118D6dCF55a0DfBC3d1052FBD41A483f8a6a68b3",
+            "0x3b9eAF01facee23846cea722a92e853bee064d69",
+            "0xDA1a7e2D400f09292F22d02343E9BF8445EAA71C",
+            "0x91c5Da0CEFc781545B6B9Ad0438D1a944B6DdC52",
+            "0x1F7F8786D8699CC4d722AEaEd5797a6d8a6815d5",
+            "0xd0F657D3CEBB51ceEa20DFb3aF6213fa1cecd5A7",
+            "0xEb6927E3599D1Ee873b348efc99e81B36179CDAf"
+          ],
+          "threshold": 8,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+          "observedBlock": 25530270,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe Global API — USD0 RegistryAccess admin",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x6e9d65eC80D69b1f508560Bc7aeA5003db1f7FB7"
+          }
+        ],
+        "evidence": "At Ethereum block 25530270, RegistryAccess.hasRole(DEFAULT_ADMIN_ROLE, 0x6e9d65eC)=true. Safe API returned an 8-of-15 threshold, no enabled modules, zero guard, and the standard fallback handler."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xaaDa24358620d4638a2eE8788244c6F4b197Ca16",
+        "label": "Usual ProxyAdmin owner (upgrade Safe)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 8,
+        "signerCount": 15,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 8,
           "owners": [
             "0xEBc9B8F11Da82cC17ffEC763dE7EB1daa735Bb3C",
             "0xDF758F044e3761aD52E1B96E1A468f03f565334b",
@@ -90,40 +157,11 @@
             "0xd0F657D3CEBB51ceEa20DFb3aF6213fa1cecd5A7",
             "0xEb6927E3599D1Ee873b348efc99e81B36179CDAf"
           ],
-          "threshold": 8,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": null,
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
           "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
-          "observedBlock": 25294761,
-          "source": "safe-api"
-        },
-        "sources": [
-          {
-            "label": "Safe Global API — USD0 RegistryAccess admin",
-            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x6e9d65eC80D69b1f508560Bc7aeA5003db1f7FB7"
-          }
-        ],
-        "evidence": "At Ethereum block 25294761: RegistryAccess (0x0d374775e962c3608b8f0a4b8b10567df739bb56).hasRole(DEFAULT_ADMIN_ROLE, 0x6e9d65eC)=true. Safe API confirmed 8-of-15 threshold, no enabled modules, zero guard address."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xaaDa24358620d4638a2eE8788244c6F4b197Ca16",
-        "label": "Usual ProxyAdmin owner (upgrade Safe)",
-        "role": "governor",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
-        "threshold": 8,
-        "signerCount": 15,
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "threshold": 8,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": null,
-          "masterCopy": null,
-          "observedBlock": 25294761,
+          "observedBlock": 25530270,
           "source": "safe-api"
         },
         "sources": [
@@ -132,7 +170,7 @@
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xaaDa24358620d4638a2eE8788244c6F4b197Ca16"
           }
         ],
-        "evidence": "At Ethereum block 25294761: DaoCollateral ProxyAdmin (0xc6b60cbcec7d9f98fdcdef6b9a611a955d7fefd4).owner() = 0xaaDa24...; SwapperEngine ProxyAdmin (0x76ef37...).owner() = 0xaaDa24...; USD0 token ProxyAdmin (0xc15091...).owner() = 0xaaDa24.... Safe API confirmed 8-of-15 threshold, no modules, zero guard."
+        "evidence": "At Ethereum block 25530270, owner() on the USD0 token, DaoCollateral, and RegistryAccess ProxyAdmins (0xc15091d3..., 0xc6b60c..., and 0x77c5d6...) returned 0xaaDa24.... Safe API returned an 8-of-15 threshold, no modules, zero guard, and the standard fallback handler."
       }
     ],
     "review": {
@@ -150,9 +188,9 @@
           "url": "https://etherscan.io/address/0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5#readContract"
         }
       ],
-      "evidence": "At Ethereum block 25294761: USD0 token (0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5) name()='Usual USD', confirmed proxy with implementation 0xae12f6f805842e6dafe71a6d2b41b28ba5fc821e. RegistryAccess (0x0d374775e962c3608b8f0a4b8b10567df739bb56).hasRole(USD0_MINT role 0xb90c0a1b...) confirmed for both DaoCollateral and SwapperEngine. DEFAULT_ADMIN of RegistryAccess = 8-of-15 Safe (0x6e9d65eC). All proxy contracts share ProxyAdmin owner = 8-of-15 Safe (0xaaDa24). Both Safes have no enabled modules and zero guard.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25530270, DaoCollateral held keccak256('USD0_MINT') while the prior SwapperEngine address did not and its current verified implementation exposed no mint function. USD0, DaoCollateral, and RegistryAccess are transparent proxies with distinct ProxyAdmins owned by the 8-of-15 0xaaDa24 Safe. RegistryAccess DEFAULT_ADMIN remains the separate 8-of-15 0x6e9d65 Safe. Contract-based issuance requires no off-chain mint reconciliation; no mint-authority incident is recorded in the reviewed sources.",
+      "reviewer": "Codex V9 control curation",
+      "reviewedAt": "2026-07-14"
     }
   },
   "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena (via UsualUSDtb wrapper), and indirect USDC gateway liquidity",
@@ -303,32 +341,6 @@
     ]
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Hashnote USYC (tokenized T-bills/reverse repos)",
-      "pct": 65,
-      "risk": "low",
-      "coinId": "usyc-hashnote"
-    },
-    {
-      "name": "M by M^0 (tokenized T-bills)",
-      "pct": 15,
-      "risk": "low",
-      "coinId": "m-m0"
-    },
-    {
-      "name": "USDtb by Ethena (via UsualUSDtb wrapper)",
-      "pct": 10,
-      "risk": "low",
-      "coinId": "usdtb-ethena"
-    },
-    {
-      "name": "USDC (Circle)",
-      "pct": 10,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",
     "version": 1,

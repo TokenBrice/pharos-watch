@@ -90,6 +90,40 @@
   "collateral": "GHO staked into Aave Umbrella as a slashable safety-module asset covering GHO deficits; holders earn Umbrella rewards while accepting cooldown and automated slashing risk",
   "pegMechanism": "ERC-4626-style staking receipt over GHO with 1:1 convertToAssets under normal conditions; unstaking requires Aave Umbrella cooldown and withdrawal-window mechanics, and deficit events can reduce redeemable value through slashing",
   "mechanismArchetype": "cdp",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "stkGHO is a slashable Aave Umbrella safety-module receipt and has no borrower-owned collateral positions or token-level liquidation oracle. Its underlying GHO exposure inherits the external Aave reserve-oracle and bad-debt risks reviewed on the parent asset.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Aave documents Umbrella as an automated safety module that stakes assets and burns or slashes the staked receipt to cover protocol deficits. stkGHO depositors do not open GHO borrower positions, so there are no stkGHO collateral-market or liquidation branches to inventory; the underlying GHO parent carries the separate Aave oracle profile.",
+      "sources": [
+        {
+          "label": "Aave Umbrella help",
+          "url": "https://aave.com/help/umbrella/umbrella"
+        },
+        {
+          "label": "Aave Umbrella development proposal",
+          "url": "https://governance.aave.com/t/bgd-aave-safety-module-umbrella/18366"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aave Umbrella help",
+        "url": "https://aave.com/help/umbrella/umbrella"
+      },
+      {
+        "label": "Aave Umbrella development proposal",
+        "url": "https://governance.aave.com/t/bgd-aave-safety-module-umbrella/18366"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "links": [
     {

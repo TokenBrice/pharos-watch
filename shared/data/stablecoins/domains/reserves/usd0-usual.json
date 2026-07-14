@@ -1,0 +1,66 @@
+{
+  "id": "usd0-usual",
+  "reserves": [
+    {
+      "name": "Hashnote USYC",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usyc-hashnote",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Hashnote International Short Duration Yield Fund Ltd.",
+      "riskFactors": ["counterparty", "liquidity", "custody", "smart-contract"],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Usual USYC collateral factsheet",
+        "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/collateral-assets/usyc-hashnote"
+      },
+      {
+        "label": "Circle USYC developer overview",
+        "url": "https://developers.circle.com/tokenized/usyc/overview"
+      }
+    ],
+    "rationale": "The exact July 14 onchain branch-balance capture identifies Hashnote USYC as 100% of observed USD0 collateral. Usual identifies USYC as USD0 collateral, and Circle identifies the token as an onchain share of Hashnote International Short Duration Yield Fund Ltd. with atomic T+0 subscriptions and redemptions under ordinary conditions.",
+    "compositionBasis": "Exact Usual DaoCollateral branch balances captured on July 14, 2026",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The direct USD0 collateral identity is fully resolved to USYC; USYC's underlying Treasury-bill and reverse-repo allocation is reviewed separately on the upstream asset.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon (USYC)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Marex",
+        "role": "prime-broker"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Usual USYC collateral factsheet",
+        "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/collateral-assets/usyc-hashnote"
+      },
+      {
+        "label": "Circle USYC developer overview",
+        "url": "https://developers.circle.com/tokenized/usyc/overview"
+      }
+    ],
+    "uncertainty": "Usual identifies BNY Mellon custody through Marex and states that USYC assets are segregated, but current provider shares, account-level legal terms, and rehypothecation terms are not published."
+  }
+}

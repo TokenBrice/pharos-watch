@@ -25,7 +25,22 @@
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "Singapore",
-    "attestorLicense": "ACRA-registered Public Accounting Corporation"
+    "attestorLicense": "ACRA-registered Public Accounting Corporation",
+    "latestReport": {
+      "periodEnd": "2026-05-29",
+      "publishedAt": "2026-06-25",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "KPMG USDG Redemption Assets Report - May 2026",
+          "url": "https://framerusercontent.com/assets/o61pz3wuO4LmxEuDTUxmINc09qc.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -365,23 +380,6 @@
     ]
   },
   "custodyModel": "institutional-top",
-  "reserves": [
-    {
-      "name": "U.S. Government Securities",
-      "pct": 50,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash Deposits (DBS/StanChart)",
-      "pct": 35,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash Equivalents",
-      "pct": 15,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

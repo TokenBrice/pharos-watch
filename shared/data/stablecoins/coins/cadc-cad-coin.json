@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Canadian dollars and cash equivalents (liquid securities with original maturity ≤ 90 days) held 1:1 in a segregated account at a Canadian financial institution, in trust for CADC holders",
+  "collateral": "Canadian-dollar cash held 1:1 in segregated accounts at ATB Financial, in trust for CADC holders",
   "pegMechanism": "Direct 1:1 redemption for CAD through Loon (FINTRAC-registered MSB, formerly issued by PayTrie); CADC is burned on redemption and minted on deposit",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "145",
@@ -19,7 +19,7 @@
   "geckoId": "cad-coin",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://loon.finance/",
+    "url": "https://loon.finance/transparency/",
     "provider": "Loon monthly third-party attestation for CAD reserves held at ATB Financial",
     "attestorTier": "niche",
     "cadence": "monthly",
@@ -87,15 +87,95 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "CADC is issued by Loon (FINTRAC-registered MSB); on-chain owner/masterMinter across the EVM deployments is a set of Gnosis Safe multisigs with identical 3 signers (2/3 threshold) operated by the issuer.",
+    "summary": "CADC is issued by Loon through issuer-controlled owner/masterMinter Safes. All five EVM tokens are upgradeable legacy ZeppelinOS FiatTokenProxy deployments: Ethereum, Polygon, Arbitrum, and Base share a 1-of-1 proxy-admin Safe, while Linea is immediately upgradeable by a single EOA. The Solana mint remains separately owned by the SPL Token program.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef",
+        "0x9de41aff9f55219d5bf4359f167d1d0c772a396d",
+        "0x2b28e826b55e399f4d4699b85f68666ac51e6f70",
+        "0x043eb4b75d0805c43d7c834902e335621983cf03",
+        "0xa0b18e70387ba72d1c7038bc0bd3a05e5a2287f6"
+      ],
+      "implementationAddresses": [
+        "0x0c9b0169a23087a5edb566d4b1ea39b6b276332a",
+        "0x82d095da45b0757648b6e76aaf67996045967369",
+        "0x3082847216e5ce9f46b3b46235a37959a494cb5e",
+        "0xdd022586a7700e2480838350554b0db8b9ff6502",
+        "0x8056da37595f42d90776f720b500e81f9c2c36fd"
+      ],
+      "adminAddresses": [
+        "0x616c831464c2ef872fd0d1b7bff7973c3a91ae12",
+        "0xa0f5c8e8bcbdf066643c2ea8484cba7a3aff01f9"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "CADC Linea legacy proxy admin EOA",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Sourcify CADC Ethereum FiatTokenProxy",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef?fields=compilation,proxyResolution"
+        },
+        {
+          "label": "Sourcify CADC Polygon FiatTokenProxy",
+          "url": "https://sourcify.dev/server/v2/contract/137/0x9de41aff9f55219d5bf4359f167d1d0c772a396d?fields=compilation,proxyResolution"
+        },
+        {
+          "label": "Sourcify CADC Arbitrum FiatTokenProxy",
+          "url": "https://sourcify.dev/server/v2/contract/42161/0x2b28e826b55e399f4d4699b85f68666ac51e6f70?fields=compilation,proxyResolution"
+        },
+        {
+          "label": "Sourcify CADC Base FiatTokenProxy",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x043eb4b75d0805c43d7c834902e335621983cf03?fields=compilation,proxyResolution"
+        },
+        {
+          "label": "Sourcify CADC Linea FiatTokenProxy",
+          "url": "https://sourcify.dev/server/v2/contract/59144/0xa0b18e70387ba72d1c7038bc0bd3a05e5a2287f6?fields=compilation,proxyResolution"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        },
+        {
+          "label": "Arbitrum PublicNode RPC",
+          "url": "https://arbitrum-one-rpc.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base-rpc.publicnode.com"
+        },
+        {
+          "label": "Linea mainnet RPC",
+          "url": "https://rpc.linea.build"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Loon CADC issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Loon controls 1:1 mint on CAD deposit and burn on redemption against segregated trust reserves; minting is issuer-operated with no permissionless route."
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "issuer:loon-finance"
+        ],
+        "sources": [
+          {
+            "label": "Loon Finance",
+            "url": "https://loon.finance/"
+          },
+          {
+            "label": "CADC Ethereum contract",
+            "url": "https://etherscan.io/address/0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef"
+          }
+        ],
+        "evidence": "Loon controls 1:1 mint on CAD deposit and burn on redemption against segregated trust reserves; minting is issuer-operated with no permissionless route. The issuer-controlled masterMinter Safes can authorize minters and change mint allowances, so this issuer failure domain can raise the effective mint cap."
       },
       {
         "label": "CADC Ethereum owner/masterMinter — Gnosis Safe v1.3.0 (2/3)",
@@ -171,24 +251,122 @@
           "source": "onchain"
         },
         "evidence": "Polygon owner() on 0x9de41aff... = 0x9bba7ae7276e352387211384de6f87491162a19c; Arbitrum owner() on 0x2b28e826... = 0xf78280429f296f44fa2e222bec2e877afff9ac35. Both return identical 3-signer set, threshold 2, guard 0xf48f2b2d..., slot 0 = 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Safe L2 1.3.0 singleton)."
+      },
+      {
+        "address": "0x616c831464c2ef872fd0d1b7bff7973c3a91ae12",
+        "label": "CADC Ethereum/Polygon/Arbitrum/Base legacy proxy-admin Safe (1/1)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "ethereum:0x616c831464c2ef872fd0d1b7bff7973c3a91ae12",
+          "polygon:0x616c831464c2ef872fd0d1b7bff7973c3a91ae12",
+          "arbitrum:0x616c831464c2ef872fd0d1b7bff7973c3a91ae12",
+          "base:0x616c831464c2ef872fd0d1b7bff7973c3a91ae12"
+        ],
+        "safe": {
+          "owners": [
+            "0x568b35d8c100d07293cc59c8d9dd9a7ebdc22ed5"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "version": "1.4.1",
+          "observedBlock": 25531359,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25531359, Polygon block 90221893, Arbitrum block 483787658, and Base block 48624243, the legacy proxy admin address was deployed as a chain-local Safe v1.4.1 instance with the same sole owner 0x568b35d8c100d07293cc59c8d9dd9a7ebdc22ed5, threshold 1, no enabled modules, and a zero guard slot. It can immediately call the verified FiatTokenProxy upgrade functions on the first four deployments."
+      },
+      {
+        "chain": "linea",
+        "address": "0xa0f5c8e8bcbdf066643c2ea8484cba7a3aff01f9",
+        "label": "CADC Linea legacy proxy admin EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 31369755,
+        "sources": [
+          {
+            "label": "Sourcify CADC Linea FiatTokenProxy",
+            "url": "https://sourcify.dev/server/v2/contract/59144/0xa0b18e70387ba72d1c7038bc0bd3a05e5a2287f6?fields=compilation,proxyResolution"
+          },
+          {
+            "label": "Linea mainnet RPC",
+            "url": "https://rpc.linea.build"
+          }
+        ],
+        "evidence": "At Linea block 31369755, the legacy ZeppelinOS admin slot on CADC resolved directly to 0xa0f5c8e8bcbdf066643c2ea8484cba7a3aff01f9 and eth_getCode returned 0x. This single EOA can replace the implementation immediately and is therefore the weakest deployment-wide upgrade authority."
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295003 and Base block 47200682: all five CADC deployments confirmed. ETH owner/masterMinter = Safe 1.3.0 2/3 at 0x3e30d340... Polygon owner = Safe L2 1.3.0 2/3 at 0x9bba7ae7... Arbitrum owner = Safe L2 1.3.0 2/3 at 0xf7828042... Base/Linea owner = Safe 1.4.1 2/3 at 0x3de34058... All Safes share the same 3 issuer-controlled signers. No modules detected on any chain.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Sourcify verifies all five EVM deployments as FiatTokenProxy/ZeppelinOSProxy contracts whose AdminUpgradeabilityProxy path exposes upgradeTo and upgradeToAndCall. At Ethereum block 25531348, Polygon block 90221803, Arbitrum block 483787112, Base block 48624176, and Linea block 31369755, the legacy implementation slot resolved in contract order to 0x0c9b0169..., 0x82d095da..., 0x30828472..., 0xdd022586..., and 0x8056da37.... The legacy admin slot resolved to 0x616c8314... on the first four chains and 0xa0f5c8e8... on Linea. The shared-address admin is a 1-of-1 Safe on each of the first four chains with sole owner 0x568b35d8..., no modules, and no guard; the Linea admin is an EOA. The previously reviewed logic-level owner/masterMinter Safes remain separate controls. Solana mint 9ewjJpmD... remains owned by the SPL Token program with its distinct mint and freeze authorities and is not included in the EVM proxy arrays.",
+      "reviewer": "owner-triage",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Loon Finance",
           "url": "https://loon.finance/"
         },
         {
-          "label": "CADC Ethereum contract",
-          "url": "https://etherscan.io/address/0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef"
+          "label": "Sourcify CADC Ethereum FiatTokenProxy",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef?fields=compilation,proxyResolution"
         },
         {
-          "label": "CADC Base contract",
-          "url": "https://basescan.org/address/0x043eb4b75d0805c43d7c834902e335621983cf03"
+          "label": "Sourcify CADC Base FiatTokenProxy",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0x043eb4b75d0805c43d7c834902e335621983cf03?fields=compilation,proxyResolution"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        },
+        {
+          "label": "Arbitrum PublicNode RPC",
+          "url": "https://arbitrum-one-rpc.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base-rpc.publicnode.com"
+        },
+        {
+          "label": "Linea mainnet RPC",
+          "url": "https://rpc.linea.build"
+        },
+        {
+          "label": "Solana mainnet RPC",
+          "url": "https://api.mainnet-beta.solana.com"
         }
       ]
     }
@@ -196,11 +374,45 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "CAD & short-term securities in segregated trust",
+      "name": "Canadian-dollar cash deposits at ATB Financial",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "ATB Financial",
+      "riskFactors": ["credit", "custody", "concentration", "legal"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Loon CADC transparency and monthly attestations",
+        "url": "https://loon.finance/transparency/"
+      },
+      {
+        "label": "Loon CADC product page",
+        "url": "https://loon.finance/"
+      }
+    ],
+    "rationale": "Loon's current transparency page states that every CADC is backed 1:1 by Canadian dollars at ATB Financial, with 100% cash deposits in segregated accounts and no exposure to commercial paper or investment instruments. The reserve slice is narrowed from an unsupported cash-and-securities aggregate to the disclosed cash deposit category.",
+    "compositionBasis": "Loon transparency page and current monthly attestation history",
+    "compositionAsOf": "2026-05-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve asset class and ATB Financial custody are disclosed; the transparency page does not disclose account-level balances or provider shares beyond the single named bank.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Canadian-dollar cash deposits at ATB Financial",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Canadian-dollar bank deposits are off-chain cash reserves rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

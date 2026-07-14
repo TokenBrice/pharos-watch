@@ -1,0 +1,68 @@
+{
+  "id": "sfrxusd-frax",
+  "reserves": [
+    {
+      "name": "frxUSD savings vault shares",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "frxusd-frax",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Finance and frxUSD reserve venues",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax sfrxUSD documentation",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+      },
+      {
+        "label": "Frax frxUSD product page",
+        "url": "https://frax.com/frxUSD"
+      }
+    ],
+    "rationale": "Frax documents sfrxUSD as an ERC-4626-like token fully redeemable for frxUSD at an increasing exchange rate. Its benchmark strategy can rotate among carry trades, AMOs, DeFi venues, and short-dated Treasury-bill strategies; the reserve envelope therefore retains one 100% frxUSD dependency while leaving strategy allocation dynamic.",
+    "compositionBasis": "Frax sfrxUSD and frxUSD documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The frxUSD dependency is identified at 100%, but the current benchmark-yield venue, strategy allocation, and available redemption liquidity are dynamic.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Frax sfrxUSD savings vault",
+        "role": "custodian"
+      },
+      {
+        "name": "Frax-approved AMO, DeFi, carry-trade, and Treasury venues",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Frax sfrxUSD documentation",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+      }
+    ],
+    "uncertainty": "Frax identifies the vault and governance-approved strategy venues but does not establish legal segregation, bankruptcy remoteness, rehypothecation, or current venue shares."
+  }
+}

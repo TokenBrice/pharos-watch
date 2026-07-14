@@ -1,0 +1,74 @@
+{
+  "id": "vnxau-vnx",
+  "reserves": [
+    {
+      "name": "Allocated physical gold held at Philoro Edelmetallhandel AG",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Physical gold inventory held at Philoro Edelmetallhandel AG",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AREVA VNXAU agreed-upon procedures report as of December 31, 2025",
+        "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+      },
+      {
+        "label": "VNX Gold",
+        "url": "https://vnx.li/gold/"
+      }
+    ],
+    "rationale": "AREVA reconciled 13,100 generated VNXAU across Ethereum, Q, Polygon, Solana, and Base to 13,100 gross grams reported on Philoro's custody statement as of December 31, 2025. The AUP documented a 1.13-token Solana difference caused by holder burns and still found generated supply did not exceed the reported gold balance. AREVA did not physically observe the gold or validate its quality, value, legal property rights, or the token-holder register.",
+    "compositionBasis": "AREVA AUP reconciliation of VNXAU supply to gross grams on Philoro's custody statement",
+    "compositionAsOf": "2025-12-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The backing asset and custody provider are identified, but gold quality, valuation, bar-level identity, legal property rights, and liquidation timing were outside the AUP procedures.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Allocated physical gold held at Philoro Edelmetallhandel AG",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Physical gold is an exogenous reserve asset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Philoro Edelmetallhandel AG",
+        "role": "subcustodian",
+        "sharePct": 100,
+        "jurisdiction": "Liechtenstein"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AREVA VNXAU agreed-upon procedures report as of December 31, 2025",
+        "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+      }
+    ],
+    "uncertainty": "AREVA confirmed that Philoro's custody statement was in VNX Commodities AG's name and reported all 13,100 gross grams there, but did not physically observe the gold or validate quality, legal rights, segregation, bankruptcy remoteness, or rehypothecation restrictions.",
+    "knownUnknownExposurePct": 0
+  }
+}

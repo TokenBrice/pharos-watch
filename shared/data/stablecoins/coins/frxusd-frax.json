@@ -445,29 +445,90 @@
   "reserves": [
     {
       "name": "WTGXX (WisdomTree Government Money Market)",
-      "pct": 44,
+      "pct": 54.1,
       "risk": "low",
-      "coinId": "wtgxx-wisdomtree"
+      "coinId": "wtgxx-wisdomtree",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "WisdomTree Treasury Money Market Digital Fund",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "smart-contract"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "USTB (Superstate tokenized T-bills)",
-      "pct": 43,
+      "pct": 29.9,
       "risk": "low",
-      "coinId": "ustb-superstate"
+      "coinId": "ustb-superstate",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Invesco Short Duration U.S. Government Securities Fund",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "smart-contract"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "BUIDL (BlackRock tokenized T-bills)",
-      "pct": 12,
+      "pct": 14.2,
       "risk": "low",
-      "coinId": "buidl-blackrock"
+      "coinId": "buidl-blackrock",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "smart-contract"],
+      "liquidityHorizon": "one-day"
     },
     {
-      "name": "USDB (Bridge/Stripe fiat-backed stablecoin)",
-      "pct": 1,
+      "name": "USDB (Bridge)",
+      "pct": 1.8,
       "risk": "low",
-      "coinId": "usdb-bridge"
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Bridge Building Inc.",
+      "riskFactors": ["counterparty", "liquidity", "custody", "smart-contract"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax frxUSD balance-sheet API",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      },
+      {
+        "label": "Frax transparency",
+        "url": "https://frax.com/transparency"
+      },
+      {
+        "label": "WisdomTree WTGXX fund page",
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+      },
+      {
+        "label": "Superstate USTB fund page",
+        "url": "https://superstate.com/ustb"
+      },
+      {
+        "label": "Securitize BUIDL overview",
+        "url": "https://securitize.io/blackrock/buidl"
+      },
+      {
+        "label": "Bridge USDB overview",
+        "url": "https://www.bridge.xyz/news/usdb"
+      }
+    ],
+    "rationale": "The official Frax balance-sheet API identifies WTGXX, USTB, BUIDL, and USDB holdings and their USD values. The live adapter aggregates repeated token rows and normalizes them against total assets to the four displayed percentages; a de minimis USDC balance rounds below 0.1% and does not create a displayed slice.",
+    "compositionBasis": "Official Frax frxUSD balance-sheet asset values normalized by total assets",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unclassified reserve exposure is present in the official balance sheet; the disclosed de minimis USDC balance rounds below the live adapter's 0.1% display precision.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 3,
+        "reserveName": "USDB (Bridge)",
+        "pct": 1.8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USDB is identified by the official balance sheet but remains outside the active scoring set, so it is not promoted into the active dependency graph."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "frax-balance-sheet",
     "version": 2,

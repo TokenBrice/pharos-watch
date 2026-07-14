@@ -152,7 +152,7 @@ These steps are for fresh provisioning or recovery of account-bound configuratio
 
 ### 1. Confirm the standard Worker deployment
 
-Run the normal main-branch release flow in [Deployment Process](./deployment-process.md). After a successful Worker promotion, confirm:
+Run the normal main-branch release flow in [Deployment Process](./deployment-process.md). After a successful Worker deployment, confirm:
 
 - `api.pharos.watch` continues to serve the current Worker
 - `site-api.pharos.watch` remains attached to the same Worker script

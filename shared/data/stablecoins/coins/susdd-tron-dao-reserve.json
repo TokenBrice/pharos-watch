@@ -26,6 +26,40 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "savings-usdd",
+  "oracleRisk": {
+    "tier": "medianized-with-delay",
+    "summary": "sUSDD is an ERC-4626 savings wrapper over USDD and has no borrower-owned collateral positions or local liquidation engine. Its required USDD parent carries the separately reviewed governed CDP oracle, auction, deficit, and shutdown branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "USDD documents sUSDD as an ERC-4626 tokenized vault minted when users deposit USDD and redeemable back to USDD through its exchange rate. The savings wrapper does not originate borrower debt or operate collateral-ratio-triggered liquidations. The variantOf relationship preserves the complete USDD parent branch review.",
+      "sources": [
+        {
+          "label": "USDD sUSDD mechanism",
+          "url": "https://docs.usdd.io/susdd-mechanism"
+        },
+        {
+          "label": "USDD oracle architecture",
+          "url": "https://docs.usdd.io/developers/oracle"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDD sUSDD mechanism",
+        "url": "https://docs.usdd.io/susdd-mechanism"
+      },
+      {
+        "label": "USDD parent oracle architecture",
+        "url": "https://docs.usdd.io/developers/oracle"
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://usdd.io/data",

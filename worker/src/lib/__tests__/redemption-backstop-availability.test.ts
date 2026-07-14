@@ -149,7 +149,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     const cusd = result.get("cusd-celo");
     expect(cusd?.routeStatus).toBe("degraded");
     expect(cusd?.outputImpairedDependencyId).toBe("ausd-agora");
-    expect(cusd?.outputImpairedShare).toBeCloseTo(0.413, 6);
+    expect(cusd?.outputImpairedShare).toBeCloseTo(0.27, 6);
     expect(cusd?.routeStatusReason).toContain("Output asset impairment");
   });
 
@@ -180,8 +180,8 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     // worst impaired dependency wins attribution
     expect(honey?.outputImpairedDependencyId).toBe("usdc-circle");
     expect(honey?.activeDepegBps).toBe(3000);
-    // usdc (0.40) + usdt (0.25) shares accumulate
-    expect(honey?.outputImpairedShare).toBeCloseTo(0.65, 6);
+    // Current reviewed USDC.e and USDt0 vault shares accumulate.
+    expect(honey?.outputImpairedShare).toBeCloseTo(0.00006381, 8);
     // composition weights sum to exactly 1.0, so no over-leverage marker is emitted
     expect(honey?.routeStatusReason).not.toContain("over-leveraged");
   });

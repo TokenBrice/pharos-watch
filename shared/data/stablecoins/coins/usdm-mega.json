@@ -188,26 +188,33 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
+  "dependencies": [
     {
-      "name": "USDtb (BlackRock BUIDL tokenized U.S. Treasuries via Securitize)",
-      "pct": 90,
-      "risk": "low",
-      "coinId": "usdtb-ethena"
-    },
-    {
-      "name": "Liquid stablecoins (USDC) for redemptions",
-      "pct": 5,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "Liquid stablecoins (USDT) for redemptions",
-      "pct": 5,
-      "risk": "low",
-      "coinId": "usdt-tether"
+      "id": "usdtb-ethena",
+      "weight": 1,
+      "type": "mechanism"
     }
   ],
+  "dependencyReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "MegaETH introduces USDm",
+        "url": "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
+      }
+    ],
+    "rationale": "MegaETH documents USDm v1 as issued on Ethena's USDtb rails. The cited approximately 90% BUIDL allocation is USDtb's target reserve mix, not a measured USDm composition, so the evidenced relationship is a serial mechanism dependency rather than estimated parallel reserve weights.",
+    "relationships": [
+      {
+        "id": "usdtb-ethena",
+        "weight": 1,
+        "type": "mechanism",
+        "reason": "USDm v1 issuance and backing operate through Ethena's USDtb stablecoin rails."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
@@ -233,7 +240,36 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "inheritedFrom": "usdtb-ethena",
-    "summary": "USDM is MegaETH's dollar issued on Ethena's USDtb rails and backed ~90% by USDtb; its supply tracks USDtb-backed issuance, so it inherits USDtb's Ethena-operated mint authority rather than running an independent mint path. The wrapper's own admin is a 9-owner 4/9 Gnosis Safe; no direct mint function or proxy upgrade admin exists on either deployment.",
+    "summary": "USDM is MegaETH's dollar issued on Ethena's USDtb rails and backed ~90% by USDtb, so it inherits the backing and issuance dependency on USDtb. Each USDM deployment is also a UUPS-upgradeable OFT whose 4-of-9 owner Safe can add or remove direct minters and replace mint-critical logic without a timelock.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xec2af1c8b110a61fd9c3fa6a554a031ca9943926",
+        "0xfafddbb3fc7688494971a79cc65dca3ef82079e7"
+      ],
+      "implementationAddresses": [
+        "0x61e6eb7f9e36d27db1da7df55b898122b9145de2",
+        "0xac37677261885fdb372a37ac8d5d47044196073c"
+      ],
+      "adminAddresses": [
+        "0x141c03abc062a9d5d4238e1666b849c929e53cb2"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "USDM logic owner (Gnosis Safe 9/4)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530956,
+      "sources": [
+        {
+          "label": "USDM Ethereum implementation verified source",
+          "url": "https://eth.blockscout.com/address/0x61e6eb7f9e36d27db1da7df55b898122b9145de2"
+        },
+        {
+          "label": "USDM MegaETH implementation verified source",
+          "url": "https://megaeth.blockscout.com/address/0xac37677261885fdb372a37ac8d5d47044196073c"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "USDM USDtb-rails representation (share accounting)",
@@ -252,7 +288,7 @@
             "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
           }
         ],
-        "evidence": "At Ethereum block 25294742: ERC1967Proxy (impl 0x61e6eb7f9e36d27db1da7df55b898122b9145de2, ContractName xUSDOFTUpgradeable), admin slot 0x0 (no proxy upgrade admin). At MegaETH block 18390248: ERC1967Proxy (impl 0xac37677261885fdb372a37ac8d5d47044196073c, ContractName xUSDOFTUpgradeable), admin slot 0x0. Both: mint() reverts, getRoleMemberCount(MINTER_ROLE) reverts — no direct privileged mint surface. Supply controlled via LayerZero OFT bridge only."
+        "evidence": "At Ethereum block 25530956 and MegaETH block 21235969, the ERC-1967 implementation slots resolve to verified xUSDOFTUpgradeable implementations 0x61e6... and 0xac376... respectively, while the transparent-proxy admin slots are zero as expected for UUPS proxies. The verified implementation exposes mint(address,uint256), addMinter(address), and removeMinter(address); mint is restricted to the contract's owner-managed minter set."
       },
       {
         "chain": "ethereum",
@@ -260,8 +296,8 @@
         "label": "USDM logic owner (Gnosis Safe 9/4)",
         "role": "minter-admin",
         "authorityType": "safe",
-        "directMintAbility": "none",
-        "canRaiseCap": false,
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "threshold": 4,
         "signerCount": 9,
@@ -291,7 +327,7 @@
             "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
           }
         ],
-        "evidence": "At Ethereum block 25294742: owner() on both MegaETH (block 18390248) and Ethereum USDM proxies returns 0x141C03AbC062a9d5d4238e1666B849C929e53cB2. On-chain getOwners() returned 9 addresses; threshold() = 4 (confirmed slot 4); getModules() returned empty array (no modules); guard slot 0x33 = zero; fallbackHandler = zero; masterCopy (slot 0) = 0x41675c099f32341bf84bfc5382af534df5c7461a (GnosisSafe 1.3.0, ContractName Safe on Blockscout). This owner is a logic-level admin only; proxy upgrade admin slots are 0x0 on both chains (upgradeability not set/renounced)."
+        "evidence": "At Ethereum block 25530956 and MegaETH block 21235969, owner() on both USDM proxies returns 0x141C03AbC062a9d5d4238e1666B849C929e53cB2. On-chain Safe review returned 9 owners, threshold 4, no enabled modules, a zero guard, and a zero fallback handler. Verified xUSDOFTUpgradeable source makes addMinter() and removeMinter() onlyOwner and authorizes UUPS upgradeToAndCall() through _authorizeUpgrade(...), also onlyOwner; the zero ERC-1967 admin slot does not renounce these UUPS powers."
       }
     ],
     "review": {
@@ -309,9 +345,9 @@
           "url": "https://docs.megaeth.com"
         }
       ],
-      "evidence": "Wrapper verification complete. Both USDM deployments (MegaETH 0xFAfD..., Ethereum 0xec2a...) are ERC1967Proxy contracts with impl xUSDOFTUpgradeable (LayerZero OFT), no proxy upgrade admin (admin slot = 0x0), no direct mint function, no MINTER_ROLE. Owner (same on both chains) is Gnosis Safe 0x141C03... with 9 owners, threshold 4, no modules, confirmed at Ethereum block 25294742 and MegaETH block 18390248. Parent coin usdtb-ethena tracked separately.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Both USDM deployments are ERC1967Proxy contracts with verified xUSDOFTUpgradeable implementations. Direct RPC checks confirmed the implementation slots and common owner Safe. Contrary to the earlier zero-admin-slot interpretation, verified source shows a UUPS authorization path controlled by onlyOwner plus owner-managed addMinter/removeMinter functions and a direct mint entry point restricted to those minters. The common owner is Gnosis Safe 0x141C03... with 9 owners, threshold 4, no modules, and no timelock observed. Parent coin usdtb-ethena is tracked separately.",
+      "reviewer": "OpenAI Codex adversarial verification",
+      "reviewedAt": "2026-07-14"
     }
   },
   "launchDate": "2026-02-09"

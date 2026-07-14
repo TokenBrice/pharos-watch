@@ -69,9 +69,26 @@
   "geckoId": "savings-crvusd",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "Savings crvUSD uses internal vault share accounting but inherits crvUSD collateral-oracle exposure from Curve controllers.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "scrvUSD is a passive Yearn V3 vault that accepts crvUSD and runs no strategies, borrower-owned debt positions, or local liquidation engine. Its required crvUSD parent retains the separately tracked unresolved LLAMMA branch inventory.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "Curve's repository describes scrvUSD as an unmodified Yearn V3 vault accepting crvUSD, with deposited funds left in the vault and no strategies. Minting and redemption are share accounting rather than borrower debt creation, so scrvUSD has no local collateral-oracle or liquidation branches. The variantOf relationship keeps the unresolved crvUSD parent branch review visible rather than treating it as cleared.",
+      "sources": [
+        {
+          "label": "Savings crvUSD repository",
+          "url": "https://github.com/curvefi/scrvusd"
+        },
+        {
+          "label": "Curve crvUSD risk documentation",
+          "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
     "confidence": "verified",
     "sources": [
       {

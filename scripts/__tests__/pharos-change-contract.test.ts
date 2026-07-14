@@ -9,10 +9,8 @@ import {
   buildSessionStartHookOutput,
   classifyChangedFiles,
   formatContract,
-  formatContractMarkdown,
   normalizeChangedFiles,
 } from "../ci/pharos-change-contract.mjs";
-import { findExistingComment, parseNextLink, upsertPrComment } from "../ci/upsert-github-pr-comment.mjs";
 
 function requireBlockingReason(output: unknown): string {
   if (typeof output !== "object" || output === null || !("reason" in output) || typeof output.reason !== "string") {
@@ -74,16 +72,6 @@ describe("formatContract", () => {
     expect(text).toContain("npm run check:migrations");
     expect(text).toContain("D1 migrations are applied before the new Worker is live");
     expect(text).toContain("Deploy impact:");
-  });
-
-  it("renders a stable Markdown PR comment body", () => {
-    const contract = classifyChangedFiles(["shared/data/stablecoins/coins/example-usd.json"]);
-    const markdown = formatContractMarkdown(contract);
-
-    expect(markdown).toContain("<!-- pharos-change-contract -->");
-    expect(markdown).toContain("### Pharos Change Contract");
-    expect(markdown).toContain("| Stablecoin metadata or registry | high |");
-    expect(markdown).toContain("npm run check:stablecoin-data");
   });
 });
 
@@ -439,115 +427,5 @@ describe("repo Claude hook config", () => {
     expect(config.hooks.UserPromptSubmit).toBeUndefined();
     expect(config.hooks.PostToolUse).toBeUndefined();
     expect(config.hooks.PostToolBatch).toBeUndefined();
-  });
-});
-
-describe("upsert GitHub PR comment", () => {
-  it("parses the rel=next URL from a Link header", () => {
-    const header =
-      '<https://api.github.com/repos/o/r/issues/1/comments?page=2>; rel="next", ' +
-      '<https://api.github.com/repos/o/r/issues/1/comments?page=5>; rel="last"';
-    expect(parseNextLink(header)).toBe("https://api.github.com/repos/o/r/issues/1/comments?page=2");
-    expect(parseNextLink('<https://x>; rel="last"')).toBeNull();
-    expect(parseNextLink(null)).toBeNull();
-  });
-
-  it("follows Link pagination to find a marker comment beyond the first page", async () => {
-    const page2Url = "https://api.github.com/repos/owner/repo/issues/12/comments?page=2";
-    const calls: string[] = [];
-    const fetchImpl: typeof fetch = async (input) => {
-      const url = String(input);
-      calls.push(url);
-      if (url.endsWith("/issues/12/comments?per_page=100")) {
-        return new Response(JSON.stringify([{ id: 1, body: "noise" }]), {
-          headers: { link: `<${page2Url}>; rel="next"` },
-        });
-      }
-      if (url === page2Url) {
-        return new Response(JSON.stringify([{ id: 77, body: "<!-- pharos-change-contract --> old" }]));
-      }
-      return new Response(JSON.stringify({ id: 77 }));
-    };
-
-    await expect(
-      upsertPrComment(
-        {
-          body: "<!-- pharos-change-contract -->\nbody",
-          prNumber: "12",
-          repo: "owner/repo",
-          token: "token",
-        },
-        { fetchImpl },
-      ),
-    ).resolves.toEqual({ action: "updated", commentId: 77 });
-
-    expect(calls).toContain(page2Url);
-  });
-
-  it("finds the most recent marker comment", () => {
-    expect(
-      findExistingComment([
-        { id: 1, body: "<!-- pharos-change-contract --> old" },
-        { id: 2, body: "other" },
-        { id: 3, body: "<!-- pharos-change-contract --> new" },
-      ])?.id,
-    ).toBe(3);
-  });
-
-  it("patches an existing marker comment", async () => {
-    const calls: Array<{ body?: string; method?: string; url: string }> = [];
-    const fetchImpl: typeof fetch = async (input, init) => {
-      const url = String(input);
-      calls.push({
-        body: typeof init?.body === "string" ? init.body : undefined,
-        method: init?.method,
-        url,
-      });
-      if (url.endsWith("/issues/12/comments?per_page=100")) {
-        return new Response(JSON.stringify([{ id: 44, body: "<!-- pharos-change-contract --> old" }]));
-      }
-      return new Response(JSON.stringify({ id: 44 }));
-    };
-
-    await expect(
-      upsertPrComment(
-        {
-          body: "<!-- pharos-change-contract -->\nbody",
-          prNumber: "12",
-          repo: "owner/repo",
-          token: "token",
-        },
-        { fetchImpl },
-      ),
-    ).resolves.toEqual({ action: "updated", commentId: 44 });
-
-    expect(calls.at(-1)).toMatchObject({
-      body: JSON.stringify({ body: "<!-- pharos-change-contract -->\nbody" }),
-      method: "PATCH",
-      url: "https://api.github.com/repos/owner/repo/issues/comments/44",
-    });
-  });
-
-  it("skips comment upserts when the GitHub token cannot write comments", async () => {
-    const fetchImpl = async () =>
-      new Response(
-        JSON.stringify({
-          message: "Resource not accessible by integration",
-          status: "403",
-        }),
-        { status: 403 },
-      );
-
-    await expect(
-      upsertPrComment(
-        {
-          body: "<!-- pharos-change-contract -->\nbody",
-          prNumber: "12",
-          repo: "owner/repo",
-          token: "token",
-        },
-        { fetchImpl },
-      ),
-    ).resolves.toEqual({ action: "skipped", reason: "forbidden" });
   });
 });

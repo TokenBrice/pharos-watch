@@ -50,48 +50,191 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "DOC is minted against rBTC locked in Money On Chain's overcollateralized contracts on Rootstock with permissionless DOC-for-rBTC redemption; the MoC token DAO governs the proxy-upgradeable contract suite via the Governor/Changer pattern.",
+    "confidence": "verified",
+    "summary": "DOC is minted permissionlessly against rBTC locked in Money On Chain's overcollateralized contracts on Rootstock, with permissionless DOC-for-rBTC redemption. The DoCToken is Ownable and its owner is the MoCExchange proxy, which is the only direct minter. MoCExchange is a zeppelinOS transparent proxy whose admin is the published Admin contract, owned by the Upgrade Delegator, which is governed by the Money On Chain Governor. The Governor authorizes Changer contracts and can therefore upgrade mint-critical logic, so the mint bound is governance-revocable rather than immutable. The Governor's owner is the verified Money On Chain VotingMachine proxy: token holders vote on proposals, and an accepted proposal calls the Governor to execute its Changer. The VotingMachine is itself upgradeable through a ProxyAdmin and UpgradeDelegator governed by that same Governor. The posture remains partially bounded because governance can alter collateral parameters and replace mint-critical logic, not because of an unidentified off-chain signer set.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038"
+      ],
+      "implementationAddresses": [
+        "0x9bfbbdb1bf118e15249bb70460a1f4886511b53c"
+      ],
+      "adminAddresses": [
+        "0x009c51e1f6fedcdb8014ea9ae1e39b6dbf2ac0ec",
+        "0x5ce577f6ec969ce9a282838d350206c52a6f338c"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Money On Chain Governor",
+      "observedAt": "2026-07-14",
+      "observedBlock": 9051085,
+      "sources": [
+        {
+          "label": "Money On Chain published mainnet contract list (Governor, Upgrade Delegator, Admin, MoCExchange, DoCToken)",
+          "url": "https://docs.moneyonchain.com/main-rbtc-contract/smart-contracts/contracts-verification"
+        },
+        {
+          "label": "Rootstock explorer: MoCExchange proxy 0x6acb83bb",
+          "url": "https://rootstock.blockscout.com/address/0x6aCb83bB0281FB847b43cf7dd5e2766BFDF49038"
+        },
+        {
+          "label": "Rootstock public RPC node (eth_call / eth_getStorageAt reads)",
+          "url": "https://public-node.rsk.co"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "Money On Chain MoC contract (rBTC mint)",
+        "chain": "rootstock",
+        "address": "0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038",
+        "label": "MoCExchange (DOC mint and redeem contract)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "chain": "rootstock",
-        "capDescription": "Mint bounded by the protocol's rBTC overcollateralization; DOC targets 1 USD with permissionless redemption to rBTC.",
-        "canRaiseCap": "unknown",
-        "evidence": "DOC is minted against rBTC locked in Money On Chain smart contracts, with permissionless DOC-to-rBTC redemption maintaining the peg."
+        "capDescription": "Mint is bounded by the protocol's rBTC overcollateralization: DOC is issued only against locked rBTC and is permissionlessly redeemable for rBTC. MoCExchange cannot raise that bound itself; only a Governor-authorized Changer can alter the parameters.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Rootstock explorer: DoCToken 0xe700691d",
+            "url": "https://rootstock.blockscout.com/address/0xe700691dA7b9851F2F35f8b8182c69c53CcaD9Db"
+          },
+          {
+            "label": "Rootstock explorer: MoCExchange proxy 0x6acb83bb",
+            "url": "https://rootstock.blockscout.com/address/0x6aCb83bB0281FB847b43cf7dd5e2766BFDF49038"
+          },
+          {
+            "label": "Money On Chain published mainnet contract list (Governor, Upgrade Delegator, Admin, MoCExchange, DoCToken)",
+            "url": "https://docs.moneyonchain.com/main-rbtc-contract/smart-contracts/contracts-verification"
+          },
+          {
+            "label": "Money On Chain platform main concepts (rBTC-collateralized DOC minting and redemption)",
+            "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+          },
+          {
+            "label": "Rootstock public RPC node (eth_call / eth_getStorageAt reads)",
+            "url": "https://public-node.rsk.co"
+          }
+        ],
+        "evidence": "At Rootstock block 9051085: DoCToken 0xe700691d owner() = 0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038, which Money On Chain's published contract list names MoCExchange. The DoCToken itself is not a proxy (EIP-1967 implementation and admin slots and the zeppelinOS slots all read zero), so the token's mint logic can only change by changing its owner contract or by upgrading MoCExchange. Reported DoCToken totalSupply at that block was 2,935,279.125 DOC."
       },
       {
-        "label": "Money On Chain DAO governance (Governor/Changer, proxy-upgradeable)",
+        "chain": "rootstock",
+        "address": "0x3b8853df65afbd94853e6d77ee0ab5590f41bb08",
+        "label": "Money On Chain Governor",
         "role": "governor",
-        "authorityType": "dao-governor",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "evidence": "The MoC suite is DAO-governed (MOC token) and proxy-upgradeable via the Governor/Changer pattern; upgrades could alter mint/redeem logic, an indirect intervention surface noted in the coin's blacklistability review."
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Money On Chain published mainnet contract list (Governor, Upgrade Delegator, Admin, MoCExchange, DoCToken)",
+            "url": "https://docs.moneyonchain.com/main-rbtc-contract/smart-contracts/contracts-verification"
+          },
+          {
+            "label": "Rootstock explorer: Money On Chain Governor 0x3b8853df",
+            "url": "https://rootstock.blockscout.com/address/0x3b8853DF65AfBd94853E6D77ee0Ab5590F41bB08"
+          },
+          {
+            "label": "Rootstock public RPC node (eth_call / eth_getStorageAt reads)",
+            "url": "https://public-node.rsk.co"
+          }
+        ],
+        "evidence": "At Rootstock block 9051085 the MoCExchange proxy's zeppelinOS admin slot (keccak256('org.zeppelinos.proxy.admin') = 0x10d6a54a...) reads 0x009c51e1f6fedcdb8014ea9ae1e39b6dbf2ac0ec (the published Admin contract); Admin.owner() = 0x5ce577f6ec969ce9a282838d350206c52a6f338c (the published Upgrade Delegator); UpgradeDelegator.governor() = 0x3b8853df65afbd94853e6d77ee0ab5590f41bb08 (the published Governor). The Governor exposes isAuthorizedChanger(address), i.e. it authorizes the Changer contracts that execute upgrades and parameter changes, so it can raise or remove the collateral-derived mint bound and can replace mint logic. CORRECTION to the 2026-06-11 review: 0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3 is keccak256('org.zeppelinos.proxy.implementation'), not a governor slot, so the address previously recorded as the Governor (0x36d1dc7b) was the MoCExchange implementation at that time; that slot now reads 0x9bfbbdb1bf118e15249bb70460a1f4886511b53c."
+      },
+      {
+        "chain": "rootstock",
+        "address": "0x65a5681be95d212f0c90ead40170d8277de81169",
+        "label": "Money On Chain VotingMachine",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Rootstock explorer: Money On Chain Governor 0x3b8853df",
+            "url": "https://rootstock.blockscout.com/address/0x3b8853DF65AfBd94853E6D77ee0Ab5590F41bB08"
+          },
+          {
+            "label": "Rootstock explorer API: VotingMachine proxy 0x65a5681b",
+            "url": "https://rootstock.blockscout.com/api/v2/addresses/0x65a5681be95d212f0c90ead40170d8277de81169"
+          },
+          {
+            "label": "Rootstock explorer API: verified VotingMachine implementation 0x00594d54",
+            "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x00594D5456c4650d10Edbb62D7a482d8Fa9a5b53"
+          },
+          {
+            "label": "Rootstock explorer API: VotingMachine ProxyAdmin 0x1a1824f3",
+            "url": "https://rootstock.blockscout.com/api/v2/addresses/0x1a1824F39d79937DCB80c9D9938AE77E431c2DEF"
+          },
+          {
+            "label": "Rootstock explorer API: VotingMachine UpgradeDelegator proxy 0x13156470",
+            "url": "https://rootstock.blockscout.com/api/v2/addresses/0x131564703310a294C1bFDC09D10EC0659f18E253"
+          },
+          {
+            "label": "Rootstock explorer API: verified UpgradeDelegator implementation 0x6d1cca35",
+            "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x6D1cCA35Aa431F2AF0f0F2b9050c582B823ac731"
+          },
+          {
+            "label": "Rootstock public RPC node (eth_call / eth_getStorageAt reads)",
+            "url": "https://public-node.rsk.co"
+          }
+        ],
+        "evidence": "At Rootstock block 9051414, Governor.owner() = 0x65a5681be95d212f0c90ead40170d8277de81169. Explorer metadata and storage resolve that address as an AdminUpgradeabilityProxy to the verified VotingMachine implementation 0x00594d5456c4650d10edbb62d7a482d8fa9a5b53, with EIP-1967 admin 0x1a1824f39d79937dcb80c9d9938ae77e431c2def. That verified ProxyAdmin's owner is UpgradeDelegator proxy 0x131564703310a294c1bfdc09d10ec0659f18e253; its verified implementation returns the same Money On Chain Governor 0x3b8853df, and it shares that ProxyAdmin. VotingMachine controlledGovernor() and governor() also return 0x3b8853df. Verified source shows stake-weighted preVote/vote/veto handling; acceptedStep() calls controlledGovernor.executeChange(winnerProposal). The result is a cyclic on-chain governance and upgrade path, not an unenumerated off-chain signer set."
       }
     ],
     "review": {
-      "evidence": "At Rootstock block 8935202: DOC token 0xe700691d owner() = MoC main proxy 0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038 (confirmed as a contract). The MoC proxy at 0x6acb83bb uses a custom governor storage slot (0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3) which returned MoC Governor 0x36d1dc7b41a18c2455ad7c3844a3c711712f6f14 (confirmed as a contract). The MoC Governor is the MoC Foundation BitVoting contract (custom off-chain signature governance), not a token-DAO. No EIP-1967 proxy admin on DOC token itself (slot = zero). Governance chain confirmed on-chain: DOC token → MoC main proxy → MoC Foundation BitVoting Governor. The Governor controls proxy upgrades via the MoC Changer pattern, an indirect mint surface.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "disposition": "scoreable",
+      "evidence": "Authority graph re-derived on-chain on 2026-07-14 via eth_call and eth_getStorageAt on https://public-node.rsk.co, then cross-checked against Money On Chain's published mainnet contract list and verified explorer source: DoCToken 0xe700691d (not a proxy; owner() = MoCExchange 0x6acb83bb) -> MoCExchange transparent proxy (zeppelinOS implementation slot = 0x9bfbbdb1, admin slot = Admin 0x009c51e1) -> Admin.owner() = Upgrade Delegator 0x5ce577f6 -> UpgradeDelegator.governor() = Governor 0x3b8853df -> Governor.owner() = VotingMachine proxy 0x65a5681b. At block 9051414, the VotingMachine points back to that Governor, verified source shows stake-weighted voting followed by executeChange(winnerProposal), and its EIP-1967 admin is ProxyAdmin 0x1a1824f3. ProxyAdmin.owner() is UpgradeDelegator proxy 0x13156470, whose verified implementation is governed by that same Governor and which shares the ProxyAdmin, completing a cyclic on-chain governance/upgrade path. This review corrects both the 2026-06-11 implementation-slot error and the later misclassification of the VotingMachine as an unidentified off-chain keyholder contract. The posture remains partially-bounded because an accepted governance proposal can change collateral parameters or mint-critical logic.",
+      "reviewer": "owner-triage",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
-          "label": "Money On Chain main concepts docs",
+          "label": "Money On Chain published mainnet contract list (Governor, Upgrade Delegator, Admin, MoCExchange, DoCToken)",
+          "url": "https://docs.moneyonchain.com/main-rbtc-contract/smart-contracts/contracts-verification"
+        },
+        {
+          "label": "Money On Chain platform main concepts (rBTC-collateralized DOC minting and redemption)",
           "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
         },
         {
-          "label": "Rootstock explorer: DOC token",
-          "url": "https://rootstock.blockscout.com/address/0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
+          "label": "Rootstock explorer: DoCToken 0xe700691d",
+          "url": "https://rootstock.blockscout.com/address/0xe700691dA7b9851F2F35f8b8182c69c53CcaD9Db"
         },
         {
-          "label": "Rootstock explorer: MoC Governor",
-          "url": "https://rootstock.blockscout.com/address/0x36d1dc7b41a18c2455ad7c3844a3c711712f6f14"
+          "label": "Rootstock explorer: MoCExchange proxy 0x6acb83bb",
+          "url": "https://rootstock.blockscout.com/address/0x6aCb83bB0281FB847b43cf7dd5e2766BFDF49038"
+        },
+        {
+          "label": "Rootstock explorer: Money On Chain Governor 0x3b8853df",
+          "url": "https://rootstock.blockscout.com/address/0x3b8853DF65AfBd94853E6D77ee0Ab5590F41bB08"
+        },
+        {
+          "label": "Rootstock explorer API: VotingMachine proxy 0x65a5681b",
+          "url": "https://rootstock.blockscout.com/api/v2/addresses/0x65a5681be95d212f0c90ead40170d8277de81169"
+        },
+        {
+          "label": "Rootstock explorer API: verified VotingMachine implementation 0x00594d54",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x00594D5456c4650d10Edbb62D7a482d8Fa9a5b53"
+        },
+        {
+          "label": "Rootstock explorer API: VotingMachine ProxyAdmin 0x1a1824f3",
+          "url": "https://rootstock.blockscout.com/api/v2/addresses/0x1a1824F39d79937DCB80c9D9938AE77E431c2DEF"
+        },
+        {
+          "label": "Rootstock explorer API: VotingMachine UpgradeDelegator proxy 0x13156470",
+          "url": "https://rootstock.blockscout.com/api/v2/addresses/0x131564703310a294C1bFDC09D10EC0659f18E253"
+        },
+        {
+          "label": "Rootstock explorer API: verified UpgradeDelegator implementation 0x6d1cca35",
+          "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x6D1cCA35Aa431F2AF0f0F2b9050c582B823ac731"
+        },
+        {
+          "label": "Rootstock public RPC node (eth_call / eth_getStorageAt reads)",
+          "url": "https://public-node.rsk.co"
         }
-      ],
-      "unresolvedQuestions": [
-        "MoC Governor 0x36d1dc is a Foundation BitVoting contract (custom off-chain proposal mechanism, not token-DAO); the number of Foundation keyholders/threshold cannot be confirmed on-chain from public RPC alone."
       ]
     }
   },

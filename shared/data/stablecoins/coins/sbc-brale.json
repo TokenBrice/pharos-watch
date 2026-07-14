@@ -24,7 +24,22 @@
     "attestorTier": "regional",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
-    "attestorLicense": "AICPA attestation standards"
+    "attestorLicense": "AICPA attestation standards",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-09",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "MCCPA SBC Reserve Attestation Report - May 2026",
+          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-05-2026.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -173,7 +188,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "SBC is issued by Brale (FinCEN MSB / US money transmitter) via UUPS-upgradeable AccessControl token contracts. On Ethereum, EOA 0xb180f98 holds both MINTER_ROLE and DEFAULT_ADMIN_ROLE; the UPGRADER_ROLE (proxy upgrade authority) is held by a separate 6-signer legacy multisig (threshold 3, no modules) at 0x4d16d9e3. Same minter EOA confirmed on Arbitrum.",
+    "summary": "SBC is issued by Brale (FinCEN MSB / US money transmitter) via UUPS-upgradeable AccessControl token contracts. The tracked EVM deployments use chain-local UPGRADER_ROLE authorities: a 6-signer legacy multisig on Ethereum, 3-of-6 Safes on Polygon and Avalanche, and the Brale issuance EOA on Arbitrum, Optimism, Base, and Celo.",
     "controls": [
       {
         "label": "Brale issuance EOA — MINTER_ROLE and DEFAULT_ADMIN_ROLE",
@@ -209,12 +224,272 @@
             "url": "https://etherscan.io/address/0x935eda0060ba40ea409bb05fa2300abb4e215ac1"
           }
         ]
+      },
+      {
+        "chain": "polygon",
+        "address": "0xcf64b5d44f6aa845d857a008d3c5465cfa80214a",
+        "label": "Proxy upgrade authority — Polygon Safe (6 signers, threshold 3, UPGRADER_ROLE)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x3AA32480a1f03e07b213C5Ea51f0a0360F678928",
+            "0x7A39C50AcBbbdE33c1B9d3CfaA70386aA1174328",
+            "0xC53FCFc7F823EfB6aE37a32F14030E595386879F",
+            "0x49dda3d8B88c973315F0983Ee63BF91b2c76c427",
+            "0x8f96FDB72A6Aa0FCfCa11C233c1dfb57D6e64dF2",
+            "0x0a9e9d79C80A42fA681177288d4C7244De1894f1"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
+          "observedBlock": 90219432,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 90219432,
+        "sources": [
+          {
+            "label": "Polygon SBC token",
+            "url": "https://polygon.blockscout.com/address/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+          },
+          {
+            "label": "Polygon upgrade Safe",
+            "url": "https://polygon.blockscout.com/address/0xcf64b5d44f6aa845d857a008d3c5465cfa80214a"
+          },
+          {
+            "label": "Polygon RPC",
+            "url": "https://polygon.drpc.org"
+          }
+        ],
+        "evidence": "At Polygon block 90219432, hasRole(UPGRADER_ROLE, 0xcf64b5d44f6aa845d857a008d3c5465cfa80214a) = true. The authority is a Gnosis Safe v1.3.0 proxy: getOwners() returned six owners, getThreshold() = 3, getModulesPaginated() returned an empty array, and Safe guard storage slot 6 was zero. The SBC EIP-1967 implementation slot contained 0xc1bc0450f8bb1386ffd5150cbb3ad38da1f0dd12 and the admin slot was zero."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xa8cdd1c1d889bff3e8c149c7cf2059e5a3dcb7ac",
+        "label": "Proxy upgrade authority — Avalanche Safe (6 signers, threshold 3, UPGRADER_ROLE)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x3AA32480a1f03e07b213C5Ea51f0a0360F678928",
+            "0x0a9e9d79C80A42fA681177288d4C7244De1894f1",
+            "0x49dda3d8B88c973315F0983Ee63BF91b2c76c427",
+            "0x7A39C50AcBbbdE33c1B9d3CfaA70386aA1174328",
+            "0x8f96FDB72A6Aa0FCfCa11C233c1dfb57D6e64dF2",
+            "0xC53FCFc7F823EfB6aE37a32F14030E595386879F"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0xfb1bffC9d739B8D520DaF37dF666da4C687191EA",
+          "observedBlock": 90290804,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 90290804,
+        "sources": [
+          {
+            "label": "Avalanche SBC token",
+            "url": "https://snowtrace.io/address/0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+          },
+          {
+            "label": "Avalanche upgrade Safe",
+            "url": "https://snowtrace.io/address/0xa8cdd1c1d889bff3e8c149c7cf2059e5a3dcb7ac"
+          },
+          {
+            "label": "Avalanche RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          }
+        ],
+        "evidence": "At Avalanche block 90290804, hasRole(UPGRADER_ROLE, 0xa8cdd1c1d889bff3e8c149c7cf2059e5a3dcb7ac) = true. The authority is a Gnosis Safe v1.3.0 proxy: getOwners() returned six owners, getThreshold() = 3, getModulesPaginated() returned an empty array, and Safe guard storage slot 6 was zero. The SBC EIP-1967 implementation slot contained 0x935eda0060ba40ea409bb05fa2300abb4e215ac1 and the admin slot was zero."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "label": "Proxy upgrade authority — Brale EOA (Arbitrum UPGRADER_ROLE)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 483773115,
+        "sources": [
+          {
+            "label": "Arbitrum SBC token",
+            "url": "https://arbiscan.io/address/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+          },
+          {
+            "label": "Arbitrum RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "evidence": "At Arbitrum block 483773115, hasRole(UPGRADER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) = true and eth_getCode for the authority returned 0x, confirming the current upgrade authority is the Brale EOA."
+      },
+      {
+        "chain": "optimism",
+        "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "label": "Proxy upgrade authority — Brale EOA (Optimism UPGRADER_ROLE)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 154217718,
+        "sources": [
+          {
+            "label": "Optimism SBC token",
+            "url": "https://optimistic.etherscan.io/address/0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+          },
+          {
+            "label": "Optimism RPC",
+            "url": "https://mainnet.optimism.io"
+          }
+        ],
+        "evidence": "At Optimism block 154217718, hasRole(UPGRADER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) = true and eth_getCode for the authority returned 0x, confirming the current upgrade authority is the Brale EOA."
+      },
+      {
+        "chain": "base",
+        "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "label": "Proxy upgrade authority — Brale EOA (Base UPGRADER_ROLE)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 48622433,
+        "sources": [
+          {
+            "label": "Base SBC token",
+            "url": "https://basescan.org/address/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+          },
+          {
+            "label": "Base RPC",
+            "url": "https://mainnet.base.org"
+          }
+        ],
+        "evidence": "At Base block 48622433, hasRole(UPGRADER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) = true and eth_getCode for the authority returned 0x, confirming the current upgrade authority is the Brale EOA."
+      },
+      {
+        "chain": "celo",
+        "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "label": "Proxy upgrade authority — Brale EOA (Celo UPGRADER_ROLE)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 72133454,
+        "sources": [
+          {
+            "label": "Celo SBC token",
+            "url": "https://celoscan.io/address/0xde093684c796204224bc081f937aa059d903c52a"
+          },
+          {
+            "label": "Celo RPC",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "At Celo block 72133454, hasRole(UPGRADER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) = true and eth_getCode for the authority returned 0x, confirming the current upgrade authority is the Brale EOA."
+      },
+      {
+        "chain": "ethereum-classic",
+        "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "label": "Proxy upgrade authority — Brale EOA (Ethereum Classic UPGRADER_ROLE)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 24947752,
+        "sources": [
+          {
+            "label": "Ethereum Classic SBC token",
+            "url": "https://etc.blockscout.com/address/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+          },
+          {
+            "label": "Ethereum Classic RPC",
+            "url": "https://etc.rivet.link"
+          }
+        ],
+        "evidence": "At Ethereum Classic block 24947752, hasRole(UPGRADER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) = true and eth_getCode for the authority returned 0x, confirming the current upgrade authority is the Brale EOA. The EIP-1967 implementation slot contained 0xc1bc0450f8bb1386ffd5150cbb3ad38da1f0dd12 and the admin slot was zero."
+      },
+      {
+        "chain": "solana",
+        "address": "8Dn2V6HX6gTwkCid2MUiv3mXvMkTcyxQeqTychdBRBSj",
+        "label": "SBC Solana SPL mint authority (1-of-2 Token Program multisig)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 1,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 432863929,
+        "sources": [
+          {
+            "label": "SBC Solana mint",
+            "url": "https://explorer.solana.com/address/DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA"
+          },
+          {
+            "label": "Solana JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Solana Token Program",
+            "url": "https://explorer.solana.com/address/TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          }
+        ],
+        "evidence": "At Solana finalized slot 432863929, getAccountInfo for mint DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA returned owner TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA and an 82-byte SPL Mint account with mintAuthority = 8Dn2V6HX6gTwkCid2MUiv3mXvMkTcyxQeqTychdBRBSj. That authority account is a 355-byte SPL Token multisig with m = 1, n = 2, signers 82GvnsFEPfs8xq8poGax4HNjZi98LK7Lg7Btr9zx5cD and 3W4UiZLF5TckYg34mDGe1Kno2RZdp8DiiMRF9pAkxvfk. The canonical Token Program is the immutable minting runtime; the multisig retains direct mint and authority-change capability."
+      },
+      {
+        "chain": "stellar",
+        "address": "GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
+        "label": "SBC Stellar native issuer account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 63473878,
+        "sources": [
+          {
+            "label": "Stellar Horizon issuer account",
+            "url": "https://horizon.stellar.org/accounts/GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR"
+          },
+          {
+            "label": "Stellar Horizon latest ledger",
+            "url": "https://horizon.stellar.org/ledgers?order=desc&limit=1"
+          },
+          {
+            "label": "Stellar SBC asset",
+            "url": "https://stellar.expert/explorer/public/asset/SBC-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR"
+          }
+        ],
+        "evidence": "At Stellar ledger 63473878, Horizon reports the SBC issuer account GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR with one ed25519 signer of weight 1, low/medium/high thresholds all zero, auth_revocable = true, and auth_clawback_enabled = true. Stellar issued assets use the issuer account as the native issuance authority; there is no upgradeable token contract or separate program logic to review."
       }
     ],
     "review": {
-      "evidence": "Ethereum block 25295066: MINTER_ROLE + DEFAULT_ADMIN_ROLE = EOA 0xb180f98 (confirmed via hasRole + eth_getCode). UPGRADER_ROLE = legacy multisig 0x4d16d9e3 (6 signers, threshold 3, no modules). Arbitrum block 472412491: MINTER_ROLE = 0xb180f98 confirmed. EIP-1967 impl slot = 0x935eda (verified contract). All mint-capable on-chain surfaces resolved.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Current EVM role reads confirm chain-local upgrade authorities: Ethereum block 25531059 uses legacy multisig 0x4d16d9e3; Arbitrum block 483773115, Optimism block 154217718, Base block 48622433, Celo block 72133454, and Ethereum Classic block 24947752 use Brale EOA 0xb180f98; Polygon block 90219432 uses Safe 0xcf64b5d4; Avalanche block 90290804 uses Safe 0xa8cdd1c1. Polygon and Avalanche Safes are both 3-of-6 with no enabled modules and zero guard storage. Solana uses the immutable canonical Token Program with a 1-of-2 mint-authority multisig, and Stellar uses its native issuer account with one weight-1 signer and no threshold elevation.",
+      "reviewer": "OpenAI Codex control curation",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Brale SBC proof of reserve",
@@ -223,15 +498,51 @@
         {
           "label": "SBC Ethereum token",
           "url": "https://etherscan.io/address/0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+        },
+        {
+          "label": "Polygon SBC token",
+          "url": "https://polygon.blockscout.com/address/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+        },
+        {
+          "label": "Avalanche SBC token",
+          "url": "https://snowtrace.io/address/0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+        },
+        {
+          "label": "Ethereum Classic SBC token",
+          "url": "https://etc.blockscout.com/address/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+        },
+        {
+          "label": "SBC Solana mint",
+          "url": "https://explorer.solana.com/address/DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA"
+        },
+        {
+          "label": "Stellar SBC issuer account",
+          "url": "https://horizon.stellar.org/accounts/GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR"
         }
       ]
     },
     "upgradeability": {
       "model": "uups",
+      "proxyAddresses": [
+        "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
+        "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "0xde093684c796204224bc081f937aa059d903c52a"
+      ],
+      "implementationAddresses": [
+        "0x935eda0060ba40ea409bb05fa2300abb4e215ac1",
+        "0xc1bc0450f8bb1386ffd5150cbb3ad38da1f0dd12",
+        "0xe856714d339ac62cb71242d25e30867a6358778a"
+      ],
+      "adminAddresses": [
+        "0x4d16d9e3358b68638e25f631ac861fa40a8fb87e",
+        "0xcf64b5d44f6aa845d857a008d3c5465cfa80214a",
+        "0xa8cdd1c1d889bff3e8c149c7cf2059e5a3dcb7ac",
+        "0xb180f98037a63a3dca66b6b4ddbf250265b65110"
+      ],
       "canChangeMintLogic": true,
       "controlRef": "Proxy upgrade authority — 6-signer legacy multisig, threshold 3 (UPGRADER_ROLE)",
-      "observedAt": "2026-06-11",
-      "observedBlock": 25295066,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25531059,
       "sources": [
         {
           "label": "SBC Ethereum proxy implementation",
@@ -244,6 +555,14 @@
         {
           "label": "SBC Ethereum token",
           "url": "https://etherscan.io/address/0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+        },
+        {
+          "label": "Polygon upgrade Safe",
+          "url": "https://polygon.blockscout.com/address/0xcf64b5d44f6aa845d857a008d3c5465cfa80214a"
+        },
+        {
+          "label": "Avalanche upgrade Safe",
+          "url": "https://snowtrace.io/address/0xa8cdd1c1d889bff3e8c149c7cf2059e5a3dcb7ac"
         }
       ]
     }
@@ -419,18 +738,6 @@
     ]
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Cash and cash equivalents",
-      "pct": 71,
-      "risk": "very-low"
-    },
-    {
-      "name": "Short-duration U.S. Treasury securities",
-      "pct": 29,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

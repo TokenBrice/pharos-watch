@@ -27,7 +27,7 @@ export function runWorkerDeployGuard(argv = process.argv.slice(2)) {
   throw new Error(
     [
       "Worker production publishing is intentionally disabled from npm scripts.",
-      "Use the production release workflow, which uploads a Worker Version, runs validation and D1 migration checks, preview-smokes the candidate, promotes the exact version, and syncs triggers.",
+      "Use the production release workflow, which checks and applies D1 migrations, deploys once with `wrangler deploy --strict`, and verifies that the SHA-tagged version owns 100% of production traffic.",
       "For local debugging, use `cd worker && npm run dev`.",
     ].join("\n"),
   );

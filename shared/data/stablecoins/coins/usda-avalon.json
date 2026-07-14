@@ -20,14 +20,89 @@
   "cmcSlug": "usda-avalon-labs",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "Avalon USDa uses RedStone as the primary BTC-USD oracle for the BTC-backed CDP system, with no fallback or shutdown behavior documented.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "Avalon USDa uses RedStone BTC-USD pricing for its FBTC-backed CeDeFi CDP, with governed LTV thresholds and an operational liquidation algorithm that sells collateral on centralized exchanges.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "USDa supports collateralized borrowing against FBTC with published maximum, liquidation, and recovery LTV parameters. Its CeDeFi account model and centralized-exchange liquidation differ from permissionless onchain auctions, but they still form a distinct collateral-price and liquidation branch that must be reviewed; 1:1 USDT and USDC deposits are documented as non-liquidatable conversion collateral.",
+      "sources": [
+        {
+          "label": "Avalon USDa risk management",
+          "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management"
+        },
+        {
+          "label": "Avalon USDa user flow",
+          "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
     "confidence": "verified",
     "sources": [
       {
         "label": "Avalon USDa risk management",
-        "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management.md"
+        "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management"
+      },
+      {
+        "label": "Avalon USDa user flow",
+        "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
+      }
+    ],
+    "branches": [
+      {
+        "id": "avalon-cedefi-fbtc",
+        "label": "Avalon CeDeFi FBTC collateral",
+        "tier": "standard-external",
+        "summary": "FBTC-backed USDa borrowing uses RedStone BTC-USD pricing, published LTV thresholds, and Avalon-operated centralized-exchange liquidation.",
+        "collateralAssets": [
+          "FBTC"
+        ],
+        "chains": [
+          "Avalon-supported USDa networks"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone",
+            "path": "RedStone BTC-USD feed -> Avalon CeDeFi risk monitor -> account LTV",
+            "chain": "Avalon-supported USDa networks",
+            "failureDomainKeys": [
+              "redstone",
+              "avalon-risk-monitor",
+              "avalon-operations"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Avalon identifies RedStone as the primary BTC-USD oracle and continuous centralized-exchange monitoring, but the reviewed documentation does not name a secondary contractual feed or automatic onchain fallback.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "FBTC",
+            "maximumLtvPct": 60,
+            "note": "Avalon publishes a 90% liquidation LTV and an 80% recovery LTV for FBTC-backed positions; USDT and USDC deposits are listed as 100% max LTV and not subject to liquidation."
+          }
+        ],
+        "liquidationMechanism": "When an FBTC account exceeds the 90% liquidation LTV, withdrawals are restricted and Avalon sells part of the collateral on centralized exchanges through its high-frequency execution system until the account reaches the 80% recovery LTV.",
+        "backstop": "The reviewed USDa documentation describes collateral sale and institutional custody providers but does not identify a contractual reserve fund, insurance module, or permissionless recapitalization backstop for residual bad debt.",
+        "shutdownOrBadDebtBehavior": "The reviewed USDa materials do not document a global shutdown settlement or a contractual process for allocating losses that remain after centralized-exchange collateral liquidation.",
+        "failureDomainKeys": [
+          "redstone",
+          "avalon-risk-monitor",
+          "avalon-liquidation-operations",
+          "avalon-custody"
+        ],
+        "sources": [
+          {
+            "label": "Avalon USDa risk management",
+            "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management"
+          },
+          {
+            "label": "Avalon USDa user flow",
+            "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
+          }
+        ]
       }
     ]
   },
@@ -322,56 +397,118 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDa uses AccessControl roles on Ethereum. Two addresses held MINT_ROLE at the sampled block, and the default/admin role can grant or revoke mint capacity; signer setup is unknown.",
+    "confidence": "verified",
+    "summary": "Ethereum USDa is an immutable AccessControl/OFT token with two current MINT_ROLE-holder proxies. Both minter ProxyAdmins and the token's ADMIN_ROLE, DEFAULT_ADMIN_ROLE, and owner resolve to the same 5-of-6 Safe, which can add minters, upgrade either minter proxy, and configure OFT peers.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x3f390dD6EF69f68f9877aACC086856a200808693",
+        "0x1e7DFF07b891a40eF08Bb7D1D2c4385d4Ac39DFc"
+      ],
+      "implementationAddresses": [
+        "0x10D162BB7fA363201b0c749cd96322082F733a97",
+        "0x1d6321C031665802b9829f60a0602364BF30456f"
+      ],
+      "adminAddresses": [
+        "0x8ed73f9e5a4b49d07e696fe03b867e0870ac0e69",
+        "0x06de2c3fe2b69ad0acfe2aeccc871f327b08d093"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDa token and minter-proxy admin Safe",
+      "observedBlock": 25530438,
+      "sources": [
+        {
+          "label": "USDa Ethereum token",
+          "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
+        },
+        {
+          "label": "USDa first minter proxy",
+          "url": "https://etherscan.io/address/0x3f390dD6EF69f68f9877aACC086856a200808693#code"
+        },
+        {
+          "label": "USDa second minter proxy",
+          "url": "https://etherscan.io/address/0x1e7DFF07b891a40eF08Bb7D1D2c4385d4Ac39DFc#code"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x3f390dD6EF69f68f9877aACC086856a200808693",
         "label": "USDa MINT_ROLE holder",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 25530438,
         "sources": [
           {
             "label": "USDa Ethereum source",
             "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
           }
         ],
-        "evidence": "Role scan at Ethereum block 25165905 found this address holding MINT_ROLE on the verified USDa contract."
+        "evidence": "A complete RoleGranted/RoleRevoked replay plus hasRole() confirms this transparent proxy still holds MINT_ROLE at Ethereum block 25530438. Its EIP-1967 implementation is 0x10D162BB7fA363201b0c749cd96322082F733a97 and ProxyAdmin is 0x8ed73f9e5a4b49d07e696fe03b867e0870ac0e69, owned by the reviewed USDa Safe. The current implementation is not explorer-verified, so no narrower call-level cap is claimed."
       },
       {
         "chain": "ethereum",
         "address": "0x1e7DFF07b891a40eF08Bb7D1D2c4385d4Ac39DFc",
         "label": "USDa MINT_ROLE holder",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 25530438,
         "sources": [
           {
             "label": "USDa Ethereum source",
             "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
           }
         ],
-        "evidence": "Role scan at Ethereum block 25165905 found this address holding MINT_ROLE on the verified USDa contract."
+        "evidence": "A complete RoleGranted/RoleRevoked replay plus hasRole() confirms this transparent proxy still holds MINT_ROLE at Ethereum block 25530438. Its EIP-1967 implementation is 0x1d6321C031665802b9829f60a0602364BF30456f and ProxyAdmin is 0x06de2c3fe2b69ad0acfe2aeccc871f327b08d093, owned by the reviewed USDa Safe. The current implementation is not explorer-verified, so no narrower call-level cap is claimed."
       },
       {
         "chain": "ethereum",
         "address": "0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9",
-        "label": "USDa default/admin role holder",
-        "role": "minter-admin",
-        "authorityType": "unknown",
+        "label": "USDa token and minter-proxy admin Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "modulesOrGuardsStatus": "unknown",
+        "threshold": 5,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0xd955F0c167adbf7d553fc4D59A964A1b115Cc093",
+            "0x351806B55e93A8Bcb47Be3ACAF71584deDEaB324",
+            "0x85AF4b64A0d98fd9A0ef9b473dD50008F8624b8A",
+            "0x2557Ac54165134D7EfD5ab94B750e9e04147beb1",
+            "0x3b47b6a52e2C5bd4ca23eF7295Af7c435E63FC92",
+            "0xe9Cd042b659AD5fbdd6627F08ada1ed0608259f6"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+          "observedBlock": 25530438,
+          "source": "safe-api"
+        },
+        "observedBlock": 25530438,
         "sources": [
           {
-            "label": "USDa Sourcify source",
-            "url": "https://sourcify.dev/server/v2/contract/1/0x8a60e489004ca22d775c5f2c657598278d17d9c2?fields=sources,abi"
+            "label": "USDa admin Safe",
+            "url": "https://app.safe.global/home?safe=eth:0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9"
+          },
+          {
+            "label": "USDa Ethereum source",
+            "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
           }
         ],
-        "evidence": "At Ethereum block 25165905, owner(), DEFAULT_ADMIN_ROLE, and ADMIN_ROLE resolved to this address; the verified source defines MINT_ROLE and admin-controlled grant/revoke paths."
+        "evidence": "At Ethereum block 25530438, owner() returned this Safe and hasRole() confirmed it holds DEFAULT_ADMIN_ROLE and ADMIN_ROLE. Both minter ProxyAdmin owner() calls also returned this Safe. RPC and Safe Transaction Service reported threshold 5, six owners, no modules, and zero guard. It can grant MINT_ROLE, upgrade either existing minter proxy, and configure trusted OFT peers."
       }
     ],
     "review": {
@@ -389,34 +526,54 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0x8a60e489004ca22d775c5f2c657598278d17d9c2?fields=sources,abi"
         }
       ],
-      "evidence": "Verified USDa source defines MINT_ROLE and admin roles; role reads at Ethereum block 25165905 identified two live MINT_ROLE holders plus the default/admin role holder.",
-      "reviewer": "Codex mint-authority top100 batch-a",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Verify whether role holders are EOAs, Safes, timelocks, or issuer backend contracts.",
-        "Check other chains before applying the same controls globally."
-      ]
+      "evidence": "Complete Ethereum role-event replay through block 25530438 identifies exactly two live MINT_ROLE holders and the sole current admin Safe. Direct storage and owner() reads establish both transparent-proxy minter implementations, their two ProxyAdmins, and common 5-of-6 Safe ownership. The immutable USDa token also uses LayerZero OFT peer minting; deployment route semantics remain separately represented by bridgeRouteRisk rather than duplicated as an unidentified mint control.",
+      "reviewer": "Codex Safety Score V9 CTRL curation",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable"
     }
   },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
-      "name": "FBTC (tokenized BTC via Cobo custody)",
-      "pct": 45,
-      "risk": "medium"
-    },
-    {
-      "name": "USDT (1:1 minted deposits)",
-      "pct": 40,
-      "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "BTC LSTs (SolvBTC, LBTC, pumpBTC, etc.)",
-      "pct": 15,
+      "name": "FBTC-backed CDP positions and USDT/USDC 1:1 mint reserves",
+      "pct": 100,
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex dependency review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Avalon USDa usage documentation",
+        "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
+      },
+      {
+        "label": "Avalon USDa risk parameters",
+        "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management"
+      }
+    ],
+    "rationale": "Avalon verifies FBTC-backed borrowing plus 1:1 USDT minting and identifies USDC as a supported non-liquidating collateral, but publishes no current supply-weighted composition. The prior 45/40/15 split and USDT edge were estimates, so the reviewed fallback retains one conservative basket without fabricating dependency weights.",
+    "compositionBasis": "Officially documented issuance and collateral paths; constituent shares are undisclosed",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Avalon does not publish the current proportions of FBTC-backed debt, USDT deposits, and USDC deposits.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "FBTC-backed CDP positions and USDT/USDC 1:1 mint reserves",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The supported constituents are documented, but no current supply-weighted split supports individual stablecoin dependency weights.",
+        "candidateCoinIds": [
+          "usdt-tether",
+          "usdc-circle"
+        ]
+      }
+    ]
+  },
   "launchDate": "2024-11-03"
 }

@@ -5,7 +5,7 @@
 [![CodeQL](https://github.com/TokenBrice/pharos-watch/actions/workflows/codeql.yml/badge.svg)](https://github.com/TokenBrice/pharos-watch/actions/workflows/codeql.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Pharos is an open-source stablecoin intelligence dashboard tracking 411 stablecoins in repo metadata: 361 active assets on public data surfaces, 33 pre-launch entries, 17 frozen historical archives, 88 curated dead stablecoins in the cemetery dataset, and 2 PSI-only shadow assets. It is a pure information site: no wallet connectivity, no trading, no custody, and no user accounts.
+Pharos is an open-source stablecoin intelligence dashboard covering active, pre-launch, frozen, retired, and methodology-only shadow assets. The current inventory is owned by the stablecoin registries and generated datasets rather than duplicated in prose. It is a pure information site: no wallet connectivity, no trading, no custody, and no user accounts.
 
 Pharos is research infrastructure, not financial advice. Data can be delayed, incomplete, or degraded when upstream providers fail; public surfaces include freshness and status signals so users can judge whether a snapshot is current enough for their use case.
 
@@ -20,7 +20,7 @@ Pharos is research infrastructure, not financial advice. Data can be delayed, in
 ## What Pharos Tracks
 
 - **Peg health:** 15-minute peg monitoring, Peg Score, depeg detection, direction tracking, and historical depeg timelines.
-- **Issuer controls:** FreezeWatch provides on-chain tracking of 34 stablecoins, covering freeze, blacklist, and seize events for supported issuer-controlled assets across major chains.
+- **Issuer controls:** FreezeWatch covers freeze, blacklist, and seize events for supported issuer-controlled assets across major chains.
 - **Liquidity quality:** DEX Liquidity Score combines pool TVL, volume, durability, pool quality, and pair diversity.
 - **DEX price corroboration:** Curve, Uniswap V3, Aerodrome, Velodrome, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, and DexScreener inputs help suppress false depeg alerts.
 - **Market structure:** USD, non-USD fiat, commodity, and CPI-linked stablecoin cohorts with chain and peg distribution views.

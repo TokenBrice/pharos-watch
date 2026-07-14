@@ -20,18 +20,101 @@
   "pythFeedId": "0xb0948a5e5313200c632b51bb5ca32f6de0d36e9950a942d19751e833f70dabfd",
   "oracleRisk": {
     "tier": "medianized-with-delay",
-    "summary": "Maker/Sky collateral prices pass through whitelisted feed medianizers and the Oracle Security Module delay before core accounting consumes them.",
-    "reviewedAt": "2026-06-12",
+    "summary": "Maker/Sky Vault collateral prices use whitelisted feed medianizers and per-ilk Oracle Security Modules before Spot writes safety-adjusted values into the core accounting system.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "DAI is issued by a common multi-collateral Vault engine whose separately governed collateral ilks have per-ilk oracle, liquidation-ratio, auction, and debt-ceiling parameters. Those oracle-dependent ilks share one documented Median/OSM/Spot and Dog/Clipper/Vow mechanism branch; fixed-price PSM and balance-sheet allocation routes are not collateral-liquidation branches.",
+      "sources": [
+        {
+          "label": "Sky Vat documentation",
+          "url": "https://developers.skyeco.com/protocol/core/vat/"
+        },
+        {
+          "label": "Sky Spot documentation",
+          "url": "https://developers.skyeco.com/protocol/core/spot/"
+        },
+        {
+          "label": "Sky collateral liquidation documentation",
+          "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Maker Oracle Module docs",
-        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module"
+        "label": "Sky OSM documentation",
+        "url": "https://developers.skyeco.com/protocol/core/osm/"
       },
       {
-        "label": "Maker Oracle Security Module docs",
-        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module/oracle-security-module-osm-detailed-documentation"
+        "label": "Sky Spot documentation",
+        "url": "https://developers.skyeco.com/protocol/core/spot/"
+      },
+      {
+        "label": "Sky collateral liquidation documentation",
+        "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/"
+      },
+      {
+        "label": "Sky Vow documentation",
+        "url": "https://developers.skyeco.com/protocol/core/vow/"
+      }
+    ],
+    "branches": [
+      {
+        "id": "sky-vault-ilks",
+        "label": "Sky governed Vault collateral ilks",
+        "tier": "medianized-with-delay",
+        "summary": "Oracle-dependent Sky collateral ilks share the Median-to-OSM-to-Spot price path and use per-ilk Dog/Clipper liquidation parameters.",
+        "collateralAssets": ["Governance-approved Vault collateral ilks"],
+        "chains": ["ethereum"],
+        "feeds": [
+          {
+            "provider": "Sky whitelisted oracle set",
+            "path": "Per-ilk signed observations -> Median -> OSM -> Spot -> Vat",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "failureDomainKeys": ["sky-oracle-signers", "sky-governance", "ethereum"]
+          }
+        ],
+        "fallbackBehavior": "Each per-ilk OSM retains a delayed current value and queues the next value; if its peek is invalid or Spot is not poked, the Vat keeps the prior safety price and can become stale rather than accepting a fresh invalid value.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Governance-approved Vault collateral ilks",
+            "note": "Each ilk has its own Spot liquidation ratio, Vat debt ceiling and floor, Dog liquidation penalty and capacity, and dedicated Clipper auction contract; governance can change these parameters."
+          }
+        ],
+        "liquidationMechanism": "When a Vault becomes unsafe under its ilk's safety-adjusted Spot value, Dog.bark confiscates the position, assigns its debt to Vow, and promptly starts that ilk's Clipper Dutch auction; auction price decreases over time and can be reset under per-ilk parameters.",
+        "liquidationDelaySec": 0,
+        "backstop": "Collateral-auction proceeds cancel the seized debt; residual system debt is recorded in Vow, can first be netted against protocol surplus, and can become eligible for the documented governance-token debt-auction mechanism after the debt-queue delay.",
+        "shutdownOrBadDebtBehavior": "Uncovered liquidation debt remains in Vow's debt queue and can mature into debt-auction-eligible bad debt. Sky's archived End documentation describes system caging and collateral settlement but marks End deprecated, so this profile does not treat emergency shutdown as a currently active guarantee.",
+        "failureDomainKeys": ["sky-oracle-signers", "sky-governance", "sky-auction-keepers", "ethereum"],
+        "sources": [
+          {
+            "label": "Sky OSM documentation",
+            "url": "https://developers.skyeco.com/protocol/core/osm/"
+          },
+          {
+            "label": "Sky Spot documentation",
+            "url": "https://developers.skyeco.com/protocol/core/spot/"
+          },
+          {
+            "label": "Sky collateral liquidation documentation",
+            "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/"
+          },
+          {
+            "label": "Sky Vow documentation",
+            "url": "https://developers.skyeco.com/protocol/core/vow/"
+          },
+          {
+            "label": "Sky archived End documentation",
+            "url": "https://developers.skyeco.com/archive/shutdown/shutdown/"
+          }
+        ]
       }
     ]
   },
@@ -284,26 +367,22 @@
   "deploymentModel": "canonical-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "DAI is Ethereum-native, but its non-Ethereum supply includes bridge-minted representations. Maker/Sky bridge repositories document escrow/bridge contracts that lock L1 DAI and mint destination DAI, so Pharos conservatively scores the current multichain route as external lock/mint rather than pure native issuance.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "summary": "DAI is native on Ethereum. Its non-Ethereum deployments span Maker-governed rollup bridges and external lock/mint or validated-network bridges. Contract controllers are verified where the destination token exposes one; legacy BSC, Avalanche, and Fantom routes remain unresolved because their live mint authority resolves only to an EOA.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 bridge review",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
         "name": "MakerDAO Optimism DAI Bridge",
         "url": "https://github.com/makerdao/optimism-dai-bridge",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
+        "bridgeTypes": ["lockAndMint"]
       },
       {
         "source": "docs",
         "name": "MakerDAO Starknet DAI Bridge",
         "url": "https://github.com/makerdao/starknet-dai-bridge",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
+        "bridgeTypes": ["lockAndMint"]
       }
     ],
     "sources": [
@@ -352,33 +431,63 @@
       },
       {
         "id": "polygon:0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+        "sourceChain": "ethereum",
         "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Polygon PoS Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "polygon",
+        "controllerAddress": "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
+        "failureDomainKeys": [
+          "protocol:polygon-pos-bridge",
+          "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
+        ],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Polygon mapped token registry",
+            "url": "https://docs.polygon.technology/pos/reference/mapped-tokens"
+          },
+          {
+            "label": "Polygon PoS ChildChainManagerProxy",
+            "url": "https://docs.polygon.technology/pos/how-to/bridging/l1-l2-communication/state-transfer"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xda10009cbd5d07dd0cecc66161fc93d7c9000da1",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "MakerDAO Arbitrum DAI Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x467194771dae2967aef3ecbedd3bf9a310c76c65",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x467194771dae2967aef3ecbedd3bf9a310c76c65"
+        ],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "MakerDAO Arbitrum DAI Bridge repository",
+            "url": "https://github.com/makerdao/arbitrum-dai-bridge"
+          }
+        ]
       },
       {
         "id": "optimism:0xda10009cbd5d07dd0cecc66161fc93d7c9000da1",
@@ -389,9 +498,15 @@
         "protocol": "MakerDAO Optimism DAI Bridge",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
-        "riskTier": "external-lock-mint",
+        "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
         "scope": "peripheral",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x467194771dae2967aef3ecbedd3bf9a310c76c65",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x467194771dae2967aef3ecbedd3bf9a310c76c65"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13",
@@ -412,153 +527,315 @@
       },
       {
         "id": "bsc:0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3",
+        "sourceChain": "ethereum",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3",
-        "protocol": "unresolved route",
+        "protocol": "Binance-Peg authority unresolved",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "The token's live owner() is 0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d, but that address has no BSC bytecode. The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "BscScan Binance-Peg DAI token",
+            "url": "https://bscscan.com/token/0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3"
+          }
+        ]
       },
       {
         "id": "avalanche:0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
+        "sourceChain": "ethereum",
         "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
-        "protocol": "unresolved route",
+        "protocol": "Avalanche Bridge authority unresolved",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "DAI.e minting is gated by the token's private bridge role. The latest MigrateBridgeRole event assigns that role to 0xeb1bb70123b2f43419d070d7fde5618971cc2f8f, which has no Avalanche bytecode, so the bridge-route model cannot honestly encode it as a contract controller.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "SnowScan Avalanche Bridge DAI.e",
+            "url": "https://snowscan.xyz/address/0xd586e7f844cea2f87f50152665bcbc2c279d8d70"
+          },
+          {
+            "label": "Avalanche DAI.e bridge-role migration",
+            "url": "https://snowtrace.io/tx/0xc86f5d356b8a3ecdcec35993ffe7b8f61ab6227aa0f551b7beae0b0bfdd9f165"
+          }
+        ]
       },
       {
         "id": "fantom:0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e",
+        "sourceChain": "ethereum",
         "destinationChain": "fantom",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e",
-        "protocol": "unresolved route",
+        "protocol": "Multichain authority unresolved",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "The token's live owner() is 0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE, but that address has no Fantom bytecode. The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Fantom explorer DAI token",
+            "url": "https://explorer.fantom.network/address/0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e"
+          },
+          {
+            "label": "Multichain bridge repository",
+            "url": "https://github.com/anyswap/CrossChain-Router"
+          }
+        ]
       },
       {
         "id": "base:0x50c5725949a6f0c72e6c4a641f24049a917db0cb",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x50c5725949a6f0c72e6c4a641f24049a917db0cb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Base Standard Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0x4200000000000000000000000000000000000010"
+        ],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "BaseScan DAI bridge token implementation",
+            "url": "https://basescan.org/address/0x50c5725949a6f0c72e6c4a641f24049a917db0cb#code"
+          },
+          {
+            "label": "Base bridge contracts",
+            "url": "https://docs.base.org/base-chain/network-information/base-contracts"
+          }
+        ]
       },
       {
         "id": "gnosis:0x44fa8e6f47987339850636f88629646662444217",
+        "sourceChain": "ethereum",
         "destinationChain": "gnosis",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x44fa8e6f47987339850636f88629646662444217",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Gnosis OmniBridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "gnosis",
+        "controllerAddress": "0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
+        ],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Gnosis OmniBridge documentation",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge"
+          },
+          {
+            "label": "Gnosis bridge contract addresses",
+            "url": "https://docs.gnosischain.com/developers/Usefulcontracts"
+          },
+          {
+            "label": "GnosisScan DAI bridge token",
+            "url": "https://gnosisscan.io/token/0x44fa8e6f47987339850636f88629646662444217"
+          }
+        ]
       },
       {
         "id": "solana:EjmyN6qEC1Tf1JxiG1ae7UTJhUxSwk1TCWNWqxWV4J6o",
+        "sourceChain": "ethereum",
         "destinationChain": "solana",
+        "canonicalChain": "ethereum",
         "contractAddress": "EjmyN6qEC1Tf1JxiG1ae7UTJhUxSwk1TCWNWqxWV4J6o",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Wormhole Portal",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "solana",
+        "controllerAddress": "wormDTUJ6AWPNvk59vGQbDvGJmqbDTdgWgAqcLBCgUb",
+        "failureDomainKeys": [
+          "protocol:wormhole-portal",
+          "contract:solana:wormDTUJ6AWPNvk59vGQbDvGJmqbDTdgWgAqcLBCgUb"
+        ],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Jupiter validated token list DAI Portal mint",
+            "url": "https://github.com/jup-ag/token-list/blob/main/validated-tokens.csv"
+          },
+          {
+            "label": "Wormhole token bridge documentation",
+            "url": "https://wormhole.com/docs/products/token-transfers/wrapped-token-transfers/overview/"
+          },
+          {
+            "label": "Wormhole mainnet contract addresses",
+            "url": "https://wormhole.com/docs/products/reference/contract-addresses/"
+          }
+        ]
       },
       {
         "id": "klaytn:0x5c74070fdea071359b86082bd9f9b3deaafbe32b",
+        "sourceChain": "ethereum",
         "destinationChain": "klaytn",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x5c74070fdea071359b86082bd9f9b3deaafbe32b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Orbit Bridge EVERYDAI",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "klaytn",
+        "controllerAddress": "0x60070F5D2e1C1001400A04F152E7ABD43410F7B9",
+        "failureDomainKeys": ["protocol:orbit-bridge", "contract:klaytn:0x60070f5d2e1c1001400a04f152e7abd43410f7b9"],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Orbit Chain EVERYDAI guide",
+            "url": "https://medium.com/orbit-chain/everydai-user-guide-5ed0589ee07a"
+          },
+          {
+            "label": "Orbit Bridge architecture",
+            "url": "https://medium.com/orbit-chain/announcing-orbit-bridge-the-worlds-first-decentralized-open-ibc-platform-90216aed4384"
+          },
+          {
+            "label": "Orbit Bridge contract addresses",
+            "url": "https://bridge-docs.orbitchain.io/faq/integration-guide/2.-contract-addresses"
+          }
+        ]
       },
       {
         "id": "kava:0x765277eebeca2e31912c9946eae1021199b39c61",
+        "sourceChain": "ethereum",
         "destinationChain": "kava",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x765277eebeca2e31912c9946eae1021199b39c61",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Multichain",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "kava",
+        "controllerAddress": "0x639A647fbe20b6c8ac19E48E2de44ea792c62c5C",
+        "failureDomainKeys": ["protocol:multichain", "contract:kava:0x639a647fbe20b6c8ac19e48e2de44ea792c62c5c"],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Multichain Kava integration announcement",
+            "url": "https://medium.com/multichainorg/multichain-integrates-with-kava-network-448b7a37d184"
+          },
+          {
+            "label": "Kava Multichain router",
+            "url": "https://kavascan.com/address/0x639A647fbe20b6c8ac19E48E2de44ea792c62c5C"
+          }
+        ]
       },
       {
         "id": "near:6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near",
+        "sourceChain": "ethereum",
         "destinationChain": "near",
+        "canonicalChain": "ethereum",
         "contractAddress": "6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Rainbow Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "near",
+        "controllerAddress": "factory.bridge.near",
+        "failureDomainKeys": ["protocol:rainbow-bridge", "contract:near:factory.bridge.near"],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "NEAR explorer DAI bridge factory token",
+            "url": "https://nearblocks.io/address/6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near"
+          },
+          {
+            "label": "Rainbow Bridge",
+            "url": "https://rainbowbridge.app/transfer"
+          },
+          {
+            "label": "NEAR bridge contract addresses",
+            "url": "https://github.com/Near-One/omni-bridge#contract-addresses"
+          }
+        ]
       },
       {
         "id": "pulsechain:0xefd766ccb38eaf1dfd701853bfce31359239f305",
+        "sourceChain": "ethereum",
         "destinationChain": "pulsechain",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xefd766ccb38eaf1dfd701853bfce31359239f305",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "PulseChain Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "pulsechain",
+        "controllerAddress": "0x4fD0aaa7506f3d9cB8274bdB946Ec42A1b8751Ef",
+        "failureDomainKeys": [
+          "protocol:pulsechain-bridge",
+          "contract:pulsechain:0x4fd0aaa7506f3d9cb8274bdb946ec42a1b8751ef"
+        ],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "PulseChain bridge",
+            "url": "https://bridge.pulsechain.com/"
+          },
+          {
+            "label": "PulseChain explorer bridged DAI",
+            "url": "https://scan.pulsechain.com/token/0xefd766ccb38eaf1dfd701853bfce31359239f305"
+          },
+          {
+            "label": "PulseChain token bridge controller",
+            "url": "https://api.scan.pulsechain.com/address/0x4fd0aaa7506f3d9cb8274bdb946ec42a1b8751ef"
+          }
+        ]
       }
     ]
   },
@@ -624,11 +901,7 @@
         "pct": 32,
         "disposition": "basket-needs-split",
         "rationale": "The published group combines several PSM assets without per-asset weights.",
-        "candidateCoinIds": [
-          "usdc-circle",
-          "usdt-tether",
-          "usdp-paxos"
-        ]
+        "candidateCoinIds": ["usdc-circle", "usdt-tether", "usdp-paxos"]
       }
     ]
   },

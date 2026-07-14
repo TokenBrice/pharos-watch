@@ -1,0 +1,89 @@
+{
+  "id": "cadd-cad-digital",
+  "reserves": [
+    {
+      "name": "Canadian dollar cash in segregated trust accounts",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Tetra Trust Company reserve trust and undisclosed Canadian banking counterparties",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Baker Tilly CADD reasonable-assurance report - April 2026",
+        "url": "https://drive.google.com/file/d/1ZMyKTB4oq6bZDNmT8WiatYDyTYmCPXQi/view?usp=sharing"
+      },
+      {
+        "label": "CADD reserve attestations",
+        "url": "https://tetradg.com/cadd-reserve-attestations/"
+      },
+      {
+        "label": "CADD daily reserve report - July 13, 2026",
+        "url": "https://drive.google.com/file/d/1F5PQvP4Uoi2ZPwsuWbKl3gtA3H-Nebz_/view?usp=sharing"
+      }
+    ],
+    "rationale": "Baker Tilly's April 2026 reasonable-assurance report reconciles CAD 540,050 of CADD circulation to CAD 540,050 of reserve assets at April 30, classifies 100% of the reserve as Canadian-dollar cash, and states that the assets are held in segregated, unencumbered trust accounts. Tetra's July 13 daily report later self-reports the same 100% cash class, without superseding the independent assurance date.",
+    "compositionBasis": "Pinned Baker Tilly assets-and-liabilities reasonable-assurance report",
+    "compositionAsOf": "2026-04-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The independently assured reserve class and liability reconciliation are complete at April 30; individual reserve-bank identities and account allocations remain undisclosed.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Canadian dollar cash in segregated trust accounts",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Canadian-dollar cash held in offchain trust accounts is not a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Tetra Trust Company",
+        "role": "custodian",
+        "jurisdiction": "Canada"
+      },
+      {
+        "name": "Undisclosed Canadian banking counterparties",
+        "role": "bank",
+        "jurisdiction": "Canada"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Baker Tilly CADD reasonable-assurance report - April 2026",
+        "url": "https://drive.google.com/file/d/1ZMyKTB4oq6bZDNmT8WiatYDyTYmCPXQi/view?usp=sharing"
+      },
+      {
+        "label": "CADD reserve attestations",
+        "url": "https://tetradg.com/cadd-reserve-attestations/"
+      },
+      {
+        "label": "CADD product disclosure",
+        "url": "https://tetradg.com/cadd-stablecoin/"
+      }
+    ],
+    "uncertainty": "The pinned report establishes segregated, unencumbered trust accounts at the tested dates but does not identify the reserve banks, provider shares, full insolvency treatment, or an immutable rehypothecation policy."
+  }
+}

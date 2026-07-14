@@ -165,15 +165,6 @@
       ]
     }
   },
-  "reserves": [
-    {
-      "name": "Spiko EUTBL tokenized Eurozone Treasury-bill fund shares",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "eutbl-spiko",
-      "depType": "collateral"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

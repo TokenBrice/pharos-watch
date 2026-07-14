@@ -1,0 +1,104 @@
+{
+  "id": "nusd-nexus",
+  "reserves": [
+    {
+      "name": "DAI in the Ethereum Synapse nexus pool",
+      "pct": 19.145714,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Protocol through the Synapse nexus pool",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDC in the Ethereum Synapse nexus pool",
+      "pct": 19.103762,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial through the Synapse nexus pool",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDT in the Ethereum Synapse nexus pool",
+      "pct": 61.750524,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether through the Synapse nexus pool",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SOL-5 dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Synapse mainnet NexusPool configuration",
+        "url": "https://github.com/synapsecns/synapse-contracts/blob/master/script/configs/mainnet/LinkedPool.CCTP.USDC.dc.json"
+      },
+      {
+        "label": "Synapse Ethereum nexus pool contract",
+        "url": "https://etherscan.io/address/0x1116898dda4015ed8ddefb84b6e8bc24528af2d8#readContract"
+      }
+    ],
+    "rationale": "At Ethereum block 25530890, the official Synapse nexus pool reported 454,421.440754979759935790 DAI, 453,425.730071 USDC, and 1,465,641.983743 USDT. Normalizing those same-notional balances produces the exact authored dependency weights.",
+    "compositionBasis": "Fixed-block getToken and getTokenBalance reads from the official Ethereum Synapse nexus pool",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All three nexus-pool assets are identified by the official deployment and reconciled from fixed-block balances.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Synapse nexus pool contract",
+        "role": "other"
+      },
+      {
+        "name": "DAI, USDC, and USDT issuers and reserve custodians",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SOL-5 dependency review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Synapse mainnet NexusPool configuration",
+        "url": "https://github.com/synapsecns/synapse-contracts/blob/master/script/configs/mainnet/LinkedPool.CCTP.USDC.dc.json"
+      },
+      {
+        "label": "Synapse Ethereum nexus pool contract",
+        "url": "https://etherscan.io/address/0x1116898dda4015ed8ddefb84b6e8bc24528af2d8#readContract"
+      }
+    ],
+    "uncertainty": "The reserve assets are held transparently in the Synapse nexus pool contract, but the reviewed sources do not establish legal segregation, bankruptcy treatment, or protections beyond the on-chain contract design.",
+    "knownUnknownExposurePct": 100
+  }
+}

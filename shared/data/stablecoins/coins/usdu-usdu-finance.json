@@ -45,20 +45,6 @@
     "reviewedAt": "2026-05-12"
   },
   "collateralQuality": "exotic",
-  "reserves": [
-    {
-      "name": "Morpho USDU Core vault shares",
-      "pct": 60.6,
-      "risk": "medium"
-    },
-    {
-      "name": "Curve USDU/USDC LP tokens",
-      "pct": 39.4,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    }
-  ],
   "notices": [
     {
       "type": "info",

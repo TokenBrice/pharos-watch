@@ -27,7 +27,7 @@ When DefiLlama publishes a tracked zero-supply row for an asset that also has po
 3. Verify cache freshness:
    - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
-4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 363 entries: 361 active tracked + 2 shadow)
+4. Filter to `PSI_ELIGIBLE_STABLECOINS`; the eligibility registry owns the active and shadow composition
 5. Floor current date/time to UTC midnight:
    ```typescript
    const snapshotDate = Math.floor(
@@ -268,30 +268,3 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 7. The write path is guarded by a once-per-UTC-date version 2 exact-identity check on the `snapshot-supply:last-write` marker (the first healthy run after UTC midnight writes the single daily snapshot) even though the cron is chained to the 15-minute lane
 8. `supply_history` is kept as an archive for downstream historical replays such as PSI backfills; recover older gaps with the admin backfill when needed
 9. The date replacement and daily completion marker commit in the same D1 transaction. A failure leaves the prior rows and marker intact and the changed identity retryable.
-
----
-
-## File Index
-
-| File | Role |
-|------|------|
-| `worker/src/cron/snapshot-supply.ts` | Snapshot cron: reads cache, builds `INSERT OR REPLACE` statements, batch executes |
-| `worker/src/cron/snapshot-chain-supply.ts` | Chain-level snapshot cron: aggregates per-chain totals from stablecoins cache → `chain_supply_history` |
-| `worker/migrations/0000_baseline.sql` | Baseline schema for `supply_history`, `onchain_supply`, and `chain_supply_history` |
-| `worker/src/api/supply-history.ts` | `GET /api/supply-history` handler |
-| `worker/src/api/stablecoin-detail.ts` | Detail API with `supply_history` fallback for CG-only/commodity coins |
-| `worker/src/api/backfill-supply-history.ts` | Admin backfill endpoint |
-| `worker/src/lib/db.ts` | Bounded multi-row preparation and atomic batch helpers used by snapshot replacement; chunked helpers remain available to backfills |
-| `worker/src/lib/db-cache.ts` | `getCache()` cache-row access helpers |
-| `worker/src/lib/cron-logger.ts` | `CronResult` type and `logCronRun()` wrapper used by scheduled handlers |
-| `worker/src/lib/stablecoins-cache.ts` | Strict/lenient stablecoins-cache loader and failure reasons |
-| `shared/lib/supply.ts` | `sumPegBuckets()`, `getCirculatingRaw()`, other supply helpers |
-| `shared/lib/psi-eligible.ts` | PSI-eligible tracked + shadow stablecoin registry used by the snapshot filter |
-| `shared/lib/shadow-stablecoins.ts` | Shadow-asset metadata referenced by `PSI_ELIGIBLE_STABLECOINS` |
-| `shared/types/index.ts` | `StablecoinMeta` types |
-| `shared/lib/stablecoins/registry.ts` | Stablecoin metadata loader backed by `shared/data/stablecoins/coins/*.json` and `shared/data/stablecoins/coins.generated.json` |
-| `src/hooks/use-stablecoins.ts` | `useSupplyHistory()` hook for `/api/supply-history` |
-| `src/hooks/use-compare-data-model.ts` | Compare-page supply-history queries |
-| `src/components/mcap-chart.tsx` | Individual mcap chart |
-| `src/components/home-alt-hero.tsx` | Homepage aggregated mcap breakdown chart |
-| `src/lib/total-mcap-chart.ts` | Pure row builder for homepage mcap breakdown stacks |

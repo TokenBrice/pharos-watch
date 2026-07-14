@@ -76,7 +76,7 @@ const STREAMS = [
     codes: [],
     archetypes: ["cdp", "synthetic-delta-neutral", "algorithmic", "rwa-credit-fund"],
     ceiling: "component floor boundedUnknownQuality (35)",
-    fix: "Author a sourced overlay in shared/data/safety-score-v9/mechanism-review-overlays-v1.json (archetype-specific components + REQUIRED measured metrics, e.g. CDP collateralizationRatio/liquidationCapacityRatio). NO FABRICATION: only author when an honest live source exists (bold-liquity via api.liquity.org is the template). Known dead ends 2026-07-13: DAI/USDS (no honest system CR), crvUSD (PegKeeper share needs decomposition), USDe (solvency APIs auth-gated), LUSD (v1 stats API gone — needs on-chain TCR read).",
+    fix: "Author a sourced overlay in shared/data/safety-score-v9/mechanism-review-overlays-v1.json (archetype-specific components + REQUIRED measured metrics, e.g. CDP collateralizationRatio/liquidationCapacityRatio). NO FABRICATION: only author when an honest live source exists (bold-liquity via api.liquity.org is the template). CONFIRMED BLOCKED (2026-07-13 + independently re-verified by mechanism batch 01, 2026-07-14 — do not re-research): DAI/USDS (auction Hole limits are governance caps, not committed liquidation capital; no reproducible system CR), USDe (reserve fund observable, hedge notional/margin buffers not public), USDD (vault-only CR must not be applied to total supply; non-vault issuance routes), USDf-Falcon (insurance fund observable, empty venue map, no hedge measurements), crvUSD (PegKeeper share needs decomposition), LUSD (needs on-chain TCR read — the one actionable path). Expect most of this stream to stay blocked until issuers publish ratios or on-chain readers are built.",
   },
   {
     key: "EXIT",
@@ -90,7 +90,7 @@ const STREAMS = [
       "incomparable-route-requests",
     ],
     ceiling: "exit-unverified (65)",
-    fix: "Best lever per asset: (a) a resolved redemption row (redemption methodology v4.18 derives a bounded exit observation from a supply-full row with documented fixed-bps fee), (b) exact DEX capacity where the pool archetype is supported (raydium CP, balancer weighted), (c) basket/parent output resolution for unresolved-exit-output routes. CL-pool exact capacity is producer tick-data work, not per-asset curation — do not grind unsupported pools by hand.",
+    fix: "Best lever per asset: (a) a resolved redemption row (redemption methodology v4.18 derives a bounded exit observation from a supply-full row with documented fixed-bps fee), (b) unresolved-exit-output routes: set `outputAssets` on the asset's entry in shared/lib/redemption-backstop-configs/ — tracked stablecoin ids for stable-single/stable-basket, canonical asset:<symbol> keys for collateral; ONLY when the documented rail names the output (config notes/docs are the source; schema validates shape), (c) exact DEX capacity where the pool archetype is supported (raydium CP, balancer weighted). Captures with producer-embedded observations pick up outputAssets on the next production capture. CL-pool exact capacity is producer tick-data work, not per-asset curation — do not grind unsupported pools by hand.",
   },
   {
     key: "PEG",
@@ -194,19 +194,23 @@ lines.push(`Generated from \`${replayPath.split("/").pop()}\` (${cards.length} c
   "Regenerate after every merged batch:");
 lines.push("");
 lines.push("```bash");
+lines.push("# 0. node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs  # generated registry is gitignored and goes stale against coin edits");
 lines.push("# 1. fresh exact capture + drift bridge + replay (recipes: agents/safety-score-v9/results/rating-parity-implementation-2026-07-14.md)");
 lines.push("# 2. node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs --replay <replay.json> --v8-cards <v8.json> --output <this file>");
 lines.push("```");
 lines.push("");
 lines.push("## Protocol for agents");
 lines.push("");
-lines.push("1. **Claim** a contiguous block of unchecked items (top of a stream, P0 first). Note the claim in your session log; concurrent sessions work this repo — never stash, never whole-tree ops.");
-lines.push("2. **Fix** per the stream's how-to. Evidence must be sourced and cited; NO fabricated values, NO manual supply overrides. If a source doesn't exist, mark the item `BLOCKED(<why>)` instead of inventing data — dead ends are findings.");
-lines.push("3. **Verify** locally: `npm run check:stablecoin-data` + the focused vitest suites for touched surfaces; registry regeneration if coin JSONs changed.");
-lines.push("4. **Commit** in thematic batches (descriptive subject + body).");
-lines.push("5. **Re-measure** (any agent, periodically — not per item): fresh replay + regenerate this file. Items whose codes cleared disappear; check them off in the tracking copy with the commit hash.");
+lines.push("1. **Claim** a contiguous block of unchecked items (top of a stream, P0 first) in the swarm session log (`results/curation-swarm-session-*.md`), and **check prior batch reports first**: an item another batch recorded as an evidence blocker must not be re-ground — carry the blocker forward instead.");
+lines.push("2. **Ownership**: re-check `git status` on the target coin file immediately before editing; skip any file dirty from another lane and record the skip. Skipped-by-collision items are NOT done — the coordinator sweeps them into a later batch.");
+lines.push("3. **Fix** per the stream's how-to. Evidence must be sourced and cited (primary sources, review date, reviewer); NO fabricated values, NO manual supply overrides. If a source doesn't exist, record `BLOCKED(<why>)` in your batch report — dead ends are findings, and refusing to author is the correct outcome (see the MECH stream).");
+lines.push("4. **Verify** locally: per-file schema parse for touched records + focused vitest suites. Expect `check:stablecoin-data` to report stale generated artifacts mid-batch — that is by design; do NOT regenerate registry/generated artifacts during a parallel batch (coordinator/measurement time only).");
+lines.push("5. **Commit** in thematic batches after the coordinator reviews the combined diff (descriptive subject + body).");
+lines.push("6. **Re-measure** (coordinator, periodically — not per item): registry regen → fresh replay → regenerate this file. Items whose codes cleared disappear; never hand-edit generated rows.");
 lines.push("");
 lines.push("Item ID format: `STREAM-assetId`. An item is DONE when none of its listed reason codes appear for the asset in a fresh replay.");
+lines.push("");
+lines.push("**Where to spend hours** (measured 2026-07-14): CTRL, RESV, ORCL, and BRDG batches clear items reliably and CTRL is the biggest single-score lever (~8-12 pts per asset). MECH is mostly an evidence wall (5/5 majors blocked on unpublishable ratios) — do not grind it; it moves via on-chain reads or issuer transparency changes. EXIT largely waits on the next deploy+capture (embedded producer observations) plus `outputAssets` config curation.");
 lines.push("");
 
 lines.push("## Summary");

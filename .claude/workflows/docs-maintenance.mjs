@@ -14,8 +14,6 @@ export const meta = {
 // CI ALREADY GUARDS THESE — every agent must treat them as OUT OF SCOPE:
 //  - file-path citations in docs            (check:doc-source-paths, passing)
 //  - internal doc link targets              (check:verified-doc-links, passing)
-//  - headline aggregate counts              (check:doc-counts, passing)
-//      e.g. total tracked-stablecoin count, reserve-adapter count, archetype count
 //  - methodology version STRINGS            (check:doc-sync, passing) e.g. "v8.0"
 //  - AGENTS.md <-> CLAUDE.md sync            (check:agent-doc-sync, passing)
 //  - the generated HTTP contract in api-reference.md (check:docs-api-reference: current)
@@ -149,13 +147,13 @@ const APPLY_SCHEMA = {
 const OUT_OF_SCOPE = `OUT OF SCOPE — CI already guards these, do NOT report them:
 - existence of file paths cited in the doc (check:doc-source-paths passes)
 - internal markdown link targets (check:verified-doc-links passes)
-- headline aggregate counts: total tracked/active/frozen stablecoin counts, reserve-adapter count, archetype count, and similar dashboard totals (check:doc-counts passes)
 - methodology version STRINGS like "v8.0"/"v5.91" (check:doc-sync passes) — but DO check the formulas/weights/thresholds/bands those versions describe
 - AGENTS.md vs CLAUDE.md wording sync (check:agent-doc-sync passes)
 - the generated HTTP request/response catalogue in api-reference.md (it is generated and verified current)`;
 
 const VERIFY_RULES = `WHAT COUNTS AS A DISCREPANCY (in scope):
 - a stated formula, weight, threshold, band boundary, cap, default value, or constant that differs from the code
+- a mutable aggregate inventory copied into prose instead of pointing to its source-owned registry or generated report
 - an enumerated list (sources, providers, chains, signals, columns, states, fields, steps, kill-switches) that is wrong, incomplete, or includes items the code dropped
 - an env var / binding / secret name that the code does not read, or a renamed one
 - a D1 table or column name, or schema claim, that differs from migrations / store code

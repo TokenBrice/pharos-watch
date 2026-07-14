@@ -17,6 +17,40 @@
   "llamaId": "283",
   "detailProvider": "defillama",
   "geckoId": "usdu",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "USDu is issued against a protocol-managed delta-neutral reserve portfolio rather than borrower debt positions with oracle-triggered collateral liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Unitas documents whitelist-restricted minting and redemption against deposited USDC, followed by protocol-managed allocation into JLP and hedged perpetual positions. It does not document borrower-specific debt, collateral-ratio thresholds, or liquidatable collateral branches for USDu issuance.",
+      "sources": [
+        {
+          "label": "Unitas minting USDu",
+          "url": "https://docs.unitas.so/solution-design/minting-usdu"
+        },
+        {
+          "label": "Unitas delta-neutral stability",
+          "url": "https://docs.unitas.so/solution-overview/delta-neutral-stability"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Unitas minting USDu",
+        "url": "https://docs.unitas.so/solution-design/minting-usdu"
+      },
+      {
+        "label": "Unitas delta-neutral stability",
+        "url": "https://docs.unitas.so/solution-overview/delta-neutral-stability"
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://accountable.unitas.so/",

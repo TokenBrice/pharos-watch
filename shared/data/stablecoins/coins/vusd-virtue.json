@@ -12,20 +12,301 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Overcollateralized IOTA, stIOTA, and IBTC (bridged BTC) positions backing VUSD debt inside the Virtue Money protocol",
+  "collateral": "Overcollateralized IOTA, stIOTA, vIOTA, and iBTC positions backing VUSD debt inside the Virtue Money protocol",
   "pegMechanism": "CDP-style mint: users borrow VUSD against IOTA or stIOTA collateral and repay debt to unlock collateral, with liquidation and redemption mechanics supporting the U.S. dollar peg",
   "mechanismArchetype": "cdp",
   "geckoId": "virtue-usd",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Virtue USD do not identify the collateral oracle setup or failure handling.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
-    "confidence": "limited",
+    "tier": "single-source-or-laggy",
+    "summary": "Virtue's four debt-bearing IOTA Move vaults use one configured oracle rule per collateral. IOTA and iBTC depend on single Pyth feeds with the Pyth State's 60-second stale-price threshold; stIOTA and vIOTA derive their values from their native staking pools and inherit the same single IOTA/USD Pyth path.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-ROOT-DRAIN data review",
+      "rationale": "At IOTA checkpoint 166884205, the VUSD Treasury authorized exactly one current mint module, VirtueCDP. A type-wide query of that module returned exactly four live shared Vault objects, all with nonzero debt supply: IOTA, stIOTA, vIOTA, and iBTC. The oracle package likewise exposed exactly four matching PriceAggregater objects, so each debt-bearing branch is reviewed below.",
+      "sources": [
+        {
+          "label": "Virtue VUSD Treasury object",
+          "url": "https://explorer.iota.org/object/0x81f525f4fa5b2d3cf58677d3e39aabc4b0a1ca25cbba605033cfe417e47b0a16?network=mainnet"
+        },
+        {
+          "label": "Virtue CDP package",
+          "url": "https://explorer.iota.org/object/0xcdeeb40cd7ffd7c3b741f40a8e11cb784a5c9b588ce993d4ab86479072386ba1?network=mainnet"
+        },
+        {
+          "label": "IOTA checkpoint 166884205",
+          "url": "https://explorer.iota.org/checkpoint/166884205?network=mainnet"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-ROOT-DRAIN data review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Virtue USD docs",
-        "url": "https://docs.virtue.money/overview/what-is-vusd"
+        "label": "Virtue CDP documentation",
+        "url": "https://docs.virtue.money/mechanisms/cdp-collateralized-debt-position"
+      },
+      {
+        "label": "Virtue Stability Pool and liquidation documentation",
+        "url": "https://docs.virtue.money/mechanisms/stability-pool-and-liquidations"
+      },
+      {
+        "label": "Virtue oracle aggregation package",
+        "url": "https://explorer.iota.org/object/0x7eebbee92f64ba2912bdbfba1864a362c463879fc5b3eacc735c1dcb255cc2cf?network=mainnet"
+      },
+    {
+      "label": "Pyth IOTA integration documentation",
+      "url": "https://docs.pyth.network/price-feeds/core/use-real-time-data/pull-integration/iota"
+    },
+    {
+      "label": "Deployed Pyth State object",
+      "url": "https://explorer.iota.org/object/0x6bc33855c7675e006f55609f61eebb1c8a104d8973a698ee9efd3127c210b37f?network=mainnet"
+    },
+    {
+      "label": "Deployed Virtue Stability Pool object",
+      "url": "https://explorer.iota.org/object/0x6101272394511caf38ce5a6d120d3b4d009b6efabae8faac43aa9ac938cec558?network=mainnet"
+    }
+    ],
+    "branches": [
+      {
+        "id": "vusd-iota",
+        "label": "IOTA vault",
+        "tier": "single-source-or-laggy",
+        "summary": "The IOTA vault uses a one-of-one PriceAggregater whose only accepted rule reads the Pyth IOTA/USD feed.",
+        "collateralAssets": [
+          "IOTA"
+        ],
+        "chains": [
+          "iota"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth via Virtue PriceAggregater",
+            "path": "Pyth IOTA/USD c7b72e5d860034288c9335d4d325da4272fe50c92ab72249d58f6cbba30e4c44 -> sole PythRule weight 1 of threshold 1 -> Virtue IOTA PriceResult",
+            "address": "0x052c40b4e8f16df5238457f3a7b3b0eeaa49c6bc8acc22f6a7790ab32495b2c6",
+            "chain": "iota",
+            "stalenessBoundSec": 60,
+            "observedAt": "2026-07-14",
+            "observedBlock": 166884205,
+            "failureDomainKeys": [
+              "virtue-pyth-iota-usd",
+              "virtue-price-aggregater",
+              "pyth-iota-state",
+              "iota"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The aggregator has one rule and a threshold of one. Its PythRule calls Pyth get_price, which applies the Pyth State's 60-second stale-price threshold; an unsupported identifier, stale or invalid Pyth result, or missing rule aborts the transaction. No fallback or last-good cache is configured.",
+        "observedAt": "2026-07-14",
+            "observedBlock": 166884205,
+        "collateralParameters": [
+          {
+            "asset": "IOTA",
+            "minimumCollateralRatioPct": 110,
+            "note": "Vault 0xaf306be8419cf059642acdba3b4e79a5ae893101ae62c8331cefede779ef48d5; debt cap 5,000,000 VUSD and debt supply 17,604.317760 VUSD at the observation checkpoint."
+          }
+        ],
+        "liquidationMechanism": "Authorized liquidator 0xf11c141e6a4c633baa304150c50c85ed66df639c995a1d26aedd5cc235c1f760 may execute the configured below-110%-MCR StabilityPoolRule using a current PriceResult. Pool VUSD offsets debt and receives collateral; the deployed rule charges a 2% protocol fee and 0.5% rebate.",
+        "liquidationDelaySec": 0,
+        "backstop": "Shared Stability Pool 0x6101272394511caf38ce5a6d120d3b4d009b6efabae8faac43aa9ac938cec558 held 198,602.895218 VUSD and 195 positions at observation. Its authorized liquidator is 0xf11c141e6a4c633baa304150c50c85ed66df639c995a1d26aedd5cc235c1f760; fee rate is 2% and rebate rate 0.5%. Official docs describe same-transaction flash-mint supplementation when deposits are insufficient.",
+        "shutdownOrBadDebtBehavior": "The reviewed public objects and modules did not establish a separate redistribution or stored-bad-debt route beyond the Stability Pool liquidation/payback flow. AdminCap can change the vault supply limit, liquidation rule/checklists, and pool liquidator; no enforced delay was visible in the reviewed modules.",
+        "failureDomainKeys": [
+          "virtue-vault-iota",
+          "virtue-stability-pool",
+          "virtue-pyth-iota-usd",
+          "iota"
+        ],
+        "sources": [
+          {
+            "label": "IOTA vault object",
+            "url": "https://explorer.iota.org/object/0xaf306be8419cf059642acdba3b4e79a5ae893101ae62c8331cefede779ef48d5?network=mainnet"
+          },
+          {
+            "label": "IOTA PriceAggregater object",
+            "url": "https://explorer.iota.org/object/0x052c40b4e8f16df5238457f3a7b3b0eeaa49c6bc8acc22f6a7790ab32495b2c6?network=mainnet"
+          }
+        ]
+      },
+      {
+        "id": "vusd-stiota",
+        "label": "stIOTA vault",
+        "tier": "single-source-or-laggy",
+        "summary": "The stIOTA vault's only oracle rule derives the staking token's IOTA exchange rate from its native pool and applies the sole IOTA/USD Pyth result.",
+        "collateralAssets": [
+          "stIOTA"
+        ],
+        "chains": [
+          "iota"
+        ],
+        "feeds": [
+          {
+            "provider": "Swirl stIOTA native pool plus Pyth via Virtue PriceAggregater",
+            "path": "stIOTA NativePool/Metadata exchange rate -> IOTA PriceResult -> Pyth IOTA/USD with 60-second Pyth State threshold; sole CertRule weight 1 of threshold 1",
+            "address": "0x8c730f64aa369eed69ddf7eea39c78bf0afd3f9fbb4ee0dfe457f6dea5a0f4ed",
+            "chain": "iota",
+            "stalenessBoundSec": 60,
+            "observedAt": "2026-07-14",
+            "observedBlock": 166884205,
+            "failureDomainKeys": [
+              "virtue-pyth-iota-usd",
+              "swirl-stiota-native-pool",
+              "virtue-price-aggregater",
+              "iota"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The aggregator has only the stIOTA CertRule. The Pyth IOTA leg has the State's 60-second stale threshold; the NativePool/Metadata rate leg has no independent time-based freshness bound. Stale Pyth data or a failed dependency aborts, with no alternate source or cache.",
+        "observedAt": "2026-07-14",
+            "observedBlock": 166884205,
+        "collateralParameters": [
+          {
+            "asset": "stIOTA",
+            "minimumCollateralRatioPct": 110,
+            "note": "Vault 0xc9cb494657425f350af0948b8509efdd621626922e9337fd65eb161ec33de259; debt cap 5,000,000 VUSD and debt supply 578,973.526402 VUSD at the observation checkpoint."
+          }
+        ],
+        "liquidationMechanism": "Authorized liquidator 0xf11c141e6a4c633baa304150c50c85ed66df639c995a1d26aedd5cc235c1f760 may execute the configured below-110%-MCR StabilityPoolRule using a current PriceResult. Pool VUSD offsets debt and receives collateral; the deployed rule charges a 2% protocol fee and 0.5% rebate.",
+        "liquidationDelaySec": 0,
+        "backstop": "Shared Stability Pool 0x6101272394511caf38ce5a6d120d3b4d009b6efabae8faac43aa9ac938cec558 held 198,602.895218 VUSD and 195 positions at observation. Its authorized liquidator is 0xf11c141e6a4c633baa304150c50c85ed66df639c995a1d26aedd5cc235c1f760; fee rate is 2% and rebate rate 0.5%. Official docs describe same-transaction flash-mint supplementation when deposits are insufficient.",
+        "shutdownOrBadDebtBehavior": "The reviewed public objects and modules did not establish a separate redistribution or stored-bad-debt route beyond the Stability Pool liquidation/payback flow. AdminCap can change the vault supply limit, liquidation rule/checklists, and pool liquidator; no enforced delay was visible in the reviewed modules.",
+        "failureDomainKeys": [
+          "virtue-vault-stiota",
+          "virtue-stability-pool",
+          "virtue-pyth-iota-usd",
+          "swirl-stiota-native-pool",
+          "iota"
+        ],
+        "sources": [
+          {
+            "label": "stIOTA vault object",
+            "url": "https://explorer.iota.org/object/0xc9cb494657425f350af0948b8509efdd621626922e9337fd65eb161ec33de259?network=mainnet"
+          },
+          {
+            "label": "stIOTA PriceAggregater object",
+            "url": "https://explorer.iota.org/object/0x8c730f64aa369eed69ddf7eea39c78bf0afd3f9fbb4ee0dfe457f6dea5a0f4ed?network=mainnet"
+          }
+        ]
+      },
+      {
+        "id": "vusd-viota",
+        "label": "vIOTA vault",
+        "tier": "single-source-or-laggy",
+        "summary": "The vIOTA vault's only oracle rule derives the reward-bearing token's IOTA exchange rate from the TokenLabs native pool and applies the sole IOTA/USD Pyth result.",
+        "collateralAssets": [
+          "vIOTA"
+        ],
+        "chains": [
+          "iota"
+        ],
+        "feeds": [
+          {
+            "provider": "TokenLabs vIOTA native pool plus Pyth via Virtue PriceAggregater",
+            "path": "vIOTA NativePool/Metadata exchange rate -> IOTA PriceResult -> Pyth IOTA/USD with 60-second Pyth State threshold; sole VCertRule weight 1 of threshold 1",
+            "address": "0xe5fbc659022066c53f8143e42c604b561719990a1eca76e06bb284f8791d8cc9",
+            "chain": "iota",
+            "stalenessBoundSec": 60,
+            "observedAt": "2026-07-14",
+            "observedBlock": 166884205,
+            "failureDomainKeys": [
+              "virtue-pyth-iota-usd",
+              "tokenlabs-viota-native-pool",
+              "virtue-price-aggregater",
+              "iota"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The aggregator has only the vIOTA VCertRule. The Pyth IOTA leg has the State's 60-second stale threshold; the NativePool/Metadata rate leg has no independent time-based freshness bound. Stale Pyth data or a failed dependency aborts, with no alternate source or cache.",
+        "observedAt": "2026-07-14",
+            "observedBlock": 166884205,
+        "collateralParameters": [
+          {
+            "asset": "vIOTA",
+            "minimumCollateralRatioPct": 110,
+            "note": "Vault 0x53b6405d2672be1e73f8ddea1766dbda57f1fed677be58fbfedc9fdddaafdd26; debt cap 50,000 VUSD and debt supply 3,181.439050 VUSD at the observation checkpoint."
+          }
+        ],
+        "liquidationMechanism": "Authorized liquidator 0xf11c141e6a4c633baa304150c50c85ed66df639c995a1d26aedd5cc235c1f760 may execute the configured below-110%-MCR StabilityPoolRule using a current PriceResult. Pool VUSD offsets debt and receives collateral; the deployed rule charges a 2% protocol fee and 0.5% rebate.",
+        "liquidationDelaySec": 0,
+        "backstop": "Shared Stability Pool 0x6101272394511caf38ce5a6d120d3b4d009b6efabae8faac43aa9ac938cec558 held 198,602.895218 VUSD and 195 positions at observation. Its authorized liquidator is 0xf11c141e6a4c633baa304150c50c85ed66df639c995a1d26aedd5cc235c1f760; fee rate is 2% and rebate rate 0.5%. Official docs describe same-transaction flash-mint supplementation when deposits are insufficient.",
+        "shutdownOrBadDebtBehavior": "The reviewed public objects and modules did not establish a separate redistribution or stored-bad-debt route beyond the Stability Pool liquidation/payback flow. AdminCap can change the vault supply limit, liquidation rule/checklists, and pool liquidator; no enforced delay was visible in the reviewed modules.",
+        "failureDomainKeys": [
+          "virtue-vault-viota",
+          "virtue-stability-pool",
+          "virtue-pyth-iota-usd",
+          "tokenlabs-viota-native-pool",
+          "iota"
+        ],
+        "sources": [
+          {
+            "label": "vIOTA vault object",
+            "url": "https://explorer.iota.org/object/0x53b6405d2672be1e73f8ddea1766dbda57f1fed677be58fbfedc9fdddaafdd26?network=mainnet"
+          },
+          {
+            "label": "vIOTA PriceAggregater object",
+            "url": "https://explorer.iota.org/object/0xe5fbc659022066c53f8143e42c604b561719990a1eca76e06bb284f8791d8cc9?network=mainnet"
+          }
+        ]
+      },
+      {
+        "id": "vusd-ibtc",
+        "label": "iBTC vault",
+        "tier": "single-source-or-laggy",
+        "summary": "The iBTC vault uses a one-of-one PriceAggregater whose only accepted rule reads the Pyth BTC/USD feed.",
+        "collateralAssets": [
+          "iBTC"
+        ],
+        "chains": [
+          "iota"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth via Virtue PriceAggregater",
+            "path": "Pyth BTC/USD e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43 -> sole PythRule weight 1 of threshold 1 -> Virtue iBTC PriceResult",
+            "address": "0x8a00ca5bae51c5d001e92e5b2188b7ec20a1c530aeac327b3ab86049bf9540ed",
+            "chain": "iota",
+            "stalenessBoundSec": 60,
+            "observedAt": "2026-07-14",
+            "observedBlock": 166884205,
+            "failureDomainKeys": [
+              "virtue-pyth-btc-usd",
+              "virtue-price-aggregater",
+              "pyth-iota-state",
+              "iota"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The aggregator has one rule and a threshold of one. Pyth get_price applies the State's 60-second stale-price threshold; stale or invalid data aborts and there is no fallback or last-good cache.",
+        "observedAt": "2026-07-14",
+            "observedBlock": 166884205,
+        "collateralParameters": [
+          {
+            "asset": "iBTC",
+            "minimumCollateralRatioPct": 110,
+          "note": "Vault 0xcc094d9e3b491b0c943bb18daf07a49bd951f34688f9610d90982de06fc0c5c9; VUSD supply cap 850 VUSD and debt supply 630.250079 VUSD at the observation checkpoint."
+          }
+        ],
+        "liquidationMechanism": "Authorized liquidator 0xf11c141e6a4c633baa304150c50c85ed66df639c995a1d26aedd5cc235c1f760 may execute the configured below-110%-MCR StabilityPoolRule using a current PriceResult. Pool VUSD offsets debt and receives collateral; the deployed rule charges a 2% protocol fee and 0.5% rebate.",
+        "liquidationDelaySec": 0,
+        "backstop": "Shared Stability Pool 0x6101272394511caf38ce5a6d120d3b4d009b6efabae8faac43aa9ac938cec558 held 198,602.895218 VUSD and 195 positions at observation. Its authorized liquidator is 0xf11c141e6a4c633baa304150c50c85ed66df639c995a1d26aedd5cc235c1f760; fee rate is 2% and rebate rate 0.5%. Official docs describe same-transaction flash-mint supplementation when deposits are insufficient.",
+        "shutdownOrBadDebtBehavior": "The reviewed public objects and modules did not establish a separate redistribution or stored-bad-debt route beyond the Stability Pool liquidation/payback flow. AdminCap can change the vault supply limit, liquidation rule/checklists, and pool liquidator; no enforced delay was visible in the reviewed modules.",
+        "failureDomainKeys": [
+          "virtue-vault-ibtc",
+          "virtue-stability-pool",
+          "virtue-pyth-btc-usd",
+          "iota"
+        ],
+        "sources": [
+          {
+            "label": "iBTC vault object",
+            "url": "https://explorer.iota.org/object/0xcc094d9e3b491b0c943bb18daf07a49bd951f34688f9610d90982de06fc0c5c9?network=mainnet"
+          },
+          {
+            "label": "iBTC PriceAggregater object",
+            "url": "https://explorer.iota.org/object/0x8a00ca5bae51c5d001e92e5b2188b7ec20a1c530aeac327b3ab86049bf9540ed?network=mainnet"
+          }
+        ]
       }
     ]
   },

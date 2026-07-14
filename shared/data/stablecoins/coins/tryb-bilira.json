@@ -16,10 +16,29 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.bilira.co/en/audit-reports",
-    "provider": "BiLira independent audit reports",
+    "provider": "Corpus Denetim ve Yeminli Mali Musavirlik A.S.",
     "attestorTier": "niche",
     "cadence": "quarterly",
-    "attestorJurisdiction": "Turkey"
+    "attestorJurisdiction": "Turkey",
+    "latestReport": {
+      "periodEnd": "2026-05-21",
+      "publishedAt": "2026-05-21",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "SOL-3 adversarial verification",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Corpus independent TRYB assurance report - May 21, 2026",
+          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a325f5892dd1853f5b372cf_Bilira_Guvence_Raporu_May%C4%B1s_2026_ENG.pdf"
+        },
+        {
+          "label": "BiLira audit reports index",
+          "url": "https://www.bilira.co/en/audit-reports"
+        }
+      ]
+    }
   },
   "mechanismArchetype": "fiat-cash",
   "llamaId": "300",
@@ -370,13 +389,6 @@
       ]
     }
   },
-  "reserves": [
-    {
-      "name": "TRY cash reserves",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

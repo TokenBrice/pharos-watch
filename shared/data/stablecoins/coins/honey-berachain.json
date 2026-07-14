@@ -112,32 +112,32 @@
   },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "reserves": [
-    {
-      "name": "USDC.e (bridged Circle)",
-      "pct": 40,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "USDt0 (Tether via LayerZero)",
-      "pct": 25,
-      "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "BYUSD (bridged PayPal USD)",
-      "pct": 20,
-      "risk": "low",
-      "coinId": "pyusd-paypal"
-    },
-    {
-      "name": "USDe (Ethena)",
-      "pct": 15,
-      "risk": "high",
-      "coinId": "usde-ethena"
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://berascan.com/address/0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401#readProxyContract",
+    "provider": "Berachain HoneyFactory",
+    "attestorTier": "none",
+    "cadence": "real-time",
+    "latestReport": {
+      "periodEnd": "2026-07-14",
+      "publishedAt": "2026-07-14",
+      "assuranceMethod": "onchain-proof",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "HoneyFactory and HONEY on-chain snapshot at Berachain block 23506303",
+          "url": "https://berascan.com/address/0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401#readProxyContract"
+        },
+        {
+          "label": "Berachain HONEY collateral and vault documentation",
+          "url": "https://docs.berachain.com/general/tokens/honey"
+        }
+      ]
     }
-  ],
+  },
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",
     "version": 1,

@@ -26,7 +26,26 @@
     "attestorTier": "regional",
     "cadence": "quarterly",
     "attestorJurisdiction": "Italy",
-    "attestorLicense": "BDO member firm assurance"
+    "attestorLicense": "BDO member firm assurance",
+    "latestReport": {
+      "periodEnd": "2026-03-31",
+      "publishedAt": "2026-04-30",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "BDO Tether Gold Reserves Report - March 31, 2026",
+          "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_31.03.2026_RC187322026DV0089.pdf"
+        },
+        {
+          "label": "Tether Gold reserves reports",
+          "url": "https://gold.tether.to/reports"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -173,13 +192,6 @@
     }
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Physical gold bars (LBMA Good Delivery, Swiss vaults)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "tether-transparency",
     "version": 1,

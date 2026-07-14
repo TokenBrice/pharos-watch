@@ -69,7 +69,6 @@ npm run bootstrap:generated
 npm run check:stablecoin-data
 npm run check:mechanism-archetype-coverage
 npm run check:generated-artifacts
-npm run check:doc-counts
 npm test -- shared/lib/__tests__/stablecoin-id-registry.test.ts
 ```
 

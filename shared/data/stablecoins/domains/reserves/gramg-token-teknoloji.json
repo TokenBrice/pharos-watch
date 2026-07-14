@@ -1,0 +1,76 @@
+{
+  "id": "gramg-token-teknoloji",
+  "reserves": [
+    {
+      "name": "Unresolved GRAMG backing (conflicting PAXG and physical-gold disclosures)",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "Token Teknoloji and undisclosed reserve counterparties",
+      "riskFactors": [
+        "credit",
+        "custody",
+        "market",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Token Teknoloji GRAMG product page",
+        "url": "https://www.token.com.tr/en/reserve-tokens/gram-gold-gramg/"
+      },
+      {
+        "label": "Token Teknoloji proof of reserves",
+        "url": "https://www.token.com.tr/en/proof-of-reserves/"
+      }
+    ],
+    "rationale": "Token Teknoloji's English GRAMG product copy says equivalent PAXG is added to an on-chain reserve wallet, while the same page's FAQ says GRAMG holds physical gold, mostly at the Turkish Central Bank, and the issuer's proof page describes gold held at Turkish banks and the Central Bank. The issuer does not reconcile these claims, so neither reserve form nor a PAXG dependency is published as fact.",
+    "compositionBasis": "Conflicting Token Teknoloji GRAMG product and proof-of-reserves disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete reserve form, constituent proportions, custody path, current balances, and reconciliation to GRAMG supply remain unresolved because the issuer's PAXG and physical-gold disclosures conflict.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Unresolved GRAMG backing (conflicting PAXG and physical-gold disclosures)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Issuer sources conflict between PAXG and physical gold and do not publish evidence that reconciles the current reserve composition."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Unresolved GRAMG reserve custody path",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Token Teknoloji GRAMG product page",
+        "url": "https://www.token.com.tr/en/reserve-tokens/gram-gold-gramg/"
+      },
+      {
+        "label": "Token Teknoloji proof of reserves",
+        "url": "https://www.token.com.tr/en/proof-of-reserves/"
+      }
+    ],
+    "uncertainty": "The issuer alternately describes an on-chain PAXG reserve and physical gold held through Turkish banks, the Central Bank, and company vaults. It does not reconcile which custody path backs current GRAMG supply or disclose provider shares, segregation, bankruptcy treatment, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

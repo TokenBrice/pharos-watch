@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Allocated physical gold bars stored in Liechtenstein vaults, with VNX materials describing token-holder ownership and segregated custody",
+  "collateral": "Physical gold reported in custody at Philoro in Liechtenstein; the latest AUP reconciles 13,100 tokens to 13,100 gross grams but does not validate gold quality, value, legal rights, or physical presence",
   "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",
   "mechanismArchetype": "fiat-cash",
   "commodityOunces": 0.0321507466,
@@ -25,7 +25,26 @@
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Liechtenstein",
-    "attestorLicense": "FMA TVTG (Blockchain Act)"
+    "attestorLicense": "Liechtenstein FMA-licensed auditing company",
+    "latestReport": {
+      "periodEnd": "2025-12-31",
+      "publishedAt": "2026-03-23",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "AREVA VNXAU agreed-upon procedures report as of December 31, 2025",
+          "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+        },
+        {
+          "label": "AREVA licences and registrations",
+          "url": "https://www.areva.li/en/"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -972,13 +991,6 @@
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Allocated physical gold bars (Liechtenstein vault custody)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -996,7 +1008,7 @@
       }
     },
     "params": {
-      "label": "Allocated physical gold bars",
+      "label": "Allocated physical gold held at Philoro Edelmetallhandel AG",
       "risk": "very-low"
     }
   },

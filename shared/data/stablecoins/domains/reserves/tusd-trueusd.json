@@ -1,0 +1,88 @@
+{
+  "id": "tusd-trueusd",
+  "reserves": [
+    {
+      "name": "First Digital Trust fund investments (at cost, opaque)",
+      "pct": 99.98,
+      "risk": "very-high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "First Digital Trust Limited and undisclosed fund investments",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "legal", "concentration"],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Cash at depository institutions",
+      "pct": 0.02,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed depository institutions",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Moore CPA TUSD Consolidated Reserves Report - July 14, 2026",
+        "url": "https://widget.verinumus.io/api/v1/tusd/report?tokens=%5BTrueUSD%5D"
+      },
+      {
+        "label": "TUSD transparency dashboard",
+        "url": "https://tusd.io/transparency"
+      }
+    ],
+    "rationale": "Moore CPA's July 14 reasonable-assurance report states $501.850 million held through First Digital Trust Limited and $78,900.88 of cash against $501.928901 million of total collateral. Those balances normalize to 99.98% and 0.02%; the report values the First Digital position at reported cost and does not disclose the underlying fund instruments or fair value.",
+    "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of July 14, 2026",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The assets, liquidity, counterparties, and current fair value inside the First Digital Trust fund position are not disclosed; the report also notes ongoing litigation and restrictions affecting that collateral.",
+    "knownUnknownExposurePct": 99.98,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "First Digital Trust fund investments (at cost, opaque)",
+        "pct": 99.98,
+        "disposition": "insufficient-evidence",
+        "rationale": "The report identifies the depository and aggregate cost balance but not the fund's underlying instruments, position weights, liquidity, or fair value."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Cash at depository institutions",
+        "pct": 0.02,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Cash held at depository institutions is an external reserve asset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "First Digital Trust Limited",
+        "role": "custodian",
+        "sharePct": 99.98,
+        "jurisdiction": "Hong Kong"
+      },
+      {
+        "name": "Undisclosed depository institutions",
+        "role": "bank",
+        "sharePct": 0.02
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Moore CPA TUSD Consolidated Reserves Report - July 14, 2026",
+        "url": "https://widget.verinumus.io/api/v1/tusd/report?tokens=%5BTrueUSD%5D"
+      }
+    ],
+    "uncertainty": "The report describes collateral accounts held for TUSD holders and identifies First Digital Trust, but it does not name every depository institution or establish statutory bankruptcy remoteness. It states that substantially all collateral was invested for yield and records ongoing litigation over access to the First Digital position."
+  }
+}

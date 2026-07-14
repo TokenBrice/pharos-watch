@@ -1,0 +1,45 @@
+{
+  "id": "usdai-usd-ai",
+  "reserves": [
+    {
+      "name": "PYUSD held by the canonical USDai contract",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "pyusd-paypal",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos Trust Company, LLC / PayPal, Inc.",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USD.AI March 2026 mint/redeem upgrade - 1:1 PYUSD backing",
+        "url": "https://usd.ai/insights/usdai-mint-redeem-upgrade"
+      },
+      {
+        "label": "USDai Arbitrum implementation and baseToken",
+        "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
+      },
+      {
+        "label": "USD.AI sUSDai product - GPU-loan yield layer",
+        "url": "https://usd.ai/susdai"
+      },
+      {
+        "label": "Arbitrum public RPC fixed-block liability reconciliation",
+        "url": "https://arbitrum-one-rpc.publicnode.com"
+      }
+    ],
+    "rationale": "USD.AI's March 26, 2026 upgrade states that every USDai is backed 1:1 by PYUSD. At Arbitrum block 483800206, baseToken() returned canonical PYUSD; canonical totalSupply plus bridgedSupply was 196,394,460.208802187811855903 USDai, while the hub held 196,394,460.221193 PYUSD. The small surplus reconciles the complete base-token liability. USD.AI separately assigns GPU-loan yield exposure to sUSDai, so DEAL rows are not attributed to base USDai.",
+    "compositionBasis": "Issuer disclosure plus fixed-block canonical and bridged liability reconciliation against the hub's PYUSD balance",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified base-USDai reserve exposure remained in the fixed-block liability reconciliation. This conclusion does not classify the separate sUSDai strategy portfolio.",
+    "knownUnknownExposurePct": 0
+  }
+}

@@ -104,8 +104,110 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "GBPe is minted via Monerium's licensed EMI flow; the Ethereum token owner is the same 3/6 Safe as EURE (0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f); EIP-1967 proxy admin slot is zero; all addressable mint-capable surfaces confirmed.",
+    "summary": "GBPe is minted through Monerium's licensed EMI flow. Ethereum is a direct token and the five other tracked deployments are UUPS proxies; three chain-local 3-of-6 Safes with the same six owners control the complete deployment set.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x8e34bfec4f6eb781f9743d9b4af99cd23f9b7053",
+        "0x3bce82cf1a2bc357f956dd494713fe11dc54780f",
+        "0x2d80dbf04d0802abd7a342dafa5d7cb42bfbb52f",
+        "0xc4759ed641da77cbdc9fa2f37e9260a29bf7cc52",
+        "0x646beea7a02fdada34c8e118949fe32350ab2206"
+      ],
+      "implementationAddresses": [
+        "0x7ba92741bf2a568abc6f1d3413c58c6e0244f8fd",
+        "0x2ba8cbba75c70fa47107e836bed8c3b3b41bf7be",
+        "0x0f04844cf6426b854466953e1ba89710bf7cf4ad",
+        "0xddfe2c5f94909420cf55827fffa09a7ff9b2ab77",
+        "0x07a39b8cdb8b2227651023f54e85401c4bd8f08d",
+        "0x0a0b9dce9c2d20067df8bfd245d1b7701cfb6438"
+      ],
+      "adminAddresses": [
+        "0x5591a6495d726c7efafb9a9dad32695d137b4d9f",
+        "0x8001ea269cb9715bf7acff89c664ffc134a519ec",
+        "0xd4d43a82708261f2995f7ba65319d8664b992a96"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "GBPe deployment-wide Monerium owner Safes",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Ethereum mainnet RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Gnosis mainnet RPC",
+          "url": "https://rpc.gnosischain.com"
+        },
+        {
+          "label": "Linea mainnet RPC",
+          "url": "https://rpc.linea.build"
+        },
+        {
+          "label": "Arbitrum mainnet RPC",
+          "url": "https://arb1.arbitrum.io/rpc"
+        },
+        {
+          "label": "Base mainnet RPC",
+          "url": "https://mainnet.base.org"
+        },
+        {
+          "label": "Polygon mainnet RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f",
+        "label": "GBPe deployment-wide Monerium owner Safes",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "failureDomainKeys": [
+          "safe:ethereum:0x5591a6495d726c7efafb9a9dad32695d137b4d9f",
+          "safe:evm:0x8001ea269cb9715bf7acff89c664ffc134a519ec",
+          "safe:arbitrum:0xd4d43a82708261f2995f7ba65319d8664b992a96"
+        ],
+        "bypassSurfaces": [
+          "Each chain-local Safe can replace mint logic for its own UUPS deployment with no on-chain timelock.",
+          "The three Safe addresses share the same six owner keys, so a common 3-of-6 signer quorum spans all upgrade domains."
+        ],
+        "sources": [
+          {
+            "label": "Ethereum mainnet RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Gnosis mainnet RPC",
+            "url": "https://rpc.gnosischain.com"
+          },
+          {
+            "label": "Linea mainnet RPC",
+            "url": "https://rpc.linea.build"
+          },
+          {
+            "label": "Arbitrum mainnet RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          },
+          {
+            "label": "Base mainnet RPC",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Polygon mainnet RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Current owner() and EIP-1967 reads covered all six deployments. Ethereum is direct code with owner Safe 0x5591...; Gnosis, Linea, Base, and Polygon use Safe 0x8001...; Arbitrum uses Safe 0xd4d43.... Each Safe returned threshold 3 and the same six owners. The five non-Ethereum tokens resolve to the implementation addresses listed in the upgradeability record; Ethereum's implementation slot is zero."
+      },
       {
         "label": "Monerium issuer-operated mint authority",
         "role": "direct-minter",
@@ -174,9 +276,9 @@
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
         }
       ],
-      "evidence": "At Ethereum block 25294994: GBPe owner() = 3/6 Safe 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f (threshold 3, 6 owners, no modules, no guard) — identical Safe to EURE. EIP-1967 proxy admin slot = zero. Every addressable mint-capable on-chain surface is confirmed. Issuer-backend model corroborated by Monerium docs.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Current RPC reads cover all six tracked GBPe deployments. Ethereum is direct code; Gnosis, Linea, Arbitrum, Base, and Polygon are UUPS proxies. Their three owner Safe addresses all require 3 of the same 6 signers, and no deployment has a separate EIP-1967 ProxyAdmin. The licensed issuer-backend path remains corroborated by Monerium docs.",
+      "reviewer": "SOL-7 blocker challenge batch 02",
+      "reviewedAt": "2026-07-14"
     }
   },
   "deploymentModel": "native-multichain",
@@ -292,13 +394,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "GBP safeguarded funds and permitted EMI reserve assets",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

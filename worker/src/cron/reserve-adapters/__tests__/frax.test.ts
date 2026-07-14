@@ -45,7 +45,7 @@ describe("adaptFraxBalanceSheet", () => {
     expect(byName("USDC")!.pct).toBeLessThan(1);
   });
 
-  it("maps coinIds for known tokens", () => {
+  it("maps active coinIds while keeping pre-launch assets visible", () => {
     const result = adaptFraxBalanceSheet(BALANCE_SHEET_SAMPLE);
     const ustb = result.slices.find((s) => s.name.startsWith("USTB"));
     const wtgxx = result.slices.find((s) => s.name.startsWith("WTGXX"));
@@ -56,7 +56,8 @@ describe("adaptFraxBalanceSheet", () => {
     expect(wtgxx!.coinId).toBe("wtgxx-wisdomtree");
     expect(buidl!.coinId).toBe("buidl-blackrock");
     expect(usdc!.coinId).toBe("usdc-circle");
-    expect(usdb!.coinId).toBe("usdb-bridge");
+    expect(usdb).toMatchObject({ name: "USDB (Bridge)" });
+    expect(usdb!.coinId).toBeUndefined();
   });
 
   it("keeps subject reserves visible without emitting a self dependency", () => {

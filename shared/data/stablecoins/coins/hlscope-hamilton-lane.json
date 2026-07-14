@@ -192,7 +192,53 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "HLSCOPE is a Securitize DSToken on Ethereum, Polygon, and Optimism. All three chains share the same EOA owner (0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee), confirmed EOA on all three chains. Polygon uses an EIP-1967 proxy; Optimism also uses a proxy. No permissionless mint route exists.",
+    "summary": "HLSCOPE uses Securitize DSToken UUPS proxies on Ethereum, Polygon, Optimism, Plume, and Tron. The four EVM deployments share owner EOA 0x59c1eAcE...76Ee; Tron uses owner EOA TGmCDF...6huia. Both reviewed owners hold the trust-service MASTER role on their respective reviewed branches, which authorizes issuance and UUPS upgrades. No permissionless mint route exists.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xda2ffa104356688e74d9340519b8c17f00d7752e",
+        "0x4c5ca366e26409845624e29b62c388a06961a792",
+        "0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b",
+        "0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a",
+        "TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X"
+      ],
+      "implementationAddresses": [
+        "0xa2f6ef3144753f31fcd728910b96a92bbbb462c9",
+        "0x5e98857d4bd2b3569a87c0f226e2c961aae02e0b",
+        "0x05eadc08ffd13ee7b1e28a883c4ce45e46a063ae",
+        "0x0d12bd2941f61b84f01342b3248ef1dedcd0c344",
+        "TPEAnjjT35bqVPJ39ohdJSSfXdWxRPrTFT"
+      ],
+      "adminAddresses": [
+        "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "TGmCDF656XokXcpJsvBZsdinQzgru6huia"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "HLSCOPE shared EVM token owner",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Securitize HLSCOPE",
+          "url": "https://securitize.io/primary-market/hl-scope"
+        },
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+        },
+        {
+          "label": "Plume HLSCOPE proxy",
+          "url": "https://explorer.plume.org/address/0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a?tab=contract"
+        },
+        {
+          "label": "Tronscan HLSCOPE proxy",
+          "url": "https://tronscan.org/#/contract/TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X/code"
+        },
+        {
+          "label": "Tronscan HLSCOPE implementation",
+          "url": "https://tronscan.org/#/contract/TPEAnjjT35bqVPJ39ohdJSSfXdWxRPrTFT/code"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -203,6 +249,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531417,
         "sources": [
           {
             "label": "Securitize HLSCOPE",
@@ -211,9 +259,13 @@
           {
             "label": "Sourcify DSToken source",
             "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25295014, owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee (EOA confirmed, eth_getCode returned 0x). Implementation 0xa2f6ef3144753f31fcd728910b96a92bbbb462c9; DSToken exposes issueTokens issuance functions."
+        "evidence": "At Ethereum block 25531417, the EIP-1967 implementation slot resolved to 0xa2f6ef3144753f31fcd728910b96a92bbbb462c9, the admin slot was zero, and owner() returned code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. Verified DSToken source exposes privileged issuance and UUPS upgrade surfaces."
       },
       {
         "chain": "polygon",
@@ -224,13 +276,19 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 90222365,
         "sources": [
           {
             "label": "Securitize HLSCOPE",
             "url": "https://securitize.io/primary-market/hl-scope"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Polygon block 88323698, owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee (same EOA as Ethereum, confirmed). EIP-1967 proxy; implementation slot = 0x5e98857d4bd2b3569a87c0f226e2c961aae02e0b."
+        "evidence": "At Polygon block 90222365, the EIP-1967 implementation slot resolved to 0x5e98857d4bd2b3569a87c0f226e2c961aae02e0b, the admin slot was zero, and owner() returned the shared code-empty EVM owner EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee."
       },
       {
         "chain": "optimism",
@@ -241,24 +299,134 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 154219883,
         "sources": [
           {
             "label": "Securitize HLSCOPE",
             "url": "https://securitize.io/primary-market/hl-scope"
+          },
+          {
+            "label": "Optimism PublicNode RPC",
+            "url": "https://optimism-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Optimism block 152795880, owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee (same EOA as Ethereum, confirmed). EIP-1967 proxy; implementation slot = 0x05eadc08ffd13ee7b1e28a883c4ce45e46a063ae."
+        "evidence": "At Optimism block 154219883, the EIP-1967 implementation slot resolved to 0x05eadc08ffd13ee7b1e28a883c4ce45e46a063ae, the admin slot was zero, and owner() returned the shared code-empty EVM owner EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee."
+      },
+      {
+        "chain": "plume",
+        "address": "0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a",
+        "label": "HLSCOPE Securitize DSToken issuance surface (Plume)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 81057700,
+        "sources": [
+          {
+            "label": "Plume HLSCOPE proxy",
+            "url": "https://explorer.plume.org/address/0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a?tab=contract"
+          },
+          {
+            "label": "Plume HLSCOPE implementation",
+            "url": "https://explorer.plume.org/address/0x0d12bd2941f61b84f01342b3248ef1dedcd0c344?tab=contract"
+          },
+          {
+            "label": "Plume mainnet RPC",
+            "url": "https://rpc.plume.org"
+          }
+        ],
+        "evidence": "At Plume block 81057700, HLSCOPE was a UUPS proxy with implementation 0x0d12bd2941f61b84f01342b3248ef1dedcd0c344 and a zero EIP-1967 admin slot. owner() returned code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee; its trust service returned role 1 (MASTER) for that owner, satisfying the verified DSToken issuance and UUPS authorization gates."
+      },
+      {
+        "chain": "tron",
+        "address": "TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X",
+        "label": "HLSCOPE Securitize DSToken issuance surface (Tron)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Tronscan HLSCOPE proxy",
+            "url": "https://tronscan.org/#/contract/TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X/code"
+          },
+          {
+            "label": "Tronscan HLSCOPE implementation",
+            "url": "https://tronscan.org/#/contract/TPEAnjjT35bqVPJ39ohdJSSfXdWxRPrTFT/code"
+          },
+          {
+            "label": "TronGrid API",
+            "url": "https://api.trongrid.io"
+          }
+        ],
+        "evidence": "On 2026-07-14, Tronscan identified the token as an ERC-1967 proxy using verified implementation TPEAnjjT35bqVPJ39ohdJSSfXdWxRPrTFT. TronGrid owner() returned TGmCDF656XokXcpJsvBZsdinQzgru6huia, the token trust service resolved to THCip3txeTF1nsxk1n3fKt6KwTXxEpzvau, and getRole(owner) returned 1 (MASTER). The owner account was non-contract, and the verified implementation exposes privileged issuance and UUPS upgrade methods."
       },
       {
         "chain": "ethereum",
         "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
-        "label": "HLSCOPE token owner (EOA, all chains)",
+        "label": "HLSCOPE shared EVM token owner",
         "role": "minter-admin",
         "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Ethereum block 25295014, eth_getCode returned 0x (EOA confirmed). Same address is owner on Polygon (block 88323698) and Optimism (block 152795880), also confirmed EOA on Polygon."
+        "failureDomainKeys": [
+          "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
+          "polygon:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
+          "optimism:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
+          "plume:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
+        ],
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Sourcify DSToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+          },
+          {
+            "label": "Plume HLSCOPE implementation",
+            "url": "https://explorer.plume.org/address/0x0d12bd2941f61b84f01342b3248ef1dedcd0c344?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Plume mainnet RPC",
+            "url": "https://rpc.plume.org"
+          }
+        ],
+        "evidence": "Exact-block owner() and eth_getCode reads confirmed this same code-empty EOA on Ethereum block 25531417, Polygon block 90222365, Optimism block 154219883, and Plume block 81057700. On Plume, getRole(owner) returned MASTER; verified DSToken source permits MASTER accounts to issue tokens and authorizes UUPS upgrades through onlyMaster."
+      },
+      {
+        "chain": "tron",
+        "address": "TGmCDF656XokXcpJsvBZsdinQzgru6huia",
+        "label": "HLSCOPE Tron token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Tronscan HLSCOPE proxy",
+            "url": "https://tronscan.org/#/contract/TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X/code"
+          },
+          {
+            "label": "Tronscan HLSCOPE implementation",
+            "url": "https://tronscan.org/#/contract/TPEAnjjT35bqVPJ39ohdJSSfXdWxRPrTFT/code"
+          },
+          {
+            "label": "TronGrid API",
+            "url": "https://api.trongrid.io"
+          }
+        ],
+        "evidence": "On 2026-07-14, TronGrid owner() returned this non-contract account and the token's trust service returned role 1 (MASTER) for it. That role satisfies the verified implementation's privileged issuance and UUPS authorization gates."
       }
     ],
     "review": {
@@ -270,11 +438,43 @@
         {
           "label": "Sourcify DSToken source",
           "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        },
+        {
+          "label": "Optimism PublicNode RPC",
+          "url": "https://optimism-rpc.publicnode.com"
+        },
+        {
+          "label": "Plume HLSCOPE proxy",
+          "url": "https://explorer.plume.org/address/0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a?tab=contract"
+        },
+        {
+          "label": "Plume mainnet RPC",
+          "url": "https://rpc.plume.org"
+        },
+        {
+          "label": "Tronscan HLSCOPE proxy",
+          "url": "https://tronscan.org/#/contract/TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X/code"
+        },
+        {
+          "label": "Tronscan HLSCOPE implementation",
+          "url": "https://tronscan.org/#/contract/TPEAnjjT35bqVPJ39ohdJSSfXdWxRPrTFT/code"
+        },
+        {
+          "label": "TronGrid API",
+          "url": "https://api.trongrid.io"
         }
       ],
-      "evidence": "All three HLSCOPE deployments (Ethereum, Polygon, Optimism) return the same EOA owner 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee from owner(). EOA confirmed via eth_getCode (0x) on Ethereum and Polygon. Polygon and Optimism are EIP-1967 proxies of DSToken implementations; no proxy admin separate from owner. Polygon proxy admin slot (0xb531...) = 0x00 confirming no separate admin.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "The full five-deployment registry was re-verified on 2026-07-14. Exact-block EVM reads resolved implementations 0xa2f6...62c9 (Ethereum block 25531417), 0x5e98...2e0b (Polygon block 90222365), 0x05ea...63ae (Optimism block 154219883), and 0x0d12...c344 (Plume block 81057700); each proxy had a zero EIP-1967 admin slot and returned shared code-empty owner EOA 0x59c1...76Ee. Plume's trust service returned MASTER for that owner. Tronscan and TronGrid identified Tron proxy TSwy...TPht1X, implementation TPEA...PrTFT, trust service THCi...zvau, and non-contract owner TGmC...6huia with MASTER role. Verified DSToken implementations gate privileged issuance at ISSUER-or-above and UUPS upgrades at MASTER.",
+      "reviewer": "owner-triage",
+      "reviewedAt": "2026-07-14"
     }
   },
   "chainTier": "ethereum",

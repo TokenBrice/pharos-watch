@@ -1,0 +1,71 @@
+{
+  "id": "cusdo-openeden",
+  "reserves": [
+    {
+      "name": "USDO wrapper shares",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdo-openeden",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "OpenEden Digital and the USDO reserve portfolio",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "OpenEden cUSDO token documentation",
+        "url": "https://docs.openeden.com/usdo/cusdo-token"
+      },
+      {
+        "label": "OpenEden USDO FAQ and segregated-account disclosure",
+        "url": "https://docs.openeden.com/usdo/faqs"
+      }
+    ],
+    "rationale": "OpenEden documents cUSDO as the non-rebasing wrapped form of USDO and states that users can convert between the two at any time through the wrapper smart contract. Its direct reserve dependency is therefore 100% USDO; the tokenized Treasury portfolio is inherited through USDO rather than duplicated as cUSDO's direct backing.",
+    "compositionBasis": "OpenEden documented USDO-to-cUSDO wrapper relationship",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "Current USDO reserve-asset weights and custodian shares are inherited from USDO and are not required to establish the direct 100% wrapper relationship.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "cUSDO wrapper smart contracts",
+        "role": "other"
+      },
+      {
+        "name": "OpenEden Digital segregated account",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "OpenEden cUSDO token documentation",
+        "url": "https://docs.openeden.com/usdo/cusdo-token"
+      },
+      {
+        "label": "OpenEden USDO FAQ and segregated-account disclosure",
+        "url": "https://docs.openeden.com/usdo/faqs"
+      }
+    ],
+    "uncertainty": "OpenEden identifies the wrapper contracts and states that the underlying USDO issuer is a Bermuda segregated accounts company, but does not publish a rehypothecation term for wrapper-held USDO or current provider shares.",
+    "knownUnknownExposurePct": 100
+  }
+}

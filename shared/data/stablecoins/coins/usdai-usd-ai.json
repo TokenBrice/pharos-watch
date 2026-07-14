@@ -2,7 +2,7 @@
   "id": "usdai-usd-ai",
   "name": "USD.AI",
   "symbol": "USDai",
-  "oneLiner": "USDai is USD.AI's non-yielding base dollar, minted 1:1 from USDC/USDT and separately stakeable into sUSDai for GPU-loan yield.",
+  "oneLiner": "USDai is USD.AI's non-yielding base dollar, backed 1:1 by PYUSD and separately stakeable into sUSDai for GPU-loan yield.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -18,8 +18,8 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "collateral": "USDai is the non-yielding base token of USD.AI, currently backed 1:1 by PayPal's PYUSD stablecoin held in the USDai contract (live proof-of-reserves shows the entire base reserve is PYUSD on Arbitrum). USDC/USDT serve as retail deposit and secondary-market exit currencies, not the reserve asset. Yield and GPU-collateralized loan exposure accrue to staked sUSDai, not to base USDai.",
-  "pegMechanism": "USDai is minted and redeemed 1:1 against its PYUSD reserve via the contract deposit()/withdraw() functions; direct mint/redeem is KYC-gated to whitelisted institutions, with no withdrawal queue. Retail users deposit USDC/USDT and can exit via supported currencies. Staking into the yield-bearing sUSDai vault is optional.",
+  "collateral": "PYUSD held by the canonical USDai contract on Arbitrum and reconciled 1:1 against canonical plus bridged USDai liabilities; GPU-loan DEAL exposure belongs to the separate sUSDai yield layer",
+  "pegMechanism": "Users mint and redeem canonical USDai against PYUSD through the Arbitrum hub. Satellite USDai supply is tracked as bridgedSupply against the same PYUSD pool, while sUSDai separately deploys deposited USDai into GPU-backed credit strategies.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "309",
   "detailProvider": "defillama",
@@ -527,14 +527,6 @@
       "reviewedAt": "2026-07-13"
     }
   },
-  "reserves": [
-    {
-      "name": "PYUSD (PayPal USD) held by USDai contract",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "pyusd-paypal"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 2,
@@ -551,13 +543,6 @@
         "rpcMode": "public-rpc"
       }
     }
-  },
-  "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
-    "provider": "USD.AI proof-of-reserves API",
-    "attestorTier": "self",
-    "cadence": "real-time"
   },
   "launchDate": "2025-05-23"
 }

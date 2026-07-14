@@ -57,15 +57,6 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
-  "reserves": [
-    {
-      "name": "USDC and yield-bearing USDC strategy positions",
-      "pct": 100,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "wrapper"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "StoneYield protocol",
     "yieldType": "lending-vault"

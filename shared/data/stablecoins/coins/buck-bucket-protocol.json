@@ -19,23 +19,2730 @@
   "geckoId": "bucket-protocol-buck-stablecoin",
   "pythFeedId": "0xfdf28a46570252b25fd31cb257973f865afc5ca2f320439e45d95e0394bc7382",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Bucket's oracle repo aggregates Switchboard, Pyth, and Supra feeds with freshness and tolerance checks for BUCK collateral pricing, without documented shutdown handling.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "tier": "opaque-or-unknown",
+    "summary": "Bucket v1 has 40 registered Sui collateral branches. Thirty-eight have currently refreshable threshold-one Supra or whitelisted derivative-rule SingleOracles that fail closed after ten seconds; two debt-bearing StakedHouse branches remain registered but their stale, unconfigured oracles make price-dependent actions unavailable.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 ORCL curation",
+      "rationale": "At finalized Sui checkpoint 298434520, Bucket protocol 0x9e3dab13212b27f5434416939db5dec6a319d15b89a84fd074d03ece6350d3df returned 40 registered Buckets. Every row had a positive mint ceiling plus matching Tank and SingleOracle. Thirty-eight had a configured collector or whitelisted-rule update path. The two StakedHouse rows retained debt and positive ceilings but had stale, unconfigured oracles, so price-dependent borrowing and liquidation were unavailable. Twenty-seven rows carried more than 1,000 raw debt units and thirteen were zero or dust; all 40 remain explicit because registration, debt, or residual resolution state persists.",
+      "sources": [
+        {
+          "label": "Pinned Bucket v1 interface and deployment registry",
+          "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+        },
+        {
+          "label": "Pinned Bucket mainnet oracle implementation",
+          "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+        },
+        {
+          "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+          "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 ORCL curation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Bucket Protocol oracle README",
-        "url": "https://raw.githubusercontent.com/Bucket-Protocol/oracle/main/README.md"
+        "label": "Pinned Bucket v1 interface and deployment registry",
+        "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
       },
       {
-        "label": "Bucket single_oracle.move",
-        "url": "https://raw.githubusercontent.com/Bucket-Protocol/oracle/main/sources/single_oracle.move"
+        "label": "Pinned Bucket mainnet oracle implementation",
+        "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
       },
       {
-        "label": "Bucket price_aggregator.move",
-        "url": "https://raw.githubusercontent.com/Bucket-Protocol/oracle/main/sources/parser/price_aggregator.move"
+        "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+        "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+      }
+    ],
+    "branches": [
+      {
+        "id": "bucket-01-wal",
+        "label": "WAL Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "WAL remains a registered callable v1 Bucket with 50584022907858 raw debt (50584.022907858 BUCK) across 1 position(s); its threshold-1 SingleOracle accepts independent Supra pair 534 collector and whitelisted Navi-rule updates through 0x1c2740b75e06bf7bcee49d6df216f8a069c00e86173a021da712c37de2eb84af::navi_rule::Rule.",
+        "collateralAssets": [
+          "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 534 + whitelisted rule 0x1c2740b75e06bf7bcee49d6df216f8a069c00e86173a021da712c37de2eb84af::navi_rule::Rule",
+            "path": "Supra pair 534 collector OR Navi derivative-rule upstream state -> Supra pair 534 + whitelisted rule 0x1c2740b75e06bf7bcee49d6df216f8a069c00e86173a021da712c37de2eb84af::navi_rule::Rule -> SingleOracle 0xfad0726efe449969d126befb9acf7250c1438b6d7cab477f7d0bb2ee7561b435 -> Bucket collateral valuation",
+            "address": "0xfad0726efe449969d126befb9acf7250c1438b6d7cab477f7d0bb2ee7561b435",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui",
+              "bucket-rule:navi_rule",
+              "bucket-rule-direct-write",
+              "oracle:supra:pair-534",
+              "oracle:navi:wal-rule"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Two accepted update routes write the same SingleOracle: the Supra pair 534 collector route and the whitelisted Navi rule route. This is not automatic failover; either route may refresh the stored value. The 30-second source-timestamp tolerance and threshold apply only to the Supra collector route, while the Navi route checks only rule whitelisting before writing its rule-computed price. There is no cached-price fallback, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL",
+            "minimumCollateralRatioPct": 130,
+            "note": "Bucket 0xac7dc2939bb11fe7efb64d79f8e4e7d406e5c7f339242184f1e21a0c46f3bb7e; Tank 0x23a4655a16bcd4cd39449724d6a5b87231285f22bb2cea0739dc7ac239b4d28d; 50584022907858 raw debt (50584.022907858 BUCK); 130000000000000 raw ceiling (130000 BUCK); recovery threshold 130%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x23a4655a16bcd4cd39449724d6a5b87231285f22bb2cea0739dc7ac239b4d28d is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-rule:navi_rule",
+          "bucket-tank:0x23a4655a16bcd4cd39449724d6a5b87231285f22bb2cea0739dc7ac239b4d28d",
+          "bucket-rule-direct-write",
+          "oracle:supra:pair-534",
+          "oracle:navi:wal-rule"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-02-scallop-sui",
+        "label": "SCALLOP_SUI Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "SCALLOP_SUI remains a registered callable v1 Bucket with 46074664609529 raw debt (46074.664609529 BUCK) across 2 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "collateralAssets": [
+          "0xaafc4f740de0dd0dde642a31148fb94517087052f19afb0f7bed1dc41a50c77b::scallop_sui::SCALLOP_SUI"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule",
+            "path": "Underlying-asset Bucket SingleOracle + Scallop Market reserve/interest state -> sCoin unit conversion -> whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule -> SingleOracle 0xaa91d69d041c3b803fae92d4efd6d1e98742ead6c4e5d06b6aa5ba0575a35ff6 -> Bucket collateral valuation",
+            "address": "0xaa91d69d041c3b803fae92d4efd6d1e98742ead6c4e5d06b6aa5ba0575a35ff6",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:scoin_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:underlying-single-oracle",
+              "protocol:scallop-market"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xaafc4f740de0dd0dde642a31148fb94517087052f19afb0f7bed1dc41a50c77b::scallop_sui::SCALLOP_SUI",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0x807880e7a64e680ec92ead9159c5f7c4f90724d02d25835c91a4b1b80c1bea78; Tank 0x0a49cebe7853d1e53684c8d56dd43763f01cbe5211a6be33b75016909eb77c79; 46074664609529 raw debt (46074.664609529 BUCK); 50000000000000 raw ceiling (50000 BUCK); recovery threshold 150%; 2 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x0a49cebe7853d1e53684c8d56dd43763f01cbe5211a6be33b75016909eb77c79 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:scoin_rule",
+          "bucket-tank:0x0a49cebe7853d1e53684c8d56dd43763f01cbe5211a6be33b75016909eb77c79",
+          "bucket-rule-direct-write",
+          "oracle:bucket:underlying-single-oracle",
+          "protocol:scallop-market"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-03-tlp",
+        "label": "TLP Bucket",
+        "tier": "opaque-or-unknown",
+        "summary": "TLP remains a registered callable v1 Bucket with 12494869472018 raw debt (12494.869472018 BUCK) across 1 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "collateralAssets": [
+          "0xe27969a70f93034de9ce16e6ad661b480324574e68d15a64b513fd90eb2423e5::tlp::TLP"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0x1f19c4572c45f8e116a6aa6c7ffafc3569a3cea407ad839c43de5898369030ce::tlp_rule::Rule",
+            "path": "Unresolved deployed upstream inputs -> whitelisted rule 0x1f19c4572c45f8e116a6aa6c7ffafc3569a3cea407ad839c43de5898369030ce::tlp_rule::Rule -> SingleOracle 0xec55b3639e6f739af189d221199211d0eae6cf6c1d4ba655f29acdb68d422e40 -> Bucket collateral valuation",
+            "address": "0xec55b3639e6f739af189d221199211d0eae6cf6c1d4ba655f29acdb68d422e40",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:tlp_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:rule-upstream-unresolved"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xe27969a70f93034de9ce16e6ad661b480324574e68d15a64b513fd90eb2423e5::tlp::TLP",
+            "minimumCollateralRatioPct": 130,
+            "note": "Bucket 0xd01f281c50824d568f16ed08ca8b610672c043bdcb187708587b03ab16e6ecec; Tank 0x9724d024a919c5e48857c8ab572ca5b82ed801b7c26f696e02e58ebc6477f000; 12494869472018 raw debt (12494.869472018 BUCK); 15000000000000 raw ceiling (15000 BUCK); recovery threshold 130%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x9724d024a919c5e48857c8ab572ca5b82ed801b7c26f696e02e58ebc6477f000 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:tlp_rule",
+          "bucket-tank:0x9724d024a919c5e48857c8ab572ca5b82ed801b7c26f696e02e58ebc6477f000",
+          "bucket-rule-direct-write",
+          "oracle:bucket:rule-upstream-unresolved"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-04-cert",
+        "label": "CERT Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "CERT remains a registered callable v1 Bucket with 10784652371709 raw debt (10784.652371709 BUCK) across 15 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xc952f454a2cc83ad1102ebd84306f4e7ebb3d6fcb44d2feb94911010d64e1237::vsui_rule::Rule.",
+        "collateralAssets": [
+          "0x549e8b69270defbfafd4f94e17ec44cdbdd99820b33bda2278dea3b9a32d3f55::cert::CERT"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xc952f454a2cc83ad1102ebd84306f4e7ebb3d6fcb44d2feb94911010d64e1237::vsui_rule::Rule",
+            "path": "SUI Bucket SingleOracle -> Volo NativePool + CERT Metadata share conversion -> whitelisted rule 0xc952f454a2cc83ad1102ebd84306f4e7ebb3d6fcb44d2feb94911010d64e1237::vsui_rule::Rule -> SingleOracle 0xedec6c6c2d71c53b4af15f0863ad977bca38bcac0cc57ab79e1a6acb8a64b66c -> Bucket collateral valuation",
+            "address": "0xedec6c6c2d71c53b4af15f0863ad977bca38bcac0cc57ab79e1a6acb8a64b66c",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:vsui_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:sui-single-oracle",
+              "protocol:volo-native-pool"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x549e8b69270defbfafd4f94e17ec44cdbdd99820b33bda2278dea3b9a32d3f55::cert::CERT",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0xf8cdc2b3f4a7129f784c280f1025fd874764380d81b6a6f3709dfb63e84d9d90; Tank 0x29ffc55ce1d9d20a69ed82474758276a972720b9586e6fa099dccbbc04cf16f5; 10784652371709 raw debt (10784.652371709 BUCK); 12000000000000 raw ceiling (12000 BUCK); recovery threshold 150%; 15 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x29ffc55ce1d9d20a69ed82474758276a972720b9586e6fa099dccbbc04cf16f5 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:vsui_rule",
+          "bucket-tank:0x29ffc55ce1d9d20a69ed82474758276a972720b9586e6fa099dccbbc04cf16f5",
+          "bucket-rule-direct-write",
+          "oracle:bucket:sui-single-oracle",
+          "protocol:volo-native-pool"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-05-sui",
+        "label": "SUI Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "SUI remains a registered callable v1 Bucket with 9837611422697 raw debt (9837.611422697 BUCK) across 148 position(s); its threshold-1 SingleOracle uses Supra pair 90.",
+        "collateralAssets": [
+          "0x2::sui::SUI"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 90",
+            "path": "SingleOracle 0xd6d8584845645f719d88ad4119c31e388df17b81ee7f995ac091b03786522b70 -> Supra pair 90 -> Bucket collateral valuation",
+            "address": "0xd6d8584845645f719d88ad4119c31e388df17b81ee7f995ac091b03786522b70",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x2::sui::SUI",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0xca4f4781342cfd66ff8e3d52862c1c82c7c1dd641c142e368939ca0e0efbb3d2; Tank 0xa0938650873cc169ffcaa54bfa63523c5239628b3a86b5e893c0caeb6e8c1de1; 9837611422697 raw debt (9837.611422697 BUCK); 20000000000000 raw ceiling (20000 BUCK); recovery threshold 150%; 148 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xa0938650873cc169ffcaa54bfa63523c5239628b3a86b5e893c0caeb6e8c1de1 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0xa0938650873cc169ffcaa54bfa63523c5239628b3a86b5e893c0caeb6e8c1de1"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-06-scallop-usdc",
+        "label": "SCALLOP_USDC Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "SCALLOP_USDC remains a registered callable v1 Bucket with 7016485263093 raw debt (7016.485263093 BUCK) across 48 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "collateralAssets": [
+          "0x854950aa624b1df59fe64e630b2ba7c550642e9342267a33061d59fb31582da5::scallop_usdc::SCALLOP_USDC"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule",
+            "path": "Underlying-asset Bucket SingleOracle + Scallop Market reserve/interest state -> sCoin unit conversion -> whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule -> SingleOracle 0xe83dae90d004e07db82186fd7d2ebb216f161977da5d78ca5cf7778ff56a2bf5 -> Bucket collateral valuation",
+            "address": "0xe83dae90d004e07db82186fd7d2ebb216f161977da5d78ca5cf7778ff56a2bf5",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:scoin_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:underlying-single-oracle",
+              "protocol:scallop-market"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x854950aa624b1df59fe64e630b2ba7c550642e9342267a33061d59fb31582da5::scallop_usdc::SCALLOP_USDC",
+            "minimumCollateralRatioPct": 130,
+            "note": "Bucket 0xbc69a3b2730356073994d893e88085c1eb0b1b1a47cf77fcfaa6cd277bd6824a; Tank 0x0ab497a0e2f7cced013d1b9185b41d510ccabf8efd7bfdcc2f83a6f07255826f; 7016485263093 raw debt (7016.485263093 BUCK); 8500000000000 raw ceiling (8500 BUCK); recovery threshold 130%; 48 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x0ab497a0e2f7cced013d1b9185b41d510ccabf8efd7bfdcc2f83a6f07255826f is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:scoin_rule",
+          "bucket-tank:0x0ab497a0e2f7cced013d1b9185b41d510ccabf8efd7bfdcc2f83a6f07255826f",
+          "bucket-rule-direct-write",
+          "oracle:bucket:underlying-single-oracle",
+          "protocol:scallop-market"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-07-afsui",
+        "label": "AFSUI Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "AFSUI remains a registered callable v1 Bucket with 3286798258951 raw debt (3286.798258951 BUCK) across 12 position(s); its threshold-1 SingleOracle uses whitelisted rule 0x2480d9a3ff2c821061df22c4365316f894c6fa686fbd03ba828fe7c5bef9ad22::afsui_rule::Rule.",
+        "collateralAssets": [
+          "0xf325ce1300e8dac124071d3152c5c5ee6174914f8bc2161e88329cf579246efc::afsui::AFSUI"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0x2480d9a3ff2c821061df22c4365316f894c6fa686fbd03ba828fe7c5bef9ad22::afsui_rule::Rule",
+            "path": "SUI Bucket SingleOracle -> Aftermath StakedSuiVault + Safe exchange rate -> whitelisted rule 0x2480d9a3ff2c821061df22c4365316f894c6fa686fbd03ba828fe7c5bef9ad22::afsui_rule::Rule -> SingleOracle 0xbed256cf47ea637e765a3f0f40a90b54511fe3be418af65b6c695616a859723a -> Bucket collateral valuation",
+            "address": "0xbed256cf47ea637e765a3f0f40a90b54511fe3be418af65b6c695616a859723a",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:afsui_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:sui-single-oracle",
+              "protocol:aftermath-staked-sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xf325ce1300e8dac124071d3152c5c5ee6174914f8bc2161e88329cf579246efc::afsui::AFSUI",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0x7bae099fba3b32b5052ef98a53e3193c3497881c05a4ce13b603084a3dd10679; Tank 0xf2c6b68854ff0b2b81cdd2ebe6402be4bbe4a95ef14f1d0b732fd0a7ae0074f9; 3286798258951 raw debt (3286.798258951 BUCK); 6000000000000 raw ceiling (6000 BUCK); recovery threshold 150%; 12 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xf2c6b68854ff0b2b81cdd2ebe6402be4bbe4a95ef14f1d0b732fd0a7ae0074f9 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:afsui_rule",
+          "bucket-tank:0xf2c6b68854ff0b2b81cdd2ebe6402be4bbe4a95ef14f1d0b732fd0a7ae0074f9",
+          "bucket-rule-direct-write",
+          "oracle:bucket:sui-single-oracle",
+          "protocol:aftermath-staked-sui"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-08-stakedhouse-sui",
+        "label": "StakedHouse SUI Bucket",
+        "tier": "opaque-or-unknown",
+        "summary": "StakedHouse SUI remains a registered, debt-bearing v1 Bucket with 3017794346294 raw debt (3017.794346294 BUCK), but its SingleOracle has no configured external provider or whitelisted rule and its last observation is stale, so current price-dependent borrowing and liquidation hard-revert.",
+        "collateralAssets": [
+          "0x2f2226a22ebeb7a0e63ea39551829b238589d981d1c6dd454f01fcc513035593::house::StakedHouseCoin<0x2::sui::SUI>"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Unconfigured stale Bucket SingleOracle",
+            "path": "SingleOracle 0x3f852b3314a2d07303fc3053aca2defb65878f1c6e90b7bc6bd228dcac2cdec5 has neither an external provider configuration nor a whitelisted derivative rule; its 2025-09 observation exceeds the ten-second read bound",
+            "address": "0x3f852b3314a2d07303fc3053aca2defb65878f1c6e90b7bc6bd228dcac2cdec5",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-stakedhouse-unconfigured"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no provider, rule, cache, or alternate source. The SingleOracle read is stale and hard-reverts, so price-dependent borrowing and liquidation fail closed until an authorized valid update path exists.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x2f2226a22ebeb7a0e63ea39551829b238589d981d1c6dd454f01fcc513035593::house::StakedHouseCoin<0x2::sui::SUI>",
+            "minimumCollateralRatioPct": 140,
+            "note": "Bucket 0xf86fa9413102a9025ff44be31f41e376db66846f781281a717c6a965c078ce88; Tank 0x75176542b37f6a9a9398799a5a207bcb74a1b951e5157b43b3b5acc21706ec72; 3017794346294 raw debt (3017.794346294 BUCK); 4000000000000 raw ceiling (4000 BUCK); recovery threshold 140%; 1 observed position(s). The branch remains registered with a positive ceiling, but the stale unconfigured oracle currently prevents price-dependent borrowing and liquidation."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x75176542b37f6a9a9398799a5a207bcb74a1b951e5157b43b3b5acc21706ec72 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "The stale oracle blocks price-dependent borrowing and liquidation rather than using an old value. If a later valid price permits liquidation but the Tank cannot fully offset debt, the residual position and debt remain; no automatic write-off or global settlement path was identified.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-stakedhouse-unconfigured",
+          "bucket-tank:0x75176542b37f6a9a9398799a5a207bcb74a1b951e5157b43b3b5acc21706ec72"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-09-sca",
+        "label": "SCA Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "SCA remains a registered callable v1 Bucket with 1865037219788 raw debt (1865.037219788 BUCK) across 1 position(s); its threshold-1 SingleOracle uses Supra pair 476.",
+        "collateralAssets": [
+          "0x7016aae72cfc67f2fadf55769c0a7dd54291a583b63051a5ed71081cce836ac6::sca::SCA"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 476",
+            "path": "SingleOracle 0xca0f4614690cd727218f9a53b6352d429e077f9d0ab46f880431019f0e4a1c73 -> Supra pair 476 -> Bucket collateral valuation",
+            "address": "0xca0f4614690cd727218f9a53b6352d429e077f9d0ab46f880431019f0e4a1c73",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x7016aae72cfc67f2fadf55769c0a7dd54291a583b63051a5ed71081cce836ac6::sca::SCA",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0x0e15f217ddcb5019c47881bd6df573a652dda8c612c52f74a09f8ae75b92e774; Tank 0x9b0abd35112c1e4da777dedd36cbfcb25a85df46dcc9e9decdd60df524a726a1; 1865037219788 raw debt (1865.037219788 BUCK); 3000000000000 raw ceiling (3000 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x9b0abd35112c1e4da777dedd36cbfcb25a85df46dcc9e9decdd60df524a726a1 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0x9b0abd35112c1e4da777dedd36cbfcb25a85df46dcc9e9decdd60df524a726a1"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-10-lp-token-828b452d",
+        "label": "LP_TOKEN 828b452d Bucket",
+        "tier": "opaque-or-unknown",
+        "summary": "LP_TOKEN 828b452d remains a registered callable v1 Bucket with 1487982953506 raw debt (1487.982953506 BUCK) across 4 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "collateralAssets": [
+          "0x828b452d2aa239d48e4120c24f4a59f451b8cd8ac76706129f4ac3bd78ac8809::lp_token::LP_TOKEN"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0x656c6d23553950af9bc7e16e4cffa5cdfcd97705e4fddfe5f52eeb38f0cd75ad::cetus_lp_rule::Rule",
+            "path": "Unresolved deployed upstream inputs -> whitelisted rule 0x656c6d23553950af9bc7e16e4cffa5cdfcd97705e4fddfe5f52eeb38f0cd75ad::cetus_lp_rule::Rule -> SingleOracle 0x4cc468960b58b62902cbca55b7d1c90f86f996dc3d284134340f0709c5780cf5 -> Bucket collateral valuation",
+            "address": "0x4cc468960b58b62902cbca55b7d1c90f86f996dc3d284134340f0709c5780cf5",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:cetus_lp_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:rule-upstream-unresolved"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x828b452d2aa239d48e4120c24f4a59f451b8cd8ac76706129f4ac3bd78ac8809::lp_token::LP_TOKEN",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0xb33f59265c4f3af215e6c3727acbeb98764d8d4453efc4486cbf554b5f49f632; Tank 0x1cfc88aaf573ab52886f7c9d0cadc10908676470b4cfb6044442c64b465a0df1; 1487982953506 raw debt (1487.982953506 BUCK); 1500000000000 raw ceiling (1500 BUCK); recovery threshold 150%; 4 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x1cfc88aaf573ab52886f7c9d0cadc10908676470b4cfb6044442c64b465a0df1 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:cetus_lp_rule",
+          "bucket-tank:0x1cfc88aaf573ab52886f7c9d0cadc10908676470b4cfb6044442c64b465a0df1",
+          "bucket-rule-direct-write",
+          "oracle:bucket:rule-upstream-unresolved"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-11-scallop-deep",
+        "label": "SCALLOP_DEEP Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "SCALLOP_DEEP remains a registered callable v1 Bucket with 1357181489418 raw debt (1357.181489418 BUCK) across 1 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "collateralAssets": [
+          "0xeb7a05a3224837c5e5503575aed0be73c091d1ce5e43aa3c3e716e0ae614608f::scallop_deep::SCALLOP_DEEP"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule",
+            "path": "Underlying-asset Bucket SingleOracle + Scallop Market reserve/interest state -> sCoin unit conversion -> whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule -> SingleOracle 0x97f6d6c0cb6156abbf2aabe3b12ad0d9122c87bf974de729505d18c981e042b7 -> Bucket collateral valuation",
+            "address": "0x97f6d6c0cb6156abbf2aabe3b12ad0d9122c87bf974de729505d18c981e042b7",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:scoin_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:underlying-single-oracle",
+              "protocol:scallop-market"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xeb7a05a3224837c5e5503575aed0be73c091d1ce5e43aa3c3e716e0ae614608f::scallop_deep::SCALLOP_DEEP",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0x1d6f971c6b6ec5493777cbe19bca4ab79a1bc639354be600247ebd2bc2627b7e; Tank 0x81f97f440af86983e105193b48c5a94d0f261464e96a65a105be26f1394b4693; 1357181489418 raw debt (1357.181489418 BUCK); 1500000000000 raw ceiling (1500 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x81f97f440af86983e105193b48c5a94d0f261464e96a65a105be26f1394b4693 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:scoin_rule",
+          "bucket-tank:0x81f97f440af86983e105193b48c5a94d0f261464e96a65a105be26f1394b4693",
+          "bucket-rule-direct-write",
+          "oracle:bucket:underlying-single-oracle",
+          "protocol:scallop-market"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-12-scallop-wormhole-usdt",
+        "label": "SCALLOP_WORMHOLE_USDT Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "SCALLOP_WORMHOLE_USDT remains a registered callable v1 Bucket with 934531226139 raw debt (934.531226139 BUCK) across 8 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "collateralAssets": [
+          "0xe6e5a012ec20a49a3d1d57bd2b67140b96cd4d3400b9d79e541f7bdbab661f95::scallop_wormhole_usdt::SCALLOP_WORMHOLE_USDT"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule",
+            "path": "Underlying-asset Bucket SingleOracle + Scallop Market reserve/interest state -> sCoin unit conversion -> whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule -> SingleOracle 0x25606cbe4c20193a417cbe4ae951b332bec40ee53425d557c817e1554f0ae6ec -> Bucket collateral valuation",
+            "address": "0x25606cbe4c20193a417cbe4ae951b332bec40ee53425d557c817e1554f0ae6ec",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:scoin_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:underlying-single-oracle",
+              "protocol:scallop-market"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xe6e5a012ec20a49a3d1d57bd2b67140b96cd4d3400b9d79e541f7bdbab661f95::scallop_wormhole_usdt::SCALLOP_WORMHOLE_USDT",
+            "minimumCollateralRatioPct": 130,
+            "note": "Bucket 0xe7e1e08ec7139eb9f8eed96a868f140c993ce4a237a8c6ca006376345c8ac8ed; Tank 0x6e4558bde9e4f3ef69945046555701327dc8aa402d8d5586b76e5639394a1340; 934531226139 raw debt (934.531226139 BUCK); 1200000000000 raw ceiling (1200 BUCK); recovery threshold 130%; 8 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x6e4558bde9e4f3ef69945046555701327dc8aa402d8d5586b76e5639394a1340 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:scoin_rule",
+          "bucket-tank:0x6e4558bde9e4f3ef69945046555701327dc8aa402d8d5586b76e5639394a1340",
+          "bucket-rule-direct-write",
+          "oracle:bucket:underlying-single-oracle",
+          "protocol:scallop-market"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-13-hasui",
+        "label": "HASUI Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "HASUI remains a registered callable v1 Bucket with 905906536148 raw debt (905.906536148 BUCK) across 45 position(s); its threshold-1 SingleOracle uses whitelisted rule 0x4433ab096a71cbcdf70183f465e613955526f321039d9a76be0bd98c5da75382::hasui_rule::Rule.",
+        "collateralAssets": [
+          "0xbde4ba4c2e274a60ce15c1cfff9e5c42e41654ac8b6d906a57efa4bd3c29f47d::hasui::HASUI"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0x4433ab096a71cbcdf70183f465e613955526f321039d9a76be0bd98c5da75382::hasui_rule::Rule",
+            "path": "SUI Bucket SingleOracle -> Haedal staking exchange rate -> whitelisted rule 0x4433ab096a71cbcdf70183f465e613955526f321039d9a76be0bd98c5da75382::hasui_rule::Rule -> SingleOracle 0x9de6922b66031705e64ae48d700255b7c4234bb50b2bc0e28b94c5cb44255ccd -> Bucket collateral valuation",
+            "address": "0x9de6922b66031705e64ae48d700255b7c4234bb50b2bc0e28b94c5cb44255ccd",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:hasui_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:sui-single-oracle",
+              "protocol:haedal-staking"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xbde4ba4c2e274a60ce15c1cfff9e5c42e41654ac8b6d906a57efa4bd3c29f47d::hasui::HASUI",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0x29919d2f47e27a075f6ddb099d03f6455a5595b5bcf7e30d3b30cd539b5c16f1; Tank 0x59e598ca4a38e7af2ae6388ea96d52cdc432efddfe0eda31175f6c7a1dd3d1bf; 905906536148 raw debt (905.906536148 BUCK); 20000000000000 raw ceiling (20000 BUCK); recovery threshold 150%; 45 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x59e598ca4a38e7af2ae6388ea96d52cdc432efddfe0eda31175f6c7a1dd3d1bf is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:hasui_rule",
+          "bucket-tank:0x59e598ca4a38e7af2ae6388ea96d52cdc432efddfe0eda31175f6c7a1dd3d1bf",
+          "bucket-rule-direct-write",
+          "oracle:bucket:sui-single-oracle",
+          "protocol:haedal-staking"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-14-usdy",
+        "label": "USDY Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "USDY remains a registered callable v1 Bucket with 548142669960 raw debt (548.14266996 BUCK) across 9 position(s); its threshold-1 SingleOracle uses Supra pair 185.",
+        "collateralAssets": [
+          "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 185",
+            "path": "SingleOracle 0xdc1b35e54f94e308fd8c66a927a524b87d723102490a1de2623546b966195de6 -> Supra pair 185 -> Bucket collateral valuation",
+            "address": "0xdc1b35e54f94e308fd8c66a927a524b87d723102490a1de2623546b966195de6",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY",
+            "minimumCollateralRatioPct": 105,
+            "note": "Bucket 0x1de3c4f89ad80a33d4e02efe2965bfb3b35543a52b2588048f5b3fcbf702136f; Tank 0x518a74158b31365876b413ad51f5fdd42db4d4559d9db3f91d44a2e948fc2a49; 548142669960 raw debt (548.14266996 BUCK); 800000000000 raw ceiling (800 BUCK); recovery threshold 110%; 9 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x518a74158b31365876b413ad51f5fdd42db4d4559d9db3f91d44a2e948fc2a49 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0x518a74158b31365876b413ad51f5fdd42db4d4559d9db3f91d44a2e948fc2a49"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-15-scallop-wormhole-usdc",
+        "label": "SCALLOP_WORMHOLE_USDC Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "SCALLOP_WORMHOLE_USDC remains a registered callable v1 Bucket with 433909154048 raw debt (433.909154048 BUCK) across 1 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "collateralAssets": [
+          "0xad4d71551d31092230db1fd482008ea42867dbf27b286e9c70a79d2a6191d58d::scallop_wormhole_usdc::SCALLOP_WORMHOLE_USDC"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule",
+            "path": "Underlying-asset Bucket SingleOracle + Scallop Market reserve/interest state -> sCoin unit conversion -> whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule -> SingleOracle 0x8ddfb53b381fdeb95b0923c6c827582e9f5a64dcad3fb3b0b55ae11a0a144ed2 -> Bucket collateral valuation",
+            "address": "0x8ddfb53b381fdeb95b0923c6c827582e9f5a64dcad3fb3b0b55ae11a0a144ed2",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:scoin_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:underlying-single-oracle",
+              "protocol:scallop-market"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xad4d71551d31092230db1fd482008ea42867dbf27b286e9c70a79d2a6191d58d::scallop_wormhole_usdc::SCALLOP_WORMHOLE_USDC",
+            "minimumCollateralRatioPct": 130,
+            "note": "Bucket 0xc83914293187893e0377b333633d6a5e7636697e240ca815f47dcfff176d60f5; Tank 0x32fb360e0c6a3c051f18eb39122baa8816cbe2692e45cd5ce5d9b75bcb3b852f; 433909154048 raw debt (433.909154048 BUCK); 600000000000 raw ceiling (600 BUCK); recovery threshold 130%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x32fb360e0c6a3c051f18eb39122baa8816cbe2692e45cd5ce5d9b75bcb3b852f is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:scoin_rule",
+          "bucket-tank:0x32fb360e0c6a3c051f18eb39122baa8816cbe2692e45cd5ce5d9b75bcb3b852f",
+          "bucket-rule-direct-write",
+          "oracle:bucket:underlying-single-oracle",
+          "protocol:scallop-market"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-16-lbtc",
+        "label": "LBTC Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "LBTC remains a registered callable v1 Bucket with 427603076987 raw debt (427.603076987 BUCK) across 4 position(s); its threshold-1 SingleOracle uses Supra pair 18.",
+        "collateralAssets": [
+          "0x3e8e9423d80e1774a7ca128fccd8bf5f1f7753be658c5e645929037f7c819040::lbtc::LBTC"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 18",
+            "path": "SingleOracle 0xc922a87c4805be3336e63167dd5fe4b5f582006ebd158cbafcae00efad90eeea -> Supra pair 18 -> Bucket collateral valuation",
+            "address": "0xc922a87c4805be3336e63167dd5fe4b5f582006ebd158cbafcae00efad90eeea",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x3e8e9423d80e1774a7ca128fccd8bf5f1f7753be658c5e645929037f7c819040::lbtc::LBTC",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0x8d33d84650f489c794849a9e80e58bab91f39be29a661fc9a7c25154eade3a9c; Tank 0xae606e4a43d50f9d497dbb1b93a8f08b77f5e41cfe9b8653b808806496ea3d36; 427603076987 raw debt (427.603076987 BUCK); 600000000000 raw ceiling (600 BUCK); recovery threshold 130%; 4 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xae606e4a43d50f9d497dbb1b93a8f08b77f5e41cfe9b8653b808806496ea3d36 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0xae606e4a43d50f9d497dbb1b93a8f08b77f5e41cfe9b8653b808806496ea3d36"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-17-scallop-sb-usdt",
+        "label": "SCALLOP_SB_USDT Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "SCALLOP_SB_USDT remains a registered callable v1 Bucket with 351752143974 raw debt (351.752143974 BUCK) across 4 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "collateralAssets": [
+          "0xb1d7df34829d1513b73ba17cb7ad90c88d1e104bb65ab8f62f13e0cc103783d3::scallop_sb_usdt::SCALLOP_SB_USDT"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule",
+            "path": "Underlying-asset Bucket SingleOracle + Scallop Market reserve/interest state -> sCoin unit conversion -> whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule -> SingleOracle 0xdc7a1776848e8290e8f476fea5bfefb3e63d75e798f75799940483674256bba4 -> Bucket collateral valuation",
+            "address": "0xdc7a1776848e8290e8f476fea5bfefb3e63d75e798f75799940483674256bba4",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:scoin_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:underlying-single-oracle",
+              "protocol:scallop-market"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xb1d7df34829d1513b73ba17cb7ad90c88d1e104bb65ab8f62f13e0cc103783d3::scallop_sb_usdt::SCALLOP_SB_USDT",
+            "minimumCollateralRatioPct": 130,
+            "note": "Bucket 0xc13be9b96a87c70608d06715345bfb00ab22a2a44081462e816507e03067a7c3; Tank 0xc96adf8e14650a5f91bb4e8456d89502124ef9c007f9ee3511ccf4a00b3e8ae6; 351752143974 raw debt (351.752143974 BUCK); 750000000000 raw ceiling (750 BUCK); recovery threshold 130%; 4 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xc96adf8e14650a5f91bb4e8456d89502124ef9c007f9ee3511ccf4a00b3e8ae6 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:scoin_rule",
+          "bucket-tank:0xc96adf8e14650a5f91bb4e8456d89502124ef9c007f9ee3511ccf4a00b3e8ae6",
+          "bucket-rule-direct-write",
+          "oracle:bucket:underlying-single-oracle",
+          "protocol:scallop-market"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-18-coin-af8cd5ed",
+        "label": "COIN af8cd5ed Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "COIN af8cd5ed remains a registered callable v1 Bucket with 313208336622 raw debt (313.208336622 BUCK) across 1 position(s); its threshold-1 SingleOracle uses Supra pair 19.",
+        "collateralAssets": [
+          "0xaf8cd5edc19c4512f4259f0bee101a40d41ebed738ade5874359610ef8eeced5::coin::COIN"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 19",
+            "path": "SingleOracle 0x72388090a94ffa228ee931f39e764c10e1535ada5e0e6edda5988b13b767d973 -> Supra pair 19 -> Bucket collateral valuation",
+            "address": "0x72388090a94ffa228ee931f39e764c10e1535ada5e0e6edda5988b13b767d973",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xaf8cd5edc19c4512f4259f0bee101a40d41ebed738ade5874359610ef8eeced5::coin::COIN",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0x15b017368a2f0f848b24a6925f99ce94a3a8dccda09c62f54813d137e5ebc5eb; Tank 0x334185acea7d6cef173fe506abaa0b4babc949a89862db78b00e610bfe129517; 313208336622 raw debt (313.208336622 BUCK); 400000000000 raw ceiling (400 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x334185acea7d6cef173fe506abaa0b4babc949a89862db78b00e610bfe129517 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0x334185acea7d6cef173fe506abaa0b4babc949a89862db78b00e610bfe129517"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-19-tbtc",
+        "label": "TBTC Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "TBTC remains a registered callable v1 Bucket with 287956825780 raw debt (287.95682578 BUCK) across 5 position(s); its threshold-1 SingleOracle uses Supra pair 18.",
+        "collateralAssets": [
+          "0x77045f1b9f811a7a8fb9ebd085b5b0c55c5cb0d1520ff55f7037f89b5da9f5f1::TBTC::TBTC"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 18",
+            "path": "SingleOracle 0xacd85c5bd59b3e7fb96eaaee261fe5181765f9d40c64c0aa2ebe2709e16d5fca -> Supra pair 18 -> Bucket collateral valuation",
+            "address": "0xacd85c5bd59b3e7fb96eaaee261fe5181765f9d40c64c0aa2ebe2709e16d5fca",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x77045f1b9f811a7a8fb9ebd085b5b0c55c5cb0d1520ff55f7037f89b5da9f5f1::TBTC::TBTC",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0x3a3545739027335834e930175942fb11a9d5ca4aea2ebad46770a1cc77d340b3; Tank 0x64d97e92b121d0994b4c532eb4e1ec56e4ef087aabe8723d03381090e80e60d2; 287956825780 raw debt (287.95682578 BUCK); 300000000000 raw ceiling (300 BUCK); recovery threshold 130%; 5 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x64d97e92b121d0994b4c532eb4e1ec56e4ef087aabe8723d03381090e80e60d2 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0x64d97e92b121d0994b4c532eb4e1ec56e4ef087aabe8723d03381090e80e60d2"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-20-scallop-sca",
+        "label": "SCALLOP_SCA Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "SCALLOP_SCA remains a registered callable v1 Bucket with 161471204678 raw debt (161.471204678 BUCK) across 2 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "collateralAssets": [
+          "0x5ca17430c1d046fae9edeaa8fd76c7b4193a00d764a0ecfa9418d733ad27bc1e::scallop_sca::SCALLOP_SCA"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule",
+            "path": "Underlying-asset Bucket SingleOracle + Scallop Market reserve/interest state -> sCoin unit conversion -> whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule -> SingleOracle 0x0c10758fdd20c4138c66d8db2eed011d7e55f76cd531db2e91665146c913807e -> Bucket collateral valuation",
+            "address": "0x0c10758fdd20c4138c66d8db2eed011d7e55f76cd531db2e91665146c913807e",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:scoin_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:underlying-single-oracle",
+              "protocol:scallop-market"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x5ca17430c1d046fae9edeaa8fd76c7b4193a00d764a0ecfa9418d733ad27bc1e::scallop_sca::SCALLOP_SCA",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0x841941866cf228b19df57e7bf1a85a03b955a2f06d787a617ac20a5054a83460; Tank 0x8958c3986c18b525a7cf7a63c749e5be9142167113a8634543b7f857e75920b3; 161471204678 raw debt (161.471204678 BUCK); 300000000000 raw ceiling (300 BUCK); recovery threshold 150%; 2 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x8958c3986c18b525a7cf7a63c749e5be9142167113a8634543b7f857e75920b3 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:scoin_rule",
+          "bucket-tank:0x8958c3986c18b525a7cf7a63c749e5be9142167113a8634543b7f857e75920b3",
+          "bucket-rule-direct-write",
+          "oracle:bucket:underlying-single-oracle",
+          "protocol:scallop-market"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-21-navx",
+        "label": "NAVX Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "NAVX remains a registered callable v1 Bucket with 52870769635 raw debt (52.870769635 BUCK) across 1 position(s); its threshold-1 SingleOracle uses Supra pair 408.",
+        "collateralAssets": [
+          "0xa99b8952d4f7d947ea77fe0ecdcc9e5fc0bcab2841d6e2a5aa00c3044e5544b5::navx::NAVX"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 408",
+            "path": "SingleOracle 0x25eba4fa2b0be8417520117681d9fb9df0c9e8dd6d899f15af0130fbb491e763 -> Supra pair 408 -> Bucket collateral valuation",
+            "address": "0x25eba4fa2b0be8417520117681d9fb9df0c9e8dd6d899f15af0130fbb491e763",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xa99b8952d4f7d947ea77fe0ecdcc9e5fc0bcab2841d6e2a5aa00c3044e5544b5::navx::NAVX",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0x7b613c12b423aa7085f47dc4aa9f5b85546f21cbf1fe2861f3834c08d288b670; Tank 0xc4cf6d81db62d266d377d4e2315ea0b3ef417c49a76af5ad9803318938262887; 52870769635 raw debt (52.870769635 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xc4cf6d81db62d266d377d4e2315ea0b3ef417c49a76af5ad9803318938262887 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0xc4cf6d81db62d266d377d4e2315ea0b3ef417c49a76af5ad9803318938262887"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-22-spring-sui",
+        "label": "SPRING_SUI Bucket",
+        "tier": "opaque-or-unknown",
+        "summary": "SPRING_SUI remains a registered callable v1 Bucket with 52128022742 raw debt (52.128022742 BUCK) across 1 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "collateralAssets": [
+          "0x83556891f4a0f233ce7b05cfe7f957d4020492a34f5405b2cb9377d060bef4bf::spring_sui::SPRING_SUI"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0x915d11320f37ddb386367dbce81154e1b4cf83e6a3039df183ac4ae78131c786::ssui_rule::Rule",
+            "path": "Unresolved deployed upstream inputs -> whitelisted rule 0x915d11320f37ddb386367dbce81154e1b4cf83e6a3039df183ac4ae78131c786::ssui_rule::Rule -> SingleOracle 0xd157ac74338bb4688f6261439a2cede4707b01da87c7e83ca81d5d479c2370f2 -> Bucket collateral valuation",
+            "address": "0xd157ac74338bb4688f6261439a2cede4707b01da87c7e83ca81d5d479c2370f2",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:ssui_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:rule-upstream-unresolved"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x83556891f4a0f233ce7b05cfe7f957d4020492a34f5405b2cb9377d060bef4bf::spring_sui::SPRING_SUI",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0x422aaf58e7398a15a60fb298b6a2367b981674c8ab368a54bf1f861ba99cf59b; Tank 0x4b8f8f6b8d5b36701d9c47e3c088c56d9df0af6d617c131a723994a919a41860; 52128022742 raw debt (52.128022742 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x4b8f8f6b8d5b36701d9c47e3c088c56d9df0af6d617c131a723994a919a41860 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:ssui_rule",
+          "bucket-tank:0x4b8f8f6b8d5b36701d9c47e3c088c56d9df0af6d617c131a723994a919a41860",
+          "bucket-rule-direct-write",
+          "oracle:bucket:rule-upstream-unresolved"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-23-haedal",
+        "label": "HAEDAL Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "HAEDAL remains a registered callable v1 Bucket with 50493491719 raw debt (50.493491719 BUCK) across 1 position(s); its threshold-1 SingleOracle uses Supra pair 540.",
+        "collateralAssets": [
+          "0x3a304c7feba2d819ea57c3542d68439ca2c386ba02159c740f7b406e592c62ea::haedal::HAEDAL"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 540",
+            "path": "SingleOracle 0x3a440f99ba2c484123c721fa1152a61c7940b038f453fab20c0dbb3c23e1d2b6 -> Supra pair 540 -> Bucket collateral valuation",
+            "address": "0x3a440f99ba2c484123c721fa1152a61c7940b038f453fab20c0dbb3c23e1d2b6",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x3a304c7feba2d819ea57c3542d68439ca2c386ba02159c740f7b406e592c62ea::haedal::HAEDAL",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0x4916b9e3378db0d3f4758709b508bd23e2670fcaa3a8ff076af8923dfb70ce67; Tank 0x88af925da59793c0c9ae188c2e248ae18b575feada45b198429f45b247a51a1b; 50493491719 raw debt (50.493491719 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x88af925da59793c0c9ae188c2e248ae18b575feada45b198429f45b247a51a1b is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0x88af925da59793c0c9ae188c2e248ae18b575feada45b198429f45b247a51a1b"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-24-musd",
+        "label": "MUSD Bucket",
+        "tier": "opaque-or-unknown",
+        "summary": "MUSD remains a registered callable v1 Bucket with 50480380224 raw debt (50.480380224 BUCK) across 1 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "collateralAssets": [
+          "0xe44df51c0b21a27ab915fa1fe2ca610cd3eaa6d9666fe5e62b988bf7f0bd8722::musd::MUSD"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xe7eddf0041f423643fd8ee2a01eba4462b1b438e88bf99653b6337f102bb3e02::pyth_rule::Rule",
+            "path": "Unresolved deployed upstream inputs -> whitelisted rule 0xe7eddf0041f423643fd8ee2a01eba4462b1b438e88bf99653b6337f102bb3e02::pyth_rule::Rule -> SingleOracle 0x96567f9b4a97ada445fb9f8f837819726c743ebd0ca1e10fb01d9c52d6823ab4 -> Bucket collateral valuation",
+            "address": "0x96567f9b4a97ada445fb9f8f837819726c743ebd0ca1e10fb01d9c52d6823ab4",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "pyth:sui",
+              "bucket-rule:pyth_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:rule-upstream-unresolved"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xe44df51c0b21a27ab915fa1fe2ca610cd3eaa6d9666fe5e62b988bf7f0bd8722::musd::MUSD",
+            "minimumCollateralRatioPct": 105,
+            "note": "Bucket 0x90c5ee9f76be5f5a5fca9a197d9756f1b4418ffa69affa276e58671a376b70b3; Tank 0xcd437a2a1deca9a4c658ac96bfd2c631924a0f28cad1d490c2e27ee60a53645a; 50480380224 raw debt (50.480380224 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 110%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xcd437a2a1deca9a4c658ac96bfd2c631924a0f28cad1d490c2e27ee60a53645a is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "pyth:sui",
+          "bucket-rule:pyth_rule",
+          "bucket-tank:0xcd437a2a1deca9a4c658ac96bfd2c631924a0f28cad1d490c2e27ee60a53645a",
+          "bucket-rule-direct-write",
+          "oracle:bucket:rule-upstream-unresolved"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-25-stsui",
+        "label": "STSUI Bucket",
+        "tier": "opaque-or-unknown",
+        "summary": "STSUI remains a registered callable v1 Bucket with 36308843496 raw debt (36.308843496 BUCK) across 1 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "collateralAssets": [
+          "0xd1b72982e40348d069bb1ff701e634c117bb5f741f44dff91e472d3b01461e55::stsui::STSUI"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xdfdab1daf15c8b79512001f8eff16f8b07f2c9bbb1cc277d8739eb5338722340::stsui_rule::Rule",
+            "path": "Unresolved deployed upstream inputs -> whitelisted rule 0xdfdab1daf15c8b79512001f8eff16f8b07f2c9bbb1cc277d8739eb5338722340::stsui_rule::Rule -> SingleOracle 0xdcc6c90b41d77f05b939b28f0c5d147acd06a109f9b75d5eadc4fb3f42610d10 -> Bucket collateral valuation",
+            "address": "0xdcc6c90b41d77f05b939b28f0c5d147acd06a109f9b75d5eadc4fb3f42610d10",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:stsui_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:rule-upstream-unresolved"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xd1b72982e40348d069bb1ff701e634c117bb5f741f44dff91e472d3b01461e55::stsui::STSUI",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0x7aa059e7b38634f001eaac0fd2583d1d265caebaeca6bdbb6bb8659fc8e37859; Tank 0x90558901a83b7e62ff6e9275116ebe26c59eee00f8b192ac8cbd4cff39acf194; 36308843496 raw debt (36.308843496 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x90558901a83b7e62ff6e9275116ebe26c59eee00f8b192ac8cbd4cff39acf194 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:stsui_rule",
+          "bucket-tank:0x90558901a83b7e62ff6e9275116ebe26c59eee00f8b192ac8cbd4cff39acf194",
+          "bucket-rule-direct-write",
+          "oracle:bucket:rule-upstream-unresolved"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-26-coin-5d4b3025",
+        "label": "COIN 5d4b3025 Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "COIN 5d4b3025 remains a registered callable v1 Bucket with 11591830138 raw debt (11.591830138 BUCK) across 0 position(s); its threshold-1 SingleOracle uses Supra pair 89.",
+        "collateralAssets": [
+          "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 89",
+            "path": "SingleOracle 0x2e103271a6cc4a7217c5d5b47eda820306e865458ce6d5381b0e856eabe9c9e2 -> Supra pair 89 -> Bucket collateral valuation",
+            "address": "0x2e103271a6cc4a7217c5d5b47eda820306e865458ce6d5381b0e856eabe9c9e2",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN",
+            "minimumCollateralRatioPct": 105,
+            "note": "Bucket 0x563d1d07eee89a33263f76b8b4c19d7aee06eb8d35161e2892885bf7f295a8a8; Tank 0x9115c70471c2d755eb91e3c15c9c9aaca721f8542b6d4bf0f1fa234d10c24097; 11591830138 raw debt (11.591830138 BUCK); 4000000000000000 raw ceiling (4000000 BUCK); recovery threshold 110%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x9115c70471c2d755eb91e3c15c9c9aaca721f8542b6d4bf0f1fa234d10c24097 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0x9115c70471c2d755eb91e3c15c9c9aaca721f8542b6d4bf0f1fa234d10c24097"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-27-cetus",
+        "label": "CETUS Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "CETUS remains a registered callable v1 Bucket with 9818140909 raw debt (9.818140909 BUCK) across 1 position(s); its threshold-1 SingleOracle uses Supra pair 93.",
+        "collateralAssets": [
+          "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 93",
+            "path": "SingleOracle 0x27ed736120ef77516c01e80451200a8016f36be6b6de7c5936f8ef098ff168cc -> Supra pair 93 -> Bucket collateral valuation",
+            "address": "0x27ed736120ef77516c01e80451200a8016f36be6b6de7c5936f8ef098ff168cc",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0x10e30ddaa454b9041378c84f6330075ee356b80e459e375898d348c1649fa1af; Tank 0xcca986a2c141959168c53898078e9f30c8cfd51457926f1645f2569e0d6a71f6; 9818140909 raw debt (9.818140909 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 1 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xcca986a2c141959168c53898078e9f30c8cfd51457926f1645f2569e0d6a71f6 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0xcca986a2c141959168c53898078e9f30c8cfd51457926f1645f2569e0d6a71f6"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-28-deep",
+        "label": "DEEP Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "DEEP remains a registered callable v1 Bucket with 10 raw debt (1e-8 BUCK) across 0 position(s); its threshold-1 SingleOracle uses Supra pair 491.",
+        "collateralAssets": [
+          "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 491",
+            "path": "SingleOracle 0xe858198822c24eefa9f418d2c0952b107a787456d3ca930d98d449737d742356 -> Supra pair 491 -> Bucket collateral valuation",
+            "address": "0xe858198822c24eefa9f418d2c0952b107a787456d3ca930d98d449737d742356",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0xc56f025e654a8426ba69a8e17002a5ccb5d9f940ec196f239b88f0ae8d499044; Tank 0x165e84a8086a925cad61ea796403bf3d77abbd061b661432ee4cf0f85edf1ca3; 10 raw debt (1e-8 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x165e84a8086a925cad61ea796403bf3d77abbd061b661432ee4cf0f85edf1ca3 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0x165e84a8086a925cad61ea796403bf3d77abbd061b661432ee4cf0f85edf1ca3"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-29-btc",
+        "label": "BTC Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "BTC remains a registered callable v1 Bucket with 9 raw debt (9e-9 BUCK) across 0 position(s); its threshold-1 SingleOracle uses Supra pair 18.",
+        "collateralAssets": [
+          "0xaafb102dd0902f5055cadecd687fb5b71ca82ef0e0285d90afde828ec58ca96b::btc::BTC"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 18",
+            "path": "SingleOracle 0x25e50c011ce1b97085edaa25a94063c98223142a036f6aabfd7f0f059ce3da9b -> Supra pair 18 -> Bucket collateral valuation",
+            "address": "0x25e50c011ce1b97085edaa25a94063c98223142a036f6aabfd7f0f059ce3da9b",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xaafb102dd0902f5055cadecd687fb5b71ca82ef0e0285d90afde828ec58ca96b::btc::BTC",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0x0160ca59fb59bf53dee686b5bb4b954816f0d9f96f079e55d5e0c71f6ab2fd57; Tank 0xf61d81dd62875f3822c60918c1420e70be2f4eb5834983d157c242dbf3928228; 9 raw debt (9e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 130%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xf61d81dd62875f3822c60918c1420e70be2f4eb5834983d157c242dbf3928228 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0xf61d81dd62875f3822c60918c1420e70be2f4eb5834983d157c242dbf3928228"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-30-alphafi-stsui-sui-lp",
+        "label": "ALPHAFI_STSUI_SUI_LP Bucket",
+        "tier": "opaque-or-unknown",
+        "summary": "ALPHAFI_STSUI_SUI_LP remains a registered callable v1 Bucket with 6 raw debt (6e-9 BUCK) across 0 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "collateralAssets": [
+          "0x96eb2012a75798ce4410392baeab9dd888bc704799b7daa468c36856c83174f3::ALPHAFI_STSUI_SUI_LP::ALPHAFI_STSUI_SUI_LP"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0x3d078bd7af765ed2889ac67a3d0dd812341403e1f415bd9fd287a4d7f49023aa::alphafi_stsui_sui_rule::Rule",
+            "path": "Unresolved deployed upstream inputs -> whitelisted rule 0x3d078bd7af765ed2889ac67a3d0dd812341403e1f415bd9fd287a4d7f49023aa::alphafi_stsui_sui_rule::Rule -> SingleOracle 0x607f4c9ee3d599931a6e9c374edc761debff33e499db7d8f7a95be740ba74fb7 -> Bucket collateral valuation",
+            "address": "0x607f4c9ee3d599931a6e9c374edc761debff33e499db7d8f7a95be740ba74fb7",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:alphafi_stsui_sui_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:rule-upstream-unresolved"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x96eb2012a75798ce4410392baeab9dd888bc704799b7daa468c36856c83174f3::ALPHAFI_STSUI_SUI_LP::ALPHAFI_STSUI_SUI_LP",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0xacb3a3cd71d354828a098d426014e495651e5957a5f32e7311cab7145144af27; Tank 0xb313e8e2e7f1bb1d4de63dfd9b542cb07570768c4f9bb03c21f64d3a2a4be14e; 6 raw debt (6e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xb313e8e2e7f1bb1d4de63dfd9b542cb07570768c4f9bb03c21f64d3a2a4be14e is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:alphafi_stsui_sui_rule",
+          "bucket-tank:0xb313e8e2e7f1bb1d4de63dfd9b542cb07570768c4f9bb03c21f64d3a2a4be14e",
+          "bucket-rule-direct-write",
+          "oracle:bucket:rule-upstream-unresolved"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-31-coin-c0600061",
+        "label": "COIN c0600061 Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "COIN c0600061 remains a registered callable v1 Bucket with 3 raw debt (3e-9 BUCK) across 0 position(s); its threshold-1 SingleOracle uses Supra pair 48.",
+        "collateralAssets": [
+          "0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c::coin::COIN"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 48",
+            "path": "SingleOracle 0xfdb5fdfbc82a582e00845f9bd0e87e0c2c40eb63449ac2800f1750a928ba395b -> Supra pair 48 -> Bucket collateral valuation",
+            "address": "0xfdb5fdfbc82a582e00845f9bd0e87e0c2c40eb63449ac2800f1750a928ba395b",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c::coin::COIN",
+            "minimumCollateralRatioPct": 105,
+            "note": "Bucket 0xba71f630e9b51e25e17bda03a13dd675cb58d8193a6a6424087165b78c9841e6; Tank 0x93c38674a753b42ad4e860457fe9590abb40fe05075b0c4362c474cf95be0109; 3 raw debt (3e-9 BUCK); 4000000000000000 raw ceiling (4000000 BUCK); recovery threshold 110%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x93c38674a753b42ad4e860457fe9590abb40fe05075b0c4362c474cf95be0109 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0x93c38674a753b42ad4e860457fe9590abb40fe05075b0c4362c474cf95be0109"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-32-stakedhouse-up-usd",
+        "label": "StakedHouse UP_USD Bucket",
+        "tier": "opaque-or-unknown",
+        "summary": "StakedHouse UP_USD remains a registered, debt-bearing v1 Bucket with 2 raw debt (2e-9 BUCK), but its SingleOracle has no configured external provider or whitelisted rule and its last observation is stale, so current price-dependent borrowing and liquidation hard-revert.",
+        "collateralAssets": [
+          "0x2f2226a22ebeb7a0e63ea39551829b238589d981d1c6dd454f01fcc513035593::house::StakedHouseCoin<0x5de877a152233bdd59c7269e2b710376ca271671e9dd11076b1ff261b2fd113c::up_usd::UP_USD>"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Unconfigured stale Bucket SingleOracle",
+            "path": "SingleOracle 0xa717c909df11b77792496850dc2e127aa0380eae248af61cc82c6fb7aad63819 has neither an external provider configuration nor a whitelisted derivative rule; its 2025-09 observation exceeds the ten-second read bound",
+            "address": "0xa717c909df11b77792496850dc2e127aa0380eae248af61cc82c6fb7aad63819",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-stakedhouse-unconfigured"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no provider, rule, cache, or alternate source. The SingleOracle read is stale and hard-reverts, so price-dependent borrowing and liquidation fail closed until an authorized valid update path exists.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x2f2226a22ebeb7a0e63ea39551829b238589d981d1c6dd454f01fcc513035593::house::StakedHouseCoin<0x5de877a152233bdd59c7269e2b710376ca271671e9dd11076b1ff261b2fd113c::up_usd::UP_USD>",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0x1a34ced67102fb332bda3394fe274736a0528ee000598a3447a117173a870256; Tank 0x82ef9e1378c0bdc6d3129bf809622b128f684a5d420f89a474193c89dcfc0408; 2 raw debt (2e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 110%; 0 observed position(s). The branch remains registered with a positive ceiling, but the stale unconfigured oracle currently prevents price-dependent borrowing and liquidation."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x82ef9e1378c0bdc6d3129bf809622b128f684a5d420f89a474193c89dcfc0408 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "The stale oracle blocks price-dependent borrowing and liquidation rather than using an old value. If a later valid price permits liquidation but the Tank cannot fully offset debt, the residual position and debt remain; no automatic write-off or global settlement path was identified.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-stakedhouse-unconfigured",
+          "bucket-tank:0x82ef9e1378c0bdc6d3129bf809622b128f684a5d420f89a474193c89dcfc0408"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-33-hawal",
+        "label": "HAWAL Bucket",
+        "tier": "opaque-or-unknown",
+        "summary": "HAWAL remains a registered callable v1 Bucket with 2 raw debt (2e-9 BUCK) across 0 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "collateralAssets": [
+          "0x8b4d553839b219c3fd47608a0cc3d5fcc572cb25d41b7df3833208586a8d2470::hawal::HAWAL"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xb78aa952cdced6ec22196bcfc4b3224fe28aa9e34d1ed939b652b9969a55a0ac::hawal_rule::Rule",
+            "path": "Unresolved deployed upstream inputs -> whitelisted rule 0xb78aa952cdced6ec22196bcfc4b3224fe28aa9e34d1ed939b652b9969a55a0ac::hawal_rule::Rule -> SingleOracle 0x0f2a038e57414b34ea5df4d02454cd0eec3c052aa3a9fc1d574557eb4a93e575 -> Bucket collateral valuation",
+            "address": "0x0f2a038e57414b34ea5df4d02454cd0eec3c052aa3a9fc1d574557eb4a93e575",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:hawal_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:rule-upstream-unresolved"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x8b4d553839b219c3fd47608a0cc3d5fcc572cb25d41b7df3833208586a8d2470::hawal::HAWAL",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0xc76382ebb99c9a6eb6a7d0e11a2751a57923dc71dfb3a792e422b653c9296f9d; Tank 0xb589351baf0b96835c75e33abeaf13fb9f30f6084ac7a71b82db184e391379e2; 2 raw debt (2e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xb589351baf0b96835c75e33abeaf13fb9f30f6084ac7a71b82db184e391379e2 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:hawal_rule",
+          "bucket-tank:0xb589351baf0b96835c75e33abeaf13fb9f30f6084ac7a71b82db184e391379e2",
+          "bucket-rule-direct-write",
+          "oracle:bucket:rule-upstream-unresolved"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-34-xbtc",
+        "label": "XBTC Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "XBTC remains a registered callable v1 Bucket with 2 raw debt (2e-9 BUCK) across 0 position(s); its threshold-1 SingleOracle uses Supra pair 18.",
+        "collateralAssets": [
+          "0x876a4b7bce8aeaef60464c11f4026903e9afacab79b9b142686158aa86560b50::xbtc::XBTC"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 18",
+            "path": "SingleOracle 0xc6361aaae52d5dc42a008b4d7528b3f90a339cdbca326f8572c91ae8875de3eb -> Supra pair 18 -> Bucket collateral valuation",
+            "address": "0xc6361aaae52d5dc42a008b4d7528b3f90a339cdbca326f8572c91ae8875de3eb",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x876a4b7bce8aeaef60464c11f4026903e9afacab79b9b142686158aa86560b50::xbtc::XBTC",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0xabf78f6aa14854fb2775900717bb23506f581af80bc7de1ffb66826c3bdc1f13; Tank 0xa4b85842a3b24e679d088599f87d0bd2db88ce7562c8181d4b465763ae02254a; 2 raw debt (2e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 130%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xa4b85842a3b24e679d088599f87d0bd2db88ce7562c8181d4b465763ae02254a is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0xa4b85842a3b24e679d088599f87d0bd2db88ce7562c8181d4b465763ae02254a"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-35-wwal",
+        "label": "WWAL Bucket",
+        "tier": "opaque-or-unknown",
+        "summary": "WWAL remains a registered callable v1 Bucket with 2 raw debt (2e-9 BUCK) across 0 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "collateralAssets": [
+          "0xb1b0650a8862e30e3f604fd6c5838bc25464b8d3d827fbd58af7cb9685b832bf::wwal::WWAL"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0x0697807e89307c7124aeb5847e817fbb49c7701e4f5b03f1d38a91bdee3e3f66::wwal_rule::Rule",
+            "path": "Unresolved deployed upstream inputs -> whitelisted rule 0x0697807e89307c7124aeb5847e817fbb49c7701e4f5b03f1d38a91bdee3e3f66::wwal_rule::Rule -> SingleOracle 0xab70a4e52586824af111af1d9af94751019a269b8d82a83c9f8f4fe8af948fcc -> Bucket collateral valuation",
+            "address": "0xab70a4e52586824af111af1d9af94751019a269b8d82a83c9f8f4fe8af948fcc",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:wwal_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:rule-upstream-unresolved"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xb1b0650a8862e30e3f604fd6c5838bc25464b8d3d827fbd58af7cb9685b832bf::wwal::WWAL",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0x58537f99e78af65296aeef85ed099ccf337602aa961b0111b87c20647966aaf2; Tank 0xdbfce464a83764940aa491671f06c19e0f44f974bc1151626c23a952539c1f19; 2 raw debt (2e-9 BUCK); 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xdbfce464a83764940aa491671f06c19e0f44f974bc1151626c23a952539c1f19 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:wwal_rule",
+          "bucket-tank:0xdbfce464a83764940aa491671f06c19e0f44f974bc1151626c23a952539c1f19",
+          "bucket-rule-direct-write",
+          "oracle:bucket:rule-upstream-unresolved"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-36-af-lp",
+        "label": "AF_LP Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "AF_LP remains a registered callable v1 Bucket with zero observed debt across 0 position(s); its threshold-4 SingleOracle uses whitelisted rule 0x928ff0be132d9bad7926008780d2a5adfefa1a24559a567dafbfd267d1b1b294::af_lp_rule::Rule.",
+        "collateralAssets": [
+          "0x42d0b3476bc10d18732141a471d7ad3aa588a6fb4ba8e1a6608a4a7b78e171bf::af_lp::AF_LP"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0x928ff0be132d9bad7926008780d2a5adfefa1a24559a567dafbfd267d1b1b294::af_lp_rule::Rule",
+            "path": "Two underlying Bucket SingleOracles + Aftermath Pool reserves/LP supply -> whitelisted rule 0x928ff0be132d9bad7926008780d2a5adfefa1a24559a567dafbfd267d1b1b294::af_lp_rule::Rule -> SingleOracle 0x8fa2b252bb0cdc97ecd1b45c3f8954d4f8bed3f5c21fab7d9f14463cc785aba1 -> Bucket collateral valuation",
+            "address": "0x8fa2b252bb0cdc97ecd1b45c3f8954d4f8bed3f5c21fab7d9f14463cc785aba1",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:af_lp_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:two-underlying-single-oracles",
+              "protocol:aftermath-pool"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x42d0b3476bc10d18732141a471d7ad3aa588a6fb4ba8e1a6608a4a7b78e171bf::af_lp::AF_LP",
+            "minimumCollateralRatioPct": 120,
+            "note": "Bucket 0x1e88892e746708ec69784a56c6aba301a97e87e5b77aaef0eec16c3e472e8653; Tank 0x14c3673ce65f0dbd9df7e4b265ccf4d9ac1124ece755ebf3dd4d5abab8826729; zero observed debt; 10000000000000 raw ceiling (10000 BUCK); recovery threshold 140%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x14c3673ce65f0dbd9df7e4b265ccf4d9ac1124ece755ebf3dd4d5abab8826729 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:af_lp_rule",
+          "bucket-tank:0x14c3673ce65f0dbd9df7e4b265ccf4d9ac1124ece755ebf3dd4d5abab8826729",
+          "bucket-rule-direct-write",
+          "oracle:bucket:two-underlying-single-oracles",
+          "protocol:aftermath-pool"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-37-msui",
+        "label": "MSUI Bucket",
+        "tier": "opaque-or-unknown",
+        "summary": "MSUI remains a registered callable v1 Bucket with zero observed debt across 0 position(s); its SingleOracle accepts a deployed whitelisted rule whose upstream implementation is absent from the pinned source.",
+        "collateralAssets": [
+          "0x922d15d7f55c13fd790f6e54397470ec592caa2b508df292a2e8553f3d3b274f::msui::MSUI"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0x915d11320f37ddb386367dbce81154e1b4cf83e6a3039df183ac4ae78131c786::ssui_rule::Rule",
+            "path": "Unresolved deployed upstream inputs -> whitelisted rule 0x915d11320f37ddb386367dbce81154e1b4cf83e6a3039df183ac4ae78131c786::ssui_rule::Rule -> SingleOracle 0x69a6638af00cfb2eeaf600bf7e42404fdcecf9a130292d22d4cf93b98ad7c314 -> Bucket collateral valuation",
+            "address": "0x69a6638af00cfb2eeaf600bf7e42404fdcecf9a130292d22d4cf93b98ad7c314",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:ssui_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:rule-upstream-unresolved"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x922d15d7f55c13fd790f6e54397470ec592caa2b508df292a2e8553f3d3b274f::msui::MSUI",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0x203de71248d9987effceb2844fdc2455d6d543ccbd9e2f04a96e4190e5e487f6; Tank 0xc43263ac2a738a6db782a279b4e917a8a0b2ace82e2324793ad0a48b5eacd170; zero observed debt; 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xc43263ac2a738a6db782a279b4e917a8a0b2ace82e2324793ad0a48b5eacd170 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:ssui_rule",
+          "bucket-tank:0xc43263ac2a738a6db782a279b4e917a8a0b2ace82e2324793ad0a48b5eacd170",
+          "bucket-rule-direct-write",
+          "oracle:bucket:rule-upstream-unresolved"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-38-eth",
+        "label": "ETH Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "ETH remains a registered callable v1 Bucket with zero observed debt across 0 position(s); its threshold-1 SingleOracle uses Supra pair 19.",
+        "collateralAssets": [
+          "0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29::eth::ETH"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "Supra pair 19",
+            "path": "SingleOracle 0xa4f963049e660444b0f3ecc8274cc1376ff6b70b4b14747fa0f2a4f4ae6edcc1 -> Supra pair 19 -> Bucket collateral valuation",
+            "address": "0xa4f963049e660444b0f3ecc8274cc1376ff6b70b4b14747fa0f2a4f4ae6edcc1",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "supra:sui"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider or cached-price fallback. Updates outside the 30-second tolerance or source validation revert, and reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29::eth::ETH",
+            "minimumCollateralRatioPct": 110,
+            "note": "Bucket 0x99a390a8dd96f0d9abce40e78cff03189331b1957e4db27ab4bc5d11bc0769c7; Tank 0x85ba60c87e25fb931bd2d278efdb74f98e15dda0e7847c1164e8723ae0074b37; zero observed debt; 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x85ba60c87e25fb931bd2d278efdb74f98e15dda0e7847c1164e8723ae0074b37 is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "supra:sui",
+          "bucket-tank:0x85ba60c87e25fb931bd2d278efdb74f98e15dda0e7847c1164e8723ae0074b37"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-39-scallop-sb-eth",
+        "label": "SCALLOP_SB_ETH Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "SCALLOP_SB_ETH remains a registered callable v1 Bucket with zero observed debt across 0 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "collateralAssets": [
+          "0xb14f82d8506d139eacef109688d1b71e7236bcce9b2c0ad526abcd6aa5be7de0::scallop_sb_eth::SCALLOP_SB_ETH"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule",
+            "path": "Underlying-asset Bucket SingleOracle + Scallop Market reserve/interest state -> sCoin unit conversion -> whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule -> SingleOracle 0x3ca30849ec50158cba70dc6159a02d75666e6121293aa02857e41f1867ecb75b -> Bucket collateral valuation",
+            "address": "0x3ca30849ec50158cba70dc6159a02d75666e6121293aa02857e41f1867ecb75b",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:scoin_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:underlying-single-oracle",
+              "protocol:scallop-market"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0xb14f82d8506d139eacef109688d1b71e7236bcce9b2c0ad526abcd6aa5be7de0::scallop_sb_eth::SCALLOP_SB_ETH",
+            "minimumCollateralRatioPct": 150,
+            "note": "Bucket 0xc2fcacbc7eb7c9706541db58f5dbffc55aac7c70e045318b267ee89a676ee100; Tank 0x055f07a3f3a52032463702747d146b94fa0d5bf2d72016ab6001d0fe70b034dc; zero observed debt; 100000000000 raw ceiling (100 BUCK); recovery threshold 150%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0x055f07a3f3a52032463702747d146b94fa0d5bf2d72016ab6001d0fe70b034dc is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:scoin_rule",
+          "bucket-tank:0x055f07a3f3a52032463702747d146b94fa0d5bf2d72016ab6001d0fe70b034dc",
+          "bucket-rule-direct-write",
+          "oracle:bucket:underlying-single-oracle",
+          "protocol:scallop-market"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
+      },
+      {
+        "id": "bucket-40-scallop-wal",
+        "label": "SCALLOP_WAL Bucket",
+        "tier": "single-source-or-laggy",
+        "summary": "SCALLOP_WAL remains a registered callable v1 Bucket with zero observed debt across 0 position(s); its threshold-1 SingleOracle uses whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule.",
+        "collateralAssets": [
+          "0x622345b3f80ea5947567760eec7b9639d0582adcfd6ab9fccb85437aeda7c0d0::scallop_wal::SCALLOP_WAL"
+        ],
+        "chains": [
+          "sui"
+        ],
+        "feeds": [
+          {
+            "provider": "whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule",
+            "path": "Underlying-asset Bucket SingleOracle + Scallop Market reserve/interest state -> sCoin unit conversion -> whitelisted rule 0xe8e2e65d77e92fee59b9027ad0e29da5d932c6a5fb46c9d4eecbcc747e33d38a::scoin_rule::Rule -> SingleOracle 0x8fde484b7795efda45aac28491789d1c17308522acd36004dc4be29b0e58855b -> Bucket collateral valuation",
+            "address": "0x8fde484b7795efda45aac28491789d1c17308522acd36004dc4be29b0e58855b",
+            "chain": "sui",
+            "stalenessBoundSec": 10,
+            "observedAt": "2026-07-14",
+            "observedBlock": 298434520,
+            "failureDomainKeys": [
+              "bucket-protocol-v1",
+              "bucket-single-oracle",
+              "sui",
+              "bucket-rule:scoin_rule",
+              "bucket-rule-direct-write",
+              "oracle:bucket:underlying-single-oracle",
+              "protocol:scallop-market"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The whitelisted-rule route computes a derivative price from its rule-specific upstream state and writes it directly after checking only that the rule type is whitelisted; the SingleOracle's 30-second collector tolerance and threshold do not apply to this route. There is no cached-price fallback. Reads older than ten seconds revert, so price-dependent actions fail closed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298434520,
+        "collateralParameters": [
+          {
+            "asset": "0x622345b3f80ea5947567760eec7b9639d0582adcfd6ab9fccb85437aeda7c0d0::scallop_wal::SCALLOP_WAL",
+            "minimumCollateralRatioPct": 130,
+            "note": "Bucket 0x98ad78b15479297e9f1cfbe18ce214a687ce06448aa1cf45b0e09e3164c3596c; Tank 0xc386dddc91ec6b7d7077f51f40e51558661f92ba55c1ca4ac1b27e0635ae894d; zero observed debt; 6000000000000 raw ceiling (6000 BUCK); recovery threshold 130%; 0 observed position(s). Positive ceiling and the public borrow entry point keep this branch callable."
+          }
+        ],
+        "liquidationMechanism": "Liquidation is permissionless with no time-based grace period. Normal and recovery-mode paths offset debt against the matching Tank, pay a 0.5% executor rebate and 2% Well fee, and return borrower surplus after a full recovery-mode repayment.",
+        "liquidationDelaySec": 0,
+        "backstop": "The matching per-collateral Tank 0xc386dddc91ec6b7d7077f51f40e51558661f92ba55c1ca4ac1b27e0635ae894d is the Stability Pool backstop. It offsets available BUCK against the liquidated position; no separate insurance fund or auction backstop was identified in the reviewed v1 path.",
+        "shutdownOrBadDebtBehavior": "A partial Tank offset leaves the residual position and debt outstanding. A full recovery-mode repayment credits borrower surplus; the reviewed v1 path defines no automatic write-off, debt socialization, or global settlement after an uncovered residual.",
+        "failureDomainKeys": [
+          "bucket-protocol-v1",
+          "bucket-single-oracle",
+          "sui",
+          "bucket-rule:scoin_rule",
+          "bucket-tank:0xc386dddc91ec6b7d7077f51f40e51558661f92ba55c1ca4ac1b27e0635ae894d",
+          "bucket-rule-direct-write",
+          "oracle:bucket:underlying-single-oracle",
+          "protocol:scallop-market"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Bucket v1 interface and deployment registry",
+            "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+          },
+          {
+            "label": "Pinned Bucket mainnet oracle implementation",
+            "url": "https://github.com/Bucket-Protocol/oracle/tree/c53dc952734a6d48b09f2c4cf1f574d2a5a40b21"
+          },
+          {
+            "label": "Finalized Sui checkpoint 298434520 anchor transaction",
+            "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+          }
+        ]
       }
     ]
   },

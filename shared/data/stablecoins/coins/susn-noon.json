@@ -166,36 +166,48 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "sUSN is Noon's staking wrapper over USN. Wrapper is a transparent proxy upgraded via ProxyAdmin → intermediate contract → 3/6 Safe (v1.4.1, no modules, no guard). Wrapper owner() is the same 3/6 Safe. Share minting is backed by deposited USN; base USN mint authority is inherited from reviewed usn-noon controls.",
+    "summary": "sUSN is Noon's staking wrapper over USN. Shares mint against deposited USN and inherit the reviewed MinterHandlerV2 and 3-of-6 Noon admin Safe. The Ethereum wrapper is a transparent proxy whose ProxyAdmin is governed by a 48-hour timelock owned by that Safe.",
     "inheritedFrom": "usn-noon",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xe24a3dc889621612422a64e6388927901608b91d"
+      ],
+      "implementationAddresses": [
+        "0xd1ffb6a6a42c86b931b2a6d388d1f25c1c775b34"
+      ],
+      "adminAddresses": [
+        "0x1908284b50ee152c9f00c8e65a81fc1c4520bd81",
+        "0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "sUSN Ethereum upgrade timelock",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530817,
+      "sources": [
+        {
+          "label": "sUSN proxy on Etherscan",
+          "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#code"
+        },
+        {
+          "label": "Noon upgrade timelock source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f?fields=sources,abi,metadata"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xe24a3dc889621612422a64e6388927901608b91d",
         "label": "Noon sUSN transparent proxy",
         "role": "wrapper",
-        "authorityType": "safe",
+        "authorityType": "contract",
         "directMintAbility": "none",
-        "modulesOrGuardsStatus": "none-detected",
-        "threshold": 3,
-        "signerCount": 6,
-        "safe": {
-          "owners": [
-            "0x0649f6fc279b0eb94d5b15de013b87b0e50d2d88",
-            "0xe45Bb0D3cC77702E1310BB621c59c778304A42D0",
-            "0x09CE2d1C37772F7fF666B6447a66a5EBd2833799",
-            "0x7b1187106a3ac9d2602f41224a06e247fc12be37",
-            "0xe8241facb568e4c880490e8ab4e015f2572e6976",
-            "0x8b3641db7737ffab752718fcc772161ec09fad01"
-          ],
-          "threshold": 3,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "version": "1.4.1",
-          "observedBlock": 25295181,
-          "source": "onchain"
-        },
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530817,
         "capDescription": "Transparent proxy; upgrade path: ProxyAdmin (0x1908284b) → owner 0xe5e412c → owner Safe 0x1ea169. Wrapper owner() also returns the same 3/6 Safe.",
         "sources": [
           {
@@ -207,7 +219,7 @@
             "url": "https://docs.noon.capital/"
           }
         ],
-        "evidence": "At Ethereum block 25295181: EIP-1967 admin slot = ProxyAdmin 0x1908284b50ee152c9f00c8e65a81fc1c4520bd81 (code 2128 bytes); ProxyAdmin owner() = 0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f (8410-byte contract); that contract owner() = Safe 0x1ea169ecccf7714e7ba04900e1a3357cca77327f. Safe v1.4.1, masterCopy=0x41675c..., getOwners()=6 owners, getThreshold()=3. getModulesPaginated returned sentinel only (no modules). Guard keccak slot=0x0 (no guard). Wrapper owner()=same 3/6 Safe."
+        "evidence": "At Ethereum block 25530817, the wrapper implementation slot returned 0xd1ffb6...5b34 and the admin slot returned ProxyAdmin 0x190828...bd81. The wrapper itself has no separate privileged base-USN mint path; its supply is issued through the staking deposit flow."
       },
       {
         "chain": "ethereum",
@@ -216,7 +228,7 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": true,
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Inherited USN MinterHandlerV2 minting is bounded by the parent USN handler's per-block/per-day and whitelist controls, which Noon admin controls can update.",
         "sources": [
@@ -225,7 +237,74 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
           }
         ],
-        "evidence": "Inherited from reviewed usn-noon mintAuthority."
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530462,
+        "evidence": "Inherited from the reviewed usn-noon mintAuthority. Verified MinterHandlerV2 source enforces per-block, per-day, whitelisted-user, and collateral checks; the handler itself does not hold DEFAULT_ADMIN_ROLE."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f",
+        "label": "Inherited Noon admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x5eF8aa9cb6b2dEDCd02509058cf99d3d44d023c3",
+            "0xe45Bb0D3cC77702E1310BB621c59c778304A42D0",
+            "0x09CE2d1C37772F7fF666B6447a66a5EBd2833799",
+            "0x0057f25088B450170229D78b5700ED735c7cc722",
+            "0xe8241FACB568E4c880490e8Ab4E015F2572e6976",
+            "0x8B3641db7737ffab752718fcc772161eC09FaD01"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedBlock": 25530462,
+          "observedAt": "2026-07-14",
+          "source": "safe-api"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530462,
+        "sources": [
+          {
+            "label": "Noon admin Safe API",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f/"
+          }
+        ],
+        "evidence": "The parent USN review confirms this 3-of-6 Safe holds MinterHandlerV2 MINTER_ROLE and DEFAULT_ADMIN_ROLE, so it can execute bounded mints and change the handler's limits. Current Safe reads show six owners, threshold 3, no enabled modules, and a zero guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F",
+        "label": "sUSN Ethereum upgrade timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 172800,
+        "failureDomainKeys": [
+          "safe:ethereum:0x1ea169ecccf7714e7ba04900e1a3357cca77327f"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530817,
+        "sources": [
+          {
+            "label": "Noon upgrade timelock source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f?fields=sources,abi,metadata"
+          },
+          {
+            "label": "sUSN ProxyAdmin on Etherscan",
+            "url": "https://etherscan.io/address/0x1908284b50ee152c9f00c8e65a81fc1c4520bd81#code"
+          }
+        ],
+        "evidence": "At block 25530817, the sUSN proxy admin slot returned ProxyAdmin 0x190828...bd81; its owner was the verified Noon timelock 0xe5e412...15a7f. delay() returned 172800 seconds and owner() returned the Noon 3-of-6 admin Safe."
       }
     ],
     "review": {
@@ -243,9 +322,9 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
         }
       ],
-      "evidence": "Wrapper surface verified at Ethereum block 25295181: ProxyAdmin → intermediate contract → 3/6 Safe (v1.4.1, masterCopy 0x41675c, no modules, no guard). Wrapper owner() confirmed as same 3/6 Safe. Non-Ethereum deployments (zkSync, Sophon, StarkNet) are third-party bridges and do not carry separate wrapper mint authority.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "The sUSN wrapper mints only against deposited USN and inherits the parent MinterHandlerV2 plus Noon 3-of-6 admin Safe. At Ethereum block 25530817, its transparent proxy resolved to implementation 0xd1ffb6...5b34 and ProxyAdmin 0x190828...bd81; the ProxyAdmin owner was a verified 172800-second timelock owned by the same Safe. Non-Ethereum contracts are reviewed as third-party bridge representations, not independent issuer mint paths.",
+      "reviewer": "Codex V9 control curation",
+      "reviewedAt": "2026-07-14"
     }
   },
   "deploymentModel": "third-party-bridge",

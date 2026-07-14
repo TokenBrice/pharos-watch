@@ -32,9 +32,26 @@
   "custodyModel": "onchain",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for ZYS do not identify a yield-share-specific oracle setup, and the underlying Zephyr pricing-oracle failure handling remains unresolved.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "ZYS is a share of Zephyr's ZSD yield reserve rather than a borrower debt market; it inherits the underlying ZSD reserve-pricing risk, whose production oracle provider and failure handling remain unpublished.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Zephyr documents ZYS as a share of the ZSD yield reserve that provides variable yield from ZSD holdings. ZYS holders do not open borrower positions or control collateral liquidation, so there are no ZYS-specific collateral or liquidation branches to inventory; the underlying ZSD parent carries the protocol-wide reserve and oracle risk.",
+      "sources": [
+        {
+          "label": "Zephyr official documentation",
+          "url": "https://zephyrprotocol.com/documentation"
+        },
+        {
+          "label": "Zephyr repository",
+          "url": "https://github.com/ZephyrProtocol/zephyr"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
     "confidence": "limited",
     "sources": [
       {

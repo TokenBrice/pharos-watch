@@ -8,7 +8,7 @@ Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`,
 - **API source:** `worker/src/api/chains.ts`
 - **Route contract:** [chains-page.md](./chains-page.md)
 - **Public changelog route:** `/methodology/chain-health-changelog/`
-- **Version timeline:** [chain-health-timeline.md](./chain-health-timeline.md)
+- **Structured changelog:** `shared/data/methodology-changelogs/chain-health/`
 
 ## Inputs
 
@@ -78,7 +78,7 @@ When Chain Health behavior changes, update these files together:
 1. `shared/lib/chains/health.ts`, `shared/lib/chains/l2beat-risk.ts`, and the `shared/lib/chain-health.ts` facade if exports change
 2. `shared/lib/methodology-versions/chain-health.ts` and the `shared/lib/chain-health-version.ts` facade if exports change
 3. `docs/chain-health.md`
-4. `docs/chain-health-timeline.md`
+4. `shared/data/methodology-changelogs/chain-health/`
 5. `docs/chains-page.md`
 6. `docs/api-reference.md` (`GET /api/chains`)
 7. `/methodology` Chain Health copy and changelog route when user-facing methodology text changes

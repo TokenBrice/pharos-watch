@@ -1,0 +1,73 @@
+{
+  "id": "pathusd-bridge",
+  "reserves": [
+    {
+      "name": "Short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Bridge stablecoin issuance FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+      },
+      {
+        "label": "Bridge issuance reserve configuration",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserves"
+      }
+    ],
+    "rationale": "Bridge states that its custom stablecoins are backed one-for-one by a portfolio of short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash. Custom allocations are configurable and pathUSD's current allocation is not public, so the reserve remains one aggregate basket.",
+    "compositionBasis": "Bridge custom-stablecoin reserve policy; pathUSD allocation undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The eligible Bridge reserve portfolio is known, but pathUSD's current asset-class allocation is not publicly disclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Bridge supports configurable reserve allocations but does not publish pathUSD's current weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "BlackRock",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Fidelity",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Bridge stablecoin issuance FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+      },
+      {
+        "label": "Bridge issuance overview",
+        "url": "https://apidocs.bridge.xyz/platform/issuance"
+      }
+    ],
+    "uncertainty": "Bridge names BlackRock and Fidelity as custody partners and explicitly states that reserve accounts are segregated and bankruptcy remote. It does not publish pathUSD provider shares, the exact provider role by reserve slice, or rehypothecation terms."
+  }
+}

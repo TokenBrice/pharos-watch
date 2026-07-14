@@ -1,0 +1,71 @@
+{
+  "id": "qcad-stablecorp",
+  "reserves": [
+    {
+      "name": "Eligible CAD reserve asset basket",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Canadian government and regulated Canadian financial institutions",
+      "riskFactors": ["credit", "duration", "counterparty", "custody", "liquidity", "legal"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Stablecorp QCAD balances API",
+        "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json"
+      },
+      {
+        "label": "QCAD Digital Trust regulatory order",
+        "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
+      }
+    ],
+    "rationale": "Stablecorp's live balances API reported CAD 1,451,000 of total fiat reserves against CAD 1,451,000 QCAD supply when reviewed. The regulatory order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. The current allocation within that eligible basket is not published.",
+    "compositionBasis": "Stablecorp live total-reserves disclosure and the regulatory order's eligible-asset envelope",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The full eligible reserve envelope is disclosed, but the current mix among cash, short-term Canadian government debt, money-market funds, and any approved assets is not published.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Eligible CAD reserve asset basket",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The current allocation among the permitted reserve asset classes and custodial providers is not publicly disclosed."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Canadian custodian (not publicly named)",
+        "role": "custodian",
+        "jurisdiction": "Canada"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Stablecorp QCAD balances API",
+        "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json"
+      },
+      {
+        "label": "QCAD Digital Trust regulatory order",
+        "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
+      }
+    ],
+    "uncertainty": "The regulatory order requires a Canadian custodian, trust-designated segregation, exclusion from issuer-creditor claims, and no encumbrance. The custodian identity, provider allocation, and current asset mix are not published.",
+    "knownUnknownExposurePct": 100
+  }
+}

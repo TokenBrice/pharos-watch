@@ -28,6 +28,22 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
     "summary": "AUDF uses a 2/5 Admin Safe that holds DEFAULT_ADMIN_ROLE and MINT_ROLE on all confirmed chains (ETH, Polygon, Base, Avalanche). The ETH MINT_ROLE also has a second holder: a StablecoinMintBurnOFTAdapter contract, itself owned by the same Admin Safe. ProxyAdmin across all confirmed chains is also owned by the Admin Safe. Redbelly chain unconfirmable.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "canChangeMintLogic": true,
+      "controlRef": "AUDF Admin Safe (DEFAULT_ADMIN + MINT_ROLE, multichain)",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "AUDF Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+        },
+        {
+          "label": "AUDF admin Safe API",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6929Fd915b0755EfDC255eA841B68a263A362C5A/"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -309,12 +325,5 @@
     }
   ],
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "AUD reserves and cash-equivalent reserve assets",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "launchDate": "2024-01-09"
 }

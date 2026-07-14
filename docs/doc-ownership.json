@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "status": "advisory",
-  "purpose": "Map source areas to documentation that agents should consider when behavior changes. This manifest is a navigation aid; existing CI checks and human review remain authoritative.",
+  "status": "canonical",
+  "purpose": "Canonical source-to-document routing for agents and change checks. Code, schemas, registries, and checked runtime data remain authoritative for behavior.",
   "baseDocs": ["docs/agent-task-router.md"],
   "coreRules": ["Prefer the smallest root-cause fix; avoid unrelated refactors.", "Update matching docs for behavior, API, pipeline, methodology, or data-source changes.", "Do not add manual/on-chain/CMC/DEX supply overrides; primary supply remains DefiLlama with the existing fallback path.", "Keep Tailwind classes as static strings.", "Do not edit shadcn primitives in src/components/ui/ unless explicitly required."],
   "taskFamilies": [
@@ -20,8 +20,8 @@
       "id": "pricing-pipeline",
       "label": "Pricing pipeline or source roster",
       "risk": "high",
-      "docsToRead": ["matched docs/pricing-pipeline.md section", "matched docs/data-pipeline.md section", "docs/pricing-pipeline-timeline.md latest entries"],
-      "docsLikelyRequired": ["docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/data-pipeline.md", "docs/about-page.md when adding a data source"],
+      "docsToRead": ["matched docs/pricing-pipeline.md section", "matched docs/data-pipeline.md section", "latest entries under shared/data/methodology-changelogs/pricing-pipeline/"],
+      "docsLikelyRequired": ["docs/pricing-pipeline.md", "structured pricing changelog entry", "docs/data-pipeline.md", "docs/about-page.md when adding a data source"],
       "checks": ["npm run audit:pricing-providers", "focused pricing/depeg tests"],
       "hardRules": ["Consume or cancel failed fetch bodies before opening more Worker fetches.", "Do not multiply DefiLlama list-endpoint supply by price."],
       "prefixes": ["worker/src/cron/sync-stablecoins/", "worker/src/lib/price", "worker/src/lib/address-price-providers/"],
@@ -64,7 +64,7 @@
       "id": "frontend-route",
       "label": "Frontend page or route behavior",
       "risk": "medium",
-      "docsToRead": ["route-specific doc from docs/README.md", "docs/architecture.md", "src/AGENTS.md"],
+      "docsToRead": ["matched route-specific doc found through docs/doc-ownership.json or rg", "docs/architecture.md", "src/AGENTS.md"],
       "docsLikelyRequired": ["route contract doc", "docs/architecture.md", "docs/design-language.md when UI patterns change"],
       "checks": ["npm run build", "npm run seo:check for Pages-impacting route work", "relevant component/page tests"],
       "hardRules": ["Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes."],
@@ -86,12 +86,12 @@
       "id": "methodology-scoring",
       "label": "Methodology or scoring change",
       "risk": "high",
-      "docsToRead": ["docs/methodology-page.md", "specific methodology doc", "matching timeline doc latest entries (older in -archive.md)"],
-      "docsLikelyRequired": ["runtime methodology doc", "timeline doc", "src/app/methodology/sections/* when methodology UI changes"],
+      "docsToRead": ["docs/methodology-page.md", "specific methodology doc", "matching entries under shared/data/methodology-changelogs/"],
+      "docsLikelyRequired": ["runtime methodology doc", "structured methodology changelog entry", "src/app/methodology/sections/* when methodology UI changes"],
       "checks": ["focused scoring tests", "npm run check:doc-sync"],
       "hardRules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."],
       "prefixes": ["src/app/methodology/", "src/components/methodology/"],
-      "regexes": ["^docs/.*methodology", "^docs/.*timeline\\.md$", "^shared/lib/.*(score|scoring|dews|report-card|stability-index|liquidity|resilience|peg)", "^worker/src/.*(dews|report-card|stability-index|liquidity|mint-burn|yield|blacklist|reserve)"]
+      "regexes": ["^docs/.*methodology", "^shared/data/methodology-changelogs/", "^shared/lib/.*(score|scoring|dews|report-card|stability-index|liquidity|resilience|peg)", "^worker/src/.*(dews|report-card|stability-index|liquidity|mint-burn|yield|blacklist|reserve)"]
     },
     {
       "id": "pages-functions-host",
@@ -154,7 +154,7 @@
     {
       "name": "pricing-pipeline",
       "sources": ["worker/src/cron/sync-stablecoins/**", "worker/src/lib/price-consensus.ts", "worker/src/lib/price-validation.ts", "worker/src/lib/authoritative-price-sources/**", "shared/lib/pricing-*.ts", "shared/lib/pricing-provider-config.ts"],
-      "docs": ["docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/data-pipeline.md", "docs/about-page.md", "src/app/about/page.tsx"],
+      "docs": ["docs/pricing-pipeline.md", "shared/data/methodology-changelogs/pricing-pipeline/", "docs/data-pipeline.md", "docs/about-page.md", "src/app/about/page.tsx"],
       "notes": ["Source roster and live-price selection semantics affect the about page and methodology copy."]
     },
     {
@@ -185,7 +185,7 @@
       "name": "frontend-routes",
       "sources": ["src/app/**", "src/components/**", "src/hooks/**", "src/lib/nav-config.ts", "src/lib/page-metadata.ts", "src/app/sitemap.ts", "src/app/robots.ts", "shared/lib/public-docs.ts", "next.config.ts"],
       "docs": ["docs/README.md", "docs/architecture.md", "docs/homepage.md", "docs/start-page.md", "docs/stablecoin-detail-page.md", "docs/chains-page.md", "docs/coverage-page.md", "docs/status-dashboard.md"],
-      "notes": ["Start with docs/README.md Public Route Coverage to select the route-specific contract; the listed docs are high-churn examples, not the full route-doc set."]
+      "notes": ["Use the source path or public route to locate the nearest route-specific contract; the listed docs are representative, not a second route inventory."]
     },
     {
       "name": "design-system",
@@ -201,9 +201,9 @@
     },
     {
       "name": "methodology",
-      "sources": ["shared/lib/*-version.ts", "shared/lib/methodology-versions/**", "shared/lib/report-card*.ts", "shared/lib/peg-score.ts", "shared/lib/dews-config.ts", "shared/lib/liquidity-score-weights.ts", "shared/lib/mint-authority-scoring.ts", "shared/lib/depeg-resolver/**", "worker/src/lib/stability-index.ts", "worker/src/lib/mint-burn-scoring.ts", "worker/src/lib/dews.ts", "worker/src/cron/compute-depeg-resolver.ts", "worker/src/api/depeg-resolver.ts", "src/app/methodology/**"],
-      "docs": ["docs/methodology-page.md", "docs/report-cards.md", "docs/report-cards-timeline.md", "docs/depeg-detection.md", "docs/dews.md", "docs/depeg-dews-timeline.md", "docs/depeg-resolver.md", "docs/depeg-resolver-timeline.md", "docs/dex-liquidity.md", "docs/liquidity-score-timeline.md", "docs/mint-authority-scoring.md", "docs/stability-index.md", "docs/stability-index-timeline.md", "docs/mint-burn-flows.md", "docs/mint-burn-flows-timeline.md", "docs/yield-intelligence.md", "docs/yield-intelligence-timeline.md", "docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/blacklist-tracker.md", "docs/blacklist-tracker-timeline.md", "docs/chain-health.md", "docs/chain-health-timeline.md"],
-      "notes": ["Also update the relevant timeline doc for versioned methodology changes."]
+      "sources": ["shared/data/methodology-changelogs/**", "shared/lib/*-version.ts", "shared/lib/methodology-versions/**", "shared/lib/report-card*.ts", "shared/lib/peg-score.ts", "shared/lib/dews-config.ts", "shared/lib/liquidity-score-weights.ts", "shared/lib/mint-authority-scoring.ts", "shared/lib/depeg-resolver/**", "worker/src/lib/stability-index.ts", "worker/src/lib/mint-burn-scoring.ts", "worker/src/lib/dews.ts", "worker/src/cron/compute-depeg-resolver.ts", "worker/src/api/depeg-resolver.ts", "src/app/methodology/**"],
+      "docs": ["docs/methodology-page.md", "docs/report-cards.md", "docs/depeg-detection.md", "docs/dews.md", "docs/depeg-resolver.md", "docs/dex-liquidity.md", "docs/mint-authority-scoring.md", "docs/stability-index.md", "docs/mint-burn-flows.md", "docs/yield-intelligence.md", "docs/pricing-pipeline.md", "docs/blacklist-tracker.md", "docs/chain-health.md", "shared/data/methodology-changelogs/**"],
+      "notes": ["Versioned methodology changes update the structured changelog source; public pages and Markdown exports render from that registry."]
     },
     {
       "name": "mint-authority-score",

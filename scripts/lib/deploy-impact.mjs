@@ -9,17 +9,17 @@ const FULL_DEPLOY_GUARDRAIL_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.fullDep
 const PAGES_ONLY_INFRA_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.pages.workflowOnlyExactPaths);
 const PAGES_CHANGE_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.pages.exactPaths);
 const WORKER_CHANGE_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.worker.exactPaths);
-const WORKER_PROMOTION_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.excludedPaths ?? []);
-const WORKER_PROMOTION_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.exactPaths);
+const WORKER_RELEASE_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerRelease.excludedPaths ?? []);
+const WORKER_RELEASE_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerRelease.exactPaths);
 const WORKER_SHARED_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.worker.sharedExcludedPaths ?? []);
-const WORKER_PROMOTION_SHARED_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.sharedExcludedPaths);
+const WORKER_RELEASE_SHARED_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerRelease.sharedExcludedPaths);
 const PAGES_UI_EXACT_PATHS = new Set(["next.config.ts", "package.json", "package-lock.json"]);
 const FULL_DEPLOY_INFRA_PREFIXES = DEPLOY_IMPACT_REGISTRY.fullDeployInfra.prefixes;
 const PAGES_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.pages.prefixes;
 const WORKER_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.worker.prefixes;
-const WORKER_PROMOTION_PREFIXES = DEPLOY_IMPACT_REGISTRY.workerPromotion.prefixes;
+const WORKER_RELEASE_PREFIXES = DEPLOY_IMPACT_REGISTRY.workerRelease.prefixes;
 const WORKER_SHARED_EXCLUDED_PREFIXES = DEPLOY_IMPACT_REGISTRY.worker.sharedExcludedPrefixes ?? [];
-const WORKER_PROMOTION_SHARED_EXCLUDED_PREFIXES = DEPLOY_IMPACT_REGISTRY.workerPromotion.sharedExcludedPrefixes ?? [];
+const WORKER_RELEASE_SHARED_EXCLUDED_PREFIXES = DEPLOY_IMPACT_REGISTRY.workerRelease.sharedExcludedPrefixes ?? [];
 
 function isTestPath(file) {
   return /(^|\/)__tests__\//.test(file) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
@@ -36,11 +36,11 @@ function isPagesImpactPath(file) {
   );
 }
 
-function isWorkerPromotionSharedPath(file) {
+function isWorkerReleaseSharedPath(file) {
   return (
     file.startsWith("shared/") &&
-    !WORKER_PROMOTION_SHARED_EXCLUDED_PATHS.has(file) &&
-    !WORKER_PROMOTION_SHARED_EXCLUDED_PREFIXES.some((prefix) => file.startsWith(prefix)) &&
+    !WORKER_RELEASE_SHARED_EXCLUDED_PATHS.has(file) &&
+    !WORKER_RELEASE_SHARED_EXCLUDED_PREFIXES.some((prefix) => file.startsWith(prefix)) &&
     !isTestPath(file)
   );
 }
@@ -54,14 +54,14 @@ function isWorkerSharedDeployPath(file) {
   );
 }
 
-function isWorkerPromotionPath(file) {
-  if (WORKER_PROMOTION_EXCLUDED_PATHS.has(file) || isTestPath(file)) {
+function isWorkerReleasePath(file) {
+  if (WORKER_RELEASE_EXCLUDED_PATHS.has(file) || isTestPath(file)) {
     return false;
   }
   return (
-    WORKER_PROMOTION_EXACT_PATHS.has(file) ||
-    WORKER_PROMOTION_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
-    isWorkerPromotionSharedPath(file)
+    WORKER_RELEASE_EXACT_PATHS.has(file) ||
+    WORKER_RELEASE_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
+    isWorkerReleaseSharedPath(file)
   );
 }
 
@@ -77,8 +77,8 @@ export function hasWorkerDeployImpact(files) {
   );
 }
 
-export function hasWorkerPromotionImpact(files) {
-  return files.some((file) => isWorkerPromotionPath(file));
+export function hasWorkerReleaseImpact(files) {
+  return files.some((file) => isWorkerReleasePath(file));
 }
 
 export function hasPagesDeployImpact(files) {

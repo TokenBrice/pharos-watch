@@ -20,18 +20,291 @@
   "pythFeedId": "0x7f2e9a7365eb634c543e9ca72683a9cf778cdc16ee5b8bca73abe6d08c1410d5",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "Felix feUSD uses RedStone price-feed contracts for its CDP collateral branches, but reviewed docs do not document fallback, delay, or shutdown behavior.",
-    "reviewedAt": "2026-06-12",
+    "summary": "Felix feUSD uses separate external-oracle PriceFeed contracts for four isolated Liquity V2-style branches, with freshness checks, shutdown on feed failure, Stability Pool offsets, and branch-local debt redistribution.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Felix documents WHYPE, kHYPE, UBTC, and wstHYPE as independent collateral branches with separate PriceFeed, TroveManager, Stability Pool, and risk-parameter contracts. Each branch therefore requires its own oracle and liquidation evidence row.",
+      "sources": [
+        {
+          "label": "Felix Market 1 feUSD CDP",
+          "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp"
+        },
+        {
+          "label": "Felix contracts repository",
+          "url": "https://github.com/felixprotocol/felix-contracts"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
         "label": "Felix Market 1 feUSD CDP",
-        "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp.md"
+        "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp"
       },
       {
         "label": "Felix risk management",
-        "url": "https://usefelix.gitbook.io/docs/advanced/risk-management.md"
+        "url": "https://usefelix.gitbook.io/docs/advanced/risk-management"
+      },
+      {
+        "label": "Felix feUSD FAQ",
+        "url": "https://usefelix.gitbook.io/docs/lending-products/quickstart/faq"
+      },
+      {
+        "label": "Felix contracts repository",
+        "url": "https://github.com/felixprotocol/felix-contracts"
+      }
+    ],
+    "branches": [
+      {
+        "id": "whype",
+        "label": "WHYPE collateral branch",
+        "tier": "standard-external",
+        "summary": "The WHYPE branch uses its dedicated Felix PriceFeed contract to value collateral for Trove health and liquidation.",
+        "collateralAssets": [
+          "WHYPE"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Felix branch PriceFeed with external AggregatorV3 source",
+            "path": "External HYPE/USD answer -> WHYPE PriceFeed -> Trove ICR",
+            "address": "0x12a1868b89789900e413a6241ca9032dd1873a51",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "failureDomainKeys": [
+              "felix-whype-price-feed",
+              "felix-external-oracle",
+              "hyperevm"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The PriceFeed rejects reverted, zero, or stale oracle answers and triggers branch shutdown; after shutdown it retains the lastGoodPrice for urgent redemption pricing rather than switching to a live secondary market feed.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "WHYPE",
+            "note": "The branch has independently deployed MCR, CCR, SCR, liquidation-penalty, and mint-cap parameters; Troves become liquidatable immediately below the branch MCR."
+          }
+        ],
+        "liquidationMechanism": "Any caller may liquidate a Trove once ICR is below MCR. Branch Stability Pool feUSD first offsets and burns debt for seized WHYPE; any uncovered debt and collateral are redistributed across active Troves in the same branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch-local Stability Pool is the first-loss liquidation backstop; just-in-time feUSD or branch-local redistribution to active Troves handles debt not covered by Stability Pool deposits.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below SCR can shut the branch, freeze borrower operations, and enable fee-free urgent redemptions at a collateral bonus using lastGoodPrice. Felix documents that uncleared debt may remain after shutdown and that a separate bad-debt solution is not implemented.",
+        "failureDomainKeys": [
+          "felix-whype-price-feed",
+          "felix-whype-stability-pool",
+          "felix-whype-trove-redistribution",
+          "hyperevm"
+        ],
+        "sources": [
+          {
+            "label": "Felix Market 1 feUSD CDP",
+            "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp"
+          },
+          {
+            "label": "Felix feUSD FAQ",
+            "url": "https://usefelix.gitbook.io/docs/lending-products/quickstart/faq"
+          },
+          {
+            "label": "Felix contracts repository",
+            "url": "https://github.com/felixprotocol/felix-contracts"
+          }
+        ]
+      },
+      {
+        "id": "khype",
+        "label": "kHYPE collateral branch",
+        "tier": "standard-external",
+        "summary": "The kHYPE branch uses its dedicated Felix PriceFeed contract to value the liquid-staking collateral for Trove health and liquidation.",
+        "collateralAssets": [
+          "kHYPE"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Felix branch PriceFeed with external AggregatorV3 source",
+            "path": "External collateral price answer and branch conversion -> kHYPE PriceFeed -> Trove ICR",
+            "address": "0x0a04e685f12e47b22b03c3763add63f1dd73265c",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "failureDomainKeys": [
+              "felix-khype-price-feed",
+              "felix-external-oracle",
+              "khype-exchange-rate",
+              "hyperevm"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The PriceFeed rejects reverted, zero, or stale inputs and shuts down the branch. If only the kHYPE/HYPE market feed fails while HYPE/USD and the canonical staking rate remain live, it switches to HYPE/USD multiplied by that canonical rate; failure of HYPE/USD, USDC/USD, or the canonical rate instead falls back to lastGoodPrice.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "kHYPE",
+            "note": "The branch has independently deployed MCR, CCR, SCR, liquidation-penalty, and mint-cap parameters; Troves become liquidatable immediately below the branch MCR."
+          }
+        ],
+        "liquidationMechanism": "Any caller may liquidate a Trove once ICR is below MCR. Branch Stability Pool feUSD first offsets and burns debt for seized kHYPE; any uncovered debt and collateral are redistributed across active Troves in the same branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch-local Stability Pool is the first-loss liquidation backstop; just-in-time feUSD or branch-local redistribution to active Troves handles debt not covered by Stability Pool deposits.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below SCR can shut the branch, freeze borrower operations, and enable fee-free urgent redemptions at a collateral bonus. After an isolated kHYPE/HYPE feed failure, redemption pricing uses live HYPE/USD multiplied by the canonical staking rate; failures that also prevent that calculation use lastGoodPrice. Felix documents that uncleared debt may remain after shutdown and that a separate bad-debt solution is not implemented.",
+        "failureDomainKeys": [
+          "felix-khype-price-feed",
+          "felix-khype-stability-pool",
+          "felix-khype-trove-redistribution",
+          "khype-exchange-rate",
+          "hyperevm"
+        ],
+        "sources": [
+          {
+            "label": "Felix Market 1 feUSD CDP",
+            "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp"
+          },
+          {
+            "label": "Felix feUSD FAQ",
+            "url": "https://usefelix.gitbook.io/docs/lending-products/quickstart/faq"
+          },
+          {
+            "label": "Felix contracts repository",
+            "url": "https://github.com/felixprotocol/felix-contracts"
+          },
+          {
+            "label": "Felix kHYPE PriceFeed contract",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/PriceFeeds/KHYPEPriceFeed.sol"
+          }
+        ]
+      },
+      {
+        "id": "ubtc",
+        "label": "UBTC collateral branch",
+        "tier": "standard-external",
+        "summary": "The UBTC branch uses its dedicated Felix PriceFeed contract to value bridged Bitcoin collateral for Trove health and liquidation.",
+        "collateralAssets": [
+          "UBTC"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Felix branch PriceFeed with external AggregatorV3 source",
+            "path": "External UBTC/USD answer -> UBTC PriceFeed -> Trove ICR",
+            "address": "0xf59f338424062dd1d44a9b4dd2721128a45358ab",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "failureDomainKeys": [
+              "felix-ubtc-price-feed",
+              "felix-external-oracle",
+              "ubtc-bridge",
+              "hyperevm"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The PriceFeed rejects reverted, zero, or stale oracle answers and triggers branch shutdown; after shutdown it retains the lastGoodPrice for urgent redemption pricing rather than switching to a live secondary market feed.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "UBTC",
+            "note": "The branch has independently deployed MCR, CCR, SCR, liquidation-penalty, and mint-cap parameters; Troves become liquidatable immediately below the branch MCR."
+          }
+        ],
+        "liquidationMechanism": "Any caller may liquidate a Trove once ICR is below MCR. Branch Stability Pool feUSD first offsets and burns debt for seized UBTC; any uncovered debt and collateral are redistributed across active Troves in the same branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch-local Stability Pool is the first-loss liquidation backstop; just-in-time feUSD or branch-local redistribution to active Troves handles debt not covered by Stability Pool deposits.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below SCR can shut the branch, freeze borrower operations, and enable fee-free urgent redemptions at a collateral bonus using lastGoodPrice. Felix documents that uncleared debt may remain after shutdown and that a separate bad-debt solution is not implemented.",
+        "failureDomainKeys": [
+          "felix-ubtc-price-feed",
+          "felix-ubtc-stability-pool",
+          "felix-ubtc-trove-redistribution",
+          "ubtc-bridge",
+          "hyperevm"
+        ],
+        "sources": [
+          {
+            "label": "Felix Market 1 feUSD CDP",
+            "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp"
+          },
+          {
+            "label": "Felix feUSD FAQ",
+            "url": "https://usefelix.gitbook.io/docs/lending-products/quickstart/faq"
+          },
+          {
+            "label": "Felix contracts repository",
+            "url": "https://github.com/felixprotocol/felix-contracts"
+          }
+        ]
+      },
+      {
+        "id": "wsthype",
+        "label": "wstHYPE collateral branch",
+        "tier": "standard-external",
+        "summary": "The wstHYPE branch uses its dedicated Felix PriceFeed contract to value liquid-staking collateral for Trove health and liquidation.",
+        "collateralAssets": [
+          "wstHYPE"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Felix branch PriceFeed with external AggregatorV3 source",
+            "path": "External collateral price answer and branch conversion -> wstHYPE PriceFeed -> Trove ICR",
+            "address": "0x067e69ad6bdb8ee95cac31b34626f48eb6f169a2",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "failureDomainKeys": [
+              "felix-wsthype-price-feed",
+              "felix-external-oracle",
+              "wsthype-exchange-rate",
+              "hyperevm"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The PriceFeed rejects reverted, zero, or stale inputs and shuts down the branch. If only the stHYPE/USD feed fails while HYPE/USD and the canonical staking rate remain live, it switches to HYPE/USD multiplied by that canonical rate; failure of HYPE/USD, USDC/USD, or the canonical rate instead falls back to lastGoodPrice.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "wstHYPE",
+            "note": "The branch has independently deployed MCR, CCR, SCR, liquidation-penalty, and mint-cap parameters; Troves become liquidatable immediately below the branch MCR."
+          }
+        ],
+        "liquidationMechanism": "Any caller may liquidate a Trove once ICR is below MCR. Branch Stability Pool feUSD first offsets and burns debt for seized wstHYPE; any uncovered debt and collateral are redistributed across active Troves in the same branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch-local Stability Pool is the first-loss liquidation backstop; just-in-time feUSD or branch-local redistribution to active Troves handles debt not covered by Stability Pool deposits.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or TCR below SCR can shut the branch, freeze borrower operations, and enable fee-free urgent redemptions at a collateral bonus. After an isolated stHYPE/USD feed failure, redemption pricing uses live HYPE/USD multiplied by the canonical staking rate; failures that also prevent that calculation use lastGoodPrice. Felix documents that uncleared debt may remain after shutdown and that a separate bad-debt solution is not implemented.",
+        "failureDomainKeys": [
+          "felix-wsthype-price-feed",
+          "felix-wsthype-stability-pool",
+          "felix-wsthype-trove-redistribution",
+          "wsthype-exchange-rate",
+          "hyperevm"
+        ],
+        "sources": [
+          {
+            "label": "Felix Market 1 feUSD CDP",
+            "url": "https://usefelix.gitbook.io/docs/developers/market-1-feusd-cdp"
+          },
+          {
+            "label": "Felix feUSD FAQ",
+            "url": "https://usefelix.gitbook.io/docs/lending-products/quickstart/faq"
+          },
+          {
+            "label": "Felix contracts repository",
+            "url": "https://github.com/felixprotocol/felix-contracts"
+          },
+          {
+            "label": "Felix wstHYPE PriceFeed contract",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/PriceFeeds/WSTHYPEPriceFeed.sol"
+          }
+        ]
       }
     ]
   },
@@ -142,7 +415,37 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "feUSD is minted from Liquity-v2-fork CDPs on Hyperliquid (HyperEVM) against HYPE, kHYPE, wstHYPE, and bridged BTC at user-set interest rates. The feUSD token (0x02c6a2fa) is an EIP-1967 proxy whose ProxyAdmin (0x44a600c0) is owned by a central admin contract (0xf42fdd95, itself a UUPS proxy). That admin proxy's own ProxyAdmin (0xdf1293b4) is owned by a Gnosis Safe 1.3.0 multisig (0x699090e7, 3-of-6, no modules, no guard). The same multisig is the ultimate upgrade authority for the entire Felix protocol.",
+    "summary": "feUSD is minted from Liquity-v2-fork CDPs on Hyperliquid (HyperEVM) against HYPE, kHYPE, wstHYPE, and bridged BTC at user-set interest rates. The feUSD token (0x02c6a2fa) is an EIP-1967 proxy whose ProxyAdmin (0x44a600c0) is owned by a central admin proxy (0xf42fdd95). That admin proxy's own ProxyAdmin (0xdf1293b4) is owned by a Gnosis Safe 1.3.0 multisig (0x699090e7, 3-of-6, no modules, no guard). The same multisig is the ultimate upgrade authority for the entire Felix protocol.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
+        "0xF42fDD953E68D0010F5fA9d61ef1ba0Fc997Ef2F"
+      ],
+      "implementationAddresses": [
+        "0x444322c3c54908fa5a7842a4f3ff085ec67f2598",
+        "0xd2fe30df10e6c130fa23da2db6c68b48c8584c4b"
+      ],
+      "adminAddresses": [
+        "0x44a600c031dbdf652500f4a6d84b168056f13692",
+        "0xdf1293b46d3d8f6c090ab98094805db68922ce30",
+        "0x699090E73c4077eF2aF42773b31788C6564F079c"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Felix admin multisig (ultimate upgrade and parameter authority)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 40435040,
+      "sources": [
+        {
+          "label": "feUSD token on HyperEVM",
+          "url": "https://explorer.hyperliquid.xyz/address/0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70"
+        },
+        {
+          "label": "Felix docs",
+          "url": "https://usefelix.gitbook.io/docs"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Felix CDP branch contracts (collateral mint)",
@@ -186,9 +489,9 @@
       }
     ],
     "review": {
-      "evidence": "On-chain reads at HyperEVM block 37553335 traced the full Felix admin chain: feUSD token (0x02c6a2fa) → ProxyAdmin (0x44a600c0, owner=0xf42fdd95) → 0xf42fdd95 is a UUPS proxy (impl=0xd2fe30, proxyAdmin=0xdf1293b4) → 0xdf1293b4 owner()=0x699090e7 → Gnosis Safe 1.3.0 (3-of-6, 6 current EOA signers, no modules, no guard, fallback handler=0x017062a1). The same 0xf42f proxy is confirmed as owner of the Felix AddressesRegistry (0x9de1e57049c475736289cb006212f3e1dce4711b). The 3-of-6 Safe is the ultimate admin authority.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "On-chain reads traced the full Felix admin chain: feUSD token (0x02c6a2fa) → ProxyAdmin (0x44a600c0, owner=0xf42fdd95) → nested admin proxy 0xf42fdd95 (implementation 0xd2fe30df..., ProxyAdmin 0xdf1293b4) → 0xdf1293b4 owner()=0x699090e7 → Gnosis Safe 1.3.0 (3-of-6, 6 current EOA signers, no modules, no guard, fallback handler=0x017062a1). Rechecked at HyperEVM block 40435040; the proxy, implementation, and ownership chain is unchanged. The same 0xf42f proxy owns the Felix AddressesRegistry (0x9de1e57049c475736289cb006212f3e1dce4711b). The 3-of-6 Safe is the ultimate admin authority.",
+      "reviewer": "Codex CTRL batch 07",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Felix docs",

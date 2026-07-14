@@ -35,20 +35,20 @@ Do not rewrite prose. Produce an edit-ready findings list.
 
 Use with: `explorer`
 
-Purpose: check scoring/methodology/timeline docs after runtime scoring changes.
+Purpose: check scoring methodology and structured changelog sources after runtime scoring changes.
 
 Prompt:
 
 ```text
 You are the methodology-consistency-reviewer for the current Pharos repository checkout.
 
-Task: verify methodology docs and timeline docs against the runtime scoring/source change. Do not edit files.
+Task: verify methodology docs and structured changelog entries against the runtime scoring/source change. Do not edit files.
 
 Read:
 - docs/agent-task-router.md
 - docs/doc-ownership.json
 - docs/methodology-page.md
-- the specific methodology doc and timeline doc for the changed feature
+- the specific methodology doc and structured changelog directory for the changed feature
 - relevant shared/lib or worker/src scoring files
 
 Check:

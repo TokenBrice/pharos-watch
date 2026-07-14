@@ -15,6 +15,32 @@
   "collateral": "USDC collateral supporting LeverUp's liquidity-layer stablecoin (lvUSD) for perpetuals and margin trading; MON collateral backs the separate LVMON token.",
   "pegMechanism": "Synthetic stablecoin used inside LeverUp's Monad liquidity layer, with mint, burn, and redemption mechanics tied to the protocol's collateral and trading engine",
   "mechanismArchetype": "algorithmic",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "LeverUp describes lvUSD as a USDC-backed liquidity-layer token stabilized through protocol-internal TWAP anchoring, LV auctions, and redemption quotas rather than an external liquidation oracle.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 oracle review",
+      "rationale": "LeverUp documents lvUSD as an automatically minted liquidity-layer asset backed by USDC positions, with TWAP-based price anchoring and protocol auctions/redemptions when the token trades below its target. The reviewed product description does not expose borrower-owned collateral positions, per-market collateral thresholds, or a token-level liquidation branch, so the V9 collateral-liquidation inventory does not apply.",
+      "sources": [
+        {
+          "label": "LeverUp lvUSD stablecoin documentation",
+          "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 oracle review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "LeverUp lvUSD stablecoin documentation",
+        "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+      }
+    ]
+  },
   "geckoId": "leverup-usd",
   "links": [
     {
@@ -60,9 +86,27 @@
       "name": "USDC liquidity-layer collateral",
       "pct": 100,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "LeverUp lvUSD documentation",
+        "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+      }
+    ],
+    "rationale": "LeverUp documents lvUSD as the liquidity-layer token automatically minted when a trader opens a position with USDC collateral and redeemable through the protocol's USDC reserve flow. MON collateral mints the separate LVMON token and is not part of lvUSD's direct dependency set.",
+    "compositionBasis": "Current LeverUp documentation for collateral-specific liquidity-layer issuance",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct lvUSD collateral asset is identified in the current issuance documentation; protocol trading gains or losses can change reserve coverage but do not introduce another authored reserve dependency.",
+    "knownUnknownExposurePct": 0
+  },
   "notices": [
     {
       "type": "warning",

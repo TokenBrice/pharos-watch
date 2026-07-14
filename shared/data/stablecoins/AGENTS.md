@@ -28,11 +28,10 @@ See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file onl
 - Keep `proofOfReserves.latestReport` in the base coin file. Put custody evidence in the reserves sidecar, omit undisclosed provider shares, and use explicit `unknown` safeguards instead of inference.
 - Structured reserve facts must be source-supported. Do not convert weighted-average maturity into `maturityDaysMax`, preserve unsupported category percentages, or force a mixed basket into a single asset class.
 - If adding a data source, update the about page and source docs.
-- If classification or methodology semantics change, update the relevant methodology doc and timeline.
+- If classification or methodology semantics change, update the relevant methodology doc and structured changelog.
 
 ## Common Checks
 
 - `npm run check:stablecoin-data`
 - `npm run check:generated-artifacts`
-- `npm run check:doc-counts`
 - Focused stablecoin registry tests under `shared/lib/__tests__`

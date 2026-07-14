@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
+  "collateral": "Mento's CDP architecture uses USDm as the collateral asset for GBPm; the public reserve API is a portfolio view rather than an exhaustive borrower-position inventory",
   "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint GBPm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
   "mechanismArchetype": "cdp",
   "llamaId": "358",
@@ -208,14 +208,6 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
-  "reserves": [
-    {
-      "name": "USDm (Mento Dollar) CDP collateral",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "cusd-celo"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,

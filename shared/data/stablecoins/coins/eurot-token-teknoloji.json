@@ -231,12 +231,5 @@
     ]
   },
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "Euro bank reserves at Ziraat Participation Bank and Akbank",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "launchDate": "2023-08-28"
 }

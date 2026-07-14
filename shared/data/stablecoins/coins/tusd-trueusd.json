@@ -21,11 +21,26 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://tusd.io/transparency",
-    "provider": "Moore Hong Kong / Chainlink",
+    "provider": "Moore CPA Limited",
     "attestorTier": "niche",
-    "cadence": "real-time",
+    "cadence": "daily",
     "attestorJurisdiction": "Hong Kong",
-    "attestorLicense": "HK CPA"
+    "attestorLicense": "HK CPA",
+    "latestReport": {
+      "periodEnd": "2026-07-14",
+      "publishedAt": "2026-07-14",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Moore CPA TUSD Consolidated Reserves Report - July 14, 2026",
+          "url": "https://widget.verinumus.io/api/v1/tusd/report?tokens=%5BTrueUSD%5D"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -630,18 +645,6 @@
     ]
   },
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "First Digital Trust fund investments (at cost, opaque)",
-      "pct": 99,
-      "risk": "very-high"
-    },
-    {
-      "name": "Cash at depository institutions",
-      "pct": 1,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "chainlink-por",
     "version": 1,

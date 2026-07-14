@@ -55,9 +55,9 @@ When changing any methodology surface, update the runtime implementation, the de
 2. Detailed methodology doc (`docs/*.md` for that system).
 3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. If the markdown export summary should also change, update the matching entry in `src/app/methodology/sections/methodology-content.ts`. Use `core-sections.tsx`, `core-sections-pricing.tsx`, `monitoring-sections.tsx`, or `src/app/methodology/methodology-sections.tsx` only when changing section composition or order.
 
-If a versioned methodology changes, bump the corresponding version module in `shared/lib/*-version.ts` so badges/changelog links stay consistent.
+If a versioned methodology changes, add the entry under `shared/data/methodology-changelogs/` and bump the corresponding version module in `shared/lib/*-version.ts` so badges and changelog links stay consistent.
 
-Commit provenance in `shared/lib/*-version.ts` uses real commit hashes only. Use `commits: []` when provenance was not recorded; public changelog routes and timeline docs should omit `Commit(s)` lines for those entries rather than using `unreleased` as a placeholder.
+Commit provenance in structured changelog entries uses real commit hashes only. Use `commits: []` when provenance was not recorded; public changelog routes should omit `Commit(s)` output for those entries rather than using `unreleased` as a placeholder.
 
 Also update `src/app/methodology/page.tsx` whenever its FAQ structured-data answers, metadata copy, or reader-guide copy changes. Those claims are runtime-facing even when the shell layout itself is unchanged.
 
@@ -65,14 +65,15 @@ If section IDs or changelog paths change, also update `src/lib/methodology-conte
 
 If you add a new methodology changelog route, follow the existing pattern:
 
-1. Add or update the version source in `shared/lib/*-version.ts`.
-2. Add the public route in `src/app/methodology/*-changelog/page.tsx` using `createStandardMethodologyChangelogRoute(...)` (the standard factory used by every non-scoring route); `createMethodologyChangelogRoute(...)` is reserved for the `scoring-changelog` special case with custom authored content.
-3. Wire the new anchor/path into `src/lib/methodology-context.ts` if any cards/tooltips deep-link to it.
+1. Add the structured entries under `shared/data/methodology-changelogs/` and register them through `shared/lib/methodology-versions/registry.ts`.
+2. Add or update the version source in `shared/lib/*-version.ts`.
+3. Add the public route in `src/app/methodology/*-changelog/page.tsx` using `createStandardMethodologyChangelogRoute(...)` (the standard factory used by every non-scoring route); `createMethodologyChangelogRoute(...)` is reserved for the `scoring-changelog` special case with custom authored content.
+4. Wire the new anchor/path into `src/lib/methodology-context.ts` if any cards/tooltips deep-link to it.
 
 If the Chain Health methodology changes, also update:
 
 1. `docs/chains-page.md`
-2. `docs/chain-health-timeline.md`
+2. `shared/data/methodology-changelogs/chain-health/`
 3. `docs/api-reference.md` (`GET /api/chains`)
 4. `src/app/chains/page.tsx` and `src/app/chains/[chain]/client.tsx` if any user-facing factor labels or weights change
 
@@ -86,13 +87,13 @@ If the Mint Authority Score methodology changes, also update:
 If the pricing pipeline's source roster or live-price selection semantics change, also update:
 
 1. `docs/pricing-pipeline.md`
-2. `docs/pricing-pipeline-timeline.md`
+2. `shared/data/methodology-changelogs/pricing-pipeline/`
 3. `docs/data-pipeline.md`
 4. `docs/about-page.md` plus `src/app/about/page.tsx`
 
 For the safety-score changelog specifically, update both:
 
-1. `shared/lib/methodology-versions/safety-score.ts` for the machine-readable safety-score changelog and current version exported through `shared/lib/safety-score-version.ts`.
+1. `shared/data/methodology-changelogs/safety-score/` plus `shared/lib/methodology-versions/safety-score.ts` for the machine-readable changelog and current version exported through `shared/lib/safety-score-version.ts`.
 2. `src/app/methodology/scoring-changelog/content.tsx` plus the split `content-v8.tsx`, `content-v7-*.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` modules for the authored long-form detail maps and reference tables (with `content-v6.tsx` merging `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`).
 
 ---
@@ -152,19 +153,3 @@ Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, C
 - **Pressure Shift / gauge bands / flight-to-quality:** `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`
 - **DEWS weights / signal thresholds / bands:** `shared/lib/dews-config.ts`, `worker/src/lib/dews.ts`
 - **Peg score blend / penalties / min history:** `shared/lib/peg-score.ts`
-
-## Changelog
-
-- **v3.15** (2026-07-12): Documented the Safety Score changelog's machine-ordered renderer and version-keyed authored detail maps after removing the manual v7 collector topology.
-- **v3.14** (2026-06-13): Updated Chain Health source mapping to the canonical `shared/lib/methodology-versions/chain-health.ts` module while documenting the preserved compatibility re-exports.
-- **v3.13** (2026-06-11): Added the Mint Authority Score section, source mapping, update contract, and methodology-context references for the standalone v1.0 score.
-- **v3.12** (2026-05-15): Documented the new `#blacklist-tracker`, `#bluechip`, and `#proof-of-reserves` methodology-context sub-anchors used by the May 2026 detail-page work, plus the surfacing fields (`oneLiner`, `mechanismArchetype`, `attestorTier`, `cadence`) now carried on `StablecoinMeta`.
-- **v3.11** (2026-05-11): Moved methodology markdown-export summaries and stable section ids/titles into `src/app/methodology/sections/methodology-content.ts` so markdown generation no longer imports React section modules.
-- **v3.10** (2026-03-24): Corrected the methodology route contract to include the dedicated pricing-section source file, clarified that `src/lib/methodology-context.ts` owns hard-coded methodology anchors while changelog paths come from shared version modules, and fixed the stale liquidity-discovery cadence/budget note.
-- **v3.9** (2026-03-22): Corrected the update contract so authored methodology copy points to the grouped section modules under `src/app/methodology/sections/`, not the thin `methodology-sections.tsx` composition wrapper.
-- **v3.8** (2026-03-21): Split the authored long-form methodology body out of the single 2.8k-line hotspot into grouped section modules under `src/app/methodology/sections/`, while keeping `methodology-sections.tsx` as the composition root.
-- **v3.7** (2026-03-16): Corrected the Chain Health source mapping to the live v1.1 implementation, added the missing `chain-health-changelog` route to the methodology route inventory, and linked the chain analytics docs update contract.
-- **v3.6** (2026-03-14): Documented the remaining route-shell contract in `page.tsx` (FAQ/metadata/reader-guide copy), the persisted Reader/Analyst mode toggle behavior, the shared changelog factory, and the cross-app anchor/path dependency in `src/lib/methodology-context.ts`.
-- **v3.5** (2026-03-14): Added Pricing Pipeline section (first position) with 8-source consensus diagram, source weights table, enrichment pipeline, confidence levels, and validation modes. Created `shared/lib/pricing-pipeline-version.ts` and `src/app/methodology/pricing-pipeline-changelog/page.tsx`.
-- **v3.4** (2026-03-12): Corrected the update contract so methodology-copy edits point to `methodology-sections.tsx`, which is where the authored long-form content and worked examples now live.
-- **v3.3** (2026-03-09): Separated discovery pipeline with staged pool confidence decay. Discovery sources now run on a dedicated half-hourly trigger (`6,36 * * * *`) with a 12-minute shared run budget and 25-second per-coin crawl budget. Staged pools merge into scoring with freshness confidence decay (`max(0.5, 1 - ageHours/48)`) and explicit defaults contract. Chain-aware source routing reduces wasted API calls. Tiered priority with exponential backoff prevents looping on pool-less coins.

@@ -1,0 +1,68 @@
+{
+  "id": "stusd-stoneyield",
+  "reserves": [
+    {
+      "name": "USDC and yield-bearing USDC strategy positions",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "StoneYield StrategyRouter and Venus Protocol",
+      "riskFactors": ["counterparty", "liquidity", "custody", "smart-contract", "market"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "StoneYield contract design",
+        "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
+      },
+      {
+        "label": "StoneYield yield generation",
+        "url": "https://docs.stoneyield.io/docs/protocol/yield-generation"
+      }
+    ],
+    "rationale": "StoneYield documents that USDC deposits are routed by its StrategyRouter into a Venus-integrated ERC-4626 vault, where vUSDC accrues lending yield. The current strategy position is retained as one linked USDC protocol-position slice because the disclosures do not publish a durable allocation among Venus positions or future strategy modules.",
+    "compositionBasis": "Current StoneYield contract-design and yield-generation documentation",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The direct reserve relationship is USDC routed through the documented StrategyRouter and Venus path. Current vUSDC balances, allocation weights, and any later strategy-module allocation are not published as a durable composition.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "StoneYield StrategyRouter and Venus USDC vault contracts",
+        "role": "other",
+        "jurisdiction": "BNB Chain"
+      },
+      {
+        "name": "Venus Protocol",
+        "role": "other",
+        "jurisdiction": "BNB Chain"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "StoneYield contract design",
+        "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
+      },
+      {
+        "label": "StoneYield yield generation",
+        "url": "https://docs.stoneyield.io/docs/protocol/yield-generation"
+      }
+    ],
+    "uncertainty": "StoneYield identifies its router and Venus vault path but does not publish legal custody terms, contract-level allocation shares, bankruptcy treatment, or a current strategy inventory."
+  }
+}

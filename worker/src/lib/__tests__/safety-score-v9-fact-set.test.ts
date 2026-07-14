@@ -180,7 +180,7 @@ function exactFixedInput(args: { liquidityScore?: number; classifiedReserve?: bo
   });
 }
 
-function exactTwoAssetFixedInput(options: { mapAlphaCollateral?: boolean } = {}) {
+function exactTwoAssetFixedInput(options: { mapAlphaCollateral?: boolean; omitAlphaReserve?: boolean } = {}) {
   const alpha = exactFixedInput();
   const alphaDex = alpha.dexLiqMap.alpha!;
   const alphaPeg = alpha.pegDataById.alpha!;
@@ -203,6 +203,8 @@ function exactTwoAssetFixedInput(options: { mapAlphaCollateral?: boolean } = {})
     omittedInputMethodologyVersions,
     omittedBaseInputGenerationId,
   ];
+  const liveReserveMap = structuredClone(alpha.liveReserveMap);
+  if (options.omitAlphaReserve) delete liveReserveMap.alpha;
   return createReportCardsFixedInput({
     ...draft,
     activeAssetIds: ["alpha", "beta"],
@@ -219,7 +221,7 @@ function exactTwoAssetFixedInput(options: { mapAlphaCollateral?: boolean } = {})
     },
     resolvedBlacklistStatuses: { alpha: false, beta: false },
     liveReserveMap: {
-      ...alpha.liveReserveMap,
+      ...liveReserveMap,
       ...(options.mapAlphaCollateral
         ? {
             alpha: [
@@ -597,6 +599,39 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     });
   });
 
+  it("reconciles curated collateral only when no live reserve snapshot exists", () => {
+    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+      [
+        "alpha",
+        {
+          id: "alpha",
+          mechanismArchetype: "fiat-cash",
+          launchDate: "1970-01-01",
+          reserves: [{ name: "Beta stablecoin", pct: 50, risk: "low", coinId: "beta", depType: "collateral" }],
+        },
+      ],
+      ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "1970-01-01" }],
+    ]);
+    const noLiveSnapshot = exactTwoAssetFixedInput({ omitAlphaReserve: true });
+
+    const curated = buildSafetyScoreV9BaselineExtension(noLiveSnapshot, { metaById });
+    expect(curated.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
+      source: "curated-reserve",
+      diagnostics: { graphState: "valid", issueCodes: [] },
+      edges: [{ upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.5 }],
+    });
+
+    const liveSnapshot = exactTwoAssetFixedInput();
+    const liveMismatch = buildSafetyScoreV9BaselineExtension(liveSnapshot, { metaById });
+    expect(liveMismatch.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
+      source: "curated-reserve",
+      diagnostics: {
+        graphState: "unresolved",
+        issueCodes: ["collateral-edge-exposure-unmapped:beta"],
+      },
+    });
+  });
+
   it("compiles exact base facts and explicit reviews without consulting v8 score outputs", () => {
     const fixed = exactFixedInput();
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension());
@@ -949,6 +984,133 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       incidentState: "unknown",
     });
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
+  });
+
+  it("joins a capped minter to its separately reviewed cap-raising governor", () => {
+    const fixed = exactFixedInput();
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "alpha",
+          {
+            id: "alpha",
+            mechanismArchetype: "cdp" as const,
+            mintAuthority: {
+              mintPath: "user-collateralized-governed" as const,
+              authorityPosture: "partially-bounded-admin" as const,
+              confidence: "verified" as const,
+              summary: "A protocol adapter mints within a cap that a separate governor can raise.",
+              upgradeability: {
+                model: "immutable" as const,
+                canChangeMintLogic: false,
+                sources: [{ label: "Contract source", url: "https://example.com/source" }],
+              },
+              controls: [
+                {
+                  chain: "ethereum",
+                  address: "0x1111111111111111111111111111111111111111",
+                  label: "Capped protocol minter",
+                  role: "direct-minter" as const,
+                  authorityType: "contract" as const,
+                  directMintAbility: "cap-limited" as const,
+                  canRaiseCap: false,
+                  sources: [{ label: "Minter docs", url: "https://example.com/minter" }],
+                },
+                {
+                  chain: "ethereum",
+                  address: "0x2222222222222222222222222222222222222222",
+                  label: "Cap governor",
+                  role: "governor" as const,
+                  authorityType: "dao-governor" as const,
+                  directMintAbility: "parameter-only" as const,
+                  canRaiseCap: true,
+                  sources: [{ label: "Governance docs", url: "https://example.com/governance" }],
+                },
+              ],
+              review: {
+                sources: [{ label: "Minter docs", url: "https://example.com/minter" }],
+                evidence: "The capped mint path and the separate cap-raising governor are both reviewed.",
+                reviewer: "Fixture reviewer",
+                reviewedAt: "1970-01-01",
+              },
+            },
+          },
+        ],
+      ]),
+    });
+
+    const controlReview = baseline.assets[0]!.controlReview;
+    expect(controlReview).toMatchObject({ state: "reviewed-controls" });
+    if (controlReview?.state !== "reviewed-controls") {
+      throw new Error("expected reviewed controls");
+    }
+    expect(controlReview.controls[0]).toMatchObject({
+      capSemantics: { kind: "raiseable", bound: null },
+      claimImpairment: "bounded",
+    });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    expect(compiled.assets[0]!.controls[0]!.capSemantics).toEqual({ kind: "raiseable", bound: null });
+  });
+
+  it("does not join a capped minter to a cap raiser on another chain", () => {
+    const fixed = exactFixedInput();
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "alpha",
+          {
+            id: "alpha",
+            mechanismArchetype: "cdp" as const,
+            mintAuthority: {
+              mintPath: "user-collateralized-governed" as const,
+              authorityPosture: "partially-bounded-admin" as const,
+              confidence: "verified" as const,
+              summary: "A capped minter and an unrelated cross-chain cap raiser.",
+              upgradeability: {
+                model: "immutable" as const,
+                canChangeMintLogic: false,
+                sources: [{ label: "Contract source", url: "https://example.com/source" }],
+              },
+              controls: [
+                {
+                  chain: "ethereum",
+                  address: "0x1111111111111111111111111111111111111111",
+                  label: "Ethereum capped minter",
+                  role: "direct-minter" as const,
+                  authorityType: "contract" as const,
+                  directMintAbility: "cap-limited" as const,
+                  canRaiseCap: false,
+                  sources: [{ label: "Minter docs", url: "https://example.com/minter" }],
+                },
+                {
+                  chain: "arbitrum",
+                  address: "0x2222222222222222222222222222222222222222",
+                  label: "Arbitrum cap governor",
+                  role: "governor" as const,
+                  authorityType: "dao-governor" as const,
+                  directMintAbility: "parameter-only" as const,
+                  canRaiseCap: true,
+                  sources: [{ label: "Governance docs", url: "https://example.com/governance" }],
+                },
+              ],
+              review: {
+                sources: [{ label: "Minter docs", url: "https://example.com/minter" }],
+                evidence: "Both controls are reviewed but operate on different chains.",
+                reviewer: "Fixture reviewer",
+                reviewedAt: "1970-01-01",
+              },
+            },
+          },
+        ],
+      ]),
+    });
+
+    const controlReview = baseline.assets[0]!.controlReview;
+    expect(controlReview).toMatchObject({ state: "partially-reviewed-controls" });
+    if (controlReview?.state !== "partially-reviewed-controls") {
+      throw new Error("expected partially reviewed controls");
+    }
+    expect(controlReview.controls[0]).toMatchObject({ capSemantics: { kind: "unknown", bound: null } });
   });
 
   it("does not infer immutable upgradeability from an immutable mint path", () => {

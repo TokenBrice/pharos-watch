@@ -18,15 +18,1895 @@
   "detailProvider": "defillama",
   "geckoId": "satoshi-stablecoin",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "River satUSD uses DIA price feeds with documented MAIR pricing, deviation triggers, refresh frequency, and heartbeat parameters.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "tier": "single-source-or-laggy",
+    "summary": "Thirty-one callable collateral branches across 11 chains use branch-local single-provider or all-components-required aggregate wrappers. Each wrapper fails closed on non-positive or older-than-configured input and has no cache or automatic provider failover; liquidations are immediate, Stability Pool first, then redistribution.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 ORCL curation",
+      "rationale": "The 11 official deployment registries and fixed-block contract reads enumerate exactly 31 callable TroveManagers. Twenty-eight carried positive or defaulted debt. X Layer WETH, BOB WBTC, and BOB FBTC had zero debt but remained unpaused, unsunset, callable, and configured with nonzero caps, so they remain live branches rather than exclusions.",
+      "sources": [
+        {
+          "label": "River oracle provider and heartbeat matrix",
+          "url": "https://docs.river.inc/outro/oracle"
+        },
+        {
+          "label": "River deployed-contract registries",
+          "url": "https://docs.river.inc/outro/deployed-contracts/ethereum"
+        },
+        {
+          "label": "Pinned Satoshi core source",
+          "url": "https://github.com/Satoshi-Protocol/satoshi-core/tree/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 ORCL curation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "River DIA oracle docs",
-        "url": "https://docs.river.inc/outro/satusd-oracle/dia-oracle"
+        "label": "River oracle provider and heartbeat matrix",
+        "url": "https://docs.river.inc/outro/oracle"
+      },
+      {
+        "label": "River risk management",
+        "url": "https://docs.river.inc/products/editor/risk-management"
+      },
+      {
+        "label": "River Stability Pool",
+        "url": "https://docs.river.inc/products/editor/stability-pool"
+      },
+      {
+        "label": "River Recovery Mode",
+        "url": "https://docs.river.inc/products/editor/recovery-mode"
+      },
+      {
+        "label": "Pinned Satoshi Chainlink wrapper",
+        "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+      },
+      {
+        "label": "Pinned Satoshi aggregate wrapper",
+        "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlinkAggregator.sol"
+      },
+      {
+        "label": "Pinned Satoshi liquidation manager",
+        "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/core/LiquidationManager.sol"
+      },
+      {
+        "label": "Pinned Satoshi trove manager",
+        "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/core/TroveManager.sol"
+      }
+    ],
+    "branches": [
+      {
+        "id": "ethereum-weth",
+        "label": "ethereum WETH Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WETH branch uses one Chainlink wrapper path with a contract-enforced 3900-second maximum age.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0x44AfcF491d9BcA179F9F99d7b11EC5519895f317 -> WETH/USD at 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "address": "0x44AfcF491d9BcA179F9F99d7b11EC5519895f317",
+            "chain": "ethereum",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531862,
+            "failureDomainKeys": [
+              "chainlink:0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+              "satoshi:ethereum:price-feed-wrapper",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-3900-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531862,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xb97E6219B0836E21ae671358e746f03dcdbCb6D8; PriceFeed 0x44AfcF491d9BcA179F9F99d7b11EC5519895f317; debt 84057591437969129521091 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+          "satoshi:ethereum:stability-pool",
+          "satoshi:ethereum:redistribution",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "River ethereum deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/ethereum"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-wbtc",
+        "label": "ethereum WBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WBTC branch uses one Chainlink wrapper path with a contract-enforced 3900-second maximum age.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0x1Af6626290b03803Cedf7eF32e7ADB7DaE844663 -> WBTC/USD at 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "address": "0x1Af6626290b03803Cedf7eF32e7ADB7DaE844663",
+            "chain": "ethereum",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531862,
+            "failureDomainKeys": [
+              "chainlink:0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+              "satoshi:ethereum:price-feed-wrapper",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-3900-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531862,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xc03403DD8f27CEFA314Fc109D26777c81b0De895; PriceFeed 0x1Af6626290b03803Cedf7eF32e7ADB7DaE844663; debt 22520199283000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+          "satoshi:ethereum:stability-pool",
+          "satoshi:ethereum:redistribution",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "River ethereum deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/ethereum"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-weeth",
+        "label": "ethereum weETH Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable weETH branch uses one Chainlink-compatible wrapper path with a contract-enforced 3900-second maximum age.",
+        "collateralAssets": [
+          "weETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink-compatible",
+            "path": "PriceFeed 0x93736af88195abbe9c8E0abeb53Cf6550F0747F6 -> weETH/USD at 0x01cC29E063cc5c28C4e7A84bF1F565C83ba300A5",
+            "address": "0x93736af88195abbe9c8E0abeb53Cf6550F0747F6",
+            "chain": "ethereum",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531862,
+            "failureDomainKeys": [
+              "chainlink-compatible:0x01cc29e063cc5c28c4e7a84bf1f565c83ba300a5",
+              "satoshi:ethereum:price-feed-wrapper",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-3900-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531862,
+        "collateralParameters": [
+          {
+            "asset": "weETH",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "TroveManager 0x2135EfEF5aC35ba549Cc791cEc4D15E8C8115611; PriceFeed 0x93736af88195abbe9c8E0abeb53Cf6550F0747F6; debt 240000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink-compatible:0x01cc29e063cc5c28c4e7a84bf1f565c83ba300a5",
+          "satoshi:ethereum:stability-pool",
+          "satoshi:ethereum:redistribution",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "River ethereum deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/ethereum"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "bsc-wbtc",
+        "label": "bsc WBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WBTC branch uses one Chainlink wrapper path with a contract-enforced 86700-second maximum age.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "bsc"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0x7ddCA7C659BF897dfaA65f830Eaf3343E026Fe8D -> WBTC/USD at 0xcFd160510b5a7912Ee593f8711429b23C71ca947",
+            "address": "0x7ddCA7C659BF897dfaA65f830Eaf3343E026Fe8D",
+            "chain": "bsc",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 109965700,
+            "failureDomainKeys": [
+              "chainlink:0xcfd160510b5a7912ee593f8711429b23c71ca947",
+              "satoshi:bsc:price-feed-wrapper",
+              "bsc"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 109965700,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xb655775C4C7C6e0C2002935133c950FB89974928; PriceFeed 0x7ddCA7C659BF897dfaA65f830Eaf3343E026Fe8D; debt 37455425000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0xcfd160510b5a7912ee593f8711429b23c71ca947",
+          "satoshi:bsc:stability-pool",
+          "satoshi:bsc:redistribution",
+          "bsc"
+        ],
+        "sources": [
+          {
+            "label": "River bsc deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bnb-chain"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "bsc-btcb",
+        "label": "bsc BTCB Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable BTCB branch uses one Chainlink wrapper path with a contract-enforced 86700-second maximum age.",
+        "collateralAssets": [
+          "BTCB"
+        ],
+        "chains": [
+          "bsc"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782 -> BTCB/USD at 0xC3740C3c49EdA37298F8e6C5970D53b9C2498F2b",
+            "address": "0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782",
+            "chain": "bsc",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 109965700,
+            "failureDomainKeys": [
+              "chainlink:0xc3740c3c49eda37298f8e6c5970d53b9c2498f2b",
+              "satoshi:bsc:price-feed-wrapper",
+              "bsc"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 109965700,
+        "collateralParameters": [
+          {
+            "asset": "BTCB",
+            "maximumLtvPct": 83.333333,
+            "minimumCollateralRatioPct": 120,
+            "note": "TroveManager 0x5EA26D0A1a9aa6731F9BFB93fCd654cd1C3079Ec; PriceFeed 0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782; debt 40550370557849253066 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0xc3740c3c49eda37298f8e6c5970d53b9c2498f2b",
+          "satoshi:bsc:stability-pool",
+          "satoshi:bsc:redistribution",
+          "bsc"
+        ],
+        "sources": [
+          {
+            "label": "River bsc deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bnb-chain"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "xlayer-weth",
+        "label": "xlayer WETH Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WETH branch uses one Chainlink wrapper path with a contract-enforced 86700-second maximum age.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "xlayer"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0xde87146b00817fC265978424880646Fb7b4Fe7b8 -> WETH/USD at 0x8b85b50535551F8E8cDAF78dA235b5Cf1005907b",
+            "address": "0xde87146b00817fC265978424880646Fb7b4Fe7b8",
+            "chain": "xlayer",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 65274868,
+            "failureDomainKeys": [
+              "chainlink:0x8b85b50535551f8e8cdaf78da235b5cf1005907b",
+              "satoshi:xlayer:price-feed-wrapper",
+              "xlayer"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 65274868,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xbe223F331f05a8cf18F98675033FEFD6b23c7176; PriceFeed 0xde87146b00817fC265978424880646Fb7b4Fe7b8; debt 0 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false; zero debt but the branch remained callable with a nonzero cap."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0x8b85b50535551f8e8cdaf78da235b5cf1005907b",
+          "satoshi:xlayer:stability-pool",
+          "satoshi:xlayer:redistribution",
+          "xlayer"
+        ],
+        "sources": [
+          {
+            "label": "River xlayer deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/x-layer"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "xlayer-wbtc",
+        "label": "xlayer WBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WBTC branch uses one Chainlink wrapper path with a contract-enforced 86700-second maximum age.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "xlayer"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0xcA14eAd06B3fa58460d7f9e46a2DE4E1e5090b75 -> WBTC/USD at 0x4D6f6488a2B3a5f7b088f276887f608a1e9805c4",
+            "address": "0xcA14eAd06B3fa58460d7f9e46a2DE4E1e5090b75",
+            "chain": "xlayer",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 65274868,
+            "failureDomainKeys": [
+              "chainlink:0x4d6f6488a2b3a5f7b088f276887f608a1e9805c4",
+              "satoshi:xlayer:price-feed-wrapper",
+              "xlayer"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 65274868,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xd19BC6B110896d136D9456E8fD45C71C8d8C5abB; PriceFeed 0xcA14eAd06B3fa58460d7f9e46a2DE4E1e5090b75; debt 12050000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0x4d6f6488a2b3a5f7b088f276887f608a1e9805c4",
+          "satoshi:xlayer:stability-pool",
+          "satoshi:xlayer:redistribution",
+          "xlayer"
+        ],
+        "sources": [
+          {
+            "label": "River xlayer deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/x-layer"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "xlayer-cbbtc",
+        "label": "xlayer cbBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable cbBTC branch uses one Chainlink-compatible wrapper path with a contract-enforced 86700-second maximum age.",
+        "collateralAssets": [
+          "cbBTC"
+        ],
+        "chains": [
+          "xlayer"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink-compatible",
+            "path": "PriceFeed 0x0341E348DB0F81fD6E425703D05B1FFb9a0835FC -> cbBTC/USD at 0x5f88f74f2474925dF0BE9ef93cA8C3671D9B935A",
+            "address": "0x0341E348DB0F81fD6E425703D05B1FFb9a0835FC",
+            "chain": "xlayer",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 65274868,
+            "failureDomainKeys": [
+              "chainlink-compatible:0x5f88f74f2474925df0be9ef93ca8c3671d9b935a",
+              "satoshi:xlayer:price-feed-wrapper",
+              "xlayer"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 65274868,
+        "collateralParameters": [
+          {
+            "asset": "cbBTC",
+            "maximumLtvPct": 66.666667,
+            "minimumCollateralRatioPct": 150,
+            "note": "TroveManager 0xE92d7002E3172dD1Ee4ABeAfcfD4fDB0D8F042D5; PriceFeed 0x0341E348DB0F81fD6E425703D05B1FFb9a0835FC; debt 12050000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink-compatible:0x5f88f74f2474925df0be9ef93ca8c3671d9b935a",
+          "satoshi:xlayer:stability-pool",
+          "satoshi:xlayer:redistribution",
+          "xlayer"
+        ],
+        "sources": [
+          {
+            "label": "River xlayer deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/x-layer"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "base-weth",
+        "label": "base WETH Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WETH branch uses one Chainlink wrapper path with a contract-enforced 1500-second maximum age.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0x82bea9fC5Aa6101AAB55933eA76F2f71cE3ae4e2 -> WETH/USD at 0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70",
+            "address": "0x82bea9fC5Aa6101AAB55933eA76F2f71cE3ae4e2",
+            "chain": "base",
+            "stalenessBoundSec": 1500,
+            "observedAt": "2026-07-14",
+            "observedBlock": 48627278,
+            "failureDomainKeys": [
+              "chainlink:0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70",
+              "satoshi:base:price-feed-wrapper",
+              "base"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-1500-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48627278,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xddac7d4e228c205197FE9961865FFE20173dE56B; PriceFeed 0x82bea9fC5Aa6101AAB55933eA76F2f71cE3ae4e2; debt 16603481000000000002 plus 2 defaulted raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70",
+          "satoshi:base:stability-pool",
+          "satoshi:base:redistribution",
+          "base"
+        ],
+        "sources": [
+          {
+            "label": "River base deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/base"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "base-wbtc",
+        "label": "base WBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WBTC branch uses one Chainlink wrapper path with a contract-enforced 1500-second maximum age.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0xc601034d15e2b739E73D2E1E8Ef9A5C452fB9C0d -> WBTC/USD at 0xCCADC697c55bbB68dc5bCdf8d3CBe83CdD4E071E",
+            "address": "0xc601034d15e2b739E73D2E1E8Ef9A5C452fB9C0d",
+            "chain": "base",
+            "stalenessBoundSec": 1500,
+            "observedAt": "2026-07-14",
+            "observedBlock": 48627278,
+            "failureDomainKeys": [
+              "chainlink:0xccadc697c55bbb68dc5bcdf8d3cbe83cdd4e071e",
+              "satoshi:base:price-feed-wrapper",
+              "base"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-1500-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48627278,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0x4B37F38DF39C9E6D876b830ED3FF444533Aa2E45; PriceFeed 0xc601034d15e2b739E73D2E1E8Ef9A5C452fB9C0d; debt 12000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0xccadc697c55bbb68dc5bcdf8d3cbe83cdd4e071e",
+          "satoshi:base:stability-pool",
+          "satoshi:base:redistribution",
+          "base"
+        ],
+        "sources": [
+          {
+            "label": "River base deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/base"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "base-cbbtc",
+        "label": "base cbBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable cbBTC branch uses one Chainlink wrapper path with a contract-enforced 1500-second maximum age.",
+        "collateralAssets": [
+          "cbBTC"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0xB06Ee04eE3FBAD0394259497b15f590DacbCCa83 -> cbBTC/USD at 0x07DA0E54543a844a80ABE69c8A12F22B3aA59f9D",
+            "address": "0xB06Ee04eE3FBAD0394259497b15f590DacbCCa83",
+            "chain": "base",
+            "stalenessBoundSec": 1500,
+            "observedAt": "2026-07-14",
+            "observedBlock": 48627278,
+            "failureDomainKeys": [
+              "chainlink:0x07da0e54543a844a80abe69c8a12f22b3aa59f9d",
+              "satoshi:base:price-feed-wrapper",
+              "base"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-1500-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48627278,
+        "collateralParameters": [
+          {
+            "asset": "cbBTC",
+            "maximumLtvPct": 83.333333,
+            "minimumCollateralRatioPct": 120,
+            "note": "TroveManager 0x50B02283f3c39A463DF3d84d44d46b5432D7D193; PriceFeed 0xB06Ee04eE3FBAD0394259497b15f590DacbCCa83; debt 2975417198000000048192 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0x07da0e54543a844a80abe69c8a12f22b3aa59f9d",
+          "satoshi:base:stability-pool",
+          "satoshi:base:redistribution",
+          "base"
+        ],
+        "sources": [
+          {
+            "label": "River base deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/base"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "base-clbtc",
+        "label": "base clBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable clBTC branch uses one Chainsight wrapper path with a contract-enforced 3900-second maximum age.",
+        "collateralAssets": [
+          "clBTC"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainsight",
+            "path": "PriceFeed 0xA9ECf240B4621cf703aDc3985a084770D8Df1F3A -> clBTC/USD at 0x146447574c02deB3B802A1d4c9447CB7648aA56D",
+            "address": "0xA9ECf240B4621cf703aDc3985a084770D8Df1F3A",
+            "chain": "base",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 48627278,
+            "failureDomainKeys": [
+              "chainsight:0x146447574c02deb3b802a1d4c9447cb7648aa56d",
+              "satoshi:base:price-feed-wrapper",
+              "base"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-3900-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48627278,
+        "collateralParameters": [
+          {
+            "asset": "clBTC",
+            "maximumLtvPct": 66.666667,
+            "minimumCollateralRatioPct": 150,
+            "note": "TroveManager 0x01DF7D28c51639F2f2F95dcF2FdFF374269327B0; PriceFeed 0xA9ECf240B4621cf703aDc3985a084770D8Df1F3A; debt 9415926056000000000000000 raw 18-decimal satUSD; cap 10000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainsight:0x146447574c02deb3b802a1d4c9447cb7648aa56d",
+          "satoshi:base:stability-pool",
+          "satoshi:base:redistribution",
+          "base"
+        ],
+        "sources": [
+          {
+            "label": "River base deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/base"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum-weth",
+        "label": "arbitrum WETH Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WETH branch uses one Chainlink wrapper path with a contract-enforced 86700-second maximum age.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "arbitrum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782 -> WETH/USD at 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612",
+            "address": "0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782",
+            "chain": "arbitrum",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 483812002,
+            "failureDomainKeys": [
+              "chainlink:0x639fe6ab55c921f74e7fac1ee960c0b6293ba612",
+              "satoshi:arbitrum:price-feed-wrapper",
+              "arbitrum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 483812002,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xb655775C4C7C6e0C2002935133c950FB89974928; PriceFeed 0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782; debt 6477998081663552406180 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0x639fe6ab55c921f74e7fac1ee960c0b6293ba612",
+          "satoshi:arbitrum:stability-pool",
+          "satoshi:arbitrum:redistribution",
+          "arbitrum"
+        ],
+        "sources": [
+          {
+            "label": "River arbitrum deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/arbitrum"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum-wbtc",
+        "label": "arbitrum WBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WBTC branch uses one Chainlink wrapper path with a contract-enforced 86700-second maximum age.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "arbitrum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0x5348fFaB4F2dDc88400D7471230a17e18bF26087 -> WBTC/USD at 0xd0C7101eACbB49F3deCcCc166d238410D6D46d57",
+            "address": "0x5348fFaB4F2dDc88400D7471230a17e18bF26087",
+            "chain": "arbitrum",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 483812002,
+            "failureDomainKeys": [
+              "chainlink:0xd0c7101eacbb49f3decccc166d238410d6d46d57",
+              "satoshi:arbitrum:price-feed-wrapper",
+              "arbitrum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 483812002,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0x5EA26D0A1a9aa6731F9BFB93fCd654cd1C3079Ec; PriceFeed 0x5348fFaB4F2dDc88400D7471230a17e18bF26087; debt 38175000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0xd0c7101eacbb49f3decccc166d238410d6d46d57",
+          "satoshi:arbitrum:stability-pool",
+          "satoshi:arbitrum:redistribution",
+          "arbitrum"
+        ],
+        "sources": [
+          {
+            "label": "River arbitrum deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/arbitrum"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum-clbtc",
+        "label": "arbitrum clBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable clBTC branch uses one Chainsight wrapper path with a contract-enforced 3900-second maximum age.",
+        "collateralAssets": [
+          "clBTC"
+        ],
+        "chains": [
+          "arbitrum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainsight",
+            "path": "PriceFeed 0x7a38cB1aB2409873C86b73C71cdb33e916696956 -> clBTC/USD at 0x146447574c02deB3B802A1d4c9447CB7648aA56D",
+            "address": "0x7a38cB1aB2409873C86b73C71cdb33e916696956",
+            "chain": "arbitrum",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 483812002,
+            "failureDomainKeys": [
+              "chainsight:0x146447574c02deb3b802a1d4c9447cb7648aa56d",
+              "satoshi:arbitrum:price-feed-wrapper",
+              "arbitrum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-3900-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 483812002,
+        "collateralParameters": [
+          {
+            "asset": "clBTC",
+            "maximumLtvPct": 66.666667,
+            "minimumCollateralRatioPct": 150,
+            "note": "TroveManager 0xa7B54413129441e872F42C1c4fE7D1984332CA87; PriceFeed 0x7a38cB1aB2409873C86b73C71cdb33e916696956; debt 9645828176264000000000000 raw 18-decimal satUSD; cap 10000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainsight:0x146447574c02deb3b802a1d4c9447cb7648aa56d",
+          "satoshi:arbitrum:stability-pool",
+          "satoshi:arbitrum:redistribution",
+          "arbitrum"
+        ],
+        "sources": [
+          {
+            "label": "River arbitrum deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/arbitrum"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "sonic-weth",
+        "label": "sonic WETH Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WETH branch uses one Chainlink wrapper path with a contract-enforced 86700-second maximum age.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "sonic"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0x595aDC759518DD58fd644b8d5a166A00388c77C4 -> WETH/USD at 0x61c7cB499022E74A992c4dC4590DeED13E85543f",
+            "address": "0x595aDC759518DD58fd644b8d5a166A00388c77C4",
+            "chain": "sonic",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 75938977,
+            "failureDomainKeys": [
+              "chainlink:0x61c7cb499022e74a992c4dc4590deed13e85543f",
+              "satoshi:sonic:price-feed-wrapper",
+              "sonic"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 75938977,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xb655775C4C7C6e0C2002935133c950FB89974928; PriceFeed 0x595aDC759518DD58fd644b8d5a166A00388c77C4; debt 12085149397581336470 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0x61c7cb499022e74a992c4dc4590deed13e85543f",
+          "satoshi:sonic:stability-pool",
+          "satoshi:sonic:redistribution",
+          "sonic"
+        ],
+        "sources": [
+          {
+            "label": "River sonic deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/sonic"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "sonic-wbtc",
+        "label": "sonic WBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WBTC branch uses one Chainlink wrapper path with a contract-enforced 86700-second maximum age.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "sonic"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782 -> WBTC/USD at 0x91dC4c1df27F0619c7a2B2a28c54Ee5a03e26E72",
+            "address": "0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782",
+            "chain": "sonic",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 75938977,
+            "failureDomainKeys": [
+              "chainlink:0x91dc4c1df27f0619c7a2b2a28c54ee5a03e26e72",
+              "satoshi:sonic:price-feed-wrapper",
+              "sonic"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 75938977,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0x5EA26D0A1a9aa6731F9BFB93fCd654cd1C3079Ec; PriceFeed 0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782; debt 41175000000000000000 plus 17075000000000000000 defaulted raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0x91dc4c1df27f0619c7a2b2a28c54ee5a03e26e72",
+          "satoshi:sonic:stability-pool",
+          "satoshi:sonic:redistribution",
+          "sonic"
+        ],
+        "sources": [
+          {
+            "label": "River sonic deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/sonic"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "bob-wbtc",
+        "label": "bob WBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WBTC branch uses one Chainlink-compatible wrapper path with a contract-enforced 86400-second maximum age.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "bob"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink-compatible",
+            "path": "PriceFeed 0x4851b1F29E2A2802bb97136aEA4106992FC82f33 -> WBTC/USD at 0x81A64473D102b38eDcf35A7675654768D11d7e24",
+            "address": "0x4851b1F29E2A2802bb97136aEA4106992FC82f33",
+            "chain": "bob",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 35590959,
+            "failureDomainKeys": [
+              "chainlink-compatible:0x81a64473d102b38edcf35a7675654768d11d7e24",
+              "satoshi:bob:price-feed-wrapper",
+              "bob"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 35590959,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xB6C69F4EfC6ad9d12C5Fc3715722D5bbEa712a3f; PriceFeed 0x4851b1F29E2A2802bb97136aEA4106992FC82f33; debt 0 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false; zero debt but the branch remained callable with a nonzero cap."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink-compatible:0x81a64473d102b38edcf35a7675654768d11d7e24",
+          "satoshi:bob:stability-pool",
+          "satoshi:bob:redistribution",
+          "bob"
+        ],
+        "sources": [
+          {
+            "label": "River bob deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bob"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "bob-tbtc",
+        "label": "bob tBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable tBTC branch uses one Chainlink-compatible wrapper path with a contract-enforced 86400-second maximum age.",
+        "collateralAssets": [
+          "tBTC"
+        ],
+        "chains": [
+          "bob"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink-compatible",
+            "path": "PriceFeed 0x18D2d92cecE0E983C77c1F705F7617b6826c33e8 -> tBTC/USD at 0x4d24E7c1cF0ed63bc8c6cB5a795af31FD8127C6B",
+            "address": "0x18D2d92cecE0E983C77c1F705F7617b6826c33e8",
+            "chain": "bob",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 35590959,
+            "failureDomainKeys": [
+              "chainlink-compatible:0x4d24e7c1cf0ed63bc8c6cb5a795af31fd8127c6b",
+              "satoshi:bob:price-feed-wrapper",
+              "bob"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 35590959,
+        "collateralParameters": [
+          {
+            "asset": "tBTC",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "TroveManager 0xbf626Fc742bFfD6F17de9Cf2480Da25Dad4D5135; PriceFeed 0x18D2d92cecE0E983C77c1F705F7617b6826c33e8; debt 12000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink-compatible:0x4d24e7c1cf0ed63bc8c6cb5a795af31fd8127c6b",
+          "satoshi:bob:stability-pool",
+          "satoshi:bob:redistribution",
+          "bob"
+        ],
+        "sources": [
+          {
+            "label": "River bob deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bob"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "bob-solvbtc",
+        "label": "bob solvBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable solvBTC branch uses one 50/50 Chainlink-compatible aggregate wrapper path with a contract-enforced 14500-second maximum age; every configured component is required.",
+        "collateralAssets": [
+          "solvBTC"
+        ],
+        "chains": [
+          "bob"
+        ],
+        "feeds": [
+          {
+            "provider": "50/50 Chainlink-compatible aggregate",
+            "path": "PriceFeed 0x6A18A6b715bF690aC5e16b022AceF139b3355956 -> solvBTC/USD two-component path; both required at 0xD0157e52C06E734aA0F0eB6Db620149021DA819B + 0xE0dBd230E320625fa30B85b1f2a68d0aaDDD367a",
+            "address": "0x6A18A6b715bF690aC5e16b022AceF139b3355956",
+            "chain": "bob",
+            "stalenessBoundSec": 14500,
+            "observedAt": "2026-07-14",
+            "observedBlock": 35590959,
+            "failureDomainKeys": [
+              "50-50-chainlink-compatible-aggregate:0xd0157e52c06e734aa0f0eb6db620149021da819b + 0xe0dbd230e320625fa30b85b1f2a68d0aaddd367a",
+              "satoshi:bob:price-feed-wrapper",
+              "bob"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-14500-second source. There is no cached-price or alternate-provider fallback; every configured component must succeed; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 35590959,
+        "collateralParameters": [
+          {
+            "asset": "solvBTC",
+            "maximumLtvPct": 68.965517,
+            "minimumCollateralRatioPct": 145,
+            "note": "TroveManager 0x39F36DA1f4028473d41e077E178c8551bE4bb231; PriceFeed 0x6A18A6b715bF690aC5e16b022AceF139b3355956; debt 203000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "50-50-chainlink-compatible-aggregate:0xd0157e52c06e734aa0f0eb6db620149021da819b + 0xe0dbd230e320625fa30b85b1f2a68d0aaddd367a",
+          "satoshi:bob:stability-pool",
+          "satoshi:bob:redistribution",
+          "bob"
+        ],
+        "sources": [
+          {
+            "label": "River bob deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bob"
+          },
+          {
+            "label": "Pinned Satoshi aggregate wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlinkAggregator.sol"
+          }
+        ]
+      },
+      {
+        "id": "bob-solvbtc-bbn",
+        "label": "bob solvBTC.BBN Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable solvBTC.BBN branch uses one 50/50 Chainlink-compatible aggregate wrapper path with a contract-enforced 14500-second maximum age; every configured component is required.",
+        "collateralAssets": [
+          "solvBTC.BBN"
+        ],
+        "chains": [
+          "bob"
+        ],
+        "feeds": [
+          {
+            "provider": "50/50 Chainlink-compatible aggregate",
+            "path": "PriceFeed 0xE3cD7A8AEb9c1305162b216aB93Ef98EfC0e451c -> solvBTC.BBN/USD two-component path; both required at 0xaF98498ae8cA3eD6eFf938BeF3933E6f374Fedee + 0x120e3D31E4D31868553cEFd8E398001C003FE852",
+            "address": "0xE3cD7A8AEb9c1305162b216aB93Ef98EfC0e451c",
+            "chain": "bob",
+            "stalenessBoundSec": 14500,
+            "observedAt": "2026-07-14",
+            "observedBlock": 35590959,
+            "failureDomainKeys": [
+              "50-50-chainlink-compatible-aggregate:0xaf98498ae8ca3ed6eff938bef3933e6f374fedee + 0x120e3d31e4d31868553cefd8e398001c003fe852",
+              "satoshi:bob:price-feed-wrapper",
+              "bob"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-14500-second source. There is no cached-price or alternate-provider fallback; every configured component must succeed; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 35590959,
+        "collateralParameters": [
+          {
+            "asset": "solvBTC.BBN",
+            "maximumLtvPct": 64.516129,
+            "minimumCollateralRatioPct": 155,
+            "note": "TroveManager 0x1F6eF853341037c5C057101F2E38C15c95130807; PriceFeed 0xE3cD7A8AEb9c1305162b216aB93Ef98EfC0e451c; debt 128600243066708655760 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "50-50-chainlink-compatible-aggregate:0xaf98498ae8ca3ed6eff938bef3933e6f374fedee + 0x120e3d31e4d31868553cefd8e398001c003fe852",
+          "satoshi:bob:stability-pool",
+          "satoshi:bob:redistribution",
+          "bob"
+        ],
+        "sources": [
+          {
+            "label": "River bob deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bob"
+          },
+          {
+            "label": "Pinned Satoshi aggregate wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlinkAggregator.sol"
+          }
+        ]
+      },
+      {
+        "id": "bob-fbtc",
+        "label": "bob FBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable FBTC branch uses one Chainlink wrapper path with a contract-enforced 86400-second maximum age.",
+        "collateralAssets": [
+          "FBTC"
+        ],
+        "chains": [
+          "bob"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "PriceFeed 0x5c64d9aa1E7Bb51C50A940F2E46b2B65C99Fca81 -> FBTC/USD at 0xdcBf8fe85Fb49b385678B4772A0424743Da582cd",
+            "address": "0x5c64d9aa1E7Bb51C50A940F2E46b2B65C99Fca81",
+            "chain": "bob",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 35590959,
+            "failureDomainKeys": [
+              "chainlink:0xdcbf8fe85fb49b385678b4772a0424743da582cd",
+              "satoshi:bob:price-feed-wrapper",
+              "bob"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 35590959,
+        "collateralParameters": [
+          {
+            "asset": "FBTC",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "TroveManager 0x4dEA4c11bDd3Ad05063405C7167Fa9B3f95Aea90; PriceFeed 0x5c64d9aa1E7Bb51C50A940F2E46b2B65C99Fca81; debt 0 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false; zero debt but the branch remained callable with a nonzero cap."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "chainlink:0xdcbf8fe85fb49b385678b4772a0424743da582cd",
+          "satoshi:bob:stability-pool",
+          "satoshi:bob:redistribution",
+          "bob"
+        ],
+        "sources": [
+          {
+            "label": "River bob deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bob"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "bsquared-wbtc",
+        "label": "bsquared WBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WBTC branch uses one APRO wrapper path with a contract-enforced 86400-second maximum age.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "bsquared"
+        ],
+        "feeds": [
+          {
+            "provider": "APRO",
+            "path": "PriceFeed 0xdee136cd19cBfb6571c93E834071E00d721E5cF0 -> WBTC/USD at 0xfcd454d19f9B8806F8908e99d85b8eA17b3c7346",
+            "address": "0xdee136cd19cBfb6571c93E834071E00d721E5cF0",
+            "chain": "bsquared",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 35440059,
+            "failureDomainKeys": [
+              "apro:0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346",
+              "satoshi:bsquared:price-feed-wrapper",
+              "bsquared"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 35440059,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0x8FBfe28D6E5424d7f8c8c29A4910ce8a618d2D54; PriceFeed 0xdee136cd19cBfb6571c93E834071E00d721E5cF0; debt 24000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "apro:0xfcd454d19f9b8806f8908e99d85b8ea17b3c7346",
+          "satoshi:bsquared:stability-pool",
+          "satoshi:bsquared:redistribution",
+          "bsquared"
+        ],
+        "sources": [
+          {
+            "label": "River bsquared deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bsquared"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "bsquared-stbtc",
+        "label": "bsquared stBTC (registry uBTC) Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable stBTC (registry uBTC) branch uses one 50/50 APRO aggregate wrapper path with a contract-enforced 3780-second maximum age; every configured component is required.",
+        "collateralAssets": [
+          "stBTC (registry uBTC)"
+        ],
+        "chains": [
+          "bsquared"
+        ],
+        "feeds": [
+          {
+            "provider": "50/50 APRO aggregate",
+            "path": "PriceFeed 0x6C481F0d17Cd6d1299D5f211217e86f25d829B00 -> stBTC/USD two-component path; both required at 0x571b77B3511ba6A097cd219023DBc7a0820DB797 + 0x219491D3D577537C66d1D3d21C0eC3486042065",
+            "address": "0x6C481F0d17Cd6d1299D5f211217e86f25d829B00",
+            "chain": "bsquared",
+            "stalenessBoundSec": 3780,
+            "observedAt": "2026-07-14",
+            "observedBlock": 35440059,
+            "failureDomainKeys": [
+              "50-50-apro-aggregate:0x571b77b3511ba6a097cd219023dbc7a0820db797 + 0x219491d3d577537c66d1d3d21c0ec3486042065",
+              "satoshi:bsquared:price-feed-wrapper",
+              "bsquared"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-3780-second source. There is no cached-price or alternate-provider fallback; every configured component must succeed; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 35440059,
+        "collateralParameters": [
+          {
+            "asset": "stBTC (registry uBTC)",
+            "maximumLtvPct": 58.823529,
+            "minimumCollateralRatioPct": 170,
+            "note": "TroveManager 0xa03B86E93c98FE95caC2A6645fF271Bb67040eab; PriceFeed 0x6C481F0d17Cd6d1299D5f211217e86f25d829B00; debt 1030162243973017249291147 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "50-50-apro-aggregate:0x571b77b3511ba6a097cd219023dbc7a0820db797 + 0x219491d3d577537c66d1d3d21c0ec3486042065",
+          "satoshi:bsquared:stability-pool",
+          "satoshi:bsquared:redistribution",
+          "bsquared"
+        ],
+        "sources": [
+          {
+            "label": "River bsquared deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bsquared"
+          },
+          {
+            "label": "Pinned Satoshi aggregate wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlinkAggregator.sol"
+          }
+        ]
+      },
+      {
+        "id": "hemi-weth",
+        "label": "hemi WETH Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WETH branch uses one RedStone wrapper path with a contract-enforced 21900-second maximum age.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "hemi"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone",
+            "path": "PriceFeed 0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782 -> WETH/USD at 0xb9D0073aCb296719C26a8BF156e4b599174fe1d5",
+            "address": "0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782",
+            "chain": "hemi",
+            "stalenessBoundSec": 21900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 4848099,
+            "failureDomainKeys": [
+              "redstone:0xb9d0073acb296719c26a8bf156e4b599174fe1d5",
+              "satoshi:hemi:price-feed-wrapper",
+              "hemi"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-21900-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 4848099,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xb655775C4C7C6e0C2002935133c950FB89974928; PriceFeed 0x9d9f0D9a13d3bA201003DD2e8950059d2c08D782; debt 12000000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "redstone:0xb9d0073acb296719c26a8bf156e4b599174fe1d5",
+          "satoshi:hemi:stability-pool",
+          "satoshi:hemi:redistribution",
+          "hemi"
+        ],
+        "sources": [
+          {
+            "label": "River hemi deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/hemi"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "hemi-hemibtc",
+        "label": "hemi HemiBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable HemiBTC branch uses one RedStone wrapper path with a contract-enforced 21600-second maximum age.",
+        "collateralAssets": [
+          "HemiBTC"
+        ],
+        "chains": [
+          "hemi"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone",
+            "path": "PriceFeed 0x7ddCA7C659BF897dfaA65f830Eaf3343E026Fe8D -> HemiBTC/USD at 0xE23eCA12D7D2ED3829499556F6dCE06642AFd990",
+            "address": "0x7ddCA7C659BF897dfaA65f830Eaf3343E026Fe8D",
+            "chain": "hemi",
+            "stalenessBoundSec": 21600,
+            "observedAt": "2026-07-14",
+            "observedBlock": 4848099,
+            "failureDomainKeys": [
+              "redstone:0xe23eca12d7d2ed3829499556f6dce06642afd990",
+              "satoshi:hemi:price-feed-wrapper",
+              "hemi"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-21600-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 4848099,
+        "collateralParameters": [
+          {
+            "asset": "HemiBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0x5EA26D0A1a9aa6731F9BFB93fCd654cd1C3079Ec; PriceFeed 0x7ddCA7C659BF897dfaA65f830Eaf3343E026Fe8D; debt 13089134868000000038279 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "redstone:0xe23eca12d7d2ed3829499556f6dce06642afd990",
+          "satoshi:hemi:stability-pool",
+          "satoshi:hemi:redistribution",
+          "hemi"
+        ],
+        "sources": [
+          {
+            "label": "River hemi deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/hemi"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "hemi-wbtc",
+        "label": "hemi WBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WBTC branch uses one RedStone-compatible wrapper path with a contract-enforced 86700-second maximum age.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "hemi"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone-compatible",
+            "path": "PriceFeed 0x7cfe0DB80E7D197e61B9388F67008946C7AF1281 -> WBTC/USD at 0x930Cb6E69e43443b1632B80f98308dD5521183C9",
+            "address": "0x7cfe0DB80E7D197e61B9388F67008946C7AF1281",
+            "chain": "hemi",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 4848099,
+            "failureDomainKeys": [
+              "redstone-compatible:0x930cb6e69e43443b1632b80f98308dd5521183c9",
+              "satoshi:hemi:price-feed-wrapper",
+              "hemi"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86700-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 4848099,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xa7B54413129441e872F42C1c4fE7D1984332CA87; PriceFeed 0x7cfe0DB80E7D197e61B9388F67008946C7AF1281; debt 12050000000000000000 raw 18-decimal satUSD; cap 1000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "redstone-compatible:0x930cb6e69e43443b1632b80f98308dd5521183c9",
+          "satoshi:hemi:stability-pool",
+          "satoshi:hemi:redistribution",
+          "hemi"
+        ],
+        "sources": [
+          {
+            "label": "River hemi deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/hemi"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "bevm-wbtc",
+        "label": "bevm WBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WBTC branch uses one DIA wrapper path with a contract-enforced 86400-second maximum age.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "bevm"
+        ],
+        "feeds": [
+          {
+            "provider": "DIA",
+            "path": "PriceFeed 0xDBd6d24dFbBe88B87Bf54961E791FAc7827426CF -> WBTC/USD at 0x9a9a5113b853b394E9BA5FdB7e72bC5797C85191",
+            "address": "0xDBd6d24dFbBe88B87Bf54961E791FAc7827426CF",
+            "chain": "bevm",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 12312615,
+            "failureDomainKeys": [
+              "dia:0x9a9a5113b853b394e9ba5fdb7e72bc5797c85191",
+              "satoshi:bevm:price-feed-wrapper",
+              "bevm"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 12312615,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0xe7E23aD9c455c2Bcd3f7943437f4dFBe9149c0D2; PriceFeed 0xDBd6d24dFbBe88B87Bf54961E791FAc7827426CF; debt 320180921893450153694 raw 18-decimal satUSD; cap 1000000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "dia:0x9a9a5113b853b394e9ba5fdb7e72bc5797c85191",
+          "satoshi:bevm:stability-pool",
+          "satoshi:bevm:redistribution",
+          "bevm"
+        ],
+        "sources": [
+          {
+            "label": "River bevm deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bevm"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "bevm-wstbtc",
+        "label": "bevm wstBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable wstBTC branch uses one DIA plus staking exchange rate wrapper path with a contract-enforced 86400-second maximum age.",
+        "collateralAssets": [
+          "wstBTC"
+        ],
+        "chains": [
+          "bevm"
+        ],
+        "feeds": [
+          {
+            "provider": "DIA plus staking exchange rate",
+            "path": "PriceFeed 0xfC555dA7C383A583FBc040b9bDcd4cC7d892575D -> BTC/USD multiplied by wstBTC/stBTC exchange rate at 0x9a9a5113b853b394E9BA5FdB7e72bC5797C85191",
+            "address": "0xfC555dA7C383A583FBc040b9bDcd4cC7d892575D",
+            "chain": "bevm",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 12312615,
+            "failureDomainKeys": [
+              "dia-plus-staking-exchange-rate:0x9a9a5113b853b394e9ba5fdb7e72bc5797c85191",
+              "satoshi:bevm:price-feed-wrapper",
+              "bevm"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-86400-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 12312615,
+        "collateralParameters": [
+          {
+            "asset": "wstBTC",
+            "maximumLtvPct": 58.823529,
+            "minimumCollateralRatioPct": 170,
+            "note": "TroveManager 0xD63e204F0aB688403205cFC144CAdfc0D8C68458; PriceFeed 0xfC555dA7C383A583FBc040b9bDcd4cC7d892575D; debt 1623945700000000000000 raw 18-decimal satUSD; cap 1000000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "dia-plus-staking-exchange-rate:0x9a9a5113b853b394e9ba5fdb7e72bc5797c85191",
+          "satoshi:bevm:stability-pool",
+          "satoshi:bevm:redistribution",
+          "bevm"
+        ],
+        "sources": [
+          {
+            "label": "River bevm deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bevm"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "bitlayer-wbtc",
+        "label": "bitlayer WBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable WBTC branch uses one APRO wrapper path with a contract-enforced 4000-second maximum age.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "bitlayer"
+        ],
+        "feeds": [
+          {
+            "provider": "APRO",
+            "path": "PriceFeed 0x78C04c4A2A606077be0Aa04721d6b144Df44Df52 -> WBTC/USD at 0x29304F0c6fd0Db604312d6E982164e1E7C3adAD9",
+            "address": "0x78C04c4A2A606077be0Aa04721d6b144Df44Df52",
+            "chain": "bitlayer",
+            "stalenessBoundSec": 4000,
+            "observedAt": "2026-07-14",
+            "observedBlock": 23922180,
+            "failureDomainKeys": [
+              "apro:0x29304f0c6fd0db604312d6e982164e1e7c3adad9",
+              "satoshi:bitlayer:price-feed-wrapper",
+              "bitlayer"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-4000-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 23922180,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "TroveManager 0x3DC0565bcA627823828Aa3F2f8d805ec8a16005a; PriceFeed 0x78C04c4A2A606077be0Aa04721d6b144Df44Df52; debt 1045000000000000000000 raw 18-decimal satUSD; cap 1000000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "apro:0x29304f0c6fd0db604312d6e982164e1e7c3adad9",
+          "satoshi:bitlayer:stability-pool",
+          "satoshi:bitlayer:redistribution",
+          "bitlayer"
+        ],
+        "sources": [
+          {
+            "label": "River bitlayer deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bitlayer"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
+      },
+      {
+        "id": "bitlayer-stbtc",
+        "label": "bitlayer stBTC Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The callable stBTC branch uses one APRO wrapper path with a contract-enforced 4000-second maximum age.",
+        "collateralAssets": [
+          "stBTC"
+        ],
+        "chains": [
+          "bitlayer"
+        ],
+        "feeds": [
+          {
+            "provider": "APRO",
+            "path": "PriceFeed 0x40918B4649a618eEE47f62Be7Fb6ce5b9906da9A -> stBTC/USD at 0xafB68Ec2aA21B5c2D2A408792eaD54a7AC8fC197",
+            "address": "0x40918B4649a618eEE47f62Be7Fb6ce5b9906da9A",
+            "chain": "bitlayer",
+            "stalenessBoundSec": 4000,
+            "observedAt": "2026-07-14",
+            "observedBlock": 23922180,
+            "failureDomainKeys": [
+              "apro:0xafb68ec2aa21b5c2d2a408792ead54a7ac8fc197",
+              "satoshi:bitlayer:price-feed-wrapper",
+              "bitlayer"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The branch wrapper reverts on a non-positive or older-than-4000-second source. There is no cached-price or alternate-provider fallback; an admin-configurable source or threshold is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 23922180,
+        "collateralParameters": [
+          {
+            "asset": "stBTC",
+            "maximumLtvPct": 62.5,
+            "minimumCollateralRatioPct": 160,
+            "note": "TroveManager 0x404dCd7E15947D04063B436f71d93E2d79023aa9; PriceFeed 0x40918B4649a618eEE47f62Be7Fb6ce5b9906da9A; debt 522500000000000000000 raw 18-decimal satUSD; cap 1000000000 satUSD; sunsetting=false and paused=false."
+          }
+        ],
+        "liquidationMechanism": "Any caller can execute an immediate fixed-path liquidation below MCR; there is no auction or keeper allowlist. The chain-local Stability Pool burns satUSD against seized collateral first and any unoffset debt/collateral is redistributed across surviving troves; Recovery Mode expands eligibility up to TCR or 150% subject to pool coverage.",
+        "liquidationDelaySec": 0,
+        "backstop": "Chain-local depositor-funded Stability Pool offsets liquidations first; flash-loan execution can supply atomic liquidity but is not committed insurance. Any remainder is redistributed to active troves.",
+        "shutdownOrBadDebtBehavior": "Owner sunset sets the branch cap to zero, blocks new debt, and leaves repayment, redemption, and liquidation live. Unoffset debt and collateral are redistributed to surviving troves; the final trove cannot be liquidated and must repay or be redeemed.",
+        "failureDomainKeys": [
+          "apro:0xafb68ec2aa21b5c2d2a408792ead54a7ac8fc197",
+          "satoshi:bitlayer:stability-pool",
+          "satoshi:bitlayer:redistribution",
+          "bitlayer"
+        ],
+        "sources": [
+          {
+            "label": "River bitlayer deployments",
+            "url": "https://docs.river.inc/outro/deployed-contracts/bitlayer"
+          },
+          {
+            "label": "Pinned Satoshi Chainlink wrapper",
+            "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/dependencies/priceFeed/PriceFeedChainlink.sol"
+          }
+        ]
       }
     ]
   },
@@ -351,35 +2231,84 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "satUSD (River, formerly Satoshi Protocol) is a Liquity-v1-derived omni-CDP: users lock BTC/ETH/BNB/LSTs on a source chain and LayerZero OFT messaging authorizes a native satUSD mint on the destination chain. The OFT contracts on Ethereum and Base are UUPS proxies owned by a single EOA.",
+    "confidence": "manual-review",
+    "summary": "satUSD's Ethereum and Base DebtTokenWithLz proxies mint for chain-specific SatoshiXApp and enabled TroveManager contracts, plus owner-appointed wards. Both UUPS proxies share one EOA owner that can upgrade mint logic or appoint unrestricted wards, but the ward and TroveManager sets cannot be exhaustively enumerated from contract state or events.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x1958853a8be062dc4f401750eb233f5850f0d0d2",
+        "0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+      ],
+      "implementationAddresses": [
+        "0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d",
+        "0x256bd26fddc17a1d1a9b974bcd268f89bfe15789"
+      ],
+      "adminAddresses": [
+        "0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "satUSD UUPS owner and ward administrator",
+      "sources": [
+        {
+          "label": "satUSD Ethereum proxy",
+          "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2#code"
+        },
+        {
+          "label": "satUSD Base proxy",
+          "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162#code"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "River omni-CDP borrower-operations / OFT mint",
+        "chain": "ethereum",
+        "address": "0xb8374e4DfF99202292da2FE34425e1dE665b67E6",
+        "label": "satUSD Ethereum SatoshiXApp mint path",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Mint capped by per-branch overcollateralized CDP debt; cross-chain mint is authorized by LayerZero OFT messages confirming source-chain collateral lockup.",
-        "evidence": "River docs and LayerZero integration coverage describe a Liquity-v1-style CDP whose collateral stays source-chain; OFT _lzSend/_lzReceive messages relay collateral state to authorize satUSD mint on the destination chain.",
+        "capDescription": "The verified debt token permits this SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedBlock": 25530324,
+        "evidence": "At Ethereum block 25530324, satoshiXApp() on proxy 0x195885... returned this contract. Verified DebtTokenWithLz source permits satoshiXApp to call mint(), mintWithGasCompensation(), and enableTroveManager().",
         "sources": [
           {
-            "label": "River docs",
-            "url": "https://docs.river.inc"
+            "label": "satUSD Ethereum proxy",
+            "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2#code"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0x9a3c724ee9603A7550499bE73DC743B371811dd3",
+        "label": "satUSD Base SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified debt token permits this SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedBlock": 48618018,
+        "evidence": "At Base block 48618018, satoshiXApp() on proxy 0x70654... returned this contract. The Base proxy uses the same verified DebtTokenWithLz mint checks as Ethereum.",
+        "sources": [
+          {
+            "label": "satUSD Base proxy",
+            "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162#code"
           }
         ]
       },
       {
         "chain": "ethereum",
         "address": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
-        "label": "satUSD OFT owner (EOA)",
-        "role": "minter-admin",
+        "label": "satUSD UUPS owner and ward administrator",
+        "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Ethereum block 25294721, owner() on the satUSD Ethereum contract (0x1958853a8be062dc4f401750eb233f5850f0d0d2, UUPS proxy with impl 0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d) returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47; eth_getCode returned 0x (EOA). Base OFT (0x70654aad8b7734dc319d0c3608ec7b32e03fa162) owner() also returned the same EOA.",
+        "observedBlock": 25530324,
+        "evidence": "At Ethereum block 25530324 and Base block 48618018, owner() on both satUSD UUPS proxies returned this address and eth_getCode returned empty bytecode. Verified implementation source gates _authorizeUpgrade(), rely(), and deny() with onlyOwner; a relied ward may call mint() without a numeric token-contract cap.",
         "sources": [
           {
             "label": "satUSD on Etherscan",
@@ -393,9 +2322,9 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25294721: owner() on satUSD ETH UUPS proxy = 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47; eth_getCode = 0x (confirmed EOA). Base OFT owner() = same EOA. The ETH contract has an EIP-1967 implementation slot pointing to 0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d (no separate proxy admin). EOA ownership is issuer-standard enterprise custody (MPC/HSM indistinguishable on-chain); per brief, this does not block verification.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "RPC reads establish both current SatoshiXApp addresses, both UUPS implementations, and the shared owner. Verified DebtTokenWithLz source shows three mint-authorized classes: satoshiXApp, troveManager mapping entries, and owner-managed wards. Because rely(), deny(), and enableTroveManager() emit no membership events and neither mapping is enumerable, exact current ward and TroveManager membership cannot be reconstructed safely from the contract interface alone.",
+      "reviewer": "Codex Safety Score V9 CTRL curation",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "River docs",
@@ -404,7 +2333,15 @@
         {
           "label": "satUSD on Etherscan",
           "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2"
+        },
+        {
+          "label": "satUSD on Basescan",
+          "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
         }
+      ],
+      "unresolvedQuestions": [
+        "Enumerate every currently enabled wards(address) entry on Ethereum and Base despite the mappings having no iterable getter or membership events.",
+        "Enumerate every currently enabled troveManager(address) entry on Ethereum and Base despite enableTroveManager() emitting no event."
       ]
     }
   },

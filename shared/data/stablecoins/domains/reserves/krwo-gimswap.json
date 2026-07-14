@@ -1,0 +1,75 @@
+{
+  "id": "krwo-gimswap",
+  "reserves": [
+    {
+      "name": "Open Voucher KRW vouchers / OV tokens",
+      "pct": 100,
+      "risk": "high",
+      "blacklistable": true,
+      "assetClass": "other",
+      "issuerOrObligor": "Open(Asset) Co., Ltd. and GimSwap",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "legal",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "GimSwap KRWO documentation",
+        "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
+      },
+      {
+        "label": "GimSwap official website",
+        "url": "https://gimswap.com"
+      }
+    ],
+    "rationale": "GimSwap documents KRWO as collateralized by OV vouchers issued by Open(Asset), with 10,000 KRWO corresponding to one OV voucher and OV vouchers redeemable for Korean won through the Open(Voucher) service. The reviewed documentation does not publish current voucher balances, reserve accounts, or independent assurance.",
+    "compositionBasis": "GimSwap KRWO collateral and redemption disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The OV voucher reserve instrument is identified, but current voucher balances, issuer reserve backing, custody, and redemption liquidity are not independently evidenced.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Open Voucher KRW vouchers / OV tokens",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The product documentation describes the voucher mechanism but provides no dated reserve evidence or current supply reconciliation."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Open(Asset) Co., Ltd. / Open(Voucher)",
+        "role": "custodian"
+      },
+      {
+        "name": "GimSwap KRWO contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "GimSwap KRWO documentation",
+        "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
+      }
+    ],
+    "uncertainty": "GimSwap names Open(Asset) as the OV voucher operator but does not disclose reserve-bank custody, segregation, bankruptcy treatment, or rehypothecation terms."
+  }
+}

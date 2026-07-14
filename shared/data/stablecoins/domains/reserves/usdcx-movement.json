@@ -1,0 +1,59 @@
+{
+  "id": "usdcx-movement",
+  "reserves": [
+    {
+      "name": "Circle USDC held in xReserve smart contract",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, LLC",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Circle xReserve",
+        "url": "https://www.circle.com/xreserve"
+      },
+      {
+        "label": "Movement USDCx announcement",
+        "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
+      }
+    ],
+    "rationale": "Circle documents xReserve as a Circle-deployed smart contract that holds USDC to back partner-chain stablecoins 1:1. Circle's product page identifies Movement as an xReserve partner, while Movement identifies USDCx as its USDC-backed stablecoin. The direct reserve exposure is therefore Circle USDC held in xReserve.",
+    "compositionBasis": "Circle xReserve issuer documentation for one-to-one USDC backing",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No direct reserve asset remains unidentified in the documented 1:1 xReserve model.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Circle-deployed xReserve smart contract",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Circle xReserve",
+        "url": "https://www.circle.com/xreserve"
+      }
+    ],
+    "uncertainty": "Circle documents the on-chain xReserve custody and 1:1 backing model but the reviewed source does not state legal segregation, bankruptcy remoteness, or rehypothecation terms for the reserve contract.",
+    "knownUnknownExposurePct": 100
+  }
+}

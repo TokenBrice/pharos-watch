@@ -1,0 +1,81 @@
+{
+  "id": "reur-royal-euro",
+  "reserves": [
+    {
+      "name": "EUR cash and cash equivalents",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed financial institution or institutions",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RIB Digital REUR transparency dashboard API",
+        "url": "https://rib.digital/api/v1/digital/transparency/assets/REUR/dashboard"
+      },
+      {
+        "label": "RIB Digital REUR product overview",
+        "url": "https://rib.digital/products"
+      },
+      {
+        "label": "RIB Digital REUR signed PoR snapshot - April 2026",
+        "url": "https://ribstatic.com/public_sanitized/2026-04-20/REUR_sanitized_PoR_snapshot_20260420_1.json"
+      }
+    ],
+    "rationale": "RIB Digital's REUR dashboard reports the April 23, 2026 reserve composition as 100% cash and cash equivalents, while its REUR product description identifies EUR-denominated reserves held with financial institutions. The envelope retains one aggregate EUR-cash slice because the issuer does not disclose the current bank-level allocation.",
+    "compositionBasis": "RIB Digital REUR reserve-composition dashboard",
+    "compositionAsOf": "2026-04-23",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The disclosed reserve category is fully classified as EUR cash and cash equivalents, but bank identities, account-level balances, and provider shares are not public.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "EUR cash and cash equivalents",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Off-chain EUR cash and cash equivalents are external reserve assets rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed financial institution or institutions",
+        "role": "bank"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "RIB Digital REUR product overview",
+        "url": "https://rib.digital/products"
+      },
+      {
+        "label": "RIB Digital REUR signed PoR snapshot - April 2026",
+        "url": "https://ribstatic.com/public_sanitized/2026-04-20/REUR_sanitized_PoR_snapshot_20260420_1.json"
+      }
+    ],
+    "uncertainty": "The product-level disclosure describes segregated accounts, but the signed snapshot redacts the bank and account details. Current provider identities and shares, legal insolvency treatment, and rehypothecation terms therefore remain unknown.",
+    "knownUnknownExposurePct": 100
+  }
+}

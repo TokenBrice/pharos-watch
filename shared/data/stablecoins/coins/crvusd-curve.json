@@ -18,35 +18,632 @@
   "detailProvider": "defillama",
   "geckoId": "crvusd",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Curve crvUSD uses collateral price oracles for LLAMMA/loan health, but reviewed sources do not show an explicit redundant failover tier.",
+    "tier": "single-source-or-laggy",
+    "summary": "Nine debt-bearing Ethereum controllers use market-specific Curve EMA and aggregate-stable-price routes. Modern Chainlink clamps were disabled at the reviewed block, while legacy sfrxETH requires an unchecked Chainlink answer; tBTC, weETH, cbBTC, and LBTC add single-pool conversion dependencies without alternate feeds.",
+    "branchModel": "multi-branch",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-07-13",
-      "reviewer": "Codex data review",
-      "rationale": "crvUSD has distinct LLAMMA collateral markets, but the reviewed risk and audit sources do not support a complete per-market feed, liquidation, fallback, and bad-debt evidence inventory. Keep crvUSD out of branch-complete v9 evaluation until those markets are reviewed.",
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 ORCL curation",
+      "rationale": "ControllerFactory reported nine collateral controllers at finalized Ethereum block 25531477, and every controller had both positive total_debt and at least one active loan. Legacy sfrxETH and LBTC had zero debt ceilings but retained debt and loans, so they remain liquidation-active branches rather than exclusions.",
       "sources": [
         {
-          "label": "Curve crvUSD risk docs",
-          "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+          "label": "Curve Controller documentation",
+          "url": "https://docs.curve.finance/developer/crvusd/controller"
         },
         {
-          "label": "Curve stablecoin audit",
-          "url": "https://reports.chainsecurity.com/Curve/ChainSecurity_Curve_CurveStablecoin_Audit.pdf"
+          "label": "crvUSD ControllerFactory",
+          "url": "https://eth.blockscout.com/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC?tab=contract"
+        },
+        {
+          "label": "Finalized Ethereum block 25531477",
+          "url": "https://eth.blockscout.com/block/25531477"
         }
       ]
     },
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 ORCL curation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Curve crvUSD risk docs",
-        "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+        "label": "Curve crvUSD oracle documentation",
+        "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
       },
       {
-        "label": "Curve stablecoin audit",
-        "url": "https://reports.chainsecurity.com/Curve/ChainSecurity_Curve_CurveStablecoin_Audit.pdf"
+        "label": "Curve Controller documentation",
+        "url": "https://docs.curve.finance/developer/crvusd/controller"
+      },
+      {
+        "label": "Curve LLAMMA explainer",
+        "url": "https://docs.curve.finance/developer/crvusd/llamma-explainer"
+      },
+      {
+        "label": "Pinned Curve stablecoin repository",
+        "url": "https://github.com/curvefi/curve-stablecoin/tree/6b0c3096841d46e8d6790630b6443d5510dd87e8"
+      }
+    ],
+    "branches": [
+      {
+        "id": "legacy-sfrxeth",
+        "label": "Legacy sfrxETH controller",
+        "tier": "single-source-or-laggy",
+        "summary": "The legacy sfrxETH controller retains five loans and debt despite a zero debt ceiling; its oracle always invokes an unchecked Chainlink ETH/USD clamp and a 900-second Uniswap lower floor around Curve EMA components.",
+        "collateralAssets": [
+          "sfrxETH (legacy market)"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve legacy CryptoWithStablePriceAndChainlinkFrxeth",
+            "path": "TriCrypto2 USDT/WBTC/WETH WETH leg 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46 + USDT/crvUSD pool 0x390f3595bCa2Df7d23783dFd126427CCeb997BF4 + legacy stable-price aggregator 0xe5Afcf332a5457E8FafCD668BcE3dF953762Dfe7 + ETH/frxETH pool 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577 + sfrxETH share rate, bounded to Chainlink ETH/USD 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 and a 900-second Uniswap frxETH/FRAX lower floor 0x36C060Cc4b088c830a561E959A679A58205D3F56",
+            "address": "0x19F5B81e5325F882C9853B5585f74f751DE3896d",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve-legacy-tricrypto2",
+              "curve-legacy-stable-aggregator",
+              "chainlink:ethereum:eth-usd-unchecked",
+              "uniswap:ethereum:frxeth-frax-twap",
+              "sfrxeth-share-rate",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider. Chainlink ETH/USD is called unconditionally for a plus-or-minus 1% clamp but updatedAt is not checked; the 900-second Uniswap frxETH/FRAX TWAP is only a lower floor, not failover. Mandatory component reverts block the oracle, and the internal Curve price uses a 600-second EMA.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "sfrxETH (legacy market)",
+            "maximumLtvPct": 89,
+            "note": "Controller 0x8472A9A7632b173c8Cf3a86D3afec50c35548e76; AMM 0x136e783846ef68C8Bd00a3369F787dF8d683a696; A=100, loan discount 9%, liquidation discount 6%. Debt was 153,838.108782806041821091 crvUSD across five loans; zero ceiling disables fresh factory inventory but does not remove existing exposure."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "failureDomainKeys": [
+          "curve-legacy-sfrxeth-oracle",
+          "curve-llamma-liquidators",
+          "curve-no-automatic-bad-debt-backstop",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Legacy sfrxETH oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x19F5B81e5325F882C9853B5585f74f751DE3896d?tab=contract"
+          },
+          {
+            "label": "Curve Controller documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/controller"
+          }
+        ]
+      },
+      {
+        "id": "wsteth",
+        "label": "wstETH controller",
+        "tier": "standard-external",
+        "summary": "The wstETH controller prices two Curve Tricrypto routes against the aggregate crvUSD stable price and stETH/wstETH conversion; its configured Chainlink clamps were disabled at the reviewed block.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoWithStablePriceWsteth",
+            "path": "Tricrypto pools 0x7F86Bf177Dd4F3494b841a37e810A34dD56c829B and 0xf5f5B97624542D72A9E06f04804Bf81baA15e2B4 -> paired stable pools 0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E and 0x390f3595bCa2Df7d23783dFd126427CCeb997BF4 -> AggregateStablePrice 0x18672b1b0c623a30089A280Ed9256379fb0E4E62 -> stETH/ETH pool 0x21E27a5E5513D6e65C4f830167390997aA84843a -> wstETH rate",
+            "address": "0xc1793A29609ffFF81f10139fa0A7A444c9e106Ad",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve-modern-tricrypto-ema",
+              "curve-aggregate-stable-price",
+              "curve-steth-eth-ema",
+              "wsteth-rate",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Dormant Chainlink clamps",
+            "path": "Configured ETH/USD 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 and stETH/ETH 0x86392dC19c0b719886221c78AB11eb8Cf5c52812 plus-or-minus 1.5% clamps; use_chainlink=false at the observed block",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "chainlink:ethereum:eth-usd-dormant",
+              "chainlink:ethereum:steth-eth-dormant"
+            ]
+          }
+        ],
+        "fallbackBehavior": "use_chainlink was false, so the configured 86,400-second Chainlink clamps were dormant rather than failover. The active Curve EMA and AggregateStablePrice route has no contractual heartbeat or stale-answer rejection and no alternate provider.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "maximumLtvPct": 89,
+            "note": "Controller 0x100dAa78fC509Db39Ef7D04DE0c1ABD299f4C6CE; AMM 0x37417B2238AA52D0DD2D6252d989E728e8f706e4; A=100, loan discount 9%, liquidation discount 6%, 150 million crvUSD ceiling. Debt was 7,670,365.763525878213991253 across 77 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "failureDomainKeys": [
+          "curve-modern-tricrypto-ema",
+          "curve-aggregate-stable-price",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "wstETH oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0xc1793A29609ffFF81f10139fa0A7A444c9e106Ad?tab=contract"
+          },
+          {
+            "label": "Curve oracle documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
+          }
+        ]
+      },
+      {
+        "id": "wbtc",
+        "label": "WBTC controller",
+        "tier": "standard-external",
+        "summary": "The WBTC controller uses the two modern Tricrypto Curve EMA routes and AggregateStablePrice; its configured BTC/USD Chainlink clamp was disabled at the reviewed block.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoWithStablePriceWBTC",
+            "path": "WBTC legs of Tricrypto pools 0x7F86Bf177Dd4F3494b841a37e810A34dD56c829B and 0xf5f5B97624542D72A9E06f04804Bf81baA15e2B4 -> paired USDC/crvUSD and USDT/crvUSD pools -> AggregateStablePrice 0x18672b1b0c623a30089A280Ed9256379fb0E4E62",
+            "address": "0xBe83fD842DB4937C0C3d15B2aBA6AF7E854f8dcb",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve-modern-tricrypto-ema",
+              "curve-aggregate-stable-price",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Dormant Chainlink BTC/USD clamp",
+            "path": "Configured BTC/USD 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c plus-or-minus 1.5% clamp; use_chainlink=false at the observed block",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "chainlink:ethereum:btc-usd-dormant"
+            ]
+          }
+        ],
+        "fallbackBehavior": "use_chainlink was false, so the configured 86,400-second BTC/USD clamp was dormant rather than failover. Active Curve EMA and AggregateStablePrice inputs have no contractual heartbeat or stale-answer rejection and no alternate provider.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 89,
+            "note": "Controller 0x4e59541306910aD6dC1daC0AC9dFB29bD9F15c67; AMM 0xE0438Eb3703bF871E31Ce639bd351109c88666ea; A=100, loan discount 9%, liquidation discount 6%, 200 million crvUSD ceiling. Debt was 16,754,863.623974532900875714 across 104 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "failureDomainKeys": [
+          "curve-modern-tricrypto-ema",
+          "curve-aggregate-stable-price",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "WBTC oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0xBe83fD842DB4937C0C3d15B2aBA6AF7E854f8dcb?tab=contract"
+          },
+          {
+            "label": "Curve oracle documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
+          }
+        ]
+      },
+      {
+        "id": "weth",
+        "label": "WETH controller",
+        "tier": "standard-external",
+        "summary": "The WETH controller uses the two modern Tricrypto Curve EMA routes and AggregateStablePrice; its configured ETH/USD Chainlink clamp was disabled at the reviewed block.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoWithStablePriceETH",
+            "path": "WETH legs of Tricrypto pools 0x7F86Bf177Dd4F3494b841a37e810A34dD56c829B and 0xf5f5B97624542D72A9E06f04804Bf81baA15e2B4 -> paired USDC/crvUSD and USDT/crvUSD pools -> AggregateStablePrice 0x18672b1b0c623a30089A280Ed9256379fb0E4E62",
+            "address": "0x966cBDeceFB60A289b0460F7638f4A75F432cA06",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve-modern-tricrypto-ema",
+              "curve-aggregate-stable-price",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Dormant Chainlink ETH/USD clamp",
+            "path": "Configured ETH/USD 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 plus-or-minus 1.5% clamp; use_chainlink=false at the observed block",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "chainlink:ethereum:eth-usd-dormant"
+            ]
+          }
+        ],
+        "fallbackBehavior": "use_chainlink was false, so the configured 86,400-second ETH/USD clamp was dormant rather than failover. Active Curve EMA and AggregateStablePrice inputs have no contractual heartbeat or stale-answer rejection and no alternate provider.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 83.71,
+            "note": "Controller 0xA920De414eA4Ab66b97dA1bFE9e6EcA7d4219635; AMM 0x1681195C176239ac5E72d9aeBaCf5b2492E0C4ee; A=100, loan discount 14.29%, liquidation discount 9.21%, 200 million crvUSD ceiling. Debt was 1,696,250.542549832367317280 across 200 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "failureDomainKeys": [
+          "curve-modern-tricrypto-ema",
+          "curve-aggregate-stable-price",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "WETH oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x966cBDeceFB60A289b0460F7638f4A75F432cA06?tab=contract"
+          },
+          {
+            "label": "Curve oracle documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
+          }
+        ]
+      },
+      {
+        "id": "sfrxeth-v2",
+        "label": "Current sfrxETH controller",
+        "tier": "standard-external",
+        "summary": "The current sfrxETH controller combines the modern WETH Curve composite with the frxETH/WETH pool and sfrxETH share rate; its configured ETH/USD clamp was disabled.",
+        "collateralAssets": [
+          "sfrxETH (current market)"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoWithStablePriceSfrxeth",
+            "path": "Modern WETH Tricrypto and AggregateStablePrice composite -> frxETH/WETH pool 0x9c3B46C0Ceb5B9e304FCd6D88Fc50f7DD24B31Bc -> sfrxETH share rate",
+            "address": "0x28d7880B5b67fB4a0B1c6Ed6c33c33f365113C29",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve-modern-tricrypto-ema",
+              "curve-aggregate-stable-price",
+              "curve-frxeth-weth-ema",
+              "sfrxeth-share-rate",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Dormant Chainlink ETH/USD clamp",
+            "path": "Configured ETH/USD 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 plus-or-minus 1.5% clamp; use_chainlink=false at the observed block",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "chainlink:ethereum:eth-usd-dormant"
+            ]
+          }
+        ],
+        "fallbackBehavior": "use_chainlink was false, so the configured 86,400-second ETH/USD clamp was dormant. Active Curve EMA, AggregateStablePrice, and share-rate components have no alternate provider or contractual stale-answer rejection.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "sfrxETH (current market)",
+            "maximumLtvPct": 89,
+            "note": "Controller 0xEC0820EfafC41D8943EE8dE495fC9Ba8495B15cf; AMM 0xfA96ad0a9E64261dB86950e2dA362f5572c5c6fd; A=100, loan discount 9%, liquidation discount 6%, 50 million crvUSD ceiling. Debt was 1,218,769.139164882615291076 across 18 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "failureDomainKeys": [
+          "curve-modern-tricrypto-ema",
+          "curve-frxeth-weth-ema",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Current sfrxETH oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x28d7880B5b67fB4a0B1c6Ed6c33c33f365113C29?tab=contract"
+          },
+          {
+            "label": "Curve oracle documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
+          }
+        ]
+      },
+      {
+        "id": "tbtc",
+        "label": "tBTC controller",
+        "tier": "single-source-or-laggy",
+        "summary": "The tBTC controller depends on one crvUSD/tBTC/wstETH pool plus AggregateStablePrice; its configured BTC/USD clamp was disabled and is not failover.",
+        "collateralAssets": [
+          "tBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoWithStablePriceTBTC",
+            "path": "crvUSD/tBTC/wstETH pool 0x2889302a794dA87fBF1D6Db415C1492194663D13 tBTC EMA -> AggregateStablePrice 0x18672b1b0c623a30089A280Ed9256379fb0E4E62",
+            "address": "0xbeF434E2aCF0FBaD1f0579d2376fED0d1CfC4217",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve:tbtc-single-pool-ema",
+              "curve-aggregate-stable-price",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Dormant Chainlink BTC/USD clamp",
+            "path": "Configured BTC/USD 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c plus-or-minus 1.5% clamp; use_chainlink=false at the observed block",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "chainlink:ethereum:btc-usd-dormant"
+            ]
+          }
+        ],
+        "fallbackBehavior": "use_chainlink was false, so the configured 86,400-second BTC/USD clamp was dormant. The single active Curve pool and AggregateStablePrice expose no contractual heartbeat, stale-answer rejection, or alternate tBTC price path.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "tBTC",
+            "maximumLtvPct": 89,
+            "note": "Controller 0x1C91da0223c763d2e0173243eAdaA0A2ea47E704; AMM 0xf9bD9da2427a50908C4c6D1599D8e62837C2BCB0; A=100, loan discount 9%, liquidation discount 6%, 50 million crvUSD ceiling. Debt was 3,167,593.156509140683260690 across 17 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "failureDomainKeys": [
+          "curve:tbtc-single-pool-ema",
+          "curve-aggregate-stable-price",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "tBTC oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0xbeF434E2aCF0FBaD1f0579d2376fED0d1CfC4217?tab=contract"
+          },
+          {
+            "label": "Curve oracle documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
+          }
+        ]
+      },
+      {
+        "id": "weeth",
+        "label": "weETH controller",
+        "tier": "single-source-or-laggy",
+        "summary": "The weETH controller layers one WETH/weETH conversion pool and capped rate updates over the modern WETH oracle, with no alternate weETH path.",
+        "collateralAssets": [
+          "weETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoFromPoolsRateWAgg",
+            "path": "WETH/weETH pool 0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5 with USE_RATES=true and stored-rate speed cap 1% per minute -> base WETH oracle 0x966cBDeceFB60A289b0460F7638f4A75F432cA06, whose Chainlink clamp was disabled",
+            "address": "0x0a9aE947495034C0bBBAB845Fd75b5BBAfc91aAb",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve:weeth-weth-single-pool",
+              "curve-weeth-rate-cap",
+              "curve-modern-weth-oracle",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate weETH conversion path. The oracle applies a one-percent-per-minute speed cap to its stored rate and then multiplies by the base WETH Curve composite; the base oracle's Chainlink clamp was disabled, and active Curve inputs have no contractual stale-answer rejection.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "weETH",
+            "maximumLtvPct": 90.14,
+            "note": "Controller 0x652aEa6B22310C89DCc506710CaD24d2Dba56B11; AMM 0xEd325262f54b2987e74436f4556a27f748146da1; A=70, loan discount 7%, liquidation discount 4%, 20 million crvUSD ceiling. Debt was 159,841.535473546838251713 across ten loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "failureDomainKeys": [
+          "curve:weeth-weth-single-pool",
+          "curve-modern-weth-oracle",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "weETH oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x0a9aE947495034C0bBBAB845Fd75b5BBAfc91aAb?tab=contract"
+          },
+          {
+            "label": "Pinned Curve conversion-oracle source",
+            "url": "https://github.com/curvefi/curve-stablecoin/blob/6b0c3096841d46e8d6790630b6443d5510dd87e8/curve_stablecoin/price_oracles/CryptoFromPoolsRateWAgg.vy"
+          }
+        ]
+      },
+      {
+        "id": "cbbtc",
+        "label": "cbBTC controller",
+        "tier": "single-source-or-laggy",
+        "summary": "The cbBTC controller layers one cbBTC/WBTC pool over the modern WBTC oracle, with no alternate cbBTC conversion path.",
+        "collateralAssets": [
+          "cbBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoFromPoolWAgg",
+            "path": "cbBTC/WBTC pool 0x839d6bDeDFF886404A6d7a788ef241e4e28F4802 -> base WBTC oracle 0xBe83fD842DB4937C0C3d15B2aBA6AF7E854f8dcb, whose Chainlink clamp was disabled",
+            "address": "0x4710A77a0E0f4c7b0E11CDeB74acB042e62B8d22",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve:cbbtc-wbtc-single-pool",
+              "curve-modern-wbtc-oracle",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate cbBTC conversion provider. The single pool is multiplied by the modern WBTC Curve composite, whose Chainlink clamp was disabled; active Curve inputs have no contractual heartbeat or stale-answer rejection.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "cbBTC",
+            "maximumLtvPct": 90.83,
+            "note": "Controller 0xf8C786b1064889fFd3c8A08B48D5e0c159F4cBe3; AMM 0xB6E62Aa178a5421d0A51D17E720A05de78D3137A; A=75, loan discount 6.5%, liquidation discount 3.5%, 50 million crvUSD ceiling. Debt was 1,208,494.487182224333313150 across 20 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "failureDomainKeys": [
+          "curve:cbbtc-wbtc-single-pool",
+          "curve-modern-wbtc-oracle",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "cbBTC oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x4710A77a0E0f4c7b0E11CDeB74acB042e62B8d22?tab=contract"
+          },
+          {
+            "label": "Pinned Curve conversion-oracle source",
+            "url": "https://github.com/curvefi/curve-stablecoin/blob/6b0c3096841d46e8d6790630b6443d5510dd87e8/curve_stablecoin/price_oracles/CryptoFromPoolWAgg.vy"
+          }
+        ]
+      },
+      {
+        "id": "lbtc",
+        "label": "LBTC controller",
+        "tier": "single-source-or-laggy",
+        "summary": "The LBTC controller retains two loans despite a zero debt ceiling and layers one eBTC/LBTC/WBTC pool over the modern WBTC oracle without an alternate LBTC path.",
+        "collateralAssets": [
+          "LBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoFromPoolWAgg",
+            "path": "eBTC/LBTC/WBTC pool 0xabaf76590478F2fE0b396996f55F0b61101e9502 LBTC/WBTC conversion -> base WBTC oracle 0xBe83fD842DB4937C0C3d15B2aBA6AF7E854f8dcb, whose Chainlink clamp was disabled",
+            "address": "0x2eF4b38A128eCc1aC06B43055553F95af59523de",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve:lbtc-wbtc-single-pool",
+              "curve-modern-wbtc-oracle",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate LBTC conversion provider. The single pool is multiplied by the modern WBTC Curve composite, whose Chainlink clamp was disabled; active Curve inputs have no contractual heartbeat or stale-answer rejection.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "LBTC",
+            "maximumLtvPct": 90.83,
+            "note": "Controller 0x8aca5A776a878Ea1F8967e70a23b8563008f58Ef; AMM 0x9a2e6bb3114B1EEB5492D97188A3ECB09E39fac8; A=75, loan discount 6.5%, liquidation discount 3.5%. Debt was 1.066531947162226292 crvUSD across two loans; zero ceiling disables fresh factory inventory but does not remove existing exposure."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "failureDomainKeys": [
+          "curve:lbtc-wbtc-single-pool",
+          "curve-modern-wbtc-oracle",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "LBTC oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x2eF4b38A128eCc1aC06B43055553F95af59523de?tab=contract"
+          },
+          {
+            "label": "Pinned Curve conversion-oracle source",
+            "url": "https://github.com/curvefi/curve-stablecoin/blob/6b0c3096841d46e8d6790630b6443d5510dd87e8/curve_stablecoin/price_oracles/CryptoFromPoolWAgg.vy"
+          }
+        ]
       }
     ]
   },
@@ -140,46 +737,87 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "crvUSD combines user borrowing markets with Curve ControllerFactory debt-ceiling and market-admin surfaces that can affect supply; the factory admin is a Vyper intermediary contract delegating to Curve DAO and an emergency multisig.",
+    "summary": "crvUSD's immutable ControllerFactory is the token minter and pre-mints inventory to each lending controller up to its debt ceiling. Curve DAO can raise those ceilings through an immutable Vyper intermediary; a 5-of-9 emergency multisig can only reduce ceilings and adjust controller parameters.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedBlock": 25530324,
+      "sources": [
+        {
+          "label": "crvUSD token verified contract",
+          "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+        },
+        {
+          "label": "crvUSD ControllerFactory verified contract",
+          "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC",
         "label": "crvUSD ControllerFactory",
-        "role": "cap-admin",
+        "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": true,
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "ControllerFactory manages collateral markets, controller deployments, and debt ceilings for crvUSD borrow markets. minter() on the crvUSD token returns this address.",
+        "capDescription": "The factory mints crvUSD inventory to each controller only when an admin-set market debt ceiling is created or raised; user borrowing remains bounded by that inventory and the controller's collateral checks.",
+        "observedBlock": 25530324,
         "sources": [
-          {
-            "label": "Curve crvUSD resources",
-            "url": "https://resources.curve.finance/crvusd/"
-          },
           {
             "label": "crvUSD ControllerFactory",
             "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
           }
         ],
-        "evidence": "At Ethereum block 25294733: ControllerFactory.admin() returned 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79. crvUSD token minter() returned ControllerFactory address. No proxy admin slot set (not upgradeable). eth_getCode confirms contract."
+        "evidence": "At Ethereum block 25530324, crvUSD.minter() returned the ControllerFactory and ControllerFactory.admin() returned 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79. Verified factory source shows _set_debt_ceiling() calls STABLECOIN.mint() only for the increase over residual inventory. Token and factory EIP-1967 slots are unset."
       },
       {
         "chain": "ethereum",
-        "address": "0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79",
-        "label": "crvUSD ControllerFactory admin (Vyper intermediary)",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "label": "Curve DAO Agent for crvUSD factory",
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "parameter-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 25530324,
         "sources": [
           {
             "label": "crvUSD ControllerFactory admin Etherscan",
             "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
+          },
+          {
+            "label": "Curve DAO Agent",
+            "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968#code"
           }
         ],
-        "evidence": "At Ethereum block 25294733: Verified as Vyper 0.4.3 contract (Blockscout source confirmed). Storage slot 0 = dao=0x40907540d8a6C65c637785e8f8B742ae6b0b9968 (Curve DAO Aragon Agent — AppProxyUpgradeable). Storage slot 1 = emergency=0x467947EE34aF926cF1DCac093870f613C96B1E0C (5-of-9 Gnosis Safe — getThreshold()=5, getOwners()=9 addresses; nonce=13). Contract enforces _check_dao() (DAO-only) for ownership transfers and _check_authorized() (DAO or emergency) for parameter adjustments. No upgrade admin on this contract."
+        "evidence": "At Ethereum block 25530324, the immutable Vyper factory-admin contract's dao() is this Curve DAO Aragon Agent. Verified intermediary source restricts execute(), factory ownership transfer, and emergency replacement to dao(), allowing DAO governance to call factory set_debt_ceiling() and raise market inventory. Blockscout identifies the Agent as an AppProxyUpgradeable with implementation 0x3A93C17FC82CC33420d1809dDA9Fb715cc89dd37."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0C",
+        "label": "crvUSD emergency multisig",
+        "role": "cap-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "parameter-only",
+        "threshold": 5,
+        "signerCount": 9,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedBlock": 25530324,
+        "sources": [
+          {
+            "label": "crvUSD emergency multisig",
+            "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0C#code"
+          },
+          {
+            "label": "crvUSD factory-admin intermediary",
+            "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25530324, getThreshold() returned 5, getOwners() returned nine owners, and getModulesPaginated() returned no enabled modules. The intermediary's verified reduce_debt_ceiling() function accepts the emergency address but asserts the new ceiling cannot exceed the current ceiling; arbitrary execute() remains DAO-only."
       }
     ],
     "review": {
@@ -197,9 +835,10 @@
           "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
         }
       ],
-      "evidence": "At Ethereum block 25294733: ControllerFactory.admin()=Vyper intermediary 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79; crvUSD.minter()=ControllerFactory. The Vyper admin contract has dao=Curve DAO Aragon Agent (0x40907540, AppProxyUpgradeable) and emergency=5-of-9 multisig (0x467947EE). DAO path executes via Aragon vote; emergency multisig can reduce debt ceilings and adjust parameters. Neither component is upgradeable via proxy admin. All addresses confirmed as contracts.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Ethereum RPC at block 25530324 and verified Vyper source establish the full mint path: immutable token minter -> immutable ControllerFactory -> per-market debt-ceiling inventory. Factory admin is the immutable intermediary at 0xb740..., whose DAO path can raise ceilings while its 5-of-9 emergency path can only reduce them or change bounded controller parameters. The DAO Agent is upgradeable, but it is an upstream governance executor and cannot change the immutable token or factory mint logic.",
+      "reviewer": "Codex Safety Score V9 CTRL curation",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable"
     }
   },
   "chainTier": "ethereum",
@@ -491,101 +1130,59 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "WBTC / cbBTC",
-      "pct": 69,
+      "name": "WBTC",
+      "pct": 52.36,
       "risk": "medium",
       "blacklistable": true
     },
     {
-      "name": "tBTC",
-      "pct": 11,
-      "risk": "medium"
-    },
-    {
-      "name": "wstETH / sfrxETH / weETH",
-      "pct": 12,
+      "name": "wstETH",
+      "pct": 23.95,
       "risk": "low"
     },
     {
-      "name": "ETH",
-      "pct": 8,
+      "name": "tBTC",
+      "pct": 9.9,
+      "risk": "medium"
+    },
+    {
+      "name": "WETH",
+      "pct": 5.26,
       "risk": "very-low"
+    },
+    {
+      "name": "sfrxETH",
+      "pct": 4.29,
+      "risk": "low"
+    },
+    {
+      "name": "cbBTC",
+      "pct": 3.73,
+      "risk": "medium",
+      "blacklistable": true
+    },
+    {
+      "name": "weETH",
+      "pct": 0.5,
+      "risk": "low"
     }
   ],
-  "dependencies": [
-    {
-      "id": "usdc-circle",
-      "weight": 0.2,
-      "type": "mechanism"
-    },
-    {
-      "id": "usdt-tether",
-      "weight": 0.2,
-      "type": "mechanism"
-    },
-    {
-      "id": "pyusd-paypal",
-      "weight": 0.2,
-      "type": "mechanism"
-    },
-    {
-      "id": "frxusd-frax",
-      "weight": 0.2,
-      "type": "mechanism"
-    },
-    {
-      "id": "gho-aave",
-      "weight": 0.2,
-      "type": "mechanism"
-    }
-  ],
-  "dependencyReview": {
-    "reviewedAt": "2026-07-12",
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex dependency review",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Curve stablecoin design",
-        "url": "https://resources.curve.finance/pdf/curve-stablecoin.pdf"
-      },
-      {
-        "label": "crvUSD balance sheet",
-        "url": "https://dune.com/warshine/crvusd-balance-sheet"
+        "label": "Curve crvUSD markets API",
+        "url": "https://prices.curve.finance/v1/crvusd/markets"
       }
     ],
-    "rationale": "PegKeeper pools are a required stabilization path rather than proportional vault collateral. The equal weights model mechanism criticality across the five currently curated paired-stablecoin routes, so the relationships remain manual instead of being mixed into the crypto-collateral reserve composition.",
-    "relationships": [
-      {
-        "id": "usdc-circle",
-        "weight": 0.2,
-        "type": "mechanism",
-        "reason": "USDC is a curated crvUSD PegKeeper pool counterasset."
-      },
-      {
-        "id": "usdt-tether",
-        "weight": 0.2,
-        "type": "mechanism",
-        "reason": "USDT is a curated crvUSD PegKeeper pool counterasset."
-      },
-      {
-        "id": "pyusd-paypal",
-        "weight": 0.2,
-        "type": "mechanism",
-        "reason": "PYUSD is a curated crvUSD PegKeeper pool counterasset."
-      },
-      {
-        "id": "frxusd-frax",
-        "weight": 0.2,
-        "type": "mechanism",
-        "reason": "frxUSD is a curated crvUSD PegKeeper pool counterasset."
-      },
-      {
-        "id": "gho-aave",
-        "weight": 0.2,
-        "type": "mechanism",
-        "reason": "GHO is a curated crvUSD PegKeeper pool counterasset."
-      }
-    ]
+    "rationale": "Weights are each market's current debt share from the official API. PegKeeper counterassets are stabilization-pool counterparties, not serial claims or proportional collateral, so the prior equal-weight dependency links are removed.",
+    "compositionBasis": "Current crvUSD debt outstanding by LLAMMA collateral market",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material collateral market is unidentified; rounding and the de minimis LBTC market explain the 0.01% display remainder.",
+    "knownUnknownExposurePct": 0
   },
   "liveReservesConfig": {
     "adapter": "crvusd",

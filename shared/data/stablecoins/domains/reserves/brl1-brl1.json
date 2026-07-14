@@ -1,0 +1,99 @@
+{
+  "id": "brl1-brl1",
+  "reserves": [
+    {
+      "name": "Brazilian federal LFT government bonds",
+      "pct": 86.16,
+      "risk": "low",
+      "assetClass": "government-security",
+      "issuerOrObligor": "Federative Republic of Brazil",
+      "riskFactors": ["duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "BRL bank-account balance at regulated Brazilian financial institutions",
+      "pct": 0.09,
+      "risk": "medium",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed regulated Brazilian financial institutions",
+      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "BRL repurchase agreements",
+      "pct": 13.75,
+      "risk": "medium",
+      "assetClass": "repo",
+      "issuerOrObligor": "Undisclosed repo counterparty",
+      "riskFactors": ["counterparty", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "BRL1 proof-of-reserves report - May 2026",
+        "url": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
+      },
+      {
+        "label": "BRL1 reserve and redemption disclosures",
+        "url": "https://brl1.io/en/como_funciona"
+      }
+    ],
+    "rationale": "BRL1's latest linked proof-of-reserves report discloses R$5,820,958.93 of LFTs, R$5,923.85 of bank balance, and R$929,250.86 of repos, or 86.16%, 0.09%, and 13.75% of the reported R$6,756,133.64 reserve. The May 2026 report is issuer-produced and not independently audited, so the exact composition retains probable confidence.",
+    "compositionBasis": "BRL1 issuer proof-of-reserves report",
+    "compositionAsOf": "2026-05-01",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All reported reserve categories are classified; the repo counterparty and current post-report allocation changes are not disclosed.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Brazilian federal LFT government bonds",
+        "pct": 86.16,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Brazilian federal government securities are off-chain reserve assets rather than tracked stablecoins."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "BRL bank-account balance at regulated Brazilian financial institutions",
+        "pct": 0.09,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The bank balance is off-chain BRL cash rather than a tracked stablecoin."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "BRL repurchase agreements",
+        "pct": 13.75,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The repo position is an off-chain financial instrument rather than a tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed regulated Brazilian financial institutions",
+        "role": "custodian",
+        "jurisdiction": "Brazil",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "BRL1 proof-of-reserves report - May 2026",
+        "url": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
+      }
+    ],
+    "uncertainty": "The issuer report says all assets are held in a segregated, unencumbered account owned by BRL1 Consortium at regulated Brazilian financial institutions, but it does not name those institutions, disclose provider shares, or establish statutory bankruptcy remoteness."
+  }
+}

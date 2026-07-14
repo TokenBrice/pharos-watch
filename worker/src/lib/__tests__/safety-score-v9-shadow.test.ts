@@ -435,10 +435,22 @@ describe("Safety Score V9 compact daily history", () => {
     expect(archived.selectedRun).toMatchObject({ archiveSelectionReasons: ["anomaly"], artifactKeys });
   });
 
-  it("rejects a second selected success for the same UTC day", () => {
+  it("re-selects the same UTC day with a later success and rejects backwards selection", () => {
     const daily = successfulDaily();
-    expect(() => successfulDaily(daily)).toThrow("already has a selected successful run");
-    expect(SafetyScoreV9ShadowDailySchema.parse(daily)).toEqual(daily);
+    // Intra-day refresh: a later success re-selects the day and increments
+    // the successful attempt count; the daily summary stays one row.
+    const refreshed = successfulDaily(daily);
+    expect(refreshed.attemptCounts.successful).toBe(2);
+    expect(refreshed.selectedRun).not.toBeNull();
+    expect(SafetyScoreV9ShadowDailySchema.parse(refreshed)).toEqual(refreshed);
+    // A re-selection older than the current selected run fails closed.
+    const backwards = {
+      ...daily,
+      selectedRun: { ...daily.selectedRun!, selectedAtSec: daily.selectedRun!.selectedAtSec + 1 },
+    };
+    expect(() => successfulDaily(SafetyScoreV9ShadowDailySchema.parse(backwards))).toThrow(
+      "cannot move the selected run backwards",
+    );
   });
 });
 

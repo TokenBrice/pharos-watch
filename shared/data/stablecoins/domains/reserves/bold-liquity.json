@@ -1,0 +1,75 @@
+{
+  "id": "bold-liquity",
+  "reserves": [
+    {
+      "name": "WETH, wstETH, and rETH collateral basket",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Liquity V2 collateral branches and borrowers",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Liquity BOLD and Earn FAQ",
+        "url": "https://docs.liquity.org/v2-faq/bold-and-earn"
+      },
+      {
+        "label": "Liquity V2 redemptions and delegation",
+        "url": "https://docs.liquity.org/v2-faq/redemptions-and-delegation"
+      },
+      {
+        "label": "Liquity V2 risk disclosure",
+        "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+      }
+    ],
+    "rationale": "Liquity documents BOLD as overcollateralized by WETH, wstETH, and rETH only, with direct redemptions. The redemption documentation states that the collateral mix is dynamic and depends on current Stability Pool backing, so the prior 50/30/20 split is replaced by one complete permitted-collateral basket.",
+    "compositionBasis": "Liquity V2 permitted collateral and dynamic redemption disclosures; current branch weights are undisclosed",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Liquity identifies the complete permitted collateral set but does not publish current WETH, wstETH, and rETH weights in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "WETH, wstETH, and rETH collateral basket",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The permitted collateral assets are identified, but the current branch allocation is dynamic and not published as a stable percentage split."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Liquity V2 immutable collateral branch contracts",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Liquity BOLD and Earn FAQ",
+        "url": "https://docs.liquity.org/v2-faq/bold-and-earn"
+      },
+      {
+        "label": "Liquity V2 risk disclosure",
+        "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+      }
+    ],
+    "uncertainty": "Collateral is held in immutable on-chain branch contracts rather than a conventional off-chain custodian. The reviewed sources do not establish legal segregation, bankruptcy remoteness, or rehypothecation terms, so those fields remain unknown.",
+    "knownUnknownExposurePct": 100
+  }
+}

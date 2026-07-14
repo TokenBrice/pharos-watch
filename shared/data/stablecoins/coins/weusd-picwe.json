@@ -191,13 +191,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Disputed USDC versus USDT/MOVE backing disclosure",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "notices": [
     {
       "type": "warning",
@@ -210,6 +203,33 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "WEUSD is minted and redeemed through PicWe's omni-chain protocol via AccessControl tokens whose live BSC/Base/Arbitrum roles resolve to a PicWe admin/minter EOA plus a mint/redeem contract; the basket-style backing (roughly 9 USDT + 1 MOVE) explains the persistent ~$0.91 trading level.",
+    "upgradeability": {
+      "model": "custom",
+      "implementationAddresses": [
+        "0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6"
+      ],
+      "adminAddresses": [
+        "0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "PicWe WEUSD Movement package publisher",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "PicWe WEUSD contract directory",
+          "url": "https://docs.picwe.org/developers/contracts"
+        },
+        {
+          "label": "Movement Aptos REST — WEUSD package registry",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
+        },
+        {
+          "label": "Aptos package upgrade documentation",
+          "url": "https://legacy.aptos.dev/move/move-on-aptos/modules-on-aptos/"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "PicWe WEUSD DEFAULT_ADMIN_ROLE and MINTER_ROLE holder",
@@ -250,6 +270,32 @@
         ]
       },
       {
+        "label": "PicWe WEUSD Movement package publisher",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "chain": "movement",
+        "address": "0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "evidence": "Movement REST reports an authentication key equal to the publishing account and package picwe at upgrade_number 0 with compatible upgrade policy 1. This account can publish compatible replacements for weusd, weusd_mint_redeem, and weusd_cross_chain_gas with no on-chain timelock. The EVM WEUSD contracts on BSC, Base, Arbitrum, and Plume have zero EIP-1967 implementation slots and are not proxies; PicWe's April 2026 directory separately lists the upgradeable investment modules and does not classify the WEUSD core contracts as proxies.",
+        "sources": [
+          {
+            "label": "PicWe WEUSD contract directory",
+            "url": "https://docs.picwe.org/developers/contracts"
+          },
+          {
+            "label": "Movement Aptos REST — WEUSD account",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6"
+          },
+          {
+            "label": "Movement Aptos REST — WEUSD package registry",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
+          }
+        ]
+      },
+      {
         "label": "PicWe WEUSD Movement cross-chain minter",
         "role": "direct-minter",
         "authorityType": "eoa",
@@ -268,10 +314,14 @@
       }
     ],
     "review": {
-      "evidence": "BSC/Base/Plume hasRole checks (blocks 103632076 / 47201470 / 74174478) confirmed EOA 0xc122... as DEFAULT_ADMIN+MINTER_ROLE holder and mint/redeem contract 0x5D54... as MINTER_ROLE holder; EOA confirmed by eth_getCode (empty). Movement Aptos REST (mainnet.movementnetwork.xyz/v1) now accessible: weusd_cross_chain_gas::GlobalManage.cross_mint_role_contract = 0x86e5136... (active EOA, seq 142); deployer EOA 0xf39c267... controls module upgrade (policy=1) and admin-gated functions; resource-account-based mint uses burned signer cap (0x16bb553...). All chains resolved. No multisig or timelock on any chain.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "BSC/Base/Arbitrum/Plume role checks confirmed EOA 0xc122... as DEFAULT_ADMIN+MINTER_ROLE holder and mint/redeem contract 0x5D54... as MINTER_ROLE holder; the new PicWe contract directory independently lists the same token and mint/redeem addresses on Arbitrum. EIP-1967 implementation slots are zero on the reviewed EVM contracts. Movement REST reports cross_mint_role_contract 0x86e5136... and a publisher-controlled package with compatible upgrade policy 1. All tracked chains and the distinct Movement upgrade path are resolved; no multisig or timelock was found.",
+      "reviewer": "SOL-7 blocker challenge batch 01",
+      "reviewedAt": "2026-07-14",
       "sources": [
+        {
+          "label": "PicWe WEUSD contract directory",
+          "url": "https://docs.picwe.org/developers/contracts"
+        },
         {
           "label": "BscScan WEUSD contract",
           "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"

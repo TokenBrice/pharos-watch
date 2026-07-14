@@ -1,0 +1,68 @@
+{
+  "id": "hlusd-hela",
+  "reserves": [
+    {
+      "name": "USDC reserves",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and the licensed Australian financial institution managing HLUSD reserves",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "HeLa HLUSD benefits documentation",
+        "url": "https://docs.helalabs.com/hlusd/markdown"
+      },
+      {
+        "label": "HeLa HLUSD overview",
+        "url": "https://docs.helalabs.com/hlusd/editor"
+      }
+    ],
+    "rationale": "HeLa's current documentation states that HLUSD is fully backed by custodial USDC reserves managed by a licensed Australian financial institution and describes the peg as 1 HLUSD to 1 USDC. The complete direct reserve dependency is therefore USDC.",
+    "compositionBasis": "Current HeLa issuer documentation for the HLUSD reserve and redemption model",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No direct reserve asset remains unidentified in the issuer's current full-backing disclosure.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Licensed Australian financial institution (not publicly named)",
+        "role": "custodian",
+        "jurisdiction": "Australia"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "HeLa HLUSD benefits documentation",
+        "url": "https://docs.helalabs.com/hlusd/markdown"
+      },
+      {
+        "label": "HeLa HLUSD overview",
+        "url": "https://docs.helalabs.com/hlusd/editor"
+      }
+    ],
+    "uncertainty": "HeLa identifies a licensed Australian financial institution and regulated custodians but does not publish the provider name, reserve account segregation, insolvency treatment, or rehypothecation terms."
+  }
+}

@@ -20,11 +20,36 @@
   "detailProvider": "coingecko",
   "oracleRisk": {
     "tier": "redundant-with-failover",
-    "summary": "BOLD wrapper vaults use internal share accounting but inherit Liquity V2 collateral-feed staleness checks and branch shutdown behavior from the underlying BOLD system.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "yBOLD is a tokenized Liquity V2 Stability Pool position with no borrower-owned collateral branches of its own; its underlying BOLD exposure inherits Liquity V2 collateral-feed validation, fallback, and branch shutdown behavior.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Yearn documents yBOLD as a 1:1 tokenized BOLD deposit routed into Liquity V2 Stability Pools. yBOLD holders do not open borrower positions, so the wrapper has no collateral-market or liquidation branches to inventory; the underlying BOLD parent carries the separately reviewed Liquity V2 branches.",
+      "sources": [
+        {
+          "label": "Yearn yBOLD documentation",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+        },
+        {
+          "label": "Liquity V2 risk disclosure",
+          "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+        },
+        {
+          "label": "Liquity BOLD contracts",
+          "url": "https://github.com/liquity/bold/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Yearn yBOLD documentation",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+      },
       {
         "label": "Liquity V2 risk disclosure",
         "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"

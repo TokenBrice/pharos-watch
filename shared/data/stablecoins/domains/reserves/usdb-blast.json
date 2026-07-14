@@ -1,0 +1,74 @@
+{
+  "id": "usdb-blast",
+  "reserves": [
+    {
+      "name": "MakerDAO DSR / DAI yield manager",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "depType": "mechanism",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "MakerDAO / Sky Protocol",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Blast developer documentation - T-Bill yield",
+        "url": "https://docs.blast.io/about-blast"
+      },
+      {
+        "label": "Blast USDYieldManager verified implementation",
+        "url": "https://eth.blockscout.com/address/0xeCDdf748A60E23609c07af6CA3856744B139B911"
+      },
+      {
+        "label": "Blast DSRYieldProvider verified source",
+        "url": "https://eth.blockscout.com/address/0x0733F618118bF420b6b604c969498ecf143681a8"
+      },
+      {
+        "label": "Ethereum PublicNode fixed-block reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "rationale": "At Ethereum block 25531735, Blast's USDYieldManager proxy resolved to verified implementation 0xeCDd...B911; TOKEN() returned canonical DAI, and its only enumerated provider was verified DSRYieldProvider 0x0733...81a8 with 13.520 million DAI of provider value. Provider index 1 reverted out of bounds. The provider source hardcodes DAI and Maker's DSR manager and values the position from DSR pie times chi. Blast documentation separately establishes DAI bridge redemption and notes that governance can replace Maker in the future.",
+    "compositionBasis": "Fixed-block USDYieldManager and sole-provider reconciliation",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified provider remained at the pinned block. Governance can change the yield provider later, so the live adapter must continue to validate the current provider and token.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Blast bridge and yield-manager contracts",
+        "role": "other"
+      },
+      {
+        "name": "MakerDAO / Sky Protocol",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Blast developer documentation - T-Bill yield",
+        "url": "https://docs.blast.io/about-blast"
+      },
+      {
+        "label": "Blast DSRYieldProvider verified source",
+        "url": "https://eth.blockscout.com/address/0x0733F618118bF420b6b604c969498ecf143681a8"
+      }
+    ],
+    "uncertainty": "The official documentation identifies the protocol path but does not publish asset-segregation, bankruptcy-remoteness, provider-share, or current reserve-account details. Rehypothecation is marked permitted because bridged stablecoin backing is explicitly deployed into an external yield protocol."
+  }
+}

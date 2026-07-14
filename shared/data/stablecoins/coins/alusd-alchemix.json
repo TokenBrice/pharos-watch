@@ -20,13 +20,34 @@
   "oracleRisk": {
     "tier": "oracleless-or-internal",
     "summary": "Alchemix alUSD loans are self-repaying and non-liquidating, so the CDP path does not rely on an external liquidation oracle.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex ORCL curation batch 15",
+      "rationale": "Alchemix documents alUSD loans as self-repaying and non-liquidating. A borrower may self-liquidate by repaying debt with collateral, but the protocol does not forcibly liquidate borrower positions, so there is no market-specific oracle and collateral-liquidation branch to enumerate.",
+      "sources": [
+        {
+          "label": "Alchemix user docs",
+          "url": "https://v2-docs.alchemix.fi/"
+        },
+        {
+          "label": "Alchemix Alchemist overview",
+          "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemist"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ORCL curation batch 15",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Alchemix V2 docs",
+        "label": "Alchemix user docs",
         "url": "https://v2-docs.alchemix.fi/"
+      },
+      {
+        "label": "Alchemix Alchemist overview",
+        "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemist"
       }
     ]
   },
@@ -306,24 +327,55 @@
   "collateralQuality": "exotic",
   "reserves": [
     {
-      "name": "DAI (in Yearn/Aave yield strategies)",
-      "pct": 35,
-      "risk": "medium",
+      "name": "DAI yield-token collateral",
+      "pct": 80.2,
+      "risk": "low",
       "coinId": "dai-makerdao"
     },
     {
-      "name": "USDC (in Yearn/Aave yield strategies)",
-      "pct": 35,
-      "risk": "medium",
+      "name": "USDC yield-token collateral",
+      "pct": 15.9,
+      "risk": "low",
       "coinId": "usdc-circle"
     },
     {
-      "name": "USDT (in Yearn/Aave yield strategies)",
-      "pct": 30,
-      "risk": "medium",
+      "name": "USDT yield-token collateral",
+      "pct": 0.4,
+      "risk": "low",
       "coinId": "usdt-tether"
+    },
+    {
+      "name": "FRAX yield-token collateral",
+      "pct": 3.5,
+      "risk": "low",
+      "coinId": "frax-frax"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AlchemistV2 on Etherscan",
+        "url": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
+      },
+      {
+        "label": "Alchemix IAlchemistV2State interface",
+        "url": "https://github.com/alchemix-finance/v2-foundry/blob/master/src/interfaces/alchemist/IAlchemistV2State.sol"
+      },
+      {
+        "label": "Alchemix collateral de-pegging documentation",
+        "url": "https://v2-docs.alchemix.fi/resources/guides/vault-losses-and-collateral-de-pegging"
+      }
+    ],
+    "rationale": "At Ethereum block 25530459, the AlchemistV2 expectedValue for every registered yield token was aggregated by its on-chain underlying token. The resulting USD-like collateral mix was 80.2263% DAI, 15.9306% USDC, 0.3867% USDT, and 3.4564% FRAX, rounded to one decimal while preserving a 100% total. Each slice maps to its exact tracked stablecoin dependency.",
+    "compositionBasis": "AlchemistV2 getSupportedYieldTokens() and getYieldTokenParameters().expectedValue aggregated by underlying token at Ethereum block 25530459",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All registered yield-token expected values were attributed to their on-chain underlying stablecoins.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

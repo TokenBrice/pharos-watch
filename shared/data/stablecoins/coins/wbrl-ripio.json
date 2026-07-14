@@ -17,12 +17,27 @@
   "pegMechanism": "WBRL is issued and managed by Ripio against local fiat reserves, but ordinary holders do not have a documented direct redemption right with the issuer. Exits depend on secondary-market liquidity, Ripio on/off-ramp flows, or issuer-managed market operations.",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
-    "provider": "Local public accountants",
+    "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
+    "provider": "Pablo Eduardo Soto",
     "attestorTier": "niche",
-    "cadence": "quarterly",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Argentina",
-    "attestorLicense": "Professional Council of Economic Sciences of the Autonomous City of Buenos Aires"
+    "attestorLicense": "Professional Council of Economic Sciences of the Autonomous City of Buenos Aires",
+    "latestReport": {
+      "periodEnd": "2026-03-31",
+      "publishedAt": "2026-05-18",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Independent public accountant certification for wBRL - March 2026",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf"
+        }
+      ]
+    }
   },
   "mechanismArchetype": "fiat-cash",
   "geckoId": "brazilian-real",
@@ -207,6 +222,53 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "WBRL is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+      ],
+      "implementationAddresses": [
+        "0xfbab5dcb1647787ec8402a6509add256fa6c7f9d"
+      ],
+      "adminAddresses": [
+        "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Ripio shared WBRL admin and MINTER_ROLE holder (EOA)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Ethereum WBRL proxy and verified UUPS implementation",
+          "url": "https://etherscan.io/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0#code"
+        },
+        {
+          "label": "WBRL implementation source",
+          "url": "https://etherscan.io/address/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d#code"
+        },
+        {
+          "label": "Ethereum, Base, BSC, Polygon, and Gnosis PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base.publicnode.com"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor.publicnode.com"
+        },
+        {
+          "label": "Gnosis PublicNode RPC",
+          "url": "https://gnosis.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "multichain",
@@ -310,12 +372,26 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Brazilian-real cash deposited in a Brazilian bank account",
-      "pct": 100,
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "wbrl-ripio",
+    "display": {
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+      "label": "Ripio local stablecoins"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Brazilian-real cash deposited in a Brazilian bank account",
       "risk": "high"
     }
-  ],
+  },
   "launchDate": "2025-10-10"
 }

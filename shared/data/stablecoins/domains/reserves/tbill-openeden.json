@@ -1,0 +1,127 @@
+{
+  "id": "tbill-openeden",
+  "reserves": [
+    {
+      "name": "Direct U.S. Treasury bills",
+      "pct": 99.50431807,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Dreyfus Institutional Preferred Treasury Obligations Fund",
+      "pct": 0.42476766,
+      "risk": "low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "Dreyfus / BNY Mellon",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Coinbase USDC and cash equivalents",
+      "pct": 0.07066055,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, LLC / Coinbase, Inc.",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Accrued interest receivable",
+      "pct": 0.00025372,
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "TBILL portfolio counterparties",
+      "riskFactors": ["credit", "liquidity"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "OpenEden report API",
+        "url": "https://prod-gw.openeden.com/v3/vault/reports?folderId=1cHhy4p0iL242Wq6fwuYyczJPoXJiI6Tc"
+      },
+      {
+        "label": "TBILL Daily NAV Report - July 10, 2026",
+        "url": "https://drive.google.com/file/d/1zkGEy-ZUWvH4sKtoppk0Ktl32eHRCgC7/view"
+      },
+      {
+        "label": "OpenEden trust and transparency",
+        "url": "https://docs.openeden.com/tbill/trust-and-transparency"
+      }
+    ],
+    "rationale": "OpenEden's pinned July 10, 2026 balance sheet reports USD 212,779,806.05 of assets: USD 211,725,095.00 of direct Treasury bills, USD 903,819.80 in the Dreyfus Treasury money-market fund, USD 150,351.39 of Coinbase USDC/cash-equivalent balances, and USD 539.87 of accrued interest receivable. The four normalized weights replace the unsupported legacy 95/5 split.",
+    "compositionBasis": "Pinned OpenEden TBILL daily NAV balance sheet",
+    "compositionAsOf": "2026-07-10",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All balance-sheet asset categories are classified; the report does not establish provider-level legal safeguards or a separate assurance opinion.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Direct U.S. Treasury bills",
+        "pct": 99.50431807,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Direct U.S. Treasury bills are external reserve assets rather than tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Dreyfus Institutional Preferred Treasury Obligations Fund",
+        "pct": 0.42476766,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The Dreyfus Treasury money-market fund is an external reserve asset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Accrued interest receivable",
+        "pct": 0.00025372,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Accrued interest receivable is an external accounting asset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "BNY",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Coinbase",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "OpenEden TBILL FAQ",
+        "url": "https://docs.openeden.com/tbill/faq"
+      },
+      {
+        "label": "OpenEden TBILL introduction",
+        "url": "https://docs.openeden.com/tbill/introduction"
+      },
+      {
+        "label": "TBILL Daily NAV Report - July 10, 2026",
+        "url": "https://drive.google.com/file/d/1zkGEy-ZUWvH4sKtoppk0Ktl32eHRCgC7/view"
+      }
+    ],
+    "uncertainty": "OpenEden documents BNY for the Treasury portfolio, while the pinned balance sheet names Coinbase for the USDC/cash balance. Provider shares are intentionally omitted because the report classifies assets rather than legal custody allocations; complete bankruptcy and rehypothecation terms remain undisclosed.",
+    "knownUnknownExposurePct": 100
+  }
+}

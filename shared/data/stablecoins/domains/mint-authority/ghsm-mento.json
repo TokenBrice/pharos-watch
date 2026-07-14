@@ -1,0 +1,93 @@
+{
+  "id": "ghsm-mento",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "GHSm is minted CDP-style on Celo by depositing USDm as collateral in Mento V3 (a Liquity v2 fork); BorrowerOperations is an immutable contract with no upgrade path; the token owner is the Mento Timelock (2-day delay) whose sole proposer is the veMENTO DAO Governor.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313"
+      ],
+      "implementationAddresses": [
+        "0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+      ],
+      "adminAddresses": [
+        "0x890db8a597940165901372dd7db61c9f246e2147"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Mento Timelock (GHSm token owner)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 72127037,
+      "sources": [
+        {
+          "label": "Mento V3 deployments",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+        },
+        {
+          "label": "GHSm proxy on CeloScan",
+          "url": "https://celoscan.io/address/0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "celo",
+        "address": "0x8ec9A81871F816F1EF007a82293703057A943B8A",
+        "label": "Mento BorrowerOperations (immutable CDP minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "GHSm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot — it is immutable.",
+        "sources": [
+          {
+            "label": "Mento V3 deployments",
+            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          }
+        ],
+        "evidence": "At Celo block 69291577, eth_getCode returned 46358 bytes for 0x8ec9A81871F816F1EF007a82293703057A943B8A; owner() returned empty; EIP-1967 impl and admin slots are zero — confirmed immutable, no upgrade path."
+      },
+      {
+        "chain": "celo",
+        "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+        "label": "Mento Timelock (GHSm token owner)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Mento V3 deployments",
+            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          }
+        ],
+        "evidence": "At Celo block 69291577, GHSm owner() returned 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() returned 172800. hasRole(PROPOSER_ROLE, 0x47036d78bB3169b4F5560dD77BF93f4412A59852) returned true (MentoGovernor is sole proposer); hasRole(EXECUTOR_ROLE, 0x0) returned true (open executor — standard OZ TimelockController pattern)."
+      }
+    ],
+    "review": {
+      "evidence": "At Celo block 69291577, GHSm owner() resolved to the 172800-second Mento Timelock and BorrowerOperations was confirmed immutable. At block 72127037, the GHSm EIP-1967 implementation slot resolved to StableTokenV2 implementation 0x434563b0...850e and the EIP-1967 admin slot resolved directly to the same Mento Timelock, which can replace mint-critical token logic after its two-day delay.",
+      "reviewer": "Codex CTRL root batch 05",
+      "reviewedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento V3 deployments",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+        },
+        {
+          "label": "Mento governance docs",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/governance-and-mento/understanding-mento-governance"
+        }
+      ]
+    }
+  }
+}

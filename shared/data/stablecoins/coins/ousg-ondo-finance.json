@@ -340,25 +340,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "BlackRock BUIDL (U.S. T-bills, cash, repos)",
-      "pct": 85,
-      "risk": "low",
-      "coinId": "buidl-blackrock"
-    },
-    {
-      "name": "BlackRock FedFund (TFDXX)",
-      "pct": 12,
-      "risk": "very-low"
-    },
-    {
-      "name": "USDC liquidity buffer",
-      "pct": 3,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 1,

@@ -1,0 +1,69 @@
+{
+  "id": "m-m0",
+  "reserves": [
+    {
+      "name": "Cash, Treasury, and token collateral aggregate",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "M0 permissioned issuers and collateral obligors",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "M0 platform mechanics and eligible collateral",
+        "url": "https://docs.m0.org/get-started/protocol-mechanics"
+      },
+      {
+        "label": "M0 collateral-composition API recipe",
+        "url": "https://docs.m0.org/api-reference/protocol/recipes/collateral-composition"
+      }
+    ],
+    "rationale": "M0 documents an eligible-collateral policy, while its official collateral-composition recipe exposes cash, Treasury, and on-chain token-collateral aggregates, including eligible and non-eligible subcategories. Those sources do not support a static 100% Treasury-bill claim or a durable current split, so the authored fallback remains one unresolved aggregate while the configured M0 adapter supplies live composition.",
+    "compositionBasis": "M0 collateral policy and official collateral-composition API field model",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current cash, Treasury, token, eligibility, maturity, token-identity, and minter-level weights are not pinned in this static review.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Cash, Treasury, and token collateral aggregate",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The official API model identifies several collateral families but the static record lacks a durable normalized split and token-level mapping."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Permissioned M0 issuers and their collateral arrangements",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "M0 platform mechanics and eligible collateral",
+        "url": "https://docs.m0.org/get-started/protocol-mechanics"
+      },
+      {
+        "label": "M0 issuer overview",
+        "url": "https://docs.m0.org/issuers/overview"
+      }
+    ],
+    "uncertainty": "M0 assigns reserve management to permissioned issuers but the reviewed public materials do not identify current providers, provider shares, segregation, bankruptcy remoteness, or a general rehypothecation prohibition.",
+    "knownUnknownExposurePct": 100
+  }
+}

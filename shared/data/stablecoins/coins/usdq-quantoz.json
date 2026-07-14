@@ -38,10 +38,7 @@
         "name": "LayerZero / Stargate",
         "slug": "layerzero",
         "url": "https://www.quantoz.com/blog/layerzero-enables-cross-chain-interoperability-for-quantoz-stablecoins-eurq-and-usdq",
-        "bridgeTypes": [
-          "oft",
-          "lockAndMint"
-        ],
+        "bridgeTypes": ["oft", "lockAndMint"],
         "note": "Quantoz announced LayerZero messaging and Stargate liquidity transport for EURQ/USDQ cross-chain transfers; final on-chain adapter topology remains to be re-reviewed."
       }
     ],
@@ -368,10 +365,7 @@
     },
     "upgradeability": {
       "model": "transparent-proxy",
-      "adminAddresses": [
-        "0xa6724f792002d5677a7bc370986e1b580b8773e7",
-        "0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8"
-      ],
+      "adminAddresses": ["0xa6724f792002d5677a7bc370986e1b580b8773e7", "0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8"],
       "canChangeMintLogic": true,
       "controlRef": "USDQ Ethereum proxy admin",
       "observedAt": "2026-06-11",
@@ -395,16 +389,49 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "Government bonds (NL, DE, US)",
+      "name": "Government bonds (Netherlands, Germany, and US)",
       "pct": 70,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "government-security",
+      "issuerOrObligor": "Sovereign issuers of the Netherlands, Germany, and United States",
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Cash deposits at Tier 1 European banks",
       "pct": 30,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed Tier 1 European banking partners",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Quantoz transparency",
+        "url": "https://www.quantoz.com/transparency"
+      },
+      {
+        "label": "Quantoz USDQ whitepaper v1.4",
+        "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/69f8a95a68591924cd02b363_USDQ-WP-1.4%20(30-04-2026).pdf"
+      },
+      {
+        "label": "DNB public register - Quantoz Payments B.V.",
+        "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+      }
+    ],
+    "rationale": "Quantoz's June 30 reserve overview reports USDQ at 30% allocated cash and 70% government bonds, with a 101.23% reserve ratio. The USDQ whitepaper confirms that at least 30% is held in separate bank accounts and the remainder in secure, low-risk, highly liquid instruments; the dashboard identifies the bond issuers as the Netherlands, Germany, and United States.",
+    "compositionBasis": "Quantoz Reserve Status Overview updated June 30, 2026",
+    "compositionAsOf": "2026-06-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The two disclosed categories cover the full reserve allocation, but Quantoz does not identify individual banking partners, bond security identifiers, country weights, or a maximum maturity. Liquidity horizon therefore remains unknown for the government-bond bucket.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "quantoz-transparency",
     "version": 1,

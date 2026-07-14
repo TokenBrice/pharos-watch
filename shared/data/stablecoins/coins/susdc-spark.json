@@ -189,15 +189,6 @@
   "collateralQuality": "native",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "USDC deposited in Spark Savings vault",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "wrapper"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Spark Savings USDC",
     "yieldType": "nav-appreciation"

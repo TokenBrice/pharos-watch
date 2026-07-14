@@ -2,7 +2,7 @@
   "id": "brla-brla-digital",
   "name": "BRLA Digital",
   "symbol": "BRLA",
-  "oneLiner": "BRLA is Avenia's centralized Brazilian real stablecoin, mint/redeemed 1:1 for BRL and backed by Brazilian government bonds and BRL cash in regulated custody.",
+  "oneLiner": "BRLA is Avenia's centralized Brazilian real stablecoin, mint/redeemed 1:1 for BRL and backed by BRL cash equivalents and overnight repurchase agreements.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Brazilian government bonds (titulos publicos) and BRL cash held in regulated custody in Brazil; reserves audited monthly by a third-party firm with attestations published on a transparency page",
+  "collateral": "BRL cash and cash equivalents plus overnight repurchase agreements collateralized by Brazilian corporate debentures; the May 31, 2026 reserve and circulation totals received reasonable assurance from UHY Bendoraytes",
   "pegMechanism": "Fiat-backed 1:1 peg to the Brazilian Real; mint/redeem 1:1 for BRL through Avenia (formerly BRLA Digital) platform after KYC; native multichain deployment without wrapping or bridge dependencies",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "365",
@@ -20,10 +20,25 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
-    "provider": "External audit firm disclosed through BRLA transparency materials",
+    "provider": "UHY Bendoraytes & Cia Auditores Independentes",
     "attestorTier": "niche",
     "cadence": "monthly",
-    "attestorJurisdiction": "Brazil"
+    "attestorJurisdiction": "Brazil",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-16",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+        "reviewer": "owner-triage",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "UHY BRLA Transparency Report - May 31, 2026",
+          "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -84,13 +99,6 @@
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Brazilian government bonds and BRL cash in regulated custody",
-      "pct": 100,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

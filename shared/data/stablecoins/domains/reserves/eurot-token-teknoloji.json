@@ -1,0 +1,70 @@
+{
+  "id": "eurot-token-teknoloji",
+  "reserves": [
+    {
+      "name": "Euro bank reserves at Ziraat Participation Bank and Akbank",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Ziraat Participation Bank and Akbank",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Token EURO proof of reserves",
+        "url": "https://www.token.com.tr/en/proof-of-reserves/"
+      }
+    ],
+    "rationale": "Token states that EURO reserves are held in euro at Ziraat Participation Bank and Akbank. The issuer page identifies the reserve institutions but does not publish current balances, account terms, or bank-level weights.",
+    "compositionBasis": "Token proof-of-reserves disclosure",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve banks are named, but the split between them and the applicable account liquidity and safeguarding terms are undisclosed.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Euro bank reserves at Ziraat Participation Bank and Akbank",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The disclosed backing is direct euro bank deposits rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ziraat Participation Bank",
+        "role": "bank",
+        "jurisdiction": "Turkey"
+      },
+      {
+        "name": "Akbank",
+        "role": "bank",
+        "jurisdiction": "Turkey"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Token EURO proof of reserves",
+        "url": "https://www.token.com.tr/en/proof-of-reserves/"
+      }
+    ],
+    "uncertainty": "Token names the two reserve banks but does not disclose the account structure, bank-level shares, segregation, bankruptcy treatment, or rehypothecation terms."
+  }
+}

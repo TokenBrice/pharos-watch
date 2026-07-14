@@ -2,7 +2,7 @@
   "id": "m-m0",
   "name": "M by M0",
   "symbol": "M",
-  "oneLiner": "M is M0's institutional dollar stablecoin, minted 1:1 by permissioned Minters against short-term U.S. T-bill collateral with on-chain Validator attestations.",
+  "oneLiner": "M is M0's institutional dollar stablecoin, minted by permissioned Minters against eligible collateral with on-chain Validator attestations.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -37,6 +37,31 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "M minting is routed through the Ethereum M0 MinterGateway, with cross-chain representations bridged through M0 portal infrastructure.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+      ],
+      "implementationAddresses": [
+        "GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n"
+      ],
+      "adminAddresses": [
+        "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "M0 Solana program upgrade authority",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "M0 Solana Portal program",
+          "url": "https://solscan.io/account/mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+        },
+        {
+          "label": "Solana mainnet RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -80,11 +105,13 @@
       },
       {
         "chain": "solana",
-        "address": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
-        "label": "M0 Solana Portal",
+        "address": "ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th",
+        "label": "M Solana SPL mint authority",
         "role": "bridge-admin",
-        "authorityType": "bridge",
+        "authorityType": "multisig",
         "directMintAbility": "cap-limited",
+        "threshold": 1,
+        "signerCount": 2,
         "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway. The SPL Token-2022 mintAuthority is a 1-of-2 SPL multisig (ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th) whose two signers are off-curve PDAs controlled by M0 Portal and allied programs; all programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW.",
         "routeChecks": {
           "lockboxOrEscrow": "Solana M is a spoke deployment bridged from Ethereum M; base supply remains governed by the Ethereum MinterGateway.",
@@ -93,7 +120,7 @@
           "pausersAdminsUpgraders": "M0 Solana programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW; extension authorities point to the same EOA where checked."
         },
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "M0 deployments",
@@ -104,7 +131,28 @@
             "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
           }
         ],
-        "evidence": "At Solana slot 425799131: getAccountInfo on M mint mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo returns mintAuthority=ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th (SPL multisig, 1-of-2 threshold, signers: 9vSE2CHNE54ENdAVG3r8dkthXNVWtEyZdXXEFnVN1a8H and BQdqsDuByTYYeDp92ar7guMFD1P4FTWXJPP1WMq2rUXm). Both signers are confirmed off the Ed25519 curve (PDAs, not keypairs). M0 Portal program (mzp1q2j5...) programData upgrade authority: 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW (funded System program account = EOA). freezeAuthority=null. Extension authorities (metadataPointer, transferHook, confidentialTransfer) all point to the same EOA 9QpF8a9T...."
+        "evidence": "At finalized Solana slot 432835922, the M mint reported mintAuthority=ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th, a 1-of-2 SPL multisig with the same two program-derived signers recorded previously. The mint freeze authority remained null, and the M0 Portal program resolved to programData GBcoKgAk... with upgrade authority 9QpF8a9T...."
+      },
+      {
+        "chain": "solana",
+        "address": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "label": "M0 Solana program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "M0 Solana Portal program",
+            "url": "https://solscan.io/account/mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+          },
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 432835922, getAccountInfo on programData GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n returned upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW."
       }
     ],
     "review": {
@@ -122,16 +170,16 @@
           "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
         }
       ],
-      "evidence": "At Ethereum block 25294742: MinterGateway (0xf7f9638c...) confirmed via Blockscout as ContractName=MinterGateway, IsProxy=false (immutable, no upgrade admin). EIP-1967 slots both zero. At Solana slot 425799131: M SPL mint mintAuthority=ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th (1-of-2 SPL multisig); both signers confirmed off-curve PDAs. Portal upgrade authority=9QpF8a9T... (funded EOA). freezeAuthority=null. All M0 Solana programs share same upgrade authority (EOA). Null but off-curve = program-derived, not a free keypair.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25530270, verified MinterGateway and MToken contracts had zero EIP-1967 implementation/admin slots; MToken.minterGateway() resolved to the reviewed gateway. Gateway reads returned TTG Registrar 0x119F..., mint ratio 9950, mint delay 300 seconds, and validator threshold 1. At finalized Solana slot 432835922, the Portal program was upgradeable through the explicitly reviewed 9QpF8a9T... authority. Contract and validator-attested issuance is continuously constrained onchain; no mint-authority incident is recorded in the reviewed sources.",
+      "reviewer": "Codex V9 control curation",
+      "reviewedAt": "2026-07-14"
     }
   },
   "infrastructures": [
     "m0"
   ],
-  "collateral": "Short-term U.S. Treasury bills (30–90 day) held in bankruptcy-remote SPVs by permissioned Minters; Validators independently attest collateral sufficiency on-chain before minting",
-  "pegMechanism": "Permissioned Minters lock eligible T-bill collateral in bankruptcy-remote SPVs; Validators cryptographically attest off-chain collateral sufficiency, enabling on-chain minting of M 1:1 against attested reserves; POWER token holders govern eligible collateral and Minter/Validator permissions",
+  "collateral": "Eligible cash, Treasury, and token collateral reported by M0's protocol API; static category, token, and minter weights remain unresolved and are supplied dynamically by the configured live-reserve adapter",
+  "pegMechanism": "Permissioned Minters pledge eligible collateral; Validators attest collateral sufficiency before on-chain minting, while POWER token holders govern eligible collateral and Minter/Validator permissions",
   "mechanismArchetype": "tbill",
   "llamaId": "213",
   "detailProvider": "defillama",
@@ -579,13 +627,6 @@
     ]
   },
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "Short-term U.S. Treasury Bills (30-90 day)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,

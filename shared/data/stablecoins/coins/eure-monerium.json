@@ -351,13 +351,6 @@
     ]
   },
   "custodyModel": "institutional-top",
-  "reserves": [
-    {
-      "name": "EUR reserves at State Street EUR Liquidity LVNAV Fund, Arion Bank, and LHV Bank",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

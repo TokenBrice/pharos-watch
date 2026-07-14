@@ -109,7 +109,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
     ],
     sharedExcludedPrefixes: ["shared/data/funding/", "shared/lib/selector/"],
   },
-  workerPromotion: {
+  workerRelease: {
     excludedPaths: ["worker/migrations/MANIFEST.md"],
     exactPaths: [
       "package-lock.json",
@@ -136,9 +136,9 @@ export function findDuplicateDeployImpactExactPaths(registry = DEPLOY_IMPACT_REG
     ["pages.workflowOnlyExactPaths", registry.pages.workflowOnlyExactPaths],
     ["worker", registry.worker.exactPaths],
     ["worker.sharedExcludedPaths", registry.worker.sharedExcludedPaths],
-    ["workerPromotion.excludedPaths", registry.workerPromotion.excludedPaths],
-    ["workerPromotion", registry.workerPromotion.exactPaths],
-    ["workerPromotion.sharedExcludedPaths", registry.workerPromotion.sharedExcludedPaths],
+    ["workerRelease.excludedPaths", registry.workerRelease.excludedPaths],
+    ["workerRelease", registry.workerRelease.exactPaths],
+    ["workerRelease.sharedExcludedPaths", registry.workerRelease.sharedExcludedPaths],
   ];
 
   return groups.flatMap(([group, paths]) => {
@@ -335,18 +335,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     reproducibility: "deterministic",
     script: "scripts/build-data/build-client-registry.mjs",
     sourcePaths: ["shared/data/stablecoins/coins.generated.json"],
-  }),
-  generatedArtifact({
-    id: "agent-code-map",
-    checkCommand: "node scripts/maintenance/generate-agent-code-map.mjs --check",
-    command: "node scripts/maintenance/generate-agent-code-map.mjs",
-    bootstrap: true,
-    dependsOn: ["stablecoin-prevalidated-registry", "legacy-stablecoin-redirects", "stablecoin-client-registry"],
-    outputPaths: ["docs/agent-code-map.md"],
-    phase: 2,
-    reproducibility: "deterministic",
-    script: "scripts/maintenance/generate-agent-code-map.mjs",
-    sourcePaths: ["functions/**", "scripts/**", "shared/**", "src/**", "worker/src/**"],
   }),
   generatedArtifact({
     id: "cemetery-dataset",

@@ -4,7 +4,38 @@
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "MetaMask USD is an M0-backed extension; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
+    "summary": "MetaMask USD is an M0-backed extension; extension wrapping routes through M0 SwapFacility infrastructure while base M issuance remains on the Ethereum MinterGateway. The MUSD token and SwapFacility are transparent proxies, with the material Ethereum, Linea, and Monad deployments governed through independently verified ProxyAdmin owners.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xaca92e438df0b2401ff60da7e4337b687a2435da"
+      ],
+      "implementationAddresses": [
+        "0x37a309611e1d278cddc341e479957ec8bc6256ce",
+        "0x58a3a9c561591bab0dd11110eca755ea455f1841",
+        "0xc2e2fbcef84dea88025a5b2599039c912ef6b61c"
+      ],
+      "adminAddresses": [
+        "0x685e7f8c9414bfa716b254b349153e2317929ac9"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "MUSD token upgrade timelock",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "MetaMask USD token audit",
+          "url": "https://diligence.consensys.io/audits/2025/08/metamask-usd-token/"
+        },
+        {
+          "label": "MUSD Ethereum proxy on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        },
+        {
+          "label": "MUSD Monad proxy on MonadScan",
+          "url": "https://monadscan.com/address/0xaca92e438df0b2401ff60da7e4337b687a2435da"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -43,6 +74,48 @@
         "evidence": "At Ethereum block 25294742: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin or module surface; cap governance rests with M0 TTG (POWER token holders)."
       },
       {
+        "address": "0x7701F4fA4592f59A6Cd0E3aC1c182B3c3173c280",
+        "label": "MUSD token upgrade timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 259200,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "signingModel": "On Ethereum, Linea, and Monad, the same-address 3-of-5 Safe 0x5916ec446793e8740645e57a63dc7bc5910c7724 holds proposer, executor, and canceller roles on this same-address timelock.",
+          "rateLimits": "getMinDelay() returned 259,200 seconds on each material deployment.",
+          "pausersAdminsUpgraders": "Each MUSD token proxy has ProxyAdmin 0x685e7f8c9414bfa716b254b349153e2317929ac9, whose owner() returned this timelock on Ethereum, Linea, and Monad."
+        },
+        "observedAt": "2026-07-14",
+        "failureDomainKeys": [
+          "m0-musd-token-upgrade-governance"
+        ],
+        "sources": [
+          {
+            "label": "MetaMask USD token audit",
+            "url": "https://diligence.consensys.io/audits/2025/08/metamask-usd-token/"
+          },
+          {
+            "label": "MUSD Ethereum proxy on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xaca92e438df0b2401ff60da7e4337b687a2435da"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Linea PublicNode RPC",
+            "url": "https://linea-rpc.publicnode.com"
+          },
+          {
+            "label": "Monad public RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Ethereum block 25531380, Linea block 31369840, and Monad block 87714833, the tracked MUSD token's canonical EIP-1967 admin slot 0xb5312768...d6103 returned ProxyAdmin 0x685e7f8c9414bfa716b254b349153e2317929ac9 on all three chains; each OpenZeppelin v5 proxy runtime independently embedded the same immutable admin address. ProxyAdmin owner() returned this timelock on all three chains; getMinDelay() returned 259,200 seconds, and live role reads confirmed the same 3-of-5 Safe as proposer, executor, and canceller on each deployment."
+      },
+      {
         "chain": "ethereum",
         "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
         "label": "M0 SwapFacility extension router",
@@ -72,7 +145,7 @@
             "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
           }
         ],
-        "evidence": "At Ethereum block 25294742: Blockscout confirms ContractName=TransparentUpgradeableProxy, IsProxy=true, impl=0x45bf08d042a8958f01f8e8319b791e4584550da8 (impl code 15869 bytes). ProxyAdmin (EIP-1967 admin slot) = 0x0f38d8a5583f9316084e9c40737244870c565924 (ContractName=ProxyAdmin on Blockscout). ProxyAdmin owner = TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 (3-day minDelay=259200s). Timelock proposer = Gnosis Safe 0xb7a9b5f301ef3bad36c2b4964e82931dd7fb989c (5 owners, threshold 3); executor = 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. SwapFacility cap follows M supply; canRaiseCap=true via M0 TTG governance."
+        "evidence": "At Ethereum block 25531380, SwapFacility remained a TransparentUpgradeableProxy using implementation 0x45bf08d042a8958f01f8e8319b791e4584550da8. The canonical EIP-1967 admin slot 0xb5312768...d6103 returned ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924, and the proxy runtime independently embedded the same immutable admin address. ProxyAdmin owner() returned TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 (3-day minDelay=259200s). Timelock proposer was Gnosis Safe 0xb7a9b5f301ef3bad36c2b4964e82931dd7fb989c (5 owners, threshold 3); executor was 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. SwapFacility cap follows M supply; canRaiseCap=true via M0 TTG governance."
       },
       {
         "chain": "linea",
@@ -86,7 +159,7 @@
           "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
           "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply.",
           "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
-          "pausersAdminsUpgraders": "Linea SwapFacility is treated as the same proxy-admin pattern by deployment convention; the Linea-specific proxy admin slot was not independently read."
+          "pausersAdminsUpgraders": "Linea SwapFacility is a TransparentUpgradeableProxy with ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924. ProxyAdmin owner() returned Linea TimelockController 0xa7BDf17aF97D06d674D03086e90A18C2D90732b6, whose minimum delay is three days and whose proposer is the M0 3-of-5 Safe."
         },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
@@ -100,7 +173,41 @@
             "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
           }
         ],
-        "evidence": "SwapFacility at same address 0xB6807116b3B1B321a390594e31ECD6e0076f6278 on Linea; same deployment pattern as Ethereum (TransparentUpgradeableProxy, same ProxyAdmin → TimelockController admin structure per M0 deployment convention). Linea-specific proxy admin slot not independently read."
+        "evidence": "At Linea block 31369840, SwapFacility was a TransparentUpgradeableProxy using implementation 0x9e0fdb26954bc8998158c0c921c8254bd6dfe5ec. Its canonical EIP-1967 admin slot returned ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924 and its runtime embedded the same immutable admin address. ProxyAdmin owner() returned TimelockController 0xa7BDf17aF97D06d674D03086e90A18C2D90732b6; getMinDelay() returned 259,200 seconds and the M0 3-of-5 Safe held PROPOSER_ROLE."
+      },
+      {
+        "chain": "monad",
+        "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+        "label": "M0 SwapFacility extension router",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
+        "routeChecks": {
+          "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
+          "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply.",
+          "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
+          "pausersAdminsUpgraders": "Monad SwapFacility is a TransparentUpgradeableProxy with ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924. ProxyAdmin owner() returned a 3-of-5 Safe directly, so this material deployment has no timelock on SwapFacility upgrades."
+        },
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 87688132,
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "M0 SwapFacility docs",
+            "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+          },
+          {
+            "label": "Monad public RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "At Monad block 87714833, SwapFacility was a TransparentUpgradeableProxy using implementation 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e. Its canonical EIP-1967 admin slot returned ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924 and its runtime embedded the same immutable admin address. ProxyAdmin owner() returned Safe 0x48670B46380FE1645f0E3e821a25162dB2589D19; live Safe reads returned five owners, threshold three, and no enabled modules."
       }
     ],
     "review": {
@@ -120,11 +227,15 @@
         {
           "label": "SwapFacility on Blockscout",
           "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+        },
+        {
+          "label": "MetaMask USD token audit",
+          "url": "https://diligence.consensys.io/audits/2025/08/metamask-usd-token/"
         }
       ],
-      "evidence": "At Ethereum block 25294742: MinterGateway confirmed immutable non-proxy (Blockscout ContractName=MinterGateway, IsProxy=false). SwapFacility (Ethereum) confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (minDelay=259200s, 3 days); timelock proposer is Gnosis Safe 3/5 (0xb7a9b5f3...). Linea SwapFacility: EIP-1967 admin slot confirmed same ProxyAdmin 0x0f38d8a5... (identical governance). All controls fully characterized.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "The MinterGateway remains an immutable non-proxy on Ethereum. At Ethereum block 25531380, Linea block 31369840, and Monad block 87714833, the tracked MUSD token and SwapFacility remained TransparentUpgradeableProxy deployments. On all six proxy reads, the canonical EIP-1967 admin slot returned the recorded token or SwapFacility ProxyAdmin and the runtime independently embedded that same OpenZeppelin v5 immutable admin. The MUSD token's common ProxyAdmin is owned by the same 259,200-second TimelockController on all three chains, with the same 3-of-5 Safe holding proposer, executor, and canceller roles. SwapFacility uses a separate common ProxyAdmin: its owner is a three-day timelock on Ethereum and Linea, but a direct 3-of-5 Safe on Monad. The MetaMask USD audit explicitly identifies the proxy-admin owner as able to replace token logic.",
+      "reviewer": "owner-triage",
+      "reviewedAt": "2026-07-14"
     }
   }
 }

@@ -225,30 +225,6 @@
     }
   },
   "custodyModel": "cex",
-  "reserves": [
-    {
-      "name": "Short-term U.S. Treasury bonds",
-      "pct": 70,
-      "risk": "very-low"
-    },
-    {
-      "name": "USDT deposits (minting collateral)",
-      "pct": 12.5,
-      "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "USDC deposits (minting collateral)",
-      "pct": 12.5,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "Yield strategies (CEX-managed, undisclosed composition)",
-      "pct": 5,
-      "risk": "high"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Gate USD redemption yield",
     "yieldType": "governance-set"

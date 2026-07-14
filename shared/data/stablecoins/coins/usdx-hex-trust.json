@@ -116,7 +116,57 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "USDX is an issuer-operated UUPS/OFT token. Active MINTER_ROLE EOAs can mint directly, while the default admin/upgrade-admin EOA can grant roles and upgrade the token.",
+    "summary": "USDX is an issuer-operated UUPS/OFT token on Ethereum, Flare, and Songbird. The active MINTER_ROLE set is two EOAs on Ethereum and one shared EOA on Flare and Songbird; the default admin can grant roles, while a secondary UPGRADE_ADMIN_ROLE EOA is also present on Ethereum and Flare.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xf8750b54d86be7ae9e32b4a0c826811198d63313",
+        "0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+      ],
+      "implementationAddresses": [
+        "0xce2d107b6046e61a651484b4ee65023d89a42d7b",
+        "0x35151bA1c19b31cc258787A414c93Bbe77251147",
+        "0xF34A47Df7098a23f42A06839F0CC2eA61cAafb0B"
+      ],
+      "adminAddresses": [
+        "0xb8Ce31ad8bAD26e88Db17e68F695C64f67AD31EB",
+        "0x47345bb878501cc204d6e7d13d74ce159f287c55"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDX default admin / upgrade admin",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530752,
+      "sources": [
+        {
+          "label": "USDX Ethereum verified token",
+          "url": "https://etherscan.io/address/0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+        },
+        {
+          "label": "USDX Ethereum Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+        },
+        {
+          "label": "USDX Flare verified implementation",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/14/etherscan/api?module=contract&action=getsourcecode&address=0x35151bA1c19b31cc258787A414c93Bbe77251147"
+        },
+        {
+          "label": "USDX Songbird verified implementation",
+          "url": "https://songbird-explorer.flare.network/address/0xF34A47Df7098a23f42A06839F0CC2eA61cAafb0B"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Flare official RPC",
+          "url": "https://flare-api.flare.network/ext/C/rpc"
+        },
+        {
+          "label": "Songbird official RPC",
+          "url": "https://songbird-api.flare.network/ext/C/rpc"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -125,8 +175,11 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
+        "capDescription": "No aggregate supply ceiling was identified in the verified implementation; this EOA can call the MINTER_ROLE-gated mint function, subject to the issuer's operational controls.",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530752,
         "sources": [
           {
             "label": "USDX token on Etherscan",
@@ -137,7 +190,7 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
           }
         ],
-        "evidence": "Direct reads showed this EOA has MINTER_ROLE. Sourcify implementation source exposes mint(address,uint256) gated by MINTER_ROLE."
+        "evidence": "At Ethereum block 25530752, hasRole(MINTER_ROLE, 0xf28a91a1...) returned true on the proxy. The verified implementation exposes mint(address,uint256) gated by MINTER_ROLE, with no aggregate supply ceiling in the reviewed source."
       },
       {
         "chain": "ethereum",
@@ -146,8 +199,11 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
+        "capDescription": "No aggregate supply ceiling was identified in the verified implementation; this EOA can call the MINTER_ROLE-gated mint function, subject to the issuer's operational controls.",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530752,
         "sources": [
           {
             "label": "USDX token on Etherscan",
@@ -158,7 +214,7 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
           }
         ],
-        "evidence": "Direct reads showed this EOA has MINTER_ROLE. Sourcify implementation source exposes mint(address,uint256) gated by MINTER_ROLE."
+        "evidence": "At Ethereum block 25530752, hasRole(MINTER_ROLE, 0x6329218f...) returned true on the proxy. The verified implementation exposes mint(address,uint256) gated by MINTER_ROLE, with no aggregate supply ceiling in the reviewed source."
       },
       {
         "chain": "ethereum",
@@ -167,15 +223,119 @@
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530752,
         "sources": [
           {
             "label": "USDX RoleGranted logs",
             "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xf8750b54d86be7ae9e32b4a0c826811198d63313&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           }
         ],
-        "evidence": "Direct reads showed this EOA has DEFAULT_ADMIN_ROLE and UPGRADE_ADMIN_ROLE; no Safe setup was verified."
+        "evidence": "At Ethereum block 25530752, Flare block 65060282, and Songbird block 127737529, hasRole(DEFAULT_ADMIN_ROLE, 0xb8ce31ad...) and owner() both resolved to this EOA on every proxy. The address also has UPGRADE_ADMIN_ROLE on all three deployments, and the verified UUPS implementation gates upgrades through the default admin or UPGRADE_ADMIN_ROLE. No Safe setup was verified."
+      },
+      {
+        "chain": "flare",
+        "address": "0x6329218fdb55c65a73313a76c20f1b6f0c169691",
+        "label": "USDX active MINTER_ROLE EOA - Flare",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "capDescription": "No aggregate supply ceiling was identified in the verified implementation; this EOA can call the MINTER_ROLE-gated mint function, subject to the issuer's operational controls.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 65060282,
+        "sources": [
+          {
+            "label": "USDX Flare token",
+            "url": "https://flarescan.com/address/0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+          },
+          {
+            "label": "USDX Flare RoleGranted logs",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/14/etherscan/api?module=logs&action=getLogs&address=0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "USDX Flare verified implementation",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/14/etherscan/api?module=contract&action=getsourcecode&address=0x35151bA1c19b31cc258787A414c93Bbe77251147"
+          }
+        ],
+        "evidence": "At Flare block 65060282, hasRole(MINTER_ROLE, 0x6329218f...) returned true on the proxy. Verified HexTrustUSDV2 source exposes mint(address,uint256) gated by MINTER_ROLE."
+      },
+      {
+        "chain": "songbird",
+        "address": "0x6329218fdb55c65a73313a76c20f1b6f0c169691",
+        "label": "USDX active MINTER_ROLE EOA - Songbird",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "capDescription": "No aggregate supply ceiling was identified in the verified implementation; this EOA can call the MINTER_ROLE-gated mint function, subject to the issuer's operational controls.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 127737529,
+        "sources": [
+          {
+            "label": "USDX Songbird token",
+            "url": "https://songbird-explorer.flare.network/address/0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"
+          },
+          {
+            "label": "USDX Songbird RoleGranted logs",
+            "url": "https://songbird-explorer.flare.network/api?module=logs&action=getLogs&address=0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "USDX Songbird verified implementation",
+            "url": "https://songbird-explorer.flare.network/address/0xF34A47Df7098a23f42A06839F0CC2eA61cAafb0B"
+          }
+        ],
+        "evidence": "At Songbird block 127737529, hasRole(MINTER_ROLE, 0x6329218f...) returned true on the proxy. Verified HexTrustUSD source exposes minting through the role-controlled implementation."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x47345bb878501cc204d6e7d13d74ce159f287c55",
+        "label": "USDX secondary UPGRADE_ADMIN_ROLE EOA - Ethereum",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530752,
+        "sources": [
+          {
+            "label": "USDX Ethereum RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xf8750b54d86be7ae9e32b4a0c826811198d63313&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "USDX Ethereum verified token",
+            "url": "https://etherscan.io/address/0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+          }
+        ],
+        "evidence": "At Ethereum block 25530752, hasRole(UPGRADE_ADMIN_ROLE, 0x47345bb8...) returned true. Verified UUPS source gates _authorizeUpgrade with UPGRADE_ADMIN_ROLE (and the default-admin path where applicable); this EOA has no DEFAULT_ADMIN_ROLE or MINTER_ROLE."
+      },
+      {
+        "chain": "flare",
+        "address": "0x47345bb878501cc204d6e7d13d74ce159f287c55",
+        "label": "USDX secondary UPGRADE_ADMIN_ROLE EOA - Flare",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 65060282,
+        "sources": [
+          {
+            "label": "USDX Flare RoleGranted logs",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/14/etherscan/api?module=logs&action=getLogs&address=0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "USDX Flare verified implementation",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/14/etherscan/api?module=contract&action=getsourcecode&address=0x35151bA1c19b31cc258787A414c93Bbe77251147"
+          }
+        ],
+        "evidence": "At Flare block 65060282, hasRole(UPGRADE_ADMIN_ROLE, 0x47345bb8...) returned true. Verified HexTrustUSDV2 source gates the upgrade authorization path through UPGRADE_ADMIN_ROLE; this EOA has no DEFAULT_ADMIN_ROLE or MINTER_ROLE."
       }
     ],
     "review": {
@@ -185,7 +345,7 @@
           "url": "https://www.htdigitalassets.com/"
         },
         {
-          "label": "USDX Sourcify implementation",
+          "label": "USDX Ethereum Sourcify implementation",
           "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
         },
         {
@@ -193,9 +353,9 @@
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xf8750b54d86be7ae9e32b4a0c826811198d63313&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "Sourcify source and direct role reads identify active MINTER_ROLE EOAs plus a default-admin and upgrade-admin EOA for the Ethereum USDX token.",
-      "reviewer": "Codex mint-authority top100 batch-c",
-      "reviewedAt": "2026-05-24",
+      "evidence": "At Ethereum block 25530752, Flare block 65060282, and Songbird block 127737529, the EIP-1967 implementation slots returned 0xce2d107b..., 0x35151b..., and 0xF34A47..., respectively, while the proxy-admin slot was zero on all three deployments. owner() and hasRole(DEFAULT_ADMIN_ROLE, 0xb8ce31ad...) returned the same default-admin EOA on every deployment. hasRole(MINTER_ROLE, ...) returned true for 0xf28a91a1... and 0x6329218f... on Ethereum, and for 0x6329218f... on Flare and Songbird. hasRole(UPGRADE_ADMIN_ROLE, 0xb8ce31ad...) returned true on all three; 0x47345bb8... also held UPGRADE_ADMIN_ROLE on Ethereum and Flare. Verified source gates mint() with MINTER_ROLE and _authorizeUpgrade with the upgrade-admin path.",
+      "reviewer": "Codex CTRL batch 13",
+      "reviewedAt": "2026-07-14",
       "unresolvedQuestions": [
         "Confirm whether the active minter EOAs are operational backend keys, custody keys, or named issuer treasury wallets.",
         "Confirm whether any offchain policy or custody approval flow constrains the minter EOAs."
@@ -203,18 +363,6 @@
     }
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "U.S. Treasury bills (1-3 month maturity)",
-      "pct": 80,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash and cash equivalents",
-      "pct": 20,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

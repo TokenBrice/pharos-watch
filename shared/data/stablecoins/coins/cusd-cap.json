@@ -34,38 +34,256 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "cUSD mints through Cap's vault mint path against supported assets; admin-controlled access, asset lists, caps, and UUPS upgrade authority remain material mint-path controls.",
+    "confidence": "verified",
+    "summary": "Ethereum cUSD mints through Cap's collateralized vault with per-asset deposit caps. Ethereum and MegaETH proxy upgrades, MegaETH OFT administration, and Tempo's TIP-20 issuer/admin paths resolve to the same 3/5 Safe through one-day timelocks; that governance can change caps, roles, and mint logic.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        "0xbd12e50bfaa25735d074dbfdcf73208b9ccd2e43"
+      ],
+      "implementationAddresses": [
+        "0xa76645E15c267b876999bf7689E0b2C1EE29BFE6",
+        "0x3b2bf0834130878e0568b8047061a77e234ef37b",
+        "0x2df83a34269bf665a3de9ccd7234867401526ae8"
+      ],
+      "adminAddresses": [
+        "0xD8236031d8279d82E615aF2BFab5FC0127A329ab",
+        "0x0000000035A7744F94e6949431CE20EA77312a55"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 86400,
+      "controlRef": "Cap Ethereum governance Safe through one-day timelock",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530492,
+      "sources": [
+        {
+          "label": "Ethereum cUSD proxy and verified implementation",
+          "url": "https://eth.blockscout.com/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+        },
+        {
+          "label": "MegaETH cUSD proxy",
+          "url": "https://mega.etherscan.io/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+        },
+        {
+          "label": "Tempo cUSD TIP-20 token",
+          "url": "https://explore.tempo.xyz/address/0x20C0000000000000000000000520792DcCccCccC"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
-        "label": "Cap cUSD vault mint path",
-        "role": "other",
+        "label": "Cap cUSD Ethereum collateralized vault mint path",
+        "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Verified implementation source exposes mint(asset,amountIn,minAmountOut,receiver,deadline), mints cUSD to the receiver and fees to the insurance fund, and relies on AccessControl for asset/cap/upgrade-sensitive functions."
+        "directMintAbility": "cap-limited",
+        "capDescription": "User minting requires a supported reserve asset and is bounded by that asset's deposit cap; the one-day Timelock can change supported assets and raise deposit caps.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530492,
+        "failureDomainKeys": [
+          "cap-cusd-ethereum-vault"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum cUSD proxy and verified CapToken implementation",
+            "url": "https://eth.blockscout.com/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+          },
+          {
+            "label": "Cap AccessControl proxy and verified implementation",
+            "url": "https://eth.blockscout.com/address/0x7731129a10d51e18cde607c5c115f26503d2c683"
+          }
+        ],
+        "evidence": "At Ethereum block 25530492, the verified CapToken implementation exposed collateralized mint(), addAsset(), setDepositCap(), and UUPS upgrade logic. The external enumerable AccessControl returned one holder for the vault upgrade, addAsset, and setDepositCap selector roles: TimelockController 0xD8236031...."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb8FC49402dF3ee4f8587268FB89fda4d621a8793",
+        "label": "Cap Ethereum governance Safe through one-day timelock",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xDD30a4712e6B34926d4f5aA99c1881573407538C",
+            "0xdf466Fa3ddd0042d990FA9A023e040884CBaD439",
+            "0x7c29F6A93df60Bcd3B20f03B57a2F9e698FD4128",
+            "0x62D0b3c0a77bE77EaB2060266a95FfaD9e6A3F51",
+            "0xA62f87A9D4B5EE1F83cb644Ea076832A396101b8"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "version": "1.4.1",
+          "observedBlock": 25530492,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530492,
+        "failureDomainKeys": [
+          "cap-governance-safe"
+        ],
+        "sources": [
+          {
+            "label": "Cap Ethereum TimelockController",
+            "url": "https://eth.blockscout.com/address/0xD8236031d8279d82E615aF2BFab5FC0127A329ab"
+          },
+          {
+            "label": "Cap governance Safe on Ethereum",
+            "url": "https://eth.blockscout.com/address/0xb8FC49402dF3ee4f8587268FB89fda4d621a8793"
+          }
+        ],
+        "evidence": "At Ethereum block 25530492, the vault AccessControl's DEFAULT_ADMIN, grant/revoke, upgrade, addAsset, and setDepositCap roles resolved to TimelockController 0xD8236031.... Its minimum delay was 86400 seconds, and Safe 0xb8FC... held proposer, executor, and canceller roles. The Safe was 3/5 with no enabled modules and a zero guard."
+      },
+      {
+        "chain": "megaeth",
+        "address": "0xb8FC49402dF3ee4f8587268FB89fda4d621a8793",
+        "label": "Cap MegaETH OFT and upgrade Safe through one-day timelock",
+        "role": "bridge-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xDD30a4712e6B34926d4f5aA99c1881573407538C",
+            "0xdf466Fa3ddd0042d990FA9A023e040884CBaD439",
+            "0x7c29F6A93df60Bcd3B20f03B57a2F9e698FD4128",
+            "0x62D0b3c0a77bE77EaB2060266a95FfaD9e6A3F51",
+            "0xA62f87A9D4B5EE1F83cb644Ea076832A396101b8"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "version": "1.4.1",
+          "observedBlock": 21230596,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 21230596,
+        "failureDomainKeys": [
+          "cap-governance-safe"
+        ],
+        "sources": [
+          {
+            "label": "Cap cUSD OFT on MegaETH",
+            "url": "https://mega.etherscan.io/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+          },
+          {
+            "label": "Cap MegaETH TimelockController",
+            "url": "https://mega.etherscan.io/address/0x0000000035A7744F94e6949431CE20EA77312a55"
+          }
+        ],
+        "evidence": "At MegaETH block 21230596, cUSD was an OFT UUPS proxy with implementation 0x3b2bf083... and owner TimelockController 0x0000000035A7.... The timelock delay was 86400 seconds; the same 3/5 Safe held proposer, executor, and canceller roles, with no enabled modules and a zero guard."
+      },
+      {
+        "chain": "tempo",
+        "address": "0xbd12e50bfaa25735d074dbfdcf73208b9ccd2e43",
+        "label": "Cap cUSD Tempo TIP-20 issuer proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "The TIP-20 ISSUER_ROLE can mint up to supplyCap; the current cap is uint128 max and DEFAULT_ADMIN_ROLE can change it.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 29925481,
+        "failureDomainKeys": [
+          "cap-cusd-tempo-issuer"
+        ],
+        "sources": [
+          {
+            "label": "Tempo TIP-20 specification",
+            "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+          },
+          {
+            "label": "Tempo cUSD TIP-20 token",
+            "url": "https://explore.tempo.xyz/address/0x20C0000000000000000000000520792DcCccCccC"
+          }
+        ],
+        "evidence": "At Tempo block 29925481, hasRole(active issuer, ISSUER_ROLE) was true for proxy 0xbd12e50b... and false for the revoked prior issuer. Its EIP-1967 implementation was 0x2df83a34... and owner() returned the one-day TimelockController 0x0000000035A7.... TIP-20 supplyCap was uint128 max."
+      },
+      {
+        "chain": "tempo",
+        "address": "0xb8FC49402dF3ee4f8587268FB89fda4d621a8793",
+        "label": "Cap Tempo issuer-admin Safe through one-day timelock",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xDD30a4712e6B34926d4f5aA99c1881573407538C",
+            "0xdf466Fa3ddd0042d990FA9A023e040884CBaD439",
+            "0x7c29F6A93df60Bcd3B20f03B57a2F9e698FD4128",
+            "0x62D0b3c0a77bE77EaB2060266a95FfaD9e6A3F51",
+            "0xA62f87A9D4B5EE1F83cb644Ea076832A396101b8"
+          ],
+          "enabledModules": [],
+          "observedBlock": 29925481,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 29925481,
+        "failureDomainKeys": [
+          "cap-governance-safe"
+        ],
+        "sources": [
+          {
+            "label": "Tempo cUSD TIP-20 token",
+            "url": "https://explore.tempo.xyz/address/0x20C0000000000000000000000520792DcCccCccC"
+          },
+          {
+            "label": "Cap Tempo TimelockController",
+            "url": "https://explore.tempo.xyz/address/0x0000000035A7744F94e6949431CE20EA77312a55"
+          }
+        ],
+        "evidence": "Tempo role history transferred DEFAULT_ADMIN_ROLE from the Safe to TimelockController 0x0000000035A7... at block 18705862. At block 29925481 the timelock remained DEFAULT_ADMIN, its delay was 86400 seconds, and the active issuer proxy was owned by it. The same 3/5 Safe controls the timelock."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Sourcify CapToken source",
-          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC/sources/contracts/token/CapToken.sol"
+          "label": "Ethereum cUSD proxy and verified implementation",
+          "url": "https://eth.blockscout.com/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
         },
         {
-          "label": "Sourcify Vault source",
-          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC/sources/contracts/vault/Vault.sol"
+          "label": "Cap AccessControl proxy and verified implementation",
+          "url": "https://eth.blockscout.com/address/0x7731129a10d51e18cde607c5c115f26503d2c683"
+        },
+        {
+          "label": "MegaETH cUSD proxy",
+          "url": "https://mega.etherscan.io/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+        },
+        {
+          "label": "Tempo TIP-20 specification",
+          "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+        },
+        {
+          "label": "Tempo cUSD TIP-20 token",
+          "url": "https://explore.tempo.xyz/address/0x20C0000000000000000000000520792DcCccCccC"
         }
       ],
-      "evidence": "At Ethereum block 25294782: EIP-1967 implementation slot = 0xa76645e15c267b876999bf7689e0b2c1ee29bfe6 (CapToken, 33KB, UUPS). insuranceFund() = 0x5eaf535b1e399de08db23b4e18bd3cd29e16b825 (GnosisSafe v1.4.1 proxy); interestReceiver() = 0xa1a20abdc873cf291c22ce3c8968ec06277324d0. ABI exposes addAsset, setDepositCap, upgradeToAndCall behind custom AccessDenied checks. No getRoleMemberCount/hasRole in ABI, zero RoleGranted events, no owner() — role holders not enumerable on-chain.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Vault (0xcccc62962d17b8914c62d74ffb843d73b2a3cccc) uses a custom non-enumerable AccessControl: no getRoleMemberCount/hasRole in ABI, no RoleGranted events emitted, and no owner()/admin() exposed. UUPS proxy implementation (0xa76645e15c267b876999bf7689e0b2c1ee29bfe6, CapToken) exposes addAsset/setDepositCap/upgradeToAndCall behind custom AccessDenied checks with no standard query path. Cannot enumerate role holders on-chain; verification requires off-chain documentation or a Cap-specific role enumeration interface."
-      ]
+      "evidence": "Live RPC and verified implementation review resolved the prior enumeration blocker. Ethereum's vault points to an external AccessControlEnumerableUpgradeable proxy; selector-derived upgrade/addAsset/setDepositCap roles each had exactly the one-day Timelock as holder. Ethereum, MegaETH, and Tempo governance converge on the same 3/5 Safe. Tempo event history and current role calls identified the active issuer proxy and the current timelocked DEFAULT_ADMIN.",
+      "reviewer": "Codex CTRL curation batch 03",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable"
     }
   },
   "liveReservesConfig": {

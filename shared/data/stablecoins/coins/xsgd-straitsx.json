@@ -162,6 +162,50 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "StraitsX tokens use a Circle-style MasterMinter pattern on Ethereum; token and master-minter controls resolve to verified 3/5 Safes, and the Solana mint authority resolves to a 3/10 multisig.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530897,
+      "sources": [
+        {
+          "label": "XSGD Ethereum token",
+          "url": "https://etherscan.io/address/0x70e8de73ce538da2beed35d14187f6959a8eca96#code"
+        },
+        {
+          "label": "XSGD Polygon token",
+          "url": "https://polygonscan.com/address/0xdc3326e71d45186f113a2f448984ca0e8d201995#code"
+        },
+        {
+          "label": "XSGD Arbitrum token",
+          "url": "https://arbiscan.io/address/0xe333e7754a2dc1e020a162ecab019254b9dab653#code"
+        },
+        {
+          "label": "XSGD Avalanche token",
+          "url": "https://snowtrace.io/address/0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e#code"
+        },
+        {
+          "label": "XSGD Base token",
+          "url": "https://basescan.org/address/0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Solana Token Program",
+          "url": "https://explorer.solana.com/address/TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "label": "Hedera XSGD token",
+          "url": "https://hashscan.io/mainnet/token/0.0.1985922"
+        },
+        {
+          "label": "XRPL XSGD issuer",
+          "url": "https://livenet.xrpl.org/accounts/rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -426,13 +470,6 @@
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "SGD at Tier-1 banks (DBS, Standard Chartered)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "attestation-pdf-index",
     "version": 1,

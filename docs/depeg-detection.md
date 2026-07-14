@@ -7,7 +7,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 - **Current methodology version:** `v6.096`
 - **Runtime/version source:** `shared/lib/depeg-dews-version.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
-- **Version timeline:** [depeg-dews-timeline.md](./depeg-dews-timeline.md)
+- **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
 
 ## Downstream: Depeg Duration Resolver
 
@@ -527,20 +527,3 @@ Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as 
 | DEX freshness | Prices > 35 min old ignored |
 | Orphaned events | Closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL` when coin drops off tracking |
 | Non-USD threshold | 150bps accounts for FX noise and thin liquidity |
-
-## File Index
-
-| File | Role |
-|------|------|
-| `worker/src/cron/detect-depegs.ts` | Stage 1: detection, peak tracking, DEX cross-validation, orphan cleanup |
-| `worker/src/cron/confirm-pending-depegs.ts` | Stage 2: multi-source confirmation for large coins |
-| `worker/src/cron/sync-stablecoins.ts` | Parent cron that calls both stages after price enrichment |
-| `worker/src/lib/depeg-helpers.ts` | `DepegRow` type, `rowToDepegEvent()`, `loadDexPriceRows()`, `buildInsertDepegEventStmt()` |
-| `worker/src/api/depeg-events.ts` | `GET /api/depeg-events` handler |
-| `worker/migrations/0000_baseline.sql` | Baseline `depeg_events` / `depeg_pending` schema, including the historical dedupe and non-USD cleanup changes |
-| `shared/types/market.ts` | `DepegEvent` frontend type (re-exported via `shared/types/index.ts`) |
-| `shared/lib/peg-score.ts` | Peg score computation for report cards |
-| `src/lib/peg-stability.ts` | Peg stability metrics (`pegPct`, streak, tracking span) |
-| `src/hooks/use-depeg-events.ts` | TanStack Query hook |
-| `src/components/depeg-feed.tsx` | Recent events grid (homepage) |
-| `src/components/depeg-history.tsx` | Event history table (detail page) |

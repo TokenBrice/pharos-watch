@@ -197,19 +197,33 @@ export type DexAmmExecutionToken = z.infer<typeof DexAmmExecutionTokenSchema>;
 
 export const DexAmmExecutionModelSchema = z
   .object({
-    source: z.enum(["raydium", "balancer"]),
-    invariant: z.enum(["constant-product", "weighted-constant-mean"]),
+    source: z.enum(["raydium", "balancer", "curve"]),
+    invariant: z.enum(["constant-product", "weighted-constant-mean", "stableswap"]),
     trackedTokenIndex: z.number().int().nonnegative(),
     feeRate: z.number().finite().min(0).lt(1),
+    /** StableSwap amplification coefficient A (plain paper convention, not A*n^n). */
+    amplification: z.number().finite().positive().optional(),
     tokens: z.array(DexAmmExecutionTokenSchema).min(2).max(8),
   })
   .superRefine((model, ctx) => {
     if (model.trackedTokenIndex >= model.tokens.length) {
       ctx.addIssue({ code: "custom", path: ["trackedTokenIndex"], message: "tracked token index is out of range" });
     }
+    if (model.invariant !== "stableswap" && model.amplification !== undefined) {
+      ctx.addIssue({ code: "custom", path: ["amplification"], message: "amplification is a stableswap parameter" });
+    }
     if (model.invariant === "constant-product") {
       if (model.source !== "raydium" || model.tokens.length !== 2) {
         ctx.addIssue({ code: "custom", path: ["invariant"], message: "invalid constant-product model" });
+      }
+      return;
+    }
+    if (model.invariant === "stableswap") {
+      if (model.source !== "curve") {
+        ctx.addIssue({ code: "custom", path: ["source"], message: "stableswap models require Curve source" });
+      }
+      if (model.amplification === undefined) {
+        ctx.addIssue({ code: "custom", path: ["amplification"], message: "stableswap models require amplification" });
       }
       return;
     }

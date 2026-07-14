@@ -2,7 +2,7 @@
   "id": "mxnb-juno",
   "name": "MXNB",
   "symbol": "MXNB",
-  "oneLiner": "MXNB is Juno/Bitso's MXN-pegged stablecoin backed 1:1 by peso reserves at regulated banks with quarterly attestations; now issued from El Salvador under CNAD.",
+  "oneLiner": "MXNB is backed by segregated MXN cash, cash equivalents, and short-term Mexican government securities and issued under El Salvador's CNAD.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "MXN",
@@ -11,16 +11,37 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mexican peso (MXN) fiat reserves and cash-equivalent assets held across multiple regulated financial institutions; beginning April 8, 2026, MXNB is issued by Nvio Pagos El Salvador, S.A. de C.V., an authorised digital-asset issuer in El Salvador",
+  "collateral": "Mexican peso cash, cash-equivalent assets, and short-term Mexican government securities held through segregated custodial accounts; beginning April 8, 2026, MXNB is issued by Nvio Pagos El Salvador, S.A. de C.V., an authorised digital-asset issuer in El Salvador",
   "pegMechanism": "1:1 MXN fiat-collateralized stablecoin; Juno/MXNB materials describe reserve parity, token burn/redemption through issuer rails, and quarterly third-party attestations confirming reserves exceed circulating supply",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "mxnb",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://mxnb.mx/transparency",
-    "attestorTier": "big4",
-    "cadence": "quarterly"
+    "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf",
+    "provider": "BDO Mexico (Castillo Miranda y Compania)",
+    "attestorTier": "regional",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Mexico",
+    "latestReport": {
+      "periodEnd": "2026-03-31",
+      "publishedAt": "2026-06-23",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "owner-triage",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "BDO Mexico MXNB Q1 2026 valuation report",
+          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
+        },
+        {
+          "label": "MXNB attestation index",
+          "url": "https://mxnb.mx/en-US/transparency"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -188,11 +209,98 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "MXN fiat reserves and cash-equivalents at Mexican financial institutions",
+      "name": "MXN cash, cash-equivalents, and short-term Mexican government securities",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "Mexican banking counterparties and the United Mexican States",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "market", "concentration", "legal"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "MXNB transparency",
+        "url": "https://mxnb.mx/transparency"
+      },
+      {
+        "label": "MXNB issuer page",
+        "url": "https://mxnb.mx/"
+      },
+      {
+        "label": "MXNB whitepaper",
+        "url": "https://mxnb.mx/whitepaper.pdf"
+      },
+      {
+        "label": "BDO Mexico MXNB Q1 2026 valuation report",
+        "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
+      }
+    ],
+    "rationale": "MXNB's current transparency page reports 37.7 million MXN of reserves against 37.2 million MXNB in circulation as of July 12, 2026. The issuer's whitepaper says the reserve spans pesos, cash equivalents, and an internally audited short-term Mexican-government-security process, but publishes no current category or provider weights. The March 31 BDO report confirms Nvio and Hey Banco statement balances for that earlier date without narrowing the issuer's complete permitted reserve envelope.",
+    "compositionBasis": "Current issuer balance disclosure plus the whitepaper's complete reserve-policy envelope",
+    "compositionAsOf": "2026-07-12",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current weights across cash, cash equivalents, short-term government securities, accounts, and providers are not published.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "MXN cash, cash-equivalents, and short-term Mexican government securities",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer defines the complete reserve envelope but does not publish current instrument or provider weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Nvio",
+        "role": "other",
+        "jurisdiction": "Mexico"
+      },
+      {
+        "name": "Hey Banco",
+        "role": "bank",
+        "jurisdiction": "Mexico"
+      },
+      {
+        "name": "MXNB issuer and reserve-management entities",
+        "role": "custodian",
+        "jurisdiction": "El Salvador"
+      },
+      {
+        "name": "MXNB token contracts",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "MXNB transparency",
+        "url": "https://mxnb.mx/transparency"
+      },
+      {
+        "label": "MXNB whitepaper",
+        "url": "https://mxnb.mx/whitepaper.pdf"
+      },
+      {
+        "label": "BDO Mexico MXNB Q1 2026 valuation report",
+        "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
+      }
+    ],
+    "uncertainty": "The whitepaper states that reserves are legally and operationally segregated from issuer and affiliate operating funds and held through a single-purpose entity. It does not establish statutory bankruptcy remoteness, current provider shares, account-level allocations, or rehypothecation treatment."
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

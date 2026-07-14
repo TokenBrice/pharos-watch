@@ -159,15 +159,23 @@
     "provider": "Aura Partners",
     "attestorTier": "niche",
     "cadence": "monthly",
-    "attestorJurisdiction": "Australia"
-  },
-  "reserves": [
-    {
-      "name": "AUD cash and government-backed instruments",
-      "pct": 100,
-      "risk": "low"
+    "attestorJurisdiction": "Australia",
+    "latestReport": {
+      "periodEnd": "2026-04-30",
+      "publishedAt": "2026-05-14",
+      "assuranceMethod": "review",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Aura Partners AUDX Limited Assurance Report - April 2026",
+          "url": "https://www.audxtoken.com/_files/ugd/539754_d3b6f8c78ec04b63b1df788050e271d9.pdf"
+        }
+      ]
     }
-  ],
+  },
   "liveReservesConfig": {
     "adapter": "attestation-pdf-index",
     "version": 1,

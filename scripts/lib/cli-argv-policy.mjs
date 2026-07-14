@@ -84,11 +84,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/check-worker-wrangler-config.ts", "read-only"),
     exempt("scripts/ci/classify-deploy-changes.mjs", "read-only"),
     exempt("scripts/ci/pharos-change-contract.mjs", "build"),
-    exempt(
-      "scripts/ci/upsert-github-pr-comment.mjs",
-      "build",
-      "CI-only mutation is configured entirely through environment variables; process.argv is used only for direct-entrypoint detection.",
-    ),
     exempt("scripts/lib/coverage-audit-cli.ts", "build"),
     exempt(
       "scripts/lib/source-files.mjs",
@@ -120,7 +115,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/capture-d1-insights.mjs", "build"),
     exempt("scripts/maintenance/check-safety-score-v9-parity.mjs", "test"),
     exempt("scripts/maintenance/explain-build-chunks.mjs", "build"),
-    exempt("scripts/maintenance/generate-agent-code-map.mjs", "build"),
     exempt("scripts/maintenance/generate-api-reference.mjs", "build"),
     exempt("scripts/maintenance/generate-bridge-route-coverage-audit.ts", "build"),
     exempt("scripts/maintenance/generate-case-study-client-index.ts", "build"),

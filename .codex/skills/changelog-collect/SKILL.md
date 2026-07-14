@@ -71,7 +71,7 @@ Group the surviving commits by conventional prefix (`feat`, `fix`, `docs`, `refa
 
 Actively check these signals — they often belong in the headline or a labeled cluster:
 
-- **Stablecoin count crossings**: compare the count implied by `shared/data/stablecoins/coins.generated.json` (or the `npm run check:doc-counts` output) against the previous entry's claim. A crossing (e.g., 192 → 194) is headline-worthy.
+- **Stablecoin count crossings**: compare the count in `shared/data/stablecoins/coins.generated.json` against the previous entry's claim. A crossing (e.g., 192 → 194) is headline-worthy.
 - **Methodology version bumps**: grep filtered commits for `v\d+\.\d+\d?` (e.g., `v6.93`, `v5.0`). Map each bump to a cluster with the correct `href` (see step 7).
 - **New data source integrations**: updates the about page too — flag so the reviewer can cross-check.
 
@@ -185,7 +185,7 @@ Run the relevant gates locally:
 npx tsc --noEmit                           # Catches bad tag enum, missing fields
 npm run lint
 npm test -- src/data/changelogs/           # Type + barrel tests
-npm run check:doc-counts                   # Only if the summary cites a coin count
+npm run check:stablecoin-data              # If the summary cites a coin count
 ```
 
 Cross-check any cited number (coin count, reserve adapter total, methodology version) against the source of truth.
@@ -212,4 +212,4 @@ git add src/data/changelogs/<to>.ts src/data/changelogs/index.ts
 git commit -m "docs(changelog): add changelog for <from> to <to>"
 ```
 
-Before a push, run the focused changelog checks above and let the repo pre-push hook execute the authoritative merge gate once.
+Before publishing, run the focused changelog checks above. Use `pharos-release-runner` for the protected branch/PR path; GitHub's required `PR gate` is authoritative, and the heavy local merge gate is an explicit rehearsal only.

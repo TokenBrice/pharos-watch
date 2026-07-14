@@ -18,19 +18,952 @@
   "geckoId": "defi-money",
   "protocolSlug": "defi.money",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "defi.money uses Chainlink EMA feeds on supported chains and RedStone Push feeds with heartbeat/deviation checks elsewhere, without a stronger reviewed failover tier.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "tier": "single-source-or-laggy",
+    "summary": "defi.money exposes 16 borrowing-callable controller markets plus one registered, zero-ceiling RDNT branch across Arbitrum, Base, and Optimism. Each market uses one AggregateChainedOracle path over a 20-observation, 30-second Chainlink EMA; wstETH uses two serial Chainlink legs, not failover. Healthy state-changing price_w() updates refresh storedPrice, while view-only price() does not; the aggregate serves storedPrice only during sequencer downtime and the 30-minute recovery grace period. Chainlink updatedAt has no enforced staleness bound.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-DRAIN data review",
+      "rationale": "The three verified MainController deployments enumerate 17 independent collateral markets. Zero-debt markets remain callable when their debt ceiling is positive; the zero-ceiling RDNT market is retained as a registered disabled branch, not described as borrowing-callable.",
+      "sources": [
+        {
+          "label": "defi.money deployment registry",
+          "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
+        },
+        {
+          "label": "Pinned MainController source",
+          "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+        },
+        {
+          "label": "Finalized Arbitrum block 483808699",
+          "url": "https://arbiscan.io/block/483808699"
+        },
+        {
+          "label": "Finalized Base block 48626666",
+          "url": "https://basescan.org/block/48626666"
+        },
+        {
+          "label": "Finalized Optimism block 154221898",
+          "url": "https://optimistic.etherscan.io/block/154221898"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-DRAIN data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "defi.money oracles",
-        "url": "https://docs.defi.money/welcome/protocol-components/oracles.md"
+        "label": "defi.money oracle documentation",
+        "url": "https://docs.defi.money/welcome/protocol-components/oracles"
       },
       {
-        "label": "defi.money liquidations",
-        "url": "https://docs.defi.money/welcome/how-does-it-work/liquidation.md"
+        "label": "defi.money liquidation documentation",
+        "url": "https://docs.defi.money/welcome/how-does-it-work/liquidation"
+      },
+      {
+        "label": "Pinned AggregateChainedOracle source",
+        "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/oracles/AggregateChainedOracle.sol"
+      },
+      {
+        "label": "Pinned ChainlinkEMA source",
+        "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/oracles/ChainlinkEMA.sol"
+      },
+      {
+        "label": "Pinned Layer2UptimeOracle source",
+        "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/oracles/Layer2UptimeOracle.sol"
+      },
+      {
+        "label": "Pinned MarketOperator source",
+        "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MarketOperator.vy"
+      }
+    ],
+    "branches": [
+      {
+        "id": "arbitrum-weth",
+        "label": "Arbitrum WETH market",
+        "tier": "single-source-or-laggy",
+        "summary": "Debt-bearing WETH market 0xe38F...C43E under controller 0x1337...62CD; one Chainlink ETH/USD EMA path.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "arbitrum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xe38FB572099A8Fdb51e0929cb2B439D0479fC43E -> AMM 0xE73a960cD30659714aa8275Aa12aeec918e729D8 -> aggregate 0x469974C4297139f48daF1BfeA9d9aA44f9789e02 -> EMA 0x881Ba857166DDc8E364Be5C24b2c9eC587776760 -> ETH/USD",
+            "address": "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612",
+            "chain": "arbitrum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 483808699,
+            "failureDomainKeys": [
+              "chainlink-arbitrum",
+              "defi-money-owner"
+            ]
+          }
+        ],
+        "fallbackBehavior": "One live path only. Aggregate returns cached storedPrice during sequencer downtime and the 1,800-second recovery grace period; otherwise an upstream revert/zero fails closed. Positive stale Chainlink rounds are accepted because updatedAt has no bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 483808699,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "note": "Debt 1,108.263551 MONEY; ceiling 5,000,000 MONEY; loan discount 7%; liquidation discount 4%; A=72; 8 open loans. Maximum LTV varies with selected LLAMMA band count."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA bad liquidation: third-party callers require negative health, while the borrower may self-liquidate without that gate; the caller burns net MONEY and receives converted stablecoin surplus and collateral.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance backstop; the AMM's converted MONEY offsets debt and the external liquidator must burn the remaining debt.",
+        "shutdownOrBadDebtBehavior": "Owner or guardian can pause new and adjusted loans while close and liquidation remain callable. No residual-debt socialization exists; uncovered debt remains economically dependent on a liquidator burning MONEY.",
+        "failureDomainKeys": [
+          "chainlink-arbitrum",
+          "sequencer-arbitrum",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Arbitrum block 483808699",
+            "url": "https://arbiscan.io/block/483808699"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum-wbtc",
+        "label": "Arbitrum WBTC market",
+        "tier": "single-source-or-laggy",
+        "summary": "Debt-bearing WBTC market 0xB745...e5f9; one Chainlink BTC/USD EMA path.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "arbitrum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xB745f12eCF271484c79D3999cA12164Fe1c4e5f9 -> AMM 0x9cabC4d0eD66Ff48625D6f973A784c7234eB2B80 -> aggregate 0xFfd787C71792494646DefADa9761989aAA6E013a -> EMA 0x200A5EbEF24d7e41B0387007a4c2eb7b165beD7C -> BTC/USD",
+            "address": "0xd0C7101eACbB49F3deCcCc166d238410D6D46d57",
+            "chain": "arbitrum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 483808699,
+            "failureDomainKeys": [
+              "chainlink-arbitrum",
+              "defi-money-owner"
+            ]
+          }
+        ],
+        "fallbackBehavior": "One live path only. Sequencer downtime uses the aggregate cache through the 1,800-second recovery grace; upstream revert/zero fails closed, but positive stale rounds have no enforced age bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 483808699,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "note": "Debt 0.713392 MONEY; ceiling 4,000,000 MONEY; loan discount 7%; liquidation discount 4%; A=89; 6 open loans. Maximum LTV varies with LLAMMA band count."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA bad liquidation: third-party callers require negative health, while the borrower may self-liquidate without that gate; the caller supplies net debt and receives AMM stablecoin surplus and collateral.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance; AMM conversion plus liquidator-funded burn settles debt.",
+        "shutdownOrBadDebtBehavior": "Emergency pause preserves close/liquidate. No residual-debt redistribution or insurer is implemented.",
+        "failureDomainKeys": [
+          "chainlink-arbitrum",
+          "sequencer-arbitrum",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Arbitrum block 483808699",
+            "url": "https://arbiscan.io/block/483808699"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum-arb",
+        "label": "Arbitrum ARB market",
+        "tier": "single-source-or-laggy",
+        "summary": "Debt-bearing ARB market 0xEC70...F9D1; one Chainlink ARB/USD EMA path.",
+        "collateralAssets": [
+          "ARB"
+        ],
+        "chains": [
+          "arbitrum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xEC70Ac48D2cc382987a176f64fe74d77d010F9D1 -> AMM 0xfeAf54Da93b427caCe0B6A063ABac637D1A981f5 -> aggregate 0xCad2c4b1AAd5116256E3206c5c26a3a9962573a4 -> EMA 0x35A3Dca4320202A6946C49874273041421325029 -> ARB/USD",
+            "address": "0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6",
+            "chain": "arbitrum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 483808699,
+            "failureDomainKeys": [
+              "chainlink-arbitrum",
+              "defi-money-owner"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Single path; sequencer-only cached price, otherwise fail-closed on revert/zero and no positive-round staleness bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 483808699,
+        "collateralParameters": [
+          {
+            "asset": "ARB",
+            "note": "Debt 0.001174 MONEY; ceiling 1,000,000 MONEY; loan discount 12%; liquidation discount 9%; A=30; 2 open loans; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance; AMM conversion and liquidator burn settle debt.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution or insurer.",
+        "failureDomainKeys": [
+          "chainlink-arbitrum",
+          "sequencer-arbitrum",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Arbitrum block 483808699",
+            "url": "https://arbiscan.io/block/483808699"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum-wsteth",
+        "label": "Arbitrum wstETH market",
+        "tier": "single-source-or-laggy",
+        "summary": "Callable zero-debt wstETH market 0xE927...DD1; serial wstETH/ETH and ETH/USD Chainlink EMA legs, not redundant failover.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "arbitrum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xE927e8B43Da90f017b146Eff5f99515372630DD1 -> AMM 0x8825E6BE3dC33e9651Dfa0583f95616D1E339Dda -> aggregate 0x80E0bB21737C8E1BAbD4b9E113c735b994126400 -> EMA 0xb8efFdf5952753B098bFbFDf9393cf699aEE844a -> wstETH/ETH",
+            "address": "0xb523AE262D20A936BC152e6023996e46FDC2A95D",
+            "chain": "arbitrum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 483808699,
+            "failureDomainKeys": [
+              "chainlink-arbitrum",
+              "defi-money-owner"
+            ]
+          },
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "same aggregate serial leg -> EMA 0x85F09b2d7EcF1F5A62252Cc4b8DB5136f3D88E2 -> ETH/USD",
+            "address": "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612",
+            "chain": "arbitrum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 483808699,
+            "failureDomainKeys": [
+              "chainlink-arbitrum",
+              "defi-money-owner"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both serial legs must succeed; there is no alternate path. Sequencer downtime uses cache; positive stale rounds are accepted without age bounds.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 483808699,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "note": "Zero debt and zero open loans, but callable with 1,500,000 MONEY ceiling; loan discount 13%; liquidation discount 10%; A=72; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution or insurer.",
+        "failureDomainKeys": [
+          "chainlink-arbitrum",
+          "sequencer-arbitrum",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Arbitrum block 483808699",
+            "url": "https://arbiscan.io/block/483808699"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum-gmx",
+        "label": "Arbitrum GMX market",
+        "tier": "single-source-or-laggy",
+        "summary": "Callable zero-debt GMX market 0xa8ED...f790; one Chainlink GMX/USD EMA path.",
+        "collateralAssets": [
+          "GMX"
+        ],
+        "chains": [
+          "arbitrum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xa8ED217624218a4c65e6d577A26D7810E2f8f790 -> AMM 0xfD3A1275A1Edda1237a2c82dA9f1736F2efa0BC9 -> aggregate 0x3247Ae2B8C73A71f0f8D66731B245dB2afD08237 -> EMA 0x73307EFC576627904B5e31bB628D3260484b5281 -> GMX/USD",
+            "address": "0xDB98056FecFff59D032aB628337A4887110df3dB",
+            "chain": "arbitrum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 483808699
+          }
+        ],
+        "fallbackBehavior": "Single path; sequencer cache only, fail-closed on revert/zero, no positive-round staleness bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 483808699,
+        "collateralParameters": [
+          {
+            "asset": "GMX",
+            "note": "Zero debt/loans; callable 1,000,000 MONEY ceiling; loan discount 17%; liquidation discount 14%; A=60; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-arbitrum",
+          "sequencer-arbitrum",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Arbitrum block 483808699",
+            "url": "https://arbiscan.io/block/483808699"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum-rdnt",
+        "label": "Arbitrum RDNT legacy market",
+        "tier": "single-source-or-laggy",
+        "summary": "Registered zero-ceiling, zero-debt RDNT disabled market 0xE304...4378; borrowing is unavailable while the ceiling is zero, but the branch remains explicit and uses one Chainlink RDNT/USD EMA path.",
+        "collateralAssets": [
+          "RDNT"
+        ],
+        "chains": [
+          "arbitrum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xE304eF44F4240E44d0A8E954c22e5007a93a4378 -> AMM 0xa3c0533Cf448d0fbEacB1294cd63DdBbceB2f5f7 -> aggregate 0x78377b26A718c8F532B07D3063e2517f33AE592f -> EMA 0xd869d3E3B5A49746EE59aE8a6f8C9B62CD3f9173 -> RDNT/USD",
+            "address": "0x20d0Fcab0ECFD078B036b6CAf1FaC69A6453b352",
+            "chain": "arbitrum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 483808699
+          }
+        ],
+        "fallbackBehavior": "Single path; sequencer cache only, fail-closed on revert/zero, no positive-round staleness bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 483808699,
+        "collateralParameters": [
+          {
+            "asset": "RDNT",
+            "note": "Zero debt, zero loans, and zero debt ceiling: new debt is disabled. Retained as a deployed legacy branch. Loan discount 19%; liquidation discount 16%; A=20."
+          }
+        ],
+        "liquidationMechanism": "Immediate LLAMMA liquidation remains deployed; third-party callers require negative health, while the borrower may self-liquidate without that gate. No current loans exist.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Zero ceiling blocks new borrowing; pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-arbitrum",
+          "sequencer-arbitrum",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Arbitrum block 483808699",
+            "url": "https://arbiscan.io/block/483808699"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum-pendle",
+        "label": "Arbitrum PENDLE market",
+        "tier": "single-source-or-laggy",
+        "summary": "Callable zero-debt PENDLE market 0xFF75...592; one Chainlink PENDLE/USD EMA path.",
+        "collateralAssets": [
+          "PENDLE"
+        ],
+        "chains": [
+          "arbitrum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xFF75fa72bbc5DB02FceB948901614A1155925592 -> AMM 0xCaE9a11153cA1c0B8B1BC6A9EE3d5754c445f3d9 -> aggregate 0x284FAe4eBEc78e6a6c70Ed577BBD55b13FCD5D4E -> EMA 0x5462868c57b893d7f7f3A4715e0cC9b1D51E0537 -> PENDLE/USD",
+            "address": "0x66853E19d73c0F9301fe099c324A1E9726953433",
+            "chain": "arbitrum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 483808699
+          }
+        ],
+        "fallbackBehavior": "Single path; sequencer cache only, fail-closed on revert/zero, no positive-round staleness bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 483808699,
+        "collateralParameters": [
+          {
+            "asset": "PENDLE",
+            "note": "Zero debt/loans; callable 1,000,000 MONEY ceiling; loan discount 19%; liquidation discount 16%; A=20; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-arbitrum",
+          "sequencer-arbitrum",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Arbitrum block 483808699",
+            "url": "https://arbiscan.io/block/483808699"
+          }
+        ]
+      },
+      {
+        "id": "base-weth",
+        "label": "Base WETH market",
+        "tier": "single-source-or-laggy",
+        "summary": "Debt-bearing WETH market 0xA929...D2cE; one Chainlink ETH/USD EMA path.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xA929A836148E0635aB5EDf5B474d664601aDD2cE -> AMM 0x65958eB6169B291aeeE5e5445674FB4868476878 -> aggregate 0xcaa86F5888Bbb15504Ec0AE8033633F2d5c88B06 -> EMA 0x7c458879de0550A69B4c4AC11070bDC20C712940 -> ETH/USD",
+            "address": "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70",
+            "chain": "base",
+            "observedAt": "2026-07-14",
+            "observedBlock": 48626666
+          }
+        ],
+        "fallbackBehavior": "Single path; Base sequencer downtime uses aggregate cache through the 1,800-second recovery grace. Revert/zero fails closed; positive stale rounds are accepted.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48626666,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "note": "Debt 12.894532 MONEY; ceiling 5,000,000 MONEY; loan discount 16%; liquidation discount 13%; A=90; 11 open loans; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance; liquidator burns net MONEY.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-base",
+          "sequencer-base",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Base block 48626666",
+            "url": "https://basescan.org/block/48626666"
+          }
+        ]
+      },
+      {
+        "id": "base-cbbtc",
+        "label": "Base cbBTC market",
+        "tier": "single-source-or-laggy",
+        "summary": "Debt-bearing cbBTC market 0xA86e...7aFB; one Chainlink cbBTC/USD EMA path.",
+        "collateralAssets": [
+          "cbBTC"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xA86e8d5ed6F07DAb21C44e55e8576742760a7aFB -> AMM 0x09A00B732C0A9567A088f6433f77211b05D4DBb8 -> aggregate 0x831fBfd6A264aDc1F705903cf843De26e6Aa12dA -> EMA 0x4b1FA377C4CBE86C7b9C8e20A0c1264cc4D666a2 -> cbBTC/USD",
+            "address": "0x07DA0E54543a844a80ABE69c8A12F22B3aA59f9D",
+            "chain": "base",
+            "observedAt": "2026-07-14",
+            "observedBlock": 48626666
+          }
+        ],
+        "fallbackBehavior": "Single path; sequencer cache only, fail-closed on revert/zero, no positive-round staleness bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48626666,
+        "collateralParameters": [
+          {
+            "asset": "cbBTC",
+            "note": "Debt 270.450859 MONEY; ceiling 5,000,000 MONEY; loan discount 7%; liquidation discount 4%; A=70; 1 open loan; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-base",
+          "sequencer-base",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Base block 48626666",
+            "url": "https://basescan.org/block/48626666"
+          }
+        ]
+      },
+      {
+        "id": "base-cbeth",
+        "label": "Base cbETH market",
+        "tier": "single-source-or-laggy",
+        "summary": "Debt-bearing cbETH market 0xdf88...57dc; one Chainlink cbETH/USD EMA path.",
+        "collateralAssets": [
+          "cbETH"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xdf887F7a76744df87CF8111349657688E73257dc -> AMM 0xC65949105c75d517C6c63d6d96F4837124ccac10 -> aggregate 0x5FAfa61f8c350A2f3fBe31302035643d4Bc20BcA -> EMA 0xBE90D2DB18AeA1AeE86ed478FFd66ee1eFA6D9A4 -> cbETH/USD",
+            "address": "0xd7818272B9e248357d13057AAb0B417aF31E817d",
+            "chain": "base",
+            "observedAt": "2026-07-14",
+            "observedBlock": 48626666
+          }
+        ],
+        "fallbackBehavior": "Single path; sequencer cache only, fail-closed on revert/zero, no positive-round staleness bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48626666,
+        "collateralParameters": [
+          {
+            "asset": "cbETH",
+            "note": "Debt 69.728162 MONEY; ceiling 2,500,000 MONEY; loan discount 15%; liquidation discount 12%; A=70; 1 open loan; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-base",
+          "sequencer-base",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Base block 48626666",
+            "url": "https://basescan.org/block/48626666"
+          }
+        ]
+      },
+      {
+        "id": "base-wsteth",
+        "label": "Base wstETH market",
+        "tier": "single-source-or-laggy",
+        "summary": "Callable zero-debt wstETH market 0x7276...41bF; serial wstETH/ETH and ETH/USD Chainlink EMA legs.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0x72765c346e139eF09d104955dD0bd3d4F45441bF -> AMM 0x9E4bEf7995db8ADD5B6468B5AeFADc90d80cFB76 -> aggregate 0xd85926EfF9A348B24E779baCd80469dEFC06EEEc -> EMA 0x5806220D221AB6171DF4EFF78c0b678e5A45188E -> wstETH/ETH",
+            "address": "0x43a5C292A453A3bF3606fa856197f09D7B74251a",
+            "chain": "base",
+            "observedAt": "2026-07-14",
+            "observedBlock": 48626666
+          },
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "same aggregate serial leg -> EMA 0xC9AfED0E2361ee9AcD525EeB0e31816034CA2F56 -> ETH/USD",
+            "address": "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70",
+            "chain": "base",
+            "observedAt": "2026-07-14",
+            "observedBlock": 48626666
+          }
+        ],
+        "fallbackBehavior": "Both serial legs must succeed; no alternate path. Sequencer cache only; positive stale rounds accepted.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48626666,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "note": "Zero debt/loans; callable 2,500,000 MONEY ceiling; loan discount 13%; liquidation discount 10%; A=65; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-base",
+          "sequencer-base",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Base block 48626666",
+            "url": "https://basescan.org/block/48626666"
+          }
+        ]
+      },
+      {
+        "id": "base-aero",
+        "label": "Base AERO market",
+        "tier": "single-source-or-laggy",
+        "summary": "Callable AERO market 0x3385...D224 with one zero-debt loan slot and a Chainlink AERO/USD EMA path.",
+        "collateralAssets": [
+          "AERO"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0x3385255E97FBdcA1F94491557211f56B250BD224 -> AMM 0x6b6b69Cc5624Da005A829b8fA20f31AE52A43e09 -> aggregate 0x28a7D232cb52D1214B1229C6493d4afF75bb242E -> EMA 0x6601594474A0f82Dfe05419463c019178E3e2fbc -> AERO/USD",
+            "address": "0x4EC5970fC728C5f65ba413992CD5fF6FD70fcfF0",
+            "chain": "base",
+            "observedAt": "2026-07-14",
+            "observedBlock": 48626666
+          }
+        ],
+        "fallbackBehavior": "Single path; sequencer cache only, fail-closed on revert/zero, no positive-round staleness bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48626666,
+        "collateralParameters": [
+          {
+            "asset": "AERO",
+            "note": "Zero current debt, 1 enumerated loan, callable 1,000,000 MONEY ceiling; loan discount 42%; liquidation discount 39%; A=7; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-base",
+          "sequencer-base",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Base block 48626666",
+            "url": "https://basescan.org/block/48626666"
+          }
+        ]
+      },
+      {
+        "id": "optimism-weth",
+        "label": "Optimism WETH market",
+        "tier": "single-source-or-laggy",
+        "summary": "Debt-bearing WETH market 0xD74A...7476; one Chainlink ETH/USD EMA path.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "optimism"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xD74A1f6B44395cf8c4833df5Bc965C6C2b567476 -> AMM 0xad7d46ceB08ba5a1A21AFc43e9E2591c842F9057 -> aggregate 0xFD008636Cc1B4544D60A096Ea2D006a2e925846A -> EMA 0x3b54dd4E159e810811C0ba0f7684a56856860b7F -> ETH/USD",
+            "address": "0x13e3Ee699D1909E989722E753853AE30b17e08c5",
+            "chain": "optimism",
+            "observedAt": "2026-07-14",
+            "observedBlock": 154221898
+          }
+        ],
+        "fallbackBehavior": "Single path; Optimism sequencer downtime uses aggregate cache through the 1,800-second recovery grace; positive stale rounds have no enforced bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 154221898,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "note": "Debt 0.643541 MONEY; ceiling 1,750,000 MONEY; loan discount 7%; liquidation discount 4%; A=72; 2 open loans; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-optimism",
+          "sequencer-optimism",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Optimism block 154221898",
+            "url": "https://optimistic.etherscan.io/block/154221898"
+          }
+        ]
+      },
+      {
+        "id": "optimism-wbtc",
+        "label": "Optimism WBTC market",
+        "tier": "single-source-or-laggy",
+        "summary": "Debt-bearing WBTC market 0xC82B...405b; one Chainlink BTC/USD EMA path.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "optimism"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xC82B4C656BA6Aa4A2eF6bfe6b511d206C93b405b -> AMM 0x69B308628D58066Dd21874B43CB790BaE3D0BaFC -> aggregate 0x543BbcC290fE6B2424d79d232D203DC378768666 -> EMA 0x468Ff60cb1AD1b97E84F8A4e22642E740FF1eCa6 -> BTC/USD",
+            "address": "0x718A5788b89454aAE3A028AE9c111A29Be6c2a6F",
+            "chain": "optimism",
+            "observedAt": "2026-07-14",
+            "observedBlock": 154221898
+          }
+        ],
+        "fallbackBehavior": "Single path; sequencer cache only, fail-closed on revert/zero, no positive-round staleness bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 154221898,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "note": "Debt 93.618282 MONEY; ceiling 750,000 MONEY; loan discount 7%; liquidation discount 4%; A=89; 3 open loans; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-optimism",
+          "sequencer-optimism",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Optimism block 154221898",
+            "url": "https://optimistic.etherscan.io/block/154221898"
+          }
+        ]
+      },
+      {
+        "id": "optimism-wsteth",
+        "label": "Optimism wstETH market",
+        "tier": "single-source-or-laggy",
+        "summary": "Debt-bearing wstETH market 0xfC6E...BAEf; one Chainlink wstETH/USD EMA path.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "optimism"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0xfC6Ec1F94f2fFCe0f0BcB79592D765abD3E1BAEf -> AMM 0x2eEAb5f076dea85517a53b33f4828c5bb6CE9216 -> aggregate 0x9523974c497FA67D5a33a46Ec74816c95959bd5F -> EMA 0x07cA937A0e78DBbe69d32E6cC7928FAD18dF768B -> wstETH/USD",
+            "address": "0x698B585CbC4407e2D54aa898B2600B53C68958f7",
+            "chain": "optimism",
+            "observedAt": "2026-07-14",
+            "observedBlock": 154221898
+          }
+        ],
+        "fallbackBehavior": "Single path; sequencer cache only, fail-closed on revert/zero, no positive-round staleness bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 154221898,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "note": "Debt 442.761131 MONEY; ceiling 1,000,000 MONEY; loan discount 7%; liquidation discount 4%; A=72; 2 open loans; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-optimism",
+          "sequencer-optimism",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Optimism block 154221898",
+            "url": "https://optimistic.etherscan.io/block/154221898"
+          }
+        ]
+      },
+      {
+        "id": "optimism-op",
+        "label": "Optimism OP market",
+        "tier": "single-source-or-laggy",
+        "summary": "Debt-bearing OP market 0x13aa...7b29; one Chainlink OP/USD EMA path.",
+        "collateralAssets": [
+          "OP"
+        ],
+        "chains": [
+          "optimism"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0x13aa7dBB49d414A321b403EabB1B4231e61C7b29 -> AMM 0xAA948FcF8954E4721B39eaAD32978E804A5A0859 -> aggregate 0x787174E73D2076503b31fB9AF4CF6802f79241dF -> EMA 0xF9aD0A334Bfb2Dbce03910a79509093a1B027dE3 -> OP/USD",
+            "address": "0x0D276FC14719f9292D5C1eA2198673d1f4269246",
+            "chain": "optimism",
+            "observedAt": "2026-07-14",
+            "observedBlock": 154221898
+          }
+        ],
+        "fallbackBehavior": "Single path; sequencer cache only, fail-closed on revert/zero, no positive-round staleness bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 154221898,
+        "collateralParameters": [
+          {
+            "asset": "OP",
+            "note": "Debt 103.364896 MONEY; ceiling 500,000 MONEY; loan discount 15%; liquidation discount 12%; A=40; 3 open loans; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-optimism",
+          "sequencer-optimism",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Optimism block 154221898",
+            "url": "https://optimistic.etherscan.io/block/154221898"
+          }
+        ]
+      },
+      {
+        "id": "optimism-velo",
+        "label": "Optimism VELO market",
+        "tier": "single-source-or-laggy",
+        "summary": "Debt-bearing VELO market 0x7e02...E2d6; one Chainlink VELO/USD EMA path.",
+        "collateralAssets": [
+          "VELO"
+        ],
+        "chains": [
+          "optimism"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink via defi.money EMA",
+            "path": "market 0x7e0242FCAA2d4844C6fF0769fac9c9cF5f8DE2d6 -> AMM 0xde18225b337337Bc94bcc7886EF55689C99208f4 -> aggregate 0x2fFb796Cf9da8cDc1204E2ee77b3081f891B01fA -> EMA 0x48C76B7D7d53d5B81D1732e6953aEDd21A76Ec83 -> VELO/USD",
+            "address": "0x0f2Ed59657e391746C1a097BDa98F2aBb94b1120",
+            "chain": "optimism",
+            "observedAt": "2026-07-14",
+            "observedBlock": 154221898
+          }
+        ],
+        "fallbackBehavior": "Single path; sequencer cache only, fail-closed on revert/zero, no positive-round staleness bound.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 154221898,
+        "collateralParameters": [
+          {
+            "asset": "VELO",
+            "note": "Debt 3.311716 MONEY; ceiling 200,000 MONEY; loan discount 21%; liquidation discount 18%; A=30; 1 open loan; band-dependent maximum LTV."
+          }
+        ],
+        "liquidationMechanism": "Immediate full or partial LLAMMA liquidation; third-party callers require negative health, while the borrower may self-liquidate without that gate.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or insurance.",
+        "shutdownOrBadDebtBehavior": "Pause preserves close/liquidate; no residual-debt redistribution.",
+        "failureDomainKeys": [
+          "chainlink-optimism",
+          "sequencer-optimism",
+          "defi-money-owner"
+        ],
+        "sources": [
+          {
+            "label": "Pinned MainController source",
+            "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+          },
+          {
+            "label": "Finalized Optimism block 154221898",
+            "url": "https://optimistic.etherscan.io/block/154221898"
+          }
+        ]
       }
     ]
   },

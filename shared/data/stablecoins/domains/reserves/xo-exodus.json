@@ -1,0 +1,77 @@
+{
+  "id": "xo-exodus",
+  "reserves": [
+    {
+      "name": "U.S. dollars and other high-quality liquid reserve assets",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "MoonPay reserve counterparties (not publicly named)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration",
+        "legal",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "MoonPay XO announcement",
+        "url": "https://www.moonpay.com/newsroom/exodus-stablecoin"
+      },
+      {
+        "label": "MoonPay stablecoin terms",
+        "url": "https://www.moonpay.com/legal/stablecoin_terms"
+      }
+    ],
+    "rationale": "MoonPay describes XO as a fully reserved USD-backed stablecoin developed using M0 infrastructure. MoonPay's stablecoin terms permit U.S. dollars and other high-quality liquid USD-denominated assets in segregated accounts, but neither source publishes XO's current asset mix. M0 infrastructure use does not establish a token-specific M reserve dependency or allocation.",
+    "compositionBasis": "MoonPay XO announcement and stablecoin reserve terms; current asset-class weights undisclosed",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The full reserve envelope is disclosed, but the current mix among cash and other high-quality liquid assets, provider identities, and provider shares are not published.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. dollars and other high-quality liquid reserve assets",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "MoonPay does not publish XO's current reserve-asset allocation, counterparties, or provider shares."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Regulated financial institutions, qualified custodians, and secure wallets (not publicly named)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "MoonPay XO announcement",
+        "url": "https://www.moonpay.com/newsroom/exodus-stablecoin"
+      },
+      {
+        "label": "MoonPay stablecoin terms",
+        "url": "https://www.moonpay.com/legal/stablecoin_terms"
+      }
+    ],
+    "uncertainty": "MoonPay requires reserve assets to be segregated from corporate funds and held for stablecoin holders. The terms do not identify XO's providers or shares, establish statutory bankruptcy remoteness, or state a rehypothecation prohibition."
+  }
+}

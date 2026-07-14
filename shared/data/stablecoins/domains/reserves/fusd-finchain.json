@@ -1,0 +1,76 @@
+{
+  "id": "fusd-finchain",
+  "reserves": [
+    {
+      "name": "Tokenized Treasury and money-market fund basket",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Taikang Asset Management, China Asset Management, and BNY Mellon Fund Management",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "legal"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "FinChain FUSD reserves",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves"
+      },
+      {
+        "label": "FinChain FUSD reserve dashboard",
+        "url": "https://fusd.finchain.global/#reserves"
+      }
+    ],
+    "rationale": "FinChain names three tokenized money-market and Treasury-liquidity fund products backing FUSD and states a minimum 100% collateralization ratio, but it does not publish current product weights in the reviewed documentation. The reserve is therefore represented as one 100% aggregate fund basket.",
+    "compositionBasis": "FinChain named FUSD reserve-fund inventory",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current weights across the Taikang, ChinaAMC, and BNY Mellon products, plus their underlying holdings and maturity profile, are not published.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Tokenized Treasury and money-market fund basket",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The three products are identified, but their current allocations are not disclosed."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Taikang Asset Management (Hong Kong) Company Limited",
+        "role": "other",
+        "jurisdiction": "Hong Kong"
+      },
+      {
+        "name": "China Asset Management (Hong Kong) Limited",
+        "role": "other",
+        "jurisdiction": "Hong Kong"
+      },
+      {
+        "name": "BNY Mellon Fund Management (Luxembourg) S.A.",
+        "role": "other",
+        "jurisdiction": "Luxembourg"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "FinChain FUSD reserves",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves"
+      }
+    ],
+    "uncertainty": "FinChain names the fund managers and products but not the underlying custodians, current provider shares, segregation terms, bankruptcy-remoteness safeguards, or rehypothecation policy.",
+    "knownUnknownExposurePct": 100
+  }
+}

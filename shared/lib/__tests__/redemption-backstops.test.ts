@@ -227,9 +227,11 @@ describe("getRedemptionBackstopConfig", () => {
 
     expect(getRedemptionBackstopConfig("buck-bucket-protocol")).toMatchObject({
       routeFamily: "psm-swap",
+      outputAssetType: "stable-basket",
+      outputAssets: ["usdc-circle", "usdt-tether"],
       capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound" },
       costModel: { kind: "fee-bps", feeBps: 30 },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-07-14",
     });
 
     expect(getRedemptionBackstopConfig("fxusd-f-x-protocol")).toMatchObject({
@@ -745,9 +747,10 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("aid-gaib")).toMatchObject({
       routeFamily: "stablecoin-redeem",
       accessModel: "whitelisted-onchain",
+      outputAssets: ["usdc-circle"],
       capacityModel: { kind: "supply-full", confidence: "documented-bound" },
       costModel: { kind: "fee-bps", feeBps: 10 },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-07-14",
     });
 
     expect(getRedemptionBackstopConfig("ousd-origin-protocol")).toMatchObject({

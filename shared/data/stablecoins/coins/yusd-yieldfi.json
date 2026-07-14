@@ -18,6 +18,32 @@
   "pegMechanism": "ERC-4626 share over USDC priced at NAV ((Series Assets - Series Liabilities) / tokens outstanding), valued at least twice weekly using Chainlink oracles; value tracks the dollar through delta-neutral strategy returns rather than direct redemption against fiat reserves",
   "mechanismArchetype": "synthetic-delta-neutral",
   "archetypeOverride": true,
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "YieldFi token terms specify Chainlink or equivalent pricing for on-chain assets and a reasonable execution-based fallback during market disruption; yUSD has no borrower-owned collateral or liquidation branches.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "YieldFi defines yUSD as a market-neutral series whose NAV is based on Series Assets and whose collateral and liquidation policies are not applicable. Tokenholders redeem against the series and do not open borrower positions, so there are no yUSD collateral-market or liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "YieldFi yUSD token terms",
+          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "YieldFi yUSD token terms",
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd.md"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "yieldfi-ytoken",
   "links": [

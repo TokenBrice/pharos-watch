@@ -19,8 +19,25 @@
   "geckoId": "hydrated-dollar",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "HOLLAR mints through Hydration Borrow, and DIA says it powers Hydration money-market collateral pricing with custom price feeds, but no stronger failover is documented.",
-    "reviewedAt": "2026-06-12",
+    "summary": "HOLLAR uses Hydration's enshrined per-block money-market oracles and automated partial-liquidation engine across its governance-enabled collateral set; public protocol docs do not identify a secondary oracle or a separate bad-debt backstop.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "HOLLAR can be minted against multiple reserves with asset-specific LTV and liquidation parameters. Hydration documents one common Borrow engine, per-block oracle update path, and automated liquidation mechanism, so those reserves are represented as one grouped collateral branch without inventing reserve-level thresholds.",
+      "sources": [
+        {
+          "label": "Hydration HOLLAR docs",
+          "url": "https://docs.hydration.net/products/hollar/"
+        },
+        {
+          "label": "Hydration borrowing overview",
+          "url": "https://docs.hydration.net/products/borrowing/overview/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "probable",
     "sources": [
@@ -31,6 +48,65 @@
       {
         "label": "DIA Hydration money-market oracle case study",
         "url": "https://www.diadata.org/use-cases/vaults-lending/"
+      }
+    ],
+    "branches": [
+      {
+        "id": "hydration-borrow-hollar-collateral",
+        "label": "Hydration Borrow HOLLAR collateral reserves",
+        "tier": "standard-external",
+        "summary": "Hydration's common Borrow engine values the governance-enabled HOLLAR collateral set with enshrined per-block oracle updates before evaluating health and liquidation.",
+        "collateralAssets": [
+          "Governance-enabled Hydration Borrow collateral reserves for HOLLAR"
+        ],
+        "chains": [
+          "hydration"
+        ],
+        "feeds": [
+          {
+            "provider": "Hydration enshrined money-market oracle with DIA-supported custom feeds",
+            "path": "Per-reserve market price -> Hydration runtime oracle update at block start -> Borrow health factor",
+            "chain": "hydration",
+            "observedAt": "2026-07-14",
+            "failureDomainKeys": [
+              "hydration-runtime-oracle",
+              "hydration-money-market",
+              "hydration"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Hydration documents oracle updates at the beginning of every block but does not identify a secondary price source or a failover mode for unavailable or invalid reserve prices.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Governance-enabled Hydration Borrow collateral reserves for HOLLAR",
+            "note": "Each reserve has its own displayed LTV and liquidation threshold; HOLLAR positions are exposed to liquidation once their aggregate health factor falls below 1.0. No static per-reserve values are asserted here."
+          }
+        ],
+        "liquidationMechanism": "Hydration evaluates positions at the beginning of each block and automatically performs partial liquidations to restore health. Its Borrow overview also documents protocol custom flash loans that repay debt, swap seized collateral through the Omnipool, and burn the flash-minted amount.",
+        "liquidationDelaySec": 0,
+        "backstop": "The documented liquidation path uses protocol-funded custom flash loans and Omnipool execution rather than requiring liquidator capital; the reviewed docs do not identify a separate reserve or insurance backstop for residual debt.",
+        "shutdownOrBadDebtBehavior": "Hydration's public HOLLAR and Borrow documentation does not specify an oracle-failure shutdown state or how debt remaining after failed liquidation execution is allocated, so no stronger recovery claim is made.",
+        "failureDomainKeys": [
+          "hydration-runtime-oracle",
+          "hydration-money-market",
+          "hydration-omnipool-liquidation",
+          "hydration"
+        ],
+        "sources": [
+          {
+            "label": "Hydration HOLLAR docs",
+            "url": "https://docs.hydration.net/products/hollar/"
+          },
+          {
+            "label": "Hydration borrowing overview",
+            "url": "https://docs.hydration.net/products/borrowing/overview/"
+          },
+          {
+            "label": "DIA Hydration money-market oracle case study",
+            "url": "https://www.diadata.org/use-cases/vaults-lending/"
+          }
+        ]
       }
     ]
   },
@@ -113,6 +189,31 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
     "summary": "HOLLAR is minted on the Hydration appchain by depositing DOT/ETH/BTC/stablecoin collateral into an Aave v3 (GHO-derived) money market, with the HOLLAR Stability Module anchoring the peg; Hydration governance controls collateral and risk parameters.",
+    "upgradeability": {
+      "model": "custom",
+      "canChangeMintLogic": true,
+      "controlRef": "Hydration OpenGov root track runtime upgrade origin",
+      "observedAt": "2026-07-14",
+      "observedBlock": 13133392,
+      "sources": [
+        {
+          "label": "Hydration HSM runtime configuration",
+          "url": "https://github.com/galacticcouncil/hydration-node/blob/d514dd7b428405e82b4a29b442ba20be0f9539db/runtime/hydradx/src/assets.rs#L1824-L1840"
+        },
+        {
+          "label": "Hydration OpenGov tracks",
+          "url": "https://github.com/galacticcouncil/hydration-node/blob/d514dd7b428405e82b4a29b442ba20be0f9539db/runtime/hydradx/src/governance/tracks.rs#L30-L65"
+        },
+        {
+          "label": "Hydration runtime pallet composition",
+          "url": "https://github.com/galacticcouncil/hydration-node/blob/d514dd7b428405e82b4a29b442ba20be0f9539db/runtime/hydradx/src/lib.rs#L148-L203"
+        },
+        {
+          "label": "Hydration RPC",
+          "url": "https://rpc.hydradx.cloud"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "hydration",
@@ -134,7 +235,33 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Hydration governance sets collateral onboarding, risk parameters, supply caps, and the HSM configuration; HOLLAR is governed by Hydration rather than Polkadot OpenGov directly.",
-        "evidence": "Coverage notes HOLLAR is governed by Hydration (not DOT holders), which controls collateral rules, risk parameters, and the on-chain HOLLAR Stability Module."
+        "evidence": "Coverage notes HOLLAR is governed by Hydration (not DOT holders), which controls collateral rules, risk parameters, and the on-chain HOLLAR Stability Module. Hydration's pinned runtime source configures HSM AuthorityOrigin as Root, EconomicParameters, or GeneralAdmin."
+      },
+      {
+        "chain": "hydration",
+        "label": "Hydration OpenGov root track runtime upgrade origin",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 13133392,
+        "sources": [
+          {
+            "label": "Hydration OpenGov tracks",
+            "url": "https://github.com/galacticcouncil/hydration-node/blob/d514dd7b428405e82b4a29b442ba20be0f9539db/runtime/hydradx/src/governance/tracks.rs#L30-L65"
+          },
+          {
+            "label": "Hydration runtime pallet composition",
+            "url": "https://github.com/galacticcouncil/hydration-node/blob/d514dd7b428405e82b4a29b442ba20be0f9539db/runtime/hydradx/src/lib.rs#L148-L203"
+          },
+          {
+            "label": "Hydration RPC",
+            "url": "https://rpc.hydradx.cloud"
+          }
+        ],
+        "evidence": "Hydration's runtime composes System, ConvictionVoting, Referenda, Origins, Whitelist, and Dispatcher, and its pinned governance configuration defines a `root` referendum track. Runtime code changes are Root-origin operations, so the root OpenGov track is the on-chain governance route that can replace the runtime minting logic. At Hydration block 13133392, state_getRuntimeVersion reported hydradx specVersion 428."
       }
     ],
     "review": {
@@ -151,10 +278,7 @@
           "url": "https://docs.hydration.net/quick_start/hollar/"
         }
       ],
-      "sourceFreeRationale": "Aave-v3/GHO fork mint model and Hydration governance confirmed from coverage and docs. On-chain read attempted via Hydration EVM RPC (https://rpc.nice.hydration.cloud, block 0x14fb62 ≈ 1,375,074): HOLLAR token at 0x531a654d1696ed52e7275a8cede955e82620f99a returned code length 2 (minimal EVM shim), no proxy admin slot populated, and owner() returned empty — indicating the EVM address is a pallet-backed precompile rather than a standard upgradeable EVM contract. The Hydration parachain uses Substrate runtime governance (OpenGov / Hydration council) to control the pallet parameters, not a directly readable EVM admin key.",
-      "unresolvedQuestions": [
-        "The HOLLAR token is a Substrate pallet-backed precompile: the EVM address is a thin shim with no upgradeable proxy admin. Governance over the HOLLAR money market and HSM lives in Hydration's Substrate OpenGov runtime, which cannot be verified via EVM eth_call. Confirm via Hydration's Substrate governance pallets or parachain runtime before raising confidence."
-      ]
+      "sourceFreeRationale": "Aave-v3/GHO fork mint model and Hydration governance confirmed from coverage and docs. On-chain read via Hydration EVM RPC (https://rpc.nice.hydration.cloud, block 0x14fb62 ≈ 1,375,074) showed HOLLAR at 0x531a654d1696ed52e7275a8cede955e82620f99a is a two-byte pallet-backed EVM shim with no proxy admin slot and no owner(). Hydration's pinned runtime source configures HSM AuthorityOrigin as Root, EconomicParameters, or GeneralAdmin; the runtime composes OpenGov Referenda and a root track. The current Hydration RPC at block 13133392 reported specVersion 428, confirming the runtime-governance path is the relevant mint-logic authority rather than an EVM admin key."
     }
   }
 }

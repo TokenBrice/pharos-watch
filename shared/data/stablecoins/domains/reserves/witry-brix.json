@@ -1,0 +1,75 @@
+{
+  "id": "witry-brix",
+  "reserves": [
+    {
+      "name": "Brix iTRY staking wrapper backed by TRY money-market fund exposure",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Brix / iTRY issuer and TRY money-market fund",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "legal",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Brix documentation",
+        "url": "https://docs.brix.money/"
+      },
+      {
+        "label": "Brix proof-of-solvency portal",
+        "url": "https://accountable.brix.money/"
+      },
+      {
+        "label": "Brix website",
+        "url": "https://www.brix.money/"
+      }
+    ],
+    "rationale": "Brix describes wiTRY as a staking wrapper over iTRY with cooldown and Fast Redeem paths, and the issuer's reserve portal identifies the proof-of-solvency surface. The reviewed public pages do not provide a dated independent reserve composition or underlying TRY fund allocation, so the wrapper exposure remains an aggregate slice.",
+    "compositionBasis": "Brix wiTRY staking and proof-of-solvency disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The underlying TRY money-market fund holdings, issuer split, and current assurance details are not published in the reviewed public pages.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Zodia Custody",
+        "role": "custodian"
+      },
+      {
+        "name": "Brix iTRY/wiTRY staking contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Brix iTRY product and custody disclosure",
+        "url": "https://brix.money/itry"
+      },
+      {
+        "label": "Brix proof-of-solvency portal",
+        "url": "https://accountable.brix.money/"
+      }
+    ],
+    "uncertainty": "Brix names Zodia Custody as the institutional custodian of the underlying reserves, while the staking contracts hold iTRY for the wrapper. Brix does not publish provider shares or establish legal segregation, insolvency remoteness, or collateral reuse restrictions. The British Virgin Islands disclosure identifies wiTRY Limited, not the on-chain contracts or Zodia.",
+    "knownUnknownExposurePct": 100
+  }
+}

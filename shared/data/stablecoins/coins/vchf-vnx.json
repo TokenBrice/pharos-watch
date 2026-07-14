@@ -2,7 +2,7 @@
   "id": "vchf-vnx",
   "name": "VNX Swiss Franc",
   "symbol": "VCHF",
-  "oneLiner": "VCHF is VNX's Liechtenstein-licensed Swiss franc stablecoin redeemable 1:1, backed by CHF cash in Swiss and Liechtenstein bank accounts with Areva audits.",
+  "oneLiner": "VCHF is VNX's issuer-redeemable Swiss franc token, backed at the latest published report date by an aggregate CHF-value reserve of undisclosed composition.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CHF",
@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "CHF held 1:1 in bank and custody accounts of VNX Commodities AG in Switzerland and Liechtenstein, independently audited by Areva General Auditing and Trust Company Limited",
+  "collateral": "Aggregate CHF-value reserves held by VNX Commodities AG in bank accounts and/or securities custody accounts; the latest published AREVA report does not disclose the holdings or category split",
   "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent CHF value",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "157",
@@ -326,7 +326,46 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "VCHF uses VNX's RBAC architecture: VNXManager contract (0xCdB386...c9AE) holds role 0 (Superadmin) for EOA 0x7b0c15...9403. That EOA is the confirmed sole minter (118 successful mint() calls on Ethereum). VNXManager owner confirmed as the same EOA.",
+    "summary": "VCHF minting remains controlled by VNXManager 0xCdB386...c9AE and its sole observed minter, EOA 0x7b0c15...9403. The Ethereum transparent proxy is administered by custom VNXProxyAdmin 0x817f8a...8165: upgrade() and upgradeAndCall() require role 1 in separate VNXManager 0x2B535E...114b, whose role 1 currently has no bearers. Self-administered role 0 is held by two independent EOAs, 0x45a149...545a and 0xAcC56E...311A, either of which can grant itself role 1 without delay; 0x45a149...545a also owns VNXProxyAdmin and can redirect the proxy admin through changeProxyAdmin().",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f"
+      ],
+      "implementationAddresses": [
+        "0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc"
+      ],
+      "adminAddresses": [
+        "0x817f8afee1a758faf4492f4844b08dcb57658165"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "VNXProxyAdmin role-0 superadmin EOA 0xAcC5...311A",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25531301,
+      "sources": [
+        {
+          "label": "VCHF transparent proxy",
+          "url": "https://eth.blockscout.com/address/0x79d4f0232a66c4c91b89c76362016a1707cfbf4f"
+        },
+        {
+          "label": "VCHF verified implementation",
+          "url": "https://eth.blockscout.com/address/0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc/contracts"
+        },
+        {
+          "label": "VNX ProxyAdmin",
+          "url": "https://eth.blockscout.com/address/0x817f8afee1a758faf4492f4844b08dcb57658165/contracts"
+        },
+        {
+          "label": "VNXProxyAdmin RBAC manager",
+          "url": "https://eth.blockscout.com/address/0x2b535eb09fc06431b8c69782e2c2d3a1a175114b/contracts"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -381,7 +420,105 @@
             "url": "https://etherscan.io/address/0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403"
           }
         ],
-        "evidence": "At Ethereum block 25295081, eth_getCode returns empty (confirmed EOA). This address issued 118 successful VCHF mint() calls on Ethereum and owns VNXManager (owner() confirmed). Issuer-context EOA; off-chain MPC/HSM indistinguishable on-chain, does not block verified."
+          "evidence": "At Ethereum block 25295081, eth_getCode returns empty (confirmed EOA). This address issued 118 successful VCHF mint() calls on Ethereum and owns VNXManager (owner() confirmed). Issuer-context EOA; off-chain MPC/HSM indistinguishable on-chain, does not block verified."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2B535Eb09Fc06431B8C69782E2c2D3A1a175114b",
+        "label": "VNXProxyAdmin RBAC manager",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531301,
+        "bypassSurfaces": [
+          "Self-administered role 0 administers upgrade role 1, so either role-0 bearer can grant itself direct upgrade access without delay."
+        ],
+        "sources": [
+          {
+            "label": "VNX ProxyAdmin verified source",
+            "url": "https://eth.blockscout.com/address/0x817f8afee1a758faf4492f4844b08dcb57658165/contracts"
+          },
+          {
+            "label": "VNXProxyAdmin RBAC manager verified source",
+            "url": "https://eth.blockscout.com/address/0x2b535eb09fc06431b8c69782e2c2d3a1a175114b/contracts"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25531301, VNXProxyAdmin referenced this VNXManager for its upgrade authorization. Direct upgrade() and upgradeAndCall() require manager role 1, which had zero current bearers. Role 1 was administered by self-administered role 0, whose two current bearers were EOAs 0x45a149f42FF0B77D148d05904Dd7577dF36A545a and 0xAcC56EBcC391108A725F269FDD82D6cbe65b311A."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x45a149f42ff0b77d148d05904dd7577df36a545a",
+        "label": "VNXProxyAdmin role-0 superadmin / Ownable owner EOA 0x45a1...545a",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531301,
+        "bypassSurfaces": [
+          "As a self-administered role-0 bearer, this EOA can grant itself direct upgrade role 1 without delay.",
+          "As VNXProxyAdmin's Ownable owner, this EOA can call changeProxyAdmin() and redirect the token proxy to another admin; owner() alone does not authorize upgrade() or upgradeAndCall()."
+        ],
+        "sources": [
+          {
+            "label": "VNX ProxyAdmin verified source",
+            "url": "https://eth.blockscout.com/address/0x817f8afee1a758faf4492f4844b08dcb57658165/contracts"
+          },
+          {
+            "label": "VNXProxyAdmin RBAC manager verified source",
+            "url": "https://eth.blockscout.com/address/0x2b535eb09fc06431b8c69782e2c2d3a1a175114b/contracts"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25531301, this code-empty EOA was both a role-0 bearer in VNXProxyAdmin's RBAC manager and VNXProxyAdmin's Ownable owner. Verified source shows owner-only changeProxyAdmin(), but upgrade() and upgradeAndCall() instead require RBAC role 1. Role 1 had zero bearers; this EOA can still grant itself role 1 through self-administered role 0, or use changeProxyAdmin() to create a separate indirect code-change path."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xAcC56EBcC391108A725F269FDD82D6cbe65b311A",
+        "label": "VNXProxyAdmin role-0 superadmin EOA 0xAcC5...311A",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531301,
+        "bypassSurfaces": [
+          "As a self-administered role-0 bearer, this EOA can grant itself direct upgrade role 1 without delay."
+        ],
+        "sources": [
+          {
+            "label": "VNX ProxyAdmin verified source",
+            "url": "https://eth.blockscout.com/address/0x817f8afee1a758faf4492f4844b08dcb57658165/contracts"
+          },
+          {
+            "label": "VNXProxyAdmin RBAC manager verified source",
+            "url": "https://eth.blockscout.com/address/0x2b535eb09fc06431b8c69782e2c2d3a1a175114b/contracts"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25531301, this code-empty EOA was the second role-0 bearer in VNXProxyAdmin's RBAC manager. Upgrade role 1 had zero bearers, but self-administered role 0 administers role 1, so this EOA can grant itself direct upgrade authority without delay."
       }
     ],
     "review": {
@@ -397,21 +534,26 @@
         {
           "label": "Blockscout VNXManager contract",
           "url": "https://eth.blockscout.com/address/0xCdB3867935247049e87c38eA270edD305D84c9AE/contracts"
+        },
+        {
+          "label": "VNX ProxyAdmin verified source",
+          "url": "https://eth.blockscout.com/address/0x817f8afee1a758faf4492f4844b08dcb57658165/contracts"
+        },
+        {
+          "label": "VNXProxyAdmin RBAC manager verified source",
+          "url": "https://eth.blockscout.com/address/0x2b535eb09fc06431b8c69782e2c2d3a1a175114b/contracts"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
         }
       ],
-      "evidence": "At Ethereum block 25295081: rbacManager confirmed at storage slot 0x33 = VNXManager 0xCdB386...c9AE; VNXManager owner() = EOA 0x7b0c15...9403 (eth_getCode empty); 118 successful mint() calls confirm that EOA as the sole active minter. All addressable mint-capable surfaces verified.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Mint-path findings remain supported at Ethereum block 25295081: token rbacManager 0xCdB386...c9AE and 118 successful mint() calls identify EOA 0x7b0c15...9403 as the sole observed minter. Upgrade-path review at block 25531301 confirmed VNXProxyAdmin 0x817f8a...8165 as the EIP-1967 admin and showed that upgrade() and upgradeAndCall() require role 1 in manager 0x2B535E...114b rather than Ownable owner(). Role 1 had zero bearers, while self-administered role 0 had two code-empty EOA bearers, 0x45a149...545a and 0xAcC56E...311A, either able to self-grant role 1 without delay. The first EOA also owned VNXProxyAdmin and could independently redirect the proxy admin through changeProxyAdmin().",
+      "reviewer": "owner-triage",
+      "reviewedAt": "2026-07-14"
     }
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "CHF 1:1 reserves (Areva audited)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -429,18 +571,37 @@
       }
     },
     "params": {
-      "label": "CHF cash & equivalents",
-      "risk": "very-low"
+      "label": "Aggregate CHF-value reserve (composition undisclosed)",
+      "risk": "very-high"
     }
   },
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://vnx.li/transparency/",
+    "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf",
     "provider": "AREVA General Auditing and Trust Company Limited",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Liechtenstein",
-    "attestorLicense": "FMA TVTG (Blockchain Act)"
+    "attestorLicense": "Liechtenstein FMA-licensed auditing company",
+    "latestReport": {
+      "periodEnd": "2024-12-31",
+      "publishedAt": "2025-02-05",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "AREVA VNX reserve report as of December 31, 2024",
+          "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        },
+        {
+          "label": "AREVA licences and registrations",
+          "url": "https://www.areva.li/en/"
+        }
+      ]
+    }
   },
   "launchDate": "2022-12-02"
 }

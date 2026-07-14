@@ -2,7 +2,7 @@
   "id": "xo-exodus",
   "name": "XO Cash",
   "symbol": "XO",
-  "oneLiner": "XO is MoonPay's MTL-licensed dollar token on Solana, issued via M0 Protocol with USD deposits and short-term Treasury bills held in bankruptcy-remote SPVs.",
+  "oneLiner": "XO is MoonPay's Solana dollar token, issued through M0 infrastructure and backed by segregated U.S. dollars and other high-quality liquid assets.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -14,18 +14,11 @@
   "infrastructures": [
     "m0"
   ],
-  "collateral": "Fully reserved 1:1 by U.S. dollar deposits and short-term U.S. Treasury bills held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; reserves issued and managed by MoonPay under U.S. Money Transmitter Licenses; native M0 yield is retained by MoonPay/Exodus rather than passed through to XO holders",
-  "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay via M0 Protocol infrastructure on Solana; collateral cryptographically attested on-chain by independent M0 Validators before minting; consumer access is gated through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails (cards, Apple/Google Pay, PayPal); the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
+  "collateral": "Fully reserved 1:1 by U.S. dollars and other high-quality liquid USD-denominated assets held in segregated accounts for stablecoin holders; MoonPay's terms allow depository institutions, qualified custodians, and secure virtual-currency wallets but do not publish XO's current asset allocation",
+  "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay using M0 infrastructure on Solana; consumer access is provided through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails; the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "xo-cash",
-  "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://dashboard.m0.org/",
-    "provider": "M0 Protocol",
-    "attestorTier": "niche",
-    "cadence": "real-time"
-  },
   "links": [
     {
       "label": "Website",
@@ -64,7 +57,7 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://dashboard.m0.org/",
+    "reserveDisclosureUrl": "https://www.moonpay.com/legal/stablecoin_terms",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
     "notes": "MoonPay holds an NYDFS Limited Purpose Trust Company (LPTC) charter (MoonPay Trust Company, LLC, authorized Nov 2025), BitLicense, and money transmitter licenses across 49 states. The NYDFS LPTC is the state regulatory pathway most aligned with the GENIUS Act state-qualified issuer track. No PPSI approval has been granted to any issuer as of 2026-06-18; the state-qualified certification framework is still in proposed rulemaking (Treasury NPRM, Apr 2026). issuerPathway reflects the anticipated regulatory track, not an active approval.",
@@ -182,7 +175,7 @@
         "address": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
         "label": "M0 Solana Portal",
         "role": "bridge-admin",
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "M0 documents Solana as a spoke deployment bridged from Ethereum; base M supply is governed by Ethereum MinterGateway.",
         "routeChecks": {
@@ -193,17 +186,27 @@
         },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 432836017,
+        "failureDomainKeys": [
+          "program:solana:mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
         "sources": [
           {
             "label": "M0 deployments",
-            "url": "https://docs.m0.org/get-started/resources/addresses/"
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
           },
           {
             "label": "M0 on Solana technical deep dive",
-            "url": "https://docs.m0.org/home/technical-documentations/solana/"
+            "url": "https://docs.m0.org/protocol/solana"
+          },
+          {
+            "label": "M0 Solana Portal program",
+            "url": "https://explorer.solana.com/address/mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
           }
         ],
-        "evidence": "At Solana slot 425792130: Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY confirmed executable (BPFLoaderUpgradeab1e owner). Bridge from Ethereum locks base M supply."
+        "evidence": "At finalized Solana slot 432836017, Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY was executable under BPFLoaderUpgradeable; its ProgramData upgrade authority was 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. M0 documents that the Portal validates Wormhole messages and mints Solana M backed by M locked in the Ethereum HubPortal."
       },
       {
         "chain": "solana",
@@ -257,36 +260,91 @@
   "governanceQuality": "regulated-entity",
   "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "XO has a single Solana deployment in the reviewed metadata. No material bridge route was resolved; the token is treated as native to its current deployment for bridge-route scoring.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "external-lock-mint",
+    "summary": "XO is a Solana M extension, not native unbridged issuance. Its mint-authority PDA wraps Portal-delivered M in an extension vault; M0 documents that Solana M is minted by the M0 Portal against M locked in the Ethereum HubPortal through Wormhole NTT.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex bridge route curation",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "M0 Solana Portal / Wormhole NTT",
+        "slug": "m0-solana-portal-wormhole-ntt",
+        "url": "https://docs.m0.org/build/cross-chain",
+        "bridgeTypes": [
+          "lockAndMint",
+          "hubAndSpoke"
+        ]
+      }
+    ],
     "sources": [
       {
-        "label": "Exodus XO announcement",
-        "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments"
+        "label": "M0 cross-chain architecture",
+        "url": "https://docs.m0.org/build/cross-chain"
       },
       {
-        "label": "M0 dashboard",
-        "url": "https://dashboard.m0.org/stablecoins"
+        "label": "M0 Solana architecture",
+        "url": "https://docs.m0.org/protocol/solana"
+      },
+      {
+        "label": "M0 Solana extension source",
+        "url": "https://github.com/m0-foundation/solana-m-extensions/blob/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/services/cli/main.ts"
+      },
+      {
+        "label": "Exodus XO launch announcement",
+        "url": "https://www.exodus.com/investors/news-events/press-releases/detail/112/exodus-launches-xo-cash-as-the-first-stablecoin-built-for-ai-agents"
+      }
+    ],
+    "routes": [
+      {
+        "id": "solana:xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y",
+        "sourceChain": "ethereum",
+        "destinationChain": "solana",
+        "contractAddress": "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y",
+        "protocol": "M0 Solana Portal / Wormhole NTT / M extension",
+        "issuanceModel": "wrapped-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Composite route: Wormhole NTT carries M from the Ethereum HubPortal to the Solana Portal, then the XO extension locks Solana M and mints the exact XO token through its mint-authority PDA.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+        "failureDomainKeys": [
+          "contract:ethereum:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "program:solana:mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "program:solana:mexteGyWXgUR65XepNKtLJ2H66MmyLWrDSeA1bqzZ4C",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 432836017,
+        "sources": [
+          {
+            "label": "M0 cross-chain architecture",
+            "url": "https://docs.m0.org/build/cross-chain"
+          },
+          {
+            "label": "M0 Solana architecture",
+            "url": "https://docs.m0.org/protocol/solana"
+          },
+          {
+            "label": "M0 XO extension registry source",
+            "url": "https://github.com/m0-foundation/solana-m-extensions/blob/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/services/cli/main.ts"
+          },
+          {
+            "label": "M0 extension wrap instruction",
+            "url": "https://github.com/m0-foundation/solana-m-extensions/blob/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/programs/m_ext/src/instructions/wrap.rs"
+          },
+          {
+            "label": "XO Solana token",
+            "url": "https://explorer.solana.com/address/xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
+          }
+        ]
       }
     ]
   },
-  "reserves": [
-    {
-      "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
-      "pct": 85,
-      "risk": "very-low",
-      "coinId": "m-m0",
-      "depType": "wrapper"
-    },
-    {
-      "name": "Cash and cash equivalents",
-      "pct": 15,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,

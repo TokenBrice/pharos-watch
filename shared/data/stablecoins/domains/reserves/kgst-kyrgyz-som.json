@@ -1,0 +1,72 @@
+{
+  "id": "kgst-kyrgyz-som",
+  "reserves": [
+    {
+      "name": "Kyrgyz som fiat reserves and cash equivalents",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "KGSToken LLC and licensed Kyrgyz banks",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "legal",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "KGST official website",
+        "url": "https://www.kgstoken.kg/"
+      }
+    ],
+    "rationale": "KGST states that it is fully backed 1:1 by KGS cash or cash equivalents held in licensed Kyrgyz banks and custodial institutions, with regulatory oversight and ongoing audits claimed on the issuer site. No dated independent reserve report, current balance, bank-level allocation, or cash-equivalent breakdown is published.",
+    "compositionBasis": "KGST issuer reserve and attestation disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer identifies the broad KGS bank-reserve category but does not publish current balances, bank shares, cash-equivalent composition, or attestation evidence.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Kyrgyz som fiat reserves and cash equivalents",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer claims full backing but provides no dated reserve report or current composition supporting a more detailed split."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Licensed Kyrgyz banks and custodial institutions",
+        "role": "bank",
+        "jurisdiction": "Kyrgyzstan"
+      },
+      {
+        "name": "KGSToken LLC",
+        "role": "other",
+        "jurisdiction": "Kyrgyzstan"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "KGST official website",
+        "url": "https://www.kgstoken.kg/"
+      }
+    ],
+    "uncertainty": "The issuer names licensed Kyrgyz banks and custodial institutions but does not disclose institutions, account segregation, bankruptcy treatment, or rehypothecation terms."
+  }
+}

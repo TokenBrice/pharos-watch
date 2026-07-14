@@ -1,0 +1,69 @@
+{
+  "id": "zkusd-goal3",
+  "reserves": [
+    {
+      "name": "Unresolved zkUSD backing (no current reserve disclosure)",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "zkSync Era zkUSD token contract explorer",
+        "url": "https://explorer.zksync.io/address/0xfc7e56298657b002b3e656400e746b7212912757"
+      }
+    ],
+    "rationale": "The reachable explorer identifies a deployed zkUSD token contract, but it does not establish any reserve asset, collateral pool, counterparty, coverage ratio, custody arrangement, or assurance process. The prior Goal3 technical documentation no longer resolves, so the full backing is retained as unknown without carrying forward its unsupported positive premise.",
+    "compositionBasis": "No current primary reserve-composition disclosure; token-contract identification only",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Reserve existence, asset composition, counterparties, custody, liquidity, and current coverage are not evidenced by a current primary reserve source.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Unresolved zkUSD backing (no current reserve disclosure)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "No reviewed primary source identifies the collateral assets or reconciles them to zkUSD supply."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed zkUSD reserve and custody providers",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "zkSync Era zkUSD token contract explorer",
+        "url": "https://explorer.zksync.io/address/0xfc7e56298657b002b3e656400e746b7212912757"
+      }
+    ],
+    "uncertainty": "The explorer identifies the deployed token address only. It does not identify any reserve or custody provider, asset-account segregation, bankruptcy remoteness, or rehypothecation restriction, and the prior Goal3 documentation no longer resolves.",
+    "knownUnknownExposurePct": 100
+  }
+}

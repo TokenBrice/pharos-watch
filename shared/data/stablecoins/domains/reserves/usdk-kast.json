@@ -1,0 +1,77 @@
+{
+  "id": "usdk-kast",
+  "reserves": [
+    {
+      "name": "M0 M token backing for KAST Dollar",
+      "pct": 100,
+      "risk": "very-low",
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 Protocol permissioned issuers and collateral SPVs",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 case study on KAST Dollar",
+        "url": "https://research.m0.org/research/how-kast-builds-stablecoin-products-with-m0"
+      },
+      {
+        "label": "M0 Extensions documentation",
+        "url": "https://docs.m0.org/protocol/extensions"
+      },
+      {
+        "label": "KAST Dollar launch announcement",
+        "url": "https://www.kast.xyz/blog/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins"
+      }
+    ],
+    "rationale": "KAST and M0 identify USDK as a Solana stablecoin built on M0, while M0 documents extension tokens as wrapping and unwrapping the M foundation. The reserve envelope therefore preserves the direct 100% M wrapper dependency and leaves M0 issuer, collateral, and custody details to the upstream record instead of duplicating an unsupported USDK-specific Treasury breakdown.",
+    "compositionBasis": "KAST USDK's documented M0-extension relationship",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "The direct M0 dependency is identified, but USDK-specific sources do not publish the current M0 issuer allocation, Treasury holdings, custody-provider split, or a dated assurance report.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "KAST USDK extension and M0 infrastructure",
+        "role": "other"
+      },
+      {
+        "name": "Undisclosed M0 issuer and collateral providers",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "M0 case study on KAST Dollar",
+        "url": "https://research.m0.org/research/how-kast-builds-stablecoin-products-with-m0"
+      },
+      {
+        "label": "M0 Extensions documentation",
+        "url": "https://docs.m0.org/protocol/extensions"
+      }
+    ],
+    "uncertainty": "The reviewed sources establish the USDK-to-M0 extension relationship but do not identify the current upstream M0 issuer, collateral SPV, custodian, provider shares, legal segregation, bankruptcy remoteness, or rehypothecation terms for USDK.",
+    "knownUnknownExposurePct": 100
+  }
+}

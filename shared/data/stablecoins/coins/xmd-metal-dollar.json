@@ -124,26 +124,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "USDC reserve basket component",
-      "pct": 34,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "PYUSD reserve basket component",
-      "pct": 33,
-      "risk": "low",
-      "coinId": "pyusd-paypal"
-    },
-    {
-      "name": "Paxos dollar reserve basket component",
-      "pct": 33,
-      "risk": "low",
-      "coinId": "usdp-paxos"
-    }
-  ],
   "notices": [
     {
       "type": "info",

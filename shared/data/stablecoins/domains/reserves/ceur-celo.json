@@ -1,0 +1,91 @@
+{
+  "id": "ceur-celo",
+  "reserves": [
+    {
+      "name": "Mento Reserve collateral basket (dynamic composition)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Mento Reserve governance and constituent issuers",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Pinned Mento Reserve documentation",
+        "url": "https://github.com/mento-protocol/docs/blob/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+      }
+    ],
+    "rationale": "Mento documents one shared reserve whose live allocation spans stablecoins, protocol positions, native cryptoassets, liquidity pools, safes, and governance-approved strategies. The analytics API is mutable and does not provide an immutable report artifact, so exact observed weights are intentionally left to the existing Mento live-reserve adapter rather than persisted as durable static facts.",
+    "compositionBasis": "Mento Reserve documented backing envelope with exact allocation supplied at runtime by the existing Mento adapter",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The static record identifies the complete shared-reserve envelope but does not assign changing constituent weights. Current allocation, venue balances, and strategy exposure must come from the timestamp-validated live adapter.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Mento Reserve collateral basket (dynamic composition)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The mutable API exposes current constituents, but no immutable report supports durable static weights across the mixed reserve basket.",
+        "candidateCoinIds": [
+          "ausd-agora",
+          "susds-sky",
+          "usdt-tether",
+          "eurc-circle",
+          "usdc-circle"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Mento Reserve safes and protocol contracts",
+        "role": "other"
+      },
+      {
+        "name": "Mento governance-approved strategies and operational accounts",
+        "role": "other"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Pinned Mento Reserve documentation",
+        "url": "https://github.com/mento-protocol/docs/blob/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/the-reserve.md"
+      },
+      {
+        "label": "Pinned Mento rebalancing and strategy documentation",
+        "url": "https://github.com/mento-protocol/docs/blob/41bf2c2b4295cb6eb625a89c2b781fe5bb8fb850/dive-deeper/fpmm/rebalancing-and-strategies.md"
+      }
+    ],
+    "uncertainty": "Mento documents reserve safes, liquidity contracts, operational accounts, and approved strategies, but their live shares are mutable. Public materials do not establish legal segregation, insolvency treatment, or strategy-specific reuse limits, so no static provider allocation is inferred.",
+    "knownUnknownExposurePct": 100
+  }
+}

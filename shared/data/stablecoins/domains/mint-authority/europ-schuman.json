@@ -3,218 +3,280 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "EUROP Ethereum has 3 active MINTER_ROLE holders: EOA (also DEFAULT_ADMIN), a 3/3 Safe, and an OFT bridge owned by a 2/4 Safe. Owner Safe (3/4) confirmed on ETH, Avax, and Polygon. XRPL issuer has master key disabled. Plasma chain (rpc.plasma.to): DEFAULT_ADMIN = 4/3 Safe, plus EOA minter and 3/3 Safe minter and OFT bridge minter all confirmed at block 24254601.",
+    "confidence": "manual-review",
+    "summary": "EUROP uses UUPS token proxies on Ethereum, Polygon, Avalanche, and Plasma. Each deployment has a chain-local owner/DEFAULT_ADMIN_ROLE Safe that controls upgrades and minter administration, plus a separate MASTER_MINTER_ROLE Safe that can mint without a per-minter allowance. The XRPL deployment uses Schuman's issuer account directly.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51",
+        "0x8835a2f66a7aaccb297cb985831a616b75e2e16c",
+        "0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+      ],
+      "implementationAddresses": [
+        "0xfbdaf9745da69f927bc14bd73860ffdba82cff43",
+        "0x57c2f3a0e197fef89d39c3cd551934cf2beaa7ed",
+        "0xa1058c5e9de4710e2854e5668531e54d80cdd51d"
+      ],
+      "adminAddresses": [
+        "0xe1f9754ff1f714cd3d0e939f368a97f87840cd16",
+        "0x29e6fb2dd01455472da3dd962c16a37de096b8da",
+        "0xd8b39a57b8d6c66942f4ebb1776a501e8ef68e4b"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "EUROP Ethereum owner / DEFAULT_ADMIN_ROLE Safe",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530884,
+      "sources": [
+        {
+          "label": "Schuman EUROP smart-contract addresses",
+          "url": "https://schuman.io/smart-contracts/"
+        },
+        {
+          "label": "EUROP Ethereum verified implementation",
+          "url": "https://etherscan.io/address/0xfbdaf9745da69f927bc14bd73860ffdba82cff43#code"
+        },
+        {
+          "label": "EUROP Polygon verified implementation",
+          "url": "https://polygonscan.com/address/0xfbdaf9745da69f927bc14bd73860ffdba82cff43#code"
+        },
+        {
+          "label": "EUROP Avalanche verified implementation",
+          "url": "https://subnets.avax.network/c-chain/address/0x57c2f3a0e197fef89d39c3cd551934cf2beaa7ed/contract"
+        },
+        {
+          "label": "EUROP Plasma verified implementation",
+          "url": "https://plasmascan.to/address/0xa1058c5e9de4710e2854e5668531e54d80cdd51d#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        },
+        {
+          "label": "Avalanche PublicNode RPC",
+          "url": "https://avalanche-c-chain-rpc.publicnode.com"
+        },
+        {
+          "label": "Plasma RPC",
+          "url": "https://rpc.plasma.to"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0xE1F9754ff1f714cD3D0e939f368A97f87840cD16",
-        "label": "EUROP token owner Safe (ETH, Avax, Polygon)",
+        "address": "0xe1f9754ff1f714cd3d0e939f368a97f87840cd16",
+        "label": "EUROP Ethereum owner / DEFAULT_ADMIN_ROLE Safe",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 4,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "version": "1.3.0",
-          "threshold": 3,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "moduleGuard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "source": "safe-api",
-          "observedBlock": 25295316
-        },
-        "sources": [
-          {
-            "label": "Safe Transaction Service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xE1F9754ff1f714cD3D0e939f368A97f87840cD16/"
-          }
-        ],
-        "evidence": "EUROP owner() on Ethereum confirmed this Safe at block 25295047. owner() on Avalanche (0x8835a2f66a7aaccb297cb985831a616b75e2e16c) returned same address. Polygon owner (0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51) returned 0x29e6fb2dd01455472da3dd962c16a37de096b8da (SafeL2) with same 4 owners and threshold 3 via getOwners()/getThreshold() RPC. Avax Safe confirmed via api.safe.global: threshold 3, 4 owners [0x1bCd423f, 0xf362066e, 0x7dFE41D6, 0x7d8806a9], no modules, v1.4.1+L2."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xe3997860dc9d52abed7455535dc6e2f1925bd3c9",
-        "label": "EUROP ETH/Polygon EOA DEFAULT_ADMIN + MINTER_ROLE",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "EUROP ETH RoleGranted logs",
-            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
-          }
-        ],
-        "evidence": "At block 25295047: hasRole(MINTER_ROLE, 0xe3997860) = true; eth_getCode = no bytecode (EOA). Also holds DEFAULT_ADMIN_ROLE on ETH. Same address holds DEFAULT_ADMIN_ROLE and MINTER_ROLE on Polygon per RoleGranted logs. No RoleRevoked events on ETH."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xe4b87847a06f2a31b4d04225d222d4421cee3cee",
-        "label": "EUROP ETH direct minter Safe (3/3)",
-        "role": "direct-minter",
-        "authorityType": "safe",
-        "directMintAbility": "direct",
-        "threshold": 3,
-        "signerCount": 3,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "threshold": 3,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "source": "onchain",
-          "observedBlock": 25295316
-        },
-        "sources": [
-          {
-            "label": "EUROP ETH RoleGranted logs",
-            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
-          }
-        ],
-        "evidence": "Confirmed GnosisSafeProxy via Blockscout. At block 25295047: hasRole(MINTER_ROLE) = true. getOwners() returned 3 owners [0x70d16d28, 0xc963533b, 0xc5285950]; getThreshold() = 3; getModulesPaginated returned empty array (no modules); guard slot = zero."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xde1a8a3f0d2bba8a4d0454c1eb5ace2239b221be",
-        "label": "EUROP ETH OFT bridge MINTER_ROLE (EUROPOFT)",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "sources": [
-          {
-            "label": "EUROP ETH RoleGranted logs",
-            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
-          }
-        ],
-        "evidence": "Identified as EUROPOFT (LayerZero OFT bridge) by Blockscout. At block 25295047: hasRole(MINTER_ROLE) = true. owner() returned 0x04b4cb9d5a8417729231221a8ef22a1d06adb32b (GnosisSafeProxy, 2/4 Safe with owners [0x5379b2b5, 0x1cf1804b, 0xd0ed9bd2, 0x3f433019])."
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 25530884,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530884,
+        "evidence": "At Ethereum block 25530884, owner() and the sole DEFAULT_ADMIN_ROLE member were 0xe1f9754f. The verified source gates _authorizeUpgrade with DEFAULT_ADMIN_ROLE and lets that role administer MASTER_MINTER_ROLE and minter allowances. This Safe is 3-of-4 on-chain."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x29e6fb2dd01455472da3dd962c16a37de096b8da",
+        "label": "EUROP Polygon owner / DEFAULT_ADMIN_ROLE Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 90218079,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 90218079,
+        "evidence": "At Polygon block 90218079, owner() and the sole DEFAULT_ADMIN_ROLE member were 0x29e6fb2d. The verified source gates _authorizeUpgrade with DEFAULT_ADMIN_ROLE and lets that role administer MASTER_MINTER_ROLE and minter allowances. This Safe is 3-of-4 on-chain."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xe1f9754ff1f714cd3d0e939f368a97f87840cd16",
+        "label": "EUROP Avalanche owner / DEFAULT_ADMIN_ROLE Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 90288866,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 90288866,
+        "evidence": "At Avalanche C-Chain block 90288866, owner() and the sole DEFAULT_ADMIN_ROLE member were 0xe1f9754f. The verified source gates _authorizeUpgrade with DEFAULT_ADMIN_ROLE and lets that role administer MASTER_MINTER_ROLE and minter allowances. This Safe is 3-of-4 on-chain."
       },
       {
         "chain": "plasma",
         "address": "0xd8b39a57b8d6c66942f4ebb1776a501e8ef68e4b",
-        "label": "EUROP Plasma DEFAULT_ADMIN (4/3 Safe)",
+        "label": "EUROP Plasma owner / DEFAULT_ADMIN_ROLE Safe",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 4,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
+        "modulesOrGuardsStatus": "unknown",
         "safe": {
           "threshold": 3,
-          "owners": [
-            "0x1bCd423f3245d3B87360BF218bD0ae4391568d2a",
-            "0xF362066E010B3b3d3c497BE8116177d4D712910f",
-            "0x7dFE41D630D709bb84676e86214302aBF97eB151",
-            "0x7D8806A914Db460007c9D45b3132E95e95D81bE4"
-          ],
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "source": "onchain",
-          "observedBlock": 24254601
+          "observedBlock": 27091949,
+          "source": "onchain"
         },
-        "sources": [
-          {
-            "label": "EUROP Plasma contract",
-            "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
-          }
-        ],
-        "evidence": "At Plasma block 24254601: getRoleMember(DEFAULT_ADMIN_ROLE, 0) returned 0xd8b39a57...; eth_getCode = GnosisProxy bytecode; getOwners() returned 4 signers; getThreshold() = 3; getModulesPaginated() returned empty (no modules). Same 4-signer set as EUROP Ethereum/Avax owner Safe signers."
+        "observedAt": "2026-07-14",
+        "observedBlock": 27091949,
+        "evidence": "At Plasma block 27091949, owner() and the sole DEFAULT_ADMIN_ROLE member were 0xd8b39a57. The verified source gates _authorizeUpgrade with onlyOwner and lets the owner administer MASTER_MINTER_ROLE and minter allowances. This Safe is 3-of-4 on-chain."
       },
       {
-        "chain": "plasma",
-        "address": "0xe3997860dc9d52abed7455535dc6e2f1925bd3c9",
-        "label": "EUROP Plasma EOA minter",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "EUROP Plasma contract",
-            "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
-          }
-        ],
-        "evidence": "At Plasma block 24254601: getRoleMember(MINTER_ROLE, 0) returned 0xe3997860...; eth_getCode on Plasma = 0x (EOA). Same EOA confirmed as MINTER_ROLE holder on Ethereum."
-      },
-      {
-        "chain": "plasma",
-        "address": "0xa0b56dbbd937c2252dd1c62443edc57d320d47ce",
-        "label": "EUROP Plasma Safe minter (3/3)",
+        "chain": "ethereum",
+        "address": "0x04b4cb9d5a8417729231221a8ef22a1d06adb32b",
+        "label": "EUROP Ethereum MASTER_MINTER_ROLE Safe",
         "role": "direct-minter",
         "authorityType": "safe",
         "directMintAbility": "direct",
-        "threshold": 3,
-        "signerCount": 3,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "capDescription": "MASTER_MINTER_ROLE bypasses the per-minter allowance in mint(); the Safe can also administer minter allowances.",
+        "threshold": 2,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "unknown",
         "safe": {
-          "threshold": 3,
-          "owners": [
-            "0x9b45428ddEE215e3f4AdbEe5Ca1948952f8b948f",
-            "0x97c9658db7d5c9EFEdfF1C7b064c08a54E76204",
-            "0x8b718d994c64ae644ab4ee864364581b16708d76"
-          ],
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "source": "onchain",
-          "observedBlock": 24254601
+          "threshold": 2,
+          "observedBlock": 25530884,
+          "source": "onchain"
         },
-        "sources": [
-          {
-            "label": "EUROP Plasma contract",
-            "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
-          }
-        ],
-        "evidence": "At Plasma block 24254601: getRoleMember(MINTER_ROLE, 1) returned 0xa0b56dbb...; eth_getCode = GnosisProxy bytecode; getOwners() = 3 signers; getThreshold() = 3; getModulesPaginated() empty."
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530884,
+        "evidence": "At Ethereum block 25530884, this 2-of-4 Safe was the sole MASTER_MINTER_ROLE member. EUROPToken.mint() permits MASTER_MINTER_ROLE callers to mint without consuming minterAllowed."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x3618f5a7659c299568e200e12af5371e76e35792",
+        "label": "EUROP Polygon MASTER_MINTER_ROLE Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "capDescription": "MASTER_MINTER_ROLE bypasses the per-minter allowance in mint(); the Safe can also administer minter allowances.",
+        "threshold": 2,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 2,
+          "observedBlock": 90218079,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 90218079,
+        "evidence": "At Polygon block 90218079, this 2-of-4 Safe was the sole MASTER_MINTER_ROLE member. EUROPToken.mint() permits MASTER_MINTER_ROLE callers to mint without consuming minterAllowed."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x1d55aafd7aea1ce243ec2ffc465472fe84344c40",
+        "label": "EUROP Avalanche MASTER_MINTER_ROLE Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "capDescription": "MASTER_MINTER_ROLE bypasses the per-minter allowance in mint(); the Safe can also administer minter allowances.",
+        "threshold": 2,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 2,
+          "observedBlock": 90288866,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 90288866,
+        "evidence": "At Avalanche C-Chain block 90288866, this 2-of-4 Safe was the sole MASTER_MINTER_ROLE member. EUROPToken.mint() permits MASTER_MINTER_ROLE callers to mint without consuming minterAllowed."
       },
       {
         "chain": "plasma",
-        "address": "0xf825e476ad696de47f78a8fd04e92ef1d5c6524c",
-        "label": "EUROP Plasma OFT bridge minter",
+        "address": "0x53ef7b6a497e893f739f03969306beb464328101",
+        "label": "EUROP Plasma MASTER_MINTER_ROLE Safe",
         "role": "direct-minter",
-        "authorityType": "contract",
+        "authorityType": "safe",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "capDescription": "MASTER_MINTER_ROLE bypasses the per-minter allowance in mint(); the Safe can also administer minter allowances.",
+        "threshold": 2,
+        "signerCount": 4,
         "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "threshold": 2,
+          "observedBlock": 27091949,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 27091949,
+        "evidence": "At Plasma block 27091949, this 2-of-4 Safe was the sole MASTER_MINTER_ROLE member. EUROPToken.mint() permits MASTER_MINTER_ROLE callers to mint without consuming minterAllowed."
+      },
+      {
+        "chain": "xrpl",
+        "address": "rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK",
+        "label": "EUROP XRPL issuer account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
         "sources": [
           {
-            "label": "EUROP Plasma contract",
-            "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+            "label": "Schuman EUROP smart-contract addresses",
+            "url": "https://schuman.io/smart-contracts/"
+          },
+          {
+            "label": "EUROP XRPL issuer account",
+            "url": "https://livenet.xrpl.org/accounts/rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK"
           }
         ],
-        "evidence": "At Plasma block 24254601: getRoleMember(MINTER_ROLE, 2) returned 0xf825e476...; eth_getCode = large OFT-style contract bytecode (LayerZero); owner() returned 0x53ef7b6a497e893f739f03969306beb464328101."
+        "evidence": "Schuman's official deployment page identifies rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK as the XRPL EUROP issuer account. XRPL issued-token supply is controlled by the issuer account rather than an upgradeable EVM token contract."
       }
     ],
     "review": {
+      "evidence": "At current 2026-07-14 reads, Ethereum and Polygon EUROP proxies pointed to implementation 0xfbdaf974, Avalanche pointed to 0x57c2f3a0, and Plasma pointed to 0xa1058c5e. The verified implementations expose UUPS upgrade functions authorized by the chain-local owner or DEFAULT_ADMIN_ROLE. The same reads resolved the owner/admin Safe and MASTER_MINTER_ROLE Safe on each EVM deployment. XRPL is represented by Schuman's issuer account rather than EVM upgrade logic.",
+      "reviewer": "Codex CTRL batch 16",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
-          "label": "Schuman EUROP",
-          "url": "https://schuman.io/europ/"
+          "label": "Schuman EUROP smart-contract addresses",
+          "url": "https://schuman.io/smart-contracts/"
         },
         {
-          "label": "Safe Transaction Service (ETH owner Safe)",
-          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xE1F9754ff1f714cD3D0e939f368A97f87840cD16/"
+          "label": "EUROP Ethereum verified token",
+          "url": "https://etherscan.io/address/0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51#code"
         },
         {
-          "label": "EUROP ETH RoleGranted logs",
-          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          "label": "EUROP Polygon verified token",
+          "url": "https://polygonscan.com/address/0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51#code"
         },
         {
-          "label": "EUROP Plasma contract",
-          "url": "https://plasma.blockscout.com/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a"
+          "label": "EUROP Avalanche verified token",
+          "url": "https://subnets.avax.network/c-chain/address/0x8835a2f66a7aaccb297cb985831a616b75e2e16c/contract"
+        },
+        {
+          "label": "EUROP Plasma verified token",
+          "url": "https://plasmascan.to/address/0x98658bd74ef231158cadc21d8aba733a4e947e6a#code"
         }
-      ],
-      "evidence": "ETH: 3 active MINTER_ROLE holders confirmed (EOA, 3/3 Safe, OFT bridge owned by 2/4 Safe). Owner Safe (3/4) confirmed on ETH, Avax, and Polygon. XRPL issuer rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK: lsfDisableMaster flag set (master key disabled). Plasma (block 24254601): DEFAULT_ADMIN = 4/3 Safe (0xd8b39a57), MINTER_ROLE[0] = EOA 0xe3997860, MINTER_ROLE[1] = 3/3 Safe (0xa0b56dbb), MINTER_ROLE[2] = OFT contract (0xf825e476, owned by 0x53ef7b6a). All mint-capable surfaces now confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      ]
     }
   }
 }

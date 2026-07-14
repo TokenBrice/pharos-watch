@@ -66,11 +66,76 @@
     {
       "name": "USDT (deployed as overcollateralized institutional loans)",
       "pct": 100,
-      "risk": "medium",
-      "coinId": "usdt-tether",
-      "depType": "wrapper"
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Maple Direct and governance-approved institutional borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex reserve curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Maple syrupUSDC and syrupUSDT lender documentation",
+        "url": "https://docs.maple.finance/syrupusdc-for-lenders/introduction"
+      },
+      {
+        "label": "Maple Proof of Reserves announcement",
+        "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+      }
+    ],
+    "rationale": "Maple describes syrupUSDT as a segregated pool access product built around overcollateralized institutional lending, with supporting strategies also documented. The aggregate slice is retained because Maple does not publish a current percentage split for those strategies on the cited pages.",
+    "compositionBasis": "Maple lender documentation and reserve-program disclosure",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current percentage allocation between institutional loans and supporting strategies is not published in the reviewed primary sources; Maple's independent proof-of-reserves reports are announced but no dated report scope was available here.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USDT (deployed as overcollateralized institutional loans)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Maple identifies the loan and strategy families but does not publish their current percentage weights in the reviewed primary sources.",
+        "candidateCoinIds": [
+          "usdt-tether"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Maple syrupUSDT segregated pool structure",
+        "role": "other",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex reserve curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Maple syrupUSDC and syrupUSDT lender documentation",
+        "url": "https://docs.maple.finance/syrupusdc-for-lenders/introduction"
+      },
+      {
+        "label": "Maple Proof of Reserves announcement",
+        "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+      }
+    ],
+    "uncertainty": "Maple documents legal segregation between Maple, syrupUSDC, and syrupUSDT and says supporting strategies use custody controls, but the cited sources do not name every custodian or establish full bankruptcy remoteness and rehypothecation terms."
+  },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
     "version": 1,

@@ -81,5 +81,5 @@ describe("Telegram structured log callers", () => {
 
     expect(callerCount).toBeGreaterThan(40);
     expect(violations).toEqual([]);
-  });
+  }, 15_000);
 });

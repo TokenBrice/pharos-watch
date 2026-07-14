@@ -261,9 +261,78 @@
     {
       "name": "tULTRA — Standard Chartered Libeara tokenized U.S. T-bills (Wellington Mgmt)",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "FundBridge Capital / Wellington Management / Standard Chartered Bank",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex reserve curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Theo thBILL documentation",
+        "url": "https://docs.theo.xyz/thbill"
+      },
+      {
+        "label": "Theo tULTRA documentation",
+        "url": "https://docs.theo.xyz/thbill/tultra"
+      }
+    ],
+    "rationale": "Theo documents thBILL as a basket that currently comprises tULTRA, a wrapper for Libeara's ULTRA fund. The tULTRA documentation identifies short-duration Treasury securities, repos, and cash, with FundBridge management, Wellington investment management, and Standard Chartered custody. No separate percentage split is published for those underlying ULTRA assets.",
+    "compositionBasis": "Theo thBILL and tULTRA product documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The tracked 100% tULTRA wrapper is identified, but the current percentage split of ULTRA's Treasury, repo, and cash holdings is not published in the reviewed Theo sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "tULTRA — Standard Chartered Libeara tokenized U.S. T-bills (Wellington Mgmt)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Theo identifies the tULTRA wrapper and its underlying asset families but does not publish a current category allocation within ULTRA.",
+        "candidateCoinIds": [
+          "ustb-superstate"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Standard Chartered Bank",
+        "role": "custodian",
+        "sharePct": 100,
+        "jurisdiction": "Singapore"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex reserve curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Theo tULTRA documentation",
+        "url": "https://docs.theo.xyz/thbill/tultra"
+      },
+      {
+        "label": "Theo thBILL documentation",
+        "url": "https://docs.theo.xyz/thbill"
+      }
+    ],
+    "uncertainty": "Theo identifies Standard Chartered as custodian for the ULTRA fund, but the reviewed pages do not specify custody segregation, rehypothecation, or the legal claims of thBILL holders against the underlying assets."
+  },
   "yieldConfig": {
     "yieldSource": "tULTRA (Standard Chartered Libeara tokenized T-bills)",
     "yieldType": "nav-appreciation"

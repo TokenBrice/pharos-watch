@@ -1,0 +1,85 @@
+{
+  "id": "usdsui-sui",
+  "reserves": [
+    {
+      "name": "Bridge USD reserves (short-dated Treasuries, Treasury repos, government MMFs, and cash)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury, regulated financial institutions, and permitted money-market fund issuers",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Bridge reserve management",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+      },
+      {
+        "label": "Bridge stablecoins FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+      },
+      {
+        "label": "Bridge issuance overview",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/overview"
+      }
+    ],
+    "rationale": "Bridge states that issued stablecoins are at least 1:1 collateralized and that the reserve basket may include cash, on-chain stablecoins, short-dated U.S. Treasuries, overnight Treasury repos, and government money-market funds. The USDsui-specific allocation and individual bank, repo, and fund counterparties are not disclosed, so the complete basket is retained as one explicit aggregate slice.",
+    "compositionBasis": "Bridge Open Issuance reserve categories; USDsui-specific component weights are undisclosed",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve categories are identified, but USDsui-specific weights and individual bank, repo, and money-market-fund counterparties are not published.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Bridge USD reserves (short-dated Treasuries, Treasury repos, government MMFs, and cash)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Bridge publishes the permitted reserve categories but not the current USDsui allocation among them."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Lead Bank",
+        "role": "bank",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "BlackRock",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Fidelity Investments",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Bridge stablecoins FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+      },
+      {
+        "label": "Bridge reserve management",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+      }
+    ],
+    "uncertainty": "Bridge identifies Lead Bank for liquid reserves, BlackRock and Fidelity as custody partners, and segregated bankruptcy-remote accounts, but does not publish USDsui-specific provider allocations or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

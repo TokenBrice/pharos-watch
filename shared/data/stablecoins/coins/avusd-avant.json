@@ -2,7 +2,7 @@
   "id": "avusd-avant",
   "name": "Avant USD",
   "symbol": "avUSD",
-  "oneLiner": "avUSD is Avant's centralized dollar stablecoin, redeemable 1:1 for USDC and deployed into actively managed market-neutral strategies for yield.",
+  "oneLiner": "avUSD is Avant's USDC-denominated base dollar, redeemable through the issuer and backed by a dynamically managed leveraged market-neutral portfolio.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "avUSD is fully backed 1:1 by USDC and is the non-yield-bearing, 1:1-redeemable receipt for deposited USDC. The actively managed market-neutral strategies (basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals) generate yield that accrues to the staked savUSD senior tranche, with the avUSDx junior tranche and a dedicated avUSD Reserve Fund absorbing strategy losses ahead of savUSD; avUSD holders themselves receive no yield",
+  "collateral": "A dynamic leveraged market-neutral portfolio spanning basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals. USDC is the mint/redemption asset, not the complete currently held reserve; the avUSDx junior tranche and separate reserve fund absorb strategy losses ahead of savUSD.",
   "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1–7 day settlement window; avUSD itself receives no yield, while staking into the separate savUSD token is the yield-bearing route",
   "llamaId": "271",
   "detailProvider": "defillama",
@@ -176,7 +176,7 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "avUSD is the non-yield Avant base token backed 1:1 by USDC and redeemable through protocol mint/redeem flows."
+      "summary": "avUSD is a non-yield base token with a USDC-denominated mint/redemption rail and an actively managed leveraged market-neutral backing portfolio."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -270,19 +270,6 @@
   },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "USDC (1:1 backing, deployed into delta-neutral strategies via 0xPartners)",
-      "pct": 95,
-      "risk": "high",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "Loss-absorption reserve (0xPartners managed)",
-      "pct": 5,
-      "risk": "high"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
@@ -304,7 +291,22 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "avUSD is minted 1:1 against USDC deposited into Avant's AvantMintingV2 contract on Avalanche; the minting contract and all avUSD token instances share a single Ownable owner EOA (Avant MPC-custodied Fireblocks/Fordefi key), with an issuer-backend policy engine gating access.",
+    "summary": "Avalanche avUSD has one active token minter, the immutable AvantMintingV2 gateway. A single current MINTER_ROLE EOA may invoke its collateral-backed, per-block-capped mint flow; the token owner and gateway default admin are the same documented MPC-custodied EOA, which can replace minters and raise the cap.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedBlock": 90283689,
+      "sources": [
+        {
+          "label": "AvantMintingV2 verified source",
+          "url": "https://snowtrace.io/address/0xcb43139E90f019624e3B76C56FB05394B162A49c#code"
+        },
+        {
+          "label": "avUSD token verified source",
+          "url": "https://snowtrace.io/address/0x24de8771bc5ddb3362db529fc3358f2df3a0e346#code"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "avalanche",
@@ -312,25 +314,50 @@
         "label": "Avant avUSD AvantMintingV2 contract",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Avalanche block 87747021, eth_getCode returned contract bytecode (len=29534). owner() returned 0xd4d23209aae8630bf386b7393763a5b7865e57cb. EIP-1967 proxy slots both zero (not a proxy). No AccessControl enumeration interface; uses simple Ownable pattern.",
+        "capDescription": "Verified source enforces supported collateral transfer, exact stable-value ratio at the current zero-delta setting, authorized MINTER_ROLE caller, and maxMintPerBlock. The current cap is 25,000,000 avUSD per Avalanche block.",
+        "observedBlock": 90283689,
+        "evidence": "Complete MinterUpdated event history plus minters(address) confirms this is the sole active minter on the Avalanche avUSD token at block 90283689. Verified AvantMintingV2 source calls avantcoin.mint() only after collateral, route, signature, and per-block-cap checks. Both token and gateway EIP-1967 slots are zero and their verified constructors establish non-proxy deployments.",
         "sources": [
           {
             "label": "Avant contract addresses",
             "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "AvantMintingV2 verified source",
+            "url": "https://snowtrace.io/address/0xcb43139E90f019624e3B76C56FB05394B162A49c#code"
+          }
+        ]
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xd5456b9ab991768601bedf1159c51009d43c698d",
+        "label": "AvantMintingV2 MINTER_ROLE caller",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "This EOA can call the immutable gateway, but each call remains bounded by collateral transfer, signature and route validation, and the 25,000,000 avUSD per-block gateway cap.",
+        "observedBlock": 90283689,
+        "evidence": "A complete RoleGranted/RoleRevoked replay and hasRole() at Avalanche block 90283689 confirm this is the sole current MINTER_ROLE caller on AvantMintingV2; eth_getCode returned empty bytecode. It is not itself an avUSD token minter and cannot change the gateway cap.",
+        "sources": [
+          {
+            "label": "AvantMintingV2 verified source",
+            "url": "https://snowtrace.io/address/0xcb43139E90f019624e3B76C56FB05394B162A49c#code"
           }
         ]
       },
       {
         "chain": "avalanche",
         "address": "0xd4d23209aae8630bf386b7393763a5b7865e57cb",
-        "label": "Avant avUSD owner EOA (MPC/Fireblocks)",
+        "label": "Avant avUSD token owner and gateway admin",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "keyCustodyAttestation": {
           "kind": "mpc",
@@ -341,21 +368,8 @@
             }
           ]
         },
-        "evidence": "At Avalanche block 87747021, eth_getCode returned empty bytecode (EOA confirmed). owner() on AvantMintingV2, avUSD token (Avalanche, Ethereum, Linea) all returned this same address. Avant docs describe Fireblocks/Fordefi MPC custody for privileged operations.",
-        "sources": [
-          {
-            "label": "Avant secure asset management",
-            "url": "https://docs.avantprotocol.com/security/secure-asset-management"
-          }
-        ]
-      },
-      {
-        "label": "Avant Protocol operations backend (MPC + policy engine)",
-        "role": "minter-admin",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "evidence": "Avant docs describe MPC wallets (Fireblocks/Fordefi), a transaction policy engine, RBAC, and address whitelisting gating minting. The confirmed on-chain EOA owner is the MPC-controlled address.",
+        "observedBlock": 90283689,
+        "evidence": "At Avalanche block 90283689, avUSD.owner() returned this EOA and hasRole(DEFAULT_ADMIN_ROLE) on AvantMintingV2 returned true; eth_getCode returned empty bytecode. The owner can set token minters, while the gateway admin can grant caller roles and raise maxMintPerBlock. Avant documents Fireblocks/Fordefi MPC custody and policy controls for privileged operations.",
         "sources": [
           {
             "label": "Avant secure asset management",
@@ -379,22 +393,31 @@
           "url": "https://snowtrace.io/address/0xcb43139E90f019624e3B76C56FB05394B162A49c"
         }
       ],
-      "evidence": "At Avalanche block 87747021: AvantMintingV2 (0xcb43139E...) owner() = 0xd4d23209aae8630bf386b7393763a5b7865e57cb; avUSD token (0x24de8771...) owner() = same EOA; Ethereum avUSD (0xf4c13d63...) owner() = same EOA; Linea avUSD (0x37c44fc0...) owner() = same EOA. eth_getCode on EOA returned empty (confirmed EOA). EIP-1967 proxy slots zero on all contracts. No AccessControl; Ownable pattern confirmed. Issuer-backend MPC layer corroborated by Avant docs.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Complete Avalanche role and MinterUpdated event replays through block 90283689, followed by direct hasRole() and minters(address) checks, establish one gateway caller and one active token minter. maxMintPerBlock() returned 25,000,000 avUSD, stablesDeltaLimit() returned zero, and the common admin/owner EOA can raise the cap or replace minters. Verified constructors and zero EIP-1967 slots establish immutable token and gateway code.",
+      "reviewer": "Codex Safety Score V9 CTRL curation",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable"
     }
   },
   "launchDate": "2024-11-15",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
     "reviewedAt": "2026-07-13",
-    "reviewer": "Codex mechanism review",
-    "rationale": "avUSD is a non-yielding, 1:1-redeemable USDC reserve receipt; the managed strategies sit behind separate staked tranches.",
+    "reviewer": "owner-triage",
+    "rationale": "Avant states that capital backing unstaked avUSD is deployed into a diversified market-neutral strategy basket. The live portfolio API confirms large positive and negative positions across basis, lending, and yield strategies; USDC is the denomination and redemption rail rather than the complete reserve asset.",
     "sources": [
       {
-        "label": "Avant protocol docs",
-        "url": "https://docs.avantprotocol.com/"
+        "label": "Avant reserve fund and avUSD backing",
+        "url": "https://docs.avantprotocol.com/security/reserve-fund"
+      },
+      {
+        "label": "Avant yield-generation strategies",
+        "url": "https://docs.avantprotocol.com/yield-strategies-and-revenue/yield-generation"
+      },
+      {
+        "label": "Avant avUSD portfolio API",
+        "url": "https://app.avantprotocol.com/api/metrics/avusd"
       }
     ]
   }

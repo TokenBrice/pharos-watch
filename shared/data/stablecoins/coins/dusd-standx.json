@@ -18,6 +18,48 @@
   "detailProvider": "defillama",
   "geckoId": "standx-dusd",
   "cmcSlug": "standx-dusd",
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "StandX documents multiple independent price feeds, median selection, deviation circuit breakers, secondary networks, TWAP fallbacks, and manual intervention for its managed collateral and hedging system.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "DUSD is minted from USDT or USDC into a managed vault and offchain hedging system, and redemption uses a seven-day unwind period. StandX monitors collateral, hedge positions, and liquidation triggers operationally, but users do not open permissionless per-collateral debt positions with independently inventoried onchain auction, backstop, and shutdown branches.",
+      "sources": [
+        {
+          "label": "StandX DUSD architecture",
+          "url": "https://docs.standx.com/docs/dusd-solutions"
+        },
+        {
+          "label": "StandX risks and hedging system",
+          "url": "https://docs.standx.com/docs/dusd-solutions/risks-hedging-system"
+        },
+        {
+          "label": "StandX DUSD redemption",
+          "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "StandX risks and hedging system",
+        "url": "https://docs.standx.com/docs/dusd-solutions/risks-hedging-system"
+      },
+      {
+        "label": "StandX DUSD minting",
+        "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
+      },
+      {
+        "label": "StandX DUSD redemption",
+        "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

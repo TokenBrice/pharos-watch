@@ -1,0 +1,82 @@
+{
+  "id": "eure-monerium",
+  "reserves": [
+    {
+      "name": "EUR bank deposits and the State Street EUR Liquidity LVNAV Fund",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Monerium financial and safeguarding information",
+        "url": "https://monerium.com/financial-information/"
+      },
+      {
+        "label": "Monerium fee schedule and reserve policy",
+        "url": "https://monerium.com/fee-schedule/"
+      }
+    ],
+    "rationale": "Monerium identifies safeguarded deposits at Arion Bank and LHV Bank and states that the bulk of EURe funds is held in the AAA-rated State Street EUR Liquidity LVNAV Fund. It does not disclose current allocation weights, so the reserve remains one aggregate bank-deposit/fund basket.",
+    "compositionBasis": "Current Monerium safeguarding policy; provider and asset-class weights undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All reserves fall within the disclosed bank-deposit and liquidity-fund basket, but the current allocation by provider and asset class is not public.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "EUR bank deposits and the State Street EUR Liquidity LVNAV Fund",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Monerium describes the providers and says the fund holds the bulk of reserves, but does not publish exact weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Arion Bank",
+        "role": "bank",
+        "jurisdiction": "Iceland"
+      },
+      {
+        "name": "LHV Bank",
+        "role": "bank",
+        "jurisdiction": "Estonia"
+      },
+      {
+        "name": "State Street Global Advisors Europe",
+        "role": "other",
+        "jurisdiction": "European Union"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Monerium financial and safeguarding information",
+        "url": "https://monerium.com/financial-information/"
+      },
+      {
+        "label": "Monerium fee schedule and reserve policy",
+        "url": "https://monerium.com/fee-schedule/"
+      },
+      {
+        "label": "Monerium business terms",
+        "url": "https://monerium.com/policies/business-terms-of-service/"
+      }
+    ],
+    "uncertainty": "Monerium names the two banks and State Street fund manager but does not publish provider shares. Segregation, priority claims, creditor exclusion, and the EMI prohibition on lending safeguarded customer funds are explicit; the underlying fund retains its own disclosed portfolio mechanics."
+  }
+}

@@ -284,32 +284,6 @@
     ]
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
-      "pct": 80,
-      "risk": "very-low",
-      "coinId": "tbill-openeden"
-    },
-    {
-      "name": "Ripple USD (RLUSD) cash-equivalent buffer",
-      "pct": 9,
-      "risk": "low",
-      "coinId": "rlusd-ripple"
-    },
-    {
-      "name": "BlackRock BUIDL (tokenized money market fund)",
-      "pct": 8,
-      "risk": "low",
-      "coinId": "buidl-blackrock"
-    },
-    {
-      "name": "VanEck VBILL (tokenized U.S. T-bill fund)",
-      "pct": 3,
-      "risk": "low",
-      "coinId": "vbill-vaneck"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "OpenEden USDO daily rebase",
     "yieldType": "rebase"

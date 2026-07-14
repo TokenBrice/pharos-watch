@@ -1,6 +1,6 @@
 # PharosWatchBot and Telegram Alerts
 
-> **Agent navigation** — ~75 KB; Grep the heading you need instead of reading wholesale: Overview · Personalized Daily Recap · Mini App Launch Entrypoints · Files · Frontend Main Page · Public Pulse Privacy And Freshness · D1 Schema · Secrets and Bindings · Inline Keyboards (Callback Queries) · Inline Mode Status Cards · Webhook Command Flow · Dispatch Cron · Digest Appendices · Admin Visibility · Message Types · Digest vs Subscriber Alerts · Operational Notes · Runbooks.
+> **Agent navigation** — Grep the heading you need: Overview · Personalized Daily Recap · Mini App Launch Entrypoints · Frontend Main Page · Public Pulse Privacy And Freshness · D1 Schema · Secrets and Bindings · Inline Keyboards · Webhook Command Flow · Dispatch Cron · Digest Appendices · Admin Visibility · Message Types · Operational Notes · Runbooks.
 
 ## Overview
 
@@ -52,50 +52,6 @@ BotFather-owned release checklist:
 - If chosen-card measurement is required, configure a conservative BotFather `/setinlinefeedback` sample. Feedback is aggregate-only and is not a functional delivery signal.
 - Test direct links for `https://t.me/PharosWatchBot?startapp=settings`, `watchlist`, `coin_usdc-circle`, `why_usdc-circle`, and `coverage_usdc-circle` on Telegram mobile, desktop, and web.
 - Verify the page loads inside Telegram with the Telegram bridge script, signed `initData`, and no frame denial headers.
-
-## Files
-
-- `worker/src/api/telegram-webhook.ts`
-- `worker/src/api/telegram-webhook-shared.ts`
-- `worker/src/api/telegram-webhook-parsing.ts`
-- `worker/src/api/telegram-webhook-messages.ts`
-- `worker/src/api/telegram-webhook-store.ts`
-- `worker/src/cron/dispatch-telegram-alerts.ts`
-- `worker/src/cron/telegram-recap-planner.ts`
-- `worker/src/cron/telegram-recap-store.ts`
-- `worker/src/cron/daily-digest.ts`
-- `worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts`
-- `worker/src/lib/telegram-webhook-registration.ts`
-- `shared/lib/telegram-bot-registration.ts`
-- `worker/src/lib/telegram.ts`
-- `worker/src/lib/telegram-alerts.ts`
-- `worker/src/lib/telegram-presets.ts`
-- `worker/src/lib/telegram-digest-appendices.ts`
-- `worker/src/lib/telegram-recap-facts.ts`
-- `worker/src/lib/telegram-recap-ranking.ts`
-- `worker/src/lib/telegram-recap-formatting.ts`
-- `worker/src/lib/telegram-mini-app-auth.ts`
-- `src/app/pharoswatchbot/page.tsx`
-- `src/app/pharoswatchbot/app/page.tsx`
-- `src/app/pharoswatchbot/app/client.tsx`
-- `src/app/pharoswatchbot/app/telegram-sdk.ts`
-- `src/app/pharoswatchbot/telegram-pulse-strip.tsx`
-- `src/hooks/use-telegram-pulse.ts`
-- `worker/src/api/telegram-pulse.ts`
-- `worker/src/api/telegram-mini-app.ts`
-- `worker/src/api/telegram-mini-app-state.ts`
-- `worker/src/api/telegram-mini-app-mutations.ts`
-- `shared/lib/telegram-mini-app-contract.ts`
-- `shared/lib/telegram-recap-policy.ts`
-- `shared/lib/iana-local-time.ts`
-- `shared/lib/telegram-mini-app-catalog.ts`
-- `worker/src/lib/telegram-usage-analytics.ts`
-- `worker/migrations/0000_baseline.sql`
-- `worker/migrations/0123_telegram_usage_analytics.sql`
-- `worker/migrations/0198_telegram_personalized_recap.sql`
-- `worker/migrations/MANIFEST.md`
-- `npx tsx scripts/maintenance/register-telegram.ts --action webhook`
-- `npx tsx scripts/maintenance/register-telegram.ts --action commands`
 
 ## Frontend Main Page
 

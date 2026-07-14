@@ -279,18 +279,6 @@
     ]
   },
   "custodyModel": "institutional-top",
-  "reserves": [
-    {
-      "name": "Short-dated U.S. Treasury bills (WAM <3mo)",
-      "pct": 95,
-      "risk": "very-low"
-    },
-    {
-      "name": "USD cash buffer",
-      "pct": 5,
-      "risk": "very-low"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "OpenEden T-bill vault",
     "yieldType": "nav-appreciation"

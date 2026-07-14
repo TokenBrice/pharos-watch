@@ -5,7 +5,7 @@
 - **Current methodology version:** `v5.84`
 - **Runtime/version source:** `shared/lib/liquidity-score-version.ts`
 - **Public changelog route:** `/methodology/liquidity-score-changelog/`
-- **Version timeline:** [liquidity-score-timeline.md](./liquidity-score-timeline.md)
+- **Structured changelog:** `shared/data/methodology-changelogs/liquidity-score/`
 
 ## DEX Liquidity Score
 
@@ -315,7 +315,7 @@ Discovery and merge staging tables are documented in the [Discovery Cron](#disco
   - Discovery writes normalized candidates to `dex_pool_staging`; scoring cron consumes and merges them.
 - **Discovery staging schema**: `dex_pool_staging` includes `pool_id`, `stablecoin_id`, `source`, `chain`, `protocol`, `dex_id`, `symbol`, `tvl_usd`, `volume_24h`, `quality_multiplier`, `pool_type`, `fee_tier`, `balance_ratio`, `is_stable`, `base_token`, `quote_token`, `quote_symbol`, `price_usd`, `locked_liq_pct`, `raw_json`, `discovered_at`, `refreshed_at`; PK is `(pool_id, stablecoin_id)`.
 - **Discovery meta schema**: `dex_discovery_meta` stores `stablecoin_id` (PK), `consecutive_misses`, `last_crawl_at`, `last_hit_at`.
-- **Deployment outcome schema**: `dex_deployment_outcomes` stores one exact stablecoin/chain/contract row as `observed_pools`, `verified_no_pools`, or `provider_inaccessible`, including the provider set, reason, observation time, pool count, and optional owned waiver. A no-pool result is written only after a provider completes that exact token query. The canonical registry currently classifies all 261 provider-inaccessible deployments across 120 active coins; the 20 coins whose entire deployment footprint is inaccessible have owned waivers expiring October 31, 2026 while adapters or provider mappings are evaluated.
+- **Deployment outcome schema**: `dex_deployment_outcomes` stores one exact stablecoin/chain/contract row as `observed_pools`, `verified_no_pools`, or `provider_inaccessible`, including the provider set, reason, observation time, pool count, and optional owned waiver. A no-pool result is written only after a provider completes that exact token query. The canonical registry owns current inaccessible deployments; full-footprint gaps require explicit, expiring waivers while adapters or provider mappings are evaluated.
 - **Tiered priority**:
   - T1: coins with 0 pools (or effectively eligible baseline), every run.
   - T2: 1–4 pools or 1 chain, every 3rd run.

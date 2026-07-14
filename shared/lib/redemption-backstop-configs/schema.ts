@@ -122,11 +122,37 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
     routeStatus: z.enum(["open", "unknown"]).optional(),
     routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),
     totalScoreCap: z.number().gt(0).lte(100).optional(),
+    outputAssets: z.array(z.string().min(1)).min(1).max(8).optional(),
     docs: z.array(RedemptionDocSourceSchema).optional(),
     reviewedAt: ReviewedAtSchema.optional(),
     notes: z.array(z.string()).optional(),
   })
   .superRefine((config, ctx) => {
+    if (config.outputAssets) {
+      if (new Set(config.outputAssets).size !== config.outputAssets.length) {
+        ctx.addIssue({ code: "custom", path: ["outputAssets"], message: "outputAssets cannot contain duplicates" });
+      }
+      const collateralOutput =
+        config.outputAssetType === "bluechip-collateral" || config.outputAssetType === "mixed-collateral";
+      for (const [index, asset] of config.outputAssets.entries()) {
+        if (collateralOutput !== asset.startsWith("asset:")) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["outputAssets", index],
+            message: collateralOutput
+              ? "collateral outputAssets must use canonical asset:<symbol> keys"
+              : "stable outputAssets must be tracked stablecoin ids, not asset:<symbol> keys",
+          });
+        }
+      }
+      if (config.outputAssetType === "stable-single" && config.outputAssets.length !== 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["outputAssets"],
+          message: "stable-single outputAssets must name exactly one tracked stablecoin",
+        });
+      }
+    }
     if (
       config.routeFamily === "offchain-issuer" &&
       config.accessModel !== "issuer-api" &&

@@ -18,6 +18,32 @@
   "detailProvider": "defillama",
   "geckoId": "precious-metals-usd",
   "cmcSlug": "precious-metals-usd",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "pmUSD uses an external gold-linked price for RWf(x) treasury accounting, but RAAC explicitly disables liquidation and self-liquidation, so there is no external liquidation-oracle branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "RAAC documents pmUSD as a manager-only RWf(x) fToken where xPM absorbs collateral-price volatility, the treasury reads an Instruxi/Chainlink-linked RWA price, and all liquidation and self-liquidation mechanisms are disabled. Under-collateralization instead blocks operations and permits pro-rata fToken redemption, so collateral liquidation branches are not applicable.",
+      "sources": [
+        {
+          "label": "RAAC RWf(x) documentation",
+          "url": "https://docs.raac.io/rw-fx/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RAAC RWf(x) documentation",
+        "url": "https://docs.raac.io/rw-fx/"
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por",

@@ -179,17 +179,5 @@
         "Cardano minting policy 0014df105553444d (USDM asset): the minting-policy script hash and its controlling keys are not readable via standard on-chain API calls (Koios getAccountInfo does not expose policy-key signatories). Resolve via Cardano CLI policy-id inspection or issuer disclosure of the policy script before raising confidence."
       ]
     }
-  },
-  "reserves": [
-    {
-      "name": "USD bank deposits",
-      "pct": 40,
-      "risk": "very-low"
-    },
-    {
-      "name": "Money market funds (Fidelity / Amundi)",
-      "pct": 60,
-      "risk": "very-low"
-    }
-  ]
+  }
 }

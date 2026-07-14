@@ -93,6 +93,42 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(reviews[0]).toMatchObject({ settlementModel: "atomic", settlementSlaSec: 0 });
   });
 
+  it("values a resolved stable-basket output at the weakest component's price", () => {
+    const row = supplyFullRow({ stablecoinId: "dai-makerdao" });
+    const derived = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), "dai-makerdao")[0]!;
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      exitRouteObservations: [
+        {
+          ...derived.observation,
+          output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle", "usdt-tether"] },
+        },
+      ],
+    };
+    const fixedInput = fixedInputStub(row);
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "usdc-circle": { currentDeviationBps: 2, priceObservedAt: NOW },
+      "usdt-tether": { currentDeviationBps: -14, priceObservedAt: NOW },
+    };
+    const review = buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]!;
+    expect(review.output).toMatchObject({
+      kind: "tracked-stablecoin",
+      assetKeys: ["usdc-circle", "usdt-tether"],
+      valuation: {
+        basis: "price",
+        referenceAssetKey: "usdt-tether",
+        unitValueUsd: 1 - 14 / 10_000,
+        confidence: "medium",
+      },
+    });
+
+    // A partially-priced basket stays unresolved instead of guessing.
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "usdc-circle": { currentDeviationBps: 2, priceObservedAt: NOW },
+    };
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]!.output?.valuation).toBeNull();
+  });
+
   it("derives nothing when the row already carries observations or is absent", () => {
     const withObservation = supplyFullRow();
     const derived = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(withObservation), "usdc-circle")[0]!;

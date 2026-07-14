@@ -378,26 +378,3 @@ See [API Reference](./api-reference.md) for the exact response shape.
 The maintenance coverage audit requires a durable reviewed disposition for every active asset without a route config. `scripts/lib/redemption-coverage-dispositions.ts` records evidence URLs, reviewer/date, rationale, the exact blocker and evidence still needed, and a route family only when official evidence proves that family. `add` means the holder route is evidenced but configuration still needs the listed capacity/status inputs; `needs-research`, `defer`, and `hard-reject` remain legitimate coverage outcomes and do not create a scoreable route. The audit rejects stale registry rows and keeps heuristic configured routes visible until hard capacity evidence replaces them.
 
 There is currently no dedicated list page or standalone public methodology section for redemption backstops; the primary user-facing surface is the stablecoin detail page plus the report-card liquidity dimension. Contextual hints on those surfaces currently deep-link into the Safety Scores methodology section where effective-exit logic is documented.
-
----
-
-## File Index
-
-| File                                                            | Role                                                           |
-| --------------------------------------------------------------- | -------------------------------------------------------------- |
-| `shared/lib/redemption-backstops.ts`                            | Canonical public import facade for the config registry         |
-| `shared/lib/redemption-backstop-configs/*`                      | Route-family config modules plus shared config helpers         |
-| `shared/lib/redemption-backstop-scoring.ts`                     | Component scores, route caps, and effective-exit blend         |
-| `shared/lib/redemption-backstop-version.ts`                     | Methodology version metadata                                   |
-| `shared/types/redemption.ts`                                    | Shared API schemas and TypeScript contracts                    |
-| `worker/src/cron/sync-redemption-backstops.ts`                  | 4-hourly snapshot sync                                         |
-| `worker/src/lib/redemption-backstop-sources.ts`                 | Runtime resolver for capacity, costs, docs, and scoring inputs |
-| `worker/src/lib/redemption-backstops-store.ts`                  | D1 storage helpers and API payload builder                     |
-| `worker/src/api/redemption-backstops.ts`                        | Public API handler                                             |
-| `worker/migrations/0000_baseline.sql`                           | Baseline current + history table schema                        |
-| `src/hooks/api-hooks.ts`                                        | `useRedemptionBackstops()`                                     |
-| `src/hooks/use-stablecoin-detail-view-model.ts`                 | Detail-page query wiring                                       |
-| `src/lib/stablecoin-detail-view-model.ts`                       | Public detail view-model facade                                |
-| `src/lib/stablecoin-detail-query-view-model.ts`                 | Detail-page redemption freshness and availability tracking     |
-| `src/lib/coverage/redemption.ts`                                | Coverage-page redemption state mapping                         |
-| `src/components/stablecoin-detail/redemption-backstop-card.tsx` | Detail-page redemption card UI                                 |

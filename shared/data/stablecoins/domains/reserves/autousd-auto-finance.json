@@ -1,0 +1,62 @@
+{
+  "id": "autousd-auto-finance",
+  "reserves": [
+    {
+      "name": "USDC deployed through the autoUSD Autopool and destination vaults",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Auto Finance Autopool strategy and configured DeFi destinations",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "smart-contract", "market", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Auto Finance Autopool architecture",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/autopools"
+      },
+      {
+        "label": "Auto Finance autoUSD contract registry",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+      }
+    ],
+    "rationale": "Auto Finance documents Autopools as ERC-4626-style receipt tokens whose base asset is deployed across one or more configured destination vaults and returned in the base asset on withdrawal. The official registry identifies autoUSD at 0xa7569A44f348d3D70d8ad5889e50F78E33d80D35; the position is therefore retained as a full USDC wrapper exposure while the strategy-level destination allocation remains inside the aggregate protocol position.",
+    "compositionBasis": "Auto Finance autoUSD Autopool architecture and official contract registry",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The base USDC dependency and Autopool structure are explicit, but current destination vaults, allocation weights, unwind times, and strategy counterparties are not published in the reviewed static documentation.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "autoUSD Autopool and configured destination-vault contracts",
+        "role": "custodian",
+        "jurisdiction": "On-chain"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Auto Finance Autopool architecture",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/autopools"
+      },
+      {
+        "label": "Auto Finance Autopool security model",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/autopool-contract-security"
+      }
+    ],
+    "uncertainty": "Assets are segregated in dedicated Autopool and destination-vault contracts and are intentionally deployed to external DeFi destinations. The current destination set and allocation shares were not resolved in this static-document review."
+  }
+}

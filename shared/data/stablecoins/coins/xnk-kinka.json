@@ -142,9 +142,67 @@
     {
       "name": "Physical gold bullion (99.99% Japanese LBMA Good Delivery brands, Loomis/GM custody)",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Kinka (BVI) Ltd.; Gold Management LLC and Loomis International",
+      "riskFactors": ["counterparty", "liquidity", "custody", "market", "legal"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Kinka whitepaper",
+        "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+      },
+      {
+        "label": "Kinka terms of use",
+        "url": "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf"
+      }
+    ],
+    "rationale": "Kinka documents XNK as representing 99.99% physical gold and describes redemption of 1 kg LBMA-hallmarked bars through Loomis International and affiliated warehouses after the published minimum holding threshold. The documents do not establish a redemption settlement time, so liquidity horizon remains unknown. The reserve is retained as one physical-gold slice; the medium risk classification reflects gold-market, issuer, custody, and physical-redemption exposure.",
+    "compositionBasis": "Kinka physical-gold backing and redemption disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reviewed sources identify the physical-gold reserve and Loomis/Gold Management route but do not disclose bar-level inventory, account segregation, or current provider shares.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Gold Management LLC",
+        "role": "other"
+      },
+      {
+        "name": "Loomis International",
+        "role": "custodian"
+      },
+      {
+        "name": "Kinka (BVI) Ltd.",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Kinka whitepaper",
+        "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+      },
+      {
+        "label": "Kinka terms of use",
+        "url": "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf"
+      }
+    ],
+    "uncertainty": "Kinka describes Gold Management as legally independent from Kinka and its parent and says warehouse gold cannot be seized in their bankruptcy. The reviewed documents do not establish account-level segregation, rehypothecation safeguards, current custody shares, or a physical-redemption settlement time."
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

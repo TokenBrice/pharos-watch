@@ -1,6 +1,6 @@
 ---
 name: pharos-release-runner
-description: Run the standard Pharos release path when asked to commit in logical/thematic batches, run the merge or push gate, push main, or watch the production deployment. Use for release prep, final publish, deployment monitoring, and production handoff after local work is complete.
+description: Run the standard Pharos release path when asked to commit in logical/thematic batches, publish through the protected main pull-request gate, or watch the production deployment. Use for release prep, final publish, deployment monitoring, and production handoff after local work is complete.
 user_invocable: true
 ---
 
@@ -9,7 +9,7 @@ user_invocable: true
 Use this skill from the Pharos repository root when the user asks to:
 
 - commit pending work in logical or thematic batches
-- run the local merge/push gate
+- run an explicit local merge-gate rehearsal
 - publish through the protected `main` pull-request gate
 - watch GitHub Actions or Cloudflare deployment until it clears
 - take the local state to production
@@ -83,8 +83,8 @@ Run focused checks selected from the touched files. Use the local merge gate onl
 Useful controls:
 
 - `MERGE_GATE_DRY_RUN=1 npm run test:merge-gate` to inspect the planned commands.
-- An intentional manual `npm run test:merge-gate` writes a reusable receipt only when it validates a clean committed state. A subsequent matching push reuses that receipt instead of running the gate again.
-- `PHAROS_PRE_PUSH_GATE=main git push origin main` opts into the exact-range local merge gate before sending `main`.
+- An intentional manual `npm run test:merge-gate` writes a reusable receipt only when it validates a clean committed state. An explicitly gated matching branch push can reuse that receipt.
+- `PHAROS_PRE_PUSH_GATE=all git push -u origin <release-branch>` opts into the exact-range local gate for a release-branch push; normal branch pushes leave the heavy hook disabled.
 - `MERGE_GATE_PAGES_SMOKE=0 npm run test:merge-gate` only when the user explicitly asked to skip Pages smoke.
 - `MERGE_GATE_WORKER_SMOKE=1 npm run test:merge-gate` when worker smoke is needed before a risky worker release.
 - `npm run test:merge-gate:discover` for large failure-discovery passes only. It runs the deploy-impact plan diagnostically, skips advisory prebuild unless `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1` is set, skips smoke unless `MERGE_GATE_DISCOVERY_SMOKE=1` is set, caps default fan-out at 3, and does not create a release proof or receipt.
@@ -104,7 +104,7 @@ Wait for the required `PR gate` check, then merge through GitHub. Do not bypass 
 
 ### 5. Watch Deployment
 
-After push, watch the GitHub Actions run tied to the pushed SHA:
+After the protected PR is merged, watch the GitHub Actions run tied to the resulting `main` SHA:
 
 ```bash
 gh run list --repo TokenBrice/pharos-watch --branch main --limit 10

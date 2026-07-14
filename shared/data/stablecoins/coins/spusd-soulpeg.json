@@ -46,15 +46,6 @@
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
-  "reserves": [
-    {
-      "name": "USDC routed through Venus lending markets (via soul-bound sUSDC)",
-      "pct": 100,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

@@ -1,0 +1,81 @@
+{
+  "id": "dusd-dtrinity",
+  "reserves": [
+    {
+      "name": "Chain-isolated eligible stablecoin, yieldcoin, and AMO position basket",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "dTRINITY reserve vaults, Curve AMOs, and eligible reserve-asset issuers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "dTRINITY dUSD documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/dusd"
+      },
+      {
+        "label": "dTRINITY network support",
+        "url": "https://docs.dtrinity.org/key-concepts/network-support"
+      }
+    ],
+    "rationale": "dTRINITY documents chain-isolated reserves that may contain eligible stablecoins, yieldcoins, and Curve AMO positions, with governance able to change allocations over time. The documentation identifies accepted assets and reserve-vault architecture but does not publish a reconciled current balance sheet across deployments, so the prior static component percentages are replaced by one complete aggregate basket.",
+    "compositionBasis": "dTRINITY documented eligible-asset and chain-isolated reserve envelope; current balances are undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current deployment weights, reserve-asset balances, AMO allocations, and aggregate coverage reconciliation are not published in the reviewed documentation.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Chain-isolated eligible stablecoin, yieldcoin, and AMO position basket",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The protocol publishes eligible assets and vault addresses but not current per-asset or per-network reserve balances."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "dTRINITY chain-isolated collateral vaults",
+        "role": "other"
+      },
+      {
+        "name": "dTRINITY AMO vaults and Curve positions",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "dTRINITY dUSD documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/dusd"
+      },
+      {
+        "label": "dTRINITY security addresses",
+        "url": "https://docs.dtrinity.org/security/addresses"
+      }
+    ],
+    "uncertainty": "dTRINITY publishes per-network collateral-vault and AMO-vault addresses and states that reserves are isolated by chain. It also permits reserve deployment into productive assets and AMO positions, but the reviewed sources do not establish legal segregation, bankruptcy remoteness, current contract-level allocations, or a uniform collateral-reuse restriction.",
+    "knownUnknownExposurePct": 100
+  }
+}

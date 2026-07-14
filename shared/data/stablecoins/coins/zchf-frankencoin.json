@@ -19,13 +19,34 @@
   "geckoId": "frankencoin",
   "oracleRisk": {
     "tier": "oracleless-or-internal",
-    "summary": "Frankencoin collateral valuation is auction-driven, freeing liquidations from dependence on an external price oracle.",
-    "reviewedAt": "2026-06-12",
+    "summary": "Frankencoin positions use challenge auctions to determine collateral market price and liquidate unsuccessful positions, so the liquidation path does not depend on an external price oracle.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Frankencoin documents position liquidation through permissionless challenges and auctions. The auction determines the collateral market price and liquidates a position when the highest bid remains below its liquidation price, so there is no collateral-price oracle branch to enumerate.",
+      "sources": [
+        {
+          "label": "Frankencoin collateralized minting",
+          "url": "https://docs.frankencoin.com/positions"
+        },
+        {
+          "label": "Frankencoin challenges and auctions",
+          "url": "https://docs.frankencoin.com/positions/auctions"
+        },
+        {
+          "label": "Frankencoin position opening",
+          "url": "https://docs.frankencoin.com/positions/open"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Frankencoin auction docs",
+        "label": "Frankencoin challenges and auctions",
         "url": "https://docs.frankencoin.com/positions/auctions"
       }
     ]
@@ -328,43 +349,196 @@
   ],
   "reserves": [
     {
-      "name": "BOSS (Boss Info AG corporate equity)",
-      "pct": 33,
+      "name": "BOSS (Boss Info AG)",
+      "pct": 31.4771,
       "risk": "very-high"
     },
     {
-      "name": "Wrapped Bitcoin (WBTC, cbBTC)",
-      "pct": 37,
+      "name": "cbBTC (Coinbase Wrapped BTC)",
+      "pct": 18.7088,
       "risk": "medium"
     },
     {
-      "name": "ETH LSTs (wstETH, LsETH)",
-      "pct": 17,
-      "risk": "low"
+      "name": "WBTC (Wrapped BTC)",
+      "pct": 13.2005,
+      "risk": "medium"
     },
     {
-      "name": "SPYon (tokenized S&P 500 ETF)",
-      "pct": 7,
+      "name": "DQTS (Draggable quitt.shares)",
+      "pct": 8.7326,
       "risk": "high"
     },
     {
-      "name": "PAXG gold token",
-      "pct": 2,
-      "risk": "medium",
-      "coinId": "paxg-paxos"
+      "name": "LsETH (Liquid Staked ETH)",
+      "pct": 8.3462,
+      "risk": "low"
     },
     {
-      "name": "XAUt gold token",
-      "pct": 2,
+      "name": "wstETH (Wrapped liquid staked Ether 2.0)",
+      "pct": 6.9769,
+      "risk": "low"
+    },
+    {
+      "name": "SPYon (SPDR S&P 500 ETF (Ondo Tokenized))",
+      "pct": 6.6959,
+      "risk": "high"
+    },
+    {
+      "name": "XAUt (Tether Gold)",
+      "pct": 1.7051,
       "risk": "medium",
       "coinId": "xaut-tether"
     },
     {
-      "name": "Other (WETH, GNO, REALU, LENDS)",
-      "pct": 2,
+      "name": "PAXG (Paxos Gold)",
+      "pct": 1.4316,
+      "risk": "medium",
+      "coinId": "paxg-paxos"
+    },
+    {
+      "name": "WETH (Wrapped Ether)",
+      "pct": 1.2923,
+      "risk": "very-low"
+    },
+    {
+      "name": "GNO (Gnosis Token)",
+      "pct": 1.0527,
       "risk": "very-high"
+    },
+    {
+      "name": "REALU (RealUnit Shares)",
+      "pct": 0.1915,
+      "risk": "high"
+    },
+    {
+      "name": "LENDS (Switzerlend AG C1 Shares SHA)",
+      "pct": 0.1538,
+      "risk": "high"
+    },
+    {
+      "name": "CRV (Curve DAO Token)",
+      "pct": 0.02,
+      "risk": "very-high"
+    },
+    {
+      "name": "ysyBOLD (Staked yBOLD)",
+      "pct": 0.015,
+      "risk": "medium",
+      "coinId": "ybold-yearn",
+      "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frankencoin collateral positions API",
+        "url": "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+      },
+      {
+        "label": "Frankencoin collateral price mapping",
+        "url": "https://api.frankencoin.com/prices/mapping"
+      },
+      {
+        "label": "Frankencoin collateralized minting documentation",
+        "url": "https://docs.frankencoin.com/positions"
+      }
+    ],
+    "rationale": "Each weight is the current USD value of collateral in open, non-denied Frankencoin positions divided by total active collateral value. PAXG, XAUt, and ysyBOLD are exact tracked upstreams; ysyBOLD is a direct staked claim on tracked yBOLD, while all remaining slices are identified non-stablecoin collateral and do not create stablecoin graph edges.",
+    "compositionBasis": "Latest active collateral balances from Frankencoin's positions API valued by its price-mapping API",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All active collateral assets with positive balances and available prices are identified.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BOSS (Boss Info AG)",
+        "pct": 31.4771,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "BOSS is corporate-equity collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "cbBTC (Coinbase Wrapped BTC)",
+        "pct": 18.7088,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "cbBTC is Bitcoin collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "WBTC (Wrapped BTC)",
+        "pct": 13.2005,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WBTC is Bitcoin collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "DQTS (Draggable quitt.shares)",
+        "pct": 8.7326,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "DQTS is tokenized equity collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "LsETH (Liquid Staked ETH)",
+        "pct": 8.3462,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "LsETH is liquid-staking collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "wstETH (Wrapped liquid staked Ether 2.0)",
+        "pct": 6.9769,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "wstETH is liquid-staking collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "SPYon (SPDR S&P 500 ETF (Ondo Tokenized))",
+        "pct": 6.6959,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "SPYon is tokenized equity-index collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 9,
+        "reserveName": "WETH (Wrapped Ether)",
+        "pct": 1.2923,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WETH is native-asset collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 10,
+        "reserveName": "GNO (Gnosis Token)",
+        "pct": 1.0527,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "GNO is governance-token collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 11,
+        "reserveName": "REALU (RealUnit Shares)",
+        "pct": 0.1915,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "REALU is tokenized equity collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 12,
+        "reserveName": "LENDS (Switzerlend AG C1 Shares SHA)",
+        "pct": 0.1538,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "LENDS is tokenized equity collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 13,
+        "reserveName": "CRV (Curve DAO Token)",
+        "pct": 0.02,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "CRV is governance-token collateral, not a stablecoin dependency."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "collateral-positions-api",
     "version": 2,
@@ -385,7 +559,7 @@
     },
     "params": {
       "pricesUrl": "https://api.frankencoin.com/prices/mapping",
-      "otherThresholdPct": 2,
+      "otherThresholdPct": 0.001,
       "redemptionBridge": {
         "chain": "ethereum",
         "rpcMode": "public-rpc",

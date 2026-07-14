@@ -1,0 +1,62 @@
+{
+  "id": "tryb-bilira",
+  "reserves": [
+    {
+      "name": "TRY cash reserves",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "BiLira",
+      "riskFactors": ["counterparty", "custody", "liquidity", "legal"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BiLira TRYB stablecoin disclosure",
+        "url": "https://www.bilira.co/en/product/tryb-stablecoin"
+      },
+      {
+        "label": "BiLira audit reports",
+        "url": "https://www.bilira.co/en/audit-reports"
+      }
+    ],
+    "rationale": "BiLira states that a customer deposits Turkish lira to an affiliated bank account and BiLira mints an equivalent amount of TRYB. Its current disclosure states that TRYB is redeemable 1:1 for Turkish lira and that reserves are held in Turkish bank accounts; the issuer publishes recurring reports. The reviewed sources support a complete fiat-bank-reserve category but not a bank-by-bank allocation.",
+    "compositionBasis": "BiLira issuer disclosure of 1:1 Turkish-lira reserves held in Turkish bank accounts",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete reserve category is disclosed as Turkish-lira bank reserves, but the reviewed sources do not name each reserve bank or publish its share.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Turkish bank accounts (not publicly named)",
+        "role": "bank",
+        "jurisdiction": "Turkey"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "BiLira TRYB stablecoin disclosure",
+        "url": "https://www.bilira.co/en/product/tryb-stablecoin"
+      },
+      {
+        "label": "BiLira audit reports",
+        "url": "https://www.bilira.co/en/audit-reports"
+      }
+    ],
+    "uncertainty": "BiLira confirms Turkish bank-account reserves and recurring audit reports but does not publish provider names, account segregation, insolvency treatment, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

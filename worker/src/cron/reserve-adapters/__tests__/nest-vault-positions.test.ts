@@ -70,7 +70,7 @@ describe("fetchNestVaultPositionsReserves", () => {
       { name: "Liquid USDC balances", pct: 10, risk: "low", coinId: "usdc-circle" },
       { name: "Janus Henderson Anemoy Treasury Fund (JTRSY)", pct: 10, risk: "very-low", coinId: "jtrsy-anemoy" },
       { name: "Liquid USDT balances", pct: 5, risk: "low", coinId: "usdt-tether" },
-      { name: "pUSD liquid balance", pct: 2.5, risk: "high" },
+      { name: "pUSD liquid balance", pct: 2.5, risk: "high", coinId: "pusd-plume" },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",

@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mento reserve holding AUSD (~41%), CELO (~30%), USDC (~14%), axlEUROC (~8%), USDT (~6%), and smaller EURC/axlUSDC balances; reserve composition is pulled from the live Mento reserve API and changes over time.",
+  "collateral": "Mento reserve holding AUSD, sUSDS, CELO, USDT, EURC, USDC, and stETH; reserve composition is pulled from the live Mento reserve API and changes over time.",
   "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",
   "llamaId": "24",
   "detailProvider": "defillama",
@@ -222,44 +222,111 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
-      "name": "AUSD reserve holdings",
-      "pct": 41.3,
+      "name": "AUSD (Agora Dollar)",
+      "pct": 27,
       "risk": "low",
       "coinId": "ausd-agora",
-      "depType": "collateral"
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Agora Finance",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     },
     {
-      "name": "CELO reserve holdings",
-      "pct": 30.4,
-      "risk": "high"
-    },
-    {
-      "name": "USDC reserve holdings",
-      "pct": 13.8,
+      "name": "sUSDS (Sky savings USDS)",
+      "pct": 24.2,
       "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
+      "coinId": "susds-sky",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky Protocol",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     },
     {
-      "name": "axlEUROC reserve holdings",
-      "pct": 7.8,
-      "risk": "medium"
+      "name": "CELO",
+      "pct": 17.6,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Celo Network",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
     },
     {
-      "name": "USDT reserve holdings",
-      "pct": 6.1,
+      "name": "USDT",
+      "pct": 13,
       "risk": "low",
       "coinId": "usdt-tether",
-      "depType": "collateral"
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether",
+      "riskFactors": ["counterparty", "custody", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
     },
     {
-      "name": "EURC and other reserve dust",
-      "pct": 0.6,
+      "name": "EURC (Circle euro stablecoin)",
+      "pct": 11.9,
       "risk": "low",
       "coinId": "eurc-circle",
-      "depType": "collateral"
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": ["counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDC",
+      "pct": 4,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": ["counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "stETH (Lido staked ETH)",
+      "pct": 2.3,
+      "risk": "low",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Lido DAO",
+      "riskFactors": ["market", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento reserve documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+      }
+    ],
+    "rationale": "Weights are the current USD-value percentages published by Mento's official reserve API, with chain variants consolidated by the reviewed live adapter. AUSD, sUSDS, USDT, EURC, and USDC are exact tracked reserve dependencies; CELO and stETH are identified exogenous collateral.",
+    "compositionBasis": "Current Mento reserve asset USD values, consolidated by canonical asset through the reviewed Mento adapter",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All reserve API asset rows are identified and mapped or explicitly dispositioned.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "CELO",
+        "pct": 17.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "CELO is native crypto collateral rather than a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "stETH (Lido staked ETH)",
+        "pct": 2.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "stETH is liquid-staking collateral rather than a stablecoin dependency."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,

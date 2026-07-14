@@ -20,18 +20,114 @@
   "pythFeedId": "0x77f0971af11cc8bac224917275c1bf55f2319ed5c654a1ca955c82fa2d297ea1",
   "oracleRisk": {
     "tier": "medianized-with-delay",
-    "summary": "Sky/Maker collateral prices use whitelisted feed medianizers and Oracle Security Module delays before prices reach the core accounting system; governance can still alter oracle authorization and parameters.",
-    "reviewedAt": "2026-06-12",
+    "summary": "Sky Vault collateral prices use whitelisted feed medianizers and per-ilk Oracle Security Modules before Spot writes safety-adjusted values into the core accounting system.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "USDS shares DAI's issuance source, and the common Sky Vault engine has separately governed collateral ilks with per-ilk oracle, liquidation-ratio, auction, and debt-ceiling parameters. Those oracle-dependent ilks share one documented Median/OSM/Spot and Dog/Clipper/Vow mechanism branch; fixed-price conversion and balance-sheet allocation routes are not collateral-liquidation branches.",
+      "sources": [
+        {
+          "label": "Sky protocol token routes",
+          "url": "https://developers.skyeco.com/quick-start/protocol-token-routes/"
+        },
+        {
+          "label": "Sky Spot documentation",
+          "url": "https://developers.skyeco.com/protocol/core/spot/"
+        },
+        {
+          "label": "Sky collateral liquidation documentation",
+          "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Maker Oracle Module docs",
-        "url": "https://docs.makerdao.com/smart-contract-modules/oracle-module"
+        "label": "Sky OSM documentation",
+        "url": "https://developers.skyeco.com/protocol/core/osm/"
       },
       {
-        "label": "Sky governance upgrade key information",
-        "url": "https://developers.skyeco.com/guides/sky/token-governance-upgrade/key-info/"
+        "label": "Sky Spot documentation",
+        "url": "https://developers.skyeco.com/protocol/core/spot/"
+      },
+      {
+        "label": "Sky collateral liquidation documentation",
+        "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/"
+      },
+      {
+        "label": "Sky Vow documentation",
+        "url": "https://developers.skyeco.com/protocol/core/vow/"
+      }
+    ],
+    "branches": [
+      {
+        "id": "sky-vault-ilks",
+        "label": "Sky governed Vault collateral ilks",
+        "tier": "medianized-with-delay",
+        "summary": "Oracle-dependent Sky collateral ilks share the Median-to-OSM-to-Spot price path and use per-ilk Dog/Clipper liquidation parameters.",
+        "collateralAssets": [
+          "Governance-approved Vault collateral ilks"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Sky whitelisted oracle set",
+            "path": "Per-ilk signed observations -> Median -> OSM -> Spot -> Vat",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "failureDomainKeys": [
+              "sky-oracle-signers",
+              "sky-governance",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Each per-ilk OSM retains a delayed current value and queues the next value; if its peek is invalid or Spot is not poked, the Vat keeps the prior safety price and can become stale rather than accepting a fresh invalid value.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Governance-approved Vault collateral ilks",
+            "note": "Each ilk has its own Spot liquidation ratio, Vat debt ceiling and floor, Dog liquidation penalty and capacity, and dedicated Clipper auction contract; governance can change these parameters."
+          }
+        ],
+        "liquidationMechanism": "When a Vault becomes unsafe under its ilk's safety-adjusted Spot value, Dog.bark confiscates the position, assigns its debt to Vow, and promptly starts that ilk's Clipper Dutch auction; auction price decreases over time and can be reset under per-ilk parameters.",
+        "liquidationDelaySec": 0,
+        "backstop": "Collateral-auction proceeds cancel the seized debt; residual system debt is recorded in Vow, can first be netted against protocol surplus, and can become eligible for the documented governance-token debt-auction mechanism after the debt-queue delay.",
+        "shutdownOrBadDebtBehavior": "Uncovered liquidation debt remains in Vow's debt queue and can mature into debt-auction-eligible bad debt. Sky's archived End documentation describes system caging and collateral settlement but marks End deprecated, so this profile does not treat emergency shutdown as a currently active guarantee.",
+        "failureDomainKeys": [
+          "sky-oracle-signers",
+          "sky-governance",
+          "sky-auction-keepers",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Sky OSM documentation",
+            "url": "https://developers.skyeco.com/protocol/core/osm/"
+          },
+          {
+            "label": "Sky Spot documentation",
+            "url": "https://developers.skyeco.com/protocol/core/spot/"
+          },
+          {
+            "label": "Sky collateral liquidation documentation",
+            "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/"
+          },
+          {
+            "label": "Sky Vow documentation",
+            "url": "https://developers.skyeco.com/protocol/core/vow/"
+          },
+          {
+            "label": "Sky archived End documentation",
+            "url": "https://developers.skyeco.com/archive/shutdown/shutdown/"
+          }
+        ]
       }
     ]
   },
@@ -154,6 +250,37 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "USDS ERC-20 supply is minted through USDS_JOIN against Vat.dai balances, while Sky governance/Pause Proxy remains authorized to change system modules, parameters, and USDS permissions.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xdC035D45d973E3EC169d2276DDab16f1e407384F"
+      ],
+      "implementationAddresses": [
+        "0x1923DfeE706A8E78157416C29cBCCFDe7cdF4102"
+      ],
+      "adminAddresses": [
+        "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Sky Pause Proxy governance executor",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530195,
+      "sources": [
+        {
+          "label": "Sky USDS UUPS implementation source",
+          "url": "https://github.com/sky-ecosystem/usds/blob/d65551dbc11cfe1afcc4718ab790663b99d766af/src/Usds.sol"
+        },
+        {
+          "label": "USDS Ethereum verified proxy",
+          "url": "https://etherscan.io/address/0xdc035d45d973e3ec169d2276ddab16f1e407384f#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -228,11 +355,27 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Sky documents a USDS Ethereum-Solana LayerZero bridge replacing the deprecated Wormhole bridge. Because the active cross-chain transfer path is a LayerZero/OFT-style route, Pharos reviews USDS as external lock/mint bridge exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "USDS is native on Ethereum. SkyLink uses governance-controlled token gateways over the canonical Arbitrum and OP-stack messaging systems for Arbitrum, Base, OP Mainnet, and Unichain, while the Solana representation uses a LayerZero OFT lock/mint route.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 bridge review",
     "confidence": "verified",
     "protocols": [
+      {
+        "source": "docs",
+        "name": "SkyLink Arbitrum Token Bridge",
+        "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "SkyLink OP Token Bridge",
+        "url": "https://github.com/sky-ecosystem/op-token-bridge",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
       {
         "source": "l2beat",
         "name": "LayerZero",
@@ -254,6 +397,22 @@
       {
         "label": "LayerZero on L2BEAT",
         "url": "https://l2beat.com/interop/protocols/layerzero"
+      },
+      {
+        "label": "Sky governance Arbitrum bridge initialization",
+        "url": "https://vote.makerdao.com/executive/template-executive-vote-rate-adjustments-arbitrum-token-bridge-initialization-smart-burn-engine-liquidity-unwind-smart-burn-engine-parameter-changes-allocator-spark-a-dc-iam-parameter-changes-standby-spell-changes-in-the-chainlog-aligned-delegate-compensation-atlas-core-development-payments-integration-boost-funding-spark-proxy-spell-february-21-2025"
+      },
+      {
+        "label": "SkyLink Base bridge guide",
+        "url": "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/"
+      },
+      {
+        "label": "Sky governance OP Mainnet bridge review",
+        "url": "https://vote.makerdao.com/polling/QmNe8Erm"
+      },
+      {
+        "label": "Sky governance Unichain bridge review",
+        "url": "https://vote.makerdao.com/polling/QmXjeJtw"
       }
     ],
     "routes": [
@@ -288,33 +447,67 @@
       },
       {
         "id": "arbitrum:0x6491c05a82219b8d1479057361ff1654749b876b",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x6491c05a82219b8d1479057361ff1654749b876b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "SkyLink Arbitrum Token Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x13f7f24ca959359a4d710d32c715d4bce273c793",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x13f7f24ca959359a4d710d32c715d4bce273c793"
+        ],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Sky governance Arbitrum bridge initialization",
+            "url": "https://vote.makerdao.com/executive/template-executive-vote-rate-adjustments-arbitrum-token-bridge-initialization-smart-burn-engine-liquidity-unwind-smart-burn-engine-parameter-changes-allocator-spark-a-dc-iam-parameter-changes-standby-spell-changes-in-the-chainlog-aligned-delegate-compensation-atlas-core-development-payments-integration-boost-funding-spark-proxy-spell-february-21-2025"
+          },
+          {
+            "label": "SkyLink Arbitrum Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge"
+          }
+        ]
       },
       {
         "id": "base:0x820c137fa70c8691f0e44dc420a5e53c168921dc",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x820c137fa70c8691f0e44dc420a5e53c168921dc",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "SkyLink OP Token Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7"
+        ],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "SkyLink Base bridge guide",
+            "url": "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/"
+          },
+          {
+            "label": "Sky governance Base bridge initialization",
+            "url": "https://vote.makerdao.com/executive/template-executive-vote-base-network-skylink-bridge-initialization-for-usds-and-susds-star-allocation-system-initialization-for-spark-add-new-validators-to-medianizer-october-31-2024"
+          }
+        ]
       },
       {
         "id": "solana:USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA",
@@ -328,6 +521,12 @@
         "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "peripheral",
+        "controllerChain": "solana",
+        "controllerAddress": "BEvTHkTyXooyaJzP8egDUC7WQK8cyRrq5WvERZNWhuah",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:solana:BEvTHkTyXooyaJzP8egDUC7WQK8cyRrq5WvERZNWhuah"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13",
@@ -348,33 +547,67 @@
       },
       {
         "id": "optimism:0x4f13a96ec5c4cf34e442b46bbd98a0791f20edc3",
+        "sourceChain": "ethereum",
         "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4f13a96ec5c4cf34e442b46bbd98a0791f20edc3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "SkyLink OP Token Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6"
+        ],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Sky governance OP Mainnet bridge review",
+            "url": "https://vote.makerdao.com/polling/QmNe8Erm"
+          },
+          {
+            "label": "SkyLink OP Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/op-token-bridge"
+          }
+        ]
       },
       {
         "id": "unichain:0x7e10036acc4b56d4dfca3b77810356ce52313f9c",
+        "sourceChain": "ethereum",
         "destinationChain": "unichain",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x7e10036acc4b56d4dfca3b77810356ce52313f9c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "SkyLink OP Token Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "unichain",
+        "controllerAddress": "0xa13152006d0216fe4627a0d3b006087a6a55d752",
+        "failureDomainKeys": [
+          "protocol:unichain-canonical-messaging",
+          "contract:unichain:0xa13152006d0216fe4627a0d3b006087a6a55d752"
+        ],
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Sky governance Unichain bridge review",
+            "url": "https://vote.makerdao.com/polling/QmXjeJtw"
+          },
+          {
+            "label": "SkyLink OP Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/op-token-bridge"
+          }
+        ]
       }
     ]
   },

@@ -17,6 +17,40 @@
   "llamaId": "66",
   "detailProvider": "defillama",
   "geckoId": "frax-price-index",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "FPI's redemption target uses a specialized Chainlink oracle that commits the monthly CPI-U rate, but FPI is minted and redeemed through the FRAX-backed Controller Pool and stabilized through AMOs rather than borrower positions subject to collateral-price liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Frax documents FPI as a 100%-collateral-ratio protocol balance sheet: users mint or redeem FPI for Legacy Frax Dollar through the Controller Pool, AMOs deploy the collateral, and FPIS sales replenish backing when yield trails CPI. It does not document borrower-specific debt positions, collateral health ratios, or oracle-triggered collateral liquidations, so liquidation branches are not applicable.",
+      "sources": [
+        {
+          "label": "Frax FPI overview",
+          "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+        },
+        {
+          "label": "Frax FPI Controller Pool",
+          "url": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax FPI overview",
+        "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+      },
+      {
+        "label": "Frax FPI Controller Pool",
+        "url": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -57,7 +91,54 @@
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "FPI mint/admin authority is Frax-governed; the FPI Controller Pool is owned by a 3/5 Frax Comptroller Safe.",
+    "summary": "FPI has two live uncapped minters: the Controller Pool and an upgradeable OFT mintable adapter. A 3/5 Frax Comptroller Safe can replace FPI minters immediately, while a separate 4/7 Safe can upgrade the adapter through a one-day timelock and ProxyAdmin.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x9033bAd7aA130a2466060a2da71fAE2219781B4B"
+      ],
+      "implementationAddresses": [
+        "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
+        "0x2063961F26019B588F48007D1CC43770e8B7383C"
+      ],
+      "adminAddresses": [
+        "0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502",
+        "0x8412EBf45bAC1B340BbE8F318b928C466c4E39CA",
+        "0x223a681fC5c5522c85c96157c0EFa18cd6C5405C",
+        "0xb898Ad2976b4d8f2E21521C9db16b7497825E503",
+        "0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "FPI OFT adapter upgrade Safe through one-day timelock",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25531776,
+      "sources": [
+        {
+          "label": "FPI token verified source",
+          "url": "https://eth.blockscout.com/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?tab=contract"
+        },
+        {
+          "label": "FPI OFT mintable adapter proxy",
+          "url": "https://eth.blockscout.com/address/0x9033bAd7aA130a2466060a2da71fAE2219781B4B?tab=contract"
+        },
+        {
+          "label": "FPI OFT adapter implementation",
+          "url": "https://eth.blockscout.com/address/0x2063961F26019B588F48007D1CC43770e8B7383C?tab=contract"
+        },
+        {
+          "label": "FPI OFT adapter ProxyAdmin",
+          "url": "https://eth.blockscout.com/address/0x223a681fC5c5522c85c96157c0EFa18cd6C5405C?tab=contract"
+        },
+        {
+          "label": "FPI OFT adapter one-day timelock",
+          "url": "https://eth.blockscout.com/address/0xb898Ad2976b4d8f2E21521C9db16b7497825E503?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -117,10 +198,98 @@
           }
         ],
         "evidence": "Phase 0c Safe verification refreshed current state: 3/5 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294518."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9033bAd7aA130a2466060a2da71fAE2219781B4B",
+        "label": "FPI OFT mintable adapter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "capDescription": "FPI minter_mint(address,uint256) and the adapter implementation's _credit path have no numeric mint cap.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531776,
+        "evidence": "At Ethereum block 25531776, FPI minters(0x9033bAd7...) returned true. The adapter proxy resolved to FraxOFTMintableAdapterUpgradeable 0x2063961F..., whose verified _credit implementation calls FPI minter_mint(_to,_amountLD) without a numeric cap. The adapter token() returned FPI and approvalRequired() returned true.",
+        "sources": [
+          {
+            "label": "FPI token verified source",
+            "url": "https://eth.blockscout.com/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?tab=contract"
+          },
+          {
+            "label": "FPI OFT mintable adapter proxy",
+            "url": "https://eth.blockscout.com/address/0x9033bAd7aA130a2466060a2da71fAE2219781B4B?tab=contract"
+          },
+          {
+            "label": "FPI OFT adapter implementation",
+            "url": "https://eth.blockscout.com/address/0x2063961F26019B588F48007D1CC43770e8B7383C?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937",
+        "label": "FPI OFT adapter upgrade Safe through one-day timelock",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 4,
+        "signerCount": 7,
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531776,
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
+            "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+            "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2",
+            "0xDf41722D7b1355dB08D4e7D0528fE9c82377Bb37",
+            "0xC6EF452b0de9E95Ccb153c2A5A7a90154aab3419"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
+          "observedBlock": 25531776,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25531776, adapter EIP-1967 slots resolved to implementation 0x2063961F... and ProxyAdmin 0x223a681f.... ProxyAdmin.owner() returned legacy Frax Timelock 0xb898Ad2976b4d8f2E21521C9db16b7497825E503; delay() returned 86400 and admin() returned this 4/7 Safe. The Safe had no enabled modules and a zero guard. This path can replace the adapter's uncapped _credit mint logic after one day.",
+        "sources": [
+          {
+            "label": "FPI OFT adapter ProxyAdmin",
+            "url": "https://eth.blockscout.com/address/0x223a681fC5c5522c85c96157c0EFa18cd6C5405C?tab=contract"
+          },
+          {
+            "label": "FPI OFT adapter one-day timelock",
+            "url": "https://eth.blockscout.com/address/0xb898Ad2976b4d8f2E21521C9db16b7497825E503?tab=contract"
+          },
+          {
+            "label": "FPI OFT adapter upgrade Safe",
+            "url": "https://eth.blockscout.com/address/0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
       }
     ],
     "review": {
       "sources": [
+        {
+          "label": "FPI token verified source",
+          "url": "https://eth.blockscout.com/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?tab=contract"
+        },
         {
           "label": "Frax AMO docs",
           "url": "https://docs.frax.finance/amo/overview"
@@ -128,11 +297,19 @@
         {
           "label": "Safe Transaction Service",
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502/"
+        },
+        {
+          "label": "FPI OFT adapter implementation",
+          "url": "https://eth.blockscout.com/address/0x2063961F26019B588F48007D1CC43770e8B7383C?tab=contract"
+        },
+        {
+          "label": "FPI OFT adapter one-day timelock",
+          "url": "https://eth.blockscout.com/address/0xb898Ad2976b4d8f2E21521C9db16b7497825E503?tab=contract"
         }
       ],
-      "evidence": "Phase 0c refreshed FPI Controller Pool owner() and FPI Comptroller Safe state at Ethereum block 25294518; the controller owner resolves to the 3/5 FPI Safe with no enabled modules or guard.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25531776, FPI minters(0x9033bAd7...) returned true. The live adapter proxy resolved to FraxOFTMintableAdapterUpgradeable 0x2063961F..., whose verified _credit calls uncapped FPI minter_mint. Its EIP-1967 admin was ProxyAdmin 0x223a681f..., whose owner was the 86400-second Timelock 0xb898Ad2976b4d8f2E21521C9db16b7497825E503, administered by the 4/7 Safe 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937. Separately, FPI owner 3/5 Safe 0x6A7efa96... can immediately add or remove uncapped minters. The previous abbreviated timelock address did not identify the live owner contract and has been replaced with the exact RPC-returned address.",
+      "reviewer": "owner-triage",
+      "reviewedAt": "2026-07-14"
     }
   },
   "bridgeRouteRisk": {

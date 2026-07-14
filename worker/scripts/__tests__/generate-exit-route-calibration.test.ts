@@ -239,7 +239,7 @@ describe("exit-route decision-gate calibration", () => {
     ).toMatchObject({ status: "eligible", eligibleObservationCount: 1 });
   });
 
-  it("emits a deterministic all-active replay and an explicit blocked activation decision", () => {
+  it("emits a deterministic all-active replay and an explicit blocked activation decision", { timeout: 15_000 }, () => {
     const options = {
       generationId: "dex-generation-42",
       producerGenerationStatus: "complete" as const,

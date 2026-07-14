@@ -1,0 +1,66 @@
+{
+  "id": "gusd-gemini",
+  "reserves": [
+    {
+      "name": "USD cash deposits",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "State Street Bank and Trust Company and Western Alliance Bank",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SOL-8 Safety Score V9 blocker challenge",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Gemini Dollar reserve and attestation disclosures",
+        "url": "https://www.gemini.com/dollar"
+      },
+      {
+        "label": "BPM GUSD reserves examination - May 2026",
+        "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf"
+      }
+    ],
+    "rationale": "The May 29, 2026 BPM examination reports the reserve holdings as cash deposits at State Street and Western Alliance Bank. A separate net cash payable from timing and settlement differences reconciles the gross deposits to circulating GUSD and is not treated as a reserve asset slice.",
+    "compositionBasis": "May 29, 2026 BPM independent examination",
+    "compositionAsOf": "2026-05-29",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The examination discloses the complete reserve asset class and names both banks, but does not disclose the allocation between them.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "State Street Bank and Trust Company",
+        "role": "bank",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Western Alliance Bank",
+        "role": "bank",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SOL-8 Safety Score V9 blocker challenge",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Gemini Dollar reserve and custody disclosures",
+        "url": "https://www.gemini.com/dollar"
+      },
+      {
+        "label": "BPM GUSD reserves examination - May 2026",
+        "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf"
+      }
+    ],
+    "uncertainty": "The May 2026 examination names State Street and Western Alliance Bank as the current reserve banks but does not disclose provider shares, establish statutory bankruptcy remoteness, or state rehypothecation terms."
+  }
+}

@@ -104,6 +104,27 @@ function buildOutputReview(
         ...shared,
       };
     }
+  } else if (output.kind === "tracked-stablecoin" && assetKeys.length > 1) {
+    // A resolved stable basket values at the weakest component's observed
+    // price — conservative without claiming basket weights. Every component
+    // must carry a peg row; a partially-priced basket stays unresolved.
+    const components = assetKeys.map((assetKey) => ({
+      assetKey,
+      tracked: trackedStablecoinValuation(fixedInput, assetKey, observedAtSec),
+    }));
+    if (components.every((component) => component.tracked !== null)) {
+      const weakest = components.reduce((minimum, component) =>
+        component.tracked!.unitValueUsd < minimum.tracked!.unitValueUsd ? component : minimum,
+      );
+      valuation = {
+        basis: "price",
+        referenceAssetKey: weakest.assetKey,
+        sourceId: "report-cards-peg-summary",
+        ...weakest.tracked!,
+        confidence: "medium",
+        ...shared,
+      };
+    }
   } else if (output.kind === "collateral") {
     // The producer already values executable notional in USD at observation
     // time, so the collateral leg is USD-normalized with medium confidence.

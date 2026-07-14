@@ -157,6 +157,97 @@ describe("P4 DEX exit route observations", () => {
     expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(false);
   });
 
+  it("scores exact Curve stableswap pools through the invariant simulation", () => {
+    const stableswapPool = (amplification: number, balances: [number, number]) => ({
+      poolId: `ethereum:0x00000000000000000000000000000000000000a${amplification}`,
+      project: "curve",
+      chain: "ethereum",
+      tvlUsd: balances[0] + balances[1],
+      symbol: "USDC / USDT",
+      poolType: "curve-stableswap",
+      source: "direct_api" as const,
+      extra: {
+        ammExecutionModel: {
+          source: "curve" as const,
+          invariant: "stableswap" as const,
+          trackedTokenIndex: 0,
+          feeRate: 0.0004,
+          amplification,
+          tokens: [
+            {
+              address: "0x0000000000000000000000000000000000000021",
+              symbol: "USDC",
+              decimals: 6,
+              balance: balances[0],
+              referencePriceUsd: 1,
+              referencePriceSource: "tracked-market" as const,
+              trackedAssetId: "usdc-circle",
+            },
+            {
+              address: "0x0000000000000000000000000000000000000022",
+              symbol: "USDT",
+              decimals: 6,
+              balance: balances[1],
+              referencePriceUsd: 1,
+              referencePriceSource: "tracked-market" as const,
+              trackedAssetId: "usdt-tether",
+            },
+          ],
+        },
+      },
+    });
+
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [stableswapPool(200, [5_000_000, 5_000_000])],
+    });
+    expect(result.coverage).toMatchObject({
+      retainedPoolCount: 1,
+      scoreEligiblePoolCount: 1,
+      unsupportedPoolCount: 0,
+      evidenceCounts: { "reserve-based-amm-simulation": 1 },
+    });
+    expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(true);
+    const observation = result.observations[0]!;
+    expect(observation).toMatchObject({
+      scoreEligible: true,
+      confidence: "high",
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+    });
+    expect(validateExitRouteCapacityCurve(observation.capacityCurve!)).toEqual([]);
+    // A high-A balanced stable pool fills a request near half its depth
+    // within the 200 bps bound — far above what constant-product math with
+    // the same balances would allow.
+    const point = observation.capacityCurve!.find((entry) => entry.requestedNotionalUsd === 1_000_000)!;
+    expect(point.completionRatio).toBe(1);
+
+    // Amplification monotonicity: a flatter curve (higher A) executes at
+    // least as much as a lower-A pool with identical balances.
+    const capacityAt = (amplification: number) =>
+      buildP4DexExitRouteObservations({
+        stablecoinId: "usdc-circle",
+        observedAt: 1_720_000_000,
+        retainedPools: [stableswapPool(amplification, [5_000_000, 5_000_000])],
+      }).observations[0]!.capacityCurve!.reduce((total, entry) => total + entry.executableUsd, 0);
+    expect(capacityAt(1000)).toBeGreaterThanOrEqual(capacityAt(200));
+    expect(capacityAt(200)).toBeGreaterThan(capacityAt(5));
+
+    // A pool drained on the output side executes less than a balanced one.
+    const drained = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [stableswapPool(200, [9_000_000, 1_000_000])],
+    }).observations[0]!.capacityCurve!;
+    const balanced = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [stableswapPool(200, [5_000_000, 5_000_000])],
+    }).observations[0]!.capacityCurve!;
+    const totalOf = (curve: typeof drained) => curve.reduce((total, entry) => total + entry.executableUsd, 0);
+    expect(totalOf(drained)).toBeLessThan(totalOf(balanced));
+  });
+
   it("reports shaped Curve evidence as non-executable instead of inferring depth from TVL", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",

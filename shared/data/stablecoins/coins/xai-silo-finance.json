@@ -71,6 +71,22 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "XAI is a governed CDP/protocol asset; Ethereum token ownership resolves to a 3/4 Safe with privileged mint/admin authority.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530971,
+      "sources": [
+        {
+          "label": "XAI verified token source",
+          "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -119,8 +135,8 @@
         }
       ],
       "evidence": "At Ethereum block 25296185, owner() on XAI token returned 0xE8e8041cB5E3158A0829A19E014CA1cf91098554. Safe API returned threshold 3, 4 owners (0xe153437b, 0x1fF60e85, 0x66B416a3, 0x22FF5BCE), no modules, no guard, fallbackHandler 0xf48f2B2d, masterCopy 0xd9Db270c (v1.3.0). Full safe snapshot populated from Safe API.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Codex CTRL batch 17",
+      "reviewedAt": "2026-07-14"
     }
   },
   "chainTier": "ethereum",

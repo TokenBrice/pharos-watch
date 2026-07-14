@@ -1,0 +1,66 @@
+{
+  "id": "bbqusdc-steakhouse",
+  "reserves": [
+    {
+      "name": "USDC supplied through Smokehouse-curated Morpho lending markets",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Morpho Blue borrowers and Circle USDC",
+      "riskFactors": ["credit", "counterparty", "liquidity", "smart-contract", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho Smokehouse USDC vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xBEeFFF209270748ddd194831b3fa287a5386f5bC"
+      },
+      {
+        "label": "Morpho Vaults V1 overview",
+        "url": "https://legacy.docs.morpho.org/morpho-vaults/concepts/overview"
+      }
+    ],
+    "rationale": "The official Morpho vault page identifies USDC as the Smokehouse vault asset and Steakhouse Financial as curator. Morpho documents that a V1 vault has one loan asset and allocates deposits across multiple Morpho markets. The full reserve therefore remains a linked USDC wrapper position, while its high risk reflects the vault's broad collateral set and lending-market loss and liquidity exposure.",
+    "compositionBasis": "Current Morpho Smokehouse USDC vault asset and documented V1 allocation model",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The entire reserve relationship is classified as USDC deployed through Morpho; borrower-collateral allocations change onchain but do not change the underlying reserve token relationship.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Smokehouse USDC MetaMorpho vault and Morpho Blue market contracts",
+        "role": "other"
+      },
+      {
+        "name": "Steakhouse Financial",
+        "role": "other"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho Smokehouse USDC vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xBEeFFF209270748ddd194831b3fa287a5386f5bC"
+      },
+      {
+        "label": "Morpho Vaults V1 overview",
+        "url": "https://legacy.docs.morpho.org/morpho-vaults/concepts/overview"
+      }
+    ],
+    "uncertainty": "Assets are held by identifiable noncustodial vault and market contracts, with idle and market allocations changing over time. Reuse is explicit because USDC is supplied to borrower markets. Contract-level isolation does not establish legal bankruptcy remoteness, and no static provider allocation is appropriate."
+  }
+}

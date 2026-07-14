@@ -1,0 +1,65 @@
+{
+  "id": "a7a5-old-vector",
+  "reserves": [
+    {
+      "name": "Russian-ruble reserve basket (deposits and short-term assets; allocation undisclosed)",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed reserve banks and short-term asset issuers",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "A7A5 reserve transparency documentation",
+        "url": "https://docs.a7a5.io/legal/transparency.md"
+      },
+      {
+        "label": "A7A5 terms of use",
+        "url": "https://docs.a7a5.io/legal/terms-of-use.md"
+      }
+    ],
+    "rationale": "A7A5's transparency page describes one-for-one backing by Russian-ruble deposits, while section 4.3 of its terms describes a diversified basket of fiat deposits and short-term assets. The issuer does not reconcile those descriptions or publish current constituent weights, institutions, account terms, or a retrievable assurance artifact, so the complete reserve is represented as one unresolved aggregate.",
+    "compositionBasis": "Conflicting current issuer descriptions of the eligible Russian-ruble reserve envelope",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Reserve-bank identities, deposit and short-term-asset weights, instrument identities, account terms, custody, liquidity, and current assurance evidence are undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Russian-ruble reserve basket (deposits and short-term assets; allocation undisclosed)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer sources identify deposits and short-term assets but do not publish a current constituent split or instrument-level reserve schedule."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed reserve banks and asset custodians",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "A7A5 terms of use",
+        "url": "https://docs.a7a5.io/legal/terms-of-use.md"
+      }
+    ],
+    "uncertainty": "A7A5 refers to deposits and short-term assets but does not identify the institutions, asset custodians, jurisdictions, provider shares, segregation, bankruptcy remoteness, rehypothecation terms, or account restrictions.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -200,6 +200,30 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "rUSD issuance runs through Reservoir PSMs and the Credit Enforcer. Both the PSM and Credit Enforcer share the same DEFAULT_ADMIN_ROLE holder: Reservoir EOA 0xb7570e32.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Reservoir USDC Peg Stability Module",
+          "url": "https://eth.blockscout.com/address/0x4809010926aec940b550d34a46a52739f996d75d"
+        },
+        {
+          "label": "Reservoir Credit Enforcer",
+          "url": "https://eth.blockscout.com/address/0x04716db62c085d9e08050fcf6f7d775a03d07720"
+        },
+        {
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        },
+        {
+          "label": "Reservoir GitHub",
+          "url": "https://github.com/reservoir-protocol/reservoir"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -541,44 +565,81 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "Morpho Sentora PRIME",
-      "pct": 37.7,
+      "name": "Hastra / Sentora PRIME credit allocations",
+      "pct": 43,
       "risk": "high"
     },
     {
       "name": "Pendle PT USDat tokenized-treasury principal token",
-      "pct": 20.9,
+      "pct": 24.1,
       "risk": "high",
       "coinId": "usdat-saturn",
       "depType": "collateral"
     },
     {
-      "name": "GHO Aave lending markets (Plasma and Monad)",
-      "pct": 12.7,
+      "name": "GHO lending markets",
+      "pct": 14.6,
       "risk": "medium",
       "coinId": "gho-aave",
       "depType": "collateral"
     },
     {
-      "name": "USD1 Morpho Steakhouse High Yield lending markets",
-      "pct": 12.1,
+      "name": "USDC positions",
+      "pct": 8.7,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral"
+    },
+    {
+      "name": "USD1 lending markets",
+      "pct": 8.4,
       "risk": "medium",
       "coinId": "usd1-world-liberty-financial",
       "depType": "collateral"
     },
     {
-      "name": "Hastra PRIME RWA credit allocation",
-      "pct": 11.3,
+      "name": "Unmapped reserve positions",
+      "pct": 1.2,
       "risk": "high"
-    },
-    {
-      "name": "USDC Morpho lending and direct liquidity",
-      "pct": 5.3,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reservoir raw reserves API",
+        "url": "https://app.reservoir.xyz/api/reserves/raw"
+      },
+      {
+        "label": "Reservoir proof-of-reserves documentation",
+        "url": "https://docs.reservoir.xyz/products/proof-of-reserves"
+      }
+    ],
+    "rationale": "The official raw reserves endpoint reported $37,833,252.38 of assets. Passing every disclosed asset row through the repository's reviewed Reservoir mapping produced 43.0% PRIME credit, 24.1% PT-USDat, 14.6% GHO, 8.7% USDC, 8.4% USD1, and 1.2% unmapped Agua Global Carry Vault exposure. The rounded slices reconcile to 100.0%.",
+    "compositionBasis": "Current Reservoir totalBalanceValue rows normalized against totalAssets through the reviewed Reservoir live-reserve adapter",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The 1.2% Agua Global Carry Vault row does not expose a constituent-level stablecoin mapping in the reviewed adapter.",
+    "knownUnknownExposurePct": 1.2,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Hastra / Sentora PRIME credit allocations",
+        "pct": 43,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The rows are private-credit allocations rather than claims on a tracked stablecoin issuer."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "Unmapped reserve positions",
+        "pct": 1.2,
+        "disposition": "insufficient-evidence",
+        "rationale": "The source identifies Agua Global Carry Vault but does not disclose a constituent-level allocation that supports an exact tracked dependency link."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "reservoir",
     "version": 1,

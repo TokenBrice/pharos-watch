@@ -234,9 +234,66 @@
       "pct": 100,
       "risk": "very-low",
       "coinId": "m-m0",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 Protocol and its approved M0 issuer/SPV collateral path",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "legal"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 Extensions documentation",
+        "url": "https://docs.m0.org/protocol/extensions"
+      },
+      {
+        "label": "M0 minting and burning documentation",
+        "url": "https://docs.m0.org/protocol/minting-burning"
+      },
+      {
+        "label": "Startale USDSC product page",
+        "url": "https://usd.startale.com/"
+      }
+    ],
+    "rationale": "Startale identifies USDSC as an M0 extension that wraps M. M0 documents extensions as 1:1 backed by eligible collateral and describes M collateral as typically U.S. Treasury bills held in SPVs with validator attestations. The direct reserve relationship is therefore retained as 100% M without duplicating M's underlying Treasury envelope.",
+    "compositionBasis": "Startale USDSC M0-extension relationship and M0 collateral documentation",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "No unlinked direct reserve asset remains. The Startale-specific issuer, SPV account, and custody allocation are not separately disclosed in the reviewed sources.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "M0 Protocol and approved M0 issuer/SPV collateral path",
+        "role": "other"
+      },
+      {
+        "name": "M0 validator network",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "M0 minting and burning documentation",
+        "url": "https://docs.m0.org/protocol/minting-burning"
+      },
+      {
+        "label": "Startale USDSC product page",
+        "url": "https://usd.startale.com/"
+      }
+    ],
+    "uncertainty": "M0 documents the general SPV and validator model, but the reviewed Startale sources do not establish the specific SPV, legal segregation, bankruptcy remoteness, or rehypothecation terms for USDSC."
+  },
   "liveReservesConfig": {
     "adapter": "m0-wrapper-underlying",
     "version": 1,

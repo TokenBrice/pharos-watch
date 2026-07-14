@@ -582,25 +582,43 @@
   "reserves": [
     {
       "name": "U.S. Treasury Bills",
-      "pct": 74,
-      "risk": "very-low"
+      "pct": 86.4,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "Cash",
-      "pct": 18,
-      "risk": "very-low"
-    },
-    {
-      "name": "Bank Deposits",
-      "pct": 6,
-      "risk": "very-low"
-    },
-    {
-      "name": "Overnight Reverse Repos",
-      "pct": 2,
-      "risk": "very-low"
+      "pct": 13.6,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Financial institutions holding FDUSD reserve accounts",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "First Digital Labs transparency",
+        "url": "https://www.firstdigitallabs.com/transparency"
+      },
+      {
+        "label": "AOGB FDUSD reserves attestation - June 2026",
+        "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6a55fa3b263f9436c944049d_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20%28June%202026%29.pdf"
+      }
+    ],
+    "rationale": "The exact First Digital transparency capture fetched on July 14, 2026 reports 86.4% U.S. Treasury Bills and 13.6% Cash. AOGB's June 30 limited-assurance report independently supports the Treasury-bill and cash-at-financial-institutions classifications, but its earlier weights and fixed-deposit position are not carried forward into the July 14 composition.",
+    "compositionBasis": "Exact First Digital transparency composition captured on July 14, 2026",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve asset classes are fully classified, but First Digital does not identify the financial institutions or their shares in the live cash category.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "fdusd-transparency",
     "version": 1,

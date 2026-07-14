@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       pages_required: ${{ steps.classify.outputs.pages_deploy_required }}
-      worker_required: ${{ steps.classify.outputs.worker_promotion_required }}
+      worker_required: ${{ steps.classify.outputs.worker_deploy_required }}
     steps:
       - name: Require production deploys from main
         run: |
@@ -52,15 +52,15 @@ jobs:
             case "${MANUAL_SURFACE}" in
               both)
                 echo "pages_deploy_required=true" >> "$GITHUB_OUTPUT"
-                echo "worker_promotion_required=true" >> "$GITHUB_OUTPUT"
+                echo "worker_deploy_required=true" >> "$GITHUB_OUTPUT"
                 ;;
               pages)
                 echo "pages_deploy_required=true" >> "$GITHUB_OUTPUT"
-                echo "worker_promotion_required=false" >> "$GITHUB_OUTPUT"
+                echo "worker_deploy_required=false" >> "$GITHUB_OUTPUT"
                 ;;
               worker)
                 echo "pages_deploy_required=false" >> "$GITHUB_OUTPUT"
-                echo "worker_promotion_required=true" >> "$GITHUB_OUTPUT"
+                echo "worker_deploy_required=true" >> "$GITHUB_OUTPUT"
                 ;;
               *)
                 echo "Unsupported manual surface: ${MANUAL_SURFACE}"

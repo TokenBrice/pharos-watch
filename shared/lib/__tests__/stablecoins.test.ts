@@ -476,6 +476,7 @@ describe("tracked stablecoin metadata", () => {
       "srusd-reservoir",
       "syrupusdc-maple",
       "syrupusdt-maple",
+      "yousd-yield-optimizer",
       "zys-zephyr-protocol",
       "autousd-auto-finance",
       "eearn-ember",
@@ -934,10 +935,15 @@ describe("tracked stablecoin metadata", () => {
 
     expect(usdai?.reserves).toEqual([
       {
-        name: "PYUSD (PayPal USD) held by USDai contract",
+        name: "PYUSD held by the canonical USDai contract",
         pct: 100,
         risk: "low",
         coinId: "pyusd-paypal",
+        depType: "collateral",
+        assetClass: "stablecoin",
+        issuerOrObligor: "Paxos Trust Company, LLC / PayPal, Inc.",
+        riskFactors: ["counterparty", "custody", "smart-contract", "liquidity"],
+        liquidityHorizon: "immediate",
       },
     ]);
     expect(usdai?.liveReservesConfig).toMatchObject({

@@ -18,8 +18,21 @@
   "protocolSlug": "vcred",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for vCred do not identify the collateral oracle setup or failure handling.",
-    "reviewedAt": "2026-06-12",
+    "summary": "vCRED is a staking and access token for a market-making and perpetual-vault platform; public product docs do not describe borrower-owned collateral positions or a token-level liquidation oracle.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "vCred describes an AI liquidity layer with vaults, single-side staking, and market-making strategies for perpetual venues. The reviewed product page does not describe borrower CDPs, collateralized debt positions, or oracle-triggered liquidation branches for vCRED itself.",
+      "sources": [
+        {
+          "label": "vCred product site",
+          "url": "https://vcred.trade/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "limited",
     "sources": [

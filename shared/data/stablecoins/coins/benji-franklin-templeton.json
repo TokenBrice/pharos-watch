@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "U.S. government securities, cash, and repurchase agreements held by the Franklin OnChain U.S. Government Money Fund (FOBXX); '40 Act-registered money market fund custodied by BNY Mellon with Franklin Templeton as transfer agent and Benji as the on-chain share record",
+  "collateral": "U.S. government securities, cash, and repurchase agreements held by the Franklin OnChain U.S. Government Money Fund (FOBXX); '40 Act-registered money market fund custodied by JPMorgan Chase Bank with Franklin Templeton as transfer agent and Benji as the on-chain share record",
   "pegMechanism": "Single fund, multi-chain BENJI token tracking FOBXX's stable $1.00 NAV; rebasing share count records distributed yield directly on-chain; subscriptions and redemptions are gated to KYC-verified Benji wallets with USD-wire and Benji-to-USDC settlement paths",
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
@@ -272,23 +272,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "U.S. Government Securities",
-      "pct": 60,
-      "risk": "very-low"
-    },
-    {
-      "name": "Repurchase Agreements",
-      "pct": 35,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash",
-      "pct": 5,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
@@ -321,51 +304,256 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "BENJI is the on-chain share record for Franklin Templeton's FOBXX SEC-registered government money market fund. The Ethereum ERC1967/UUPS proxy (MoneyMarketFund_V6 implementation) uses AccessControl: a single EOA (0xd8e680) holds both DEFAULT_ADMIN_ROLE and ROLE_TOKEN_OWNER, which gates mintShares(). Franklin Templeton acts as transfer agent; no permissionless mint exists.",
+    "summary": "BENJI is the on-chain share record for Franklin Templeton's FOBXX money market fund. On all five EVM chains the token is a UUPS (ERC-1967) proxy over MoneyMarketFund_V6/V5 with an empty admin slot. mintShares(address,uint256) is NOT gated by ROLE_TOKEN_OWNER: it is gated by onlyAdminOrWriteAccess, which delegates to the AuthorizationModule (isAdminAccount => ROLE_FUND_ADMIN, or WRITE_ACCESS_TOKEN). Live minting runs through Franklin Templeton's fund-admin multisig verifier and its TransferAgentModule; there is no supply cap. ROLE_TOKEN_OWNER (upgrade authority) is held by three shared single-signature EOAs on every chain plus a chain-local admin multisig, so any one EOA can swap the implementation and rewrite mint logic.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x3ddc84940ab509c11b20b76b466933f40b750dc9",
+        "0xb9e4765bce2609bc1949592059b17ea72fee6c6a",
+        "0xe08b4c1005603427420e64252a8b120cace4d122",
+        "0x60cfc2b186a4cf647486e42c42b11cc6d571d1e4",
+        "0x408a634b8a8f0de729b48574a3a7ec3fe820b00a"
+      ],
+      "implementationAddresses": [
+        "0x20ca56f1215c3376b25bba1f2f9d3701c5def4c5",
+        "0x956a399818c7cbabbd0b868a60f61ec9027136cd",
+        "0x5c118e6a0bd2de0af66655806e3001727c13d105",
+        "0xab12adb95bbbb71007669cde208a0b1f89d1a101",
+        "0xc1df95cf7f96f020f511f2f03fbf6cc18f8464b2"
+      ],
+      "adminAddresses": [
+        "0x42cc1586f9013a4b33e8f2f521bb890183d4a2d6",
+        "0x64d465f21a255612e648ed5197d07193953523e6",
+        "0xb671dd4908eee20ebc8e76c535505c09e2c0b24f",
+        "0xc69c1b3b1059086ac968788886bf8e224a63de8a",
+        "0x48a6970f3638b70d189637e836ccd1e13a2cc1fc",
+        "0xc5d376331a6fcd38ec9ef3255153833b092930b6",
+        "0xe4b254ce08a9d1c2144ffe00b24597754f347af4",
+        "0xa490c1dfa7d2182808103845f6a040daba4ae898",
+        "0x8eedc0b68ee8c2beb741fd1f94d30aa44e6100ba"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "BENJI ROLE_TOKEN_OWNER upgrade signer — EOA 0x42cc1586",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530862,
+      "sources": [
+        {
+          "label": "Sourcify MoneyMarketFund_V6 (Ethereum implementation)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x20ca56f1215c3376b25bba1f2f9d3701c5def4c5?fields=abi,sources"
+        },
+        {
+          "label": "BENJI Ethereum token proxy",
+          "url": "https://etherscan.io/address/0x3ddc84940ab509c11b20b76b466933f40b750dc9"
+        },
+        {
+          "label": "Benji published contract addresses",
+          "url": "https://digitalassets.franklintempleton.com/benji/benji-contracts/"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "Franklin Templeton transfer-agent issuance",
+        "chain": "ethereum",
+        "address": "0xa2bd91fb0c8258134706629edf7464c14bab8b66",
+        "label": "BENJI fund-admin multisig verifier (ROLE_FUND_ADMIN)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 10,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530876,
+        "sources": [
+          {
+            "label": "Sourcify AuthorizationModule_V2 (Ethereum implementation)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x555e4e69eeb9c26c9893bff40ba6c149cc2ee850?fields=abi,sources"
+          },
+          {
+            "label": "BENJI fund-admin multisig verifier on Etherscan",
+            "url": "https://etherscan.io/address/0xa2bd91fb0c8258134706629edf7464c14bab8b66"
+          }
+        ],
+        "evidence": "MoneyMarketFund_V6.mintShares(address,uint256) carries onlyAdminOrWriteAccess, which requires IAuthorization(authModule).isAdminAccount(msg.sender) (== hasRole(ROLE_FUND_ADMIN)) or hasRole(WRITE_ACCESS_TOKEN). Ethereum authModule resolves from token storage slot 302 -> ModuleRegistry 0xd7644d80 -> getModuleAddress(keccak256(\"MODULE_AUTHORIZATION\")) = 0x55dd370dede1ad474d3543be06452615d3b5b162. At block 25530862 getRoleMemberCount(ROLE_FUND_ADMIN)=1 and getRoleMember=0xa2bd91fb. Empirically, all 25 most recent BENJI mints (Transfer from 0x0, last 150k blocks to 25530876) executed through this contract via signedDataExecution (selector 0x0c32f464) submitted by 0xf0e262a6 and 0x6bc31f60. It exposes the MultiSigGenVerifier interface: getSignersCount()=10, getNormalThresholdValue()=2, getHighThresholdValue()=6, getSubmittersCount()=2. MoneyMarketFund_V6 defines no supply cap, so issuance is unbounded (open-ended fund minting shares on subscription)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8c8bfc3151c2161a4bad77268e246a08e5d9c666",
+        "label": "BENJI TransferAgentModule_V5 (WRITE_ACCESS_TOKEN)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530868,
+        "sources": [
+          {
+            "label": "Sourcify TransferAgentModule_V5 (Ethereum implementation)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x569356746d667914a0a423008bdfd2253b14a6b3?fields=abi,sources"
+          },
+          {
+            "label": "BENJI transfer-agent module on Etherscan",
+            "url": "https://etherscan.io/address/0x8c8bfc3151c2161a4bad77268e246a08e5d9c666"
+          }
+        ],
+        "evidence": "At Ethereum block 25530862 the AuthorizationModule 0x55dd370d returns getRoleMemberCount(WRITE_ACCESS_TOKEN)=1 with getRoleMember=0x8c8bfc3151c2161a4bad77268e246a08e5d9c666, and ModuleRegistry 0xd7644d80 getModuleAddress(keccak256(\"MODULE_TRANSFER_AGENT\")) returns the same address. Its EIP-1967 implementation 0x569356746d667914a0a423008bdfd2253b14a6b3 is verified on Sourcify as TransferAgentModule_V5 (exact match), exposing settleTransactions, settleCXTransactions, endOfDay, distributeDividends and adjustBalance. Holding WRITE_ACCESS_TOKEN satisfies the token's onlyAdminOrWriteAccess modifier, so this module mints shares directly on subscription settlement with no cap."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x42cc1586f9013a4b33e8f2f521bb890183d4a2d6",
+        "label": "BENJI ROLE_TOKEN_OWNER upgrade signer — EOA 0x42cc1586",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530862,
+        "sources": [
+          {
+            "label": "BENJI Ethereum token proxy",
+            "url": "https://etherscan.io/address/0x3ddc84940ab509c11b20b76b466933f40b750dc9"
+          },
+          {
+            "label": "Sourcify MoneyMarketFund_V6 (Ethereum implementation)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x20ca56f1215c3376b25bba1f2f9d3701c5def4c5?fields=abi,sources"
+          }
+        ],
+        "evidence": "hasRole(ROLE_TOKEN_OWNER 0x07ebf0b970059cabb630855106f8ac3839be12b825572fd9473db811159837d9, 0x42cc1586) returns true on all five token proxies: Ethereum block 25530862, Arbitrum 483763619, Avalanche 90288613, Base 48621251, Polygon 90217905. eth_getCode returns 0x, confirming an EOA. In MoneyMarketFund_V6/V5, ROLE_TOKEN_OWNER gates _authorizeUpgrade only (not mintShares), so a single signature from this key can replace the implementation via upgradeTo/upgradeToAndCall and thereby rewrite mint logic and any cap. Two further EOAs (0x64d465f21a255612e648ed5197d07193953523e6, 0xb671dd4908eee20ebc8e76c535505c09e2c0b24f) hold the same role on the same five chains, and 0xc69c1b3b1059086ac968788886bf8e224a63de8a additionally holds it on Arbitrum and Polygon."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x64d465f21a255612e648ed5197d07193953523e6",
+        "label": "BENJI ROLE_TOKEN_OWNER upgrade signer — EOA 0x64d465f2",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530862,
+        "sources": [
+          {
+            "label": "BENJI Ethereum token proxy",
+            "url": "https://etherscan.io/address/0x3ddc84940ab509c11b20b76b466933f40b750dc9"
+          }
+        ],
+        "evidence": "hasRole(ROLE_TOKEN_OWNER, 0x64d465f2) returns true on all five token proxies (Ethereum block 25530862, Arbitrum 483763619, Avalanche 90288613, Base 48621251, Polygon 90217905); eth_getCode returns 0x, confirming an EOA. ROLE_TOKEN_OWNER gates _authorizeUpgrade in MoneyMarketFund_V6/V5, so this single key can replace the implementation and rewrite mint logic."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb671dd4908eee20ebc8e76c535505c09e2c0b24f",
+        "label": "BENJI ROLE_TOKEN_OWNER upgrade signer — EOA 0xb671dd49",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530862,
+        "sources": [
+          {
+            "label": "BENJI Ethereum token proxy",
+            "url": "https://etherscan.io/address/0x3ddc84940ab509c11b20b76b466933f40b750dc9"
+          }
+        ],
+        "evidence": "hasRole(ROLE_TOKEN_OWNER, 0xb671dd49) returns true on all five token proxies (Ethereum block 25530862, Arbitrum 483763619, Avalanche 90288613, Base 48621251, Polygon 90217905); eth_getCode returns 0x, confirming an EOA. It also holds ROLE_MODULE_OWNER on every chain's AuthorizationModule, which gates that module's _authorizeUpgrade. A single signature can therefore rewrite either the token's mint logic or the authorization logic that gates it."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x48a6970f3638b70d189637e836ccd1e13a2cc1fc",
+        "label": "BENJI Ethereum admin multisig (MultiSigGenVerifier)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 5,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530868,
+        "sources": [
+          {
+            "label": "Sourcify MultiSigGenVerifier (Ethereum)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x48a6970f3638b70d189637e836ccd1e13a2cc1fc?fields=abi,compilation"
+          },
+          {
+            "label": "BENJI Ethereum admin multisig on Etherscan",
+            "url": "https://etherscan.io/address/0x48a6970f3638b70d189637e836ccd1e13a2cc1fc"
+          }
+        ],
+        "evidence": "Verified on Sourcify as MultiSigGenVerifier (exact match). At Ethereum block 25530868: getSignersCount()=6, getNormalThresholdValue()=5, getHighThresholdValue()=6, getSubmittersCount()=2. It holds DEFAULT_ADMIN_ROLE and ROLE_TOKEN_OWNER on the token proxy and DEFAULT_ADMIN_ROLE plus ROLE_MODULE_OWNER on the AuthorizationModule. Role rotation: the original deployer EOA 0xd8e680848ebea3075f67f6c3d556e8e79742b357 granted these roles at blocks 25396637-25396675 and renounced its own ROLE_TOKEN_OWNER and DEFAULT_ADMIN_ROLE at blocks 25396690 and 25396691, so it no longer holds any role (hasRole returns false at block 25530848). Equivalent chain-local admin contracts hold the same roles on Arbitrum (0xc5d376331a6fcd38ec9ef3255153833b092930b6), Avalanche (0xe4b254ce08a9d1c2144ffe00b24597754f347af4) and Base (0xa490c1dfa7d2182808103845f6a040daba4ae898); on Polygon the equivalent holder 0x8eedc0b68ee8c2beb741fd1f94d30aa44e6100ba is an EOA."
+      },
+      {
+        "chain": "stellar",
+        "address": "GBHNGLLIE3KWGKCHIKMHJ5HVZHYIK7WTBE4QF5PLAKL4CJGSEU7HZIW5",
+        "label": "BENJI Stellar issuing account",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 13,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Stellar Horizon issuing account",
+            "url": "https://horizon.stellar.org/accounts/GBHNGLLIE3KWGKCHIKMHJ5HVZHYIK7WTBE4QF5PLAKL4CJGSEU7HZIW5"
+          }
+        ],
+        "evidence": "Horizon account read on 2026-07-14: the issuing account's master key has weight 0 (disabled) and 13 additional ed25519 signers are configured (nine at weight 3, four at weight 1); thresholds are low 2, med 2, high 6. Issuing BENJI is a payment from this account, which needs med_threshold 2, so any single weight-3 signer can mint without limit. Account flags auth_required, auth_revocable and auth_clawback_enabled are all true, and the asset record shows 1,323 authorized and 773 unauthorized trustlines, confirming permissioned holding with issuer clawback."
+      },
+      {
+        "chain": "solana",
+        "address": "5Tu84fKBpe9vfXeotjvfvWdWbAjy3hqsExvuHgFqFxA1",
+        "label": "BENJI Solana Token-2022 mint authority",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Franklin Templeton operates Benji as FOBXX's transfer agent, recording share issuance and redemption on-chain and rebasing share counts for yield; transfers are restricted to KYC-verified holders and the issuer holds freeze/burn authority. No permissionless mint route exists.",
-        "sources": [
-          {
-            "label": "Franklin Templeton FOBXX",
-            "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
-          }
-        ]
-      },
-      {
-        "label": "BENJI Ethereum DEFAULT_ADMIN + ROLE_TOKEN_OWNER — EOA 0xd8e680",
-        "role": "minter-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25296068 (0x181f8a4), hasRole(DEFAULT_ADMIN_ROLE, 0xd8e680848ebea3075f67f6c3d556e8e79742b357) = true and hasRole(ROLE_TOKEN_OWNER 0x07ebf0b970059cabb630855106f8ac3839be12b825572fd9473db811159837d9, same address) = true on proxy 0x3ddc84940ab509c11b20b76b466933f40b750dc9. eth_getCode = 0x (confirmed EOA). Both roles granted in deployment tx at block 0x13a2270. 0 RoleRevoked events. The contract's mintShares(address,uint256) function is gated by ROLE_TOKEN_OWNER. No proxy admin slot set; upgrade path controlled via admin role.",
+        "observedAt": "2026-07-14",
         "sources": [
           {
-            "label": "BENJI Ethereum token",
-            "url": "https://etherscan.io/address/0x3ddc84940ab509c11b20b76b466933f40b750dc9"
+            "label": "Solana mainnet RPC getAccountInfo (BENJI mint)",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "BENJI Solana mint on Solscan",
+            "url": "https://solscan.io/token/5Tu84fKBpe9vfXeotjvfvWdWbAjy3hqsExvuHgFqFxA1"
           }
-        ]
+        ],
+        "evidence": "getAccountInfo (jsonParsed) at slot 432853350 shows the mint is owned by the Token-2022 program (TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb) with mintAuthority, freezeAuthority, permanentDelegate and metadata updateAuthority all set to the mint address 5Tu84fKBpe9vfXeotjvfvWdWbAjy3hqsExvuHgFqFxA1, plus a transferHook program (huk3EPrNreTdUUjVKVkGSGKF1WC4P9BiUKBkn2kFWnP). Issuance, freeze and clawback therefore sit with a single Franklin Templeton-controlled authority and are uncapped, matching the transfer-agent model on the EVM chains."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Franklin Templeton FOBXX",
+          "label": "Sourcify MoneyMarketFund_V6 (Ethereum implementation)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x20ca56f1215c3376b25bba1f2f9d3701c5def4c5?fields=abi,sources"
+        },
+        {
+          "label": "Sourcify AuthorizationModule_V2 (Ethereum implementation)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x555e4e69eeb9c26c9893bff40ba6c149cc2ee850?fields=abi,sources"
+        },
+        {
+          "label": "BENJI Ethereum token proxy",
+          "url": "https://etherscan.io/address/0x3ddc84940ab509c11b20b76b466933f40b750dc9"
+        },
+        {
+          "label": "Benji published contract addresses",
+          "url": "https://digitalassets.franklintempleton.com/benji/benji-contracts/"
+        },
+        {
+          "label": "Franklin OnChain U.S. Government Money Fund (FOBXX)",
           "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
         },
         {
-          "label": "BENJI Ethereum token",
-          "url": "https://etherscan.io/address/0x3ddc84940ab509c11b20b76b466933f40b750dc9"
+          "label": "Stellar Horizon issuing account",
+          "url": "https://horizon.stellar.org/accounts/GBHNGLLIE3KWGKCHIKMHJ5HVZHYIK7WTBE4QF5PLAKL4CJGSEU7HZIW5"
         }
       ],
-      "evidence": "Ethereum verified at block 25296068: ERC1967/UUPS proxy (MoneyMarketFund_V6 implementation 0x20ca56f1). Single EOA 0xd8e680848ebea3075f67f6c3d556e8e79742b357 holds DEFAULT_ADMIN_ROLE and ROLE_TOKEN_OWNER (the role that gates mintShares). Confirmed EOA via eth_getCode. 0 RoleRevoked events. No proxy admin slot. The confirmed issuer-EOA admin corroborates the Franklin Templeton transfer-agent model. Non-EVM chains (Stellar, Solana, Aptos) and other EVM deployments (Arbitrum, Avalanche, Base, Polygon) retain issuer-backend characterization — on-chain minter surfaces on those chains not independently verified but consistent with single-issuer model.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Full control graph re-derived from RPC and verified sources on 2026-07-14 (Ethereum block 25530862, Arbitrum 483763619, Avalanche 90288613, Base 48621251, Polygon 90217905, Solana slot 432853350). All five EVM deployments are ERC-1967 proxies with a populated implementation slot and an empty admin slot (UUPS); implementations are verified on Sourcify as MoneyMarketFund_V6 (Ethereum) and MoneyMarketFund_V5 (Arbitrum, Avalanche, Base, Polygon). This review corrects the prior entry, which stated that ROLE_TOKEN_OWNER gates mintShares and that EOA 0xd8e680848ebea3075f67f6c3d556e8e79742b357 holds it: the source shows mintShares(address,uint256) carries onlyAdminOrWriteAccess, which checks the AuthorizationModule for ROLE_FUND_ADMIN (isAdminAccount) or WRITE_ACCESS_TOKEN, while ROLE_TOKEN_OWNER gates only _authorizeUpgrade; and 0xd8e680 renounced all of its roles at blocks 25396677-25396691, so hasRole now returns false for it on every role checked. Mint capability on Ethereum is held by exactly two addresses: the fund-admin multisig verifier 0xa2bd91fb (10 signers, normal threshold 2) and TransferAgentModule_V5 0x8c8bfc31; every recent mint was executed through the former. Upgrade capability is held by three single-signature EOAs common to all five chains plus a chain-local admin multisig, which is why the posture is concentrated-admin rather than bounded. There is no supply cap in the token contract: FOBXX is an open-ended fund that mints shares on subscription, so all mint-capable controls are recorded as direct and uncapped. Franklin Templeton is the fund's transfer agent and sole share issuer under its SEC registration, consistent with the on-chain graph. Not re-verified this pass: the Aptos deployment 0x7b5e9cac3433e9202f28527f707c89e1e47b19de2c33e4db9521a63ad219b739 (no control entry claimed for it).",
+      "reviewer": "Claude CTRL batch — BENJI control graph",
+      "reviewedAt": "2026-07-14"
     }
   },
   "launchDate": "2021-04-06"

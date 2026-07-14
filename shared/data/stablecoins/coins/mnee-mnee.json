@@ -23,7 +23,22 @@
     "provider": "Wolf and Company, P.C.",
     "attestorTier": "regional",
     "attestorJurisdiction": "United States",
-    "cadence": "monthly"
+    "cadence": "monthly",
+    "latestReport": {
+      "periodEnd": "2026-05-29",
+      "publishedAt": "2026-06-10",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Wolf & Company MNEE May 2026 reserve examination",
+          "url": "https://mnee.ghost.io/content/files/2026/06/MNEE---Attestation-Opinion--May-2026--Final.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -235,18 +250,6 @@
     }
   },
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "U.S. Treasury bills (<=90-day duration)",
-      "pct": 85,
-      "risk": "very-low"
-    },
-    {
-      "name": "USD cash at qualified custodian",
-      "pct": 15,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

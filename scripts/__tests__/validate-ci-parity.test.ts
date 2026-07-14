@@ -131,7 +131,6 @@ describe("validate-ci parity", () => {
       ".github/workflows/deploy-cloudflare.yml",
       ".github/workflows/og-refresh.yml",
       ".github/workflows/pages-release.yml",
-      ".github/workflows/pharos-change-contract.yml",
       ".github/workflows/safe-browsing-monitor.yml",
       ".github/workflows/telegram-load.yml",
       ".github/workflows/validate-ci.yml",
@@ -211,13 +210,6 @@ describe("validate-ci parity", () => {
       ["stablecoin-prevalidated-registry", 1, "deterministic", true, ["stablecoin-catalog"]],
       ["legacy-stablecoin-redirects", 1, "deterministic", true, ["stablecoin-catalog"]],
       ["stablecoin-client-registry", 1, "deterministic", true, ["stablecoin-catalog"]],
-      [
-        "agent-code-map",
-        2,
-        "deterministic",
-        true,
-        ["stablecoin-prevalidated-registry", "legacy-stablecoin-redirects", "stablecoin-client-registry"],
-      ],
       ["cemetery-dataset", 2, "deterministic", false, ["stablecoin-prevalidated-registry"]],
       ["public-datasets", 2, "network-derived", false, ["stablecoin-prevalidated-registry"]],
       ["llms-txt", 2, "network-derived", false, ["stablecoin-prevalidated-registry"]],
@@ -241,7 +233,6 @@ describe("validate-ci parity", () => {
       "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs",
       "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs",
       "node scripts/build-data/build-client-registry.mjs",
-      "node scripts/maintenance/generate-agent-code-map.mjs",
       "tsx scripts/maintenance/generate-cemetery-dataset.ts",
       "tsx scripts/maintenance/generate-public-datasets.ts",
       "tsx scripts/maintenance/generate-llms-txt.ts",
@@ -265,7 +256,6 @@ describe("validate-ci parity", () => {
       "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs --check",
       "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs --check",
       "node scripts/build-data/build-client-registry.mjs --check",
-      "node scripts/maintenance/generate-agent-code-map.mjs --check",
       "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
       "tsx scripts/maintenance/generate-public-datasets.ts --check",
       "tsx scripts/maintenance/generate-llms-txt.ts --check",
@@ -301,7 +291,6 @@ describe("validate-ci parity", () => {
         "stablecoin-prevalidated-registry",
         "legacy-stablecoin-redirects",
         "stablecoin-client-registry",
-        "agent-code-map",
       ],
     );
     expect(buildGeneratedArtifactCommands()).toEqual(expectedCommands);
@@ -318,8 +307,8 @@ describe("validate-ci parity", () => {
     ).toEqual([
       expectedArtifacts.slice(0, 11).map(([id]) => id),
       expectedArtifacts.slice(11, 14).map(([id]) => id),
-      expectedArtifacts.slice(14, 19).map(([id]) => id),
-      expectedArtifacts.slice(19).map(([id]) => id),
+      expectedArtifacts.slice(14, 18).map(([id]) => id),
+      expectedArtifacts.slice(18).map(([id]) => id),
     ]);
     expect(buildGeneratedArtifactExecutionPhases().map(({ phase }) => phase)).toEqual([0, 1, 2, 3]);
     expect(
@@ -329,8 +318,8 @@ describe("validate-ci parity", () => {
     ).toEqual([
       expectedCommands.slice(0, 11),
       expectedCommands.slice(11, 14),
-      expectedCommands.slice(14, 19),
-      expectedCommands.slice(19),
+      expectedCommands.slice(14, 18),
+      expectedCommands.slice(18),
     ]);
     expect(GENERATED_ARTIFACTS_MAX_PARALLEL).toBe(4);
   });
@@ -371,7 +360,6 @@ describe("validate-ci parity", () => {
         "safety-score-v9-evaluation-build",
       ],
       ["stablecoin-prevalidated-registry", "legacy-stablecoin-redirects", "stablecoin-client-registry"],
-      ["agent-code-map"],
     ]);
   });
 
@@ -538,7 +526,7 @@ describe("validate-ci parity", () => {
     const plan = workflow.jobs.plan;
     expect(plan.outputs).toEqual({
       pages_required: "${{ steps.classify.outputs.pages_deploy_required }}",
-      worker_required: "${{ steps.classify.outputs.worker_promotion_required }}",
+      worker_required: "${{ steps.classify.outputs.worker_deploy_required }}",
     });
 
     const worker = workflow.jobs["deploy-worker"];

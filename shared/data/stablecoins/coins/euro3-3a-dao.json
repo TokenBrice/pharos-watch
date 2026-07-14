@@ -17,19 +17,224 @@
   "collateral": "Whitelisted crypto and stablecoin collateral in 3A Vaults on Polygon and Linea, including USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH, and other wrapped or yield-bearing assets depending on chain",
   "pegMechanism": "Overcollateralized vault minting and redemption: users mint EURO3 loans against approved collateral, repay debt to burn EURO3, and can redeem EURO3 against vault collateral when the protocol's redemption conditions are met",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "3A exposes oracle-backed collateral price endpoints and ChainlinkPriceFeed/ConvertedPriceFeed contracts for EURO3 collateral valuation, without documented failover handling.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "tier": "single-source-or-laggy",
+    "summary": "EURO3's five residual debt-bearing Polygon collateral branches divide a heartbeat-checked Chainlink token/USD value by a heartbeat-checked Chainlink EUR/USD value. Every leaf enforces a 24-hour staleness bound and reverts on failure; no fallback or last-good cache exists, and all branches share the same EUR/USD Chainlink failure domain.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-ROOT-DRAIN data review",
+      "rationale": "At Polygon block 90225687, the complete TokenToPriceFeed event history contained ten registered collateral tokens and all ten collateral caps were zero. Traversing all 125 current-factory vaults found debt only in WMATIC, USDC.e, WETH, QNT, and USDT vaults. SUSHI, DAI, LINK, PAXG, and UNI had zero debt and zero cap. The still-authorized legacy Polygon factory had seven vaults but zero total debt and a zero debt ceiling. At Linea block 31370307, all 585 current-factory vaults had zero debt and every documented collateral cap was zero, so Linea is an explicit inactive exclusion rather than a live oracle branch.",
+      "sources": [
+        {
+          "label": "3A Polygon contracts registry",
+          "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/polygon-mainnet-contracts.md"
+        },
+        {
+          "label": "3A Linea contracts registry",
+          "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/linea-mainnet-contracts.md"
+        },
+        {
+          "label": "Finalized Polygon block 90225687",
+          "url": "https://polygonscan.com/block/90225687"
+        },
+        {
+          "label": "Finalized Linea block 31370307",
+          "url": "https://lineascan.build/block/31370307"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-ROOT-DRAIN data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "3A smart-contract API docs",
+        "label": "3A smart-contract API",
         "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/api.md"
       },
       {
-        "label": "3A collateral requirements",
-        "url": "https://docs.3adao.org/3a-protocol/whitelisting-criteria/mandatory-requirements.md"
+        "label": "Verified TokenToPriceFeed source",
+        "url": "https://repo.sourcify.dev/contracts/full_match/137/0xfBC5cfEb809c6352Bc4ef2FFe842f72a8769E45e/"
+      },
+      {
+        "label": "Verified VaultFactory source",
+        "url": "https://repo.sourcify.dev/contracts/full_match/137/0x4760847023fa0833221ae76E01Db1E483A5D20e0/"
+      },
+      {
+        "label": "3A liquidation documentation",
+        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/lending/liquidation.md"
+      }
+    ],
+    "branches": [
+      {
+        "id": "euro3-wmatic-polygon",
+        "label": "WMATIC Polygon vaults",
+        "tier": "single-source-or-laggy",
+        "summary": "WMATIC is converted from Chainlink MATIC/USD to EUR through the shared Chainlink EUR/USD denominator.",
+        "collateralAssets": ["WMATIC"],
+        "chains": ["polygon"],
+        "feeds": [
+          {
+            "provider": "3A ConvertedPriceFeed over Chainlink",
+            "path": "MATIC/USD Chainlink 0xAB594600376Ec9fD91F8e885dADF0CE036862dE0 through 24-hour wrapper 0xf58AF9F017E81cACd1a991AF9f095660cBB70c2c, divided by EUR/USD Chainlink 0x73366Fe0AA0Ded304479862808e02506FE556a98 through 24-hour wrapper 0x54F2b321a682452E4876a2c6552228Bc54Bb1Eab",
+            "address": "0x99782c90eAA2B9aB311AAa7F928322F23FfAf71B",
+            "chain": "polygon",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 90225687,
+            "failureDomainKeys": ["3a-chainlink-matic-usd", "3a-chainlink-eur-usd-polygon", "3a-converted-price-feed", "polygon"]
+          }
+        ],
+        "fallbackBehavior": "Both Chainlink wrappers require an update no older than 86,400 seconds. A stale or reverting numerator or denominator reverts valuation; no fallback or cache is present.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 90225687,
+        "collateralParameters": [{"asset":"WMATIC","minimumCollateralRatioPct":120,"note":"Minimum liquidation ratio 110%; six vaults retained 0.294790339657197571 EURO3 debt in aggregate; collateral cap was zero."}],
+        "liquidationMechanism": "Below the 110% minimum liquidation ratio, liquidation routes collateral and debt through the Stability Pool, then AuctionManager, then LastResortLiquidation/community path.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Stability Pool is first in the configured router, auctions are second, and LastResortLiquidation manages remaining collateral and bad-debt distribution.",
+        "shutdownOrBadDebtBehavior": "The collateral cap is zero, preventing new WMATIC deposits while residual debt remains callable. Exhausted normal routes pass to the last-resort collateral and bad-debt distribution contract.",
+        "failureDomainKeys": ["3a-wmatic-vaults", "3a-liquidation-router-polygon", "3a-chainlink-eur-usd-polygon", "polygon"],
+        "sources": [
+          {"label":"Verified WMATIC ConvertedPriceFeed","url":"https://repo.sourcify.dev/contracts/full_match/137/0x99782c90eAA2B9aB311AAa7F928322F23FfAf71B/"},
+          {"label":"Finalized Polygon block 90225687","url":"https://polygonscan.com/block/90225687"}
+        ]
+      },
+      {
+        "id": "euro3-usdc-polygon",
+        "label": "USDC.e Polygon vaults",
+        "tier": "single-source-or-laggy",
+        "summary": "USDC.e is converted from Chainlink USDC/USD to EUR through the shared Chainlink EUR/USD denominator.",
+        "collateralAssets": ["USDC.e"],
+        "chains": ["polygon"],
+        "feeds": [
+          {
+            "provider": "3A ConvertedPriceFeed over Chainlink",
+            "path": "USDC/USD Chainlink 0xfE4A8cc5b5B2366C1B58Bea3858e81843581b2F7 through 24-hour wrapper 0xc5241aADbD49e3E53DC6549Cb7BA24E9d3559826, divided by EUR/USD Chainlink 0x73366Fe0AA0Ded304479862808e02506FE556a98 through 24-hour wrapper 0x43Cf44ce70B6574f184719409E9cd130087f90C5",
+            "address": "0xf03552d5E9a135E759BDf9969Ba544A0f63342b9",
+            "chain": "polygon",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 90225687,
+            "failureDomainKeys": ["3a-chainlink-usdc-usd", "3a-chainlink-eur-usd-polygon", "3a-converted-price-feed", "polygon"]
+          }
+        ],
+        "fallbackBehavior": "Both Chainlink wrappers enforce 86,400-second freshness and revert on failure, without fallback or cached prices.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 90225687,
+        "collateralParameters": [{"asset":"USDC.e","minimumCollateralRatioPct":110,"note":"Minimum liquidation ratio 105%; two vaults retained 0.035173385018764191 EURO3 debt in aggregate; collateral cap was zero."}],
+        "liquidationMechanism": "Below the 105% minimum liquidation ratio, liquidation routes through Stability Pool, AuctionManager, and LastResortLiquidation/community in order.",
+        "liquidationDelaySec": 0,
+        "backstop": "Stability Pool first, auctions second, then LastResortLiquidation for residual collateral and bad debt.",
+        "shutdownOrBadDebtBehavior": "The zero collateral cap prevents new deposits while residual debt remains; exhausted routes reach the last-resort bad-debt distribution path.",
+        "failureDomainKeys": ["3a-usdc-vaults", "3a-liquidation-router-polygon", "3a-chainlink-eur-usd-polygon", "polygon"],
+        "sources": [
+          {"label":"Verified USDC.e ConvertedPriceFeed","url":"https://repo.sourcify.dev/contracts/full_match/137/0xf03552d5E9a135E759BDf9969Ba544A0f63342b9/"},
+          {"label":"Finalized Polygon block 90225687","url":"https://polygonscan.com/block/90225687"}
+        ]
+      },
+      {
+        "id": "euro3-weth-polygon",
+        "label": "WETH Polygon vault",
+        "tier": "single-source-or-laggy",
+        "summary": "WETH is converted from Chainlink ETH/USD to EUR through the shared Chainlink EUR/USD denominator.",
+        "collateralAssets": ["WETH"],
+        "chains": ["polygon"],
+        "feeds": [
+          {
+            "provider": "3A ConvertedPriceFeed over Chainlink",
+            "path": "ETH/USD Chainlink 0xF9680D99D6C9589e2a93a78A04A279e509205945 through 24-hour wrapper 0x06E684f6E0a601b0b8304CC2f22980a6E480c981, divided by EUR/USD Chainlink 0x73366Fe0AA0Ded304479862808e02506FE556a98 through 24-hour wrapper 0x54F2b321a682452E4876a2c6552228Bc54Bb1Eab",
+            "address": "0xcFD9c639E84DCB9D8B9004840f12381E540d57Fb",
+            "chain": "polygon",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 90225687,
+            "failureDomainKeys": ["3a-chainlink-eth-usd", "3a-chainlink-eur-usd-polygon", "3a-converted-price-feed", "polygon"]
+          }
+        ],
+        "fallbackBehavior": "Both Chainlink wrappers enforce 86,400-second freshness and revert on failure, without fallback or cache.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 90225687,
+        "collateralParameters": [{"asset":"WETH","minimumCollateralRatioPct":120,"note":"Minimum liquidation ratio 110%; one vault retained 0.143824222327955801 EURO3 debt; collateral cap was zero."}],
+        "liquidationMechanism": "Below the 110% minimum liquidation ratio, liquidation routes through Stability Pool, AuctionManager, and LastResortLiquidation/community in order.",
+        "liquidationDelaySec": 0,
+        "backstop": "Stability Pool first, auctions second, then LastResortLiquidation for residual collateral and bad debt.",
+        "shutdownOrBadDebtBehavior": "The zero collateral cap prevents new deposits while residual debt remains; exhausted routes reach the last-resort bad-debt distribution path.",
+        "failureDomainKeys": ["3a-weth-vault", "3a-liquidation-router-polygon", "3a-chainlink-eur-usd-polygon", "polygon"],
+        "sources": [
+          {"label":"Verified WETH ConvertedPriceFeed","url":"https://repo.sourcify.dev/contracts/full_match/137/0xcFD9c639E84DCB9D8B9004840f12381E540d57Fb/"},
+          {"label":"Finalized Polygon block 90225687","url":"https://polygonscan.com/block/90225687"}
+        ]
+      },
+      {
+        "id": "euro3-qnt-polygon",
+        "label": "QNT Polygon vaults",
+        "tier": "single-source-or-laggy",
+        "summary": "QNT is converted from Chainlink QNT/USD to EUR through the shared Chainlink EUR/USD denominator.",
+        "collateralAssets": ["QNT"],
+        "chains": ["polygon"],
+        "feeds": [
+          {
+            "provider": "3A ConvertedPriceFeed over Chainlink",
+            "path": "QNT/USD Chainlink 0xF7F291042F6Cbc4deC0Ad75c17786511a530dbe8 through 24-hour wrapper 0xA3785184D5fA01c5811D1E2F0C54A71988a956E0, divided by EUR/USD Chainlink 0x73366Fe0AA0Ded304479862808e02506FE556a98 through 24-hour wrapper 0x54F2b321a682452E4876a2c6552228Bc54Bb1Eab",
+            "address": "0xD78fF234A0d5ddea664f4478D72B621715EF03E5",
+            "chain": "polygon",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 90225687,
+            "failureDomainKeys": ["3a-chainlink-qnt-usd", "3a-chainlink-eur-usd-polygon", "3a-converted-price-feed", "polygon"]
+          }
+        ],
+        "fallbackBehavior": "Both Chainlink wrappers enforce 86,400-second freshness and revert on failure, without fallback or cache.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 90225687,
+        "collateralParameters": [{"asset":"QNT","minimumCollateralRatioPct":175,"note":"Minimum liquidation ratio 130%; two vaults retained 0.000140475490889085 EURO3 debt in aggregate, including one 24-wei debt; collateral cap was zero."}],
+        "liquidationMechanism": "Below the 130% minimum liquidation ratio, liquidation routes through Stability Pool, AuctionManager, and LastResortLiquidation/community in order.",
+        "liquidationDelaySec": 0,
+        "backstop": "Stability Pool first, auctions second, then LastResortLiquidation for residual collateral and bad debt.",
+        "shutdownOrBadDebtBehavior": "The zero collateral cap prevents new deposits while residual debt remains; exhausted routes reach the last-resort bad-debt distribution path.",
+        "failureDomainKeys": ["3a-qnt-vaults", "3a-liquidation-router-polygon", "3a-chainlink-eur-usd-polygon", "polygon"],
+        "sources": [
+          {"label":"Verified QNT ConvertedPriceFeed","url":"https://repo.sourcify.dev/contracts/full_match/137/0xD78fF234A0d5ddea664f4478D72B621715EF03E5/"},
+          {"label":"Finalized Polygon block 90225687","url":"https://polygonscan.com/block/90225687"}
+        ]
+      },
+      {
+        "id": "euro3-usdt-polygon",
+        "label": "USDT Polygon vault",
+        "tier": "single-source-or-laggy",
+        "summary": "USDT is converted from Chainlink USDT/USD to EUR through the shared Chainlink EUR/USD denominator.",
+        "collateralAssets": ["USDT"],
+        "chains": ["polygon"],
+        "feeds": [
+          {
+            "provider": "3A ConvertedPriceFeed over Chainlink",
+            "path": "USDT/USD Chainlink 0x0A6513e40db6EB1b165753AD52E80663aeA50545 through 24-hour wrapper 0x4749e078870f6E58F3dE2984655aB00e5d0db49a, divided by EUR/USD Chainlink 0x73366Fe0AA0Ded304479862808e02506FE556a98 through 24-hour wrapper 0xF74089FF351D6250168206CC581936852C046bAB",
+            "address": "0xA6fD86886089d6A6144e3134e51a4CF8cd8A5Dd5",
+            "chain": "polygon",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 90225687,
+            "failureDomainKeys": ["3a-chainlink-usdt-usd", "3a-chainlink-eur-usd-polygon", "3a-converted-price-feed", "polygon"]
+          }
+        ],
+        "fallbackBehavior": "Both Chainlink wrappers enforce 86,400-second freshness and revert on failure, without fallback or cache.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 90225687,
+        "collateralParameters": [{"asset":"USDT","minimumCollateralRatioPct":110,"note":"Minimum liquidation ratio 105%; one vault retained 0.000000603105734829 EURO3 debt; collateral cap was zero."}],
+        "liquidationMechanism": "Below the 105% minimum liquidation ratio, liquidation routes through Stability Pool, AuctionManager, and LastResortLiquidation/community in order.",
+        "liquidationDelaySec": 0,
+        "backstop": "Stability Pool first, auctions second, then LastResortLiquidation for residual collateral and bad debt.",
+        "shutdownOrBadDebtBehavior": "The zero collateral cap prevents new deposits while residual debt remains; exhausted routes reach the last-resort bad-debt distribution path.",
+        "failureDomainKeys": ["3a-usdt-vault", "3a-liquidation-router-polygon", "3a-chainlink-eur-usd-polygon", "polygon"],
+        "sources": [
+          {"label":"Verified USDT ConvertedPriceFeed","url":"https://repo.sourcify.dev/contracts/full_match/137/0xA6fD86886089d6A6144e3134e51a4CF8cd8A5Dd5/"},
+          {"label":"Finalized Polygon block 90225687","url":"https://polygonscan.com/block/90225687"}
+        ]
       }
     ]
   },

@@ -196,24 +196,3 @@ Set in `worker/wrangler.toml` (non-secret) or via Cloudflare dashboard / `wrangl
 | `FEEDBACK_IP_SALT` | Secret | Yes | Random string used to hash IPs before storage |
 
 Without `FEEDBACK_IP_SALT` or `GITHUB_PAT` the endpoint returns 503.
-
----
-
-## File Index
-
-| File | Role |
-|------|------|
-| `src/components/feedback-button.tsx` | Floating action button, rendered in root layout |
-| `src/components/mobile-utility-dock.tsx` | Mobile-only utility dock with a second feedback entry point |
-| `src/components/feedback-modal.tsx` | Feedback dialog (form + submission logic) |
-| `src/app/layout.tsx` | Mounts `<FeedbackButton />` and `<MobileUtilityDock />` globally |
-| `worker/src/api/feedback.ts` | Thin route handler / coordinator |
-| `worker/src/api/feedback/request.ts` | Request parsing, canonicalization, and policy checks |
-| `worker/src/api/feedback/verification.ts` | Auto-verification snapshot builder for data corrections |
-| `worker/src/api/feedback/submission.ts` | GitHub routing orchestration |
-| `worker/src/api/feedback/github.ts` | GitHub REST transport helper |
-| `worker/src/api/feedback/format.ts` | Issue body and title formatting |
-| `worker/src/routes/messaging-routes.ts` | Registers the feedback static route (`MESSAGING_STATIC_ROUTES`) binding `handleFeedback()` to the `"feedback"` endpoint |
-| `shared/lib/api-endpoints/definitions.ts` (+ `paths.ts`) | Endpoint definition mapping key `"feedback"` to `POST /api/feedback` |
-| `worker/src/routes/registry.ts` | Static-route aggregator/matcher (Map by `endpoint.path`); dispatches the feedback route, does not register it |
-| `worker/migrations/0000_baseline.sql` | Baseline D1 rate-limit table schema for feedback submissions |

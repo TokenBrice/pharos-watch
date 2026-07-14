@@ -3,7 +3,7 @@
 This runbook covers additive Worker-infrastructure hardening slices such as the
 scheduled job-attempt ledger. It is intentionally conservative because D1
 migrations apply before the new Worker version is live, while rollback only
-re-promotes Worker code and does not undo schema changes.
+restores a prior Worker deployment and does not undo schema changes.
 
 ## Contract
 

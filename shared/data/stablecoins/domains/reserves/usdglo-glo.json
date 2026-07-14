@@ -1,0 +1,91 @@
+{
+  "id": "usdglo-glo",
+  "reserves": [
+    {
+      "name": "Cash and cash equivalents",
+      "pct": 70.95,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed U.S. banking counterparties holding Brale reserve accounts",
+      "riskFactors": ["counterparty", "custody", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "U.S. government-backed debt",
+      "pct": 29.05,
+      "risk": "very-low",
+      "assetClass": "government-security",
+      "issuerOrObligor": "United States government and government-backed obligors",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDGLO reserve report - May 2026",
+        "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-05-2026.pdf"
+      },
+      {
+        "label": "Brale USDGLO transparency",
+        "url": "https://brale.xyz/stablecoins/USDGLO"
+      }
+    ],
+    "rationale": "The May 31, 2026 Brale reserve report states $1,499,525 of cash and cash equivalents and $613,872 of U.S. government-backed debt against $2,113,397 of USDGLO issued. The percentages are normalized from those reported values; the report does not identify the underlying banks, instruments, maturities, or provider shares.",
+    "compositionBasis": "Brale USDGLO reserve report as of May 31, 2026",
+    "compositionAsOf": "2026-05-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The full reserve categories and amounts are reported, but underlying cash-equivalent instruments, debt instruments, banking counterparties, maturities, and provider allocations are undisclosed.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Cash and cash equivalents",
+        "pct": 70.95,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The reserve is an off-chain cash and cash-equivalent category rather than another tracked stablecoin."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "U.S. government-backed debt",
+        "pct": 29.05,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The reserve is an off-chain government-backed debt category rather than another tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Brale Inc. segregated reserve accounts",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Undisclosed U.S. banking counterparties",
+        "role": "bank",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDGLO reserve report - May 2026",
+        "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-05-2026.pdf"
+      },
+      {
+        "label": "Brale USDGLO transparency",
+        "url": "https://brale.xyz/stablecoins/USDGLO"
+      }
+    ],
+    "uncertainty": "Brale states that reserve assets are held in unencumbered accounts segregated from other Brale accounts, but the report does not identify the banking counterparties, legal insolvency treatment, provider shares, or rehypothecation terms."
+  }
+}

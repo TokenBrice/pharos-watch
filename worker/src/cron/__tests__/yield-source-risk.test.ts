@@ -237,7 +237,7 @@ describe("yield source-risk registry", () => {
     // spark-savings (sUSDS) + sparklend; both must derive to `low` so our tiering
     // neither over- nor under-penalizes the vault vs Yearn's external assessment.
     // Reviewed evidence is owned by the source-risk metadata; change history is
-    // recorded in docs/yield-intelligence-timeline.md.
+    // recorded in the structured yield methodology changelog.
     for (const venue of ["spark-savings", "sparklend"] as const) {
       const config = resolveReviewedYieldRiskConfig(venue);
       expect(config, venue).not.toBeNull();

@@ -264,13 +264,6 @@
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "Physical silver in Turkish bank custody",
-      "pct": 100,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

@@ -1,0 +1,78 @@
+{
+  "id": "wtgxx-wisdomtree",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bills and Treasury floating-rate notes",
+      "pct": 79.57,
+      "risk": "very-low",
+      "assetClass": "government-security",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Repurchase Agreements",
+      "pct": 20.43,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "Deutsche Bank AG and Royal Bank of Canada NY repo counterparties",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "custody",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "WisdomTree WTGXX fund fact sheet and top holdings as of December 31, 2025",
+        "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
+      },
+      {
+        "label": "WisdomTree WTGXX product page",
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+      }
+    ],
+    "rationale": "WisdomTree's fact sheet lists WTGXX top holdings as 79.57% Treasury bills and Treasury floating-rate notes and 20.43% tri-party repurchase agreements as of December 31, 2025. Holdings are subject to change without notice, so the dated source is not a current balance assertion.",
+    "compositionBasis": "WisdomTree WTGXX top-holdings disclosure",
+    "compositionAsOf": "2025-12-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The source is a dated top-holdings snapshot and does not establish current holdings, legal segregation, or a token-specific assurance report after December 31, 2025.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "WisdomTree Treasury Money Market Digital Fund and transfer-agent recordkeeping system",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "WisdomTree WTGXX fund fact sheet",
+        "url": "https://www.wisdomtree.com/-/media/us-media-files/documents/resource-library/fund-fact-sheets/digital/wtgxx.pdf"
+      }
+    ],
+    "uncertainty": "The fund is SEC-registered and tokenized through an integrated transfer-agent recordkeeping system, but the reviewed public fact sheet does not specify custody segregation, bankruptcy remoteness, or collateral reuse terms for token holders.",
+    "knownUnknownExposurePct": 100
+  }
+}

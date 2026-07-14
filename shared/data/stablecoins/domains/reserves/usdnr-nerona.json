@@ -1,0 +1,70 @@
+{
+  "id": "usdnr-nerona",
+  "reserves": [
+    {
+      "name": "M token held by the Nerona USDnr extension",
+      "pct": 100,
+      "risk": "very-low",
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 Protocol minters and their short-duration U.S. Treasury collateral",
+      "riskFactors": ["counterparty", "smart-contract", "custody", "liquidity"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Nerona protocol documentation",
+        "url": "https://docs.nerona.xyz/"
+      },
+      {
+        "label": "M0 USDnr dashboard",
+        "url": "https://dashboard.m0.org/stablecoins/usdnr"
+      },
+      {
+        "label": "M0 deployed-address documentation",
+        "url": "https://docs.m0.org/get-started/resources/addresses/"
+      }
+    ],
+    "rationale": "Nerona describes USDnr as fully backed by short-duration Treasuries through M0, and the configured M0 extension identifies M as the directly held wrapper asset. No primary source supports the prior separate 1% stability-reserve estimate, so the reviewed direct composition is 100% M.",
+    "compositionBasis": "Nerona M0-extension wrapper design and M0 USDnr disclosure",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "The public sources do not publish current M0 minter allocation or Treasury-position weights behind the M held by the extension.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Nerona USDnr extension contract",
+        "role": "other"
+      },
+      {
+        "name": "M0 minter collateral SPVs",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Nerona protocol documentation",
+        "url": "https://docs.nerona.xyz/"
+      },
+      {
+        "label": "M0 USDnr dashboard",
+        "url": "https://dashboard.m0.org/stablecoins/usdnr"
+      }
+    ],
+    "uncertainty": "Nerona states that it does not custody client assets, while the extension holds M on-chain and M0 minters hold underlying collateral through SPVs. Current provider shares, named SPV custodians, and rehypothecation terms are not public.",
+    "knownUnknownExposurePct": 100
+  }
+}

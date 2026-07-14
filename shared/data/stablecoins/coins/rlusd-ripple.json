@@ -25,7 +25,22 @@
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
-    "attestorLicense": "AICPA attestation standards"
+    "attestorLicense": "AICPA attestation standards",
+    "latestReport": {
+      "periodEnd": "2026-05-29",
+      "publishedAt": "2026-06-25",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Deloitte RLUSD Reserves Report - May 2026",
+          "url": "https://cdn.sanity.io/files/ior4a5y3/production/00bb3899f244c392ab77e55e65dee33cf271dfce.pdf/RLUSD_Attestation_Report_-_May_2026_Final.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -157,11 +172,38 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "RLUSD Ethereum minting is gated by Ripple's custom MultiSign contract (0x97e9, 31 signers, quorum=2, confirmed as MINTER_ROLE holder). XRPL issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De has master key active, no signer_list, Ripple-controlled. UPGRADER_ROLE and DEFAULT_ADMIN holders on ETH are unresolvable (non-enumerable AccessControl, zero RoleGranted events ever emitted).",
+    "confidence": "verified",
+    "summary": "RLUSD Ethereum minting is gated by Ripple's custom 2-of-31 MultiSign minter. The proxy creation calldata and current role reads identify separate 7-of-12 Ripple MultiSign contracts for DEFAULT_ADMIN_ROLE and UPGRADER_ROLE. The XRPL issuer account has its master key active and no signer list.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": ["0x8292bb45bf1ee4d140127049757c2e0ff06317ed"],
+      "implementationAddresses": ["0x9747a0d261c2d56eb93f542068e5d1e23170fa9e"],
+      "adminAddresses": [
+        "0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+        "0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "RLUSD Ethereum upgrader MultiSign (7-of-12)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530195,
+      "sources": [
+        {
+          "label": "Ethereum: RLUSD proxy creation transaction",
+          "url": "https://eth.blockscout.com/tx/0x811c963004b19c2e3724850cda6bffd7cab7ff8f34d5670f86b51a9e1390327d"
+        },
+        {
+          "label": "Ethereum: RLUSD implementation source",
+          "url": "https://eth.blockscout.com/address/0x9747a0d261c2d56eb93f542068e5d1e23170fa9e?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "RLUSD Ethereum minter — Ripple MultiSign contract (31-of-31, quorum=2)",
+        "label": "RLUSD Ethereum minter - Ripple MultiSign contract (2-of-31)",
         "role": "direct-minter",
         "authorityType": "multisig",
         "address": "0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
@@ -196,6 +238,64 @@
           }
         ],
         "evidence": "XRPL account_info for rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De: Flags = 0x819a0000 (RequireDestTag, DisallowXRP, DefaultRipple, DepositAuth SET; NoFreeze NOT set; GlobalFreeze NOT set). RegularKey = none. No signer_list present. Master key active; XRPL issuance fully controlled by Ripple. Total XRPL RLUSD obligations = 761,696,376 RLUSD."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
+        "label": "RLUSD Ethereum role-admin MultiSign (7-of-12)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 7,
+        "signerCount": 12,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530195,
+        "sources": [
+          {
+            "label": "Ethereum: RLUSD proxy creation transaction",
+            "url": "https://eth.blockscout.com/tx/0x811c963004b19c2e3724850cda6bffd7cab7ff8f34d5670f86b51a9e1390327d"
+          },
+          {
+            "label": "Ethereum: Ripple role-admin MultiSign",
+            "url": "https://eth.blockscout.com/address/0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "RLUSD proxy initialization calldata assigns DEFAULT_ADMIN_ROLE to 0x66fc. At block 25530195, hasRole(DEFAULT_ADMIN_ROLE, 0x66fc) returned true; the verified Ripple MultiSign reports quorum 7 and 12 signers. This role can grant and revoke mint-critical roles."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+        "label": "RLUSD Ethereum upgrader MultiSign (7-of-12)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 7,
+        "signerCount": 12,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530195,
+        "sources": [
+          {
+            "label": "Ethereum: RLUSD proxy creation transaction",
+            "url": "https://eth.blockscout.com/tx/0x811c963004b19c2e3724850cda6bffd7cab7ff8f34d5670f86b51a9e1390327d"
+          },
+          {
+            "label": "Ethereum: Ripple upgrader MultiSign",
+            "url": "https://eth.blockscout.com/address/0x863c8754c298d3efec3863f2a46f1c71a355ce6c?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "RLUSD proxy initialization calldata assigns UPGRADER_ROLE to 0x863c. At block 25530195, hasRole(UPGRADER_ROLE, 0x863c) returned true; the verified Ripple MultiSign reports quorum 7 and the same 12-signer set as the role-admin MultiSign."
       }
     ],
     "review": {
@@ -213,32 +313,70 @@
           "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
         }
       ],
-      "evidence": "ETH: MINTER_ROLE holder confirmed as 0x97e9 (Ripple MultiSign, 31 signers, quorum=2). XRPL: issuer rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De master key active, no signer_list. UPGRADER_ROLE and DEFAULT_ADMIN holders on ETH not findable: OZ v5 non-enumerable AccessControl, getRoleMemberCount/getRoleMember revert, zero RoleGranted events ever emitted across full contract history.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "UPGRADER_ROLE (0xa615a8afb6fffcb8c6809ac0997b5c9c12b8cc97651150f14c8f6203168cff4c) and DEFAULT_ADMIN_ROLE holders on RLUSD ETH are not discoverable: OZ v5 UUPS non-enumerable AccessControl, getRoleMemberCount/getRoleMember revert, zero RoleGranted events emitted in contract history. The upgrade path controller is unconfirmable from on-chain state without direct Ripple disclosure."
-      ]
+      "evidence": "ETH: MINTER_ROLE holder is 0x97e9 (Ripple MultiSign, quorum 2 of 31). The proxy creation calldata names 0x66fc as DEFAULT_ADMIN_ROLE and 0x863c as UPGRADER_ROLE; current hasRole reads at block 25530195 confirm both assignments, and both verified MultiSign contracts report quorum 7 of 12. XRPL: issuer rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De has its master key active and no signer list.",
+      "reviewer": "Codex V9 control curation",
+      "reviewedAt": "2026-07-14"
     }
   },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "U.S. Treasury Bills",
-      "pct": 36,
-      "risk": "very-low"
-    },
-    {
-      "name": "Government Money Market Funds",
-      "pct": 36,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash Deposits",
-      "pct": 28,
-      "risk": "very-low"
+      "name": "U.S. dollars and other cash equivalents",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury and NYDFS-approved regulated financial institutions",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Deloitte RLUSD Reserves Report - May 2026",
+        "url": "https://cdn.sanity.io/files/ior4a5y3/production/00bb3899f244c392ab77e55e65dee33cf271dfce.pdf/RLUSD_Attestation_Report_-_May_2026_Final.pdf"
+      },
+      {
+        "label": "Ripple RLUSD transparency",
+        "url": "https://ripple.com/solutions/stablecoin/transparency/"
+      }
+    ],
+    "rationale": "Deloitte's May examination reports $1.162351093 billion of Treasury bills, $345.319216 million of government money market funds, and $269.247197 million of cash deposits at May 29, 2026. Excluding the separately disclosed negative $3.915600 million timing adjustment, gross reserve assets normalize to 65.41%, 19.44%, and 15.15%, respectively; the registry retains their aggregate live-feed identity for deterministic reconciliation.",
+    "compositionBasis": "Deloitte examination of the RLUSD Reserve Report as of May 29, 2026",
+    "compositionAsOf": "2026-05-29",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material asset-class exposure is unclassified; the public report does not identify the depository institutions, money market funds, or custodians.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "NYDFS-approved U.S. depository institutions and asset custodians (not publicly identified)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Deloitte RLUSD Reserves Report - May 2026",
+        "url": "https://cdn.sanity.io/files/ior4a5y3/production/00bb3899f244c392ab77e55e65dee33cf271dfce.pdf/RLUSD_Attestation_Report_-_May_2026_Final.pdf"
+      },
+      {
+        "label": "Ripple RLUSD stablecoin terms",
+        "url": "https://ripple.com/legal/stablecoin/"
+      }
+    ],
+    "uncertainty": "The report and terms confirm segregated reserve accounts held with NYDFS-approved U.S. depositories or custodians, but do not identify providers or establish statutory bankruptcy remoteness and rehypothecation treatment."
+  },
   "liveReservesConfig": {
     "adapter": "ripple-transparency",
     "version": 1,

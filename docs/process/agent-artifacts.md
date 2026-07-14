@@ -15,13 +15,13 @@ Historical plans, one-off audits, exploratory research, point-in-time calibratio
 | Repeatable process guidance                     | `docs/process/`                                                |
 | Route-specific maintenance guidance             | Route doc or a dedicated subdirectory under `docs/`            |
 | Operator remediation procedure                  | `docs/runbooks/`                                               |
-| Product, API, pipeline, or methodology behavior | Existing feature/methodology doc plus timeline when applicable |
+| Product, API, pipeline, or methodology behavior | Existing feature/methodology doc plus structured changelog when applicable |
 
 ## Cleanup Rule
 
 Before deleting a historical artifact, check whether any verified doc, test, source comment, or user-facing changelog still references it. Migrate only the durable content needed by current maintainers, then update the reference to the new `/docs/` page or remove it if the note was historical context only.
 
-Do not create new committed planning-archive or calibration-snapshot material. Temporary investigation output should stay local, untracked, or in `/agents/`. Reviewed methodology decisions belong in the owning feature document and its timeline; the evidence report remains scratch output.
+Do not create new committed planning-archive or calibration-snapshot material. Temporary investigation output should stay local, untracked, or in `/agents/`. Reviewed methodology decisions belong in the owning feature document and structured changelog; the evidence report remains scratch output.
 
 ## Agent Skills
 
@@ -69,4 +69,4 @@ PHAROS_INSTALL_CODEX_HOOKS=1 npm run agent:setup
 npm run agent:doctor
 ```
 
-The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The doctor checks skill discovery, workflow portability, hook installation, and stale local overrides without mutating the checkout.
+The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The doctor checks skill discovery, workflow portability, an installed optional Codex hook config for drift, and stale local overrides without mutating the checkout. It does not warn when the optional Codex hooks are absent.

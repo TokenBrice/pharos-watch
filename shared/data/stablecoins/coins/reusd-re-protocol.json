@@ -2,22 +2,72 @@
   "id": "reusd-re-protocol",
   "name": "Re Protocol reUSD",
   "symbol": "reUSD",
-  "oneLiner": "reUSD is Re Protocol's NAV-based yield token deploying USDC and USDe/sUSDe into delta-neutral ETH basis trades and short-duration U.S. T-bills (Cayman Islands).",
+  "oneLiner": "reUSD is Re Protocol's senior NAV-based tranche, backed by onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral (Cayman Islands).",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
+    "rwa": true,
     "navToken": true
   },
-  "collateral": "USDC, USDe, and sUSDe deployed into delta-neutral ETH basis trades or short-duration U.S. Treasury bills via the Re Protocol Insurance Capital Layer",
-  "pegMechanism": "NAV-based token price recalculated daily at UTC 00:00 via Chainlink price feed; yield accrues from delta-neutral ETH basis trade or T-bill returns plus 250 bps protocol spread; atomic redemptions when instant liquidity available, otherwise queue mode",
-  "mechanismArchetype": "synthetic-delta-neutral",
+  "collateral": "At least 50% of the high-water-mark capital remains onchain as redemption liquidity, primarily sUSDe; up to 50% is deployed offchain into Regulation 114 trust accounts as collateral supporting reinsurance contracts",
+  "pegMechanism": "NAV-based token price recalculated daily at UTC 00:00 from a blend of the offchain SOFR-based return and the onchain trailing sUSDe basis rate, plus 250 bps; instant redemptions are liquidity-limited and fall back to a quarterly queue",
+  "mechanismArchetype": "rwa-credit-fund",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "rationale": "Current Re documentation describes reUSD as the senior tranche of a reinsurance-capital structure, with up to half of capital deployed into Regulation 114 trust accounts. That architecture is a real-world credit/fund exposure rather than the prior synthetic delta-neutral classification.",
+    "sources": [
+      {
+        "label": "Re Protocol About reUSD",
+        "url": "https://docs.re.xyz/products/about-reusd.md"
+      },
+      {
+        "label": "Re Protocol reUSD and reUSDe comparison",
+        "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
+      }
+    ]
+  },
   "llamaId": "339",
   "detailProvider": "defillama",
   "geckoId": "re-protocol-reusd",
   "cmcSlug": "re-protocol-reusd",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "reUSD is a senior NAV-based tranche token rather than a collateralized debt position, so it has no borrower health factor or oracle-triggered collateral liquidation branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "owner-triage",
+      "rationale": "Re Protocol documents reUSD as a senior NAV-based tranche minted against accepted stablecoin deposits, with capital split between onchain liquidity and offchain Regulation 114 trust collateral. It does not create borrower-specific debt positions, collateral ratios, or oracle-triggered collateral liquidations, so CDP collateral branches are not applicable.",
+      "sources": [
+        {
+          "label": "Re Protocol About reUSD",
+          "url": "https://docs.re.xyz/products/about-reusd.md"
+        },
+        {
+          "label": "Re Protocol reUSD and reUSDe comparison",
+          "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Re Protocol About reUSD",
+        "url": "https://docs.re.xyz/products/about-reusd.md"
+      },
+      {
+        "label": "Re Protocol reUSD and reUSDe comparison",
+        "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://app.re.xyz/transparency",
@@ -46,7 +96,7 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "reUSD is a NAV-based yield-accruing token issued exclusively to non-U.S. persons under Regulation S (Securities Act of 1933). It accrues yield from delta-neutral ETH basis trades and T-bills, carries significant risk including total loss of principal, offers gated/queue redemptions, and is not marketed or used as a 1:1 fiat payment instrument. These features place it outside GENIUS payment-stablecoin scope.",
+      "summary": "reUSD is a senior, NAV-based yield token issued exclusively to eligible non-U.S. persons. Its backing combines onchain stablecoin liquidity with offchain reinsurance collateral in Regulation 114 trust accounts; redemptions become queued when instant capacity is unavailable. These investment and yield features place it outside GENIUS payment-stablecoin scope.",
       "references": [
         {
           "label": "Re Protocol disclosure page",
@@ -55,10 +105,10 @@
           "accessedAt": "2026-06-07"
         },
         {
-          "label": "Re Protocol docs — What is reUSD",
-          "url": "https://docs.re.xyz/insurance-capital-layers/what-is-reusd",
+          "label": "Re Protocol About reUSD",
+          "url": "https://docs.re.xyz/products/about-reusd.md",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-07-14"
         }
       ]
     },
@@ -82,10 +132,10 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Re Protocol docs — What is reUSD",
-        "url": "https://docs.re.xyz/insurance-capital-layers/what-is-reusd",
+        "label": "Re Protocol About reUSD",
+        "url": "https://docs.re.xyz/products/about-reusd.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-07-14"
       },
       {
         "label": "Re Protocol disclaimers",
@@ -94,8 +144,8 @@
         "accessedAt": "2026-06-07"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-07"
+    "reviewer": "owner-triage",
+    "reviewedAt": "2026-07-14"
   },
   "contracts": [
     {
@@ -138,41 +188,155 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "bounded-admin",
-    "confidence": "manual-review",
-    "summary": "reUSD's verified ShareToken source has MINTER_ROLE and UPGRADER_ROLE. No live MINTER_ROLE holder was found in the sampled event-derived scan, but admin/upgrader addresses can restore or alter mint authority.",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "reUSD currently grants MINTER_ROLE to a collateral-deposit layer, an immutable redemption contract with no mint call, and a CCIP burn/mint pool. A two-day TimelockController holds token admin and UUPS upgrade roles; a 3-of-5 Safe is its sole proposer, executor, and canceller.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+      ],
+      "implementationAddresses": [
+        "0xb5276c436F65913Cd5332DE745d04feDEb4a21D4"
+      ],
+      "adminAddresses": [
+        "0x69dDEa332723cF5407151aAF68B9b076557FCA93"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "reUSD token admin and UUPS upgrader timelock",
+      "observedBlock": 25530324,
+      "sources": [
+        {
+          "label": "reUSD proxy and ShareToken implementation",
+          "url": "https://etherscan.io/address/0x5086bf358635b81d8c47c66d1c8b9e567db70c72#code"
+        },
+        {
+          "label": "reUSD TimelockController",
+          "url": "https://etherscan.io/address/0x69dDEa332723cF5407151aAF68B9b076557FCA93#code"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x69dDEa332723cF5407151aAF68B9b076557FCA93",
-        "label": "reUSD default admin and upgrader",
-        "role": "minter-admin",
-        "authorityType": "unknown",
-        "directMintAbility": "can-authorize",
-        "modulesOrGuardsStatus": "unknown",
+        "address": "0x4691c475be804fa85f91c2d6d0adf03114de3093",
+        "label": "reUSD InsuranceCapitalLayer MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified InsuranceCapitalLayer mints reUSD shares only after supported collateral is transferred in and share conversion checks pass. Its own UUPS upgrader role is held by the same two-day timelock that controls reUSD.",
+        "observedBlock": 25530324,
         "sources": [
           {
-            "label": "reUSD Sourcify source",
-            "url": "https://sourcify.dev/server/v2/contract/1/0x5086bf358635b81d8c47c66d1c8b9e567db70c72?fields=sources,abi"
+            "label": "InsuranceCapitalLayer proxy",
+            "url": "https://etherscan.io/address/0x4691c475be804fa85f91c2d6d0adf03114de3093#code"
           }
         ],
-        "evidence": "Role scan at Ethereum block 25165906 found this address holding DEFAULT_ADMIN_ROLE and UPGRADER_ROLE on the verified ShareToken implementation."
+        "evidence": "The complete RoleGranted/RoleRevoked history plus hasRole() at Ethereum block 25530324 confirms this proxy still holds reUSD MINTER_ROLE. Verified InsuranceCapitalLayer source calls shareToken.mint() only in collateral-backed deposit flows; its UPGRADER_ROLE is held by timelock 0x69dDEa...."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa31deebb3680a3007120e74bcbdf4df36f042a40",
+        "label": "reUSD InstantRedemption MINTER_ROLE holder",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 25530324,
+        "sources": [
+          {
+            "label": "reUSD InstantRedemption",
+            "url": "https://etherscan.io/address/0xa31deebb3680a3007120e74bcbdf4df36f042a40#code"
+          }
+        ],
+        "evidence": "hasRole(MINTER_ROLE) was true at Ethereum block 25530324, but the verified immutable InstantRedemption bytecode exposes redemption and burn flows and contains no call to ShareToken.mint(). The role assignment therefore is not a live callable mint surface in this implementation."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465",
+        "label": "reUSD CCIP burn/mint pool",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified BurnWithFromMintTokenPool can mint only through validated CCIP releaseOrMint messages and configured remote-chain rate limits; its owner is the reviewed reUSD Safe.",
+        "observedBlock": 25530324,
+        "sources": [
+          {
+            "label": "reUSD CCIP BurnWithFromMintTokenPool",
+            "url": "https://etherscan.io/address/0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465#code"
+          }
+        ],
+        "evidence": "The complete role-event history and hasRole() confirm this pool holds reUSD MINTER_ROLE at block 25530324. Verified pool source mints in _releaseOrMint() after CCIP validation. owner() returned Safe 0x8eec10616802Ef639CA55c98ac856553fAdEfBaD."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x69dDEa332723cF5407151aAF68B9b076557FCA93",
+        "label": "reUSD token admin and UUPS upgrader timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 25530324,
+        "sources": [
+          {
+            "label": "reUSD TimelockController",
+            "url": "https://etherscan.io/address/0x69dDEa332723cF5407151aAF68B9b076557FCA93#code"
+          },
+          {
+            "label": "reUSD ShareToken implementation",
+            "url": "https://etherscan.io/address/0xb5276c436f65913cd5332de745d04fedeb4a21d4#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25530324, hasRole() confirmed this TimelockController is the sole current reUSD DEFAULT_ADMIN_ROLE and UPGRADER_ROLE holder; getMinDelay() returned 172800 seconds. Verified ShareToken source gates minting by MINTER_ROLE and UUPS replacement by UPGRADER_ROLE."
       },
       {
         "chain": "ethereum",
         "address": "0x8eec10616802Ef639CA55c98ac856553fAdEfBaD",
-        "label": "reUSD default admin",
-        "role": "minter-admin",
-        "authorityType": "unknown",
-        "directMintAbility": "can-authorize",
-        "modulesOrGuardsStatus": "unknown",
+        "label": "reUSD governance Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x2a3Ef2FEd07D025b8B1f07d99C77471D11529db9",
+            "0x28d8af3CF7286Bdc34ae80cb90093dFA4dbb0020",
+            "0x7dd97C12abd41c53B4f2B3df6b872753F9DABCaa",
+            "0x1F76cC0eF4605f57478f3044e703AF6B0C57A297",
+            "0x0AE4eeAFfDA174F84c84c22f03a28F3AAB02FbDC"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25530324,
+          "source": "safe-api"
+        },
+        "observedBlock": 25530324,
         "sources": [
           {
-            "label": "reUSD Ethereum proxy",
-            "url": "https://etherscan.io/address/0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+            "label": "reUSD governance Safe",
+            "url": "https://app.safe.global/home?safe=eth:0x8eec10616802Ef639CA55c98ac856553fAdEfBaD"
+          },
+          {
+            "label": "reUSD TimelockController",
+            "url": "https://etherscan.io/address/0x69dDEa332723cF5407151aAF68B9b076557FCA93#code"
           }
         ],
-        "evidence": "Role scan at Ethereum block 25165906 found this address holding DEFAULT_ADMIN_ROLE; a prior MINTER_ROLE holder was revoked by this address at block 25109035."
+        "evidence": "At Ethereum block 25530324, Safe calls returned threshold 3 and five owners; Safe Transaction Service reported version 1.4.1, no modules, and zero guard. Timelock hasRole() returned true for this Safe as the sole PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE holder."
       }
     ],
     "review": {
@@ -194,13 +358,10 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0x5086bf358635b81d8c47c66d1c8b9e567db70c72?fields=sources,abi"
         }
       ],
-      "evidence": "Verified ShareToken source defines MINTER_ROLE and UPGRADER_ROLE; sampled role reads found no live MINTER_ROLE holder but identified two default admins and one upgrader that can restore or alter mint authority.",
-      "reviewer": "Codex mint-authority top100 batch-a",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Confirm from full deployment history whether any MINTER_ROLE holder exists outside the scanned events.",
-        "Verify signer setup for admin/upgrader addresses."
-      ]
+      "evidence": "A complete Blockscout RoleGranted/RoleRevoked event replay through Ethereum block 25530324, followed by direct hasRole() checks, found three live MINTER_ROLE holders, one DEFAULT_ADMIN_ROLE holder, and one UPGRADER_ROLE holder. Verified implementations establish the callable behavior of each minter. The admin/upgrader is a 172800-second TimelockController governed by a 3-of-5 Safe with no modules or guard.",
+      "reviewer": "Codex Safety Score V9 CTRL curation",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable"
     }
   },
   "deploymentModel": "native-multichain",
@@ -221,30 +382,56 @@
       }
     }
   },
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Re Protocol About reUSD",
+        "url": "https://docs.re.xyz/products/about-reusd.md"
+      },
+      {
+        "label": "Re Protocol complete documentation",
+        "url": "https://docs.re.xyz/llms-full.txt"
+      }
+    ],
+    "rationale": "Current Re documentation establishes an architecture-level allocation: at least 50% of high-water-mark deposits remains onchain, primarily as sUSDe, while up to 50% may be moved into Regulation 114 trust accounts supporting reinsurance. It does not establish a current point-in-time split or support the prior 25/25/30/20 weights.",
+    "compositionBasis": "Current Re architecture disclosure; no point-in-time portfolio allocation was published in the reviewed sources",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The onchain and offchain reserve categories are identified, but their current weights, temporary onchain asset mix, trust-account assets, banking partners, and reinsurance exposures are not fully enumerated.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The documentation identifies sUSDe as the primary onchain asset and Regulation 114 trust collateral as the offchain component, but does not publish a current reconciled allocation suitable for separate dependency weights.",
+        "candidateCoinIds": [
+          "susde-ethena"
+        ]
+      }
+    ]
+  },
   "reserves": [
     {
-      "name": "Delta-neutral ETH basis trade positions (via USDe)",
-      "pct": 25,
+      "name": "Onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral",
+      "pct": 100,
       "risk": "high",
-      "coinId": "usde-ethena"
-    },
-    {
-      "name": "Delta-neutral ETH basis trade positions (via sUSDe)",
-      "pct": 25,
-      "risk": "high",
-      "coinId": "susde-ethena",
-      "depType": "collateral"
-    },
-    {
-      "name": "Short-duration U.S. Treasury bills",
-      "pct": 30,
-      "risk": "very-low"
-    },
-    {
-      "name": "USDC reserves (instant redemption buffer)",
-      "pct": 20,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "assetClass": "other",
+      "issuerOrObligor": "Ethena and Re Protocol's partner reinsurers, trust accounts, custodians, and banking counterparties",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "market",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "yieldConfig": {

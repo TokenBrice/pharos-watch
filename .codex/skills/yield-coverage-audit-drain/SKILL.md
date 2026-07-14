@@ -121,7 +121,7 @@ queue payload shape, or methodology-visible behavior changes.
 Typical files:
 
 - `docs/yield-intelligence.md`
-- `docs/yield-intelligence-timeline.md`
+- `shared/data/methodology-changelogs/yield-methodology/`
 - `docs/status-dashboard.md` and `docs/runbooks/yield-health.md` for status
   surface changes
 - `docs/about-page.md` and `src/app/about/content.ts` for new external source
@@ -146,8 +146,9 @@ npx vitest run worker/src/cron/__tests__/yield-config-registry.test.ts worker/sr
 npm run check:stablecoin-data
 ```
 
-If the reviewed changes will be pushed, let the repo pre-push hook run the
-authoritative merge gate once after the commits are ready.
+If the reviewed changes will be published, use `pharos-release-runner` after
+the focused checks. GitHub's required `PR gate` is authoritative; the heavy
+local merge gate is optional rehearsal work.
 
 Add `worker/src/cron/__tests__/fetch-tbill-rate.test.ts` when benchmarks change,
 and frontend status/methodology tests when public status or UI copy changes.

@@ -1,0 +1,200 @@
+{
+  "id": "ousg-ondo-finance",
+  "reserves": [
+    {
+      "name": "State Street Galaxy Onchain Liquidity Sweep Fund (SWEEP)",
+      "pct": 36.798028,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "State Street Global Advisors and Galaxy Asset Management",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "BlackRock USD Institutional Digital Liquidity Fund (BUIDL)",
+      "pct": 24.759805,
+      "risk": "low",
+      "coinId": "buidl-blackrock",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock Financial Management",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Franklin OnChain U.S. Government Money Fund (BENJI)",
+      "pct": 18.893336,
+      "risk": "low",
+      "coinId": "benji-franklin-templeton",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Franklin Templeton",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Fidelity Treasury Digital Fund (FYOXX)",
+      "pct": 18.283568,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Fidelity Investments",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Silicon Valley Bank deposits",
+      "pct": 1.004605,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Silicon Valley Bank",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDC cash equivalents held at Coinbase",
+      "pct": 0.227874,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial; held through Coinbase",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Other assets (funds in transit and net receivables)",
+      "pct": 0.032784,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Ondo I LP counterparties",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SOL-5 dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ondo OUSG portfolio overview",
+        "url": "https://ondo.finance/ousg"
+      },
+      {
+        "label": "Ondo OUSG documentation",
+        "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
+      }
+    ],
+    "rationale": "Ondo's portfolio table dated July 13, 2026 reports seven positions totaling $408,120,484. The authored percentages normalize each published dollar value to that total; BUIDL, BENJI, and USDC map to exact tracked dependencies while every other disclosed position is explicitly dispositioned.",
+    "compositionBasis": "Issuer-published OUSG position values normalized to the published total underlying assets",
+    "compositionAsOf": "2026-07-13",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Every position in the issuer's current portfolio table is identified and either linked to an exact tracked asset or explicitly dispositioned.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "State Street Galaxy Onchain Liquidity Sweep Fund (SWEEP)",
+        "pct": 36.798028,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "SWEEP is an identified fund share without a tracked Pharos stablecoin record."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Fidelity Treasury Digital Fund (FYOXX)",
+        "pct": 18.283568,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "FYOXX is an identified fund share without a tracked Pharos stablecoin record."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Silicon Valley Bank deposits",
+        "pct": 1.004605,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The disclosed bank deposit is not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "Other assets (funds in transit and net receivables)",
+        "pct": 0.032784,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Ondo identifies this accounting line as funds in transit and outstanding receivables less payables, not a stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "NAV Consulting, Inc. (fund administrator)",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Underlying fund custodians, Coinbase, and Silicon Valley Bank",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SOL-5 dependency review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ondo OUSG portfolio overview",
+        "url": "https://ondo.finance/ousg"
+      },
+      {
+        "label": "Ondo OUSG proof-of-reserve reports",
+        "url": "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing"
+      }
+    ],
+    "uncertainty": "Ondo identifies current portfolio positions and the fund administrator, but the reviewed materials do not establish account-level segregation, bankruptcy treatment, or rehypothecation terms for every underlying provider.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -445,24 +445,86 @@
       "currencyIso": "usdt",
       "slices": [
         {
-          "name": "Direct & indirect U.S. Treasury Bills",
-          "pct": 73.5,
-          "risk": "very-low"
+          "name": "U.S. Treasury bills",
+          "pct": 61.03,
+          "risk": "very-low",
+          "assetClass": "treasury-bill",
+          "issuerOrObligor": "United States Treasury",
+          "riskFactors": ["duration", "liquidity", "custody"],
+          "liquidityHorizon": "one-day"
         },
         {
-          "name": "Physical gold bars",
-          "pct": 10.4,
-          "risk": "very-low"
+          "name": "Overnight reverse repurchase agreements",
+          "pct": 10.08,
+          "risk": "very-low",
+          "assetClass": "repo",
+          "issuerOrObligor": "Undisclosed reverse-repo counterparties",
+          "riskFactors": ["counterparty", "liquidity", "custody"],
+          "liquidityHorizon": "one-day",
+          "maturityDaysMax": 1
+        },
+        {
+          "name": "Term reverse repurchase agreements",
+          "pct": 2.47,
+          "risk": "very-low",
+          "assetClass": "repo",
+          "issuerOrObligor": "Undisclosed reverse-repo counterparties",
+          "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+          "liquidityHorizon": "unknown"
+        },
+        {
+          "name": "Cash and bank deposits",
+          "pct": 0.06,
+          "risk": "very-low",
+          "assetClass": "bank-deposit",
+          "issuerOrObligor": "Undisclosed banking counterparties",
+          "riskFactors": ["counterparty", "custody"],
+          "liquidityHorizon": "immediate"
+        },
+        {
+          "name": "Precious metals",
+          "pct": 10.34,
+          "risk": "medium",
+          "assetClass": "other",
+          "issuerOrObligor": "Physical gold inventory",
+          "riskFactors": ["market", "custody", "liquidity"],
+          "liquidityHorizon": "seven-days"
         },
         {
           "name": "Bitcoin",
-          "pct": 3.7,
-          "risk": "medium"
+          "pct": 3.45,
+          "risk": "medium",
+          "assetClass": "cryptoasset",
+          "issuerOrObligor": "Tether-controlled on-chain wallets",
+          "riskFactors": ["market", "custody", "liquidity"],
+          "liquidityHorizon": "seven-days"
         },
         {
-          "name": "Other reserves (cash & equivalents, secured loans, corporate bonds, other investments)",
-          "pct": 12.4,
-          "risk": "medium"
+          "name": "Public equities",
+          "pct": 1.78,
+          "risk": "high",
+          "assetClass": "other",
+          "issuerOrObligor": "Undisclosed public-equity issuers",
+          "riskFactors": ["market", "liquidity", "concentration", "custody"],
+          "liquidityHorizon": "unknown"
+        },
+        {
+          "name": "Other investments",
+          "pct": 2.53,
+          "risk": "high",
+          "assetClass": "other",
+          "issuerOrObligor": "Undisclosed",
+          "riskFactors": ["credit", "market", "liquidity", "custody"],
+          "liquidityHorizon": "unknown"
+        },
+        {
+          "name": "Secured loans",
+          "pct": 8.25,
+          "risk": "high",
+          "assetClass": "private-credit",
+          "issuerOrObligor": "Undisclosed third-party borrowers",
+          "riskFactors": ["credit", "liquidity", "counterparty", "concentration"],
+          "liquidityHorizon": "over-seven-days"
         }
       ]
     }

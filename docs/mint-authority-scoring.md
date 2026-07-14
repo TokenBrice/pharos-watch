@@ -6,6 +6,7 @@
 
 - **Current methodology version:** `v1.2`
 - **Runtime/version source:** `shared/lib/methodology-versions/mint-authority.ts`
+- **Structured changelog:** `shared/data/methodology-changelogs/mint-authority/`
 - **Scoring source:** `shared/lib/mint-authority-scoring.ts`
 - **Public methodology anchor:** `/methodology/#mint-authority-score`
 

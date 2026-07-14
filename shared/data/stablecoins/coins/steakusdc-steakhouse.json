@@ -120,15 +120,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "USDC deposited into Steakhouse-curated Morpho lending markets",
-      "pct": 100,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "wrapper"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Steakhouse Morpho USDC vault",
     "yieldType": "lending-vault"

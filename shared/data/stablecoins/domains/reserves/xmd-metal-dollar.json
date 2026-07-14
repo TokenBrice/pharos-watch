@@ -1,0 +1,39 @@
+{
+  "id": "xmd-metal-dollar",
+  "reserves": [
+    {
+      "name": "USDC, PYUSD, and XPAX stablecoin reserve basket",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle, PayPal, and Paxos-dollar issuers",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [{"label": "XPR Network Metal Dollar overview", "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"}],
+    "rationale": "XPR Network identifies XMD as a reserve-backed stablecoin index treasury with 1:1 minting and redemption using USDC, PYUSD, and XPAX. It does not publish basket weights, current balances, or any evidence that supports the former 34/33/33 split, so the reserve is represented as one unweighted complete basket.",
+    "compositionBasis": "XPR Network issuer disclosure of the complete three-stablecoin XMD basket",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The constituent stablecoins are disclosed, but the issuer does not publish their current weights, reserve balances, or a dated proof-of-reserves report.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [{"reserveIndex": 0, "reserveName": "USDC, PYUSD, and XPAX stablecoin reserve basket", "pct": 100, "disposition": "basket-needs-split", "rationale": "USDC, PYUSD, and XPAX are identified, but no current percentage allocation is published."}]
+  },
+  "custodyProfile": {
+    "providers": [{"name": "Metal Dollar reserve treasury (not publicly identified)", "role": "other"}],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [{"label": "XPR Network Metal Dollar overview", "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"}],
+    "uncertainty": "The reviewed issuer overview identifies the stablecoin basket but does not disclose the reserve custodian, account segregation, insolvency treatment, rehypothecation, or provider shares.",
+    "knownUnknownExposurePct": 100
+  }
+}

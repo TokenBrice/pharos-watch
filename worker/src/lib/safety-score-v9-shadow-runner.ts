@@ -48,6 +48,15 @@ import {
 } from "./safety-score-v9-store";
 
 export const SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX = "safety-score-v9-shadow";
+
+/**
+ * Minimum age of the day's selected run before the quarter-hourly caller
+ * re-runs the shadow. Three hours yields up to eight refreshes per UTC day —
+ * frequent enough for same-day candidate iteration while keeping compute and
+ * D1 writes bounded. The daily summary remains one row per day; a refresh
+ * re-selects it with the latest success.
+ */
+export const SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC = 3 * 60 * 60;
 export const SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC = V9_SHADOW_DAILY_START_OFFSET_SEC;
 export const SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC = V9_SHADOW_MAX_START_DELAY_SEC;
 export const SAFETY_SCORE_V9_SHADOW_TIMEOUT_MS = 2 * 60_000;
@@ -385,7 +394,16 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
     });
     previous = history.find((daily) => daily.utcDay === utcDay) ?? null;
     currentAttemptId = attemptId(utcDay, previous);
-    if (previous?.selectedRun !== null && previous?.selectedRun !== undefined) {
+    // A selected success no longer pins the whole UTC day: the shadow
+    // refreshes on a bounded intra-day cadence so candidate iteration is
+    // visible in the retained latest rows the same day. The daily summary
+    // stays one row (latest success re-selects); a run younger than the
+    // refresh interval still skips to bound compute and writes.
+    if (
+      previous?.selectedRun !== null &&
+      previous?.selectedRun !== undefined &&
+      fixedInput.clockSec - previous.selectedRun.selectedAtSec < SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC
+    ) {
       return {
         status: "skipped",
         attemptId: currentAttemptId,
@@ -524,8 +542,13 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
           },
           {
             kind: "fact-set",
+            // v2 archives only the reviewed extension: compiled facts are
+            // deterministically rebuilt from (base-input, extension) at gate
+            // replay time and bound by factSetDigest, and archiving the
+            // compiled copy pushed the artifact past the D1 row budget once
+            // every asset became rateable.
             identity: pipeline.candidate.factSetDigest,
-            value: { schemaVersion: 1, extension: pipeline.extension, compiledFacts: pipeline.compiledFacts },
+            value: { schemaVersion: 2, extension: pipeline.extension },
             createdAtSec: completedAtSec,
             verifiedAtSec: completedAtSec,
           },

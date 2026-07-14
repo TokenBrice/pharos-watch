@@ -1,0 +1,84 @@
+{
+  "id": "vndc-jade-labs",
+  "reserves": [
+    {
+      "name": "Issuer-disclosed VNDC 2.0 USDT/USDC collateral pools",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Jade Labs / ONUS (VNDC Hub)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "counterparty",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "VNDC issuer website",
+        "url": "https://vndc.io/"
+      },
+      {
+        "label": "VNDC 2.0 issuer overview",
+        "url": "https://blog.vndc.io/what-is-vndc-2-0-unique-digital-asset-for-the-era-of-on-chain-liquidity"
+      },
+      {
+        "label": "ONUS VNDC 2.0 network announcement",
+        "url": "https://goonus.io/en/announcement-onus-supports-vndc-2-0-bep20-and-polygon-networks/"
+      }
+    ],
+    "rationale": "Issuer materials describe VNDC 2.0 as backed by USDT/USDC collateral pools on BNB Smart Chain and Polygon, but they do not publish a current reserve split, dated attestation, or independently verified balance. The reserve and redemption claims therefore remain an issuer-disclosed aggregate under the existing investigation and withdrawal-risk notice.",
+    "compositionBasis": "VNDC 2.0 issuer disclosure of USDT/USDC collateral pools",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The USDT/USDC basket split, current balances, and independent assurance are not published in the reviewed issuer materials.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Issuer-disclosed VNDC 2.0 USDT/USDC collateral pools",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer names the basket constituents but does not publish their weights or a dated independent reserve report.",
+        "candidateCoinIds": [
+          "usdt-tether",
+          "usdc-circle"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Jade Labs / ONUS-controlled VNDC 2.0 smart-contract pools",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "VNDC issuer website",
+        "url": "https://vndc.io/"
+      },
+      {
+        "label": "ONUS VNDC 2.0 network announcement",
+        "url": "https://goonus.io/en/announcement-onus-supports-vndc-2-0-bep20-and-polygon-networks/"
+      }
+    ],
+    "uncertainty": "Issuer materials identify smart-contract collateral pools and the ONUS/VNDC Hub redemption surface but do not establish segregation, insolvency remoteness, or restrictions on reuse of collateral.",
+    "knownUnknownExposurePct": 100
+  }
+}

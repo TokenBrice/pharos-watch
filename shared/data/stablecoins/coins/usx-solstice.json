@@ -155,22 +155,6 @@
   "chainTier": "mature-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "USDC",
-      "pct": 55,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    },
-    {
-      "name": "USDT",
-      "pct": 45,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "collateral"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "solstice-attestation",
     "version": 1,

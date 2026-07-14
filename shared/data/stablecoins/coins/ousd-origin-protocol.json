@@ -53,22 +53,6 @@
   },
   "collateralQuality": "exotic",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "USDC (via Morpho/Yearn vault)",
-      "pct": 90,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    },
-    {
-      "name": "USDC (via Curve OUSD/USDC AMO LP)",
-      "pct": 10,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "origin-vault-balances",
     "version": 1,
@@ -110,6 +94,51 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "OUSD is minted 1:1 when users deposit USDC into the Origin OUSD Vault, but the protocol also runs a Curve AMO that pre-mints OUSD into protocol-owned liquidity and deploys USDC into Morpho/Curve strategies under privileged owner/Governor/Strategist roles.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+        "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70"
+      ],
+      "implementationAddresses": [
+        "0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33",
+        "0x82948060c4b72684bededec342350ab344975145"
+      ],
+      "adminAddresses": [
+        "0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "OUSD Timelock (48h) + Origin Governance (AMO/strategy admin)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530882,
+      "sources": [
+        {
+          "label": "OUSD token proxy",
+          "url": "https://etherscan.io/address/0x2a8e1e676ec238d8a992307b495b45b3feaa5e86#code"
+        },
+        {
+          "label": "OUSD Vault proxy",
+          "url": "https://etherscan.io/address/0xE75D77B1865Ae93c7eaa3040B038D7aA7BC02F70#code"
+        },
+        {
+          "label": "OUSD token implementation",
+          "url": "https://etherscan.io/address/0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33#code"
+        },
+        {
+          "label": "OUSD Vault implementation",
+          "url": "https://etherscan.io/address/0x82948060c4b72684bededec342350ab344975145#code"
+        },
+        {
+          "label": "OUSD Timelock",
+          "url": "https://etherscan.io/address/0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "mintIncidents": [
       {
         "date": "2020-11-17",
@@ -199,9 +228,9 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295197: OUSD Vault (0xE75D77B…) — governor() = 0x35918c… (Timelock, ContractName 'Timelock', OZ TimelockController, getMinDelay = 48 hours). Timelock PROPOSER_ROLE holders (from RoleGranted logs): 0x3cdd07c… (ContractName 'Governance'), 0x1d3fbd4… (ContractName 'Governance'), 0xbe2ab3d… (GnosisSafeProxy 342 bytes). strategistAddr() = 0x4ff1b9d… (ContractName 'SafeProxy'): 8 owners, 2/8 threshold. Vault implementation at 0x82948060… (EIP-1967 impl slot confirmed). Token (0x2a8e1e6…) has no proxy admin set. AMO path (mintForStrategy/burnForStrategy) governed by the same Timelock/Governance structure.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25530882, token admin() and governor() and Vault admin() and governor() all returned the 48-hour Timelock 0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f. implementation() returned 0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33 for the token and 0x82948060c4b72684bededec342350ab344975145 for the Vault. Timelock getMinDelay() returned 172800 seconds. The same Timelock controls the Vault mint/AMO administration path, so mint-critical logic can change after the recorded delay.",
+      "reviewer": "Codex CTRL batch 16",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "OUSD Vault (Blockscout)",

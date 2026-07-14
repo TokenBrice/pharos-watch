@@ -19,19 +19,1202 @@
   "geckoId": "last-usd",
   "pythFeedId": "0xe10593860e9ee1c204e4f9569e877502f098dd1a4d84cc5bad06f23f77dcbfe2",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "HypurrFi docs identify Pyth as the primary price-feed source for USDXL markets, with RedStone redundancy and Hyperliquid validator feeds for select assets but no reviewed failover logic.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "tier": "single-source-or-laggy",
+    "summary": "USDXL's persistent HypurrFi Market Loans facilitator uses one pooled Aave V3 health-factor engine with sixteen collateral-specific oracle branches. Every branch ultimately depends on Pyth through a direct adapter or a selected wrapper; no path enforces price recency. HyFiOracle can select a fallback for absent or nonpositive answers, but the configured fallback is the zero address. eMode categories 1 and 2 override risk parameters for correlated positions; Market Flash Loans and the USDT0 PSM are separate non-liquidation issuance paths.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-ROOT-DRAIN data review",
+      "rationale": "At finalized HyperEVM block 40451813, USDXL listed exactly three facilitators. HypurrFi Market Loans 0x7911c2c9c5f5a6f4Bef58d7dF35903abd3EE9DD6 (bucket capacity 3,000,000 USDXL; level 101,937.265403217904789429 USDXL) is the persistent debt path through Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b; the Pool exposed 19 reserves and 109,324.999748143155243991 USDXL variable debt. Its 16 collateral-enabled reserves are enumerated individually. USDXL, USDe, and feUSD were collateral-disabled and are excluded. Frozen, borrowing-disabled, and matured collateral reserves remain included where collateral use stayed enabled because existing positions remain repayable and liquidatable. HypurrFi Market Flash Loans 0xD12f1c402197224339D5A324AC7ef4DF5d2142E9 had bucket level zero and a 1,000,000 USDXL same-transaction limit; its ERC-3156 flow mints, requires callback repayment of principal plus fee, and burns principal before return, so it creates no persistent debt or collateral-liquidation branch. USDT0 PSM 0xcb17105F6A7A75D1F1C91317a4621d9AaAfe96Fd had 63,389.139177 USDXL outstanding and swaps USD₮0 via fixed-price strategy 0x617607aFAAf5ad91978CeC822157447B56368af3 at PRICE_RATIO 1e18; it is a reserve-backed swap path without borrower health factor or collateral liquidation, so it is outside the branch enumeration.",
+      "sources": [
+        {
+          "label": "Pinned HypurrFi CLI contract registry",
+          "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+        },
+        {
+          "label": "Pinned HypurrFi pooled-market reader",
+          "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+        },
+        {
+          "label": "Pinned official USDXL token facilitator source",
+          "url": "https://github.com/lastdotnet/usdxl-core/blob/d733c4b388b21b0f210cca2e3a85403b9351cdf2/src/contracts/usdxl/UpgradeableUsdxlToken.sol"
+        },
+        {
+          "label": "Pinned official USDXL flash-minter source",
+          "url": "https://github.com/lastdotnet/usdxl-core/blob/d733c4b388b21b0f210cca2e3a85403b9351cdf2/src/contracts/facilitators/flashMinter/UsdxlFlashMinter.sol"
+        },
+        {
+          "label": "Pinned official USDXL GSM source",
+          "url": "https://github.com/lastdotnet/usdxl-core/blob/d733c4b388b21b0f210cca2e3a85403b9351cdf2/src/contracts/facilitators/gsm/Gsm.sol"
+        },
+        {
+          "label": "Pinned official USDXL fixed-price strategy source",
+          "url": "https://github.com/lastdotnet/usdxl-core/blob/d733c4b388b21b0f210cca2e3a85403b9351cdf2/src/contracts/facilitators/gsm/priceStrategy/FixedPriceStrategy.sol"
+        },
+        {
+          "label": "HyperEVM RPC used for fixed-block reads",
+          "url": "https://rpc.hyperliquid.xyz/evm"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-ROOT-DRAIN data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "HypurrFi agents overview",
-        "url": "https://docs.hypurrfi.com/agents/overview"
+        "label": "HypurrFi USDXL introduction",
+        "url": "https://docs.hypurr.fi/usdxl/introduction"
       },
       {
-        "label": "HypurrFi USDXL docs",
-        "url": "https://docs.hypurrfi.com/agents/usdxl"
+        "label": "Verified HyFiOracle",
+        "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+      },
+      {
+        "label": "Verified Pyth adapter",
+        "url": "https://www.hyperevmscan.io/address/0x1d0E4EA616A749c1620118F7d97c111e8ec36E8b?tab=contract"
+      },
+      {
+        "label": "Pinned official USDXL core repository",
+        "url": "https://github.com/lastdotnet/usdxl-core/tree/d733c4b388b21b0f210cca2e3a85403b9351cdf2"
+      },
+      {
+        "label": "Pinned HypurrFi pooled-market reader",
+        "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+      },
+      {
+        "label": "HyperEVM RPC used for fixed-block reads",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      }
+    ],
+    "branches": [
+      {
+        "id": "hypurrfi-pooled-whype",
+        "label": "HypurrFi pooled WHYPE collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "WHYPE (0x5555555555555555555555555555555555555555) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0x1d0E4EA616A749c1620118F7d97c111e8ec36E8b feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "WHYPE"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "PythAggregatorV3",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth HYPE/USD 0x4279e31cc369bbcc2faf022b382b080e32a8e689ff20fbc530d2a603eb6cd98b -> adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0x1d0E4EA616A749c1620118F7d97c111e8ec36E8b",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:hype-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "WHYPE",
+            "maximumLtvPct": 68,
+          "note": "Liquidation threshold 80%; bonus 12%. Reserve was active and not frozen at the observation block. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:hype-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified WHYPE selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0x1d0E4EA616A749c1620118F7d97c111e8ec36E8b?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-wsthype",
+        "label": "HypurrFi pooled wstHYPE collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "wstHYPE (0x94e8396e0869c9F2200760aF0621aFd240E1CF38) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0x5777A35EED45CFD605daD5d3D7B531aC2F409cD1 feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "wstHYPE"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth HYPE/USD plus stHYPE share-ratio wrapper",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth HYPE/USD adapter 0x1d0E4EA616A749c1620118F7d97c111e8ec36E8b times stHYPE totalSupply/totalShares -> wrapper -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0x5777A35EED45CFD605daD5d3D7B531aC2F409cD1",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:hype-usd",
+              "oracle:sthype-share-ratio",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "wstHYPE",
+            "maximumLtvPct": 60,
+          "note": "Liquidation threshold 75%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:hype-usd",
+          "oracle:sthype-share-ratio"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified wstHYPE selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0x5777A35EED45CFD605daD5d3D7B531aC2F409cD1?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-ubtc",
+        "label": "HypurrFi pooled UBTC collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "UBTC (0x9FDBdA0A5e284c32744D2f17Ee5c74B284993463) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0xfD5c563391CDA3B290394da1D6c6a36A3cbf401D feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "UBTC"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "PythAggregatorV3",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth BTC/USD 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43 -> adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0xfD5c563391CDA3B290394da1D6c6a36A3cbf401D",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:btc-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "UBTC",
+            "maximumLtvPct": 60,
+            "note": "Liquidation threshold 70%; bonus 12%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:btc-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified UBTC selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0xfD5c563391CDA3B290394da1D6c6a36A3cbf401D?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-ueth",
+        "label": "HypurrFi pooled UETH collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "UETH (0xBe6727B535545C67d5cAa73dEa54865B92CF7907) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0x44Bbb85E5B1799569dD02054Cfb38028656Ae30A feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "UETH"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "PythAggregatorV3",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth ETH/USD 0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace -> adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0x44Bbb85E5B1799569dD02054Cfb38028656Ae30A",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:eth-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "UETH",
+            "maximumLtvPct": 68,
+            "note": "Liquidation threshold 83%; bonus 12%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:eth-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified UETH selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0x44Bbb85E5B1799569dD02054Cfb38028656Ae30A?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-usdt0",
+        "label": "HypurrFi pooled USD₮0 collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "USD₮0 (0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0x58Ea071Bed56c6C606686035eDB5270D9920Ca95 feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "USD₮0"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "PythAggregatorV3Standardized",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth USDt0/USD 0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b -> adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0x58Ea071Bed56c6C606686035eDB5270D9920Ca95",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:usdt-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "USD₮0",
+            "maximumLtvPct": 65,
+          "note": "Liquidation threshold 80%; bonus 8%. Reserve was active and not frozen at the observation block. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:usdt-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified USD₮0 selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0x58Ea071Bed56c6C606686035eDB5270D9920Ca95?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-usdhl",
+        "label": "HypurrFi pooled USDHL collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "USDHL (0xb50A96253aBDF803D85efcDce07Ad8becBc52BD5) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0x1a6A7eD67d52f9712C5F8150C773dD08B21CDEC7 feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "USDHL"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth-compatible adapter",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth USDHL/USD 0x1497fb795ae65533d36d147b1b88c8b7226866a201589904c13acd314f694799 -> adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0x1a6A7eD67d52f9712C5F8150C773dD08B21CDEC7",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:usdhl-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "USDHL",
+            "maximumLtvPct": 60,
+          "note": "Liquidation threshold 80%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:usdhl-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified USDHL selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0x1a6A7eD67d52f9712C5F8150C773dD08B21CDEC7?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-usol",
+        "label": "HypurrFi pooled USOL collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "USOL (0x068f321Fa8Fb9f0D135f290Ef6a3e2813e1c8A29) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0xD79b997699C9A917c7Ce8E63483dBB2fa6526B07 feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "USOL"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth-compatible adapter",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth SOL/USD 0x974c7a77dbace44d229be17fc176975e06404b004476aeaff37641818cb0c55a -> adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0xD79b997699C9A917c7Ce8E63483dBB2fa6526B07",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:sol-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "USOL",
+            "maximumLtvPct": 60,
+            "note": "Liquidation threshold 70%; bonus 12%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:sol-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified USOL selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0xD79b997699C9A917c7Ce8E63483dBB2fa6526B07?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-khype",
+        "label": "HypurrFi pooled kHYPE collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "kHYPE (0xfD739d4e423301CE9385c1fb8850539D657C296D) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0xE861F6e8D140d78efFae6dd1755E8C6962Bb1f4F feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "kHYPE"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth HYPE/USD plus kHYPE exchange-rate wrapper",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth HYPE/USD adapter 0x1d0E4EA616A749c1620118F7d97c111e8ec36E8b times kHYPE/HYPE exchange rate 0x4478c615e00ffb487aa269b2744ef4e2ddd60851 -> wrapper -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0xE861F6e8D140d78efFae6dd1755E8C6962Bb1f4F",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:hype-usd",
+              "oracle:khype-exchange-rate",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "kHYPE",
+            "maximumLtvPct": 60,
+          "note": "Liquidation threshold 75%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:hype-usd",
+          "oracle:khype-exchange-rate"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified kHYPE selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0xE861F6e8D140d78efFae6dd1755E8C6962Bb1f4F?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-xaut0",
+        "label": "HypurrFi pooled XAUt0 collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "XAUt0 (0xf4D9235269a96aaDaFc9aDAe454a0618eBE37949) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0xaA5CDCeB1AA866E89968F22CE7f17D330e43ed01 feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "XAUt0"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "PythAggregatorV3Standardized",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth XAU/USD 0x765d2ba906dbc32ca17cc11f5310a89e9ee1f6420508c63861f2f8ba4ee34bb2 -> adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0xaA5CDCeB1AA866E89968F22CE7f17D330e43ed01",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:xau-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "XAUt0",
+            "maximumLtvPct": 20,
+            "note": "Liquidation threshold 40%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:xau-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified XAUt0 selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0xaA5CDCeB1AA866E89968F22CE7f17D330e43ed01?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-thbill",
+        "label": "HypurrFi pooled thBILL collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "thBILL (0xfDD22Ce6D1F66bc0Ec89b20BF16CcB6670F55A5a) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0x592F1dB133F1e8f20253cBe506B0B393FCE7aFbf feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "thBILL"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth-compatible adapter",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth thBILL/USD 0x5b1bc5a579deba54dbaa9bc1c5b2e2b3f116d8d5ec27fbb3b9dc140a78e9f1e2 -> adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0x592F1dB133F1e8f20253cBe506B0B393FCE7aFbf",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:thbill-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "thBILL",
+            "maximumLtvPct": 40,
+          "note": "Liquidation threshold 60%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:thbill-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified thBILL selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0x592F1dB133F1e8f20253cBe506B0B393FCE7aFbf?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-susde",
+        "label": "HypurrFi pooled sUSDe collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "sUSDe (0x211Cc4DD073734dA055fbF44a2b4667d5E5fE5d2) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0xc2E5f286Caf47257C42397518CAF41987a34a582 feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "sUSDe"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth-compatible adapter",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth sUSDe/USD 0x271c64ce459937abf721d42552035713b6c58f80eeceab716a624607fda4b10f -> adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0xc2E5f286Caf47257C42397518CAF41987a34a582",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:susde-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "sUSDe",
+            "maximumLtvPct": 20,
+          "note": "Liquidation threshold 40%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. Borrowing this collateral asset itself was disabled; collateral use remained enabled. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:susde-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified sUSDe selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0xc2E5f286Caf47257C42397518CAF41987a34a582?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-pt-khype-13nov2025",
+        "label": "HypurrFi pooled PT-kHYPE-13NOV2025 collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "PT-kHYPE-13NOV2025 (0x311dB0FDe558689550c68355783c95eFDfe25329) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0x291ABb9f62f0152b441d4C6ECC03765439572168 feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "PT-kHYPE-13NOV2025"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Pendle redemption-rate plus Pyth HYPE/USD wrapper",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: redemption rate 0xa98f03ad08447c994a229442868043c884159940 times Pyth HYPE/USD adapter 0x1d0E4EA616A749c1620118F7d97c111e8ec36E8b -> wrapper -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0x291ABb9f62f0152b441d4C6ECC03765439572168",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:hype-usd",
+              "oracle:pendle-redemption-rate",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "PT-kHYPE-13NOV2025",
+            "maximumLtvPct": 1,
+          "note": "Liquidation threshold 20%; bonus 8%; matured and retained because it remains collateral-enabled. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. Borrowing this collateral asset itself was disabled; collateral use remained enabled. The matured PT branch is retained because it remains collateral-enabled and callable for existing positions. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:hype-usd",
+          "oracle:pendle-redemption-rate"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified PT-kHYPE-13NOV2025 selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0x291ABb9f62f0152b441d4C6ECC03765439572168?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-behype",
+        "label": "HypurrFi pooled beHYPE collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "beHYPE (0xd8FC8F0b03eBA61F64D08B0bef69d80916E5DdA9) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0x1d0E4EA616A749c1620118F7d97c111e8ec36E8b feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "beHYPE"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "PythAggregatorV3",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: beHYPE uses the shared Pyth HYPE/USD adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0x1d0E4EA616A749c1620118F7d97c111e8ec36E8b",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:hype-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "beHYPE",
+            "maximumLtvPct": 60,
+          "note": "Liquidation threshold 75%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:hype-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified beHYPE selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0x1d0E4EA616A749c1620118F7d97c111e8ec36E8b?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-usdc",
+        "label": "HypurrFi pooled USDC collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "USDC (0xb88339CB7199b77E23DB6E890353E22632Ba630f) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0x94F71bCa20954A1E2ced722e4a9798bAAA8dF45F feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "USDC"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "PythAggregatorV3Standardized",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth USDC/USD 0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a -> adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0x94F71bCa20954A1E2ced722e4a9798bAAA8dF45F",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:usdc-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "USDC",
+            "maximumLtvPct": 65,
+          "note": "Liquidation threshold 80%; bonus 8%. Reserve was active and not frozen at the observation block. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:usdc-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified USDC selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0x94F71bCa20954A1E2ced722e4a9798bAAA8dF45F?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-usdh",
+        "label": "HypurrFi pooled USDH collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "USDH (0x111111a1a0667d36bD57c0A9f569b98057111111) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0x2a6590B3054D6024b3AFE0E6e86F1Ec9DF7e8cb1 feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "USDH"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth-compatible adapter",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: Pyth USDH/USD 0xf364e785775b4cb2f159ea823f8b5b9b669a4c221a3f845e518ba0e09611c553 -> adapter -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0x2a6590B3054D6024b3AFE0E6e86F1Ec9DF7e8cb1",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:usdh-usd",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "USDH",
+            "maximumLtvPct": 65,
+          "note": "Liquidation threshold 80%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:usdh-usd"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified USDH selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0x2a6590B3054D6024b3AFE0E6e86F1Ec9DF7e8cb1?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hypurrfi-pooled-pt-khype-19mar2026",
+        "label": "HypurrFi pooled PT-kHYPE-19MAR2026 collateral",
+        "tier": "single-source-or-laggy",
+        "summary": "PT-kHYPE-19MAR2026 (0xea84ca9849D9e76a78B91F221F84e9Ca065FC9f5) is a collateral-enabled reserve in HypurrFi Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b. Its selected source 0x000C297b3b094624AE96c33a7411b7Ea9bA7a397 feeds HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8; the branch ultimately depends on Pyth and has no contract-enforced freshness bound or secondary source.",
+        "collateralAssets": [
+          "PT-kHYPE-19MAR2026"
+        ],
+        "chains": [
+          "hyperevm"
+        ],
+        "feeds": [
+          {
+            "provider": "Pendle redemption-rate plus Pyth HYPE/USD wrapper",
+            "path": "Pyth contract 0xe9d69CdD6Fe41e7B621B4A688C5D1a68cB5c8ADc: redemption rate 0xe7a245e2bd5929ef1ea71bf4b296629c7aa14ac5 times Pyth HYPE/USD adapter 0x1d0E4EA616A749c1620118F7d97c111e8ec36E8b -> wrapper -> HyFiOracle 0x9BE2ac1ff80950DCeb816842834930887249d9A8 -> Pool 0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b pooled health factor",
+            "address": "0x000C297b3b094624AE96c33a7411b7Ea9bA7a397",
+            "chain": "hyperevm",
+            "observedAt": "2026-07-14",
+            "observedBlock": 40451813,
+            "failureDomainKeys": [
+              "oracle:pyth:hyper-evm",
+              "oracle:pyth:hype-usd",
+              "oracle:pendle-redemption-rate",
+              "oracle:hypurrfi:hyfioracle"
+            ]
+          }
+        ],
+      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 40451813,
+        "collateralParameters": [
+          {
+            "asset": "PT-kHYPE-19MAR2026",
+            "maximumLtvPct": 1,
+          "note": "Liquidation threshold 20%; bonus 8%; matured and retained because it remains collateral-enabled. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. Borrowing this collateral asset itself was disabled; collateral use remained enabled. The matured PT branch is retained because it remains collateral-enabled and callable for existing positions. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+          }
+        ],
+      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
+        "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
+        "failureDomainKeys": [
+          "oracle:pyth:hyper-evm",
+          "oracle:hypurrfi:hyfioracle",
+          "liquidation:hypurrfi:pool",
+          "governance:hypurrfi",
+          "oracle:pyth:hype-usd",
+          "oracle:pendle-redemption-rate"
+        ],
+        "sources": [
+          {
+            "label": "Pinned HypurrFi CLI contract registry",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/config/contracts.ts"
+          },
+          {
+            "label": "Pinned official pooled-market reader",
+            "url": "https://github.com/lastdotnet/hypurrfi-data-cli/blob/715bc2557b140f277ccaff00d6138721fa29ed85/src/fetchers/pooled.ts"
+          },
+          {
+            "label": "Verified HypurrFi Pool",
+            "url": "https://www.hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25DD70e461F918A14b?tab=contract"
+          },
+          {
+            "label": "Verified HyFiOracle",
+            "url": "https://www.hyperevmscan.io/address/0x9BE2ac1ff80950DCeb816842834930887249d9A8?tab=contract"
+          },
+          {
+            "label": "Verified PT-kHYPE-19MAR2026 selected oracle source",
+            "url": "https://www.hyperevmscan.io/address/0x000C297b3b094624AE96c33a7411b7Ea9bA7a397?tab=contract"
+          }
+        ]
       }
     ]
   },
@@ -173,6 +1356,40 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM) in wind-down: pooled new borrows are suspended and settlement targets July 15, 2026. The token's GHO AccessControl roles have no members (facilitator set and bucket caps are frozen); the only remaining mint-relevant control is the 2/2 proxy-admin Safe's upgrade power.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+      ],
+      "implementationAddresses": [
+        "0xce23355599cdbe5dca05186c5d9d5b37d959b27f"
+      ],
+      "adminAddresses": [
+        "0xf050623d497be7ea6653fd205a537d10300b4c6e"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "HypurrFi / Last proxy admin Safe (upgrade authority)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 40440697,
+      "sources": [
+        {
+          "label": "USDXL token proxy on HyperEVM Blockscout",
+          "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+        },
+        {
+          "label": "USDXL implementation on HyperEVM Blockscout",
+          "url": "https://hyperliquid.blockscout.com/address/0xce23355599cdbe5dca05186c5d9d5b37d959b27f"
+        },
+        {
+          "label": "USDXL proxy admin Safe on HyperEVM Blockscout",
+          "url": "https://hyperliquid.blockscout.com/address/0xf050623d497be7ea6653fd205a537d10300b4c6e"
+        },
+        {
+          "label": "HyperEVM JSON-RPC",
+          "url": "https://rpc.hyperliquid.xyz/evm"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "HypurrFi USDXL facilitator / borrow contracts (Aave-v3 fork, GHO model; role set frozen)",
@@ -181,8 +1398,15 @@
         "directMintAbility": "cap-limited",
         "chain": "hyperevm",
         "canRaiseCap": false,
+        "failureDomainKeys": [
+          "hyperevm:0x7911c2c9c5f5a6f4bef58d7df35903abd3ee9dd6",
+          "hyperevm:0xd12f1c402197224339d5a324ac7ef4df5d2142e9",
+          "hyperevm:0xcb17105f6a7a75d1f1c91317a4621d9aaafe96fd"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 40441129,
         "capDescription": "Mint bounded by overcollateralized borrow positions and GHO-style facilitator bucket capacity within the HypurrFi pooled market. DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE on the token have zero members, so facilitators cannot be added/removed and bucket capacities cannot be raised short of a proxy upgrade.",
-        "evidence": "At HyperEVM block 37556224: getFacilitatorsList() returned exactly 3 facilitators (0x7911c2…, 0xd12f1c…, 0xcb1710… — HypurrFi market loans, flash loans, USDT0 PSM); hasRole returned false for DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE across the proxy-admin Safe, all 3 facilitators, the implementation, and HypurrFi governance addresses; no RoleGranted events exist (genesis-deployed contract, role storage empty). mint() reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down in progress, settlement target July 15 2026)."
+        "evidence": "At HyperEVM block 40441129, getFacilitatorsList() returned exactly 3 current facilitators: 0x7911c2c9c5f5a6f4Bef58d7dF35903abd3EE9DD6, 0xD12f1c402197224339D5A324AC7ef4DF5d2142E9, and 0xcb17105F6A7A75D1F1C91317a4621d9AaAfe96Fd. The proxy-admin Safe had no DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, or BUCKET_MANAGER_ROLE membership; the previously reviewed role set remains empty and the facilitator buckets remain exhausted. Minting remains bounded by facilitator bucket capacity and reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED during the wind-down."
       },
       {
         "label": "HypurrFi / Last proxy admin Safe (upgrade authority)",
@@ -212,17 +1436,25 @@
       }
     ],
     "review": {
-      "evidence": "At HyperEVM block 37547570: USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 proxy admin = Safe 2/2 (0xf050623d497be7ea6653fd205a537d10300b4c6e); Safe owners [0x67a6d918..., 0xae04ce2f...], threshold=2, no modules, no guard, masterCopy=0xfb1bffc9... Implementation at 0xce23355599cdbe5dca05186c5d9d5b37d959b27f. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down active). At block 37556224 the facilitator-bucket ACL was resolved: getFacilitatorsList() = 3 facilitators (market loans, flash loans, USDT0 PSM) and hasRole(DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE) = false for the Safe, all facilitators, the implementation, and HypurrFi governance addresses, with no RoleGranted events in history — the GHO role set has zero members and the facilitator/bucket configuration is frozen. The sole remaining mint-capable authority is the 2/2 proxy-admin Safe via implementation upgrade.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At HyperEVM block 40440697: the USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 implementation slot returned 0xce23355599cdbe5dca05186c5d9d5b37d959b27f and the admin slot returned Safe 0xf050623d497be7ea6653fd205a537d10300b4c6e. Safe getOwners() returned [0x67a6d918..., 0xae04ce2f...] and getThreshold() returned 2; getModulesPaginated() returned no enabled modules, and the guard storage slot was zero. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down active). At block 37556224 the facilitator-bucket ACL was resolved: getFacilitatorsList() = 3 facilitators (market loans, flash loans, USDT0 PSM) and hasRole(DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE) = false for the Safe, all facilitators, the implementation, and HypurrFi governance addresses, with no RoleGranted events in history — the GHO role set has zero members and the facilitator/bucket configuration is frozen. The sole remaining mint-capable authority is the 2/2 proxy-admin Safe via implementation upgrade.",
+      "reviewer": "Codex CTRL curation batch 18",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
-          "label": "USDXL token on HyperEVM",
+          "label": "USDXL token proxy on HyperEVM Blockscout",
           "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+        },
+        {
+          "label": "USDXL proxy admin Safe on HyperEVM Blockscout",
+          "url": "https://hyperliquid.blockscout.com/address/0xf050623d497be7ea6653fd205a537d10300b4c6e"
         },
         {
           "label": "HypurrFi USDXL docs",
           "url": "https://docs.hypurrfi.com/products/usdxl"
+        },
+        {
+          "label": "HyperEVM JSON-RPC",
+          "url": "https://rpc.hyperliquid.xyz/evm"
         }
       ]
     }

@@ -1,0 +1,99 @@
+{
+  "id": "brla-brla-digital",
+  "reserves": [
+    {
+      "name": "BRL cash and cash equivalents",
+      "pct": 62.05,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Named Brazilian banks, payment institutions, and brokerages",
+      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Overnight repurchase agreements collateralized by Brazilian corporate debentures",
+      "pct": 37.95,
+      "risk": "low",
+      "assetClass": "repo",
+      "issuerOrObligor": "Banco BTG Pactual and XP Investimentos; diversified corporate debentures as collateral",
+      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "market"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "UHY BRLA Transparency Report - May 31, 2026",
+        "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
+      }
+    ],
+    "rationale": "UHY's reasonable-assurance report as of May 31, 2026 reports BRL 93,207,027.30 of cash or cash equivalents and BRL 57,000,684.75 of overnight repurchase agreements, for BRL 150,207,712.05 of reserve assets. Those amounts normalize to 62.05% and 37.95%. The repos are collateralized by diversified Brazilian corporate debentures and provide next-business-day liquidity.",
+    "compositionBasis": "UHY reasonable-assurance examination of Avenia's BRLA Transparency Report as of May 31, 2026",
+    "compositionAsOf": "2026-05-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The report identifies every reserve category and names the cash and repo institutions. It does not identify each corporate debenture issuer or disclose reserve-account legal safeguards.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BRL cash and cash equivalents",
+        "pct": 62.05,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "BRL cash and cash-equivalent balances are exogenous reserve assets rather than tracked stablecoins."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Overnight repurchase agreements collateralized by Brazilian corporate debentures",
+        "pct": 37.95,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The overnight repo claims and their corporate-debenture collateral are exogenous reserve assets rather than tracked stablecoins."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Stark Bank S.A.",
+        "role": "bank",
+        "jurisdiction": "Brazil"
+      },
+      {
+        "name": "Woovi Instituicao de Pagamento Ltda",
+        "role": "other",
+        "jurisdiction": "Brazil"
+      },
+      {
+        "name": "Banco BTG Pactual S.A.",
+        "role": "bank",
+        "jurisdiction": "Brazil"
+      },
+      {
+        "name": "Banco Itau Unibanco S.A.",
+        "role": "bank",
+        "jurisdiction": "Brazil"
+      },
+      {
+        "name": "XP Investimentos CCTVM S.A.",
+        "role": "other",
+        "jurisdiction": "Brazil"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "UHY BRLA Transparency Report - May 31, 2026",
+        "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
+      }
+    ],
+    "uncertainty": "The report names every institution and reports category-level and institution-level balances, but it does not establish account segregation, bankruptcy remoteness, rehypothecation limits, or custody-provider legal roles."
+  }
+}

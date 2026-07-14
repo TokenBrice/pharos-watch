@@ -111,6 +111,45 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "EURSAFO is the EUR share class of Spiko's AMF-authorized UCITS fund. Tokens are minted by Spiko's daily-operator relayer contracts (two UUPS proxies) under a PermissionManager (custom RBAC), with a Gnosis Safe 1.4.1 (8/3) as the super-admin that controls upgrades and permission assignments.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+        "0x344278aff344d6fb960705dc18a4912221608472",
+        "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "0xe4880249745eac5f1ed9d8f7df844792d560e750"
+      ],
+      "implementationAddresses": [
+        "0x13ae01cbce8530012516fbc1273803d4995aee71",
+        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e",
+        "0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
+      ],
+      "adminAddresses": [
+        "0x4eaa52b6280593a8820c45ce38f974290ae52cea"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Spiko super-admin Safe (8/3, UUPS upgrade + permission admin)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        },
+        {
+          "label": "EURSAFO contract on Etherscan",
+          "url": "https://etherscan.io/address/0x0990b149e915cb08e2143a5c6f669c907eddc8b0#code"
+        },
+        {
+          "label": "PermissionManager on Etherscan",
+          "url": "https://etherscan.io/address/0x344278aff344d6fb960705dc18a4912221608472#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Spiko daily-operator minter contracts (two UUPS proxies)",
@@ -205,10 +244,7 @@
         "name": "Chainlink CCIP",
         "slug": "ccip",
         "url": "https://l2beat.com/interop/protocols/ccip",
-        "bridgeTypes": [
-          "burnAndMint",
-          "lockRelease"
-        ]
+        "bridgeTypes": ["burnAndMint", "lockRelease"]
       }
     ],
     "sources": [
@@ -336,9 +372,71 @@
     {
       "name": "Fully collateralized overnight total-return swap exposure",
       "pct": 100,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "BNP Paribas",
+      "riskFactors": ["counterparty", "market", "liquidity", "custody", "legal", "smart-contract"],
+      "liquidityHorizon": "one-day"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko Euro product page",
+        "url": "https://www.spiko.io/spiko-euro"
+      },
+      {
+        "label": "Spiko SICAV prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Spiko Amundi Overnight Swap Fund KID",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf"
+      },
+      {
+        "label": "Spiko eurSAFO share-class totals API",
+        "url": "https://public-api.spiko.io/share-classes/eurSAFO/totals"
+      }
+    ],
+    "rationale": "The producer emits one 100% fully collateralized overnight total-return swap identity. Spiko's product page and legal documents identify BNP Paribas as the current TRS counterparty, daily dealing, and residual counterparty and market-liquidity risk; this review classifies that exact producer identity without treating the fund's changing securities portfolio as a separately weighted reserve slice.",
+    "compositionBasis": "Exact spiko-api single-asset identity cross-checked against Spiko's current product page, prospectus, KID, and share-class totals API",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No exposure outside the emitted 100% TRS identity is indicated. The fund's changing securities portfolio and any future change of eligible TRS counterparty are look-through details, not separately reported producer slices.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "CACEIS Bank",
+        "role": "custodian",
+        "jurisdiction": "France"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko Amundi Overnight Swap Fund KID",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf"
+      },
+      {
+        "label": "Spiko SICAV prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Spiko Euro product page",
+        "url": "https://www.spiko.io/spiko-euro"
+      }
+    ],
+    "uncertainty": "The KID identifies CACEIS Bank as depositary and states that the fund is separate from its management company and legally segregated from custodian assets. The reviewed sources do not publish delegated-provider allocations or rehypothecation terms."
+  },
   "yieldConfig": {
     "yieldSource": "Spiko Amundi Overnight Swap Fund EUR NAV",
     "yieldType": "nav-appreciation"

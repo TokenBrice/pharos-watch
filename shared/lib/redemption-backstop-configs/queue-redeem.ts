@@ -134,6 +134,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "alusd-alchemix": {
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
+    outputAssets: ["dai-makerdao"],
     settlementModel: "days",
     costModel: documentedVariableFee("1:1 via the Transmuter; no separate redemption fee is disclosed"),
     docs: [
@@ -444,6 +445,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "cgusd-cygnus-finance": {
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
+    outputAssets: ["usdc-circle"],
     settlementModel: "days",
     costModel: fixedFee(35, "Cygnus docs list a 35 bps withdrawal fee on cgUSD / wcgUSD -> USDC withdrawals"),
     docs: [
@@ -469,6 +471,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "uty-xsy": {
     ...queueRedeemBase,
+    outputAssets: ["usdc-circle"],
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.3, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: undisclosedReviewedFee(),
@@ -516,6 +519,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "avusd-avant": {
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
+    outputAssets: ["usdc-circle"],
     settlementModel: "days",
     costModel: documentedVariableFee("Avant docs say the redemption fee is shown in-app before confirmation"),
     docs: [
@@ -554,6 +558,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "yzusd-yuzu": {
     ...queueRedeemBase,
     accessModel: "issuer-api",
+    outputAssets: ["usdt-tether"],
     settlementModel: "days",
     ...reviewedQueueRedemptionSupplyFull,
     costModel: undisclosedReviewedFee(),
@@ -590,6 +595,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "usdnr-nerona": {
     ...queueRedeemBase,
     accessModel: "whitelisted-onchain",
+    outputAssets: ["m-m0"],
     settlementModel: "days",
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: undisclosedReviewedFee(
@@ -623,6 +629,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "usdrif-rif": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_PHASE_4_COVERAGE_AT),
+    outputAssets: ["asset:rif"],
     outputAssetType: "mixed-collateral",
     costModel: fixedFee(25, "RIF On Chain FAQ lists a 0.25% mint/redeem fee paid in RIF for USDRIF"),
     docs: [

@@ -1,0 +1,40 @@
+{
+  "id": "xdai-gnosis",
+  "reserves": [
+    {
+      "name": "USDS backing through Gnosis bridge infrastructure",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usds-sky",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Ecosystem USDS held through Gnosis bridge infrastructure",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [{"label": "Gnosis Chain token documentation", "url": "https://docs.gnosischain.com/about/tokens/"}],
+    "rationale": "Gnosis documents that the USDS migration on the xDAI bridge is complete and identifies xDAI as the stable token used for payments and fees on Gnosis Chain. The established bridge-backed reserve relationship is USDS.",
+    "compositionBasis": "Gnosis Chain issuer documentation for the completed USDS xDAI bridge migration",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No direct reserve asset remains unidentified in the documented USDS bridge model.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [{"name": "Gnosis Chain xDAI bridge contracts", "role": "other"}],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [{"label": "Gnosis Chain token documentation", "url": "https://docs.gnosischain.com/about/tokens/"}],
+    "uncertainty": "The reviewed documentation confirms the USDS bridge migration but does not establish contract-level custody segregation, legal insolvency treatment, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

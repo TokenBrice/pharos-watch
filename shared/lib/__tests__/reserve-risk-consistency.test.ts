@@ -42,6 +42,7 @@ const STRATEGY_KEYWORDS = [
   "FX arbitrage",
   "governance",
   "multi-collateral",
+  "mint-market",
   "LSTs",
   "LST",
 ];

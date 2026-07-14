@@ -2,9 +2,9 @@
 
 This policy governs the addition of new cron trigger expressions to `worker/wrangler.toml`.
 
-## Current state
+## Source Of Truth
 
-The worker declares **20 cron expressions** in `worker/wrangler.toml`. Each expression maps to one Cloudflare scheduled-trigger invocation, dispatched in `worker/src/handlers/scheduled.ts` to the jobs configured for that slot in `shared/lib/scheduled-runner-registry.ts`.
+`worker/wrangler.toml` owns the deployed cron expressions. Each expression maps to one Cloudflare scheduled-trigger invocation, dispatched in `worker/src/handlers/scheduled.ts` to the jobs configured for that slot in `shared/lib/scheduled-runner-registry.ts`. Run `npm run check:cron-sync` and `npm run check:cron-connections` for the current inventory and capacity report.
 
 Cloudflare Workers enforce a limit of **6 simultaneous outbound requests waiting for response headers** per invocation. Pharos applies a conservative six-connection budget across every job dispatched within a trigger slot, even though Cloudflare releases the header-wait slot when headers arrive. The repo policy is documented in:
 
@@ -15,7 +15,7 @@ Cloudflare Workers enforce a limit of **6 simultaneous outbound requests waiting
 
 **Do not add a new cron trigger expression unless every existing 6-budget slot has been audited for headroom and rebalanced.**
 
-The soft cap is **20 trigger expressions** before re-architecting batched dispatch, and it is fully allocated. The 20th expression is the isolated five-minute reserve-recovery lane: sharing that recovery work with the affected reserve slot or an unrelated status lane would defeat its failure isolation. A 21st expression requires an ADR plus a trigger consolidation or rebalance plan.
+The soft cap is **20 trigger expressions** before re-architecting batched dispatch. Crossing it requires an ADR plus a trigger consolidation or rebalance plan. Failure-isolated recovery work must remain independent of the invocation it is intended to recover.
 
 ## Process for new scheduled work
 

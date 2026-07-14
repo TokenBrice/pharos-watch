@@ -49,9 +49,71 @@
     {
       "name": "Protocol-managed stablecoin and crypto collateral",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Anything Labs and undisclosed protocol collateral counterparties",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market", "legal"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "UUSD official website",
+        "url": "https://uusd.ai/"
+      },
+      {
+        "label": "UUSD whitepaper",
+        "url": "https://uusd.ai/whitepaper.pdf"
+      },
+      {
+        "label": "UUSD smart-contract repository",
+        "url": "https://github.com/uusdai/uusd"
+      }
+    ],
+    "rationale": "The reviewed UUSD website, whitepaper, and repository do not disclose reserve assets, category weights, named counterparties, or an assurance report. The existing 100% aggregate envelope is retained as an explicit evidence gap rather than decomposed into fabricated stablecoin or crypto slices.",
+    "compositionBasis": "UUSD official disclosures and repository review",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The entire reserve envelope is unclassified beyond the protocol's reserve-backed marketing claim; no current composition, custody, or assurance evidence was found.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Protocol-managed stablecoin and crypto collateral",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The official disclosures do not identify the reserve assets or provide a current auditable composition."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Anything Labs and UUSD protocol contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "UUSD official website",
+        "url": "https://uusd.ai/"
+      },
+      {
+        "label": "UUSD whitepaper",
+        "url": "https://uusd.ai/whitepaper.pdf"
+      }
+    ],
+    "uncertainty": "The reviewed public materials do not identify reserve custodians, account segregation, bankruptcy remoteness, or rehypothecation terms."
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

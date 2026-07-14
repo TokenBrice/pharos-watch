@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { renderCodexHookConfig } from "../maintenance/setup-agent-hooks.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const errors = [];
@@ -127,6 +128,13 @@ if (existsSync(localClaudeSettings)) {
   } catch {
     warnings.push(".claude/settings.local.json could not be parsed");
   }
+}
+
+const localCodexHooks = resolve(ROOT, ".codex/hooks.json");
+if (existsSync(localCodexHooks) && readFileSync(localCodexHooks, "utf8") !== renderCodexHookConfig()) {
+  warnings.push(
+    ".codex/hooks.json is stale; review and reinstall it with PHAROS_INSTALL_CODEX_HOOKS=1 npm run agent:setup",
+  );
 }
 
 try {

@@ -24,7 +24,26 @@
     "provider": "Brale Inc. management self-assertion",
     "attestorTier": "self",
     "cadence": "monthly",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-04",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Brale Inc. management",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "USDGLO reserve report - May 2026",
+          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-05-2026.pdf"
+        },
+        {
+          "label": "Brale USDGLO transparency",
+          "url": "https://brale.xyz/stablecoins/USDGLO"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -170,6 +189,37 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "USDGLO is a GloDollarV3 ERC1967 UUPS proxy deployed at the same address across ETH/Base/Optimism/Celo/Polygon/Arbitrum; Brale issues it 1:1 through their centralized backend. Full RoleGranted/RoleRevoked history shows all roles (MINTER, DEFAULT_ADMIN, PAUSER, UPGRADER) consolidated into a single Brale-operated EOA on every chain.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+      ],
+      "implementationAddresses": [
+        "0xf8dbe4f52b7d4fe90cd360aa4f49b7a66783c56f",
+        "0x693b51c1ce5c6e98d71c26ed2c6b3764d8db9cf8",
+        "0x865dda29597ce5f9404c5a56f643492720f2433f"
+      ],
+      "adminAddresses": [
+        "0xb180f98037a63a3dca66b6b4ddbf250265b65110"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Brale operator EOA (sole MINTER_ROLE + DEFAULT_ADMIN_ROLE + UPGRADER_ROLE holder on all 6 EVM chains)",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "USDGLO token (Ethereum Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+        },
+        {
+          "label": "USDGLO token (Base Blockscout)",
+          "url": "https://base.blockscout.com/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+        },
+        {
+          "label": "USDGLO token (Celo Blockscout)",
+          "url": "https://celo.blockscout.com/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+        }
+      ]
+    },
     "controls": [
       {
         "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
@@ -203,7 +253,7 @@
       }
     ],
     "review": {
-      "evidence": "On 2026-06-11: full RoleGranted/RoleRevoked log scans on USDGLO (0x4f604735c1cf31399c6e711d5962b2b3e0225ad3) via Blockscout instances on ETH (from deployment block 15921266), Base, Celo, Polygon, Optimism, and Arbitrum show every role (DEFAULT_ADMIN, MINTER 0x9f2df0fe…, PAUSER 0x65d7a28e…, UPGRADER 0x189ab7a9…) consolidated to 0xb180f98037a63a3dca66b6b4ddbf250265b65110 with all earlier holders revoked. Live hasRole reads at ETH block 25295351 / Base 47202617 / Celo 69293825 / Polygon 88326399 / OP 152797996 / ARB 472429769 confirm 0xb180f9… holds MINTER+DEFAULT_ADMIN on all six chains and eth_getCode returns empty (EOA) on all six. Polygon original deployer 0x03bcc9… hasRole(DEFAULT_ADMIN)=false (revoked). Stellar issuer (GBBS25…) has 1 signer, weight=1 (prior pass). Brale-issued model confirmed from issuer materials.",
+      "evidence": "Full RoleGranted/RoleRevoked log scans on USDGLO (0x4f604735c1cf31399c6e711d5962b2b3e0225ad3) via Blockscout instances on ETH (from deployment block 15921266), Base, Celo, Polygon, Optimism, and Arbitrum show every role (DEFAULT_ADMIN, MINTER 0x9f2df0fe…, PAUSER 0x65d7a28e…, UPGRADER 0x189ab7a9…) consolidated to 0xb180f98037a63a3dca66b6b4ddbf250265b65110 with all earlier holders revoked. Rechecked on 2026-07-14 at ETH block 25530512 / Base 48619144 / Celo 72126877 / Polygon 90215095 / OP 154214430 / ARB 483746760: hasRole(UPGRADER_ROLE, 0xb180f9…) is true and eth_getCode returns empty on every chain. ERC-1967 implementation slots resolve to 0xf8dbe4f5… (ETH/Polygon), 0x693b51c1… (Base/OP/Arbitrum), and 0x865dda29… (Celo). Stellar issuer (GBBS25…) has 1 signer, weight=1. Brale-issued model confirmed from issuer materials.",
       "sources": [
         {
           "label": "Brale USDGLO proof of reserve",
@@ -218,22 +268,10 @@
           "url": "https://eth.blockscout.com/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
         }
       ],
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Codex CTRL batch 04",
+      "reviewedAt": "2026-07-14"
     }
   },
-  "reserves": [
-    {
-      "name": "Cash and cash equivalents",
-      "pct": 62.79,
-      "risk": "very-low"
-    },
-    {
-      "name": "U.S. government-backed debt",
-      "pct": 37.21,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

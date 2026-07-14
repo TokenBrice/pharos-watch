@@ -54,7 +54,6 @@ describe("CI workflow scope", () => {
     expect(validateDocs).toContain("npm run check:doc-source-paths");
     expect(validateDocs).toContain("npm run check:doc-sync");
     expect(validateDocs).toContain("npm run check:agent-doc-sync");
-    expect(validateDocs).toContain("npm run check:doc-counts");
     expect(nodeProof).toContain("if: ${{ needs.detect-changes.outputs.node_compat_changed == 'true' }}");
   });
 
@@ -69,13 +68,10 @@ describe("CI workflow scope", () => {
     expect(zizmor).toContain('- cron: "15 6 * * 1"');
   });
 
-  it("cancels stale PR-only work and bounds the Safe Browsing monitor", () => {
-    const contract = readRepoFile(".github/workflows/pharos-change-contract.yml");
+  it("cancels stale Telegram PR work and bounds the Safe Browsing monitor", () => {
     const telegram = readRepoFile(".github/workflows/telegram-load.yml");
     const safeBrowsing = readRepoFile(".github/workflows/safe-browsing-monitor.yml");
 
-    expect(contract).toContain("group: pharos-change-contract-${{ github.event.pull_request.number }}");
-    expect(contract).toContain("cancel-in-progress: true");
     expect(telegram).toContain("group: telegram-load-${{ github.event.pull_request.number || github.ref }}");
     expect(telegram).toContain("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
     expect(safeBrowsing).toContain("timeout-minutes: 10");

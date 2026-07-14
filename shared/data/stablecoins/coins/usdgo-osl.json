@@ -19,7 +19,22 @@
     "provider": "Big Four accounting firm via Anchorage Digital Bank",
     "attestorTier": "big4",
     "cadence": "monthly",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-26",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Anchorage USDGO Reserve Report - May 31, 2026",
+          "url": "https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf"
+        }
+      ]
+    }
   },
   "mechanismArchetype": "fiat-cash",
   "llamaId": "347",
@@ -351,24 +366,6 @@
     }
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Money market funds",
-      "pct": 74,
-      "risk": "very-low"
-    },
-    {
-      "name": "BUIDL (BlackRock tokenized MMF)",
-      "pct": 25,
-      "risk": "low",
-      "coinId": "buidl-blackrock"
-    },
-    {
-      "name": "Cash",
-      "pct": 1,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "usdgo-transparency",
     "version": 1,

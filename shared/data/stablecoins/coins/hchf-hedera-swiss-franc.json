@@ -22,8 +22,25 @@
   "llamaId": "200",
   "oracleRisk": {
     "tier": "redundant-with-failover",
-    "summary": "HLiquity PriceFeed uses Pyth as primary and Supra as fallback for HBAR/CHF pricing, with frozen/broken/deviation checks and last-good-price behavior.",
-    "reviewedAt": "2026-06-12",
+    "summary": "HLiquity values its sole HBAR Trove market through Pyth HBAR/USD and USD/CHF prices, falls back to Supra, and retains the last good price when both sources are unusable.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "HLiquity has one borrower-specific HBAR collateral market. Its oracle, 110% minimum collateral ratio, permissionless Trove liquidation, HCHF Stability Pool, redistribution fallback, and 150% Recovery Mode form one complete collateral-liquidation branch.",
+      "sources": [
+        {
+          "label": "HLiquity overview",
+          "url": "https://docs.hliquity.org/"
+        },
+        {
+          "label": "HLiquity Stability Pool and liquidations",
+          "url": "https://docs.hliquity.org/deep-dive/stability-pool-and-liquidations"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
@@ -38,6 +55,76 @@
       {
         "label": "HLiquity Omniscia audit",
         "url": "https://omniscia.io/reports/swisscoast-hliquity-implementation-6617b5f16434ec0018fdb844/"
+      }
+    ],
+    "branches": [
+      {
+        "id": "hliquity-hbar",
+        "label": "HLiquity HBAR Troves",
+        "tier": "redundant-with-failover",
+        "summary": "The sole HLiquity collateral branch prices HBAR in CHF through Pyth with Supra fallback and liquidates unsafe Troves through the HCHF Stability Pool or borrower redistribution.",
+        "collateralAssets": [
+          "HBAR"
+        ],
+        "chains": [
+          "hedera"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth primary with Supra fallback",
+            "path": "Pyth HBAR/USD and USD/CHF composite, or Supra HBAR/USD and USD/CHF composite -> HLiquity PriceFeed -> Trove collateral ratio",
+            "chain": "hedera",
+            "stalenessBoundSec": 14400,
+            "observedAt": "2026-07-14",
+            "failureDomainKeys": [
+              "pyth-hbar-usd",
+              "pyth-usd-chf",
+              "supra-hbar-usd",
+              "supra-usd-chf",
+              "hedera"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The PriceFeed switches from Pyth to Supra when Pyth is broken, frozen beyond four hours, or deviates excessively without Supra confirmation. If both sources are broken or frozen, it returns the stored lastGoodPrice until a trusted source recovers.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "HBAR",
+            "minimumCollateralRatioPct": 110,
+            "note": "Normal Mode liquidates Troves below the fixed 110% MCR. Recovery Mode begins below 150% total collateral ratio and applies the documented ICR- and Stability-Pool-dependent cases."
+          }
+        ],
+        "liquidationMechanism": "Any caller can invoke the TroveManager liquidation functions without a protocol waiting period. In Normal Mode, HBAR Troves below 110% MCR are closed; HCHF debt is offset against the Stability Pool and seized HBAR is transferred to depositors.",
+        "liquidationDelaySec": 0,
+        "backstop": "The HCHF Stability Pool is the first liquidation backstop. If its balance is insufficient, the remaining debt and HBAR collateral are redistributed proportionally across active Troves.",
+        "shutdownOrBadDebtBehavior": "HLiquity documents no global shutdown path. Empty or insufficient Stability Pool liquidity routes debt and collateral to active-Trove redistribution; Recovery Mode below 150% TCR broadens liquidation conditions while preserving the offset/redistribution waterfall.",
+        "failureDomainKeys": [
+          "pyth-hbar-usd",
+          "pyth-usd-chf",
+          "supra-hbar-usd",
+          "supra-usd-chf",
+          "hliquity-stability-pool",
+          "hliquity-active-troves",
+          "hedera"
+        ],
+        "sources": [
+          {
+            "label": "HLiquity Stability Pool and liquidations",
+            "url": "https://docs.hliquity.org/deep-dive/stability-pool-and-liquidations"
+          },
+          {
+            "label": "HLiquity Recovery Mode",
+            "url": "https://docs.hliquity.org/deep-dive/recovery-mode"
+          },
+          {
+            "label": "HLiquity PriceFeed source",
+            "url": "https://github.com/SwisscoastAG/HLiquity/blob/main/packages/contracts/contracts/PriceFeed.sol"
+          },
+          {
+            "label": "HLiquity TroveManager source",
+            "url": "https://github.com/SwisscoastAG/HLiquity/blob/main/packages/contracts/contracts/TroveManager.sol"
+          }
+        ]
       }
     ]
   },

@@ -22,6 +22,48 @@
     "attestorTier": "self",
     "cadence": "daily-nav"
   },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "mHYPER is a NAV-accreting Midas Liquid Yield Token tracking a Hyperithm strategy, not a borrower CDP with user collateral liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Midas documents mHYPER as a Liquid Yield Token whose value follows a reference portfolio NAV and lists the product's token, oracle, issuance-vault, and redemption-vault contract surfaces. The reviewed product materials do not describe borrower-owned debt positions, collateral thresholds, liquidation auctions, or a token-level liquidation backstop for mHYPER, so the V9 collateral-liquidation branch inventory does not apply.",
+      "sources": [
+        {
+          "label": "Midas mHYPER smart contracts",
+          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+        },
+        {
+          "label": "Midas About page",
+          "url": "https://docs.midas.app/"
+        },
+        {
+          "label": "Midas mToken pricing",
+          "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Midas mHYPER smart contracts",
+        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+      },
+      {
+        "label": "Midas Liquid Yield Token overview",
+        "url": "https://docs.midas.app/liquid-yield-token"
+      },
+      {
+        "label": "Midas mToken pricing",
+        "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

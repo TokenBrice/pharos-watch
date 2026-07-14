@@ -16,7 +16,7 @@ Triggered by `StatusCause.code`:
 
 ## Remediation
 
-- If the database is reachable but the Worker can't see it, the binding may have drifted. Re-check `worker/wrangler.toml` → `[[d1_databases]]` block for correct `database_id`. Use the standard production deploy workflow, or an equivalent Worker Versions upload/preview-smoke/promote sequence, after correcting the binding.
+- If the database is reachable but the Worker can't see it, the binding may have drifted. Re-check the `worker/wrangler.toml` `[[d1_databases]]` block for the correct `database_id`, then use the standard protected production deploy workflow after correcting it.
 - If a migration is mid-apply, wait it out. Check `cd worker && npx --no-install wrangler d1 migrations list stablecoin-db --remote` to confirm state.
 - If a transient network issue, the next `status-self-check` cron (every 15 min) will self-clear. No manual action needed once connectivity recovers.
 

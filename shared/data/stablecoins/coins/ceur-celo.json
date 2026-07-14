@@ -27,7 +27,24 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Mento V3 routes EURm pricing through Chainlink-backed SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-peg feeds before FPMM swaps use them.",
-    "reviewedAt": "2026-06-16",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Mento documents EURm as a reserve-backed FPMM asset whose swaps use an OracleAdapter rate and whose reserve flows are governed by trading limits and circuit breakers. The reviewed EURm product does not expose borrower-owned collateral debt positions or token-level liquidation branches; the oracle governs pool pricing and trading validity instead.",
+      "sources": [
+        {
+          "label": "Mento V3 oracle and circuit-breaker documentation",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+        },
+        {
+          "label": "Mento V3 deployment addresses",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
@@ -153,58 +170,6 @@
   },
   "chainTier": "established-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "reserves": [
-    {
-      "name": "sUSDS",
-      "pct": 23.6,
-      "risk": "low",
-      "coinId": "susds-sky"
-    },
-    {
-      "name": "AUSD",
-      "pct": 22.9,
-      "risk": "low",
-      "coinId": "ausd-agora"
-    },
-    {
-      "name": "CELO",
-      "pct": 15.9,
-      "risk": "high"
-    },
-    {
-      "name": "USDC",
-      "pct": 10.6,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "EURC",
-      "pct": 9.8,
-      "risk": "low",
-      "coinId": "eurc-circle"
-    },
-    {
-      "name": "USDT",
-      "pct": 9.7,
-      "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "axlEUROC",
-      "pct": 5.2,
-      "risk": "medium"
-    },
-    {
-      "name": "stETH",
-      "pct": 2,
-      "risk": "low"
-    },
-    {
-      "name": "Other small reserve assets (axlUSDC, USDT0, WETH)",
-      "pct": 0.3,
-      "risk": "medium"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,
@@ -235,7 +200,9 @@
             }
           }
         ],
-        "sourceUrls": ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"]
+        "sourceUrls": [
+          "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+        ]
       }
     }
   },

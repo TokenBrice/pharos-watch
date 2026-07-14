@@ -103,9 +103,62 @@
       "pct": 100,
       "risk": "medium",
       "coinId": "usdc-circle",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial (USDC); Yearn v3 strategy allocator",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yearn v3 vault",
+        "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+      },
+      {
+        "label": "Yearn v3 vault documentation",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
+      }
+    ],
+    "rationale": "The Yearn v3 vault is an ERC-4626 share over USDC and routes that USDC through its strategy allocator. The existing 100% direct USDC envelope is retained; changing strategy allocations are not decomposed into fixed authored percentages.",
+    "compositionBasis": "Yearn v3 USDC vault underlying-asset and strategy-allocator disclosures",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "No unlinked direct reserve asset remains. Current strategy weights and legal custody safeguards are not fixed by the reviewed public sources.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Yearn v3 USDC vault and strategy allocator",
+        "role": "other"
+      },
+      {
+        "name": "Yearn-whitelisted strategy protocols",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Yearn v3 vault",
+        "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+      },
+      {
+        "label": "Yearn v3 vault documentation",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
+      }
+    ],
+    "uncertainty": "The reviewed sources establish the Yearn v3 vault and strategy allocator, but do not establish statutory segregation, bankruptcy remoteness, or provider shares. Rehypothecation is marked permitted because the vault deploys USDC into whitelisted strategies."
+  },
   "yieldConfig": {
     "yieldSource": "Yearn v3 USDC vault",
     "yieldType": "lending-vault"

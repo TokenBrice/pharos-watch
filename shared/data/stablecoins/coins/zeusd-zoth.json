@@ -2,7 +2,7 @@
   "id": "zeusd-zoth",
   "name": "Zoth ZeUSD",
   "symbol": "ZeUSD",
-  "oneLiner": "ZeUSD is Zoth's CDP-style dollar stablecoin, minted against tokenized RWA collateral (USYC, STBT, TBILL, Wrapped M) and off-chain T-bills and MMFs.",
+  "oneLiner": "ZeUSD is Zoth's deprecated V1 RWA-backed dollar token, minted at a fixed collateral valuation and burned to reclaim recorded collateral; V2 is separate.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,8 +12,53 @@
     "navToken": false
   },
   "collateral": "U.S. Treasury bills, ETFs, money market funds, and reverse repos (off-chain), and tokenized on-chain RWAs (e.g., Hashnote USYC, Matrixdock STBT, OpenEden TBILL); held in smart contract escrow vaults or traditional/omnibus escrow accounts",
-  "pegMechanism": "CDP: users deposit eligible RWA collateral to mint ZeUSD; peg maintained through LTV ratios and collateral redemption (repay ZeUSD to reclaim collateral)",
-  "mechanismArchetype": "cdp",
+  "pegMechanism": "Tracked V1 records collateral value and ZeUSD debt when a deposit is minted, then requires the recorded ZeUSD amount to be burned before returning the recorded collateral. It has no continuing position-health check or forced-liquidation path; the shared deposit/redemption router pause was active at the reviewed finalized block.",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "The tracked deprecated V1 uses collateral pricing only when recording a mint. Its verified router later burns the exact recorded ZeUSD debt and returns the recorded collateral, with no ongoing collateral-health oracle or liquidation engine.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-DRAIN data review",
+      "rationale": "The tracked V1 router stores collateral value and ZeUSD debt in a deposit NFT at mint, then burns that exact debt and returns the recorded collateral. It exposes no borrower-position repricing, health threshold, or forced-liquidation path. At finalized Ethereum block 25531731 the tracked router proxy still resolved to the reviewed V1 implementation and its shared deposit/redemption pause was active; Zoth's separately deployed V2 is outside this record.",
+      "sources": [
+        {
+          "label": "Zoth contract deployments and V1/V2 boundary",
+          "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+        },
+        {
+          "label": "Tracked ZeUSD V1 router verified implementation",
+          "url": "https://eth.blockscout.com/address/0xea25b537209ec4aefbc7252c6a49b132639ea677?tab=contract"
+        },
+        {
+          "label": "Finalized Ethereum block 25531731",
+          "url": "https://eth.blockscout.com/block/25531731"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-DRAIN data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Zoth contract deployments and V1/V2 boundary",
+        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+      },
+      {
+        "label": "Tracked ZeUSD V1 router proxy",
+        "url": "https://eth.blockscout.com/address/0x6283f77db630d6fe69a454ef6cf626e98b117c9b?tab=contract"
+      },
+      {
+        "label": "Tracked ZeUSD V1 router verified implementation",
+        "url": "https://eth.blockscout.com/address/0xea25b537209ec4aefbc7252c6a49b132639ea677?tab=contract"
+      },
+      {
+        "label": "Finalized Ethereum block 25531731",
+        "url": "https://eth.blockscout.com/block/25531731"
+      }
+    ]
+  },
   "llamaId": "225",
   "detailProvider": "defillama",
   "geckoId": "zeusd",
@@ -292,54 +337,6 @@
     }
   },
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)",
-      "pct": 70,
-      "risk": "low"
-    },
-    {
-      "name": "USD0++ (Usual)",
-      "pct": 15,
-      "risk": "medium",
-      "coinId": "busd0-usual"
-    },
-    {
-      "name": "Wrapped M (M0 tokenized T-bills)",
-      "pct": 15,
-      "risk": "medium",
-      "coinId": "wm-m0"
-    }
-  ],
-  "reserveReview": {
-    "reviewedAt": "2026-07-12",
-    "reviewer": "OpenAI Codex dependency review",
-    "confidence": "probable",
-    "sources": [
-      {
-        "label": "Zoth ZeUSD documentation",
-        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
-      }
-    ],
-    "rationale": "The tokenized-Treasury bucket names tracked and untracked instruments but does not disclose constituent weights.",
-    "compositionBasis": "Curated product composition",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "USYC and TBILL are plausible tracked upstreams inside an unsplit four-instrument basket.",
-    "knownUnknownExposurePct": 70,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)",
-        "pct": 70,
-        "disposition": "basket-needs-split",
-        "rationale": "The named instruments have no published individual percentages.",
-        "candidateCoinIds": [
-          "usyc-hashnote",
-          "tbill-openeden"
-        ]
-      }
-    ]
-  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
@@ -369,5 +366,21 @@
       "message": "By late June 2026, ZeUSD market pricing and public liquidity remained far below the $1 peg after the 2025 exploit history, with supply reduced to a small residual base. Treat ZeUSD as a high-risk legacy/depeg case unless current issuer redemption and reserve evidence is independently revalidated."
     }
   ],
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-DRAIN data review",
+    "rationale": "The tracked deprecated V1 is not a continuing borrower CDP: its router fixes collateral value and debt at mint and provides exact burn-and-reclaim redemption without ongoing health checks or forced liquidation. Pharos's closed archetype enum has no exact category for this fixed-mint RWA escrow receipt, so the false CDP label is removed rather than replaced with a materially different fiat issuer or fund-share model.",
+    "sources": [
+      {
+        "label": "Zoth contract deployments and V1/V2 boundary",
+        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+      },
+      {
+        "label": "Tracked ZeUSD V1 router verified implementation",
+        "url": "https://eth.blockscout.com/address/0xea25b537209ec4aefbc7252c6a49b132639ea677?tab=contract"
+      }
+    ]
+  },
   "launchDate": "2025-01-27"
 }

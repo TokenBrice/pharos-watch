@@ -21,14 +21,785 @@
   "pythFeedId": "0xc753c899ffdfcc8d1a02440fe380501b454b559122998bcd245d9063d07cc162",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "Metronome Synth uses Chainlink for synthetic and collateral prices and internal oracle parameters to reduce disruptions, but no stronger failover tier is documented.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "Five registered Metronome msUSD Pools span Ethereum, Optimism, Base, and Hemi. Ethereum, Optimism, and Base use Chainlink collateral feeds with no alternate provider; Hemi wires RedStone main/fallback providers but its main path is currently unconfigured, so live collateral prices use RedStone push feeds. Every branch hardcodes msUSD debt at $1, liquidates immediately with no protocol bad-debt backstop, and stops liquidations during reversible shutdown.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Finalized registry and Pool reads found five callable msUSD CDP issuance pools: two registered Ethereum pools, one Optimism pool, one Base pool, and one Hemi pool. Each is an independent cross-margin branch with its own registered collateral set and DebtToken; Ethereum Pool 2 is dormant but remains active and capped for new issuance. Plasma has active bridge and AMO mint authority but its PoolRegistry has no registered pools and a dead-address master oracle, so it has no borrower debt or liquidation branch. The legacy BSC pool is unregistered with zero msUSD and DebtToken supply, and retired Avalanche used a distinct zero-supply vsUSD system. The five rows therefore exhaust every live or debt-bearing msUSD collateral-liquidation branch.",
+      "sources": [
+        {
+          "label": "Metronome Synth official contracts",
+          "url": "https://docs.metronome.io/metronome-synth/contracts"
+        },
+        {
+          "label": "Pinned Metronome Pool source",
+          "url": "https://github.com/autonomoussoftware/metronome-synth-public/blob/3f6a1016c7980ac603be397a7c3d73644e62dbe7/contracts/Pool.sol"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
     "confidence": "verified",
     "sources": [
       {
         "label": "Metronome oracle disruptions",
-        "url": "https://docs.metronome.io/metronome-synth/risks/oracle-disruptions.md"
+        "url": "https://docs.metronome.io/metronome-synth/risks/oracle-disruptions"
+      },
+      {
+        "label": "Metronome liquidation documentation",
+        "url": "https://docs.metronome.io/metronome-synth/risks/liquidation"
+      },
+      {
+        "label": "Pinned Metronome Pool source",
+        "url": "https://github.com/autonomoussoftware/metronome-synth-public/blob/3f6a1016c7980ac603be397a7c3d73644e62dbe7/contracts/Pool.sol"
+      },
+      {
+        "label": "Pinned Metronome pause and shutdown source",
+        "url": "https://github.com/autonomoussoftware/metronome-synth-public/blob/3f6a1016c7980ac603be397a7c3d73644e62dbe7/contracts/utils/Pauseable.sol"
+      }
+    ],
+    "branches": [
+      {
+        "id": "ethereum-pool-1",
+        "label": "Ethereum Pool 1 cross-margin branch",
+        "tier": "standard-external",
+        "summary": "The primary Ethereum Pool has live msUSD debt and values twelve registered collateral tokens through Chainlink plus Vesper, Curve, and share-rate transformations, while valuing msUSD debt at a fixed dollar.",
+        "collateralAssets": [
+          "USDC",
+          "WETH",
+          "vaETH",
+          "FRAX",
+          "DAI",
+          "WBTC",
+          "vaUSDC",
+          "vaFRAX",
+          "sfrxETH",
+          "vaSTETH",
+          "vaRETH",
+          "vaCBETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Metronome USDPeggedTokenOracle",
+            "path": "msUSD debt hardcoded to $1; no market-price or depeg input",
+            "address": "0x278957E88bDbA45442acc49E07Ac143d893bAfB1",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531381,
+            "failureDomainKeys": [
+              "oracle:metronome:msusd-fixed-peg"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink USDC/USD -> direct USDC value; Vesper pricePerShare -> vaUSDC value",
+            "address": "0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531445,
+            "failureDomainKeys": [
+              "oracle:ethereum:chainlink-usdc",
+              "oracle:ethereum:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink ETH/USD -> direct WETH value; Vesper pricePerShare -> vaETH value",
+            "address": "0x7d4E742018fb52E48b08BE73d041C18B21de6Fb5",
+            "chain": "ethereum",
+            "stalenessBoundSec": 14400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531445,
+            "failureDomainKeys": [
+              "oracle:ethereum:chainlink-eth",
+              "oracle:ethereum:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink DAI/USD -> direct DAI value",
+            "address": "0x709783ab12b65fD6cd948214EEe6448f3BdD72A3",
+            "chain": "ethereum",
+            "stalenessBoundSec": 14400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531445,
+            "failureDomainKeys": [
+              "oracle:ethereum:chainlink-dai"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink BTC/USD -> direct WBTC value",
+            "address": "0x4a3411ac2948B33c69666B35cc6d055B27Ea84f1",
+            "chain": "ethereum",
+            "stalenessBoundSec": 14400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531445,
+            "failureDomainKeys": [
+              "oracle:ethereum:chainlink-btc"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink FRAX/USD -> inactive FRAX value; Vesper pricePerShare -> inactive vaFRAX value",
+            "address": "0x8F73090a7c58B8BDcC9A93cBB6816e5cC4f01E8c",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531445,
+            "failureDomainKeys": [
+              "oracle:ethereum:chainlink-frax",
+              "oracle:ethereum:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkEthOnlyTokenOracle",
+            "path": "Chainlink stETH/ETH 0x86392dC19c0b719886221c78AB11eb8Cf5c52812 x ETH/USD x Vesper pricePerShare -> vaSTETH value",
+            "address": "0x7b8A1D28Ef8d09b442c6070316D92401fBAD36BF",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531445,
+            "failureDomainKeys": [
+              "oracle:ethereum:chainlink-steth-eth",
+              "oracle:ethereum:chainlink-eth",
+              "oracle:ethereum:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkEthOnlyTokenOracle",
+            "path": "Chainlink rETH/ETH 0x536218f9E9Eb48863970252233c8F271f554C2d0 x ETH/USD x Vesper pricePerShare -> vaRETH value",
+            "address": "0x7b8A1D28Ef8d09b442c6070316D92401fBAD36BF",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531445,
+            "failureDomainKeys": [
+              "oracle:ethereum:chainlink-reth-eth",
+              "oracle:ethereum:chainlink-eth",
+              "oracle:ethereum:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkEthOnlyTokenOracle",
+            "path": "Chainlink cbETH/ETH 0xF017fcB346A1885194689bA23Eff2fE6fA5C483b x ETH/USD x Vesper pricePerShare -> vaCBETH value",
+            "address": "0x7b8A1D28Ef8d09b442c6070316D92401fBAD36BF",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531445,
+            "failureDomainKeys": [
+              "oracle:ethereum:chainlink-cbeth-eth",
+              "oracle:ethereum:chainlink-eth",
+              "oracle:ethereum:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome SFraxEthTokenOracle",
+            "path": "Chainlink ETH/USD x Curve WETH/frxETH price_oracle clamped to [0.9, 1.0] x sfrxETH pricePerShare",
+            "address": "0x7F4FD34dc9081144263Abee136d4280d4a086Ac2",
+            "chain": "ethereum",
+            "stalenessBoundSec": 14400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531445,
+            "failureDomainKeys": [
+              "oracle:ethereum:chainlink-eth",
+              "oracle:ethereum:curve-sfrxeth",
+              "oracle:ethereum:sfrxeth-share-rate"
+            ]
+          }
+        ],
+        "fallbackBehavior": "MasterOracle selects a token-specific oracle when configured and otherwise the default ChainlinkOracle; a configured custom-oracle failure does not fall through to the default. ChainlinkOracle rejects nonpositive or stale data and reverts, with no second provider or stored-last-good fallback. Vesper, Curve, and share-rate legs have no independent freshness timestamp, while msUSD debt remains fixed at $1.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531381,
+        "collateralParameters": [
+          {
+            "asset": "USDC",
+            "maximumLtvPct": 85,
+            "note": "Active DepositToken 0x1A9551de6d56f7768398a82aA2186624a43d89e3."
+          },
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 83,
+            "note": "Active DepositToken 0xA77B145c7Fa5B412eb8aD41D587bE892b9c1EfC3."
+          },
+          {
+            "asset": "vaETH",
+            "maximumLtvPct": 80,
+            "note": "Active DepositToken 0x45AC59746Ea5Eb74cF782855eca460A8Adc8925a."
+          },
+          {
+            "asset": "FRAX",
+            "note": "Legacy inactive DepositToken 0x608249cc11728E3b978f7B27F1EA13F607D484EF has a raw collateral factor of one wei of WAD and residual deposited balance."
+          },
+          {
+            "asset": "DAI",
+            "maximumLtvPct": 85,
+            "note": "Active DepositToken 0x1f9732B84e22E936cFc2FF6F2d4994097DCCC93e."
+          },
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 80,
+            "note": "Active DepositToken 0x7f9e66640Fec701D9f46ed5eD69F925fFDbb4683."
+          },
+          {
+            "asset": "vaUSDC",
+            "maximumLtvPct": 82,
+            "note": "Active DepositToken 0xdAec887E37e86ea9B78852EB7470D70bbF266258."
+          },
+          {
+            "asset": "vaFRAX",
+            "note": "Legacy inactive DepositToken 0x63EC45313149b1fa677b2b91CB93880232EF63AC has a raw collateral factor of one wei of WAD and residual deposited balance."
+          },
+          {
+            "asset": "sfrxETH",
+            "maximumLtvPct": 80,
+            "note": "Active DepositToken 0x24F2d1aC81eCFD8A808001a97349185EF1bCF4ad."
+          },
+          {
+            "asset": "vaSTETH",
+            "maximumLtvPct": 78,
+            "note": "Active DepositToken 0x691Af94cC63B99bd36173eD6Fb1eF5508b2774ec."
+          },
+          {
+            "asset": "vaRETH",
+            "maximumLtvPct": 75,
+            "note": "Active DepositToken 0x9e5bDf244a2Fcc44f1bcBd3aE108bE2a6dE5E379."
+          },
+          {
+            "asset": "vaCBETH",
+            "maximumLtvPct": 75,
+            "note": "Active DepositToken 0x1887e76914699B839B97A0B69FF6F8B865745321."
+          }
+        ],
+        "liquidationMechanism": "A permissionless caller may liquidate any other account immediately when current oracle-valued debt exceeds the sum of oracle-valued collateral multiplied by each collateral factor. The caller burns its own msUSD, the Pool burns the borrower's matching DebtToken, and the selected DepositToken seizes oracle-quoted collateral equal to repayment value plus a 10% liquidator incentive and 8% protocol fee. Each call is capped at 50% of that borrower's selected debt-token balance; debtFloorInUsd is zero.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, collateral auction, insurance reserve, governance-token debt auction, or other bad-debt absorber exists in the reviewed Pool, DebtToken, FeeProvider, or registry graph. Liquidations are funded only by external liquidators supplying msUSD and are limited by available borrower collateral.",
+        "shutdownOrBadDebtBehavior": "Pool.liquidate reverts if the requested seizure exceeds the borrower's selected collateral balance. Collateral-backed partial liquidations can continue, but collateral-exhausted debt remains on the borrower's DebtToken balance; the reviewed contracts expose no write-off, redistribution, or socialization path. Governor or guardian shutdown sets everythingStopped and pauses issue, repay, deposit, withdraw, liquidate, and swap; the governor can later call open(), so shutdown is reversible but also disables liquidation while active.",
+        "failureDomainKeys": [
+          "oracle:metronome:msusd-fixed-peg",
+          "oracle:ethereum:chainlink-feed-registry",
+          "oracle:ethereum:metronome-master-oracle",
+          "oracle:ethereum:vesper-price-per-share",
+          "oracle:ethereum:curve-sfrxeth",
+          "liquidation:ethereum:metronome-pool-v1.3.2",
+          "backstop:metronome:none",
+          "shutdown:ethereum:metronome-pool-registry"
+        ],
+        "sources": [
+          {
+            "label": "Metronome Synth official contracts",
+            "url": "https://docs.metronome.io/metronome-synth/contracts"
+          },
+          {
+            "label": "Ethereum Pool 1 verified contract",
+            "url": "https://eth.blockscout.com/address/0x3364f53cB866762Aef66DeEF2a6b1a17C1F17f46?tab=contract"
+          },
+          {
+            "label": "Ethereum MasterOracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x80704Acdf97723963263c78F861F091ad04F46E2?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-pool-2-usdc",
+        "label": "Ethereum Pool 2 USDC branch",
+        "tier": "standard-external",
+        "summary": "Ethereum Pool 2 is registered, open, and capped for new issuance even though its USDC collateral and msUSD debt supplies were zero at the reviewed block.",
+        "collateralAssets": [
+          "USDC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Metronome USDPeggedTokenOracle",
+            "path": "msUSD debt hardcoded to $1; no market-price or depeg input",
+            "address": "0x278957E88bDbA45442acc49E07Ac143d893bAfB1",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531381,
+            "failureDomainKeys": [
+              "oracle:metronome:msusd-fixed-peg"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink USDC/USD -> USDC collateral value",
+            "address": "0xc9E1a09622afdB659913fefE800fEaE5DBbFe9d7",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531445,
+            "failureDomainKeys": [
+              "oracle:ethereum:chainlink-usdc"
+            ]
+          }
+        ],
+        "fallbackBehavior": "MasterOracle uses the default ChainlinkOracle for USDC. Nonpositive or data older than the configured 86,400-second bound reverts; there is no second provider or stored-last-good fallback, and msUSD debt remains fixed at $1.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531381,
+        "collateralParameters": [
+          {
+            "asset": "USDC",
+            "maximumLtvPct": 85,
+            "note": "Active DepositToken 0x3cd510b7348c8e0303D8448Fd35A2789a5ac7f91; zero supply and 100,000 USDC cap at the observed block."
+          }
+        ],
+        "liquidationMechanism": "A permissionless caller may liquidate any other account immediately when current oracle-valued debt exceeds the sum of oracle-valued collateral multiplied by each collateral factor. The caller burns its own msUSD, the Pool burns the borrower's matching DebtToken, and the selected DepositToken seizes oracle-quoted collateral equal to repayment value plus a 10% liquidator incentive and 8% protocol fee. Each call is capped at 50% of that borrower's selected debt-token balance; debtFloorInUsd is zero.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, collateral auction, insurance reserve, governance-token debt auction, or other bad-debt absorber exists in the reviewed Pool, DebtToken, FeeProvider, or registry graph. Liquidations are funded only by external liquidators supplying msUSD and are limited by available borrower collateral.",
+        "shutdownOrBadDebtBehavior": "Pool.liquidate reverts if the requested seizure exceeds the borrower's selected collateral balance. Collateral-backed partial liquidations can continue, but collateral-exhausted debt remains on the borrower's DebtToken balance; the reviewed contracts expose no write-off, redistribution, or socialization path. Governor or guardian shutdown sets everythingStopped and pauses issue, repay, deposit, withdraw, liquidate, and swap; the governor can later call open(), so shutdown is reversible but also disables liquidation while active.",
+        "failureDomainKeys": [
+          "oracle:metronome:msusd-fixed-peg",
+          "oracle:ethereum:chainlink-feed-registry",
+          "oracle:ethereum:metronome-master-oracle",
+          "liquidation:ethereum:metronome-pool-v1.3.2",
+          "backstop:metronome:none",
+          "shutdown:ethereum:metronome-pool-registry"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum PoolRegistry verified contract",
+            "url": "https://eth.blockscout.com/address/0x11eaD85C679eAF528c9C1FE094bF538Db880048A?tab=contract"
+          },
+          {
+            "label": "Ethereum Pool 2 verified contract",
+            "url": "https://eth.blockscout.com/address/0x574a32f1047C631653D9283d36e73cF9BA67B940?tab=contract"
+          },
+          {
+            "label": "Pinned Metronome Pool source",
+            "url": "https://github.com/autonomoussoftware/metronome-synth-public/blob/3f6a1016c7980ac603be397a7c3d73644e62dbe7/contracts/Pool.sol"
+          }
+        ]
+      },
+      {
+        "id": "optimism-pool-1",
+        "label": "Optimism Pool 1 cross-margin branch",
+        "tier": "standard-external",
+        "summary": "The live Optimism Pool values seven collateral tokens through Chainlink and Vesper share conversions and values msUSD debt at a fixed dollar.",
+        "collateralAssets": [
+          "USDC.e",
+          "WETH",
+          "vaETH",
+          "OP",
+          "vaOP",
+          "vawstETH",
+          "vaUSDC"
+        ],
+        "chains": [
+          "optimism"
+        ],
+        "feeds": [
+          {
+            "provider": "Metronome USDPeggedTokenOracle",
+            "path": "msUSD debt hardcoded to $1; no market-price or depeg input",
+            "address": "0x28b3214684Dc4044e4Eaf7248FbB384192256BB5",
+            "chain": "optimism",
+            "observedAt": "2026-07-14",
+            "observedBlock": 154219604,
+            "failureDomainKeys": [
+              "oracle:metronome:msusd-fixed-peg"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink USDC.e/USD -> direct USDC.e value; Vesper pricePerShare -> vaUSDC value",
+            "address": "0x16a9FA2FDa030272Ce99B29CF780dFA30361E0f3",
+            "chain": "optimism",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 154219781,
+            "failureDomainKeys": [
+              "oracle:optimism:chainlink-usdc",
+              "oracle:optimism:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink ETH/USD -> direct WETH value; Vesper pricePerShare -> vaETH value",
+            "address": "0x13e3Ee699D1909E989722E753853AE30b17e08c5",
+            "chain": "optimism",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 154219781,
+            "failureDomainKeys": [
+              "oracle:optimism:chainlink-eth",
+              "oracle:optimism:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink OP/USD -> direct OP value; Vesper pricePerShare -> vaOP value",
+            "address": "0x0D276FC14719f9292D5C1eA2198673d1f4269246",
+            "chain": "optimism",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 154219781,
+            "failureDomainKeys": [
+              "oracle:optimism:chainlink-op",
+              "oracle:optimism:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink wstETH/USD -> Vesper pricePerShare -> vawstETH value",
+            "address": "0x698B585CbC4407e2D54aa898B2600B53C68958f7",
+            "chain": "optimism",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 154219781,
+            "failureDomainKeys": [
+              "oracle:optimism:chainlink-wsteth",
+              "oracle:optimism:vesper-price-per-share"
+            ]
+          }
+        ],
+        "fallbackBehavior": "MasterOracle selects a configured token-specific oracle or the default ChainlinkOracle. Stale or nonpositive Chainlink data reverts, with no alternate provider or last-good value; Vesper share rates have no independent timestamp and msUSD debt remains fixed at $1.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 154219604,
+        "collateralParameters": [
+          {
+            "asset": "USDC.e",
+            "maximumLtvPct": 85,
+            "note": "Active DepositToken 0xd2e32323686de92411639d446396AFA5E6149C28."
+          },
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 83,
+            "note": "Active DepositToken 0x5c18f45c4C62B0687425598579B026B90785c28E."
+          },
+          {
+            "asset": "vaETH",
+            "maximumLtvPct": 80,
+            "note": "Active DepositToken 0x564baA321227abf6B2E88a38557b6517077aAD32."
+          },
+          {
+            "asset": "OP",
+            "maximumLtvPct": 70,
+            "note": "Active DepositToken 0x1E6039574bBf6b1F65650bC50B2Bca8911Fd9b27."
+          },
+          {
+            "asset": "vaOP",
+            "maximumLtvPct": 70,
+            "note": "Active DepositToken 0x25Ee6eA9353E0ffa3155655F3dF9140684671f36."
+          },
+          {
+            "asset": "vawstETH",
+            "maximumLtvPct": 78,
+            "note": "Active DepositToken 0x293aaC1fef48b2ebf95d0CB3a31A7B219e8Ece9E."
+          },
+          {
+            "asset": "vaUSDC",
+            "maximumLtvPct": 82,
+            "note": "Active DepositToken 0x4E71790712424f246358D08A4De6C9896482dE64."
+          }
+        ],
+        "liquidationMechanism": "A permissionless caller may liquidate any other account immediately when current oracle-valued debt exceeds the sum of oracle-valued collateral multiplied by each collateral factor. The caller burns its own msUSD, the Pool burns the borrower's matching DebtToken, and the selected DepositToken seizes oracle-quoted collateral equal to repayment value plus a 10% liquidator incentive and 8% protocol fee. Each call is capped at 50% of that borrower's selected debt-token balance; debtFloorInUsd is zero.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, collateral auction, insurance reserve, governance-token debt auction, or other bad-debt absorber exists in the reviewed Pool, DebtToken, FeeProvider, or registry graph. Liquidations are funded only by external liquidators supplying msUSD and are limited by available borrower collateral.",
+        "shutdownOrBadDebtBehavior": "Pool.liquidate reverts if the requested seizure exceeds the borrower's selected collateral balance. Collateral-backed partial liquidations can continue, but collateral-exhausted debt remains on the borrower's DebtToken balance; the reviewed contracts expose no write-off, redistribution, or socialization path. Governor or guardian shutdown sets everythingStopped and pauses issue, repay, deposit, withdraw, liquidate, and swap; the governor can later call open(), so shutdown is reversible but also disables liquidation while active.",
+        "failureDomainKeys": [
+          "oracle:metronome:msusd-fixed-peg",
+          "oracle:optimism:chainlink",
+          "oracle:optimism:vesper-price-per-share",
+          "oracle:optimism:metronome-master-oracle",
+          "liquidation:optimism:metronome-pool-v1.3.2",
+          "backstop:metronome:none",
+          "shutdown:optimism:metronome-pool-registry"
+        ],
+        "sources": [
+          {
+            "label": "Optimism PoolRegistry verified contract",
+            "url": "https://optimism.blockscout.com/address/0xe7C65eAEb1Ca920f0DB73cDFb4915Dd31472a6a1?tab=contract"
+          },
+          {
+            "label": "Optimism Pool verified contract",
+            "url": "https://optimism.blockscout.com/address/0x6394152946dc3E0bABAA474eE9d366ef31f959c0?tab=contract"
+          },
+          {
+            "label": "Optimism MasterOracle verified contract",
+            "url": "https://optimism.blockscout.com/address/0x0aac835162D368F246dc71628AfcD6d2930c47d3?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "base-pool-1",
+        "label": "Base Pool 1 cross-margin branch",
+        "tier": "standard-external",
+        "summary": "The live Base Pool values six collateral tokens through Chainlink and Vesper share conversions and values msUSD debt at a fixed dollar.",
+        "collateralAssets": [
+          "USDC",
+          "WETH",
+          "vaETH",
+          "vaUSDC",
+          "vawstETH",
+          "vacbETH"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "Metronome USDPeggedTokenOracle",
+            "path": "msUSD debt hardcoded to $1; no market-price or depeg input",
+            "address": "0x42c9De8bf891F0bE9dA7dA8078c1f301553CE064",
+            "chain": "base",
+            "observedAt": "2026-07-14",
+            "observedBlock": 48624369,
+            "failureDomainKeys": [
+              "oracle:metronome:msusd-fixed-peg"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink USDC/USD -> direct USDC value; Vesper pricePerShare -> vaUSDC value",
+            "address": "0x7e860098F58bBFC8648a4311b374B1D669a2bc6B",
+            "chain": "base",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 48624748,
+            "failureDomainKeys": [
+              "oracle:base:chainlink-usdc",
+              "oracle:base:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink ETH/USD -> direct WETH value; Vesper pricePerShare -> vaETH value",
+            "address": "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70",
+            "chain": "base",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 48624748,
+            "failureDomainKeys": [
+              "oracle:base:chainlink-eth",
+              "oracle:base:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkOracle",
+            "path": "Chainlink cbETH/USD -> Vesper pricePerShare -> vacbETH value",
+            "address": "0xd7818272B9e248357d13057AAb0B417aF31E817d",
+            "chain": "base",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 48624748,
+            "failureDomainKeys": [
+              "oracle:base:chainlink-cbeth",
+              "oracle:base:vesper-price-per-share"
+            ]
+          },
+          {
+            "provider": "Metronome ChainlinkEthOnlyOracle",
+            "path": "Chainlink wstETH/ETH 0xa669E5272E60f78299F4824495cE01a3923f4380 x ETH/USD x Vesper pricePerShare -> vawstETH value",
+            "address": "0xdAa2a8AF96f8Df51ED989E9D1fd3F86DF1EE882e",
+            "chain": "base",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 48624748,
+            "failureDomainKeys": [
+              "oracle:base:chainlink-wsteth-eth",
+              "oracle:base:chainlink-eth",
+              "oracle:base:vesper-price-per-share"
+            ]
+          }
+        ],
+        "fallbackBehavior": "MasterOracle selects a configured token-specific oracle or the default ChainlinkOracle. Stale or nonpositive Chainlink data reverts, with no alternate provider or last-good value; Vesper share rates have no independent timestamp and msUSD debt remains fixed at $1.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48624369,
+        "collateralParameters": [
+          {
+            "asset": "USDC",
+            "maximumLtvPct": 85,
+            "note": "Active DepositToken 0xC7F2f79Daa7Ea4FBbF60b45b5D6028BDE2453476."
+          },
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 83,
+            "note": "Active DepositToken 0x8b581d0013F571a792c3Aa8AF2a0366A309BF51E."
+          },
+          {
+            "asset": "vaETH",
+            "maximumLtvPct": 80,
+            "note": "Active DepositToken 0x631E4eFe520152b9aa98aCa50739a7F6a8f21319."
+          },
+          {
+            "asset": "vaUSDC",
+            "maximumLtvPct": 82,
+            "note": "Active DepositToken 0x329846f9e19dAa7fD9844065a62eD01BCf63Cf69."
+          },
+          {
+            "asset": "vawstETH",
+            "maximumLtvPct": 78,
+            "note": "Active DepositToken 0x3E5C739deC75aC5b8BC11D763b02B2a777046802."
+          },
+          {
+            "asset": "vacbETH",
+            "maximumLtvPct": 75,
+            "note": "Active DepositToken 0xE7Eb345866e07201f0dfe9Afb3a8f0637D998FC9."
+          }
+        ],
+        "liquidationMechanism": "A permissionless caller may liquidate any other account immediately when current oracle-valued debt exceeds the sum of oracle-valued collateral multiplied by each collateral factor. The caller burns its own msUSD, the Pool burns the borrower's matching DebtToken, and the selected DepositToken seizes oracle-quoted collateral equal to repayment value plus a 10% liquidator incentive and 8% protocol fee. Each call is capped at 50% of that borrower's selected debt-token balance; debtFloorInUsd is zero.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, collateral auction, insurance reserve, governance-token debt auction, or other bad-debt absorber exists in the reviewed Pool, DebtToken, FeeProvider, or registry graph. Liquidations are funded only by external liquidators supplying msUSD and are limited by available borrower collateral.",
+        "shutdownOrBadDebtBehavior": "Pool.liquidate reverts if the requested seizure exceeds the borrower's selected collateral balance. Collateral-backed partial liquidations can continue, but collateral-exhausted debt remains on the borrower's DebtToken balance; the reviewed contracts expose no write-off, redistribution, or socialization path. Governor or guardian shutdown sets everythingStopped and pauses issue, repay, deposit, withdraw, liquidate, and swap; the governor can later call open(), so shutdown is reversible but also disables liquidation while active.",
+        "failureDomainKeys": [
+          "oracle:metronome:msusd-fixed-peg",
+          "oracle:base:chainlink",
+          "oracle:base:vesper-price-per-share",
+          "oracle:base:metronome-master-oracle",
+          "liquidation:base:metronome-pool-v1.3.2",
+          "backstop:metronome:none",
+          "shutdown:base:metronome-pool-registry"
+        ],
+        "sources": [
+          {
+            "label": "Base PoolRegistry verified contract",
+            "url": "https://base.blockscout.com/address/0x4372A2b9304296c06197a823f25Cf03119d2Fd82?tab=contract"
+          },
+          {
+            "label": "Base Pool verified contract",
+            "url": "https://base.blockscout.com/address/0xc614136d6c5AB85bc2aCF0ec2652351642d7F54E?tab=contract"
+          },
+          {
+            "label": "Base MasterOracle verified contract",
+            "url": "https://base.blockscout.com/address/0x99866a6074ADb027f09c9AF31929dB5941D36DA7?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "hemi-pool-1",
+        "label": "Hemi Pool 1 cross-margin branch",
+        "tier": "standard-external",
+        "summary": "The live Hemi Pool has nonzero msUSD debt and values WETH, USDC, USDT, and USDC.e through a RedStone main/fallback adapter whose pull-cache main route was unconfigured at the reviewed block, leaving push feeds as the active path.",
+        "collateralAssets": [
+          "WETH",
+          "USDC",
+          "USDT",
+          "USDC.e"
+        ],
+        "chains": [
+          "hemi"
+        ],
+        "feeds": [
+          {
+            "provider": "Metronome USDPeggedTokenOracle",
+            "path": "msUSD debt hardcoded to $1; no market-price or depeg input",
+            "address": "0x515E8bf34B7c300Bf1d173E434a47d564C4C9931",
+            "chain": "hemi",
+            "observedAt": "2026-07-14",
+            "observedBlock": 4847703,
+            "failureDomainKeys": [
+              "oracle:metronome:msusd-fixed-peg"
+            ]
+          },
+          {
+            "provider": "Metronome MainAndFallbackOracle / RedStone",
+            "path": "Unconfigured RedStone pull-cache main -> RedStone push ETH feed 0xb9D0073aCb296719C26a8BF156e4b599174fe1d5 -> WETH value",
+            "address": "0xd2a4Ba582dC9fAbF3293C2C46e0aFD6C4B5719b1",
+            "chain": "hemi",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 4847703,
+            "failureDomainKeys": [
+              "oracle:hemi:redstone-pull-cache",
+              "oracle:hemi:redstone-push-eth",
+              "oracle:hemi:metronome-main-and-fallback"
+            ]
+          },
+          {
+            "provider": "Metronome MainAndFallbackOracle / RedStone",
+            "path": "Unconfigured RedStone pull-cache main -> shared RedStone push USDC feed 0x31a36CdF4465ba61ce78F5CDbA26FDF8ec361803 -> USDC and USDC.e values",
+            "address": "0xd2a4Ba582dC9fAbF3293C2C46e0aFD6C4B5719b1",
+            "chain": "hemi",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 4847703,
+            "failureDomainKeys": [
+              "oracle:hemi:redstone-pull-cache",
+              "oracle:hemi:redstone-push-usdc",
+              "oracle:hemi:metronome-main-and-fallback"
+            ]
+          },
+          {
+            "provider": "Metronome MainAndFallbackOracle / RedStone",
+            "path": "Unconfigured RedStone pull-cache main -> RedStone push USDT feed 0xe8D9FbC10e00ecc9f0694617075fDAF657a76FB2 -> USDT value",
+            "address": "0xd2a4Ba582dC9fAbF3293C2C46e0aFD6C4B5719b1",
+            "chain": "hemi",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 4847703,
+            "failureDomainKeys": [
+              "oracle:hemi:redstone-pull-cache",
+              "oracle:hemi:redstone-push-usdt",
+              "oracle:hemi:metronome-main-and-fallback"
+            ]
+          }
+        ],
+        "fallbackBehavior": "MainAndFallbackOracle first accepts a positive main-provider value within the token's 86,400-second outer bound. The RedStone pull-cache main additionally returns zero outside its 60-second cache tolerance; at observation it returned zero for every collateral. The contract then uses RedStone push fallback subject to the 86,400-second bound. If both paths are zero or stale it reverts both-providers-failed; there is no stored-last-good path beyond the push feed's latest round. Both routes share RedStone and the main was unusable, so this is not provider redundancy.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 4847703,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 83,
+            "note": "Active DepositToken 0x0B6f502F245bd17848a996eeE502F89381508317."
+          },
+          {
+            "asset": "USDC",
+            "maximumLtvPct": 85,
+            "note": "Active DepositToken 0xDC698D8fdB26459fB2473A315c518619387983F0."
+          },
+          {
+            "asset": "USDT",
+            "maximumLtvPct": 85,
+            "note": "Active DepositToken 0x5a64e1b924Aa8C55D44B239d0a83AB5de60535ad."
+          },
+          {
+            "asset": "USDC.e",
+            "maximumLtvPct": 85,
+            "note": "Active DepositToken 0x7E31E5864EeA3913C89F3E035F6B0C0C41A18727."
+          }
+        ],
+        "liquidationMechanism": "A permissionless caller may liquidate any other account immediately when current oracle-valued debt exceeds the sum of oracle-valued collateral multiplied by each collateral factor. The caller burns its own msUSD, the Pool burns the borrower's matching DebtToken, and the selected DepositToken seizes oracle-quoted collateral equal to repayment value plus a 10% liquidator incentive and 8% protocol fee. Each call is capped at 50% of that borrower's selected debt-token balance; debtFloorInUsd is zero.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, collateral auction, insurance reserve, governance-token debt auction, or other bad-debt absorber exists in the reviewed Pool, DebtToken, FeeProvider, or registry graph. Liquidations are funded only by external liquidators supplying msUSD and are limited by available borrower collateral.",
+        "shutdownOrBadDebtBehavior": "Pool.liquidate reverts if the requested seizure exceeds the borrower's selected collateral balance. Collateral-backed partial liquidations can continue, but collateral-exhausted debt remains on the borrower's DebtToken balance; the reviewed contracts expose no write-off, redistribution, or socialization path. Governor or guardian shutdown sets everythingStopped and pauses issue, repay, deposit, withdraw, liquidate, and swap; the governor can later call open(), so shutdown is reversible but also disables liquidation while active.",
+        "failureDomainKeys": [
+          "oracle:metronome:msusd-fixed-peg",
+          "oracle:hemi:redstone-pull-cache",
+          "oracle:hemi:redstone-push",
+          "oracle:hemi:metronome-main-and-fallback",
+          "liquidation:hemi:metronome-pool-v1.3.2",
+          "backstop:metronome:none",
+          "shutdown:hemi:metronome-pool-registry"
+        ],
+        "sources": [
+          {
+            "label": "Hemi PoolRegistry verified contract",
+            "url": "https://explorer.hemi.xyz/address/0xDBd9Cfb0b54C08E75085f8c8844E8054d13Bd39a?tab=contract"
+          },
+          {
+            "label": "Hemi Pool implementation",
+            "url": "https://explorer.hemi.xyz/address/0xbB288e03332Ec6148431C065ccB78f223e1200Df?tab=contract"
+          },
+          {
+            "label": "Hemi MainAndFallbackOracle verified contract",
+            "url": "https://explorer.hemi.xyz/address/0xd2a4Ba582dC9fAbF3293C2C46e0aFD6C4B5719b1?tab=contract"
+          },
+          {
+            "label": "Hemi RedStone push provider",
+            "url": "https://explorer.hemi.xyz/address/0x1C8f469e3c1D87B108eC69b165037d5d7365F8C3?tab=contract"
+          }
+        ]
       }
     ]
   },
@@ -60,6 +831,11 @@
     {
       "chain": "base",
       "address": "0x526728dbc96689597f85ae4cd716d4f7fccbae9d",
+      "decimals": 18
+    },
+    {
+      "chain": "hemi",
+      "address": "0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
       "decimals": 18
     },
     {
@@ -151,6 +927,21 @@
         "observedAt": "2026-06-13"
       },
       {
+        "id": "hemi:0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
+        "destinationChain": "hemi",
+        "contractAddress": "0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-14"
+      },
+      {
         "id": "plasma:0x29ad7fe4516909b9e498b5a65339e54791293234",
         "destinationChain": "plasma",
         "contractAddress": "0x29ad7fe4516909b9e498b5a65339e54791293234",
@@ -168,36 +959,6 @@
     ]
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "reserves": [
-    {
-      "name": "USDC",
-      "pct": 30,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "DAI",
-      "pct": 20,
-      "risk": "low",
-      "coinId": "dai-makerdao"
-    },
-    {
-      "name": "Vesper yield tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH)",
-      "pct": 25,
-      "risk": "high"
-    },
-    {
-      "name": "ETH / WBTC / sfrxETH",
-      "pct": 20,
-      "risk": "medium"
-    },
-    {
-      "name": "FRAX / vaFRAX (inactive)",
-      "pct": 5,
-      "risk": "high",
-      "coinId": "frax-frax"
-    }
-  ],
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

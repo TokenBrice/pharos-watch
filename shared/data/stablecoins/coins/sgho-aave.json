@@ -72,8 +72,25 @@
   "detailProvider": "coingecko",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "sGHO uses internal savings-token accounting but inherits GHO collateral-oracle risk from Aave reserve oracle contracts.",
-    "reviewedAt": "2026-06-12",
+    "summary": "sGHO is an ERC-4626 savings wrapper over GHO and has no borrower-owned collateral positions or token-level liquidation engine. Its underlying GHO exposure inherits the external Aave reserve-oracle risk reviewed on the parent asset.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Aave documents sGHO as a savings vault where users deposit GHO and withdraw GHO against an accruing share value. sGHO holders do not open Aave borrower positions, so there are no sGHO collateral-market or liquidation branches to inventory; the underlying GHO parent carries the separate Aave oracle profile.",
+      "sources": [
+        {
+          "label": "Aave sGHO guide",
+          "url": "https://aave.com/docs/aave-v3/guides/sgho"
+        },
+        {
+          "label": "Aave Oracle docs",
+          "url": "https://aave.com/docs/ecosystem/oracle"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [

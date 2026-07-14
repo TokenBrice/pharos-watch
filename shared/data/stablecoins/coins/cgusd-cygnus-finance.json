@@ -128,30 +128,6 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "Short-term U.S. Treasury bills (off-chain)",
-      "pct": 80,
-      "risk": "very-low"
-    },
-    {
-      "name": "On-chain stablecoins (USDC)",
-      "pct": 7.5,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "On-chain stablecoins (USDT)",
-      "pct": 7.5,
-      "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "Accrued interest",
-      "pct": 5,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

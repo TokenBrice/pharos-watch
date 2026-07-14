@@ -1,0 +1,69 @@
+{
+  "id": "dusd-fluid",
+  "reserves": [
+    {
+      "name": "Current DUSD reserve assets and custodians (undisclosed)",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "Unverified Fluid Finance reserve counterparties",
+      "riskFactors": ["counterparty", "custody", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "Fluid Finance DUSD reserve FAQ",
+        "url": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8"
+      },
+      {
+        "label": "DUSD contract and token tracker on Arbiscan",
+        "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709"
+      }
+    ],
+    "rationale": "The only located issuer reserve claim is a December 2021 launch FAQ that describes parts of the product and validation API in future tense. The issuer product URL is unavailable in this review, no current composition or assurance report was found, and the Arbitrum token remains live. The historical cash design cannot support a verified 2026 composition.",
+    "compositionBasis": "Evidence-blocked: launch-era issuer design plus current onchain token existence, with no current reserve report",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All current reserve assets, balances, banking counterparties, safeguarding terms, assurance status, and redemption liquidity are unverified.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Current DUSD reserve assets and custodians (undisclosed)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "No current source establishes the reserve asset class or counterparties, so no dependency or exogenous-asset classification can be assigned safely."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Unverified and undisclosed reserve counterparties",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "Fluid Finance DUSD reserve FAQ",
+        "url": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8"
+      },
+      {
+        "label": "DUSD contract and token tracker on Arbiscan",
+        "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709"
+      }
+    ],
+    "uncertainty": "The 2021 FAQ described planned safeguarded cash backing, but no current source verifies the provider identities, reserve balances, segregation, bankruptcy remoteness, rehypothecation, or redemption liquidity.",
+    "knownUnknownExposurePct": 100
+  }
+}

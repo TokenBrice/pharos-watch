@@ -2,7 +2,7 @@
   "id": "gramg-token-teknoloji",
   "name": "Gram Gold",
   "symbol": "GRAMG",
-  "oneLiner": "GRAMG is Token Teknoloji's gram-gold stablecoin, minted 1:1 against on-chain PAXG reserves and targeting one gram of gold value per token.",
+  "oneLiner": "Token Teknoloji's gram-gold stablecoin has conflicting issuer disclosures about whether PAXG or physical gold backs current supply.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Each GRAMG is directly collateralized by PAXG held on-chain as reserve collateral; GRAMG is minted and burned as equivalent PAXG is added to or removed from the reserve wallet. The underlying PAXG is gold-backed through Paxos custody, while Token Teknoloji also discloses physical-gold reserve claims including Turkish Central Bank custody.",
+  "collateral": "Token Teknoloji's public materials conflict: product copy says equivalent PAXG is held on-chain, while the same page's FAQ and the issuer's reserve disclosures say physical gold is held at Turkish banks, the Central Bank, and company vaults. No current primary evidence reconciles the reserve form or proportions.",
   "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram gold claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
   "mechanismArchetype": "fiat-cash",
   "commodityOunces": 0.0321507466,
@@ -233,34 +233,5 @@
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "PAXG (Paxos Gold) on-chain reserve wallet",
-      "pct": 100,
-      "risk": "medium",
-      "coinId": "paxg-paxos"
-    }
-  ],
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "gramg-token-teknoloji",
-    "display": {
-      "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/",
-      "label": "Token Teknoloji"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "avalanche",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "Physical gold reserves",
-      "risk": "low"
-    }
-  },
   "launchDate": "2022-11-01"
 }

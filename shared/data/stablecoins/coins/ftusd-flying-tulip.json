@@ -16,6 +16,32 @@
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "flying-tulip-usd",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "Flying Tulip documents ftUSD as an on-chain dollar designed around delta-neutral strategies and explicitly states that ftUSD and sftUSD use no oracles or centralized systems. Strategy venues and risk controls can change, but the token itself is not a borrower-owned collateral market with an oracle-triggered liquidation branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 oracle review",
+      "rationale": "Flying Tulip describes ftUSD as a delta-neutral stablecoin wrapper with on-chain strategy deposits, optional staking, and a staged CDP-style roadmap item rather than a live borrower-owned collateral market. The official product documentation explicitly states that ftUSD and sftUSD use no oracles, so there is no current token-level liquidation branch to inventory.",
+      "sources": [
+        {
+          "label": "Flying Tulip ftUSD product documentation",
+          "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 oracle review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Flying Tulip ftUSD product documentation",
+        "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://flyingtulip.com/ftusd/dashboard/",
@@ -194,17 +220,44 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "USDC (Aave lending positions)",
-      "pct": 50,
+      "name": "USDC strategy wrappers (Ethereum and Sonic)",
+      "pct": 67.865,
       "risk": "low",
       "coinId": "usdc-circle"
     },
     {
-      "name": "USDT (Aave lending positions)",
-      "pct": 50,
+      "name": "USDT strategy wrapper (Ethereum)",
+      "pct": 31.9591,
       "risk": "low",
       "coinId": "usdt-tether"
+    },
+    {
+      "name": "USSD strategy wrapper (Sonic)",
+      "pct": 0.1759,
+      "risk": "medium",
+      "coinId": "ussd-sonic-labs"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Flying Tulip ftUSD dashboard API",
+        "url": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
+      },
+      {
+        "label": "Flying Tulip ftUSD documentation",
+        "url": "https://docs.flyingtulip.com/product-suite/ft-usd/#how-ftusd-works"
+      }
+    ],
+    "rationale": "The official dashboard API reported $2,910,351.8662 of USDC wrapper TVL across Ethereum and Sonic, $1,370,549.6573 of Ethereum USDT wrapper TVL, and $7,542.7045 of Sonic USSD wrapper TVL. Normalizing the complete $4,288,444.22799 collateral set produces the authored 67.8650%, 31.9591%, and 0.1759% shares. Each API address exactly matches the corresponding tracked stablecoin deployment.",
+    "compositionBasis": "Cross-chain collateral wrapper TVL in the official ftUSD dashboard API, aggregated by collateral token",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The dashboard API identifies every current Ethereum and Sonic collateral wrapper and its underlying token address.",
+    "knownUnknownExposurePct": 0
+  },
   "launchDate": "2026-02-23"
 }

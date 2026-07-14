@@ -13,6 +13,7 @@
   },
   "collateral": "Liquid Yield Token managed by Midas and Re7 Capital, allocating across institutional-grade DeFi yield strategies including lending, liquidity provisioning, restaking, funding-rate arbitrage, and options arbitrage",
   "pegMechanism": "mRe7YIELD is a NAV-accreting liquid yield token rather than a fixed $1 stablecoin; primary-market mint/redeem occurs through Midas rails while secondary-market holders rely on token liquidity and strategy NAV",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "midas-mre7yield",
   "proofOfReserves": {
@@ -21,6 +22,48 @@
     "provider": "Midas transparency dashboard and issuer disclosures",
     "attestorTier": "self",
     "cadence": "weekly"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "mRe7YIELD is a NAV-accreting Midas Liquid Yield Token tracking a Re7 Capital delta-neutral strategy, not a borrower CDP with user collateral liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Midas describes mRe7YIELD as a Liquid Yield Token whose NAV follows a Re7 Capital-managed strategy and lists Ethereum and Etherlink token, NAV-oracle, issuance-vault, and redemption-vault contracts. The reviewed product materials do not describe borrower-owned debt positions, collateral thresholds, liquidation auctions, or a token-level liquidation backstop for mRe7YIELD, so the V9 collateral-liquidation branch inventory does not apply.",
+      "sources": [
+        {
+          "label": "Midas mRe7YIELD product documentation",
+          "url": "https://docs.midas.app/tokens/mre7yield"
+        },
+        {
+          "label": "Midas mRe7YIELD smart contracts",
+          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+        },
+        {
+          "label": "Midas mRe7YIELD risks",
+          "url": "https://docs.midas.app/tokens/mre7yield/risks"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Midas mRe7YIELD product documentation",
+        "url": "https://docs.midas.app/tokens/mre7yield"
+      },
+      {
+        "label": "Midas Liquid Yield Token overview",
+        "url": "https://docs.midas.app/liquid-yield-token"
+      },
+      {
+        "label": "Midas mToken pricing",
+        "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
+      }
+    ]
   },
   "links": [
     {
@@ -458,14 +501,18 @@
   },
   "launchDate": "2025-02-06",
   "mechanismArchetypeReview": {
-    "disposition": "unresolved",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex mechanism review",
-    "rationale": "The reviewed multi-strategy DeFi NAV fund mixes lending, liquidity, restaking, funding-rate, and options strategies; none of the six archetypes represents that mechanism without implying a narrower backing model.",
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ARCH curation",
+    "rationale": "Midas describes mRe7YIELD as tracking delta-neutral DeFi crypto yields. Its documented strategy uses delta-hedged stablecoin deployments, market-neutral liquidity provision, and market-neutral positioning to reduce directional exposure, which fits the synthetic-delta-neutral archetype.",
     "sources": [
       {
-        "label": "Midas docs",
-        "url": "https://docs.midas.app/"
+        "label": "Midas mRe7YIELD docs",
+        "url": "https://docs.midas.app/tokens/mre7yield"
+      },
+      {
+        "label": "Midas mRe7YIELD risk disclosures",
+        "url": "https://docs.midas.app/tokens/mre7yield/risks"
       }
     ]
   }

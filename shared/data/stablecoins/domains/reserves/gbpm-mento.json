@@ -1,0 +1,16 @@
+{
+  "id": "gbpm-mento",
+  "reserves": [
+    {
+      "name": "USDm (Mento Dollar) CDP collateral",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "cusd-celo",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Mento Protocol and the shared Mento Reserve",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
+    }
+  ]
+}

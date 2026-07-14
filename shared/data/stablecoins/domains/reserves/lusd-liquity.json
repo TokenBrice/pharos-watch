@@ -1,0 +1,82 @@
+{
+  "id": "lusd-liquity",
+  "reserves": [
+    {
+      "name": "ETH collateral in Liquity V1 Troves",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Liquity V1 borrowing documentation",
+        "url": "https://docs.liquity.org/liquity-v1/faq/borrowing"
+      },
+      {
+        "label": "Liquity V1 general documentation",
+        "url": "https://docs.liquity.org/liquity-v1/faq/general"
+      },
+      {
+        "label": "Liquity V1 technical resources and contract addresses",
+        "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
+      }
+    ],
+    "rationale": "Liquity V1 accepts only ETH collateral, records each Trove's ETH collateral against LUSD debt, and allows LUSD redemption against the underlying ETH. The 100% composition describes the collateral asset type; it does not imply a 100% collateralization ratio, because individual Troves must remain above the protocol's collateral thresholds.",
+    "compositionBasis": "Liquity V1 immutable ETH-only collateral rules",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Collateralization ratios and the split between Liquity system pools change onchain, but no reserve asset other than ETH is permitted by Liquity V1.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "ETH collateral in Liquity V1 Troves",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Native ETH is direct protocol collateral rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Liquity V1 ActivePool contract",
+        "role": "other"
+      },
+      {
+        "name": "Liquity V1 DefaultPool contract",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Liquity V1 general documentation",
+        "url": "https://docs.liquity.org/liquity-v1/faq/general"
+      },
+      {
+        "label": "Liquity V1 technical resources and contract addresses",
+        "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
+      }
+    ],
+    "uncertainty": "Liquity identifies immutable, non-custodial system contracts and the dedicated ActivePool and DefaultPool addresses, but pool shares vary with liquidations and the public documentation does not express legal bankruptcy-remoteness or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

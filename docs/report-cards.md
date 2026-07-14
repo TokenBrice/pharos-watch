@@ -2,14 +2,14 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. The API normally serves the cron-published report-card snapshot and computes the same response shape on read only when that snapshot is missing, invalid, or pinned to an older Safety Score methodology generation.
 
-The stablecoin registry currently contains 411 tracked metadata entries. Report-card snapshots score the 361 active tracked assets plus the 88 cemetery assets; 17 frozen-archive tracked entries are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch.
+Report-card snapshots score active tracked and cemetery assets. Frozen archives are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch. The stablecoin and cemetery registries own the current populations.
 
 ## Methodology Versioning
 
 - **Current methodology version:** `v8.17`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
-- **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
+- **Structured changelog:** `shared/data/methodology-changelogs/safety-score/`
 
 ## Overall Grade (v8.17)
 
@@ -45,13 +45,13 @@ the [consumer ledger](./process/safety-score-v9-consumer-ledger.md).
 
 Yield Intelligence source-risk evidence is not a report-card input in the current methodology. `sourceRisk.*` fields can affect the Pharos Yield Score (PYS), opportunity-level tranche Safety Scores, and same-confidence yield source arbitration, but they do not change the underlying stablecoin's Safety Score, Resilience, or Dependency Risk dimensions here. External lending opportunities and structured-tranche rows belong to opportunity scoring, not the base stablecoin report card.
 
-Any future use of yield source-risk that affects Safety Score, Resilience, Dependency Risk, or the overall grade must ship as a report-card methodology change with the corresponding `docs/report-cards.md` and `docs/report-cards-timeline.md` updates. Until then there are no hidden yield source-risk penalties, caps, or score modifiers in report-card scoring.
+Any future use of yield source-risk that affects Safety Score, Resilience, Dependency Risk, or the overall grade must ship as a report-card methodology change with corresponding updates to this document and `shared/data/methodology-changelogs/safety-score/`. Until then there are no hidden yield source-risk penalties, caps, or score modifiers in report-card scoring.
 
 ## Mint Authority Boundary
 
 Mint Authority review produces the Mint Authority Score (MAS methodology `v1.2`) from reviewed mint path, weakest mint-capable controller, quantitative bounds, authority posture, evidence confidence, inheritance, and time-decayed incident caps. Detail pages always show the Mint Authority section: reviewed assets expose the score, band, component breakdown, controls, sources, and incident callouts, while missing reviews render an explicit `NR` state. The homepage table and `/screener/` may sort, display, export, or filter the same standalone score and review buckets so users can inspect who can create or route durable supply.
 
-As of Safety Score v8.0 the Mint Authority Score feeds the **Decentralization** dimension through a penalty-only blend (see Decentralization Details) and is exposed in report-card raw inputs as `mintAuthorityScore`. The remaining boundary is still strict: the score does not create selector exclusions, does not feed Resilience, Liquidity, Peg Stability, or Dependency Risk, and does not change any default ranking outside what the Decentralization dimension propagates. A missing or unresolved review (`NR`) never penalizes any Safety Score surface. Any further expansion of mint-authority data into other dimensions requires a new Safety Score methodology/version change and timeline entry.
+As of Safety Score v8.0 the Mint Authority Score feeds the **Decentralization** dimension through a penalty-only blend (see Decentralization Details) and is exposed in report-card raw inputs as `mintAuthorityScore`. The remaining boundary is still strict: the score does not create selector exclusions, does not feed Resilience, Liquidity, Peg Stability, or Dependency Risk, and does not change any default ranking outside what the Decentralization dimension propagates. A missing or unresolved review (`NR`) never penalizes any Safety Score surface. Any further expansion of mint-authority data into other dimensions requires a new Safety Score methodology/version change and structured changelog entry.
 
 ## Dimensions
 
@@ -326,7 +326,7 @@ Initial reviewed metadata covers USDS (`medianized-with-delay`) and BOLD (`redun
 
 L2BEAT Interop protocol data is an evidence source and queue generator for this review. The live report-card engine does not fetch L2BEAT; it consumes only curated `bridgeRouteRisk` metadata with reviewer, confidence, source, and optional protocol evidence.
 
-Reviewed profiles can also carry one exact route row per authored chain/address deployment. Report-card compilation joins those rows to DefiLlama chain-level circulating supply, treats global and canonical rows as material, and applies a 10% threshold to peripheral or unresolved rows. The resulting `complete`, `partial`, `unavailable`, or `not-applicable` materiality status, matched/unknown supply ratios, selected route, and derived effective tier are diagnostic under v8: the active blend above continues to use the profile-level tier. Activating the supply-derived effective tier requires a new methodology version and timeline entry.
+Reviewed profiles can also carry one exact route row per authored chain/address deployment. Report-card compilation joins those rows to DefiLlama chain-level circulating supply, treats global and canonical rows as material, and applies a 10% threshold to peripheral or unresolved rows. The resulting `complete`, `partial`, `unavailable`, or `not-applicable` materiality status, matched/unknown supply ratios, selected route, and derived effective tier are diagnostic under v8: the active blend above continues to use the profile-level tier. Activating the supply-derived effective tier requires a new methodology version and structured changelog entry.
 
 **Mint Authority blend (v8.0):** as the final stage, a rated Mint Authority Score applies a penalty-only blend: `score = min(score, round(score x 0.65 + MAS x 0.35))` (`MAS_BLEND_WEIGHT = 0.35` in `shared/lib/report-card-governance.ts`). The blend can only drag the dimension down — privileged-mint risk undermines a decentralization claim, but a clean mint topology never makes a centralized issuer decentralized. Coins without a rated MAS (`NR`) are unchanged, and there is no separate confidence gate because the MAS confidence caps (verified 100 / probable 90 / manual-review 85) already encode evidence quality. Wrappers inherit the parent's pre-Mint Authority score so the drag applies exactly once per coin (the wrapper's own MAS already folds the parent's mint risk), and a wrapper is additionally capped at its parent's final blended score. When the drag binds, the report card shows a `Mint authority` detail row with the MAS, band, and delta.
 
@@ -502,7 +502,7 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. The current snapshot size is 466 cards (361 active tracked assets plus 88 cemetery entries plus 17 frozen archives; pre-launch tracked assets are excluded) × 5 dimensions, which remains comfortably sub-millisecond in practice.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. Its input size follows the source-owned report-card snapshot rather than a separately maintained UI inventory.
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 
 State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.
@@ -516,23 +516,3 @@ State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.
 - **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile with simulation support (dashed border, before→after grade, "Simulated" badge) and a "Core rail" marker for objectively qualified settlement rails; the radar stage now uses a width-driven aspect ratio so the grid cards do not carry excess vertical dead space
 - **Radar chart**: `src/components/radar-chart.tsx` — hexagonal Recharts radar with `ReportCardRadar` (single) and `CompareRadar` (multi-coin overlay); `ReportCardRadar` automatically switches to short axis labels on very narrow containers
 - **Hooks**: `src/hooks/api-hooks.ts` (`useReportCards`, `useSafetyScoreHistory`), `src/hooks/use-portfolio.ts` (portfolio state + browser persistence), `src/hooks/use-stress-test.ts` (stress test state + recomputation)
-
-## Key Files
-
-| File                                                                | Purpose                                                                                                                                               |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shared/lib/report-cards.ts`                                        | Pure grading engine: dimension scorers, weights, thresholds, colors, `computeStressedGrades()`                                                        |
-| `worker/src/lib/report-cards-snapshot.ts`                           | Shared report-card snapshot builder used by API + grade-history cron                                                                                  |
-| `worker/src/api/report-cards.ts`                                    | API handler: serves shared snapshot response with freshness headers                                                                                   |
-| `worker/src/cron/snapshot-safety-grade-history.ts`                  | Daily V8 grade-history writer (legacy + version-aware V2 organic rows)                                                                                |
-| `worker/src/lib/safety-score-history-v2.ts`                         | Active-model source validation, dual-write helpers, and legacy-compatible dual-read projections                                                       |
-| `worker/src/api/safety-score-history.ts`                            | History endpoint for per-coin grade transitions                                                                                                       |
-| `src/components/stress-test-panel.tsx`                              | Stress test / Contagion Map collapsible panel (stress test controls + impact table)                                                                   |
-| `src/components/report-card.tsx`                                    | Full detail card with radar                                                                                                                           |
-| `src/components/stablecoin-detail/safety-score-history-section.tsx` | Stablecoin detail grade-history timeline UI                                                                                                           |
-| `src/components/report-card-mini.tsx`                               | Compact grid tile with simulation mode support                                                                                                        |
-| `src/components/radar-chart.tsx`                                    | Recharts radar visualization                                                                                                                          |
-| `src/app/safety-scores/client.tsx`                                  | Full page with filtering, sorting, headline safety stats, and simulation mode                                                                         |
-| `src/hooks/api-hooks.ts`                                            | TanStack Query hook exports for `useReportCards()` and `useSafetyScoreHistory()`                                                                      |
-| `src/hooks/use-portfolio.ts`                                        | Portfolio holdings state + browser persistence; delegates codec and exposure math to `src/lib/portfolio-codec.ts` and `src/lib/portfolio-analysis.ts` |
-| `src/hooks/use-stress-test.ts`                                      | Stress test state, `computeStressedGrades` invocation, impact calculation                                                                             |

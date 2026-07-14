@@ -467,7 +467,6 @@ Use `sourceFreeRationale` instead of `review.sources` only when the review is in
   - `src/lib/stablecoin-static-data.ts` — the status count constants (`TRACKED_STABLECOIN_COUNT`, `ACTIVE_STABLECOIN_COUNT`, `PRE_LAUNCH_STABLECOIN_COUNT`, …), `ACTIVE_PEG_CURRENCY_COUNTS`, the `TRACKED_STABLECOIN_IDS` array (canonical order), and `NON_ACTIVE_STABLECOIN_ID_SET` for pre-launch/frozen entries.
   - `src/lib/command-palette-search-data.ts` — add a `COMMAND_PALETTE_STABLECOINS` search row; `src/lib/__tests__/stablecoin-static-data.test.ts` enforces sync with the shared registry.
   - `shared/lib/__tests__/stablecoins.test.ts` — hardcoded tracked/active length expectations.
-  - Verified docs that cite tracked/active counts — run `npm run check:doc-counts` and update whatever it flags.
 - Use `npm run check:stablecoin-data` before moving on.
 
 ---
@@ -721,14 +720,14 @@ cd worker && npx tsc --noEmit
 npm run test:merge-gate
 ```
 
-`validate:prebuild` is the aggregated gate: it runs lint, typecheck, and the registered prebuild checks in parallel, including `check:stablecoin-data`, `check:redemption-backstops`, `check:doc-counts`, `check:verified-doc-links`, and `check:doc-sync`. Running `check:stablecoin-data` separately first gives faster feedback on the most common failure mode for this kind of diff.
+`validate:prebuild` is the aggregated gate: it runs lint, typecheck, and the checks registered in `scripts/lib/validation-lanes.mjs`, including stablecoin data, redemption coverage, verified links, and doc sync. Running `check:stablecoin-data` separately first gives faster feedback on the most common failure mode for this kind of diff.
 
 You can also run the individual checks directly when iterating:
 
 - new redemption config -> `npm run check:redemption-backstops`
 - L2BEAT-backed chain route review -> `npm run candidates:l2beat-safety-score`, `npm run candidates:l2beat-bridge-routes`, and `npm run check:l2beat-snapshot-coverage`
 - dependency/process context review -> `npm run check:dependency-coverage` and inspect the L2BEAT Deployment Context section when contracts land on matched L2BEAT chains
-- verified docs changed -> `npm run check:doc-counts`, `npm run check:verified-doc-links`, `npm run check:doc-sync`
+- verified docs changed -> `npm run check:verified-doc-links`, `npm run check:doc-sync`
 
 If you added or changed a new upstream/provider or methodology-affecting runtime path, update the matching verified docs in the same change:
 
@@ -737,7 +736,7 @@ If you added or changed a new upstream/provider or methodology-affecting runtime
 - `docs/testing.md`
 - `docs/worker-and-api-limits.md`
 - the area-specific feature doc
-- `/methodology` and its related changelog/timeline doc if scoring or methodology behavior changed
+- `/methodology`, the owning methodology doc, and its structured changelog entry if scoring or methodology behavior changed
 - the about page if a new data source was introduced
 
 ---

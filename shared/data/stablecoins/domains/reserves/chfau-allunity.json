@@ -1,0 +1,74 @@
+{
+  "id": "chfau-allunity",
+  "reserves": [
+    {
+      "name": "CHF bank deposits (CRR credit institutions, EU)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed CRR credit institutions in the European Union",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AllUnity CHFAU product and reserve disclosure",
+        "url": "https://allunity.com/chfau"
+      },
+      {
+        "label": "AllUnity trust center",
+        "url": "https://allunity.com/trust-center"
+      }
+    ],
+    "rationale": "AllUnity describes CHFAU as fully backed 1:1 by CHF reserves held at CRR credit institutions in the European Union and segregated from its operational funds. Its trust center says a reserve audit report is coming soon, so no institution-level allocation can be substantiated.",
+    "compositionBasis": "AllUnity issuer reserve and trust-center disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve institutions, account shares, and a dated independent reserve report are not public.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "CHF bank deposits (CRR credit institutions, EU)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Swiss-franc bank deposits are external reserve backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed CRR credit institutions",
+        "role": "bank",
+        "jurisdiction": "European Union"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AllUnity CHFAU product and reserve disclosure",
+        "url": "https://allunity.com/chfau"
+      },
+      {
+        "label": "AllUnity trust center",
+        "url": "https://allunity.com/trust-center"
+      }
+    ],
+    "uncertainty": "AllUnity states that reserves are segregated from operational funds but does not identify the banks, disclose provider shares, establish bankruptcy remoteness in the cited materials, or publish rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "id": "tgbp-tokenised",
+  "reserves": [
+    {
+      "name": "GBP cash and short-term UK gilts",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Tokenised GBP issuer site",
+        "url": "https://www.tokenisedgbp.com/"
+      }
+    ],
+    "rationale": "BCP Technologies states that every tGBP is backed one-for-one by cash and short-term UK gilts. No current asset-class weights are published, so the composition is represented as one aggregate basket without inventing a cash/gilt split.",
+    "compositionBasis": "Current Tokenised GBP issuer disclosure; asset-class weights undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer discloses the complete eligible reserve basket but not the current allocation between GBP cash and short-term UK gilts.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "GBP cash and short-term UK gilts",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer does not publish the current cash/gilt weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Reserve banks and securities custodian (not publicly disclosed)",
+        "role": "other",
+        "jurisdiction": "United Kingdom"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Tokenised GBP issuer site",
+        "url": "https://www.tokenisedgbp.com/"
+      }
+    ],
+    "uncertainty": "The reviewed issuer disclosure does not identify reserve banks or a securities custodian, publish provider shares, or establish segregation, bankruptcy-remoteness, and rehypothecation safeguards."
+  }
+}

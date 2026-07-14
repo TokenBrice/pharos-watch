@@ -87,16 +87,3 @@ See [API Reference](./api-reference.md) for the exact response shape.
 `src/lib/bluechip.ts` contains:
 - `BLUECHIP_REPORT_BASE` (`https://bluechip.org/en/coins`)
 - `GRADE_ORDER` for frontend sorting/color bucketing
-
----
-
-## File Index
-
-| File | Role |
-|------|------|
-| `shared/lib/bluechip-slugs.ts` | Explicit Bluechip slug → Pharos ID coverage map |
-| `worker/src/cron/sync-bluechip.ts` | Daily fetch + normalization + cache write |
-| `worker/src/api/cache-handlers.ts` | Public cache-passthrough handler for `/api/bluechip-ratings` |
-| `src/hooks/api-hooks.ts` | TanStack Query hook export for `useBluechipRatings()` |
-| `src/components/bluechip-header-badge.tsx` | Detail-page badge and outbound Bluechip link |
-| `src/lib/bluechip.ts` | Frontend sort/base URL helpers |

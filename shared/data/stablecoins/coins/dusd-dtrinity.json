@@ -18,17 +18,34 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "dUSD's own price is hard-coded at $1 for mint, redeem, and dLEND lending/borrowing to resist manipulation, but the protocol values its yield-bearing reserve stablecoins (e.g. sfrxUSD, sUSDS) and dLEND collateral through external feeds — API3 and Redstone, with Chainlink and issuer feeds — and those feeds drive reserve NAV and mint/redeem ratios. No documented single-primary-with-failover oracle architecture per asset.",
-    "reviewedAt": "2026-06-17",
-    "reviewer": "Claude oracle-risk review",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 oracle review",
+      "rationale": "dUSD is minted and redeemed against protocol reserves, while dLEND separately values borrower collateral and manages liquidations. dUSD itself is disabled as dLEND collateral and is not a borrower-owned debt position with token-level liquidation branches, so the CDP branch inventory is not applicable; reserve and lending oracle dependencies remain captured in the profile summary.",
+      "sources": [
+        {
+          "label": "dTRINITY dUSD protocol documentation",
+          "url": "https://docs.dtrinity.org/protocol-components/dusd"
+        },
+        {
+          "label": "dTRINITY dLEND oracle and liquidation documentation",
+          "url": "https://docs.dtrinity.org/protocol-components/dlend"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 oracle review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "dTRINITY dUSD stablecoin docs",
-        "url": "https://docs.dtrinity.org/core-components/dusd-stablecoin"
+        "label": "dTRINITY dUSD protocol documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/dusd"
       },
       {
-        "label": "dTRINITY dLEND money markets (oracle pricing)",
-        "url": "https://docs.dtrinity.org/core-components/dlend-money-markets"
+        "label": "dTRINITY dLEND oracle and liquidation documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/dlend"
       }
     ]
   },
@@ -234,57 +251,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
-  "reserves": [
-    {
-      "name": "sfrxUSD (Staked Frax USD)",
-      "pct": 42,
-      "risk": "medium",
-      "coinId": "sfrxusd-frax"
-    },
-    {
-      "name": "Curve AMO positions (dUSD/sfrxUSD LP)",
-      "pct": 35,
-      "risk": "high",
-      "coinId": "sfrxusd-frax",
-      "depType": "mechanism"
-    },
-    {
-      "name": "frxUSD (Fraxtal)",
-      "pct": 4,
-      "risk": "low",
-      "coinId": "frxusd-frax"
-    },
-    {
-      "name": "DAI (Fraxtal)",
-      "pct": 5,
-      "risk": "low",
-      "coinId": "dai-makerdao"
-    },
-    {
-      "name": "sDAI (Fraxtal)",
-      "pct": 5,
-      "risk": "medium",
-      "coinId": "sdai-sky"
-    },
-    {
-      "name": "vbUSDT (Katana Vault Bridge)",
-      "pct": 3,
-      "risk": "medium",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "vbUSDC (Katana Vault Bridge)",
-      "pct": 3,
-      "risk": "medium",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "sUSDS (Sky Savings Rate)",
-      "pct": 3,
-      "risk": "medium",
-      "coinId": "susds-sky"
-    }
-  ],
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "concentrated-admin",

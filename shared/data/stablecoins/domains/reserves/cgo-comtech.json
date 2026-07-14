@@ -1,0 +1,75 @@
+{
+  "id": "cgo-comtech",
+  "reserves": [
+    {
+      "name": "Allocated physical gold (24K, TransGuard vaults in the UAE)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Allocated PAMP and other LBMA-standard physical gold",
+      "riskFactors": [
+        "custody",
+        "liquidity",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "ComTech Gold proof of gold and custody disclosure",
+        "url": "https://comtechgold.com/proof-of-gold-audit"
+      },
+      {
+        "label": "ComTech Gold custody and insolvency FAQ",
+        "url": "https://comtechgold.com/faqs"
+      }
+    ],
+    "rationale": "ComTech states that one CGO represents one gram of allocated physical gold, held 1:1 in segregated and insured TransGuard vault accounts in the UAE. The disclosure identifies 999.9 and 999.5 fineness and LBMA-standard gold but does not publish a current bar-level composition suitable for a finer static split.",
+    "compositionBasis": "Issuer disclosure of one gram of allocated physical gold per CGO",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current public page does not disclose the shares by bar, refiner, fineness, or vault account, and its audit link does not expose a dated reserve examination report.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Allocated physical gold (24K, TransGuard vaults in the UAE)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Allocated physical gold is external reserve backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "TransGuard Group",
+        "role": "custodian",
+        "sharePct": 100,
+        "jurisdiction": "United Arab Emirates"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "ComTech Gold proof of gold and custody disclosure",
+        "url": "https://comtechgold.com/proof-of-gold-audit"
+      },
+      {
+        "label": "ComTech Gold custody and insolvency FAQ",
+        "url": "https://comtechgold.com/faqs"
+      }
+    ],
+    "uncertainty": "ComTech identifies TransGuard and states that the allocated gold is segregated, off balance sheet, and unavailable to general creditors. The public materials do not provide the governing custody agreement or an explicit rehypothecation prohibition."
+  }
+}

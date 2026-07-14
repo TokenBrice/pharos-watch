@@ -2,7 +2,7 @@
   "id": "a7a5-old-vector",
   "name": "A7A5",
   "symbol": "A7A5",
-  "oneLiner": "A7A5 is Old Vector's RUB stablecoin backed at sanctioned Promsvyazbank; the token and issuer network face OFAC, EU, and UK sanctions.",
+  "oneLiner": "A7A5 is Old Vector's RUB stablecoin backed by an undisclosed mix of ruble deposits and short-term assets; its issuer network faces OFAC, EU, and UK sanctions.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "RUB",
@@ -11,15 +11,14 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Russian ruble (RUB) deposits held 1:1 at Promsvyazbank (PSB), a sanctioned Russian state-owned bank; reserves audited quarterly by Kreston Bishkek (Kreston Global network member, Kyrgyzstan)",
+  "collateral": "An undisclosed Russian-ruble reserve basket that issuer materials variously describe as deposits and as deposits plus short-term assets; current constituent weights, institutions, custody, and assurance evidence are unavailable",
   "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble enforced exclusively via off-chain primary-market mint and redemption with KYC-verified authorized partners (e.g. a7a5.kg for Russian-account holders depositing or withdrawing RUB); no on-chain DEX-based RUB liquidity exists, so USD-denominated price prints reflect RUB/USD spot movements rather than secondary-market arbitrage; since 2026-02-09 the issuer (Old Vector LLC) distributes nearly all overnight reserve income to holders as additional A7A5 using a formula of the Central Bank of Russia key rate minus 1 percentage point, recalculated when the key rate changes",
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://docs.a7a5.io/legal/transparency",
-    "provider": "Kreston Bishkek (Kreston Global network member)",
-    "attestorTier": "niche",
-    "cadence": "quarterly",
-    "attestorJurisdiction": "Kyrgyzstan"
+    "type": "self-reported",
+    "url": "https://docs.a7a5.io/legal/transparency.md",
+    "provider": "A7A5",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "mechanismArchetype": "fiat-cash",
   "llamaId": "258",
@@ -112,45 +111,17 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "custodyModel": "institutional-sanctioned",
-  "reserves": [
-    {
-      "name": "Russian ruble deposits at Promsvyazbank (sanctioned)",
-      "pct": 100,
-      "risk": "very-high"
-    }
-  ],
+  "custodyModel": "institutional-unregulated",
   "yieldConfig": {
     "yieldSource": "Central Bank of Russia key rate minus 1pp issuer distribution",
     "yieldType": "governance-set"
-  },
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "a7a5-old-vector",
-    "display": {
-      "url": "https://www.a7a5.io/",
-      "label": "A7A5 Official"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "Russian ruble bank deposits",
-      "risk": "very-high"
-    }
   },
   "deploymentModel": "native-multichain",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "A7A5 is issued by Old Vector LLC; minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits at Promsvyazbank. On-chain, the Ethereum token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers), and the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). Both tokens are direct immutable deployments with no proxy or other mint-logic upgrade path.",
+    "summary": "A7A5 is issued by Old Vector LLC; minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits. On-chain, the Ethereum token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers), and the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). Both tokens are direct immutable deployments with no proxy or other mint-logic upgrade path.",
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [

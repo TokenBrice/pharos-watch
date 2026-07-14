@@ -1,0 +1,74 @@
+{
+  "id": "pusd-polymarket",
+  "reserves": [
+    {
+      "name": "USDC and USDC.e in Polymarket backing vault",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial and the Polygon PoS bridge",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Polymarket pUSD documentation",
+        "url": "https://docs.polymarket.com/concepts/pusd"
+      },
+      {
+        "label": "Polymarket collateral contract registry",
+        "url": "https://docs.polymarket.com/resources/contracts"
+      },
+      {
+        "label": "Polymarket pUSD backing vault",
+        "url": "https://polygonscan.com/address/0xc417fd8e9661c0d2120b64a04bb3278c17e99db1"
+      }
+    ],
+    "rationale": "Polymarket documents pUSD as an onchain-enforced USDC claim and exposes 1:1 wrapping and unwrapping through its collateral contracts. The reviewed reserve adapter measures both native Polygon USDC and bridged USDC.e at the dedicated backing vault, so the static envelope keeps one 100% combined slice rather than inventing a fixed weight for either token variant.",
+    "compositionBasis": "Polymarket pUSD documentation and the configured onchain backing-vault asset set",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete backing relationship is mapped to USDC, while the current balance split between native USDC and bridged USDC.e changes onchain and is intentionally not fixed in static metadata.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Polymarket pUSD backing vault (0xc417fd8e9661c0d2120b64a04bb3278c17e99db1)",
+        "role": "other",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Polymarket pUSD documentation",
+        "url": "https://docs.polymarket.com/concepts/pusd"
+      },
+      {
+        "label": "Polymarket pUSD backing vault",
+        "url": "https://polygonscan.com/address/0xc417fd8e9661c0d2120b64a04bb3278c17e99db1"
+      }
+    ],
+    "uncertainty": "The backing tokens are held at one identified onchain vault and are available through the documented unwrap path, but the reviewed sources do not establish legal bankruptcy-remoteness or a complete independent assessment of every authority that could affect reserve reuse."
+  }
+}

@@ -2,7 +2,7 @@
   "id": "witry-brix",
   "name": "Wrapped iTRY",
   "symbol": "wiTRY",
-  "oneLiner": "wiTRY is a Brix staking wrapper that accrues yield over iTRY, exposure to a BVI-regulated Turkish-lira money-market fund and local TRY instruments.",
+  "oneLiner": "wiTRY is a Brix staking wrapper that accrues yield over iTRY, with exposure to Turkish-lira money-market funds and local TRY instruments.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "TRY",
@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "iTRY deposited into the Brix staking wrapper, backed by a BVI-regulated Turkish-lira money-market fund and related TRY cash/liquidity instruments",
+  "collateral": "iTRY deposited into the Brix staking wrapper, backed by regulated Turkish-lira money-market funds and related TRY cash/liquidity instruments",
   "pegMechanism": "wiTRY appreciates against iTRY as fund yield is minted into the staking contract and vests over time; users can unstake through a cooldown or use Fast Redeem for a fee, while final TRY exposure inherits iTRY issuer and local-currency risk",
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
@@ -60,13 +60,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "Brix iTRY staking wrapper backed by TRY money-market fund exposure",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Brix iTRY staking",
     "yieldType": "nav-appreciation"

@@ -20,6 +20,44 @@
   "detailProvider": "coingecko",
   "geckoId": "ethena-staked-usde",
   "pythFeedId": "0xca3ba9a619a4b3755c10ac7d5e760275aa95e9823d38a84fedd416856cdba37c",
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "sUSDe is an ERC-4626 savings wrapper over USDe and has no borrower-owned collateral positions or token-level liquidation engine. It inherits the parent USDe offchain oracle and hedging-system risk.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "Ethena documents sUSDe as a vault where users deposit USDe, receive shares, and burn shares for proportionate USDe. sUSDe does not create borrower-owned debt positions or collateral-liquidation markets; the underlying USDe parent carries the separately reviewed offchain pricing and hedging-system exposure.",
+      "sources": [
+        {
+          "label": "Ethena staking USDe documentation",
+          "url": "https://docs.ethena.fi/solution-design/staking-usde"
+        },
+        {
+          "label": "Ethena oracle documentation",
+          "url": "https://docs.ethena.fi/solution-design/use-of-oracles"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ethena staking USDe documentation",
+        "url": "https://docs.ethena.fi/solution-design/staking-usde"
+      },
+      {
+        "label": "Ethena oracle documentation",
+        "url": "https://docs.ethena.fi/solution-design/use-of-oracles"
+      },
+      {
+        "label": "Ethena hedging-system documentation",
+        "url": "https://docs.ethena.fi/solution-design/hedging-system"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -252,9 +290,9 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Ethena lists sUSDe deployments across many chains and LayerZero OFT is the reviewed cross-chain token pattern for unified multichain supply. The route is treated as external lock/burn-and-mint infrastructure with Ethena multisig controls on destination deployments.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "LayerZero metadata identifies Ethereum's sUSDe OFT adapter and 22 non-native OFT or OFT Adapter deployments. Those reviewed routes depend on LayerZero V2 messaging, the Ethereum source adapter, and destination token or adapter controls; Plasma, TON, and X Layer remain unresolved because the API does not list them.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
     "confidence": "probable",
     "protocols": [
       {
@@ -272,6 +310,14 @@
       {
         "label": "Ethena key addresses",
         "url": "https://docs.ethena.fi/solution-design/key-addresses"
+      },
+      {
+        "label": "LayerZero OFT metadata API (sUSDe)",
+        "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+      },
+      {
+        "label": "LayerZero OFT API documentation",
+        "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
       },
       {
         "label": "LayerZero OFT reference",
@@ -292,11 +338,19 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
           },
           {
             "label": "LayerZero OFT reference",
@@ -310,25 +364,30 @@
         "destinationChain": "plasma",
         "canonicalChain": "ethereum",
         "contractAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
-        "protocol": "LayerZero OFT",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-lock-mint",
-        "semantics": "lock-mint",
-        "scope": "peripheral",
-        "reviewDisposition": "reviewed",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
-            "label": "LayerZero OFT reference",
-            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
           }
-        ]
+        ],
+        "reviewNote": "The LayerZero sUSDe metadata API did not list this deployment on 2026-07-14, so its bridge protocol, semantics, scope, and controller remain unresolved."
       },
       {
         "id": "linea:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -344,16 +403,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:linea:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -370,16 +444,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:fraxtal:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -396,16 +485,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:hyperevm:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -422,16 +526,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "berachain",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:berachain:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -448,16 +567,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "zircuit",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:zircuit:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -474,16 +608,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "metis",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:metis:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -492,25 +641,30 @@
         "destinationChain": "xlayer",
         "canonicalChain": "ethereum",
         "contractAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
-        "protocol": "LayerZero OFT",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-lock-mint",
-        "semantics": "lock-mint",
-        "scope": "peripheral",
-        "reviewDisposition": "reviewed",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
-            "label": "LayerZero OFT reference",
-            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
           }
-        ]
+        ],
+        "reviewNote": "The LayerZero sUSDe metadata API did not list this deployment on 2026-07-14, so its bridge protocol, semantics, scope, and controller remain unresolved."
       },
       {
         "id": "base:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -526,16 +680,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:base:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -552,16 +721,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:bsc:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -578,16 +762,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "morph-l2",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:morph-l2:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -604,16 +803,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "scroll",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:scroll:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -630,16 +844,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "kava",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:kava:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -656,16 +885,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "swellchain",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:swellchain:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -682,16 +926,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "mode",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:mode:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -708,16 +967,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "mantle",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:mantle:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -734,16 +1008,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:arbitrum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -760,16 +1049,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "manta",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:manta:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -786,16 +1090,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "blast",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:blast:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -812,16 +1131,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:optimism:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -830,25 +1164,30 @@
         "destinationChain": "ton",
         "canonicalChain": "ethereum",
         "contractAddress": "EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr",
-        "protocol": "LayerZero OFT",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-lock-mint",
-        "semantics": "lock-mint",
-        "scope": "peripheral",
-        "reviewDisposition": "reviewed",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
-            "label": "LayerZero OFT reference",
-            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
           }
-        ]
+        ],
+        "reviewNote": "The LayerZero sUSDe metadata API did not list this deployment on 2026-07-14, so its bridge protocol, semantics, scope, and controller remain unresolved."
       },
       {
         "id": "solana:Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",
@@ -864,16 +1203,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "D27Yp9iR2UAgD8BkBbWrHeK6MooSQu353NJm3SVmEvXw",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:solana:D27Yp9iR2UAgD8BkBbWrHeK6MooSQu353NJm3SVmEvXw"
         ]
       },
       {
@@ -890,16 +1244,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "zksync",
+        "controllerAddress": "0xad17da2f6ac76746ef261e835c50b2651ce36da8",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:zksync:0xad17da2f6ac76746ef261e835c50b2651ce36da8"
         ]
       },
       {
@@ -916,16 +1285,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:avalanche:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ]
       },
       {
@@ -942,16 +1326,31 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
+            "label": "LayerZero OFT metadata API (sUSDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+          },
+          {
+            "label": "LayerZero OFT API documentation",
+            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+          },
+          {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
+        ],
+        "controllerChain": "aptos",
+        "controllerAddress": "0xa84fcc405fa7e5415f02f50167aac3d4ec2947187aabb9087f6b16d31c8715e5",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:aptos:0xa84fcc405fa7e5415f02f50167aac3d4ec2947187aabb9087f6b16d31c8715e5"
         ]
       }
     ]

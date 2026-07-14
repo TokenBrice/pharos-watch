@@ -21,7 +21,10 @@ import type {
 } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { ReserveSlice } from "@shared/types/reserves";
-import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
+import {
+  computeSafetyScoreV9ReserveExposureKey,
+  type SafetyScoreV9FactSetExtensionV2,
+} from "./safety-score-v9-fact-set";
 import { buildSafetyScoreV9MechanismReview } from "./safety-score-v9-extension-mechanism";
 import { buildSafetyScoreV9ReserveClassifications } from "./safety-score-v9-extension-reserves";
 import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/redemption-backstop-scoring";
@@ -77,9 +80,139 @@ type ComponentEvidence = ExtensionAsset["componentEvidence"][number];
 type ControlOverlay = NonNullable<
   Extract<NonNullable<ExtensionAsset["controlReview"]>, { state: "partially-reviewed-controls" }>
 >["controls"][number];
+type ReserveClassification = ReturnType<typeof buildSafetyScoreV9ReserveClassifications>[number];
+
+const RESERVE_WEIGHT_MATCH_TOLERANCE_PCT = 0.5;
 
 function digest(domain: string, payload: unknown): string {
   return sha256Hex(stableJsonStringifyV1({ domain, payload }));
+}
+
+function normalizedReserveName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function reserveSlicesMatch(left: ReserveSlice, right: ReserveSlice): boolean {
+  const normalizedName = normalizedReserveName(left.name);
+  return (
+    normalizedName.length > 0 &&
+    normalizedName === normalizedReserveName(right.name) &&
+    Math.abs(left.pct - right.pct) <= RESERVE_WEIGHT_MATCH_TOLERANCE_PCT
+  );
+}
+
+function overlayReviewedReserveClassification(
+  classification: ReserveClassification,
+  live: ReserveSlice,
+  reviewed: ReserveSlice,
+  reviewKey: string,
+): ReserveClassification {
+  const assetClass = live.assetClass ?? reviewed.assetClass ?? null;
+  const issuerOrObligorKey =
+    live.issuerOrObligor ?? reviewed.issuerOrObligor ?? (reviewed.coinId ? `asset:${reviewed.coinId}` : null);
+  const riskFactors = live.riskFactors?.length ? [...live.riskFactors] : [...(reviewed.riskFactors ?? [])];
+  const liquidityHorizon = live.liquidityHorizon ?? reviewed.liquidityHorizon ?? null;
+  const maturityDaysMax = live.maturityDaysMax ?? reviewed.maturityDaysMax ?? null;
+  const usesReviewedMetadata =
+    (live.assetClass == null && reviewed.assetClass != null) ||
+    (live.issuerOrObligor == null && (reviewed.issuerOrObligor != null || reviewed.coinId != null)) ||
+    (!live.riskFactors?.length && Boolean(reviewed.riskFactors?.length)) ||
+    (live.liquidityHorizon == null && reviewed.liquidityHorizon != null) ||
+    (live.maturityDaysMax == null && reviewed.maturityDaysMax != null);
+
+  if (!usesReviewedMetadata) return classification;
+  return {
+    ...classification,
+    classificationKey: `registry-reviewed:${classification.exposureKey}:${reviewKey}`,
+    assetClass,
+    issuerOrObligorKey,
+    riskFactors: [...new Set(riskFactors)].sort(compareText),
+    liquidityHorizon,
+    maturityDaysMax,
+    failureDomains: issuerOrObligorKey
+      ? [{ kind: "reserve-issuer", key: issuerOrObligorKey }]
+      : classification.failureDomains,
+  };
+}
+
+/**
+ * Bridges reviewed registry classifications onto exact live reserve identities.
+ * Matching is deliberately one-to-one and ignores rows whose names or rounded
+ * weights no longer describe the same exposure.
+ */
+export function buildReviewedReserveClassifications(
+  liveReserves: readonly ReserveSlice[],
+  meta: V9ExtensionRegistryMeta,
+  clockSec: number,
+): ReserveClassification[] {
+  const classifications = buildSafetyScoreV9ReserveClassifications(liveReserves);
+  const reviewedReserves = meta.reserves ?? [];
+  const review = meta.reserveReview;
+  const reviewedAtSec = review ? Date.parse(`${review.reviewedAt}T00:00:00.000Z`) / 1_000 : Number.NaN;
+  const compositionAsOfSec = review?.compositionAsOf
+    ? Date.parse(`${review.compositionAsOf}T00:00:00.000Z`) / 1_000
+    : null;
+  if (
+    reviewedReserves.length === 0 ||
+    review?.scope !== "full-composition" ||
+    review.confidence === "unknown" ||
+    !Number.isFinite(reviewedAtSec) ||
+    reviewedAtSec > clockSec ||
+    (compositionAsOfSec !== null && (!Number.isFinite(compositionAsOfSec) || compositionAsOfSec > clockSec))
+  ) {
+    return classifications;
+  }
+
+  const reviewedCandidatesByLive = liveReserves.map((live) =>
+    reviewedReserves
+      .map((reviewed, reviewedIndex) => ({ reviewed, reviewedIndex }))
+      .filter(({ reviewed }) => reserveSlicesMatch(live, reviewed)),
+  );
+  const liveCandidateCountByReviewed = reviewedReserves.map(
+    (reviewed) => liveReserves.filter((live) => reserveSlicesMatch(live, reviewed)).length,
+  );
+  const reviewedByExposureKey = new Map<string, ReserveSlice>();
+  const liveByExposureKey = new Map(liveReserves.map((live) => [computeSafetyScoreV9ReserveExposureKey(live), live]));
+
+  for (const [liveIndex, candidates] of reviewedCandidatesByLive.entries()) {
+    if (candidates.length !== 1) continue;
+    const candidate = candidates[0]!;
+    if (liveCandidateCountByReviewed[candidate.reviewedIndex] !== 1) continue;
+    const exposureKey = computeSafetyScoreV9ReserveExposureKey(liveReserves[liveIndex]!);
+    reviewedByExposureKey.set(exposureKey, candidate.reviewed);
+  }
+
+  const reviewKey = digest("safety-score-v9.reserve-classification-review.v1", review).slice(0, 16);
+  return classifications.map((classification) => {
+    const live = liveByExposureKey.get(classification.exposureKey);
+    const reviewed = reviewedByExposureKey.get(classification.exposureKey);
+    return live && reviewed
+      ? overlayReviewedReserveClassification(classification, live, reviewed, reviewKey)
+      : classification;
+  });
+}
+
+function addReserveClassificationEvidence(
+  meta: V9ExtensionRegistryMeta,
+  classifications: readonly ReserveClassification[],
+  evidence: ReviewEvidenceBuilder,
+): void {
+  const review = meta.reserveReview;
+  const reviewed = classifications.filter((classification) =>
+    classification.classificationKey.startsWith("registry-reviewed:"),
+  );
+  if (!review || reviewed.length === 0) return;
+  evidence.add({
+    componentKeys: reviewed.map((classification) => `reserve-classification:${classification.exposureKey}`),
+    sourceId: "stablecoin-meta.reserve-review",
+    reviewedAt: review.reviewedAt,
+    confidence: confidenceForResearch(review.confidence),
+    sources: review.sources,
+    payload: { reserveReview: review, reserves: meta.reserves ?? [] },
+  });
 }
 
 function isoDateStartSec(value: string, clockSec: number, label: string): number {
@@ -270,6 +403,7 @@ function adaptMintControl(
   incidents: MintAuthorityProfile["mintIncidents"],
   reviewComplete: boolean,
   upgradeCapable: boolean,
+  hasSeparateCapRaiser: boolean,
 ): ControlOverlay {
   const controlKind = mintControlKind(control);
   const capabilities = mintCapabilities(control, upgradeCapable);
@@ -281,7 +415,9 @@ function adaptMintControl(
     if (capped) {
       // Reviewed caps exist but the campaign records raise authority, not the
       // numeric bound, so a raiseable cap is the strongest claimable state.
-      return control.canRaiseCap === true ? { kind: "raiseable", bound: null } : { kind: "unknown", bound: null };
+      return control.canRaiseCap === true || hasSeparateCapRaiser
+        ? { kind: "raiseable", bound: null }
+        : { kind: "unknown", bound: null };
     }
     return control.directMintAbility === "can-authorize"
       ? { kind: "unbounded", bound: null }
@@ -362,10 +498,10 @@ function dependencyFailureDomains(dependency: DependencyWeight) {
 
 function collateralExposureMappingIssues(
   edges: Readonly<NonNullable<SafetyScoreV9FactSetExtensionV2["assets"][number]["dependencies"]>["edges"]>,
-  liveReserveSlices: readonly ReserveSlice[] | undefined,
+  reserveSlices: readonly ReserveSlice[] | undefined,
 ): string[] {
   const mappedWeightByUpstream = new Map<string, number>();
-  for (const slice of liveReserveSlices ?? []) {
+  for (const slice of reserveSlices ?? []) {
     if (!slice.coinId || (slice.depType ?? "collateral") !== "collateral") continue;
     mappedWeightByUpstream.set(slice.coinId, (mappedWeightByUpstream.get(slice.coinId) ?? 0) + slice.pct / 100);
   }
@@ -417,7 +553,9 @@ function prepareDependency(
     .reduce((sum, edge) => sum + edge.weight, 0);
   const validEdges = collateralWeight <= 1.000001 ? edges : [];
   if (collateralWeight > 1.000001) issueCodes.push("collateral-weight-exceeds-one");
-  issueCodes.push(...collateralExposureMappingIssues(validEdges, liveReserveSlices));
+  const reconciliationSlices =
+    derived.source === "curated-reserve" && liveReserveSlices === undefined ? meta.reserves : liveReserveSlices;
+  issueCodes.push(...collateralExposureMappingIssues(validEdges, reconciliationSlices));
   if (derived.source === "manual") {
     const review = meta.dependencyReview;
     if (!review) {
@@ -808,7 +946,7 @@ function adaptMintReview(
   const controls =
     profile.review.disposition === "unresolved"
       ? []
-      : (profile.controls ?? []).map((control, index) =>
+      : (profile.controls ?? []).map((control, index, allControls) =>
           adaptMintControl(
             meta.id,
             control,
@@ -816,6 +954,14 @@ function adaptMintReview(
             profile.mintIncidents,
             reviewComplete,
             upgradeability?.canChangeMintLogic === true && upgradeability.controlRef === control.label,
+            control.directMintAbility === "cap-limited" &&
+              control.canRaiseCap === false &&
+              allControls.some(
+                (candidate, candidateIndex) =>
+                  candidateIndex !== index &&
+                  candidate.chain === control.chain &&
+                  candidate.canRaiseCap === true,
+              ),
           ),
         );
   const mintControl = controls.find((control) => control.capabilities.includes("mint")) ?? null;
@@ -979,6 +1125,8 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
       const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
+      const reserveClassifications = buildReviewedReserveClassifications(liveReserves, meta, clockSec);
+      addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
       addDependencyEvidence(meta, reviewEvidence);
       const supplyReview = buildSafetyScoreV9SupplyReview(fixedInput, assetId, meta.bridgeRouteRisk);
       const deployedChainCount = Object.keys(fixedInput.chainCirculatingById[assetId] ?? {}).length;
@@ -1017,7 +1165,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             : prepared.dependency.diagnostics,
         },
         reserveApplicability: { state: "required" },
-        reserveClassifications: buildSafetyScoreV9ReserveClassifications(liveReserves),
+        reserveClassifications,
         routeReviews: buildSafetyScoreV9RouteReviews(fixedInput, assetId),
         retainedRoutes: buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId),
         controlReview:

@@ -118,7 +118,11 @@
       "pct": 25,
       "risk": "low",
       "coinId": "susds-sky",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Protocol; underlying reserve allocation is not separately disclosed by Reserve DTF API",
+      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Static Aave Ethereum USDC",
@@ -126,7 +130,11 @@
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
-      "blacklistable": true
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave and Circle; underlying reserve allocation is not separately disclosed by Reserve DTF API",
+      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Wrapped Compound USDCv3",
@@ -134,7 +142,11 @@
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
-      "blacklistable": true
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Compound and Circle; underlying reserve allocation is not separately disclosed by Reserve DTF API",
+      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Steakhouse USDC strategy",
@@ -142,9 +154,33 @@
       "risk": "medium",
       "coinId": "steakusdc-steakhouse",
       "depType": "collateral",
-      "blacklistable": true
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Steakhouse and Circle; underlying reserve allocation is not separately disclosed by Reserve DTF API",
+      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reserve DTF transparency API",
+        "url": "https://api.reserve.org/discover/dtfs"
+      },
+      {
+        "label": "Reserve Yield DTF overview",
+        "url": "https://docs.reserve.org/core-components/yield-dtfs/yield-dtf-overview"
+      }
+    ],
+    "rationale": "USD3's governed basket targets four identified collateral positions at approximately equal weight. The authored 25% slices are a rounded fallback for static display, not a claim that a transient API snapshot remains exact; the existing reserve-protocol-dtf onchain adapter is authoritative for current live weights.",
+    "compositionBasis": "Approximate equal-weight governed basket targets cross-checked against Reserve documentation; live onchain adapter is authoritative",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current collateral token identities and weights are disclosed, but the API does not disclose the underlying custody allocation or protocol-level reserve composition inside the wrapped strategy tokens.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "reserve-protocol-dtf",
     "version": 1,
@@ -207,20 +243,69 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USD3 is a Reserve Protocol Yield RToken/DTF: anyone can permissionlessly mint by depositing the governed collateral basket and redeem for it, while RSR stakers govern via Governor Anastasius → 3-day TimelockController (OWNER_ROLE on Main). A 3/5 guardian Safe can cancel timelock proposals.",
+    "summary": "USD3 is a Reserve Protocol Yield RToken/DTF: anyone can permissionlessly mint by depositing the governed collateral basket and redeem for it. Ethereum issuance uses a UUPS Main proxy whose OWNER_ROLE is held by Reserve governance through a 3-day TimelockController; Base is an immutable OptimismMintableERC20 representation whose mint path is the canonical Base L2StandardBridge. A 3/5 guardian Safe can cancel Ethereum timelock proposals.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4"
+      ],
+      "implementationAddresses": [
+        "0xc5bf686cfb85786fcfff557297d4aff8f4e15e44"
+      ],
+      "adminAddresses": [
+        "0x848b923b5d99d5963608ff55acdfee51c443cca6"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 259200,
+      "controlRef": "Governor Anastasius → TimelockController (OWNER_ROLE on Main)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25531015,
+      "sources": [
+        {
+          "label": "USD3 Main proxy on Ethereum Blockscout",
+          "url": "https://eth.blockscout.com/address/0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4"
+        },
+        {
+          "label": "Reserve MainP1 implementation on Ethereum Blockscout",
+          "url": "https://eth.blockscout.com/address/0xc5bf686cfb85786fcfff557297d4aff8f4e15e44"
+        },
+        {
+          "label": "Reserve USD3 TimelockController on Ethereum Blockscout",
+          "url": "https://eth.blockscout.com/address/0x848b923b5d99d5963608ff55acdfee51c443cca6"
+        },
+        {
+          "label": "USD3 Base OptimismMintableERC20 source",
+          "url": "https://base.blockscout.com/address/0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+        },
+        {
+          "label": "Reserve Yield DTF overview",
+          "url": "https://docs.reserve.org/core-components/yield-dtfs/yield-dtf-overview"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "USD3 RToken mint/redeem (BasketHandler)",
         "role": "other",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "chain": "ethereum",
+        "address": "0x19835E5817A6fDC944100E86da2FCe86327457B8",
+        "canRaiseCap": false,
         "capDescription": "Permissionless mint requires depositing the full governed collateral basket in proportion; mint/redeem are throttled by protocol issuance/redemption rate limits.",
-        "evidence": "At Ethereum block 25295271, RToken.main() returned 0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4 (Main proxy→MainP1 impl). Main.rToken() returned 0x0d86883FAf4FfD7aEb116390af37746F45b6f378 (confirmed USD3). Main.basketHandler() returned 0x19835E5817A6fDC944100E86da2FCe86327457B8. frozen()=false, issuancePaused()=false.",
+        "evidence": "At Ethereum block 25531015, USD3 RToken.main() returned 0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4 (Main proxy), Main.rToken() returned 0x0d86883FAf4FfD7aEb116390af37746F45b6F378, Main.basketHandler() returned 0x19835E5817A6fDC944100E86da2FCe86327457B8, and frozen()=false / issuancePaused()=false. The Main proxy implementation slot returned verified MainP1 0xc5bf686cfb85786fcfff557297d4aff8f4e15e44.",
         "sources": [
           {
             "label": "USD3 Main contract (Ethereum)",
             "url": "https://eth.blockscout.com/address/0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
       },
@@ -229,8 +314,10 @@
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25295271: RoleGranted logs on Main proxy (0x81117e3e) show OWNER_ROLE (0x4f574e45..) held by TimelockController 0x848b923b5d99d5963608ff55acdfee51c443cca6 (3-day minDelay). TimelockController RoleGranted logs show PROPOSER+EXECUTOR role held by Governor Anastasius 0xd895a5d391fc09f12e8c8d57cfde5c59bfbe2fa7; Governor.token() returned 0x55230B05d4c1F4a0B4f804dc52919F06355DfBF8 (stRSR for USD3), confirming RSR staker governance. CANCELLER role on Timelock held by guardian Safe 0xd5fe2780eb882d1da78f2136b81c2a4395488c98 (3/5 Safe, no modules, no guard, masterCopy 0xd9db270 = Safe 1.3.0).",
+        "chain": "ethereum",
+        "address": "0x848b923b5d99d5963608ff55acdfee51c443cca6",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25531015, Main.OWNER_ROLE() returned bytes32('OWNER') and Main.hasRole(OWNER_ROLE, 0x848b923b5d99d5963608ff55acdfee51c443cca6) returned true. TimelockController.getMinDelay() returned 259200 seconds (3 days). Governor Anastasius 0xd895a5d391fc09f12e8c8d57cfde5c59bfbe2fa7 remains the USD3 stRSR governor through Governor.token() = 0x55230B05d4c1F4a0B4f804dc52919F06355DfBF8; the existing guardian Safe 0xd5fe2780eb882d1da78f2136b81c2a4395488c98 remains the cancellation authority.",
         "sources": [
           {
             "label": "Governor Anastasius (Ethereum)",
@@ -243,14 +330,44 @@
           {
             "label": "Guardian Safe (Ethereum)",
             "url": "https://eth.blockscout.com/address/0xd5fe2780eb882d1da78f2136b81c2a4395488c98"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
+      },
+      {
+        "label": "USD3 Base canonical L2StandardBridge",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "base",
+        "address": "0x4200000000000000000000000000000000000010",
+        "capDescription": "The Base representation mints and burns through the canonical OP Stack bridge against the Ethereum USD3 remote token and valid bridge messages; the bridge is not a discretionary issuer backend.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48622147,
+        "sources": [
+          {
+            "label": "USD3 Base OptimismMintableERC20 source",
+            "url": "https://base.blockscout.com/address/0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+          },
+          {
+            "label": "Base Standard Bridge documentation",
+            "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 48622147, the verified USD3 OptimismMintableERC20 deployment 0xefb97aaf77993922ac4be4da8fbc9a2425322677 returned BRIDGE() = 0x4200000000000000000000000000000000000010 and REMOTE_TOKEN() = Ethereum USD3 0x0d86883FAf4FfD7aEb116390af37746F45b6F378. The token has no proxy; its verified constructor-set bridge is the canonical Base L2StandardBridge."
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295271: USD3 RToken.main()=0x81117e3e (MainP1 proxy). Main OWNER_ROLE held by TimelockController 0x848b923b (getMinDelay=259200s=3 days). Timelock PROPOSER/EXECUTOR=Governor Anastasius 0xd895a5d3; Governor.token()=stRSR 0x55230B05 (RSR stakers). CANCELLER=3/5 Guardian Safe 0xd5fe2780 (5 owners, threshold 3, no modules, no guard). Issuance not paused, not frozen. Base deployment not separately verified but shares Reserve Protocol governance pattern.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25531015, USD3 Main proxy 0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4 had implementation 0xc5bf686cfb85786fcfff557297d4aff8f4e15e44; Main.OWNER_ROLE() was held by TimelockController 0x848b923b5d99d5963608ff55acdfee51c443cca6, whose getMinDelay() returned 259200 seconds. Main.rToken() and Main.basketHandler() returned the USD3 and BasketHandler addresses, with issuance not paused and the system not frozen. At Base block 48622147, the verified OptimismMintableERC20 representation 0xefb97aaf77993922ac4be4da8fbc9a2425322677 returned canonical L2StandardBridge 0x4200000000000000000000000000000000000010 as BRIDGE() and Ethereum USD3 as REMOTE_TOKEN(); the Base token itself is immutable. Governor Anastasius remains the stRSR governance path and the existing 3/5 guardian Safe remains the Ethereum timelock cancellation authority.",
+      "reviewer": "Codex CTRL curation batch 18",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Reserve Yield DTF overview",
@@ -261,8 +378,28 @@
           "url": "https://forum.reserve.org/t/rfc-introducing-usd3/691"
         },
         {
-          "label": "USD3 RToken contract (Ethereum)",
-          "url": "https://eth.blockscout.com/address/0x0d86883FAf4FfD7aEb116390af37746F45b6f378"
+          "label": "USD3 Main proxy on Ethereum Blockscout",
+          "url": "https://eth.blockscout.com/address/0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4"
+        },
+        {
+          "label": "Reserve MainP1 implementation on Ethereum Blockscout",
+          "url": "https://eth.blockscout.com/address/0xc5bf686cfb85786fcfff557297d4aff8f4e15e44"
+        },
+        {
+          "label": "USD3 Base OptimismMintableERC20 source",
+          "url": "https://base.blockscout.com/address/0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+        },
+        {
+          "label": "Base Standard Bridge documentation",
+          "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base-rpc.publicnode.com"
         }
       ]
     }

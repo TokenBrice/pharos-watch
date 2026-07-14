@@ -120,15 +120,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "dLEND dUSD deposits",
-      "pct": 100,
-      "risk": "high",
-      "coinId": "dusd-dtrinity",
-      "depType": "wrapper"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
     "version": 1,

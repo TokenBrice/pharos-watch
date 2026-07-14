@@ -26,6 +26,48 @@
     "attestorTier": "niche",
     "cadence": "weekly"
   },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Falcon determines collateral spot prices through its internal offchain system using major-exchange market data and retains discretion over innovative-mint liquidation decisions.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "USDf is issued through a whitelisted, issuer-operated collateral account and hedging system rather than permissionless onchain CDP markets. Falcon applies dynamic overcollateralization and may liquidate innovative-mint collateral against an agreed threshold, but its terms define spot pricing as an internal determination and do not expose onchain per-market oracle, auction, bad-debt, or shutdown branches for V9 to inventory.",
+      "sources": [
+        {
+          "label": "Falcon Finance terms of use",
+          "url": "https://docs.falcon.finance/resources/terms-of-use"
+        },
+        {
+          "label": "Falcon overcollateralization ratio",
+          "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/overcollateralization-ratio"
+        },
+        {
+          "label": "Falcon USDf peg stability",
+          "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/usdf-peg-stability"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Falcon Finance terms of use",
+        "url": "https://docs.falcon.finance/resources/terms-of-use"
+      },
+      {
+        "label": "Falcon classic mint documentation",
+        "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/usdf-minting-mechanisms/classic-mint"
+      },
+      {
+        "label": "Falcon overcollateralization ratio",
+        "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/overcollateralization-ratio"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -483,8 +525,8 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USDf uses Chainlink CCIP BurnMintTokenPools on BSC, Base, and XDC. Each verified pool directly holds the local MINTER_ROLE and is owned by a chain-local instance of the same reviewed 4/6 Safe; supply movement remains dependent on CCIP validation.",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex Safety Score V9 data research",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 bridge review",
     "confidence": "verified",
     "protocols": [
       {
@@ -555,6 +597,10 @@
         "scope": "peripheral",
         "controllerChain": "bsc",
         "controllerAddress": "0x4b66431f9e5f5cd026ae48e617902207b43048d4",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x4b66431f9e5f5cd026ae48e617902207b43048d4"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13",
@@ -592,6 +638,10 @@
         "scope": "peripheral",
         "controllerChain": "base",
         "controllerAddress": "0x33570299e0d73f07c82d005de75de54cf4582fcc",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x33570299e0d73f07c82d005de75de54cf4582fcc"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13",
@@ -629,6 +679,10 @@
         "scope": "peripheral",
         "controllerChain": "xdc",
         "controllerAddress": "0x33570299e0d73f07c82d005de75de54cf4582fcc",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:xdc:0x33570299e0d73f07c82d005de75de54cf4582fcc"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13",
@@ -679,25 +733,32 @@
     {
       "name": "Tokenized Treasuries (USTB)",
       "pct": 5,
-      "risk": "low",
-      "coinId": "ustb-superstate"
+      "risk": "low"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-12",
-    "reviewer": "OpenAI Codex dependency review",
-    "confidence": "verified",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 dependency review",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Falcon transparency dashboard",
         "url": "https://app.falcon.finance/transparency"
+      },
+      {
+        "label": "Falcon transparency API",
+        "url": "https://api.falcon.finance/api/v1/transparency"
+      },
+      {
+        "label": "Falcon supported collateral documentation",
+        "url": "https://docs.falcon.finance/supported-assets"
       }
     ],
-    "rationale": "The static fallback composition combines USDC and USDT; live exact rows may link them individually when the source provides weights.",
+    "rationale": "The static fallback combines USDC and USDT and contains a legacy USTB category, but it is not a dated current constituent-weight statement. Live transparency rows may link individual assets only when the API provides their current weights.",
     "compositionBasis": "Curated fallback aligned to Falcon transparency categories",
     "scope": "selected-slices",
-    "knownUnknownExposure": "The fallback stablecoin basket lacks constituent percentages.",
-    "knownUnknownExposurePct": 30,
+    "knownUnknownExposure": "The fallback stablecoin basket lacks constituent percentages, and its legacy USTB category is not sufficient evidence of a current 5% USTB exposure.",
+    "knownUnknownExposurePct": 35,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
@@ -708,6 +769,16 @@
         "candidateCoinIds": [
           "usdc-circle",
           "usdt-tether"
+        ]
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Tokenized Treasuries (USTB)",
+        "pct": 5,
+        "disposition": "insufficient-evidence",
+        "rationale": "Falcon supports USTB and reports it in live transparency data, but the static fallback does not establish a dated current 5% constituent weight.",
+        "candidateCoinIds": [
+          "ustb-superstate"
         ]
       }
     ]

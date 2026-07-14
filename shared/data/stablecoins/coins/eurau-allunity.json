@@ -357,13 +357,6 @@
     ]
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Euro bank deposits (CRR credit institutions, EU)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

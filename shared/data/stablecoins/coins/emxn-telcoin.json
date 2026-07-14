@@ -260,8 +260,81 @@
     {
       "name": "Mexican peso fiat reserves for Telcoin Digital Cash",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Telcoin Digital Asset Bank and undisclosed Mexican reserve institutions",
+      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Telcoin Digital Cash",
+        "url": "https://www.telco.in/en/digital-cash"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank",
+        "url": "https://bank.telco.in/"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank terms",
+        "url": "https://bank.telco.in/terms-of-use"
+      }
+    ],
+    "rationale": "Telcoin's Digital Cash disclosure identifies eMXN as a live Mexican-peso Digital Cash asset on Polygon and describes the product family as issued through regulated financial institutions. The reviewed primary sources do not publish an eMXN-specific reserve report, asset-class split, named reserve institution, or fixed redemption window, so the existing 100% aggregate envelope is retained without fabricated subcategories.",
+    "compositionBasis": "Telcoin Digital Cash issuer disclosure for the eMXN reserve envelope",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The full 100% reserve envelope lacks eMXN-specific category weights, named institutions, and an external assurance report. Telcoin states that monthly attestations will be published, but none was located in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Mexican peso fiat reserves for Telcoin Digital Cash",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer describes the Digital Cash reserve concept but does not publish eMXN-specific composition or assurance evidence."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Telcoin Digital Asset Bank",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Undisclosed Mexican reserve institutions",
+        "role": "bank",
+        "jurisdiction": "Mexico"
+      },
+      {
+        "name": "Telcoin eMXN Polygon contract",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Telcoin Digital Cash",
+        "url": "https://www.telco.in/en/digital-cash"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank terms",
+        "url": "https://bank.telco.in/terms-of-use"
+      }
+    ],
+    "uncertainty": "The reviewed sources identify Telcoin's regulated-bank framework but do not identify the eMXN reserve account, Mexican bank counterparties, legal segregation, bankruptcy treatment, or rehypothecation terms. The custody profile is therefore intentionally unknown until an eMXN-specific report is published."
+  },
   "launchDate": "2024-03-25"
 }

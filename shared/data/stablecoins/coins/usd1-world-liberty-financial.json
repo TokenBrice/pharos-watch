@@ -21,10 +21,25 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://por.worldlibertyfinancial.com",
-    "provider": "Independent accounting firm via BitGo / Chainlink",
-    "attestorTier": "niche",
+    "provider": "Crowe LLP / Chainlink",
+    "attestorTier": "regional",
     "cadence": "real-time",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-29",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Crowe USD1 Reserve Attestation Report - May 2026",
+          "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_May_2026.pdf?version=0"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -466,23 +481,6 @@
     ]
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "U.S. Treasury Bills",
-      "pct": 60,
-      "risk": "very-low"
-    },
-    {
-      "name": "U.S. Government Money Market Funds",
-      "pct": 25,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash Deposits",
-      "pct": 15,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "usd1-bundle-oracle",
     "version": 2,

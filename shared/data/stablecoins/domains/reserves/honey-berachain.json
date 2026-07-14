@@ -1,0 +1,92 @@
+{
+  "id": "honey-berachain",
+  "reserves": [
+    {
+      "name": "USDC.e in the Honey USDC vault",
+      "pct": 0.000218,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle reserve exposure via bridged USDC.e",
+      "riskFactors": ["counterparty", "custody", "smart-contract"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "BYUSD in the Honey BYUSD vault",
+      "pct": 0.000000003,
+      "risk": "low",
+      "coinId": "pyusd-paypal",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos PYUSD reserve exposure via BYUSD",
+      "riskFactors": ["counterparty", "custody", "smart-contract"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDt0 in the Honey USDt0 vault",
+      "pct": 0.006163,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether reserve exposure via USDt0",
+      "riskFactors": ["counterparty", "custody", "smart-contract"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDe in the Honey USDe vault",
+      "pct": 99.993619,
+      "risk": "high",
+      "coinId": "usde-ethena",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Ethena Labs",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "market", "basis", "concentration"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Berachain HONEY collateral and vault documentation",
+        "url": "https://docs.berachain.com/general/tokens/honey"
+      },
+      {
+        "label": "HoneyFactory read contract at block 23506303",
+        "url": "https://berascan.com/address/0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401#readProxyContract"
+      }
+    ],
+    "rationale": "At Berachain block 23506303, the four registered Honey collateral vaults reported 24.603167 USDC.e, 0.000391 BYUSD, 695.783951 USDt0, and 11,288,159.771823145610901027 USDe. Normalizing those on-chain totalAssets balances produces the stored weights; the same snapshot reported 11,285,263.733856488020121526 HONEY outstanding.",
+    "compositionBasis": "HoneyFactory registered vault totalAssets snapshot at Berachain block 23506303",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All registered collateral vaults and their balances were resolved on-chain; governance can change the collateral set or designate external custodians after the reviewed block.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Berachain Honey collateral vault contracts",
+        "role": "custodian",
+        "jurisdiction": "On-chain"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Berachain HONEY collateral custody documentation",
+        "url": "https://docs.berachain.com/general/tokens/honey"
+      },
+      {
+        "label": "HoneyFactory read contract at block 23506303",
+        "url": "https://berascan.com/address/0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401#readProxyContract"
+      }
+    ],
+    "uncertainty": "Each collateral has a dedicated vault, but governance may configure a vault to forward assets to an external custodian. The reviewed public documentation does not provide a block-specific list of any enabled external custodians."
+  }
+}

@@ -25,6 +25,40 @@
   "pegMechanism": "Users stake yzUSD for syzUSD; syzUSD appreciates against yzUSD as strategy yield accrues, and final exits inherit Yuzu's KYC-gated primary redemption and liquidity-buffer constraints",
   "detailProvider": "coingecko",
   "geckoId": "staked-yuzu-usd",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "syzUSD is Yuzu's staking wrapper over yzUSD; its share price accrues strategy yield and the wrapper does not expose a separate borrower collateral market or token-level liquidation oracle.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Yuzu documents syzUSD as a technical staking wrapper: users convert yzUSD into syzUSD shares and can unstake back to yzUSD. The reviewed wrapper has no borrower-owned debt positions or separate collateral/liquidation branches; underlying yzUSD mechanics remain a parent-asset dependency.",
+      "sources": [
+        {
+          "label": "Yuzu syzUSD documentation",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+        },
+        {
+          "label": "Yuzu yzUSD documentation",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yuzu syzUSD documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+      },
+      {
+        "label": "Yuzu yzUSD documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+      }
+    ]
+  },
   "jurisdiction": {
     "country": "Georgia",
     "regulator": "Kutaisi Free Industrial Zone (FIZ)",

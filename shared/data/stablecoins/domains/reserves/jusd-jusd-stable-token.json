@@ -1,0 +1,76 @@
+{
+  "id": "jusd-jusd-stable-token",
+  "reserves": [
+    {
+      "name": "Protocol-managed crypto collateral and reserves",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "JUSD issuer and undisclosed reserve counterparties",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "JUSD official website",
+        "url": "https://jusd.app/"
+      },
+      {
+        "label": "JUSD whitepaper",
+        "url": "https://jusd.app/whitepaper.pdf"
+      }
+    ],
+    "rationale": "JUSD's current website describes the token as backed by a reserve and advertises a proof-of-reserve architecture. The 2023 whitepaper describes a diversified reserve and intended trust, multisignature, and periodic-audit controls, but neither reviewed source publishes a current asset inventory, weights, reserve account, or assurance report. No constituent percentages or tracked dependency links are therefore inferred.",
+    "compositionBasis": "JUSD issuer website and whitepaper reserve disclosures; current composition unavailable",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current reserve assets, asset classes, counterparties, custody structure, liquidity terms, and assurance evidence are undisclosed in the reviewed primary sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Protocol-managed crypto collateral and reserves",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "JUSD describes diversified backing but does not publish enough current reserve evidence to identify or split the underlying assets."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed JUSD issuer reserve custody",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "JUSD official website",
+        "url": "https://jusd.app/"
+      },
+      {
+        "label": "JUSD whitepaper",
+        "url": "https://jusd.app/whitepaper.pdf"
+      }
+    ],
+    "uncertainty": "The whitepaper describes intended trust and multisignature arrangements in future-oriented language, while the current website does not identify the reserve custodian, account segregation, bankruptcy treatment, or rehypothecation terms."
+  }
+}

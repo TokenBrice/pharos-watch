@@ -1,0 +1,67 @@
+{
+  "id": "cngn-compliant-naira",
+  "reserves": [
+    {
+      "name": "Naira deposits at licensed Nigerian commercial banks",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed licensed Nigerian commercial banks",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "cNGN transparency and reserve disclosure",
+        "url": "https://cngn.co/transparency"
+      }
+    ],
+    "rationale": "cNGN's current transparency page states that cNGN is backed 1:1 by naira maintained in approved licensed commercial banks and presents the reserve amount as naira. It does not support the previous 54% bank-deposit and 46% money-market-and-Treasury split, so the composition is normalized to the currently disclosed bank reserve rather than preserving unsupported weights.",
+    "compositionBasis": "Current cNGN issuer transparency disclosure",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The page does not identify the custodian banks, their allocation shares, account terms, or link a dated reserve examination report; the exact deposit liquidity is therefore unknown.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Naira deposits at licensed Nigerian commercial banks",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Nigerian-naira bank deposits are external reserve backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed licensed Nigerian commercial banks",
+        "role": "bank",
+        "jurisdiction": "Nigeria"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "cNGN transparency and reserve disclosure",
+        "url": "https://cngn.co/transparency"
+      }
+    ],
+    "uncertainty": "The issuer identifies licensed commercial banks but does not name them, disclose shares, or establish segregation, bankruptcy remoteness, or rehypothecation safeguards.",
+    "knownUnknownExposurePct": 100
+  }
+}

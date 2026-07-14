@@ -205,18 +205,6 @@
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "Cash and cash equivalents",
-      "pct": 75,
-      "risk": "very-low"
-    },
-    {
-      "name": "Short-term U.S. Treasury bills",
-      "pct": 25,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

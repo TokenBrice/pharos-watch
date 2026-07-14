@@ -1,0 +1,71 @@
+{
+  "id": "steakusdc-steakhouse",
+  "reserves": [
+    {
+      "name": "USDC deposited into Steakhouse-curated Morpho lending markets",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Circle USDC and Steakhouse-curated Morpho Blue markets",
+      "riskFactors": ["credit", "counterparty", "liquidity", "smart-contract", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho Steakhouse Prime USDC vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
+      },
+      {
+        "label": "Morpho Vaults V1 contract reference",
+        "url": "https://docs.morpho.org/developers/contracts/morpho-vaults/"
+      },
+      {
+        "label": "Steakhouse documentation",
+        "url": "https://www.steakhouse.financial/docs"
+      }
+    ],
+    "rationale": "The Steakhouse Prime USDC vault is a Morpho ERC-4626 vault whose underlying asset is USDC. Morpho documents that shares are minted only by depositing the vault's underlying token and that vault capital can be allocated among same-asset Morpho markets. The full reserve is therefore the direct linked USDC wrapper position, without estimating changing borrower-market allocations.",
+    "compositionBasis": "Current Morpho vault asset and documented V1 allocation model",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete direct reserve relationship is USDC. Market allocations, borrower collateral, and withdrawal liquidity vary on-chain, but do not change the vault's underlying reserve token.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Steakhouse Prime USDC MetaMorpho vault and Morpho Blue market contracts",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      },
+      {
+        "name": "Steakhouse Financial",
+        "role": "other"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho Steakhouse Prime USDC vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
+      },
+      {
+        "label": "Morpho Vaults V1 contract reference",
+        "url": "https://docs.morpho.org/developers/contracts/morpho-vaults/"
+      }
+    ],
+    "uncertainty": "Assets are held by noncustodial vault and market contracts and are intentionally supplied into lending markets. The changing allocation set, legal bankruptcy treatment, and provider shares are not established by the reviewed static disclosures."
+  }
+}

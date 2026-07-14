@@ -70,8 +70,8 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "apyUSD is an ERC-4626-style strategy wrapper over apxUSD. Wrapper minting creates apyUSD shares against deposited apxUSD, while durable base issuance is inherited from reviewed apxUSD issuer authority.",
+    "confidence": "verified",
+    "summary": "apyUSD is an ERC-4626-style strategy wrapper over apxUSD. Ethereum and Base wrappers are UUPS proxies whose mint-critical upgrade paths are controlled by the same 3/6 Safe through chain-local Apyx AccessManagers; durable base issuance is inherited from the reviewed apxUSD issuer authority.",
     "inheritedFrom": "apxusd-apyx",
     "controls": [
       {
@@ -82,8 +82,8 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "capDescription": "The wrapper mints apyUSD shares through deposit/mint flows against apxUSD; it does not mint base apxUSD.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "Apyx docs",
@@ -97,14 +97,42 @@
         "evidence": "Ethereum asset() returned apxUSD address 0x98A878b1Cd98131B271883B390f68D2c90674665 at block 25166610; totalAssets() was nonzero and paused() returned false."
       },
       {
+        "chain": "base",
+        "address": "0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d",
+        "label": "apyUSD Base CCIP BurnMintTokenPool",
+        "role": "direct-minter",
+        "authorityType": "bridge",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Base wrapper's getCCIPPool() returns this Chainlink CCIP BurnMintTokenPool.",
+          "caps": "The pool can mint only through the verified BridgedApyxToken mint path, which enforces the stored supply cap; it cannot change the cap or upgrade the token.",
+          "pausersAdminsUpgraders": "The verified BridgedApyxToken source gates mint(), burn(), and burnFrom() to the stored CCIP pool; AccessManager separately controls administrative functions and upgrades."
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 48620556,
+        "sources": [
+          {
+            "label": "Base apyUSD wrapper",
+            "url": "https://base.blockscout.com/address/0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa"
+          },
+          {
+            "label": "Apyx bridged-token source",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+          }
+        ],
+        "evidence": "At Base block 48620556, getCCIPPool() returned 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d and authority() returned AccessManager 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d."
+      },
+      {
         "chain": "ethereum",
         "address": "0x98A878b1Cd98131B271883B390f68D2c90674665",
         "label": "Inherited apxUSD signed-order mint authority",
         "role": "backend-signer",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
         "sources": [
           {
             "label": "Apyx docs",
@@ -115,9 +143,86 @@
             "url": "https://apyx-labs.github.io/evm-contracts/"
           }
         ],
-        "evidence": "apyUSD inherits the reviewed apxUSD mint-authority profile; Apyx contract documentation describes apxUSD minting through MinterV0 EIP-712 signed orders and AccessManager permissions."
+        "evidence": "apyUSD inherits the reviewed apxUSD mint-authority profile; Apyx contract documentation describes apxUSD minting through MinterV0 EIP-712 signed orders and AccessManager permissions. The inherited MinterV0 path cannot raise the apxUSD supply cap."
+      },
+      {
+        "chain": "multichain",
+        "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+        "label": "Apyx apyUSD UUPS upgrade authority - 3/6 Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "ethereum:apyusd-uups",
+          "base:apyusd-uups"
+        ],
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "version": "1.4.1",
+          "observedBlock": 25530746,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530746,
+        "sources": [
+          {
+            "label": "Apyx ApyUSD source",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/ApyUSD.sol"
+          },
+          {
+            "label": "Apyx bridged-token source",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+          },
+          {
+            "label": "Ethereum apyUSD AccessManager",
+            "url": "https://etherscan.io/address/0xe167330e2eac88666de253e9607c6d9ae0ca2824"
+          },
+          {
+            "label": "Base apyUSD AccessManager",
+            "url": "https://basescan.org/address/0x8afde6a90d2396a64eb97e8e69e7548289f78a1d"
+          }
+        ],
+        "evidence": "At Ethereum block 25530746, the apyUSD proxy implementation slot held 0xfd616567ecc1607f61073951a1e822f7315bb112, authority() returned 0xe167330e2eac88666de253e9607c6d9ae0ca2824, getTargetFunctionRole(proxy, upgradeToAndCall) returned role 24, and the 3/6 Safe held role 24 with a 259200-second delay. At Base block 48620556, the proxy implementation was 0xe167330e2eac88666de253e9607c6d9ae0ca2824, authority() returned 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d, getTargetFunctionRole(proxy, upgradeToAndCall) returned role 25, and the same Safe held role 25 with a 604800-second delay. Official ApyUSD and BridgedApyxToken sources gate _authorizeUpgrade() through AccessManager's restricted modifier."
       }
     ],
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+        "0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa"
+      ],
+      "implementationAddresses": [
+        "0xfd616567ecc1607f61073951a1e822f7315bb112",
+        "0xe167330e2eac88666de253e9607c6d9ae0ca2824"
+      ],
+      "adminAddresses": [
+        "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Apyx apyUSD UUPS upgrade authority - 3/6 Safe",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Ethereum apyUSD proxy",
+          "url": "https://etherscan.io/address/0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a#code"
+        },
+        {
+          "label": "Base apyUSD proxy",
+          "url": "https://base.blockscout.com/address/0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa"
+        },
+        {
+          "label": "Apyx ApyUSD source",
+          "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/ApyUSD.sol"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
@@ -131,14 +236,24 @@
         {
           "label": "Ethereum apyUSD contract",
           "url": "https://etherscan.io/address/0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a#readContract"
+        },
+        {
+          "label": "Apyx ApyUSD source",
+          "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/ApyUSD.sol"
+        },
+        {
+          "label": "Apyx bridged-token source",
+          "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+        },
+        {
+          "label": "Base apyUSD wrapper",
+          "url": "https://base.blockscout.com/address/0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa"
         }
       ],
-      "evidence": "At Ethereum block 25295216: apyUSD is a UUPS proxy (impl=0xfd616567ecc1607f61073951a1e822f7315bb112, proxy admin slot=0x0). authority()=0xe167330e2eac88666de253e9607c6d9ae0ca2824 (Apyx shared AccessManager, also used by apxUSD on ETH; Base uses a different AccessManager at 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d). The AccessManager is a large contract (18036 bytes on ETH) that reverts all standard AccessManager interface calls; its admin is unconfirmable from chain state. Wrapper is not paused; asset() returns apxUSD.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Apyx shared AccessManager (0xe167330e2eac88666de253e9607c6d9ae0ca2824) reverts all standard OZ AccessManager calls and has zero-filled storage slots; its admin/upgrade authority cannot be confirmed via RPC. Resolve by reading Apyx source code on GitHub (apyx-labs/evm-contracts) or Sourcify to identify the AccessManager implementation and its admin address."
-      ]
+      "evidence": "At Ethereum block 25530746, apyUSD is a UUPS proxy with implementation 0xfd616567ecc1607f61073951a1e822f7315bb112 and AccessManager authority 0xe167330e2eac88666de253e9607c6d9ae0ca2824. At Base block 48620556, the bridged apyUSD proxy uses implementation 0xe167330e2eac88666de253e9607c6d9ae0ca2824 and AccessManager authority 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d. Verified Apyx source shows both implementations use UUPS and gate _authorizeUpgrade() with AccessManager restricted; current AccessManager reads resolve roles 24/25 to the same 3/6 Safe with three-day and seven-day delays. Base getCCIPPool() returned 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d. Wrapper is not paused and asset() returns apxUSD.",
+      "reviewer": "Codex Safety Score V9 data research",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable"
     }
   },
   "chainTier": "ethereum",

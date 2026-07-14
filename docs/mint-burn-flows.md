@@ -21,7 +21,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 - **Current methodology version:** `v6.17`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
-- **Internal reconstructed timeline:** [Mint/Burn Flow Methodology Timeline](./mint-burn-flows-timeline.md)
+- **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 
 > **Note:** `v6.17` went live on 2026-06-07 with row-level tx-context shortfall exclusion so unresolved bridge-aware rows stay out of economic flow without blocking resolved rows in the same scan or counting as provider-error failures. `v6.16` added batched bridge tx-context reads and a larger bounded critical budget for bridge-aware configs. `v6.15` added bridge tx-context shortfall guards and explicit `bridgeClassification` cron metadata. `v6.14` added fail-closed bridge-detection config validation, `v6.13` added a USD-valued-only guard for the 24-hour largest-event field, `v6.12` added cadence-based per-coin lag classification and an `unknown` coverage status when current chain-head metadata is missing, `v6.11` added Yearn BOLD (yBOLD) to extended Ethereum mint/burn tracking, `v6.1` added Tangent USD (USG) coverage from its reviewed deployment block, and `v6.0` shipped bridge-mint tagging, LayerZero endpoint-only signal, canonical-chain gauge weighting, 0.5% roundtrip tolerance, config deferral, concurrent tx-context fetch, extended cron metadata, and migrations 0096/0097. Historical rows are reclassified progressively via the operator playbook (`/api/reclassify-atomic-roundtrips?stablecoinId=<id>` for partition-scoped reverse flips; `/api/backfill-mint-burn` for chunked bridge-mint replay).
 
@@ -78,7 +78,7 @@ Token identity now resolves from the shared stablecoin registry in `shared/lib/s
 
 ### Representative Stablecoins
 
-Current scope: **134 contract configs** across **134 stablecoin IDs** (7 implicit critical + 127 extended).
+Current scope is the complete `MINT_BURN_CONFIGS` registry, including its source-owned critical and extended tiers.
 
 The table below is representative, not exhaustive. The complete active registry is `MINT_BURN_CONFIGS` in `worker/src/lib/mint-burn-contracts.ts`.
 
@@ -588,47 +588,3 @@ Current production scope already spans configured issuance chains. Planned next 
 - **Additional EVM chains:** add more native issuance configs + chain-specific scan policies after reliability gates are met
 - **Tron support:** USDT Issue/Redeem topic groundwork exists; ingestion path is not wired yet
 - **Curve Finance detection:** DEX-level flow tracking
-
----
-
-## File Index
-
-| File | Role |
-|------|------|
-| `worker/src/cron/sync-mint-burn.ts` | Cron job: critical + extended incremental event sync lanes, hourly aggregation, lane-specific run-state |
-| `worker/src/lib/mint-burn-pipeline/types.ts` | Shared ingestion types for cron/backfill |
-| `worker/src/lib/mint-burn-pipeline/parse.ts` | Shared log parsing and price resolution |
-| `worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts` | Shared same-transaction roundtrip tagging |
-| `worker/src/lib/mint-burn-pipeline/classification.ts` | Shared bridge-burn classification |
-| `worker/src/lib/mint-burn-pipeline/context.ts` | Shared current/historical price context loaders |
-| `worker/src/lib/mint-burn-pipeline/persistence.ts` | Shared event write + hourly recompute helpers |
-| `worker/src/lib/mint-burn-pipeline/price-heal.ts` | Shared NULL-price auto-heal helper |
-| `worker/src/lib/mint-burn-historical-price-repair.ts` | Bounded event-day historical repair, terminal classification, aggregate resume, and verification |
-| `worker/src/lib/mint-burn-pipeline/roundtrip-sweep.ts` | Post-cron sweep for cross-run atomic roundtrip detection |
-| `worker/src/lib/mint-burn-pipeline/sync-state.ts` | Shared sync-state read/init/upsert helpers |
-| `worker/src/lib/mint-burn-contracts.ts` | Mint/burn event configs resolved from shared stablecoin contracts (no explicit address overrides; both reUSD configs track canonical zero-address Transfers) |
-| `worker/src/lib/mint-burn-scoring.ts` | Pure scoring functions: pressure shift (FIS), gauge, flight-to-quality |
-| `worker/src/api/mint-burn-flows.ts` | API handler: route-level aggregate + per-coin orchestration |
-| `worker/src/api/mint-burn-flows-shared.ts` | Shared mint/burn cache fallback, cron snapshot, baseline, and coverage helpers |
-| `worker/src/api/mint-burn-events.ts` | API handler: paginated event feed |
-| `worker/src/api/backfill-mint-burn.ts` | Admin endpoint: controlled event ingestion backfill |
-| `worker/src/api/backfill-mint-burn-prices.ts` | Admin endpoint: backfill NULL amount_usd values |
-| `worker/src/api/reclassify-atomic-roundtrips.ts` | Admin endpoint: retroactively tag same-tx mint/burn rows as atomic roundtrips |
-| `worker/migrations/0000_baseline.sql` | Baseline mint/burn schema (3 tables, including the historical v2 layout) |
-| `worker/migrations/0178_historical_data_debt_closure.sql` | Historical repair state plus reviewed BRLA DDR repair provenance |
-| `src/hooks/use-mint-burn-flows.ts` | TanStack Query hooks (3 hooks) |
-| `src/app/flows/page.tsx` | Frontend page and metadata |
-| `worker/src/lib/mint-burn-scoring.ts` | Pure Flow Intensity / Bank Run Gauge / flight-to-quality logic (`getGaugeBand`, `computeGaugeScore`, `detectFlightToQuality`) |
-| `src/components/flow-brrr-overview.tsx` | Bank Run Gauge overview shell for `/flows` |
-| `src/components/flow-chart.tsx` | Recharts flow chart |
-| `src/components/flow-table.tsx` | Sortable per-coin table |
-| `src/components/flow-event-feed.tsx` | Paginated event table |
-| `src/components/minting-pressure-gauge.tsx` | Shared literal 24h mint-vs-burn gauge |
-| `src/components/flow-summary-card.tsx` | Summary card for detail pages |
-| `shared/lib/mint-burn-signals.ts` | Shared net-direction + pressure-state interpretation helpers |
-| `shared/types/index.ts` | TypeScript types + Zod schemas |
-| `worker/src/lib/__tests__/mint-burn-scoring.test.ts` | Scoring unit tests |
-| `worker/src/lib/__tests__/mint-burn-pipeline.test.ts` | Shared ingestion pipeline tests |
-| `worker/src/cron/__tests__/sync-mint-burn.test.ts` | Cron ingestion tests |
-| `worker/src/api/__tests__/backfill-mint-burn.test.ts` | Backfill ingestion tests |
-| `worker/src/api/__tests__/mint-burn-flows.test.ts` | API contract tests |

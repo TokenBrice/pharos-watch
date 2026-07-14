@@ -81,29 +81,6 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
-  "reserves": [
-    {
-      "name": "DAI liquidity",
-      "pct": 34,
-      "risk": "low",
-      "coinId": "dai-makerdao",
-      "depType": "collateral"
-    },
-    {
-      "name": "USDC liquidity",
-      "pct": 33,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    },
-    {
-      "name": "USDT liquidity",
-      "pct": 33,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "collateral"
-    }
-  ],
   "notices": [
     {
       "type": "info",

@@ -23,6 +23,40 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "Noble USDN is an M0-backed Noble deployment; base M issuance remains on the Ethereum MinterGateway and Noble movement uses M0 portal infrastructure.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x83ae82bd4054e815fb7b189c39d9ce670369ea16"
+      ],
+      "implementationAddresses": [
+        "0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4"
+      ],
+      "adminAddresses": [
+        "0x7176665e336e8692e9b265ab6290934c93f99ccf"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "M0 Noble Portal owner Safe (upgrade control)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25531314,
+      "sources": [
+        {
+          "label": "Noble Portal on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16"
+        },
+        {
+          "label": "Noble Portal verified HubPortal implementation",
+          "url": "https://eth.blockscout.com/address/0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4"
+        },
+        {
+          "label": "Noble Portal owner Safe",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x7176665e336e8692e9b265aB6290934C93F99cCf/"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -72,21 +106,75 @@
           "lockboxOrEscrow": "Noble USDN movement uses M0 Portal infrastructure; base M supply remains governed by the Ethereum MinterGateway.",
           "trustedPeerOrRemote": "Local bridge review identifies the M0/Noble route but does not enumerate live remote peer configuration.",
           "caps": "Portal capacity is treated as bounded by the M0 base supply and portal route, not by an immutable token-level cap.",
-          "pausersAdminsUpgraders": "Noble Portal owner is reviewed as a Safe v1.4.1 2/2 with no modules or guard."
+          "pausersAdminsUpgraders": "The portal's owner-controlled upgrade path is represented separately by the M0 Noble Portal owner Safe (upgrade control)."
         },
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531314,
         "sources": [
           {
             "label": "M0 deployments",
             "url": "https://docs.m0.org/get-started/resources/addresses/"
           },
           {
-            "label": "Noble Portal on Etherscan",
-            "url": "https://etherscan.io/address/0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16"
+            "label": "Noble Portal on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16"
+          },
+          {
+            "label": "Noble Portal verified HubPortal implementation",
+            "url": "https://eth.blockscout.com/address/0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4"
           }
         ],
-        "evidence": "At Ethereum block 25295161: Noble Portal code=452 bytes (proxy). EIP-1967 impl slot=0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4 (47208 bytes, confirmed contract). EIP-1967 admin slot=0x0 (no external ProxyAdmin; upgrade path controlled via owner). owner()=0x7176665e336e8692e9b265aB6290934C93F99cCf, a Safe v1.4.1 (2/2 threshold, 2 EOA owners: 0xb4518ae2F26ed79648C32734E0fC1F91bBF76459 and 0xDAB03eA17203d786588b9217ccC30664e7294Bd2; modules=[]; guard=0x0; fallbackHandler=0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99). Safe API confirmed. Noble chain native state is non-EVM (Cosmos); no Noble-native mint authority address exists for on-chain verification."
+        "evidence": "At Ethereum block 25531314, the Noble Portal remained the Ethereum-side M0 bridge contract for Noble movement. Its EIP-1967 implementation resolved to 0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4, its admin slot was zero, and owner() resolved to the separately reviewed upgrade Safe. Base M issuance remains governed by MinterGateway rather than the portal owner."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7176665e336e8692e9b265aB6290934C93F99cCf",
+        "label": "M0 Noble Portal owner Safe (upgrade control)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 2,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xb4518ae2F26ed79648C32734E0fC1F91bBF76459",
+            "0xDAB03eA17203d786588b9217ccC30664e7294Bd2"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25531314,
+          "observedAt": "2026-07-14",
+          "source": "safe-api"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531314,
+        "sources": [
+          {
+            "label": "Noble Portal owner Safe on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x7176665e336e8692e9b265aB6290934C93F99cCf"
+          },
+          {
+            "label": "Safe Transaction Service Noble Portal owner",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x7176665e336e8692e9b265aB6290934C93F99cCf/"
+          },
+          {
+            "label": "Noble Portal verified HubPortal implementation",
+            "url": "https://eth.blockscout.com/address/0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25531314, Noble Portal owner() returned 0x7176665e336e8692e9b265aB6290934C93F99cCf. The verified implementation delegates portal upgrades to owner authority. Fixed-block calls and the Safe service confirmed a 2-of-2 Safe with the two listed EOA owners, no enabled modules, and zero guard and module guard."
       }
     ],
     "review": {
@@ -104,13 +192,25 @@
           "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
         },
         {
-          "label": "Noble Portal on Etherscan",
-          "url": "https://etherscan.io/address/0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16"
+          "label": "Noble Portal on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16"
+        },
+        {
+          "label": "Noble Portal verified HubPortal implementation",
+          "url": "https://eth.blockscout.com/address/0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4"
+        },
+        {
+          "label": "Safe Transaction Service Noble Portal owner",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x7176665e336e8692e9b265aB6290934C93F99cCf/"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
         }
       ],
-      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable (IsProxy=false). Noble Portal confirmed proxy (impl=0xa6fab688..., no admin slot ProxyAdmin); owner=Safe v1.4.1 2/2 EOA, no modules, no guard (Safe API confirmed). Noble chain is Cosmos-based; on-chain M management is Ethereum-side only.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25531314, the immutable MinterGateway remained the base-M issuance rail and the Noble Portal remained the bridge control for Noble movement. The portal implementation was 0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4 with no external ProxyAdmin; owner() returned Safe 0x7176665e336e8692e9b265aB6290934C93F99cCf, which separately controls upgrades. The Safe was 2-of-2 with owners 0xb4518ae2F26ed79648C32734E0fC1F91bBF76459 and 0xDAB03eA17203d786588b9217ccC30664e7294Bd2, no enabled modules, and zero guard and module guard. Noble remains Cosmos-based, so M management is Ethereum-side.",
+      "reviewer": "owner-triage",
+      "reviewedAt": "2026-07-14"
     }
   },
   "infrastructures": [
@@ -250,15 +350,6 @@
   ],
   "deploymentModel": "single-chain",
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
-      "pct": 100,
-      "risk": "very-low",
-      "coinId": "m-m0",
-      "depType": "wrapper"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,

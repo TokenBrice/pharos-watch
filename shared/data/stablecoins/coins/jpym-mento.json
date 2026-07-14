@@ -209,7 +209,9 @@
         "kind": "fpmm-pool",
         "poolAddress": "0x9861F6D2Fe392b934C86eC89D2886CEb772B2b41",
         "usdmTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
-        "sourceUrls": ["https://docs.mento.org/mento-v3"]
+        "sourceUrls": [
+          "https://docs.mento.org/mento-v3"
+        ]
       }
     }
   },

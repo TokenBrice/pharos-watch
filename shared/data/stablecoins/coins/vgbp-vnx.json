@@ -2,7 +2,7 @@
   "id": "vgbp-vnx",
   "name": "VNX British Pound",
   "symbol": "VGBP",
-  "oneLiner": "VGBP is VNX's Liechtenstein-licensed pound sterling stablecoin redeemable 1:1, backed by GBP cash in Swiss and Liechtenstein bank accounts.",
+  "oneLiner": "VGBP is VNX's issuer-redeemable pound sterling token, backed at the latest published report date by an aggregate GBP-value reserve of undisclosed composition.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GBP",
@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "GBP deposits held in bank accounts in Switzerland and Liechtenstein, confirmed 1:1 by Areva General Auditing and Trust Company Limited (December 2024)",
+  "collateral": "Aggregate GBP-value reserves held by VNX Commodities AG in bank accounts and/or securities custody accounts; the latest published AREVA report does not disclose the holdings or category split",
   "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent GBP value",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "292",
@@ -88,13 +88,6 @@
     "reviewedAt": "2026-07-13"
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "GBP deposits, Switzerland/Liechtenstein (Areva audited)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -112,18 +105,37 @@
       }
     },
     "params": {
-      "label": "GBP cash & equivalents",
-      "risk": "very-low"
+      "label": "Aggregate GBP-value reserve (composition undisclosed)",
+      "risk": "very-high"
     }
   },
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://vnx.li/transparency/",
+    "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf",
     "provider": "AREVA General Auditing and Trust Company Limited",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Liechtenstein",
-    "attestorLicense": "FMA TVTG (Blockchain Act)"
+    "attestorLicense": "Liechtenstein FMA-licensed auditing company",
+    "latestReport": {
+      "periodEnd": "2024-12-31",
+      "publishedAt": "2025-02-05",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "AREVA VNX reserve report as of December 31, 2024",
+          "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        },
+        {
+          "label": "AREVA licences and registrations",
+          "url": "https://www.areva.li/en/"
+        }
+      ]
+    }
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",

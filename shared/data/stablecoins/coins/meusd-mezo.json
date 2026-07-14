@@ -20,14 +20,136 @@
   "pythFeedId": "0x0617a9b725011a126a2b9fd53563f4236501f32cf76d877644b943394606c6de",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "Mezo documents Skip Connect for BTC/USD and Pyth for additional market-data feeds, with no stronger reviewed failover tier for mUSD collateral pricing.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "Mezo MUSD uses one BTC collateral path whose PriceFeed reads a single Chainlink-compatible BTC/USD oracle, rejects data older than 60 seconds, and supplies the price to Liquity-style trove liquidation.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "owner-triage",
+      "rationale": "MUSD is issued from BTC-backed borrower troves with a 110% minimum collateral ratio. Mezo's published contracts use one shared PriceFeed, TroveManager, StabilityPool, and redistribution engine for that BTC collateral path, so one complete branch row covers the liquidation surface.",
+      "sources": [
+        {
+          "label": "Mezo MUSD development guide",
+          "url": "https://mezo.org/docs/developers/musd/"
+        },
+        {
+          "label": "Mezo MUSD contracts",
+          "url": "https://github.com/mezo-org/musd"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
         "label": "Mezo oracle docs",
         "url": "https://mezo.org/docs/developers/architecture/oracles/read-oracle/"
+      },
+      {
+        "label": "Mezo MUSD development guide",
+        "url": "https://mezo.org/docs/developers/musd/"
+      },
+      {
+        "label": "Mezo MUSD contracts",
+        "url": "https://github.com/mezo-org/musd"
+      },
+      {
+        "label": "Mezo mainnet chain ID",
+        "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/artifacts/deployments/mainnet/.chainId"
+      },
+      {
+        "label": "Mezo PriceFeed mainnet deployment artifact",
+        "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/artifacts/deployments/mainnet/PriceFeed.json"
+      },
+      {
+        "label": "Mezo PriceFeed contract source",
+        "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/contracts/PriceFeed.sol"
+      },
+      {
+        "label": "Mezo mainnet RPC",
+        "url": "https://jsonrpc-mezo.boar.network"
+      }
+    ],
+    "branches": [
+      {
+        "id": "mezo-btc-troves",
+        "label": "Mezo BTC troves",
+        "tier": "standard-external",
+        "summary": "All MUSD troves use the shared Mezo PriceFeed BTC/USD answer to calculate individual collateral ratios and liquidation eligibility.",
+        "collateralAssets": [
+          "BTC on Mezo"
+        ],
+        "chains": [
+          "mezo"
+        ],
+        "feeds": [
+          {
+            "provider": "Mezo PriceFeed with Chainlink-compatible Skip Connect BTC/USD oracle",
+            "path": "Skip Connect BTC/USD answer -> Mezo PriceFeed.fetchPrice -> TroveManager ICR",
+            "address": "0xc5aC5A8892230E0A3e1c473881A2de7353fFcA88",
+            "chain": "mezo",
+            "stalenessBoundSec": 60,
+            "observedAt": "2026-07-14",
+            "observedBlock": 10393034,
+            "failureDomainKeys": [
+              "mezo-price-feed",
+              "skip-connect-btc-usd",
+              "mezo-validator-oracle-path",
+              "mezo"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed.fetchPrice reverts when the configured oracle answer is more than 60 seconds old or the oracle call fails. The contract has no secondary source or stored last-good-price fallback; the owner can replace the configured oracle through setOracle.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "BTC on Mezo",
+            "minimumCollateralRatioPct": 110,
+            "note": "A trove becomes liquidatable when its individual collateral ratio falls below the fixed 110% MCR."
+          }
+        ],
+        "liquidationMechanism": "Any caller may submit one or more active troves for immediate liquidation. TroveManager first offsets principal and interest against MUSD in the StabilityPool, transfers proportional BTC collateral to the pool, and redistributes any uncovered debt and collateral to remaining active troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "The MUSD StabilityPool is the first-loss backstop and is seeded by protocol-controlled value; StabilityPool deposits burn against liquidated debt and receive the seized BTC collateral.",
+        "shutdownOrBadDebtBehavior": "Debt exceeding available StabilityPool MUSD is redistributed with its remaining collateral across active troves through the DefaultPool reward indices. A stale or failing oracle halts price-dependent liquidation by reverting, and the reviewed contracts do not implement a last-good-price or global shutdown settlement path.",
+        "failureDomainKeys": [
+          "mezo-price-feed",
+          "skip-connect-btc-usd",
+          "mezo-stability-pool",
+          "mezo-trove-redistribution",
+          "mezo"
+        ],
+        "sources": [
+          {
+            "label": "Mezo MUSD development guide",
+            "url": "https://mezo.org/docs/developers/musd/"
+          },
+          {
+            "label": "Mezo MUSD liquidation overview",
+            "url": "https://mezo.org/blog/how-musd-works-and-why-its-stable"
+          },
+          {
+            "label": "Mezo MUSD contracts",
+            "url": "https://github.com/mezo-org/musd"
+          },
+          {
+            "label": "Mezo mainnet chain ID",
+            "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/artifacts/deployments/mainnet/.chainId"
+          },
+          {
+            "label": "Mezo PriceFeed mainnet deployment artifact",
+            "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/artifacts/deployments/mainnet/PriceFeed.json"
+          },
+          {
+            "label": "Mezo PriceFeed contract source",
+            "url": "https://github.com/mezo-org/musd/blob/43ef44123753fa3e28425beffde42c86693fd03c/solidity/contracts/PriceFeed.sol"
+          },
+          {
+            "label": "Mezo mainnet RPC",
+            "url": "https://jsonrpc-mezo.boar.network"
+          }
+        ]
       }
     ]
   },

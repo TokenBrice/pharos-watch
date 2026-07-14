@@ -19,7 +19,24 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Parallel USDp prices backing assets with Chainlink, RedStone, DIA fundamental feeds, exchange-rate feeds, and per-asset stale periods, without documented failover.",
-    "reviewedAt": "2026-06-12",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Parallel USDp is minted, burned, and redeemed through the Parallelizer Module against a DAO-whitelisted basket priced at oracle value. The reviewed implementation exposes no borrower-specific debt positions, collateral health checks, or liquidation engine for USDp holders; asset depeg handling uses adaptive mint/burn fees and proportional redemption instead of CDP liquidation branches.",
+      "sources": [
+        {
+          "label": "Parallel USDp implementation",
+          "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation"
+        },
+        {
+          "label": "Parallelizer Module",
+          "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
@@ -565,54 +582,86 @@
   "reserves": [
     {
       "name": "frxUSD (Ethereum branch)",
-      "pct": 15,
+      "pct": 12.2182,
       "risk": "low",
       "coinId": "frxusd-frax",
       "depType": "collateral"
     },
     {
       "name": "sfrxUSD (Ethereum branch)",
-      "pct": 15,
+      "pct": 23.2223,
       "risk": "medium",
       "coinId": "sfrxusd-frax",
       "depType": "collateral"
     },
     {
       "name": "USDe (Ethereum + HyperEVM branches)",
-      "pct": 15,
+      "pct": 6.3583,
       "risk": "medium",
       "coinId": "usde-ethena",
       "depType": "collateral"
     },
     {
       "name": "sUSDe (Ethereum + HyperEVM branches)",
-      "pct": 15,
+      "pct": 25.056,
       "risk": "medium",
       "coinId": "susde-ethena",
       "depType": "collateral"
     },
     {
-      "name": "USDS (Base branch)",
-      "pct": 12.5,
-      "risk": "low",
-      "coinId": "usds-sky",
-      "depType": "collateral"
-    },
-    {
       "name": "sUSDS (Base branch)",
-      "pct": 12.5,
+      "pct": 3.7605,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral"
     },
     {
-      "name": "USDC / ygamiUSDC (Avalanche branch)",
-      "pct": 15,
+      "name": "USDS (Base branch)",
+      "pct": 0.0007,
       "risk": "low",
+      "coinId": "usds-sky",
+      "depType": "collateral"
+    },
+    {
+      "name": "USDC (Avalanche branch)",
+      "pct": 0.6436,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral"
+    },
+    {
+      "name": "ygamiUSDC vault shares (Avalanche branch)",
+      "pct": 28.7404,
+      "risk": "high",
       "coinId": "usdc-circle",
       "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Parallel USDp transparency",
+        "url": "https://app.parallel.best/transparency"
+      },
+      {
+        "label": "Parallel USDp implementation docs",
+        "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation"
+      },
+      {
+        "label": "ygamiUSDC contract on Avalanche",
+        "url": "https://subnets.avax.network/c-chain/address/0x9fd32fd5e32c6b95483d36c5e724c5c5250ce010/contract"
+      }
+    ],
+    "rationale": "Parallel's server-rendered transparency inventory publishes each current reserve asset and USD value across Ethereum, HyperEVM, Base, and Avalanche. The ygamiUSDC ERC-4626 contract returns Avalanche USDC from asset(), so both direct USDC and vault-share exposure map exactly to USDC without collapsing the vault's strategy risk.",
+    "compositionBasis": "Current USD values from Parallel's official transparency inventory, aggregated by reserve token and normalized to the published total",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified reserve assets in the published inventory; ygamiUSDC remains separately labeled and risk-rated while its USDC underlying creates the dependency edge.",
+    "knownUnknownExposurePct": 0
+  },
   "geckoId": "parallel-usdp",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
