@@ -247,11 +247,6 @@ const MECHANISM_REVIEW_OVERLAYS: ReadonlyMap<string, MechanismReviewOverlay> = n
   ]),
 );
 
-/** Curated overlay row (review provenance) for one asset, if present. */
-export function getSafetyScoreV9MechanismReviewOverlay(assetId: string): MechanismReviewOverlay | null {
-  return MECHANISM_REVIEW_OVERLAYS.get(assetId) ?? null;
-}
-
 /**
  * Builds the conservative mechanism risk review the exact evidence supports.
  * A curated overlay (schema-validated, source-cited) takes precedence for the

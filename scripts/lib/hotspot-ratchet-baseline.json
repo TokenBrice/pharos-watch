@@ -320,14 +320,14 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 1039,
-    "maxFunctionLines": 160,
-    "branchCount": 138
+    "fileLines": 1050,
+    "maxFunctionLines": 161,
+    "branchCount": 139
   },
   "worker/src/lib/safety-score-v9-fact-set.ts": {
-    "fileLines": 2115,
+    "fileLines": 2178,
     "maxFunctionLines": 224,
-    "branchCount": 141
+    "branchCount": 144
   },
   "worker/src/lib/safety-score-v9-shadow.ts": {
     "fileLines": 1184,

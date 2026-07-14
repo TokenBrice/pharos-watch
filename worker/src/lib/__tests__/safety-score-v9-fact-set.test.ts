@@ -442,6 +442,35 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).toBe("NR");
   });
 
+  it("marks pure NAV tokens as reviewed not-applicable for fixed-peg scoring", () => {
+    const fixed = exactFixedInput({ omitPegRow: true });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "alpha",
+          {
+            id: "alpha",
+            mechanismArchetype: "fiat-cash",
+            launchDate: "2020-01-01",
+            flags: { navToken: true },
+          },
+        ],
+      ]),
+    });
+
+    expect(baseline.assets[0]!.pegReference).toEqual({
+      referenceKind: "nav",
+      referenceKey: "nav:alpha",
+      failureDomains: [],
+    });
+    expect(compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]!.peg).toMatchObject({
+      status: { applicability: { state: "not-applicable" }, observationState: "known" },
+      referenceKind: "nav",
+      referenceKey: "nav:alpha",
+      pegScore: null,
+    });
+  });
+
   it("keeps reviewed fallback collateral bounded until an exact reserve exposure maps it", () => {
     const fixed = exactTwoAssetFixedInput();
     const dependencyReview = {

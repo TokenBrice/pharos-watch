@@ -172,6 +172,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/smoke-transport.mjs", "test"),
     exempt("scripts/maintenance/smoke-ui.mjs", "test"),
     exempt("scripts/maintenance/subset-fonts.mjs", "build"),
+    exempt("scripts/maintenance/summarize-safety-score-v9-replay.mjs", "read-only"),
     exempt("scripts/maintenance/test-merge-gate.mjs", "test"),
     exempt("scripts/maintenance/watch-worker-cron.mjs", "read-only"),
     exempt("scripts/maintenance/weekly-curation-digest.mjs", "build"),
