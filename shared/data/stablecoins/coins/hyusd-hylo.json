@@ -90,11 +90,11 @@
   ],
   "deploymentModel": "single-chain",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: HYUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as upstream exposure because the documented V2 collateral design includes USDC and cbBTC; no separate manual override source is attached.",
+    "evidence": "Inferred review updated: HYUSD resolves to Upstream because its documented V2 collateral set includes USDC and cbBTC, which introduce issuer-side freeze exposure.",
+    "reviewer": "Codex inferred-status reconciliation",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "mature-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
