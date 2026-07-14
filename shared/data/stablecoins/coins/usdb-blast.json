@@ -41,9 +41,9 @@
   "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "USDB is a Blast-native asset whose supply tracks stablecoins escrowed in the Ethereum USDYieldManager and minted on Blast through the L1 bridge/yield-manager path. The route is reviewed as external lock/mint infrastructure because holder-facing USDB supply depends on bridge-admin/yield-manager controls, not on issuer-native burn/mint finality.",
+    "summary": "USDB is a Blast-native asset whose supply tracks stablecoins escrowed in the Ethereum USDYieldManager and minted through Blast's dedicated L1BlastBridge/L2BlastBridge pair. The route is external lock/mint infrastructure because holder-facing USDB supply depends on bridge-admin and yield-manager controls.",
     "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 BRDG curation",
+    "reviewer": "owner-triage",
     "confidence": "verified",
     "protocols": [
       {
@@ -61,6 +61,14 @@
       {
         "label": "Blast USDYieldManager (Etherscan)",
         "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438"
+      },
+      {
+        "label": "Blast L2BlastBridge verified source",
+        "url": "https://blastscan.io/address/0x4300000000000000000000000000000000000005#code"
+      },
+      {
+        "label": "Ethereum and Blast public RPC endpoints",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
     "routes": [
@@ -70,20 +78,21 @@
         "destinationChain": "blast",
         "canonicalChain": "ethereum",
         "contractAddress": "0x4300000000000000000000000000000000000003",
-        "protocol": "Blast USDYieldManager / L1-L2 bridge",
+        "protocol": "Blast USDYieldManager / L1BlastBridge / L2BlastBridge",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "global",
         "reviewDisposition": "reviewed",
-        "reviewNote": "USDB is minted on Blast against stablecoins deposited through the Ethereum USDYieldManager and Blast bridge path.",
+        "reviewNote": "Fixed-block reads resolve USDYieldManager.blastBridge() to L1BlastBridge 0x3a05...9115 and both bridge contracts' OTHER_BRIDGE() pointers to each other.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ethereum",
-        "controllerAddress": "0xa230285d5683C74935aD14c446e137c8c8828438",
+        "controllerAddress": "0x4300000000000000000000000000000000000005",
         "failureDomainKeys": [
           "contract:ethereum:0xa230285d5683c74935ad14c446e137c8c8828438",
-          "contract:blast:0x4200000000000000000000000000000000000010"
+          "contract:ethereum:0x3a05e5d33d7ab3864d53aaec93c8301c1fa49115",
+          "contract:blast:0x4300000000000000000000000000000000000005"
         ],
         "observedAt": "2026-07-14",
         "sources": [
@@ -94,6 +103,18 @@
           {
             "label": "Blast USDYieldManager (Etherscan)",
             "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438"
+          },
+          {
+            "label": "Blast L2BlastBridge verified source",
+            "url": "https://blastscan.io/address/0x4300000000000000000000000000000000000005#code"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Blast RPC",
+            "url": "https://rpc.blast.io"
           }
         ]
       }
