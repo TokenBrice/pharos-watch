@@ -168,6 +168,14 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "weusd-picwe::PicWe WEUSD backing (current 100% USDC claim; legacy basket conflict)::USDC",
     "WEUSD's current USDC claim conflicts with older basket evidence and lacks a reconciled reserve inventory.",
   ],
+  [
+    "hyusd-hylo::Unresolved Hylo production collateral envelope (V1 SOL-LST pool and documented V2 SOL/BTC/USDC pools)::USDC",
+    "Hylo's reviewed reserve envelope does not reconcile the observable V1 deployment with the documented V2 pools or publish production weights, so linking USDC alone would overstate the dependency.",
+  ],
+  [
+    "hbusdt-hyperbeat::Dynamic Hyperbeat hbUSDT strategy portfolio::USDT",
+    "The reviewed Hyperbeat portfolio is a dynamic strategy envelope without durable asset or position weights; the hbUSDT product name does not establish a fixed USDT reserve slice.",
+  ],
 ]);
 
 describe("reserve coinId validation", () => {
