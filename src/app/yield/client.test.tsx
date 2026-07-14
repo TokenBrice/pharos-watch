@@ -16,6 +16,7 @@ const {
   setParamMock,
   pushMock,
   leaderboardPropsMock,
+  scatterPropsMock,
   staleQueriesMock,
 } = vi.hoisted(() => ({
   useYieldAdapterManifestMock: vi.fn(),
@@ -25,6 +26,7 @@ const {
   setParamMock: vi.fn(),
   pushMock: vi.fn(),
   leaderboardPropsMock: vi.fn(),
+  scatterPropsMock: vi.fn(),
   staleQueriesMock: vi.fn(),
 }));
 
@@ -54,7 +56,10 @@ vi.mock("@/hooks/use-watchlist", () => ({
 }));
 
 vi.mock("@/components/yield-scatter-plot", () => ({
-  YieldScatterPlot: () => <div data-testid="yield-scatter-plot" />,
+  YieldScatterPlot: (props: unknown) => {
+    scatterPropsMock(props);
+    return <div data-testid="yield-scatter-plot" />;
+  },
 }));
 
 vi.mock("@/components/yield-leaderboard", () => ({
@@ -166,6 +171,39 @@ describe("YieldClient", () => {
     expect(useYieldRankingsSummaryMock).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("slider", { name: "Risk tolerance" })).toBeTruthy();
     expect(screen.getByTestId("yield-scatter-plot")).toBeTruthy();
+  });
+
+  it("passes every filtered opportunity to the scatter plot", () => {
+    const manyRows = Array.from({ length: 60 }, (_, index) =>
+      makeYieldRanking({
+        id: `test-yield-${index}`,
+        symbol: `T${index}`,
+        name: `Test Yield ${index}`,
+        currentApy: 5 + index / 10,
+        apy30d: 5 + index / 10,
+        safetyScore: 40 + (index % 55),
+      }),
+    );
+    useYieldRankingsSummaryMock.mockReturnValue({
+      data: projectYieldRankingsSummary({
+        rankings: manyRows,
+        riskFreeRate: 4.25,
+        scalingFactor: 1,
+        medianApy: 8,
+        updatedAt: 1_776_000_000,
+        warnings: [],
+      }),
+      meta: null,
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_776_000_000,
+      refetch: vi.fn(),
+    });
+
+    render(<YieldClient />);
+
+    const props = scatterPropsMock.mock.calls.at(-1)?.[0] as { rankings: unknown[] };
+    expect(props.rankings).toHaveLength(60);
   });
 
   it("keeps the build-static adapter manifest out of live freshness aggregation", () => {
