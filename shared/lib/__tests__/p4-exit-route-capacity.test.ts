@@ -248,6 +248,75 @@ describe("P4 DEX exit route observations", () => {
     expect(totalOf(drained)).toBeLessThan(totalOf(balanced));
   });
 
+  it("scores Balancer stableswap models and rejects other stableswap sources", () => {
+    const balancerStableswapPool = (source: "balancer" | "raydium") => ({
+      poolId: "ethereum:0x00000000000000000000000000000000000000b1",
+      project: "balancer",
+      chain: "ethereum",
+      tvlUsd: 10_000_000,
+      symbol: "USDC / wUSDX",
+      poolType: "balancer-stable",
+      source: "direct_api" as const,
+      extra: {
+        ammExecutionModel: {
+          source,
+          invariant: "stableswap" as const,
+          trackedTokenIndex: 0,
+          feeRate: 0.0001,
+          amplification: 125,
+          tokens: [
+            {
+              address: "0x0000000000000000000000000000000000000031",
+              symbol: "USDC",
+              decimals: 6,
+              balance: 5_000_000,
+              referencePriceUsd: 1,
+              referencePriceSource: "source-token-usd" as const,
+              trackedAssetId: "usdc-circle",
+            },
+            {
+              address: "0x0000000000000000000000000000000000000032",
+              symbol: "wUSDX",
+              decimals: 18,
+              balance: 5_100_000,
+              referencePriceUsd: 0.999,
+              referencePriceSource: "source-token-usd" as const,
+            },
+          ],
+        },
+      },
+    });
+
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [balancerStableswapPool("balancer")],
+    });
+    expect(result.coverage).toMatchObject({
+      retainedPoolCount: 1,
+      scoreEligiblePoolCount: 1,
+      unsupportedPoolCount: 0,
+      evidenceCounts: { "reserve-based-amm-simulation": 1 },
+    });
+    expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(true);
+    expect(result.observations[0]).toMatchObject({
+      scoreEligible: true,
+      confidence: "high",
+      output: { kind: "collateral" },
+    });
+
+    const rejected = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [balancerStableswapPool("raydium")],
+    });
+    expect(rejected.observations).toEqual([]);
+    expect(rejected.coverage.unsupportedPoolCount).toBe(1);
+    expect(rejected.coverage.unsupportedReasons).toMatchObject({
+      "invalidExecutionModel:invalid-stableswap-model-source": 1,
+    });
+  });
+
   it("reports shaped Curve evidence as non-executable instead of inferring depth from TVL", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",

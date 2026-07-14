@@ -219,8 +219,8 @@ export const DexAmmExecutionModelSchema = z
       return;
     }
     if (model.invariant === "stableswap") {
-      if (model.source !== "curve") {
-        ctx.addIssue({ code: "custom", path: ["source"], message: "stableswap models require Curve source" });
+      if (model.source !== "curve" && model.source !== "balancer") {
+        ctx.addIssue({ code: "custom", path: ["source"], message: "stableswap models require a Curve or Balancer source" });
       }
       if (model.amplification === undefined) {
         ctx.addIssue({ code: "custom", path: ["amplification"], message: "stableswap models require amplification" });

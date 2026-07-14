@@ -37,6 +37,14 @@ const STABLE_POOL_TYPES = new Set([
 ]);
 const SUPPORTED_POOL_TYPES = new Set([...STABLE_POOL_TYPES, "WEIGHTED"]);
 
+/**
+ * Pool types that use Balancer StableMath (an amplified invariant over
+ * rate-scaled balances). Gyro pools price on an elliptic invariant and
+ * PHANTOM_STABLE is the deprecated v1 phantom-BPT design; neither may carry
+ * an amp into an exact execution model.
+ */
+const STABLE_MATH_POOL_TYPES = new Set(["STABLE", "COMPOSABLE_STABLE", "META_STABLE"]);
+
 // Direct Balancer fetcher sanity cap — protects against upstream-corrupt totalLiquidity
 // values (e.g. legacy Fantom multiUSDC/DEI pool reports $337B). Set conservatively below
 // the global DIRECT_API_MAX_POOL_TVL_USD ($10B) so obvious garbage is rejected at source.
@@ -55,7 +63,27 @@ const QUERY = `query($first: Int!, $skip: Int!) {
     type
     chain
     dynamicData { totalLiquidity volume24h swapFee }
-    poolTokens { address symbol decimals balance balanceUSD weight }
+    poolTokens { address symbol decimals balance balanceUSD weight priceRate }
+  }
+}`;
+
+/**
+ * Supplemental amp sweep. The list endpoint's pool shape does not expose amp;
+ * the aggregator endpoint does, and — queried without includeHooks — returns
+ * only hook-free pools with reviewed rate providers. That filter is
+ * load-bearing: hooks (e.g. StableSurge) reprice swaps beyond the static fee,
+ * so pools missing from this sweep must stay without an exact model.
+ */
+const AMP_QUERY = `query($first: Int!, $skip: Int!) {
+  aggregatorPools(
+    first: $first,
+    skip: $skip,
+    orderBy: totalLiquidity,
+    orderDirection: desc,
+    where: { minTvl: 10000, poolTypeIn: [STABLE, COMPOSABLE_STABLE, META_STABLE] }
+  ) {
+    id
+    amp
   }
 }`;
 
@@ -65,11 +93,21 @@ interface BalancerPool {
   type: string;
   chain: string;
   dynamicData: { totalLiquidity: string; volume24h: string; swapFee: string };
-  poolTokens: { address: string; symbol: string; decimals: number; balance: string; balanceUSD: string; weight?: string | null }[];
+  poolTokens: { address: string; symbol: string; decimals: number; balance: string; balanceUSD: string; weight?: string | null; priceRate?: string | null }[];
 }
 
 type BalancerResponse = {
   data?: { poolGetPools?: unknown };
+  errors?: unknown;
+};
+
+interface BalancerAmpRow {
+  id: string;
+  amp?: string | null;
+}
+
+type BalancerAmpResponse = {
+  data?: { aggregatorPools?: unknown };
   errors?: unknown;
 };
 
@@ -92,7 +130,12 @@ function isBalancerPoolToken(value: unknown): value is BalancerPool["poolTokens"
     Number.isFinite(value.decimals) &&
     typeof value.balance === "string" &&
     typeof value.balanceUSD === "string" &&
-    isOptionalString(value.weight);
+    isOptionalString(value.weight) &&
+    isOptionalString(value.priceRate);
+}
+
+function isBalancerAmpRow(value: unknown): value is BalancerAmpRow {
+  return isDexApiRecord(value) && typeof value.id === "string" && isOptionalString(value.amp);
 }
 
 function isBalancerPool(value: unknown): value is BalancerPool {
@@ -128,12 +171,78 @@ function extractBalancerPoolAddress(pool: Pick<BalancerPool, "id" | "address">):
   return poolId.toLowerCase();
 }
 
+/**
+ * Fetch amp for hook-free stable-math pools from the aggregator endpoint.
+ * Failures degrade to an empty map: affected pools simply keep no exact
+ * execution model. Never throws for non-abort errors.
+ */
+async function fetchBalancerStableAmps(
+  warnings: string[],
+  signal?: AbortSignal,
+): Promise<Map<string, number>> {
+  const ampByPoolId = new Map<string, number>();
+  const pageSize = 1000;
+  for (let page = 1; page <= DIRECT_API_DEFAULT_MAX_PAGES; page++) {
+    const skip = (page - 1) * pageSize;
+    let res: Response;
+    try {
+      res = await fetch(BALANCER_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+        body: JSON.stringify({ query: AMP_QUERY, variables: { first: pageSize, skip } }),
+        signal: buildDirectApiRequestSignal(signal),
+      });
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      warnings.push(`amp sweep request failed on page ${page}: ${toErrorMessage(err)}`);
+      return ampByPoolId;
+    }
+
+    if (!res.ok) {
+      warnings.push(`amp sweep returned ${res.status} on page ${page}`);
+      await cancelResponseBodyQuietly(res);
+      return ampByPoolId;
+    }
+
+    const parsed = await readDexApiJson<BalancerAmpResponse>(res, `amp sweep page ${page}`);
+    if (!parsed.ok) {
+      warnings.push(parsed.error);
+      return ampByPoolId;
+    }
+    const graphqlErrors = formatGraphqlErrors(parsed.data.errors);
+    if (graphqlErrors.length > 0) {
+      warnings.push(`amp sweep GraphQL errors on page ${page}: ${graphqlErrors.join("; ")}`);
+      return ampByPoolId;
+    }
+    const rows = parsed.data.data?.aggregatorPools;
+    if (!Array.isArray(rows)) {
+      warnings.push(`amp sweep malformed response on page ${page}`);
+      return ampByPoolId;
+    }
+
+    for (const row of rows) {
+      if (!isBalancerAmpRow(row) || row.amp == null) continue;
+      const amp = parseFloat(row.amp);
+      if (Number.isFinite(amp) && amp > 0) {
+        ampByPoolId.set(row.id.trim().toLowerCase(), amp);
+      }
+    }
+
+    if (rows.length < pageSize) break;
+    if (page === DIRECT_API_DEFAULT_MAX_PAGES) {
+      warnings.push(`amp sweep pagination cap reached at page ${page}`);
+    }
+  }
+  return ampByPoolId;
+}
+
 export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
   const errors: string[] = [];
   const warnings: string[] = [];
   const pageSize = 1000;
   let successfulPages = 0;
+  const stableMathPoolIdsByIndex = new Map<number, string>();
 
   for (let page = 1; page <= DIRECT_API_DEFAULT_MAX_PAGES; page++) {
     const skip = (page - 1) * pageSize;
@@ -231,6 +340,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
           const bal = parseFloat(t.balance);
           const balUsd = parseFloat(t.balanceUSD);
           const weight = t.weight == null ? null : parseFloat(t.weight);
+          const priceRate = t.priceRate == null ? null : parseFloat(t.priceRate);
           const tokenPriceUsd = (Number.isFinite(bal) && bal > 0 && Number.isFinite(balUsd) && balUsd > 0)
             ? balUsd / bal : null;
           return {
@@ -239,6 +349,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
             decimals: t.decimals,
             priceUsd: tokenPriceUsd,
             weight: Number.isFinite(weight) && weight != null && weight > 0 ? weight : null,
+            priceRate: Number.isFinite(priceRate) && priceRate != null && priceRate > 0 ? priceRate : null,
           };
         }),
         price,
@@ -248,6 +359,9 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         balances: balances.length === pool.poolTokens.length ? balances : null,
         balancesNormalized: true,
       });
+      if (STABLE_MATH_POOL_TYPES.has(pool.type)) {
+        stableMathPoolIdsByIndex.set(results.length - 1, pool.id.trim().toLowerCase());
+      }
     }
     if (malformedRows > 0) {
       warnings.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
@@ -258,6 +372,32 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
       errors.push(`pagination cap reached at page ${page}; resumeFromSkip=${skip + pageSize}`);
       break;
     }
+  }
+
+  if (stableMathPoolIdsByIndex.size > 0) {
+    const ampByPoolId = await fetchBalancerStableAmps(warnings, signal);
+    let ampAttached = 0;
+    if (ampByPoolId.size > 0) {
+      for (const [index, poolId] of stableMathPoolIdsByIndex) {
+        const amp = ampByPoolId.get(poolId);
+        if (amp != null) {
+          results[index]!.amp = amp;
+          ampAttached++;
+        }
+      }
+    }
+    logWorkerEvent({
+      scope: "lib",
+      level: "info",
+      event: "fetch-balancer.amp-sweep",
+      job: "sync-dex-liquidity",
+      message: "Joined stable-math amp from the aggregator endpoint",
+      metadata: {
+        stableMathPools: stableMathPoolIdsByIndex.size,
+        ampRows: ampByPoolId.size,
+        ampAttached,
+      },
+    });
   }
 
   if (results.length > 0) {
