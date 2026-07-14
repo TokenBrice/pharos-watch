@@ -1,0 +1,84 @@
+{
+  "id": "gramg-token-teknoloji",
+  "reserves": [
+    {
+      "name": "PAXG (Paxos Gold) on-chain reserve wallet",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "paxg-paxos",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Paxos Trust Company, N.A.",
+      "riskFactors": [
+        "credit",
+        "custody",
+        "market",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Token Teknoloji GRAMG product page",
+        "url": "https://www.token.com.tr/en/reserve-tokens/gram-gold-gramg/"
+      },
+      {
+        "label": "Token Teknoloji proof of reserves",
+        "url": "https://www.token.com.tr/en/proof-of-reserves/"
+      },
+      {
+        "label": "Paxos PAX Gold overview",
+        "url": "https://www.paxos.com/pax-gold"
+      }
+    ],
+    "rationale": "Token Teknoloji states that each GRAMG is collateralized by an equivalent amount of PAXG held on-chain. Its reserve page separately describes physical-gold holdings at Turkish banks and the Central Bank, but publishes no current wallet balance or custody split; the structured dependency therefore retains the disclosed 100% PAXG reserve relationship without adding unsupported physical-gold weights.",
+    "compositionBasis": "Token Teknoloji GRAMG collateral and proof-of-reserves disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The PAXG dependency is identified at 100%, but current reserve-wallet balances, wallet ownership details, and any separate physical-gold allocation are not published.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "PAXG (Paxos Gold) on-chain reserve wallet",
+        "pct": 100,
+        "disposition": "not-applicable",
+        "rationale": "The disclosed reserve is a tracked PAXG dependency rather than an untracked exogenous reserve asset."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Token Teknoloji on-chain reserve wallets",
+        "role": "custodian",
+        "jurisdiction": "Turkey"
+      },
+      {
+        "name": "Paxos Trust Company, N.A.",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Token Teknoloji GRAMG product page",
+        "url": "https://www.token.com.tr/en/reserve-tokens/gram-gold-gramg/"
+      },
+      {
+        "label": "Paxos PAX Gold overview",
+        "url": "https://www.paxos.com/pax-gold"
+      }
+    ],
+    "uncertainty": "Token Teknoloji identifies an on-chain PAXG reserve wallet, while Paxos describes custody of PAXG's underlying gold. The public materials do not disclose wallet shares, segregation, bankruptcy treatment, or rehypothecation terms."
+  }
+}

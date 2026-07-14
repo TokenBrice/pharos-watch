@@ -155,15 +155,6 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "USDC deposited into Gauntlet-curated Morpho lending markets",
-      "pct": 100,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "wrapper"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Gauntlet USDC Prime V1 MetaMorpho vault",
     "yieldType": "lending-vault"

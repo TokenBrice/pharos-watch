@@ -233,14 +233,6 @@
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "PAXG (Paxos Gold) on-chain reserve wallet",
-      "pct": 100,
-      "risk": "medium",
-      "coinId": "paxg-paxos"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

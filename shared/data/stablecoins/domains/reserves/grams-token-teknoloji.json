@@ -1,0 +1,86 @@
+{
+  "id": "grams-token-teknoloji",
+  "reserves": [
+    {
+      "name": "Physical silver in Turkish bank custody",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "Token Teknoloji A.S. and disclosed Turkish bank custodians",
+      "riskFactors": [
+        "market",
+        "custody",
+        "legal",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Token Teknoloji GRAMS product page",
+        "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/"
+      },
+      {
+        "label": "Token Teknoloji proof of reserves",
+        "url": "https://www.token.com.tr/en/proof-of-reserves/"
+      }
+    ],
+    "rationale": "Token Teknoloji states that each GRAMS is backed 1:1 by physical silver and identifies Kuveyt Türk Bank, VakıfBank, Ziraat Participation Bank, and Akbank as reserve institutions. It does not publish current quantities, bank-level weights, or an independent dated reserve report.",
+    "compositionBasis": "Token Teknoloji GRAMS product and proof-of-reserves disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The physical-silver asset class and named custodians are disclosed, but current quantities, bank-level allocation, and safeguarding terms are not.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Physical silver in Turkish bank custody",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Physical silver is an exogenous commodity reserve rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Kuveyt Türk Bank",
+        "role": "bank",
+        "jurisdiction": "Turkey"
+      },
+      {
+        "name": "VakıfBank",
+        "role": "bank",
+        "jurisdiction": "Turkey"
+      },
+      {
+        "name": "Ziraat Participation Bank",
+        "role": "bank",
+        "jurisdiction": "Turkey"
+      },
+      {
+        "name": "Akbank",
+        "role": "bank",
+        "jurisdiction": "Turkey"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Token Teknoloji proof of reserves",
+        "url": "https://www.token.com.tr/en/proof-of-reserves/"
+      }
+    ],
+    "uncertainty": "The issuer names four Turkish bank custodians but does not disclose current shares, account segregation, bankruptcy treatment, or rehypothecation terms."
+  }
+}

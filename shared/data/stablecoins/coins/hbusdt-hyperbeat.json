@@ -135,20 +135,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "hoUSDT strategy exposure (Hyperbeat USDT strategy product)",
-      "pct": 60.5,
-      "risk": "high",
-      "coinId": "usdt-tether",
-      "depType": "wrapper"
-    },
-    {
-      "name": "masterUSD strategy exposure (Hyperbeat masterUSD product)",
-      "pct": 39.5,
-      "risk": "high"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Hyperbeat USDT vault",
     "yieldType": "lending-vault"

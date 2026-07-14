@@ -1,0 +1,76 @@
+{
+  "id": "gtusdc-gauntlet",
+  "reserves": [
+    {
+      "name": "USDC deposited into Gauntlet-curated Morpho lending markets",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, Inc.",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho Gauntlet USDC Prime vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d"
+      },
+      {
+        "label": "Morpho Gauntlet curator page",
+        "url": "https://app.morpho.org/curator/gauntlet"
+      },
+      {
+        "label": "Morpho curation docs",
+        "url": "https://docs.morpho.org/curate/"
+      }
+    ],
+    "rationale": "The official Morpho vault page identifies USDC as the sole deposit asset and describes Gauntlet's allocation across curated lending markets. The reserve envelope is therefore one 100% USDC dependency; market allocation and available withdrawal liquidity remain dynamic.",
+    "compositionBasis": "Morpho vault asset and Gauntlet curation disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The sole tracked dependency is identified, but the current Morpho market allocation and available liquidity change over time.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Gauntlet USDC Prime MetaMorpho vault",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Morpho lending markets",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Morpho Gauntlet USDC Prime vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d"
+      },
+      {
+        "label": "Morpho curation docs",
+        "url": "https://docs.morpho.org/curate/"
+      }
+    ],
+    "uncertainty": "The vault and Morpho markets are on-chain, but the reviewed materials do not establish legal segregation, bankruptcy remoteness, or rehypothecation treatment for deposited USDC."
+  }
+}

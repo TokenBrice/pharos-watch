@@ -1,0 +1,118 @@
+{
+  "id": "hbusdt-hyperbeat",
+  "reserves": [
+    {
+      "name": "hoUSDT strategy exposure (Hyperbeat USDT strategy product)",
+      "pct": 60.5,
+      "risk": "high",
+      "coinId": "usdt-tether",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether Limited and Hyperbeat/Midas vault contracts",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "masterUSD strategy exposure (Hyperbeat masterUSD product)",
+      "pct": 39.5,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Hyperbeat/Midas masterUSD strategy",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Hyperbeat USDT vault documentation",
+        "url": "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault"
+      },
+      {
+        "label": "Hyperbeat hbUSDT integration documentation",
+        "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt"
+      },
+      {
+        "label": "Accountable Hyperbeat reserve attestation",
+        "url": "https://accountable.hyperbeat.org/"
+      }
+    ],
+    "rationale": "The existing reserve snapshot identifies 60.5% hoUSDT strategy exposure and 39.5% masterUSD strategy exposure. Hyperbeat documents hbUSDT as a vault accepting USDT0, USDe, and USR through an insurance contract, with instant redemption subject to liquidity and classic redemption processed within 48 hours; no current constituent weights are published for either strategy slice.",
+    "compositionBasis": "Hyperbeat hbUSDT vault documentation and current curated reserve snapshot",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The disclosed strategy names and headline percentages do not establish the current USDT0/USDe/USR mix, masterUSD underlying composition, or custody-provider shares.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "hoUSDT strategy exposure (Hyperbeat USDT strategy product)",
+        "pct": 60.5,
+        "disposition": "basket-needs-split",
+        "rationale": "Hyperbeat lists USDT0, USDe, and USR as accepted deposit assets but publishes no current allocation among them.",
+        "candidateCoinIds": [
+          "usdt-tether",
+          "usde-ethena",
+          "usr-resolv"
+        ]
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "masterUSD strategy exposure (Hyperbeat masterUSD product)",
+        "pct": 39.5,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reserve snapshot names masterUSD but the reviewed public documentation does not disclose its current underlying composition."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Hyperbeat Insurance Contract and Redemption Contract",
+        "role": "custodian",
+        "jurisdiction": "HyperEVM"
+      },
+      {
+        "name": "Morpho and HyperEVM strategy protocols",
+        "role": "other"
+      },
+      {
+        "name": "Midas",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Hyperbeat hbUSDT integration documentation",
+        "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt"
+      },
+      {
+        "label": "Hyperbeat USDT vault documentation",
+        "url": "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault"
+      }
+    ],
+    "uncertainty": "Hyperbeat identifies on-chain insurance and redemption contracts and names Midas as the vault provider, but the reviewed sources do not establish legal segregation, bankruptcy remoteness, rehypothecation terms, or current strategy-provider shares."
+  }
+}
