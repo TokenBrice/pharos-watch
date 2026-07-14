@@ -69,4 +69,4 @@ PHAROS_INSTALL_CODEX_HOOKS=1 npm run agent:setup
 npm run agent:doctor
 ```
 
-The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The doctor checks skill discovery, workflow portability, hook installation, and stale local overrides without mutating the checkout.
+The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The doctor checks skill discovery, workflow portability, an installed optional Codex hook config for drift, and stale local overrides without mutating the checkout. It does not warn when the optional Codex hooks are absent.

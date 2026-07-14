@@ -37,7 +37,7 @@ invocation_logs = true
 - `observability.enabled`: enables Worker traces.
 - `head_sampling_rate = 0.1`: samples 10% of traces.
 - `observability.logs.enabled` + `invocation_logs = true`: enables Workers Logs in dashboard.
-- `preview_urls = true`: keeps per-version preview URLs available so CI can smoke an uploaded Worker version before production promotion.
+- `preview_urls = true`: keeps deployment-specific preview URLs available for explicit diagnostics without making them part of the production release gate.
 
 Cron observability has two paths. Terminal job outcomes continue through `logCronRun()` / `cron_runs`; swallowed exceptions that should remain non-fatal use `recordCronFailure()`. Degraded, skipped, fallback, or warning conditions that should survive log retention can call `logCronEvent(db, { job, eventType, severity, message, metadata })`, which writes a latest-event record to the existing cache table under a bounded `cron:event:<job>:<eventType>` key and also emits a structured console line. Use `logCronEvent` for non-terminal operational events rather than adding TODO-backed `console.*` call sites.
 

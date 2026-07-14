@@ -84,7 +84,7 @@ npm run test:merge-gate:discover
 
 `scripts/maintenance/run-merge-gate-discovery.mjs` uses the same diff, deploy-surface classifier, node_modules freshness check, and deploy-impact command plan as `test:merge-gate`, but it is optimized for diagnostics rather than release proof. It runs the reduced blocking `validate:prebuild` surface with `VALIDATE_PREBUILD_CONTINUE_ON_ERROR=1`; advisory prebuild checks stay skipped unless `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1` is set. It then keeps independent postbuild groups running after failures so one pass can expose static-check, build/test, and Worker-validation failures together. Discovery mode skips smoke by default; set `MERGE_GATE_DISCOVERY_SMOKE=1` when smoke failures are the current target, and use `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` to cap local fan-out (default max: 3). Discovery success or failure does not create a release proof, does not write a reusable receipt, and does not replace GitHub Actions as the authoritative release gate.
 
-Pages-impacting files use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation when `test:merge-gate` is run. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, but `shared/` is classified by subpath so known Pages-only helpers do not request Worker validation or promotion. `test:merge-gate` runs Pages browser smoke by default as an intentionally deeper local rehearsal than the deterministic production publish job; Worker smoke remains explicit via `MERGE_GATE_WORKER_SMOKE=1`.
+Pages-impacting files use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation when `test:merge-gate` is run. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, but `shared/` is classified by subpath so known Pages-only helpers do not request Worker validation or deployment. `test:merge-gate` runs Pages browser smoke by default as an intentionally deeper local rehearsal than the deterministic production publish job; Worker smoke remains explicit via `MERGE_GATE_WORKER_SMOKE=1`.
 
 Useful merge-gate controls:
 
@@ -130,7 +130,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
 1. `plan`
    - rejects any ref other than `refs/heads/main`;
-   - diffs `github.event.before...github.sha` for pushes and consumes only `pages_deploy_required` and `worker_promotion_required`;
+   - diffs `github.event.before...github.sha` for pushes and consumes only `pages_deploy_required` and `worker_deploy_required`;
    - treats root `package.json` or `package-lock.json` changes conservatively as both-surface changes instead of parsing lockfile hunks;
    - accepts an explicit manual `surface` choice: `both` (default), `pages`, or `worker`;
    - produces a successful no-op when neither surface needs deployment. There is no separate guard or no-op job.

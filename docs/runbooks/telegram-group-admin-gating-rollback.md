@@ -45,11 +45,11 @@ npx wrangler tail stablecoin-api --format pretty
 
 ## Remediation
 
-1. **Flip to soft.** Patch the group-admin gating mode in `worker/src/api/telegram-webhook.ts`, then follow the standard Worker Versions release flow documented in [deployment-process.md](../deployment-process.md) so the candidate is uploaded, preview-smoked, promoted, and triggers are deployed through the normal path. A Wrangler secret change alone will not affect production because no `TELEGRAM_GROUP_ADMIN_GATING` env binding is read today.
+1. **Flip to soft.** Patch the group-admin gating mode in `worker/src/api/telegram-webhook.ts`, then follow the standard protected release flow documented in [deployment-process.md](../deployment-process.md). That workflow applies migrations, deploys the Worker once with the checked-in configuration, and verifies full activation. A Wrangler secret change alone will not affect production because no `TELEGRAM_GROUP_ADMIN_GATING` env binding is read today.
 
    Verify the next gated command in a non-admin group produces a `warned` row in `telegram_usage_daily` and that the command actually ran (subscribe row written, settings panel rendered, etc.).
 
-2. **Flip back to hard.** Once the upstream cause is fixed, restore the code-level mode to hard/default and use the same Worker Versions release flow.
+2. **Flip back to hard.** Once the upstream cause is fixed, restore the code-level mode to hard/default and use the same protected release flow.
 
    Confirm that the next gated command from a non-admin produces a `denied` row in `telegram_usage_daily` and that the command did not run.
 

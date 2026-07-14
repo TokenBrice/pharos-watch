@@ -102,11 +102,12 @@ Rerun the failing local command first. If the user asked for release/push:
 
 ```bash
 npm run test:merge-gate:discover # for large batches only; diagnostic
-git push origin main
-gh run watch <run-id> --repo TokenBrice/pharos-watch --exit-status
+git push -u origin <fix-branch>
+gh pr create --base main --head <fix-branch>
+gh pr checks <pr-number> --watch
 ```
 
-Run `npm run test:merge-gate` before push only when the user wants an explicit local rehearsal or when you are debugging a local gate failure. `PHAROS_PRE_PUSH_GATE=main git push origin main` opts into the exact-range local gate; otherwise GitHub Actions is authoritative.
+Run `npm run test:merge-gate` before publishing only when the user wants an explicit local rehearsal or when you are debugging a local gate failure. The required GitHub `PR gate` is authoritative. Merge through the protected PR path, then find and watch the resulting `main` deployment; do not push directly to `main`.
 
 If a pushed workflow fails again, repeat from Step 1 with the new run id.
 

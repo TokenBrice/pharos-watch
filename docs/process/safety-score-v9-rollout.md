@@ -205,7 +205,7 @@ V9 activation is an ordinary versioned deployment after all gates pass:
 5. deploy the Worker in which V9 is the sole scorer and canonical publisher;
 6. verify canonical full, compact, fixed-input, and alert publication within
    15 minutes;
-7. publish V9-aware Pages content after the Worker promotion gate; and
+7. publish V9-aware Pages content after the Worker deployment succeeds; and
 8. verify each derived surface as its normal producer refreshes.
 
 Migrations remain additive and backward-compatible with the retained V8

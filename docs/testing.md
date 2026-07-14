@@ -52,7 +52,7 @@ When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` first verifies that
 
 ## CI Pipeline
 
-Workflow YAML is the source of truth. The main validation and deploy files are `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, and `.github/workflows/rebuild-pages.yml`; scheduled/advisory lanes live beside them for CodeQL, Zizmor, dependency audit, Telegram load, critical coverage ratchet, secret scan, Safe Browsing, OG refresh, and the Pharos Change Contract.
+Workflow YAML is the source of truth. The main validation and deploy files are `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, and `.github/workflows/rebuild-pages.yml`; scheduled/advisory lanes live beside them for CodeQL, Zizmor, dependency audit, Telegram load, critical coverage ratchet, secret scan, Safe Browsing, and OG refresh.
 
 For deployment/worktree operating procedure, secrets, rollback, and local merge-gate behavior, see [Deployment Process](./deployment-process.md). This file documents test ownership and runner conventions only.
 

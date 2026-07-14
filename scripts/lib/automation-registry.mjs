@@ -109,7 +109,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
     ],
     sharedExcludedPrefixes: ["shared/data/funding/", "shared/lib/selector/"],
   },
-  workerPromotion: {
+  workerRelease: {
     excludedPaths: ["worker/migrations/MANIFEST.md"],
     exactPaths: [
       "package-lock.json",
@@ -136,9 +136,9 @@ export function findDuplicateDeployImpactExactPaths(registry = DEPLOY_IMPACT_REG
     ["pages.workflowOnlyExactPaths", registry.pages.workflowOnlyExactPaths],
     ["worker", registry.worker.exactPaths],
     ["worker.sharedExcludedPaths", registry.worker.sharedExcludedPaths],
-    ["workerPromotion.excludedPaths", registry.workerPromotion.excludedPaths],
-    ["workerPromotion", registry.workerPromotion.exactPaths],
-    ["workerPromotion.sharedExcludedPaths", registry.workerPromotion.sharedExcludedPaths],
+    ["workerRelease.excludedPaths", registry.workerRelease.excludedPaths],
+    ["workerRelease", registry.workerRelease.exactPaths],
+    ["workerRelease.sharedExcludedPaths", registry.workerRelease.sharedExcludedPaths],
   ];
 
   return groups.flatMap(([group, paths]) => {

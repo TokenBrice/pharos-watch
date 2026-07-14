@@ -1,4 +1,4 @@
 interface:
   display_name: "Pharos Release Runner"
   short_description: "Commit, gate, push, and watch Pharos releases"
-  default_prompt: "Use $pharos-release-runner to commit pending Pharos work in logical batches, run the merge gate, push main, and watch deployment."
+  default_prompt: "Use $pharos-release-runner to commit pending Pharos work in logical batches, publish through the protected main pull-request gate, and watch deployment."

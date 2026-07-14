@@ -131,7 +131,6 @@ describe("validate-ci parity", () => {
       ".github/workflows/deploy-cloudflare.yml",
       ".github/workflows/og-refresh.yml",
       ".github/workflows/pages-release.yml",
-      ".github/workflows/pharos-change-contract.yml",
       ".github/workflows/safe-browsing-monitor.yml",
       ".github/workflows/telegram-load.yml",
       ".github/workflows/validate-ci.yml",
@@ -538,7 +537,7 @@ describe("validate-ci parity", () => {
     const plan = workflow.jobs.plan;
     expect(plan.outputs).toEqual({
       pages_required: "${{ steps.classify.outputs.pages_deploy_required }}",
-      worker_required: "${{ steps.classify.outputs.worker_promotion_required }}",
+      worker_required: "${{ steps.classify.outputs.worker_deploy_required }}",
     });
 
     const worker = workflow.jobs["deploy-worker"];
