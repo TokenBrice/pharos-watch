@@ -191,62 +191,150 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "mMEV is minted by the MMevDepositVault proxy (0xe092…) and two EOAs holding M_MEV_MINT_OPERATOR_ROLE in the shared MidasAccessControl (0x0312…). DEFAULT_ADMIN_ROLE is held by a 1-of-3 Midas Safe and an EOA. Proxy upgrades require a 2-day MidasTimelockController.",
+    "summary": "mMEV has independently mintable deployments on Ethereum, Plume, and Etherlink. A chain-local deposit vault and EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 can mint on every deployment, while EOA 0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2 is an additional Ethereum minter. Each chain's 1-of-3 DEFAULT_ADMIN_ROLE Safe and shared admin EOA can change those grants immediately; proxy upgrades pass through a two-day chain-local timelock.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+        "0x7d611dc23267f508de90724731dc88ca28ef7473",
+        "0x5542f82389b76c23f5848268893234d8a63fd5c8",
+        "0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b",
+        "0xefed40d1eb1577d1073e9c4f277463486d39b084",
+        "0xe092737d412e0b290380f9c8548cb5a58174704f",
+        "0xe6f0c60fca2bd97d633a3d9d49dbefdf19636d8c",
+        "0x577617613c4fac5a7561f8f3f2cb128a560774bc"
+      ],
+      "implementationAddresses": [
+        "0x4fe7f62b2f4ef077aed8f458c8b4652f5de8080f",
+        "0x6d99f338b796359fedd79ff455d9e0749174c309",
+        "0x4640679ce4689f6a7ae4399ff406ac6062ad00cc",
+        "0xdd5a54ba2ab379a5e642c58f98ad793a183960e2",
+        "0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac",
+        "0xefb2e28b69a29a39067b20af633d04a2857a4d9d",
+        "0xac5c4dcd870c835f8943e62ab33cdadba850e5e5",
+        "0xd9371402379e62e83962fe776ba0ff6318eafa00",
+        "0xa064414d41560ea5f858a313977f3f787f96611e"
+      ],
+      "adminAddresses": [
+        "0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac",
+        "0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b",
+        "0xe3eee3e0d2398799c884a47fc40c029c8e241852",
+        "0x2538325446dd80fc49830eea55d9e662b5acc35c",
+        "0x852c4f1beb54acb5360dbdba7ebbe9940a698f76",
+        "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "0xb28078046efa2f0f6637f67ba5d7f36b30dc8b2b",
+        "0xdc208d4a8583663575fa548bf6de224bb5ffc26d"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Midas multichain upgrade path - chain-local 1/3 Safes through 2-day timelocks",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Midas smart contract addresses",
+          "url": "https://docs.midas.app/resources/smart-contracts-addresses"
+        },
+        {
+          "label": "Ethereum mMEV token proxy",
+          "url": "https://etherscan.io/address/0x030b69280892c888670edcdcd8b69fd8026a0bf3"
+        },
+        {
+          "label": "Plume mMEV token proxy",
+          "url": "https://explorer.plume.org/address/0x7d611dc23267f508de90724731dc88ca28ef7473"
+        },
+        {
+          "label": "Etherlink mMEV token proxy",
+          "url": "https://explorer.etherlink.com/address/0x5542f82389b76c23f5848268893234d8a63fd5c8"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
-        "label": "mMEV MMevDepositVault (M_MEV_MINT_OPERATOR_ROLE)",
+        "label": "mMEV multichain deposit-vault minters",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": false,
+        "capDescription": "No on-chain supply cap was identified; each chain-local vault holds M_MEV_MINT_OPERATOR_ROLE.",
         "address": "0xe092737d412e0b290380f9c8548cb5a58174704f",
         "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "ethereum:0xe092737d412e0b290380f9c8548cb5a58174704f",
+          "plume:0xe6f0c60fca2bd97d633a3d9d49dbefdf19636d8c",
+          "etherlink:0x577617613c4fac5a7561f8f3f2cb128a560774bc"
+        ],
+        "observedAt": "2026-07-13",
         "sources": [
           {
-            "label": "MMevDepositVault proxy (Blockscout)",
-            "url": "https://eth.blockscout.com/address/0xe092737d412e0b290380f9c8548cb5a58174704f"
+            "label": "Midas smart contract addresses",
+            "url": "https://docs.midas.app/resources/smart-contracts-addresses"
+          },
+          {
+            "label": "Ethereum mMEV issuance vault",
+            "url": "https://etherscan.io/address/0xe092737d412e0b290380f9c8548cb5a58174704f"
           }
         ],
-        "evidence": "At Ethereum block 25295093, hasRole(M_MEV_MINT_OPERATOR_ROLE=keccak256('M_MEV_MINT_OPERATOR_ROLE')=0x5b9d…, 0xe092…) returned true on MidasAccessControl 0x0312…. Implementation: MMevDepositVault (0xac5c…)."
+        "evidence": "Pinned hasRole state retained deposit-vault proxies 0xe092737d412e0b290380f9c8548cb5a58174704f on Ethereum, 0xe6f0c60fca2bd97d633a3d9d49dbefdf19636d8c on Plume, and 0x577617613c4fac5a7561f8f3f2cb128a560774bc on Etherlink as M_MEV_MINT_OPERATOR_ROLE holders."
       },
       {
         "chain": "ethereum",
-        "label": "mMEV mint operator EOA-1 (M_MEV_MINT_OPERATOR_ROLE)",
+        "label": "mMEV deployment-wide direct-minter EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": false,
+        "capDescription": "No on-chain supply cap was identified; this EOA holds M_MEV_MINT_OPERATOR_ROLE directly on all three chains.",
         "address": "0x2facac0cda0225d7acca792821164b398c26bbd2",
-        "modulesOrGuardsStatus": "none-detected",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "ethereum:0x2facac0cda0225d7acca792821164b398c26bbd2",
+          "plume:0x2facac0cda0225d7acca792821164b398c26bbd2",
+          "etherlink:0x2facac0cda0225d7acca792821164b398c26bbd2"
+        ],
+        "observedAt": "2026-07-13",
         "sources": [
           {
-            "label": "MidasAccessControl RoleGranted logs (Blockscout)",
-            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+            "label": "Ethereum MidasAccessControl",
+            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          },
+          {
+            "label": "Plume MidasAccessControl",
+            "url": "https://explorer.plume.org/address/0xefed40d1eb1577d1073e9c4f277463486d39b084"
+          },
+          {
+            "label": "Etherlink MidasAccessControl",
+            "url": "https://explorer.etherlink.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
           }
         ],
-        "evidence": "At Ethereum block 25295093, hasRole(M_MEV_MINT_OPERATOR_ROLE, 0x2fac…) returned true; eth_getCode = 0x (EOA)."
+        "evidence": "At Ethereum block 25527148, Plume block 80928370, and Etherlink block 48212139, MidasAccessControl retained EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 as a direct M_MEV_MINT_OPERATOR_ROLE holder; exact-block eth_getCode returned no bytecode on each chain."
       },
       {
         "chain": "ethereum",
-        "label": "mMEV mint operator EOA-2 (M_MEV_MINT_OPERATOR_ROLE)",
+        "label": "mMEV Ethereum direct-minter EOA",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": false,
+        "capDescription": "No on-chain supply cap was identified; this EOA holds M_MEV_MINT_OPERATOR_ROLE directly on Ethereum.",
         "address": "0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2",
-        "modulesOrGuardsStatus": "none-detected",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "ethereum:0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527148,
         "sources": [
           {
-            "label": "MidasAccessControl RoleGranted logs (Blockscout)",
-            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+            "label": "Ethereum MidasAccessControl",
+            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
           }
         ],
-        "evidence": "At Ethereum block 25295093, hasRole(M_MEV_MINT_OPERATOR_ROLE, 0x0383…) returned true; eth_getCode = 0x (EOA)."
+        "evidence": "At Ethereum block 25527148, MidasAccessControl retained EOA 0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2 as a direct M_MEV_MINT_OPERATOR_ROLE holder; exact-block eth_getCode returned no bytecode."
       },
       {
         "chain": "ethereum",
-        "label": "Midas DEFAULT_ADMIN_ROLE Safe (1-of-3)",
+        "label": "Midas mMEV multichain DEFAULT_ADMIN_ROLE Safes",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
@@ -254,80 +342,128 @@
         "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
         "threshold": 1,
         "signerCount": 3,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
-          "owners": [
-            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
-            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
-            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
-          ],
-          "threshold": 1,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "version": "1.4.1",
-          "observedBlock": 25295093,
-          "source": "onchain"
+          "source": "manual"
         },
+        "failureDomainKeys": [
+          "ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "plume:0xb28078046efa2f0f6637f67ba5d7f36b30dc8b2b",
+          "etherlink:0xdc208d4a8583663575fa548bf6de224bb5ffc26d"
+        ],
+        "observedAt": "2026-07-13",
         "sources": [
           {
-            "label": "Midas admin Safe (Blockscout)",
-            "url": "https://eth.blockscout.com/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+            "label": "Ethereum Midas admin Safe",
+            "url": "https://etherscan.io/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+          },
+          {
+            "label": "Plume Midas admin Safe",
+            "url": "https://explorer.plume.org/address/0xb28078046efa2f0f6637f67ba5d7f36b30dc8b2b"
+          },
+          {
+            "label": "Etherlink Midas admin Safe",
+            "url": "https://explorer.etherlink.com/address/0xdc208d4a8583663575fa548bf6de224bb5ffc26d"
           }
         ],
-        "evidence": "At Ethereum block 25295093, hasRole(DEFAULT_ADMIN_ROLE=0x0000…, 0xb608…) returned true on MidasAccessControl. getOwners() = 3; threshold = 1; 0 modules; guard = 0x0; Safe v1.4.1."
+        "evidence": "At the pinned chain blocks, DEFAULT_ADMIN_ROLE was held by chain-local 1-of-3 Safes 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 on Ethereum, 0xb28078046efa2f0f6637f67ba5d7f36b30dc8b2b on Plume, and 0xdc208d4a8583663575fa548bf6de224bb5ffc26d on Etherlink. Their owner sets differ by chain; each had three EOA owners, no enabled modules, and a zero guard. The role can change minter grants immediately."
       },
       {
         "chain": "ethereum",
-        "label": "Midas DEFAULT_ADMIN_ROLE EOA",
+        "label": "Midas mMEV multichain DEFAULT_ADMIN_ROLE EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "address": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
-        "modulesOrGuardsStatus": "none-detected",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "ethereum:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+          "plume:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+          "etherlink:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227"
+        ],
+        "observedAt": "2026-07-13",
         "sources": [
           {
-            "label": "MidasAccessControl RoleGranted logs (Blockscout)",
-            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+            "label": "Ethereum MidasAccessControl",
+            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          },
+          {
+            "label": "Plume MidasAccessControl",
+            "url": "https://explorer.plume.org/address/0xefed40d1eb1577d1073e9c4f277463486d39b084"
           }
         ],
-        "evidence": "At Ethereum block 25295093, hasRole(DEFAULT_ADMIN_ROLE, 0xd419…) returned true; eth_getCode = 0x (EOA)."
+        "evidence": "DEFAULT_ADMIN_ROLE event histories and pinned hasRole state retained EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 on all three MidasAccessControl deployments. This authority can immediately grant or revoke M_MEV_MINT_OPERATOR_ROLE independently on each chain."
       },
       {
         "chain": "ethereum",
-        "label": "MidasTimelockController (proxy upgrade guard)",
-        "role": "minter-admin",
-        "authorityType": "contract",
-        "directMintAbility": "can-authorize",
+        "label": "Midas multichain upgrade path - chain-local 1/3 Safes through 2-day timelocks",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
-        "address": "0xe3eee3e0d2398799c884a47fc40c029c8e241852",
+        "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "source": "manual"
+        },
+        "failureDomainKeys": [
+          "ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "plume:0xb28078046efa2f0f6637f67ba5d7f36b30dc8b2b",
+          "etherlink:0xdc208d4a8583663575fa548bf6de224bb5ffc26d"
+        ],
+        "routeChecks": {
+          "signingModel": "Each chain-local upgrade Safe is 1-of-3 with no enabled modules and a zero guard. The owner sets differ by chain, so the failure-domain keys retain each Safe independently.",
+          "rateLimits": "Every current ProxyAdmin is owned by a chain-local MidasTimelockController whose getMinDelay() returned 172800 seconds.",
+          "pausersAdminsUpgraders": "Each local Safe was the timelock's sole proposer, executor, and canceller; the delayed proxy-upgrade route is separate from immediate MidasAccessControl role administration."
+        },
+        "observedAt": "2026-07-13",
         "sources": [
           {
-            "label": "MidasTimelockController (Blockscout)",
-            "url": "https://eth.blockscout.com/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+            "label": "Ethereum MidasTimelockController",
+            "url": "https://etherscan.io/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+          },
+          {
+            "label": "Plume MidasTimelockController",
+            "url": "https://explorer.plume.org/address/0x2538325446dd80fc49830eea55d9e662b5acc35c"
+          },
+          {
+            "label": "Etherlink MidasTimelockController",
+            "url": "https://explorer.etherlink.com/address/0x852c4f1beb54acb5360dbdba7ebbe9940a698f76"
           }
         ],
-        "evidence": "ProxyAdmin (0xbf25…) owner() = 0xe3ee… (MidasTimelockController). getMinDelay() = 172800 s (2 days)."
+        "evidence": "At Ethereum block 25527148, Plume block 80928370, and Etherlink block 48212139, every listed token, access-control, and deposit-vault transparent proxy resolved through its chain-local ProxyAdmin. ProxyAdmin ownership resolved to timelocks 0xe3eee3e0d2398799c884a47fc40c029c8e241852, 0x2538325446dd80fc49830eea55d9e662b5acc35c, and 0x852c4f1beb54acb5360dbdba7ebbe9940a698f76. Each returned getMinDelay() = 172800 and assigned sole proposer, executor, and canceller authority to the corresponding chain-local 1-of-3 Safe."
       }
     ],
     "review": {
-      "evidence": "All five Midas mTokens share MidasAccessControl at 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b. At block 25295093: M_MEV_MINT_OPERATOR_ROLE (0x5b9d…) held by MMevDepositVault proxy 0xe092… and two EOAs (0x2fac…, 0x0383…); DEFAULT_ADMIN_ROLE held by Safe 0xb608… (1-of-3, no modules) and EOA 0xd419…; shared ProxyAdmin gated by 2-day MidasTimelockController.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Pinned chain state was reviewed at Ethereum 25527148, Plume 80928370, and Etherlink 48212139. M_MEV_MINT_OPERATOR_ROLE holders were: Ethereum EOAs 0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2 and 0x2facac0cda0225d7acca792821164b398c26bbd2 plus vault 0xe092737d412e0b290380f9c8548cb5a58174704f; Plume EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 plus vault 0xe6f0c60fca2bd97d633a3d9d49dbefdf19636d8c; Etherlink EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 plus vault 0x577617613c4fac5a7561f8f3f2cb128a560774bc. Every chain also retained its local 1-of-3 Safe and shared EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 as immediate DEFAULT_ADMIN_ROLE holders. All current mint-critical transparent proxies resolved through chain-local ProxyAdmins to two-day timelocks controlled by those local Safes.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
       "sources": [
         {
-          "label": "Midas mMEV docs",
-          "url": "https://docs.midas.app/tokens/mmev"
+          "label": "Midas smart contract addresses",
+          "url": "https://docs.midas.app/resources/smart-contracts-addresses"
         },
         {
           "label": "Sherlock Midas audit (vault/access-control architecture)",
           "url": "https://github.com/sherlock-audit/2024-05-midas"
         },
         {
-          "label": "MidasAccessControl on Ethereum (Blockscout)",
-          "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          "label": "Ethereum MidasAccessControl",
+          "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+        },
+        {
+          "label": "Plume MidasAccessControl",
+          "url": "https://explorer.plume.org/address/0xefed40d1eb1577d1073e9c4f277463486d39b084"
+        },
+        {
+          "label": "Etherlink MidasAccessControl",
+          "url": "https://explorer.etherlink.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
         }
       ]
     }

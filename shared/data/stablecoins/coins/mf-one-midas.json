@@ -114,24 +114,110 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "mF-ONE is a TransparentUpgradeableProxy (Ethereum). Upgrades controlled by ProxyAdmin (0xbf25b58) owned by a MidasTimelockController (2-day delay, controlled by 1/3 Safe 0xb60842e9). Minting via DepositVault (0x41438435) called by Midas backend EOA (0x9419bfcc). MidasAccessControl DEFAULT_ADMIN_ROLE held by 0xb60842e9 Safe and EOA 0xd4195cf4.",
+    "summary": "mF-ONE has two live direct-minter controls on Ethereum: backend EOA 0x4f75307888fd06b16594cc93ed478625ad65eeea and DepositVault proxy 0x41438435c20b1c2f1fca702d387889f346a0c3de. A 1-of-3 Safe and a separate EOA can immediately rotate mint operators through DEFAULT_ADMIN_ROLE. The token, vault, and shared MidasAccessControl proxies share a ProxyAdmin owned by a two-day timelock.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x238a700ed6165261cf8b2e544ba797bc11e466ba",
+        "0x41438435c20b1c2f1fca702d387889f346a0c3de",
+        "0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+      ],
+      "implementationAddresses": [
+        "0x32fb951ce9be3cd9a0a406ea86647a3c7d6406e2",
+        "0xe802e0c7a2a65dd72926aa34c27236c83a80be50",
+        "0xdd5a54ba2ab379a5e642c58f98ad793a183960e2"
+      ],
+      "adminAddresses": [
+        "0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac",
+        "0xe3eee3e0d2398799c884a47fc40c029c8e241852",
+        "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Midas Ethereum upgrade path - 1/3 Safe through 2-day timelock",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25527148,
+      "sources": [
+        {
+          "label": "Midas smart contracts docs",
+          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+        },
+        {
+          "label": "mF-ONE token proxy",
+          "url": "https://eth.blockscout.com/address/0x238a700ed6165261cf8b2e544ba797bc11e466ba"
+        },
+        {
+          "label": "mF-ONE DepositVault proxy",
+          "url": "https://eth.blockscout.com/address/0x41438435c20b1c2f1fca702d387889f346a0c3de"
+        },
+        {
+          "label": "MidasAccessControl proxy",
+          "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+        },
+        {
+          "label": "Midas ProxyAdmin",
+          "url": "https://eth.blockscout.com/address/0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac"
+        },
+        {
+          "label": "MidasTimelockController",
+          "url": "https://eth.blockscout.com/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "Midas issuance backend EOA (DepositVault operator)",
+        "chain": "ethereum",
+        "label": "mF-ONE mint operator EOA",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "evidence": "At Ethereum block 25296044: mint transactions originate from EOA 0x9419bfccf62469dd3abac731cac3fb24f5b8edaf calling DepositVault 0x41438435c20b1c2f1fca702d387889f346a0c3de (e.g. tx 0xdb38d291). MidasAccessControl (0x0312a9d1) grants 0x9419bfcc role 0xd2576bd6 (deposit vault operator). Minting is strictly issuer-controlled."
+        "canRaiseCap": false,
+        "address": "0x4f75307888fd06b16594cc93ed478625ad65eeea",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527148,
+        "sources": [
+          {
+            "label": "MidasAccessControl proxy",
+            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          }
+        ],
+        "evidence": "At Ethereum block 25527148, MidasAccessControl role-state reconstruction and live role checks identified 0x4f75307888fd06b16594cc93ed478625ad65eeea as the current mF-ONE direct-minter EOA."
       },
       {
-        "label": "Midas ProxyAdmin (MidasTimelockController + 1/3 Safe)",
+        "chain": "ethereum",
+        "label": "mF-ONE DepositVault proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "address": "0x41438435c20b1c2f1fca702d387889f346a0c3de",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527148,
+        "sources": [
+          {
+            "label": "mF-ONE DepositVault proxy",
+            "url": "https://eth.blockscout.com/address/0x41438435c20b1c2f1fca702d387889f346a0c3de"
+          },
+          {
+            "label": "MidasAccessControl proxy",
+            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          }
+        ],
+        "evidence": "At Ethereum block 25527148, DepositVault proxy 0x41438435c20b1c2f1fca702d387889f346a0c3de remained a live mF-ONE direct minter; its EIP-1967 implementation was 0xe802e0c7a2a65dd72926aa34c27236c83a80be50."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Midas Ethereum DEFAULT_ADMIN_ROLE Safe",
         "role": "minter-admin",
         "authorityType": "safe",
-        "directMintAbility": "none",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": true,
+        "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
         "threshold": 1,
         "signerCount": 3,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
@@ -141,39 +227,127 @@
           ],
           "threshold": 1,
           "enabledModules": [],
-          "guard": null,
-          "fallbackHandler": null,
-          "version": "1.3.0",
-          "observedBlock": 25296044,
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "version": "1.4.1",
+          "observedBlock": 25527148,
+          "observedAt": "2026-07-13",
           "source": "onchain"
         },
-        "evidence": "ProxyAdmin at 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac (confirmed via EIP-1967 admin slot). ProxyAdmin.owner() = MidasTimelockController 0xe3eee3e0d2398799c884a47fc40c029c8e241852 (2-day min delay). Timelock proposer/executor = Safe 0xb60842e9: getOwners() returns 3 EOA owners; slot[3]=3 (ownerCount), slot[4]=1 (threshold). Safe getModulesPaginated returns empty."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527148,
+        "sources": [
+          {
+            "label": "MidasAccessControl proxy",
+            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          },
+          {
+            "label": "Midas admin Safe",
+            "url": "https://eth.blockscout.com/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+          }
+        ],
+        "evidence": "At Ethereum block 25527148, Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 held DEFAULT_ADMIN_ROLE on MidasAccessControl and could grant or revoke the mF-ONE mint-operator role immediately. This direct role-admin path is distinct from the Safe's two-day timelocked proxy-upgrade path."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Midas Ethereum DEFAULT_ADMIN_ROLE EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527148,
+        "sources": [
+          {
+            "label": "MidasAccessControl proxy",
+            "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+          }
+        ],
+        "evidence": "At Ethereum block 25527148, EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 also held DEFAULT_ADMIN_ROLE and could grant or revoke the mF-ONE mint-operator role without delay."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Midas Ethereum upgrade path - 1/3 Safe through 2-day timelock",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x8003544d32ee074aa8a1fb72129fa8ef7fe02e5f",
+            "0x82b30194beae06d991bc71850f949ec8cb7e0cb7",
+            "0xc50bd8430545c80a681c7cb33e6560fb0bd86880"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "version": "1.4.1",
+          "observedBlock": 25527148,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527148,
+        "sources": [
+          {
+            "label": "Midas admin Safe",
+            "url": "https://eth.blockscout.com/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+          },
+          {
+            "label": "MidasTimelockController",
+            "url": "https://eth.blockscout.com/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+          },
+          {
+            "label": "Midas ProxyAdmin",
+            "url": "https://eth.blockscout.com/address/0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac"
+          }
+        ],
+        "evidence": "At Ethereum block 25527148, all three mint-critical transparent proxies shared ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac. Its owner was MidasTimelockController 0xe3eee3e0d2398799c884a47fc40c029c8e241852 with a 172800-second delay. Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 was the timelock's sole proposer, executor, and canceller; it was 1-of-3 with no enabled modules and a zero guard."
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25296044: mF-ONE at 0x238a700ed6165261cf8b2e544ba797bc11e466ba is a TransparentUpgradeableProxy with impl 0x32fb951ce9be3cd9a0a406ea86647a3c7d6406e2 (mFONE contract extending mTBILL). ProxyAdmin = 0xbf25b58, owned by MidasTimelockController 0xe3eee3e (verified name on Blockscout, 2-day delay, constructor args confirm). Timelock controlled by 1/3 Gnosis Safe 0xb60842e9 (onchain slot reads). MidasAccessControl 0x0312a9d1 (stored at storage slot 0xc9 of token proxy) has DEFAULT_ADMIN_ROLE granted to Safe 0xb60842e9 (hasRole confirmed, never revoked) and EOA 0xd4195cf4. Mint transactions go through DepositVault by EOA 0x9419bfcc.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25527148, the current mF-ONE direct minters were EOA 0x4f75307888fd06b16594cc93ed478625ad65eeea and DepositVault proxy 0x41438435c20b1c2f1fca702d387889f346a0c3de. The previously recorded 0x9419bfccf62469dd3abac731cac3fb24f5b8edaf was only a vault operator, not a live token minter. Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 and EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 each held DEFAULT_ADMIN_ROLE and could immediately change the role set. The complete mint-critical proxy inventory was token 0x238a700ed6165261cf8b2e544ba797bc11e466ba, DepositVault 0x41438435c20b1c2f1fca702d387889f346a0c3de, and shared MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, with implementations 0x32fb951ce9be3cd9a0a406ea86647a3c7d6406e2, 0xe802e0c7a2a65dd72926aa34c27236c83a80be50, and 0xdd5a54ba2ab379a5e642c58f98ad793a183960e2 respectively. Each EIP-1967 admin slot resolved to ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac, owned by the 172800-second Midas timelock. The timelock's sole initiating Safe was 1-of-3 with no enabled modules and a zero guard.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
       "sources": [
         {
-          "label": "mF-ONE proxy on Etherscan",
-          "url": "https://etherscan.io/address/0x238a700ed6165261cf8b2e544ba797bc11e466ba"
+          "label": "Midas smart contracts docs",
+          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
         },
         {
-          "label": "MidasTimelockController on Etherscan",
-          "url": "https://etherscan.io/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+          "label": "mF-ONE token proxy",
+          "url": "https://eth.blockscout.com/address/0x238a700ed6165261cf8b2e544ba797bc11e466ba"
         },
         {
-          "label": "Midas 1/3 admin Safe on Etherscan",
-          "url": "https://etherscan.io/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+          "label": "mF-ONE DepositVault proxy",
+          "url": "https://eth.blockscout.com/address/0x41438435c20b1c2f1fca702d387889f346a0c3de"
         },
         {
-          "label": "Midas docs",
-          "url": "https://docs.midas.app/"
+          "label": "MidasAccessControl proxy",
+          "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
         },
         {
-          "label": "Sherlock Midas audit",
-          "url": "https://github.com/sherlock-audit/2024-05-midas"
+          "label": "Midas ProxyAdmin",
+          "url": "https://eth.blockscout.com/address/0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac"
+        },
+        {
+          "label": "MidasTimelockController",
+          "url": "https://eth.blockscout.com/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+        },
+        {
+          "label": "Midas admin Safe",
+          "url": "https://eth.blockscout.com/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
         }
       ]
     }
