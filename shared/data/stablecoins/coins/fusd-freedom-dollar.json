@@ -20,14 +20,27 @@
   "canBeBlacklisted": false,
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Freedom Dollar do not identify the collateral oracle setup or failure handling.",
-    "reviewedAt": "2026-06-12",
+    "summary": "Freedom Dollar documents one shared, publicly auditable ZANO reserve and decentralized market-making bots around the one-dollar target, but it does not identify an oracle, liquidation engine, or reserve-shortfall procedure.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "FUSD is issued against a shared ZANO reserve and defended by DEX market-making orders rather than borrower-specific collateral positions. The reviewed white paper exposes no separately liquidatable collateral markets, so there are no oracle/liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "Freedom Dollar white paper",
+          "url": "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "limited",
     "sources": [
       {
-        "label": "Freedom Dollar docs",
-        "url": "https://www.freedomdollar.com/en/white-paper"
+        "label": "Freedom Dollar white paper",
+        "url": "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf"
       }
     ]
   },

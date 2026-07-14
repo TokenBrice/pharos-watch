@@ -25,19 +25,44 @@
     "cadence": "real-time"
   },
   "oracleRisk": {
-    "tier": "redundant-with-failover",
-    "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
-    "reviewedAt": "2026-06-12",
+    "tier": "single-source-or-laggy",
+    "summary": "COPm's live Celo USDm/COPm Broker exchange uses one SortedOracles reporter with a 360-second report-expiry window and minimumReports set to one; BreakerBox gates the swap but no second feed or failover path is configured.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "At Celo block 72127154, COPm broker() returned the Mento v2 Broker and BiPoolManager exposed one USDm/COPm exchange using rate feed 0x0196D1F4FdA21fA442e53EaF18Bf31282F6139F1, minimumReports 1, and a 360-second reset/expiry window. SortedOracles had one reporter for that feed. The current Mento reserve API lists active CDP troves only for GBPm, JPYm, and CHFm, not COPm, so COPm has no live borrower-specific oracle/liquidation branch to enumerate.",
+      "sources": [
+        {
+          "label": "Mento BiPoolManager source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/develop/contracts/swap/BiPoolManager.sol"
+        },
+        {
+          "label": "Mento deployment addresses",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+        },
+        {
+          "label": "Mento reserve analytics API",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Mento V3 smart contracts docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        "label": "Mento BiPoolManager source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/develop/contracts/swap/BiPoolManager.sol"
       },
       {
-        "label": "Mento BreakerBox docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        "label": "COPm on Celo Blockscout",
+        "url": "https://celo.blockscout.com/address/0x8a567e2ae79ca692bd748ab832081c45de4041ea"
+      },
+      {
+        "label": "COP/USD rate feed on Celo Blockscout",
+        "url": "https://celo.blockscout.com/address/0x0196D1F4FdA21fA442e53EaF18Bf31282F6139F1"
       }
     ]
   },

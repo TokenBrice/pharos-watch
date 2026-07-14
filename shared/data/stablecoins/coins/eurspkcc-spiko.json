@@ -25,6 +25,44 @@
     "attestorJurisdiction": "France",
     "attestorLicense": "AMF FPS / Alternative Investment Fund"
   },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "EURSPKCC publishes its euro-denominated fund NAV through a permissioned Spiko AggregatorV3-compatible oracle; the fund reports profit and loss daily, so this is a single administrative valuation path rather than a live liquidation feed.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "EURSPKCC represents shares in one professionally managed cash-and-carry fund. Investors submit fund-share redemption requests that an authorized operator executes by burning the shares; they do not open borrower-specific collateral positions, and the reviewed contracts expose no permissionless liquidation markets to split into branches.",
+      "sources": [
+        {
+          "label": "Spiko Cash & Carry product page",
+          "url": "https://www.spiko.io/spiko-cash-and-carry"
+        },
+        {
+          "label": "Spiko redemption contract",
+          "url": "https://github.com/spiko-tech/contracts/blob/main/contracts/token/Redemption.sol"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko production deployment registry",
+        "url": "https://github.com/spiko-tech/contracts/blob/main/.cache-1.json"
+      },
+      {
+        "label": "Spiko oracle contract",
+        "url": "https://github.com/spiko-tech/contracts/blob/main/contracts/oracle/Oracle.sol"
+      },
+      {
+        "label": "Spiko Cash & Carry product page",
+        "url": "https://www.spiko.io/spiko-cash-and-carry"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
