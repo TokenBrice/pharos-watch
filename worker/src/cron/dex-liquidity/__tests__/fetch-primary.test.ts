@@ -301,4 +301,65 @@ describe("buildCurveLookups", () => {
       }),
     ]);
   });
+
+  it("indexes pools by coin-set fingerprint and fails closed on duplicates", async () => {
+    const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
+    const makeApiPool = (address: string, coins: Array<{ symbol: string; address: string }>) => ({
+      address,
+      name: coins.map((coin) => coin.symbol).join("/"),
+      amplificationCoefficient: "1000",
+      coins: coins.map((coin) => ({
+        ...coin,
+        poolBalance: "100000000000",
+        usdPrice: 1,
+        decimals: "6",
+      })),
+      usdTotal: 200_000,
+      isMetaPool: false,
+      assetTypeName: "USD",
+      totalSupply: 0,
+      registryId: "factory-stable-ng",
+      isBroken: false,
+      virtualPrice: "1",
+      usdTotalExcludingBasePool: 0,
+      creationTs: 123,
+      basePoolAddress: null,
+      gaugeCrvApy: null,
+    });
+    const curvePayloads = [
+      {
+        data: {
+          poolData: [
+            makeApiPool("0x1111111111111111111111111111111111111111", [
+              { symbol: "USDC", address: USDC },
+              { symbol: "USDT", address: USDT },
+            ]),
+            // Distinct coin set: fingerprint survives.
+            makeApiPool("0x2222222222222222222222222222222222222222", [
+              { symbol: "USDC", address: USDC },
+              { symbol: "FRAX", address: "0x853d955acef822db058eb8505911ed77f175b99e" },
+            ]),
+            // Same coin set as the first pool: both fingerprints fail closed.
+            makeApiPool("0x3333333333333333333333333333333333333333", [
+              { symbol: "USDC", address: USDC },
+              { symbol: "USDT", address: USDT },
+            ]),
+          ],
+        },
+      },
+    ];
+
+    const { curvePoolMap } = await buildCurveLookups(curvePayloads, new Map(), new Map(), new Map());
+
+    const duplicatedFingerprint = `fp:ethereum:curve:${[USDC, USDT].sort().join(":")}`;
+    expect(curvePoolMap.has(duplicatedFingerprint)).toBe(false);
+    const uniqueFingerprint = `fp:ethereum:curve:${[USDC, "0x853d955acef822db058eb8505911ed77f175b99e"].sort().join(":")}`;
+    expect(curvePoolMap.get(uniqueFingerprint)).toBe(
+      curvePoolMap.get("ethereum:0x2222222222222222222222222222222222222222"),
+    );
+    // Address keys stay intact for all three pools.
+    expect(curvePoolMap.has("ethereum:0x1111111111111111111111111111111111111111")).toBe(true);
+    expect(curvePoolMap.has("ethereum:0x3333333333333333333333333333333333333333")).toBe(true);
+  });
 });

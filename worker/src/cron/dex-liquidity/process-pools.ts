@@ -128,19 +128,30 @@ export function processPoolMetrics(
       const vol1d = pool.volumeUsd1d ?? 0;
       const vol7d = pool.volumeUsd7d ?? 0;
 
-      // Try to find Curve enrichment data (address-based first, symbol-combo fallback)
+      // Try to find Curve enrichment data (address-based first, then the
+      // coin-set fingerprint — DeFiLlama yields rows carry UUID pool ids, so
+      // the address key alone never matches them — then symbol-combo fallback)
       const chainNorm = canonicalExitRouteChain(pool.chain);
       const addrCurveKey = canonicalExitRouteAssetKey(chainNorm, pool.pool);
+      const fpCurveKey =
+        protocol === "curve" ? buildPoolFingerprint(chainNorm, "curve", pool.underlyingTokens ?? []) : null;
       const symCurveKey = `${chainNorm}:${poolSymbols
         .map((s) => s.toUpperCase())
         .sort()
         .join("-")}`;
       const curveData =
-        protocol === "curve" ? (curvePoolMap.get(addrCurveKey) ?? curvePoolMap.get(symCurveKey)) : undefined;
-      // Track whether the match was address-based: metapoolAdjustedTvl is only valid for
-      // the specific Curve pool whose address matched. Symbol fallbacks may hit a different
-      // physical pool sharing the same token pair, so we preserve their own TVL.
-      const curveAddressMatch = curvePoolMap.has(addrCurveKey);
+        protocol === "curve"
+          ? (curvePoolMap.get(addrCurveKey) ??
+            (fpCurveKey != null ? curvePoolMap.get(fpCurveKey) : undefined) ??
+            curvePoolMap.get(symCurveKey))
+          : undefined;
+      // Track whether the match was address-grade (exact address or unambiguous
+      // coin-set fingerprint): metapoolAdjustedTvl and the execution model are only
+      // valid for the specific physical Curve pool that matched. Symbol fallbacks
+      // may hit a different pool sharing the same token pair, so they keep their
+      // own TVL and never carry a model.
+      const curveAddressMatch =
+        curvePoolMap.has(addrCurveKey) || (fpCurveKey != null && curvePoolMap.has(fpCurveKey));
 
       // --- v2: Enhanced quality resolution ---
       let qualMult: number;
