@@ -439,7 +439,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(compiled.assets[0]!.gaps.map((gap) => gap.reasonCode)).toEqual(
       expect.arrayContaining(["missing-pillar-evidence"]),
     );
-    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).toBe("NR");
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
   });
 
   it("marks pure NAV tokens as reviewed not-applicable for fixed-peg scoring", () => {
@@ -886,7 +886,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       ["shutdown-bad-debt", "known"],
     ]);
     expect(oracle.branches.every((branch) => branch.mechanismKey !== null && branch.controlKey === null)).toBe(true);
-    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).toBe("NR");
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
 
     const withoutOracle = buildSafetyScoreV9BaselineExtension(fixed, {
       metaById: new Map([["alpha", { id: "alpha", mechanismArchetype: "cdp" as const }]]),
@@ -948,7 +948,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       economicLossScope: "global-claim",
       incidentState: "unknown",
     });
-    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).toBe("NR");
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
   });
 
   it("does not infer immutable upgradeability from an immutable mint path", () => {

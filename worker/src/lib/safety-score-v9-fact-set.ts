@@ -666,12 +666,16 @@ function normalizeMechanismReview(
       componentEvidenceIds.add(evidenceId);
       continue;
     }
-    const bounded = original.observationState === "stale" || original.observationState === "bounded-unknown";
+    // A missing non-serial component is bounded like a stale or
+    // bounded-unknown one: it scores at the bounded-unknown quality and the
+    // serial-component rule in the evaluator still fails closed when a
+    // required serial claim is absent. Only an unsupported design stays a
+    // critical evidence failure.
     const gapId = addGap(
       context,
       createV9FactGap({
         gapId: `${context.asset.assetId}:gap:mechanism-review:${componentKey}`,
-        reasonCode: bounded ? "bounded-mechanism-review" : "missing-pillar-evidence",
+        reasonCode: original.observationState === "unsupported" ? "missing-pillar-evidence" : "bounded-mechanism-review",
         ownerDomain: "backing",
         policyRuleId: original.applicability.policyRuleId,
         observationState: original.observationState,
@@ -720,7 +724,11 @@ function buildMechanismReview(context: AssetBuildContext): V9MechanismRiskReview
     return {
       status: missingLocalFact(context, {
         componentKey: "mechanism-risk-review",
-        reasonCode: unresolvedArchetype ? "missing-archetype" : "missing-pillar-evidence",
+        // An absent review with a resolved archetype is bounded under the
+        // candidate policy: the backing pillar scores at the bounded-unknown
+        // quality instead of reason-coding NR. Only an unresolved archetype
+        // stays a critical classification failure.
+        reasonCode: unresolvedArchetype ? "missing-archetype" : "bounded-mechanism-review",
         ownerDomain: "backing",
         policyRuleId: "v9.backing.mechanism-review",
         message: unresolvedArchetype

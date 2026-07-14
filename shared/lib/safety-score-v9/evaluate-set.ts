@@ -319,10 +319,11 @@ function resolvedBackingExposures(
     const upstream = evaluatedById.get(dependency.upstreamAssetId);
     const unavailableCode: V9ReasonCode =
       exposure.weight >= threshold ? "material-dependency-unavailable" : "nonmaterial-dependency-unavailable";
-    const reasonCodes =
-      upstream?.trace.finalScore === null
-        ? uniqueSorted([unavailableCode, ...(upstream?.trace.nrReasons.map((reason) => reason.code) ?? [])])
-        : [];
+    // An unrateable basket upstream surfaces only the availability code; its
+    // own NR codes stay on the upstream trace. The exposure score is already
+    // floored at the bounded-unknown quality, and the availability code's
+    // policy treatment (ceiling or diagnostic) bounds the child.
+    const reasonCodes = upstream?.trace.finalScore === null ? [unavailableCode] : [];
     return [
       {
         exposureKey: exposure.exposureKey,
