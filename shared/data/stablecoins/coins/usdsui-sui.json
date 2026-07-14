@@ -150,13 +150,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "Bridge USD reserves (short-dated Treasuries, Treasury repos, government MMFs, and cash)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",

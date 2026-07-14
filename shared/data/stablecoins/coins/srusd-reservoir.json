@@ -67,6 +67,21 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "srUSD (Savingcoin, non-upgradeable) is minted only by Savings Module 0x5475... (MINTER role confirmed). DEFAULT_ADMIN = EOA 0xb7570e32... No proxy/upgrade path. Base rUSD mint authority inherited from Reservoir PSM/Credit Enforcer controls.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        },
+        {
+          "label": "srUSD Ethereum contract",
+          "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31"
+        }
+      ]
+    },
     "inheritedFrom": "rusd-reservoir",
     "controls": [
       {

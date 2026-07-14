@@ -76,6 +76,22 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "cdxUSD uses a GHO-style facilitator bucket model on Base. The active 3/9 Safe facilitator mints within a finite bucket. The owner contract is a TimelockController (24h delay) with the 3/9 Safe as PROPOSER and 1/8 guardian Safe as EXECUTOR. The OFT LayerZero extension is present in code but has zero configured peers — no cross-chain mint surface active.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 48620890,
+      "sources": [
+        {
+          "label": "Sourcify cdxUSD verified source",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi"
+        },
+        {
+          "label": "Base public RPC",
+          "url": "https://base-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "base",

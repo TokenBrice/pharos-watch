@@ -649,23 +649,6 @@
   "infrastructures": [
     "liquity-v2"
   ],
-  "reserves": [
-    {
-      "name": "wstETH (Lido)",
-      "pct": 50,
-      "risk": "low"
-    },
-    {
-      "name": "WETH",
-      "pct": 30,
-      "risk": "very-low"
-    },
-    {
-      "name": "rETH (Rocket Pool)",
-      "pct": 20,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "liquity-v2-branches",
     "version": 2,

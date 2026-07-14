@@ -533,7 +533,11 @@
       "pct": 100,
       "risk": "low",
       "coinId": "m-m0",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M by M0",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -546,11 +550,11 @@
         "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
       }
     ],
-    "rationale": "USD.AI documents USDai as M-backed: supported deposit stablecoins are swapped internally into M, and M is held by the USDai contract. This is a direct 100% reserve-derived collateral relationship rather than a PYUSD dependency.",
+    "rationale": "USD.AI documents USDai as M-backed: supported deposit stablecoins are swapped internally into M, and M is held by the USDai contract. This is a direct 100% reserve-derived collateral relationship rather than a PYUSD dependency; the source does not publish a liquidity horizon or custody-provider split.",
     "compositionBasis": "Documented base backing asset held by the USDai contract",
     "compositionAsOf": "2026-07-14",
-    "scope": "dependency-relationships",
-    "knownUnknownExposure": "No unidentified reserve dependency remains in the documented base-token backing path.",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified reserve asset remains in the documented base-token backing path; custody and liquidity terms are not separately disclosed.",
     "knownUnknownExposurePct": 0
   },
   "liveReservesConfig": {

@@ -19,13 +19,34 @@
   "geckoId": "frankencoin",
   "oracleRisk": {
     "tier": "oracleless-or-internal",
-    "summary": "Frankencoin collateral valuation is auction-driven, freeing liquidations from dependence on an external price oracle.",
-    "reviewedAt": "2026-06-12",
+    "summary": "Frankencoin positions use challenge auctions to determine collateral market price and liquidate unsuccessful positions, so the liquidation path does not depend on an external price oracle.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Frankencoin documents position liquidation through permissionless challenges and auctions. The auction determines the collateral market price and liquidates a position when the highest bid remains below its liquidation price, so there is no collateral-price oracle branch to enumerate.",
+      "sources": [
+        {
+          "label": "Frankencoin collateralized minting",
+          "url": "https://docs.frankencoin.com/positions"
+        },
+        {
+          "label": "Frankencoin challenges and auctions",
+          "url": "https://docs.frankencoin.com/positions/auctions"
+        },
+        {
+          "label": "Frankencoin position opening",
+          "url": "https://docs.frankencoin.com/positions/open"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Frankencoin auction docs",
+        "label": "Frankencoin challenges and auctions",
         "url": "https://docs.frankencoin.com/positions/auctions"
       }
     ]

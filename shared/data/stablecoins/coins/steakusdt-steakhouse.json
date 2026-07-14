@@ -102,16 +102,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "USDT deposited into Steakhouse-curated Morpho lending markets",
-      "pct": 100,
-      "risk": "medium",
-      "coinId": "usdt-tether",
-      "depType": "wrapper",
-      "blacklistable": true
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Steakhouse Morpho USDT vault",
     "yieldType": "lending-vault"

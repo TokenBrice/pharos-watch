@@ -14,6 +14,48 @@
   "collateral": "Over-collateralized by LUA staked at the protocol floor price, plus a diversified stablecoin reserve of USDT and USDC held as protocol-owned liquidity (including Lumi's Curve pool)",
   "pegMechanism": "Lumi's AMO (Algorithmic Market Operations) Protocol mints or redeems LUAUSD to rebalance its Curve pool toward the dollar, with the stablecoin reserve and rising LUA floor price as backing; it is not a hard 1:1 redeemable fiat stablecoin and has traded persistently below $1",
   "mechanismArchetype": "algorithmic",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "LUAUSD uses Lumi's internal bonding-curve, AMO, reserve-backed liquidity, and LUA floor-price mechanics rather than borrower-specific collateral valuation and liquidation oracles.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex ORCL curation batch 24",
+      "rationale": "Lumi documents LUAUSD as an over-collateralized stablecoin mechanism backed by LUA staked at an internal floor price and supported by protocol-owned liquidity. Its minting, reserve-backed AMM, and early-redemption materials describe internal price-curve and treasury operations, not user borrower positions with collateral ratios, oracle-triggered liquidations, liquidation backstops, or shutdown branches.",
+      "sources": [
+        {
+          "label": "Lumi staking and stablecoin documentation",
+          "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin"
+        },
+        {
+          "label": "Lumi reserve-backed AMM documentation",
+          "url": "https://lumi-finance.gitbook.io/docs/how-it-works/reserve-back-amm-mechanism"
+        },
+        {
+          "label": "Lumi LUA minting documentation",
+          "url": "https://lumi-finance.gitbook.io/docs/lua-minting"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ORCL curation batch 24",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Lumi staking and stablecoin documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin"
+      },
+      {
+        "label": "Lumi reserve-backed AMM documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/how-it-works/reserve-back-amm-mechanism"
+      },
+      {
+        "label": "Lumi LUA minting documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/lua-minting"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "lumi-finance-luausd",
   "cmcSlug": "lumi-finance-luausd",

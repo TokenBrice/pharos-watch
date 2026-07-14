@@ -50,6 +50,22 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "GGBR is minted exclusively through the GoldfishTokenFactory contract (MINT_OPERATOR_ROLE + DEFAULT_ADMIN held by a single issuer EOA). The GoldfishToken contract itself is administered by a 2-of-3 Safe that controls setMinterContract() and UUPS upgrades. Redemptions burn through the same factory.",
+    "upgradeability": {
+      "model": "uups",
+      "canChangeMintLogic": true,
+      "controlRef": "GoldfishToken admin Safe — upgrade and minterContract rotation",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "GoldfishToken implementation source",
+          "url": "https://eth.blockscout.com/address/0x35fef16fea897dd6ca2e28041dbfb8d56e2978d6"
+        },
+        {
+          "label": "GoldfishToken admin Safe",
+          "url": "https://etherscan.io/address/0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "GoldfishTokenFactory (minterContract) — issuer EOA operator",

@@ -270,32 +270,6 @@
   },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "USDC backing avUSD 1:1",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    }
-  ],
-  "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex dependency review",
-    "confidence": "verified",
-    "sources": [
-      {
-        "label": "Avant core tokens",
-        "url": "https://docs.avantprotocol.com/overview/core-tokens"
-      }
-    ],
-    "rationale": "Avant documents base avUSD as fully backed 1:1 by USDC and redeemable for USDC. The separate yield strategies and loss-absorption layers apply to staked or boosted token positions and do not support splitting the base-token reserve into estimated strategy shares.",
-    "compositionBasis": "Issuer-documented 1:1 base-token backing",
-    "compositionAsOf": "2026-07-14",
-    "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified reserve exposure remains in the documented avUSD base-token backing path.",
-    "knownUnknownExposurePct": 0
-  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

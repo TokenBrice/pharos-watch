@@ -268,9 +268,82 @@
     {
       "name": "Cash and high-quality dollar reserve assets",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Telcoin Digital Asset Bank and undisclosed reserve counterparties",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Telcoin Digital Asset Bank",
+        "url": "https://bank.telco.in/"
+      },
+      {
+        "label": "Telcoin Digital Cash",
+        "url": "https://www.telco.in/en/digital-cash"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank terms",
+        "url": "https://bank.telco.in/terms-of-use"
+      }
+    ],
+    "rationale": "Telcoin describes eUSD as a bank-issued Digital Dollar connected to traditional banking and payments infrastructure. The reviewed primary sources do not publish current eUSD reserve balances, asset-class weights, named counterparties, or an external assurance report, so the existing 100% aggregate reserve envelope is retained without fabricated subcategories.",
+    "compositionBasis": "Telcoin Digital Asset Bank and Digital Cash issuer disclosures for eUSD",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The full 100% reserve envelope lacks current category weights, named reserve institutions, and assurance evidence. Telcoin states that monthly attestations will be published, but no eUSD report was located in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Cash and high-quality dollar reserve assets",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer describes the reserve envelope but does not publish current eUSD-specific composition or assurance evidence."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Telcoin Digital Asset Bank",
+        "role": "bank",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Undisclosed eUSD reserve counterparties",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Telcoin eUSD token contracts",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Telcoin Digital Asset Bank",
+        "url": "https://bank.telco.in/"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank terms",
+        "url": "https://bank.telco.in/terms-of-use"
+      }
+    ],
+    "uncertainty": "The reviewed sources identify Telcoin's bank-issued framework but do not identify the eUSD reserve accounts, counterparties, legal segregation, bankruptcy treatment, or rehypothecation terms. The profile remains unknown until eUSD-specific reporting is published."
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

@@ -16,6 +16,48 @@
   "collateral": "USDC at mint, then deployed into Monetrix's on-chain Hyperliquid delta-neutral portfolio including spot assets, matching short perpetual positions, portfolio-margin slots, and vault or redeem-escrow USDC. Liquid USDM is the base dollar receipt; strategy yield accrues only via the separate sUSDM wrapper.",
   "pegMechanism": "USDM targets 1:1 USDC convertibility through Monetrix mint/redeem flows while backing is deployed into a delta-neutral Hyperliquid portfolio. The sUSDM staking wrapper accrues strategy yield separately and is not admitted as an active Pharos stablecoin until a maintained price and market-cap runtime source exists.",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "USDM is minted and redeemed 1:1 against USDC while Monetrix deploys backing into a delta-neutral Hyperliquid strategy; it has no user-owned collateral debt or token-level liquidation branch. The reviewed docs do not identify a public strategy price feed or failover path.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex ORCL curation batch 24",
+      "rationale": "Monetrix documents USDM minting by depositing USDC, redemption by burning USDM and claiming USDC after a configured cooldown, and a protocol-managed long-spot/short-perpetual delta-neutral strategy. The reviewed product does not expose borrower-specific collateral positions, collateral ratios, liquidation auctions, backstops, or shutdown branches for USDM; the remaining strategy valuation and operational feed details are retained as opaque rather than invented.",
+      "sources": [
+        {
+          "label": "Monetrix mint USDM documentation",
+          "url": "https://doc.monetrix.xyz/guide/mint"
+        },
+        {
+          "label": "Monetrix redeem USDM documentation",
+          "url": "https://doc.monetrix.xyz/guide/redeem"
+        },
+        {
+          "label": "Monetrix delta-neutral strategy documentation",
+          "url": "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ORCL curation batch 24",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Monetrix mint USDM documentation",
+        "url": "https://doc.monetrix.xyz/guide/mint"
+      },
+      {
+        "label": "Monetrix redeem USDM documentation",
+        "url": "https://doc.monetrix.xyz/guide/redeem"
+      },
+      {
+        "label": "Monetrix delta-neutral strategy documentation",
+        "url": "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy"
+      }
+    ]
+  },
   "launchDate": "2026-06-10",
   "geckoId": "monetrix-usd",
   "proofOfReserves": {

@@ -1,0 +1,80 @@
+{
+  "id": "nusd-nexus",
+  "reserves": [
+    {
+      "name": "Synapse nexus-pool stablecoin liquidity basket (DAI, USDC, and USDT)",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Maker, Circle, and Tether through the Synapse nexus pool",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Synapse documentation",
+        "url": "https://docs.synapseprotocol.com/"
+      },
+      {
+        "label": "DefiLlama NUSD reserve reference",
+        "url": "https://wiki.defillama.com/wiki/NUSD"
+      }
+    ],
+    "rationale": "NUSD is the Synapse nexus-pool LP token and its documented reserve model is a basket of DAI, USDC, and USDT liquidity. The reviewed sources do not publish a current asset-value snapshot or a defensible weight split, so the former 34% / 33% / 33% allocation is represented as one identified basket.",
+    "compositionBasis": "Synapse NUSD pool architecture and reserve disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The underlying stablecoin categories are identified, but current pool balances, issuer-level weights, reserve custody, and redemption liquidity are not independently evidenced.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Synapse nexus-pool stablecoin liquidity basket (DAI, USDC, and USDT)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The reserve categories are named, but no current balance report supports individual DAI, USDC, and USDT percentages.",
+        "candidateCoinIds": ["dai-makerdao", "usdc-circle", "usdt-tether"]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Synapse nexus pool contracts",
+        "role": "other"
+      },
+      {
+        "name": "DAI, USDC, and USDT issuers and reserve custodians",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Synapse documentation",
+        "url": "https://docs.synapseprotocol.com/"
+      },
+      {
+        "label": "DefiLlama NUSD reserve reference",
+        "url": "https://wiki.defillama.com/wiki/NUSD"
+      }
+    ],
+    "uncertainty": "NUSD is a legacy on-chain liquidity asset. The reviewed materials do not identify custody accounts, issuer-level reserve protections, segregation, bankruptcy treatment, or rehypothecation terms for the basket.",
+    "knownUnknownExposurePct": 100
+  }
+}

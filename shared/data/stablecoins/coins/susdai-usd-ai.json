@@ -207,45 +207,119 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "inheritedFrom": "usdai-usd-ai",
-    "summary": "sUSDai (EIP-1967 upgradeable proxy) upgrade path secured by 48-hour TimelockController owned by a 3-of-3 Safe multisig (0x783b08...). Shares minted only by USDai deposit — no privileged mint. Wrapper upgrade path confirmed as timelock-gated multisig.",
+    "summary": "sUSDai shares mint only against deposited USDai, so the wrapper inherits USDai's reviewed four-chain mint authority. The wrapper proxies on Ethereum, Arbitrum, Base, and Plasma share a ProxyAdmin owned by chain-local 48-hour timelocks whose proposer is a 3-of-3 Safe.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+      ],
+      "implementationAddresses": [
+        "0x30198aa66d057a6216db471fce234b98edc1e5ad",
+        "0x23783ee86db1a05dfc6dc2f042606a92c97a374c",
+        "0xe306eca9a60376d2a82f40c8e1882e2ef1c8f4cc"
+      ],
+      "adminAddresses": [
+        "0x0b3296b6f50611b28d466a6d5a49754dad4d8d9f",
+        "0x0eea1ee08611ff4a4e83bfe3916712751995639b"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "sUSDai four-chain upgrade timelocks",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Ethereum sUSDai proxy",
+          "url": "https://eth.blockscout.com/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+        },
+        {
+          "label": "Arbitrum sUSDai proxy",
+          "url": "https://arbitrum.blockscout.com/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+        },
+        {
+          "label": "Base sUSDai proxy",
+          "url": "https://base.blockscout.com/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+        },
+        {
+          "label": "Plasma sUSDai proxy",
+          "url": "https://plasmascan.to/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "sUSDai staking vault (EIP-1967 upgradeable proxy, Ethereum)",
+        "label": "sUSDai four-chain deposit-mint vaults",
         "role": "wrapper",
-        "authorityType": "multisig",
+        "authorityType": "contract",
         "directMintAbility": "none",
-        "chain": "ethereum",
         "address": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
         "canRaiseCap": false,
-        "modulesOrGuardsStatus": "none-detected",
-        "threshold": 3,
-        "signerCount": 3,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "USD.AI docs",
             "url": "https://docs.usd.ai"
           },
           {
-            "label": "sUSDai Ethereum contract",
-            "url": "https://etherscan.io/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
-          },
-          {
-            "label": "USD.AI TimelockController",
-            "url": "https://etherscan.io/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b"
+            "label": "Ethereum sUSDai proxy",
+            "url": "https://eth.blockscout.com/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9"
           }
         ],
-        "evidence": "At Ethereum block 25295219: EIP-1967 proxy admin slot = 0x0b3296b6f50611b28d466a6d5a49754dad4d8d9f (ProxyAdmin); impl slot = 0x30198aa66d057a6216db471fce234b98edc1e5ad. ProxyAdmin owner() = 0x0eea1ee08611ff4a4e83bfe3916712751995639b (TimelockController, minDelay = 172800 s = 48 h, DEFAULT_ADMIN_ROLE confirmed). Timelock creation events at block 24993318: PROPOSER_ROLE, CANCELLER_ROLE, EXECUTOR_ROLE granted to Safe 0x783b08aa21de056717173f72e04be0e91328a07b; EXECUTOR_ROLE also granted to SafeProxy 0x5f0bc72fb5952b2f3f2e11404398ed507b25841f (same 3 owners, threshold 3). Safe getOwners() = [0xe982b3f..., 0x986868c..., 0xd1affe2...], getThreshold() = 3. sUSDai shares minted only by USDai deposit."
+        "evidence": "Current EIP-1967 reads on all four tracked chains resolve the sUSDai proxy to chain-local implementations and the same-address ProxyAdmin. The reviewed wrapper exposes deposit-backed share issuance rather than a separate privileged base-asset mint path."
       },
       {
-        "label": "Inherited USDai permissioned mint authority",
+        "label": "Inherited USDai four-chain mint authority",
         "role": "minter-admin",
         "authorityType": "contract",
-        "directMintAbility": "none",
-        "canRaiseCap": "unknown",
-        "evidence": "Underlying USDai is minted 1:1 by KYC'ed institutions via the USDai deposit() contract under role-based access (STRATEGY_ADMIN_ROLE multisig, BRIDGE_ADMIN_ROLE). sUSDai inherits this concentrated-admin posture from the parent."
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "failureDomainKeys": [
+          "asset:usdai-usd-ai"
+        ],
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Sourcify USDai OToken implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad?fields=sources"
+          },
+          {
+            "label": "Arbitrum USDai hub implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
+          }
+        ],
+        "evidence": "The parent USDai review resolves the Arbitrum hub, satellite DEFAULT_ADMIN Safes, OBridge contracts, and their mint and upgrade authorities across Ethereum, Arbitrum, Base, and Plasma. sUSDai inherits that parent supply-creation risk because every wrapper share is a claim on USDai."
+      },
+      {
+        "label": "sUSDai four-chain upgrade timelocks",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 172800,
+        "failureDomainKeys": [
+          "safe:ethereum:0x783b08aa21de056717173f72e04be0e91328a07b",
+          "safe:arbitrum:0x783b08aa21de056717173f72e04be0e91328a07b",
+          "safe:base:0x783b08aa21de056717173f72e04be0e91328a07b",
+          "safe:plasma:0x783b08aa21de056717173f72e04be0e91328a07b"
+        ],
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Ethereum sUSDai ProxyAdmin",
+            "url": "https://eth.blockscout.com/address/0x0b3296b6f50611b28d466a6d5a49754dad4d8d9f"
+          },
+          {
+            "label": "Ethereum USD.AI timelock",
+            "url": "https://eth.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b"
+          }
+        ],
+        "evidence": "At Ethereum block 25530817, Arbitrum block 483761478, Base block 48620982, and Plasma block 27090959, every sUSDai proxy admin slot returned 0x0b3296...d9f. Each ProxyAdmin owner returned the chain-local 0x0eea...639b timelock, each timelock returned a 172800-second delay, and each proposer Safe at 0x783b...a07b returned the same three owners with threshold 3."
       }
     ],
     "review": {
@@ -263,9 +337,9 @@
           "url": "https://etherscan.io/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b"
         }
       ],
-      "evidence": "At Ethereum block 25295219: sUSDai proxy upgrade path = ProxyAdmin → 48-hour TimelockController → 3-of-3 Safe. No privileged mint on the wrapper; shares minted only by USDai deposit. Exit-queue parameters controlled by same Safe via Timelock (cannot mint base USDai). Parent USDai mint path tracked separately.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Current RPC reads resolve the sUSDai wrapper's four chain-local proxy paths as ProxyAdmin -> 48-hour timelock -> 3-of-3 proposer Safe. Wrapper shares mint only against deposited USDai, while the parent USDai review supplies the complete inherited four-chain mint graph.",
+      "reviewer": "Codex V9 control curation",
+      "reviewedAt": "2026-07-14"
     }
   },
   "launchDate": "2025-05-23",

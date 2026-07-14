@@ -202,14 +202,6 @@
       }
     ]
   },
-  "reserves": [
-    {
-      "name": "MXN-denominated Etherfuse Stablebonds / CETES exposure",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "cetes-etherfuse"
-    }
-  ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",

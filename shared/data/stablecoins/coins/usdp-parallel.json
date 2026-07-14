@@ -19,7 +19,24 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Parallel USDp prices backing assets with Chainlink, RedStone, DIA fundamental feeds, exchange-rate feeds, and per-asset stale periods, without documented failover.",
-    "reviewedAt": "2026-06-12",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Parallel USDp is minted, burned, and redeemed through the Parallelizer Module against a DAO-whitelisted basket priced at oracle value. The reviewed implementation exposes no borrower-specific debt positions, collateral health checks, or liquidation engine for USDp holders; asset depeg handling uses adaptive mint/burn fees and proportional redemption instead of CDP liquidation branches.",
+      "sources": [
+        {
+          "label": "Parallel USDp implementation",
+          "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation"
+        },
+        {
+          "label": "Parallelizer Module",
+          "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [

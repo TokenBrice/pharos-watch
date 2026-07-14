@@ -23,6 +23,40 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "Noble USDN is an M0-backed Noble deployment; base M issuance remains on the Ethereum MinterGateway and Noble movement uses M0 portal infrastructure.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x83ae82bd4054e815fb7b189c39d9ce670369ea16"
+      ],
+      "implementationAddresses": [
+        "0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4"
+      ],
+      "adminAddresses": [
+        "0x7176665e336e8692e9b265ab6290934c93f99ccf"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "M0 Noble Portal",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Noble Portal on Etherscan",
+          "url": "https://etherscan.io/address/0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16#code"
+        },
+        {
+          "label": "Noble Portal verified HubPortal implementation",
+          "url": "https://eth.blockscout.com/address/0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4"
+        },
+        {
+          "label": "Noble Portal owner Safe",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x7176665e336e8692e9b265ab6290934c93f99ccf/"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

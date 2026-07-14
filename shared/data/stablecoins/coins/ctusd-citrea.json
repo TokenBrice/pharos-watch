@@ -268,7 +268,11 @@
       "pct": 100,
       "risk": "low",
       "coinId": "m-m0",
-      "depType": "mechanism"
+      "depType": "mechanism",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M by M0",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {

@@ -1,0 +1,73 @@
+{
+  "id": "susd-hedgecore",
+  "reserves": [
+    {
+      "name": "USDC / Venus Protocol lending strategy",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Circle USDC, HedgeCore StrategyRouter, and Venus Protocol",
+      "riskFactors": ["counterparty", "liquidity", "custody", "smart-contract", "market"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "HedgeCore protocol architecture",
+        "url": "https://docs.hedgecore.io/docs/whitepaper/protocol-architecture"
+      },
+      {
+        "label": "HedgeCore yield generation",
+        "url": "https://docs.hedgecore.io/docs/protocol/yield-generation"
+      },
+      {
+        "label": "HedgeCore hUSDC wrapper",
+        "url": "https://docs.hedgecore.io/docs/protocol/husdc-wrapper"
+      }
+    ],
+    "rationale": "HedgeCore documents a USDC deposit path through StakeableAsset and StrategyRouter into a Venus USDC vault, where the vUSDC lending position accrues yield. The full reserve remains one linked USDC protocol-position slice; the issuer does not publish current vault balances or a further strategy allocation that would support a split.",
+    "compositionBasis": "Current HedgeCore protocol-architecture and yield-generation documentation",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The direct reserve relationship is USDC routed through the documented HedgeCore and Venus path. Current vUSDC balances, liquidity, and contract allocation detail are not published as a durable composition.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "HedgeCore StrategyRouter and Venus USD vault contracts",
+        "role": "other",
+        "jurisdiction": "BNB Chain"
+      },
+      {
+        "name": "Venus Protocol",
+        "role": "other",
+        "jurisdiction": "BNB Chain"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "HedgeCore protocol architecture",
+        "url": "https://docs.hedgecore.io/docs/whitepaper/protocol-architecture"
+      },
+      {
+        "label": "HedgeCore yield generation",
+        "url": "https://docs.hedgecore.io/docs/protocol/yield-generation"
+      }
+    ],
+    "uncertainty": "HedgeCore identifies on-chain routing and the Venus lending destination, but does not publish legal custody safeguards, current position shares, provider allocations, or fixed liquidity terms."
+  }
+}

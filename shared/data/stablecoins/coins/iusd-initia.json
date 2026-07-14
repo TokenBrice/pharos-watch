@@ -67,9 +67,82 @@
       "pct": 100,
       "risk": "low",
       "coinId": "ausd-agora",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Agora AUSD and the Initia LayerZero AUSD0 OFT",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Initia iusd-vault resources",
+        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+      },
+      {
+        "label": "Initia iUSD/AUSD0 route resources",
+        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
+      },
+      {
+        "label": "Agora AUSD reserve report - May 31, 2026",
+        "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+      },
+      {
+        "label": "LayerZero AUSD deployment announcement",
+        "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
+      }
+    ],
+    "rationale": "Initia's official iusd-vault and AUSD0 OFT resources show that iUSD is minted 1:1 only after the local AUSD0 representation is delivered and deposited. The direct reserve dependency is therefore the existing 100% Agora AUSD slice. Agora's reserve report is reviewed on the upstream AUSD record; this wrapper has no separate reserve report.",
+    "compositionBasis": "Official Initia vault/OFT relationship and documented 1:1 AUSD dependency",
+    "compositionAsOf": "2026-07-14",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "No unidentified direct stablecoin dependency remains in the iUSD wrapper path. The underlying AUSD composition and its 3.66% unidentified stablecoin sub-slice remain reviewed on the upstream AUSD asset.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Initia iusd-vault and AUSD0 OFT contracts",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "Agora AUSD reserve structure",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Agora Reserve Fund LP and regulated reserve counterparties",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Initia iusd-vault resources",
+        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+      },
+      {
+        "label": "Agora AUSD reserve report - May 31, 2026",
+        "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+      },
+      {
+        "label": "Agora reserve transparency index",
+        "url": "https://docs.agora.finance/developer/transparency"
+      }
+    ],
+    "uncertainty": "The iUSD wrapper is held through Initia and LayerZero contracts, while reserve custody and assurance are inherited from AUSD. Initia does not publish a dedicated legal custody or proof-of-reserves report for the wrapper, so segregation, bankruptcy remoteness, and rehypothecation are not asserted here."
+  },
   "mintAuthority": {
     "mintPath": "bridge-or-oft-synthetic",
     "authorityPosture": "partially-bounded-admin",

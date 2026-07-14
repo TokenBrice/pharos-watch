@@ -135,6 +135,21 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "STAC uses issuer-administered native token issuance on Ethereum and Solana. The reviewed Ethereum DSToken issueTokens functions are gated by an issuer-operated EOA owner; the later Solana deployment remains within Securitize's regulated issuance platform.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x77684815f44b28726bc3efa4471b88ef3b93feb0/sources/contracts/token/DSToken.sol"
+        },
+        {
+          "label": "Etherscan STAC contract",
+          "url": "https://etherscan.io/address/0x51c2d74017390cbbd30550179a16a1c28f7210fc"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

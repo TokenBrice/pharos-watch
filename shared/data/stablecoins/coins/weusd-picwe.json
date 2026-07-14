@@ -191,13 +191,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Disputed USDC versus USDT/MOVE backing disclosure",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "notices": [
     {
       "type": "warning",

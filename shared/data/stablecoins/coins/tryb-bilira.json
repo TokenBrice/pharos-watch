@@ -370,13 +370,6 @@
       ]
     }
   },
-  "reserves": [
-    {
-      "name": "TRY cash reserves",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

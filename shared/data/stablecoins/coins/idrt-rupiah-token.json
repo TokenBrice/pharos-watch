@@ -151,13 +151,6 @@
     ]
   },
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "IDR bank deposits",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

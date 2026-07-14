@@ -111,6 +111,45 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "EURSAFO is the EUR share class of Spiko's AMF-authorized UCITS fund. Tokens are minted by Spiko's daily-operator relayer contracts (two UUPS proxies) under a PermissionManager (custom RBAC), with a Gnosis Safe 1.4.1 (8/3) as the super-admin that controls upgrades and permission assignments.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+        "0x344278aff344d6fb960705dc18a4912221608472",
+        "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "0xe4880249745eac5f1ed9d8f7df844792d560e750"
+      ],
+      "implementationAddresses": [
+        "0x13ae01cbce8530012516fbc1273803d4995aee71",
+        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e",
+        "0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
+      ],
+      "adminAddresses": [
+        "0x4eaa52b6280593a8820c45ce38f974290ae52cea"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Spiko super-admin Safe (8/3, UUPS upgrade + permission admin)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        },
+        {
+          "label": "EURSAFO contract on Etherscan",
+          "url": "https://etherscan.io/address/0x0990b149e915cb08e2143a5c6f669c907eddc8b0#code"
+        },
+        {
+          "label": "PermissionManager on Etherscan",
+          "url": "https://etherscan.io/address/0x344278aff344d6fb960705dc18a4912221608472#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Spiko daily-operator minter contracts (two UUPS proxies)",

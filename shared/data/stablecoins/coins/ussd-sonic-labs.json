@@ -297,24 +297,43 @@
       "name": "WTGXX (WisdomTree Government Money Market)",
       "pct": 54.1,
       "risk": "low",
-      "coinId": "wtgxx-wisdomtree"
+      "coinId": "wtgxx-wisdomtree",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "WisdomTree Government Money Market Digital Fund",
+      "riskFactors": ["duration", "liquidity", "counterparty", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "USTB (Superstate tokenized T-bills)",
       "pct": 29.9,
       "risk": "low",
-      "coinId": "ustb-superstate"
+      "coinId": "ustb-superstate",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Superstate USTB and United States Treasury",
+      "riskFactors": ["duration", "liquidity", "counterparty", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "BUIDL (BlackRock tokenized T-bills)",
       "pct": 14.2,
       "risk": "low",
-      "coinId": "buidl-blackrock"
+      "coinId": "buidl-blackrock",
+      "depType": "collateral",
+      "assetClass": "other",
+      "issuerOrObligor": "BlackRock BUIDL and institutional repo counterparties",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "USDB (Bridge)",
       "pct": 1.8,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Bridge Building Inc. and its reserve counterparties",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -346,6 +365,55 @@
         "rationale": "The source identifies USDB, but the tracked USDB record is inactive and must not be promoted into the active dependency graph."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Frax Protocol reserve contracts",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "WisdomTree Government Money Market Digital Fund",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "The Bank of New York Mellon",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "BlackRock BUIDL fund and service providers",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax balance-sheet API",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      },
+      {
+        "label": "WisdomTree WTGXX product page",
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+      },
+      {
+        "label": "Superstate USTB product page",
+        "url": "https://superstate.com/ustb"
+      },
+      {
+        "label": "Securitize BUIDL product disclosure",
+        "url": "https://investors.securitize.io/news/news-details/2024/BlackRock-Launches-Its-First-Tokenized-Fund-BUIDL-on-the-Ethereum-Network-03-20-2024/default.aspx"
+      }
+    ],
+    "uncertainty": "The reviewed sources identify regulated fund and protocol reserve participants, including BNY Mellon for USTB and BUIDL-related fund services, but do not provide reserve-by-provider shares or a unified legal custody agreement for USSD. The 1.8% USDB row is identified but intentionally remains outside the active dependency graph."
   },
   "liveReservesConfig": {
     "adapter": "frax-balance-sheet",

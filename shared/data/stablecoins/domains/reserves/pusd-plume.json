@@ -1,0 +1,54 @@
+{
+  "id": "pusd-plume",
+  "reserves": [
+    {
+      "name": "USDC (via Nucleus BoringVault)",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, Inc.",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Plume USD documentation",
+        "url": "https://docs.plume.org/plume/tokens/plume-usd"
+      }
+    ],
+    "rationale": "Plume documents pUSD as a non-interest-bearing wrapper backed 1:1 by USDC in a BoringVault, redeemable for USDC at a 1:1 ratio, with collateral risk consisting entirely of reliance on Circle's USDC. The sole reserve slice therefore maps directly to the tracked USDC asset.",
+    "compositionBasis": "Current Plume issuer documentation for pUSD reserve composition and redemption",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unresolved reserve constituent exposure in the issuer-documented single-asset composition.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Plume-managed Nucleus BoringVault contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Plume USD documentation",
+        "url": "https://docs.plume.org/plume/tokens/plume-usd"
+      }
+    ],
+    "uncertainty": "Plume identifies the on-chain BoringVault and states that it is managed by Plume, but the public documentation does not establish legal segregation, bankruptcy remoteness, or rehypothecation terms.",
+    "knownUnknownExposurePct": 0
+  }
+}

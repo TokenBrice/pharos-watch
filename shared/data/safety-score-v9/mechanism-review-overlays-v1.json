@@ -16,6 +16,25 @@
         "collateralizationParameters": { "quality": "adequate" },
         "liquidationMechanics": { "quality": "adequate" }
       }
+    },
+    {
+      "assetId": "lusd-liquity",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-14",
+      "sources": [
+        { "label": "Liquity V1 TroveManager 0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2 (getTCR, getEntireSystemColl, getEntireSystemDebt, MCR, CCR, checkRecoveryMode)", "url": "https://etherscan.io/address/0xa39739ef8b0231dbfa0dcda07d7e29faabcf4bb2#readContract" },
+        { "label": "Liquity V1 StabilityPool 0x66017D22b0f8556afDd19FC67041899Eb65a21bb (getTotalLUSDDeposits)", "url": "https://etherscan.io/address/0x66017d22b0f8556afdd19fc67041899eb65a21bb#readContract" },
+        { "label": "Liquity V1 PriceFeed 0x4c517D4e2C851CA76d7eC94B805269Df0f2201De (lastGoodPrice)", "url": "https://etherscan.io/address/0x4c517d4e2c851ca76d7ec94b805269df0f2201de#readContract" },
+        { "label": "Ethereum PublicNode RPC used for the eth_call reads at block 25530791", "url": "https://ethereum-rpc.publicnode.com" },
+        { "label": "Liquity V1 documentation (110% MCR, Stability Pool liquidation, redistribution fallback)", "url": "https://docs.liquity.org/liquity-v1/faq/stability-pool-and-liquidations" },
+        { "label": "Liquity V1 documentation (150% CCR / Recovery Mode)", "url": "https://docs.liquity.org/liquity-v1/faq/recovery-mode" }
+      ],
+      "notes": "Measured on-chain 2026-07-14 at Ethereum block 25530791 via eth_call. The contract graph was derived on-chain from the LUSD token (troveManagerAddress(), stabilityPoolAddress(), then TroveManager.priceFeed()) rather than from a published address list. TroveManager.getTCR(PriceFeed.lastGoodPrice() = 1780.21673094 USD/ETH) returned 4.776, which cross-checks exactly against getEntireSystemColl() 73,493.400 ETH valued at that price ($130,834,180) over getEntireSystemDebt() 27,391,435.164 LUSD. StabilityPool.getTotalLUSDDeposits() of 7,627,015.234 LUSD over the same debt gives a liquidation capacity ratio of 0.278; LUSD totalSupply() equals getEntireSystemDebt() exactly at this block, so the ratio is identical against supply. checkRecoveryMode() was false, MCR 110%, CCR 150%. Collateralization parameters and liquidation mechanics are documented, immutable protocol design reviewed against the V1 docs. Backstop, branch isolation, shutdown/bad-debt, and structural redemption are left bounded-unknown pending a dedicated review, even though redistribution-to-Troves and permissionless redemption are documented features: the Stability Pool covers only 27.8% of system debt, and the redistribution fallback that absorbs the remainder has not been reviewed here.",
+      "metrics": { "collateralizationRatio": 4.776, "liquidationCapacityRatio": 0.278 },
+      "components": {
+        "collateralizationParameters": { "quality": "adequate" },
+        "liquidationMechanics": { "quality": "adequate" }
+      }
     }
   ]
 }

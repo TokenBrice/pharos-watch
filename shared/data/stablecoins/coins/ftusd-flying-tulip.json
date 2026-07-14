@@ -16,6 +16,32 @@
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "flying-tulip-usd",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "Flying Tulip documents ftUSD as an on-chain dollar designed around delta-neutral strategies and explicitly states that ftUSD and sftUSD use no oracles or centralized systems. Strategy venues and risk controls can change, but the token itself is not a borrower-owned collateral market with an oracle-triggered liquidation branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 oracle review",
+      "rationale": "Flying Tulip describes ftUSD as a delta-neutral stablecoin wrapper with on-chain strategy deposits, optional staking, and a staged CDP-style roadmap item rather than a live borrower-owned collateral market. The official product documentation explicitly states that ftUSD and sftUSD use no oracles, so there is no current token-level liquidation branch to inventory.",
+      "sources": [
+        {
+          "label": "Flying Tulip ftUSD product documentation",
+          "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 oracle review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Flying Tulip ftUSD product documentation",
+        "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://flyingtulip.com/ftusd/dashboard/",

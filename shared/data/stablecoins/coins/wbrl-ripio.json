@@ -222,6 +222,53 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "WBRL is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+      ],
+      "implementationAddresses": [
+        "0xfbab5dcb1647787ec8402a6509add256fa6c7f9d"
+      ],
+      "adminAddresses": [
+        "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Ripio shared WBRL admin and MINTER_ROLE holder (EOA)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Ethereum WBRL proxy and verified UUPS implementation",
+          "url": "https://etherscan.io/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0#code"
+        },
+        {
+          "label": "WBRL implementation source",
+          "url": "https://etherscan.io/address/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d#code"
+        },
+        {
+          "label": "Ethereum, Base, BSC, Polygon, and Gnosis PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base.publicnode.com"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor.publicnode.com"
+        },
+        {
+          "label": "Gnosis PublicNode RPC",
+          "url": "https://gnosis.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "multichain",

@@ -233,18 +233,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "U.S. Treasury Bills (Janus Henderson sub-advised)",
-      "pct": 97,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash and equivalents",
-      "pct": 3,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 1,

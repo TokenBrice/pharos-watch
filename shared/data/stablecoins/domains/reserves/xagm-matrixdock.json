@@ -1,0 +1,38 @@
+{
+  "id": "xagm-matrixdock",
+  "reserves": [
+    {
+      "name": "Physical silver bars (LBMA Good Delivery, Asian vault custody)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "LBMA-accredited Good Delivery physical silver",
+      "riskFactors": ["market", "custody", "liquidity", "counterparty"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [{"label": "Matrixdock XAGm", "url": "https://www.matrixdock.com/xagm"}],
+    "rationale": "Matrixdock reports total supply, physical bullion weight, and bar count, and states that XAGm is backed by 99.9% LBMA-accredited Good Delivery silver stored in Asia. It also identifies Bureau Veritas physical audits and vault asset statements.",
+    "compositionBasis": "Matrixdock live bullion and supply disclosure",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete direct reserve asset is physical silver; the reviewed page does not provide a vault-by-vault allocation.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [{"name": "Asian bullion vaults (not publicly named)", "role": "custodian"}],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [{"label": "Matrixdock XAGm", "url": "https://www.matrixdock.com/xagm"}],
+    "uncertainty": "Matrixdock identifies reputable Asian vaults and Bureau Veritas physical audits but does not name the custodians or publish segregation, insolvency, rehypothecation, or vault-share terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

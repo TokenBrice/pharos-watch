@@ -208,13 +208,6 @@
   ],
   "custodyModel": "institutional-regulated",
   "deploymentModel": "native-multichain",
-  "reserves": [
-    {
-      "name": "Canadian dollar trust reserves",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

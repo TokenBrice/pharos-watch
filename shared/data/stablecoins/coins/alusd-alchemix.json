@@ -20,13 +20,34 @@
   "oracleRisk": {
     "tier": "oracleless-or-internal",
     "summary": "Alchemix alUSD loans are self-repaying and non-liquidating, so the CDP path does not rely on an external liquidation oracle.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex ORCL curation batch 15",
+      "rationale": "Alchemix documents alUSD loans as self-repaying and non-liquidating. A borrower may self-liquidate by repaying debt with collateral, but the protocol does not forcibly liquidate borrower positions, so there is no market-specific oracle and collateral-liquidation branch to enumerate.",
+      "sources": [
+        {
+          "label": "Alchemix user docs",
+          "url": "https://v2-docs.alchemix.fi/"
+        },
+        {
+          "label": "Alchemix Alchemist overview",
+          "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemist"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ORCL curation batch 15",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Alchemix V2 docs",
+        "label": "Alchemix user docs",
         "url": "https://v2-docs.alchemix.fi/"
+      },
+      {
+        "label": "Alchemix Alchemist overview",
+        "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemist"
       }
     ]
   },

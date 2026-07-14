@@ -221,13 +221,6 @@
     }
   },
   "custodyModel": "institutional-top",
-  "reserves": [
-    {
-      "name": "Physical gold bars (LBMA Good Delivery, Brink's London vaults)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

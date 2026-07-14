@@ -24,7 +24,26 @@
     "provider": "Brale Inc. management self-assertion",
     "attestorTier": "self",
     "cadence": "monthly",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-04",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Brale Inc. management",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "USDGLO reserve report - May 2026",
+          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-05-2026.pdf"
+        },
+        {
+          "label": "Brale USDGLO transparency",
+          "url": "https://brale.xyz/stablecoins/USDGLO"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -253,18 +272,6 @@
       "reviewedAt": "2026-07-14"
     }
   },
-  "reserves": [
-    {
-      "name": "Cash and cash equivalents",
-      "pct": 62.79,
-      "risk": "very-low"
-    },
-    {
-      "name": "U.S. government-backed debt",
-      "pct": 37.21,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

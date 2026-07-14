@@ -144,50 +144,136 @@
       "pct": 39,
       "risk": "medium",
       "coinId": "usdc-circle",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "YO Protocol and whitelisted Morpho vaults",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "Auto Finance (autoUSD, baseUSD)",
       "pct": 21,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Auto Finance and YO Protocol",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Aave markets (sGHO)",
       "pct": 4.5,
       "risk": "medium",
-      "coinId": "sgho-aave"
+      "coinId": "sgho-aave",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Aave Protocol (sGHO)",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "Aave markets (RLUSD)",
       "pct": 4.5,
       "risk": "medium",
-      "coinId": "rlusd-ripple"
+      "coinId": "rlusd-ripple",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Ripple (RLUSD); YO Protocol",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "InfiniFi liUSD (1-week lock)",
       "pct": 8,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "InfiniFi and YO Protocol",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
+      "liquidityHorizon": "over-seven-days",
+      "maturityDaysMax": 7
     },
     {
       "name": "Liquid USDC buffer (undeployed)",
       "pct": 7,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial (USDC); YO Protocol",
+      "riskFactors": ["counterparty", "liquidity", "custody"],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "Avantis avUSDC (perpetuals collateral)",
       "pct": 6,
       "risk": "high",
       "coinId": "usdc-circle",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Avantis and YO Protocol",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Other DeFi (Fluid, Resolv RLP, Euler, Revert Lend)",
       "pct": 10,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "YO Protocol and other whitelisted DeFi venues",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "YO Protocol FAQ",
+        "url": "https://docs.yo.xyz/welcome-to-yo/faq"
+      },
+      {
+        "label": "YO protocol documentation",
+        "url": "https://docs.yo.xyz/protocol/yo-protocol"
+      },
+      {
+        "label": "YO vault and allocation API documentation",
+        "url": "https://docs.yo.xyz/integrations/api"
+      }
+    ],
+    "rationale": "YO documents yoUSD as a USDC-denominated ERC-4626 vault that rebalances across whitelisted DeFi pools using risk-adjusted allocation. The existing eight-slice registry envelope is retained unchanged and each slice is classified by its documented protocol or stablecoin exposure; changing live weights are not inferred from a static source.",
+    "compositionBasis": "YO yoUSD underlying-asset and strategy-allocation disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reviewed envelope covers the recorded strategy categories, but current pool weights within the dynamic categories and legal custody safeguards are not fixed by the public documentation.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "YO Protocol vaults and yoGateway",
+        "role": "other"
+      },
+      {
+        "name": "YO-whitelisted DeFi protocols and cross-chain venues",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "YO Protocol FAQ",
+        "url": "https://docs.yo.xyz/welcome-to-yo/faq"
+      },
+      {
+        "label": "YO protocol risks",
+        "url": "https://docs.yo.xyz/protocol/risks"
+      }
+    ],
+    "uncertainty": "YO identifies its vaults and whitelisted DeFi strategy venues but does not establish statutory segregation, bankruptcy remoteness, or provider shares. Rehypothecation is marked permitted because the vault actively deploys deposits into lending and other DeFi strategies."
+  },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
     "version": 1,

@@ -1,0 +1,104 @@
+{
+  "id": "usdo-openeden",
+  "reserves": [
+    {
+      "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
+      "pct": 79.7,
+      "risk": "very-low",
+      "coinId": "tbill-openeden",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "OpenEden Digital and United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody", "counterparty", "smart-contract"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "BlackRock BUIDL (tokenized money market fund)",
+      "pct": 9.7,
+      "risk": "low",
+      "coinId": "buidl-blackrock",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "smart-contract"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Ripple USD (RLUSD) cash-equivalent buffer",
+      "pct": 7.7,
+      "risk": "low",
+      "coinId": "rlusd-ripple",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Ripple USD issuer and its reserve custodians",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "VanEck VBILL (tokenized U.S. T-bill fund)",
+      "pct": 2.8,
+      "risk": "low",
+      "coinId": "vbill-vaneck",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "VanEck and United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody", "counterparty", "smart-contract"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USDC redemption buffer",
+      "pct": 0.1,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, Inc.",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "OpenEden USDO reserve composition API",
+        "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+      },
+      {
+        "label": "OpenEden USDO reserve assets",
+        "url": "https://docs.openeden.com/usdo/usdo-token/reserve-assets"
+      }
+    ],
+    "rationale": "The issuer reserve API reports current USD values for TBILL, BUIDL, RLUSD, VBILL, and USDC. The displayed weights are the official adapter's one-decimal normalization of those values; zero-balance USYC, BENJI, and pending-USDC fields do not create slices.",
+    "compositionBasis": "OpenEden issuer reserve API asset values normalized by total reserve assets",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All positive reserve components reported by the issuer API are identified.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "OpenEden Digital reserve custodians and asset issuers",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "OpenEden USDO reserve composition API",
+        "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+      },
+      {
+        "label": "OpenEden USDO reserve assets",
+        "url": "https://docs.openeden.com/usdo/usdo-token/reserve-assets"
+      }
+    ],
+    "uncertainty": "OpenEden's current reserve API identifies the asset holdings but does not identify the reserve account custodians, provider shares, legal segregation, bankruptcy remoteness, or rehypothecation terms for the USDO portfolio.",
+    "knownUnknownExposurePct": 100
+  }
+}

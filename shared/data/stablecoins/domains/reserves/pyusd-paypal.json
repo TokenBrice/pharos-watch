@@ -2,23 +2,23 @@
   "id": "pyusd-paypal",
   "reserves": [
     {
+      "name": "Cash held for authorized token holders",
+      "pct": 8.66,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Commercial banks; individual institutions not disclosed",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
       "name": "Overnight reverse repurchase agreements collateralized by U.S. Treasury obligations",
       "pct": 91.34,
       "risk": "very-low",
       "assetClass": "repo",
-      "issuerOrObligor": "Two undisclosed U.S. bank counterparties",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "issuerOrObligor": "Selected commercial banks and broker-dealers; Treasury obligations as collateral",
+      "riskFactors": ["counterparty", "liquidity", "custody"],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 3
-    },
-    {
-      "name": "Cash in demand deposit accounts",
-      "pct": 8.66,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed U.S. commercial banks",
-      "riskFactors": ["counterparty", "custody", "concentration"],
-      "liquidityHorizon": "immediate"
+      "maturityDaysMax": 1
     }
   ],
   "reserveReview": {
@@ -31,31 +31,33 @@
         "url": "https://framerusercontent.com/assets/99N5QwJCmGdSIzUsGoGdLXxYI0.pdf"
       },
       {
-        "label": "Paxos PYUSD transparency",
-        "url": "https://www.paxos.com/pyusd-transparency"
+        "label": "PayPal Cryptocurrency Terms - PYUSD reserves",
+        "url": "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc?locale.x=en_US%5C"
       }
     ],
-    "rationale": "KPMG's May examination reports $2.768410 billion of overnight reverse repurchase agreements and $262.423747 million of cash against $3.030833747 billion of redemption assets at May 29, 2026. Those amounts normalize to 91.34% repo and 8.66% cash; no direct Treasury bills or government money market funds were held.",
+    "rationale": "The KPMG-examined PYUSD Redemption Assets Report as of May 29, 2026 reports $262,423,747 of cash and $2,768,410,000 of repurchase agreements, for total redemption assets of $3,030,833,747. The report states that the repo agreements mature overnight, are overcollateralized by U.S. Treasury obligations, and may not be sold or repledged. The two reported asset types normalize to 8.66% and 91.34%.",
     "compositionBasis": "KPMG examination of the PYUSD Redemption Assets Report as of May 29, 2026",
     "compositionAsOf": "2026-05-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "No material asset-class exposure is unclassified; the report anonymizes the two repo counterparties and commercial banks.",
+    "knownUnknownExposure": "The report identifies the complete asset-type composition. Individual commercial-bank and broker-dealer counterparties are anonymized, but no reserve asset class is unclassified.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "U.S. commercial banks (not individually disclosed)",
-        "role": "bank"
+        "name": "Paxos Trust Company, N.A. and qualified custodians or sub-custodians",
+        "role": "custodian",
+        "jurisdiction": "United States"
       },
       {
-        "name": "Repo custodian or sub-custodian (not publicly identified)",
-        "role": "custodian"
+        "name": "Commercial banks and broker-dealers; individual providers not disclosed",
+        "role": "other",
+        "jurisdiction": "United States"
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "contractual-only",
-    "rehypothecation": "prohibited",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
@@ -63,8 +65,12 @@
       {
         "label": "KPMG PYUSD Redemption Assets Report - May 2026",
         "url": "https://framerusercontent.com/assets/99N5QwJCmGdSIzUsGoGdLXxYI0.pdf"
+      },
+      {
+        "label": "PayPal Cryptocurrency Terms - PYUSD reserves",
+        "url": "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc?locale.x=en_US%5C"
       }
     ],
-    "uncertainty": "The report confirms segregated, unencumbered reserves and prohibits sale or repledge of repo collateral, but anonymizes the commercial banks, counterparties, and custodian and does not establish statutory bankruptcy remoteness."
+    "uncertainty": "The report establishes segregated, unencumbered redemption assets held for PYUSD token holders and prohibits selling or repledging the securities collateralizing the repo agreements. It does not identify every custodian or counterparty or establish bankruptcy remoteness for each reserve account; the custody posture is therefore conditional for the mixed cash and repo envelope."
   }
 }

@@ -241,15 +241,6 @@
   "governanceQuality": "single-entity",
   "deploymentModel": "single-chain",
   "chainTier": "ethereum",
-  "reserves": [
-    {
-      "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
-      "pct": 100,
-      "risk": "very-low",
-      "coinId": "m-m0",
-      "depType": "wrapper"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,

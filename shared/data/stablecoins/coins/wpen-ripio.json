@@ -207,13 +207,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Peruvian-sol cash and local-currency liquid instruments",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "notices": [
     {
       "type": "info",

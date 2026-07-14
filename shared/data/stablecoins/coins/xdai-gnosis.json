@@ -234,7 +234,9 @@
         "source": "docs",
         "name": "Gnosis xDAI Bridge",
         "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
-        "bridgeTypes": ["lockAndMint"],
+        "bridgeTypes": [
+          "lockAndMint"
+        ],
         "note": "Canonical Gnosis-native, global-scope bridge representation secured by a 4-of-7 validator network; native xDAI has no ERC-20 contract address for a deployment-row join."
       }
     ],
@@ -257,15 +259,6 @@
       }
     ]
   },
-  "reserves": [
-    {
-      "name": "USDS backing through Gnosis bridge infrastructure",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "usds-sky",
-      "depType": "wrapper"
-    }
-  ],
   "notices": [
     {
       "type": "info",

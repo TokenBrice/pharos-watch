@@ -171,13 +171,6 @@
     }
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Physical gold bars (LBMA-certified 99.99%, Brink's & Malca-Amit, Singapore & Hong Kong)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 1,

@@ -93,13 +93,6 @@
       "message": "Goal3 documents zkUSD as algorithmically over-collateralized by assets held in the sportsbook, but the specific accepted collateral assets and collateralization ratio are not published. The only documented holder exit is 1:1 redemption to USDC through the Goal3 Portal."
     }
   ],
-  "reserves": [
-    {
-      "name": "Goal3 sportsbook collateral pool (composition not disclosed)",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",

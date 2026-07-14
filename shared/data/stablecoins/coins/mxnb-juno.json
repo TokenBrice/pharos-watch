@@ -190,9 +190,74 @@
     {
       "name": "MXN fiat reserves and cash-equivalents at Mexican financial institutions",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed Mexican financial institutions and MXNB issuer",
+      "riskFactors": ["counterparty", "liquidity", "custody", "concentration", "legal"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "MXNB transparency",
+        "url": "https://mxnb.mx/transparency"
+      },
+      {
+        "label": "MXNB issuer page",
+        "url": "https://mxnb.mx/"
+      },
+      {
+        "label": "MXNB whitepaper",
+        "url": "https://mxnb.mx/whitepaper.pdf"
+      }
+    ],
+    "rationale": "MXNB's current transparency page reports 35.3 million MXN of reserves and 34.8 million MXNB in circulation as of July 1, 2026, and states that quarterly third-party assurance reports cover MXN reserves versus circulation. The reviewed page does not expose a reserve asset split or the underlying institution names, so the existing 100% MXN fiat and cash-equivalent envelope is retained as one bank-deposit slice.",
+    "compositionBasis": "MXNB issuer transparency balance disclosure and whitepaper reserve policy",
+    "compositionAsOf": "2026-07-01",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve class is identified as MXN fiat and cash-equivalents, but the current page does not identify bank counterparties, account structure, or a category split within that envelope.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed Mexican financial institutions",
+        "role": "bank",
+        "jurisdiction": "Mexico"
+      },
+      {
+        "name": "MXNB issuer and reserve-management entities",
+        "role": "custodian",
+        "jurisdiction": "El Salvador"
+      },
+      {
+        "name": "MXNB token contracts",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "MXNB transparency",
+        "url": "https://mxnb.mx/transparency"
+      },
+      {
+        "label": "MXNB whitepaper",
+        "url": "https://mxnb.mx/whitepaper.pdf"
+      }
+    ],
+    "uncertainty": "MXNB describes fiat and cash-equivalent reserves and periodic third-party assurance but does not name the custodial institutions or establish legal segregation, bankruptcy remoteness, or rehypothecation treatment in the reviewed public sources."
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

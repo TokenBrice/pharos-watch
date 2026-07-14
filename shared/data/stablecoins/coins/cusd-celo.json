@@ -225,41 +225,69 @@
       "name": "AUSD (Agora Dollar)",
       "pct": 27,
       "risk": "low",
-      "coinId": "ausd-agora"
+      "coinId": "ausd-agora",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Agora Finance",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "sUSDS (Sky savings USDS)",
       "pct": 24.2,
       "risk": "low",
-      "coinId": "susds-sky"
+      "coinId": "susds-sky",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky Protocol",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "CELO",
       "pct": 17.6,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Celo Network",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "USDT",
       "pct": 13,
       "risk": "low",
-      "coinId": "usdt-tether"
+      "coinId": "usdt-tether",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether",
+      "riskFactors": ["counterparty", "custody", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "EURC (Circle euro stablecoin)",
       "pct": 11.9,
       "risk": "low",
-      "coinId": "eurc-circle"
+      "coinId": "eurc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": ["counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "USDC",
       "pct": 4,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": ["counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "stETH (Lido staked ETH)",
       "pct": 2.3,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Lido DAO",
+      "riskFactors": ["market", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {

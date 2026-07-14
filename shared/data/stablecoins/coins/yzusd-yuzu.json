@@ -25,15 +25,40 @@
     "cadence": "real-time"
   },
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Yuzu Money documents RedStone yzUSD/syzUSD feeds and lists Chainlink, Pyth, and RedStone for underlying strategy oracles, without failover handling documented.",
-    "reviewedAt": "2026-06-12",
+    "tier": "oracleless-or-internal",
+    "summary": "Yuzu documents yzUSD as a pooled, overcollateralized product minted and redeemed against USDT0, with yzPP as a first-loss tranche; it does not describe borrower-owned collateral positions with oracle-triggered liquidations.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Yuzu describes yzUSD as a senior pool tranche minted against pooled backing assets and protected by the separate yzPP first-loss pool. Minting, redemption, and loss absorption are pool-level operations rather than borrower-specific debt positions with collateral-ratio liquidations, so no liquidation-oracle branch applies to yzUSD.",
+      "sources": [
+        {
+          "label": "Yuzu Money overview",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money"
+        },
+        {
+          "label": "Yuzu Protection Pool",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/yuzu-protection-pool-yzpp"
+        },
+        {
+          "label": "Yuzu stablecoin app",
+          "url": "https://app.yuzu.money/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Yuzu oracles",
-        "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/oracles.md"
+        "label": "Yuzu Protection Pool",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/yuzu-protection-pool-yzpp"
+      },
+      {
+        "label": "Yuzu staked yzUSD wrapper",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/staked-yzusd-syzusd"
       }
     ]
   },

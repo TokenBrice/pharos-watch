@@ -24,19 +24,52 @@
     "cadence": "real-time"
   },
   "oracleRisk": {
-    "tier": "redundant-with-failover",
-    "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
-    "reviewedAt": "2026-06-12",
+    "tier": "standard-external",
+    "summary": "Mento's current Celo oracle-priced stable paths use external rate sources through OracleAdapter/SortedOracles and BreakerBox validity gates. XOFm is documented as an oracle-priced FPMM asset rather than a borrower-CDP asset.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Mento's current Celo guide explicitly places XOFm on the oracle-priced FPMM path, not the collateralized CDP path. The current reserve API reports no active XOFm troves. There is therefore no current XOFm borrower-specific liquidation branch to inventory under V9.",
+      "sources": [
+        {
+          "label": "Mento stable assets on Celo",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento stable token contracts",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+        },
+        {
+          "label": "Mento FPMM oracles and circuit breakers",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+        },
+        {
+          "label": "Mento reserve analytics API",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Mento V3 smart contracts docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        "label": "Mento stable assets on Celo",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       },
       {
-        "label": "Mento BreakerBox docs",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        "label": "Mento stable token contracts",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+      },
+      {
+        "label": "Mento FPMM oracles and circuit breakers",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+      },
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       }
     ]
   },

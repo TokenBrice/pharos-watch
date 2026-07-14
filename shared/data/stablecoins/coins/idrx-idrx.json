@@ -239,13 +239,6 @@
   "custodyModel": "institutional-unregulated",
   "collateralQuality": "rwa",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "IDR fiat reserves and government bonds",
-      "pct": 100,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

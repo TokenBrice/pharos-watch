@@ -200,6 +200,30 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "rUSD issuance runs through Reservoir PSMs and the Credit Enforcer. Both the PSM and Credit Enforcer share the same DEFAULT_ADMIN_ROLE holder: Reservoir EOA 0xb7570e32.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Reservoir USDC Peg Stability Module",
+          "url": "https://eth.blockscout.com/address/0x4809010926aec940b550d34a46a52739f996d75d"
+        },
+        {
+          "label": "Reservoir Credit Enforcer",
+          "url": "https://eth.blockscout.com/address/0x04716db62c085d9e08050fcf6f7d775a03d07720"
+        },
+        {
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        },
+        {
+          "label": "Reservoir GitHub",
+          "url": "https://github.com/reservoir-protocol/reservoir"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

@@ -123,6 +123,26 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "ACRDX is a permissioned NAV-accreting fund share issued by Anemoy via Centrifuge rails; primary subscriptions and redemptions are KYC-gated at fund NAV. On Ethereum, the Centrifuge ShareToken is warded by a Root contract (0x7ed4...368f), a Spoke contract (0xec35...25ab), and a BalanceSheet (0x12a1...43e); the Root is governed by a Centrifuge ProtocolGuardian (0xceb7...35c6) backed by a 4/9 Safe multisig (0x9711...7d225). On Plume and Monad, the same Spoke is the sole ward (Root not deployed separately on those chains — consistent with Centrifuge cross-chain architecture).",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Ethereum Blockscout ACRDX ShareToken",
+          "url": "https://eth.blockscout.com/address/0x9477724bb54ad5417de8baff29e59df3fb4da74f?tab=contract"
+        },
+        {
+          "label": "Centrifuge protocol source",
+          "url": "https://github.com/centrifuge/protocol-v3"
+        },
+        {
+          "label": "Centrifuge Spoke architecture",
+          "url": "https://docs.centrifuge.io/developer/protocol/architecture/spoke/"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Anemoy / Centrifuge fund issuance authority",

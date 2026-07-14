@@ -193,6 +193,22 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "HLSCOPE is a Securitize DSToken on Ethereum, Polygon, and Optimism. All three chains share the same EOA owner (0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee), confirmed EOA on all three chains. Polygon uses an EIP-1967 proxy; Optimism also uses a proxy. No permissionless mint route exists.",
+    "upgradeability": {
+      "model": "uups",
+      "canChangeMintLogic": true,
+      "controlRef": "HLSCOPE token owner (EOA, all chains)",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Securitize HLSCOPE",
+          "url": "https://securitize.io/primary-market/hl-scope"
+        },
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

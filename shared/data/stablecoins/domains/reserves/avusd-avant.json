@@ -1,0 +1,59 @@
+{
+  "id": "avusd-avant",
+  "reserves": [
+    {
+      "name": "USDC backing avUSD 1:1",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, Inc.",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Avant core tokens",
+        "url": "https://docs.avantprotocol.com/overview/core-tokens"
+      }
+    ],
+    "rationale": "Avant documents base avUSD as fully backed 1:1 by USDC and redeemable for USDC. The separate yield strategies and loss-absorption layers apply to staked or boosted token positions and do not support splitting the base-token reserve into estimated strategy shares.",
+    "compositionBasis": "Issuer-documented 1:1 base-token backing",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified reserve exposure remains in the documented avUSD base-token backing path.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Avant Protocol MPC custody wallets",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Avant secure asset management",
+        "url": "https://docs.avantprotocol.com/security/secure-asset-management"
+      },
+      {
+        "label": "Avant reserve fund",
+        "url": "https://docs.avantprotocol.com/security/reserve-fund"
+      }
+    ],
+    "uncertainty": "Avant describes institutional-grade multi-provider MPC wallets and a reserve fund, but does not name custody providers, publish provider shares, or establish legal segregation, bankruptcy remoteness, or rehypothecation terms for the avUSD USDC backing.",
+    "knownUnknownExposurePct": 100
+  }
+}

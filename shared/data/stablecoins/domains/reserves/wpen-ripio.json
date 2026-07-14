@@ -1,0 +1,80 @@
+{
+  "id": "wpen-ripio",
+  "reserves": [
+    {
+      "name": "Peruvian-sol cash and local-currency liquid instruments",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Ripio-affiliated wFIAT issuer and undisclosed Peruvian reserve institutions",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Ripio wFIAT whitepaper",
+        "url": "https://www.ripio.com/en/assets/wars/whitepaper"
+      }
+    ],
+    "rationale": "Ripio's current local-stablecoin disclosure describes wrapped local tokens as backed by liquid instruments denominated in the local currency. The wFIAT framework and the existing wPEN record identify Peruvian-sol cash or liquid instruments, but no reliable public wPEN-specific attestation, current balance, instrument split, or reserve-provider allocation was located.",
+    "compositionBasis": "Ripio wFIAT local-stablecoin framework applied to wPEN; token-specific reserve allocation is undisclosed",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve currency and broad instrument class are identified, but current balances, instrument weights, bank identities, and token-specific attestation evidence are unavailable.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Peruvian-sol cash and local-currency liquid instruments",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Ripio does not publish a current wPEN reserve inventory or a defensible split of the Peruvian-sol reserve instruments."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed Peruvian reserve institutions",
+        "role": "bank",
+        "jurisdiction": "Peru"
+      },
+      {
+        "name": "Ripio-affiliated wFIAT issuer",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Ripio wFIAT whitepaper",
+        "url": "https://www.ripio.com/en/assets/wars/whitepaper"
+      }
+    ],
+    "uncertainty": "The public wFIAT materials do not identify the wPEN reserve bank, custody legal structure, provider shares, or rehypothecation terms."
+  }
+}

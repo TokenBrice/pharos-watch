@@ -209,11 +209,80 @@
     {
       "name": "USDT deposited in Spark Savings vault",
       "pct": 100,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "wrapper"
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Spark Liquidity Layer / Sky ecosystem",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex reserve curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Spark Savings",
+        "url": "https://sparkprotocol.io/"
+      },
+      {
+        "label": "Spark Vaults V2 source",
+        "url": "https://github.com/sparkdotfi/spark-vaults-v2"
+      },
+      {
+        "label": "Spark Data Hub",
+        "url": "https://data.spark.fi/savings/"
+      }
+    ],
+    "rationale": "Spark documents spUSDT as an ERC-4626 Savings V2 position whose permissioned Spark Liquidity Layer taker deploys assets into yield strategies. The 100% slice identifies the vault position, while the current strategy allocation is not published as a spUSDT-specific percentage breakdown.",
+    "compositionBasis": "Spark Savings V2 product and vault documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current Spark Liquidity Layer strategy mix and redemption asset allocation are not published for this vault as a percentage table.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USDT deposited in Spark Savings vault",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Spark confirms the vault and the SLL deployment role, but does not publish a current spUSDT-specific split across lending, RWA, cash, or other strategies.",
+        "candidateCoinIds": [
+          "usdt-tether"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Spark Liquidity Layer",
+        "role": "other",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex reserve curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Spark Vaults V2 source",
+        "url": "https://github.com/sparkdotfi/spark-vaults-v2"
+      },
+      {
+        "label": "Spark Documentation Portal",
+        "url": "https://docs.spark.fi/"
+      }
+    ],
+    "uncertainty": "SLL is explicitly permitted to pull vault liquidity into yield strategies, but the current venue-level custody, segregation, insolvency, and strategy allocation details are not published for spUSDT as a complete portfolio."
+  },
   "yieldConfig": {
     "yieldSource": "Spark Savings USDT",
     "yieldType": "nav-appreciation"

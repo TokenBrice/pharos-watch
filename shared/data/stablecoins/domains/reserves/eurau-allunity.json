@@ -1,0 +1,82 @@
+{
+  "id": "eurau-allunity",
+  "reserves": [
+    {
+      "name": "EUR cash and permitted HQLA reserve basket at EU CRR credit institutions",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed EU CRR credit institutions and permitted HQLA issuers",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AllUnity trust center",
+        "url": "https://allunity.com/trust-center"
+      },
+      {
+        "label": "EURAU white paper v1.3",
+        "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf"
+      },
+      {
+        "label": "AllUnity redemption policy",
+        "url": "https://allunity.com/redemption-policy"
+      }
+    ],
+    "rationale": "AllUnity describes EURAU as fully backed by reserves at EU CRR credit institutions with segregated custody. Its white paper permits EUR cash and secure low-risk HQLAs in separate accounts and describes insolvency remoteness and 1:1 redemption; current cash/HQLA and bank shares are undisclosed.",
+    "compositionBasis": "AllUnity EURAU trust-center and white-paper reserve envelope; current cash/HQLA and bank weights are undisclosed",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The full reserve envelope is identified, but current cash/HQLA mix, bank identities, provider shares, maturities, and rehypothecation terms are not disclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "EUR cash and permitted HQLA reserve basket at EU CRR credit institutions",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Current EUR cash versus HQLA weights and bank/provider shares are not published."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed EU CRR credit institutions",
+        "role": "bank",
+        "jurisdiction": "European Union"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AllUnity trust center",
+        "url": "https://allunity.com/trust-center"
+      },
+      {
+        "label": "EURAU white paper v1.3",
+        "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf"
+      }
+    ],
+    "uncertainty": "AllUnity discloses EU CRR credit-institution custody and segregation, and the white paper describes insolvency remoteness; bank identities, provider shares, and rehypothecation terms are not disclosed."
+  }
+}

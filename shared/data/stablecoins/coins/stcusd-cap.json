@@ -24,6 +24,32 @@
     "confidence": "verified",
     "summary": "stcUSD is an ERC-4626 UUPS wrapper over Cap cUSD. Wrapper minting is deposit/share accounting with no privileged mint path; upgrade authority routes through Cap's AccessControl → 24-hour TimelockController (0 proposers/executors = fully renounced). Wrapper is effectively immutable; durable cUSD mint authority is inherited from reviewed Cap vault controls.",
     "inheritedFrom": "cusd-cap",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x88887be419578051ff9f4eb6c858a951921d8888"
+      ],
+      "implementationAddresses": [
+        "0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31"
+      ],
+      "adminAddresses": [
+        "0xd8236031d8279d82e615af2bfab5fc0127a329ab"
+      ],
+      "canChangeMintLogic": false,
+      "delaySec": 86400,
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295205,
+      "sources": [
+        {
+          "label": "StakedCap implementation (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31"
+        },
+        {
+          "label": "Cap TimelockController (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xd8236031d8279d82e615af2bfab5fc0127a329ab"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

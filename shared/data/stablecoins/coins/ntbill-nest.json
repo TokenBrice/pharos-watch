@@ -69,25 +69,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "Janus Henderson Anemoy Treasury Fund (JTRSY)",
-      "pct": 82.2,
-      "risk": "very-low",
-      "coinId": "jtrsy-anemoy"
-    },
-    {
-      "name": "Superstate USTB Treasury positions",
-      "pct": 17,
-      "risk": "low",
-      "coinId": "ustb-superstate"
-    },
-    {
-      "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-      "pct": 0.8,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "nest-vault-positions",
     "version": 1,

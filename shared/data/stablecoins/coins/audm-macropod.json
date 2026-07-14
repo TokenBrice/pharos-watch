@@ -228,6 +228,45 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "AUDM is issued by Macropod (AFSL 566313, AUSTRAC DCE100887005-001); approved clients deposit AUD into the AUDM Trust reserve to mint and return AUDM for 1:1 redemption, all gated through the issuer's compliance/onboarding backend.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x081599e4936d12c46bd48913b2329115cd26cbdd",
+        "0xeded6ae915b129b67a4ad49901518f2736427063"
+      ],
+      "implementationAddresses": [
+        "0xebadaf3d0ee4bbaa94717bd9029244b1df2f47aa"
+      ],
+      "adminAddresses": [
+        "0x999071576cc6d7feadb908bede992ab9e19212cf"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "AUDM DEFAULT_ADMIN (Ethereum + Base)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Ethereum Blockscout AUDM proxy",
+          "url": "https://eth.blockscout.com/address/0x081599e4936d12c46bd48913b2329115cd26cbdd"
+        },
+        {
+          "label": "Base Blockscout AUDM proxy",
+          "url": "https://base.blockscout.com/address/0xeded6ae915b129b67a4ad49901518f2736427063"
+        },
+        {
+          "label": "AUDM verified UUPS implementation",
+          "url": "https://eth.blockscout.com/address/0xebadaf3d0ee4bbaa94717bd9029244b1df2f47aa"
+        },
+        {
+          "label": "Ethereum and Base PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Macropod issuance backend",

@@ -70,6 +70,17 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "SLVon is a centrally issued Ondo Global Markets tokenized ETF tracker. On Ethereum the token has MINTER_ROLE held by GMTokenManager (Ondo's issuance contract) and OndoOFT (LayerZero bridge). DEFAULT_ADMIN is a TimelockController (minDelay=0) controlled by a 9-signer Ondo governance Safe (5-of-9). Full Ondo GM multisig governance confirmed.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "SLVon ETH contract on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Ondo Global Markets issuance backend",

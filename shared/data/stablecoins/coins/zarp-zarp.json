@@ -256,9 +256,64 @@
     {
       "name": "ZAR treasury at Old Mutual Wealth (Kempen audited)",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "ZARP Stablecoin (Pty) Ltd.; Old Mutual Wealth",
+      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "one-day"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "ZARP Stablecoin documentation",
+        "url": "https://docs.zarpstablecoin.com/zarp-stablecoin"
+      },
+      {
+        "label": "Kempen ZARP agreed-upon procedures report",
+        "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
+      }
+    ],
+    "rationale": "ZARP's documentation states that each token represents one rand supported by a treasury of actual rand currency equivalents managed by Old Mutual Wealth. The existing 100% treasury envelope is retained, with the current Kempen agreed-upon-procedures report kept as the assurance source rather than decomposing undisclosed bank or cash-equivalent balances.",
+    "compositionBasis": "ZARP treasury and Kempen reserve-assurance disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve is identified as rand currency equivalents, but the reviewed sources do not provide a current bank-account or cash-equivalent category split, provider shares, or legal segregation terms.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Old Mutual Wealth",
+        "role": "custodian",
+        "jurisdiction": "South Africa"
+      },
+      {
+        "name": "ZARP Stablecoin (Pty) Ltd.",
+        "role": "other",
+        "jurisdiction": "South Africa"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "ZARP Stablecoin documentation",
+        "url": "https://docs.zarpstablecoin.com/zarp-stablecoin"
+      },
+      {
+        "label": "Kempen ZARP agreed-upon procedures report",
+        "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
+      }
+    ],
+    "uncertainty": "ZARP identifies Old Mutual Wealth as treasury manager and Kempen as assurance provider, but the reviewed materials do not establish the reserve account structure, statutory segregation, bankruptcy remoteness, or rehypothecation safeguards."
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

@@ -1,0 +1,85 @@
+{
+  "id": "jtrsy-anemoy",
+  "reserves": [
+    {
+      "name": "JTRSY fund portfolio: short-duration U.S. Treasury bills and cash settlement sleeve",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Janus Henderson Anemoy Treasury Fund, managed with Anemoy and Janus Henderson",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "legal",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Anemoy Janus Henderson Treasury Fund",
+        "url": "https://www.anemoy.io/funds/jtrsy"
+      },
+      {
+        "label": "Centrifuge JTRSY pool",
+        "url": "https://centrifuge.io/pools/jtrsy"
+      },
+      {
+        "label": "Chainlink JTRSY NAV feed",
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/jtrsy-nav-v2"
+      }
+    ],
+    "rationale": "Anemoy states that JTRSY holds U.S. Treasury bills with a maximum six-month maturity, offers daily redemptions, and settles investments and redemptions in USDC. The issuer also says the fund portfolio is viewable through Centrifuge, but the reviewed public pages do not support the previous 97%/3% split or a current holding-level allocation. The reserve is therefore represented as one 100% fund portfolio envelope.",
+    "compositionBasis": "Anemoy JTRSY fund disclosure and Centrifuge/Chainlink transparency references",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The fund strategy and daily-liquidity model are disclosed, but current Treasury-bill holdings, cash sleeve, counterparties, custodians, and security-level weights are not reproduced in the reviewed public sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "JTRSY fund portfolio: short-duration U.S. Treasury bills and cash settlement sleeve",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer discloses the strategy and redemption terms but does not publish a current defensible split between Treasury holdings and cash or security-level positions in the reviewed pages."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed independent JTRSY prime broker",
+        "role": "prime-broker"
+      },
+      {
+        "name": "Undisclosed independent JTRSY custodian and fund administrator",
+        "role": "custodian"
+      },
+      {
+        "name": "Anemoy and Janus Henderson fund entities",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Anemoy Janus Henderson Treasury Fund",
+        "url": "https://www.anemoy.io/funds/jtrsy"
+      }
+    ],
+    "uncertainty": "Anemoy identifies independent prime-broker, custodian, tokenization, issuance, and fund-administrator roles and states that the fund uses a bankruptcy-remote SPV, but does not name the service providers or publish segregation and rehypothecation terms for current holdings."
+  }
+}

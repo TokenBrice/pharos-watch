@@ -1,0 +1,76 @@
+{
+  "id": "weusd-picwe",
+  "reserves": [
+    {
+      "name": "PicWe WEUSD backing (current 100% USDC claim; legacy basket conflict)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "PicWe-operated WEUSD backing and redemption infrastructure",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract",
+        "market",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "PicWe What is WEUSD",
+        "url": "https://docs.picwe.org/what-is-weusd"
+      },
+      {
+        "label": "PicWe WEUSD mint and redeem",
+        "url": "https://docs.picwe.org/mint-and-redeem"
+      }
+    ],
+    "rationale": "PicWe's current documentation states that WEUSD is minted 1:1 against USDC during Phase 1 and describes instant mint/redeem. The existing Pharos record also retains older PicWe-linked basket evidence and a persistent market depeg; no reconciled reserve inventory or assurance artifact resolves that conflict.",
+    "compositionBasis": "Current PicWe WEUSD documentation with the pre-existing conflicting backing evidence retained as unresolved",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current 100% USDC claim is not reconciled with the older USDT/MOVE basket disclosure or current market evidence, so the actual reserve composition remains unresolved.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "PicWe WEUSD backing (current 100% USDC claim; legacy basket conflict)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "PicWe has not published a reconciled current reserve inventory that resolves the conflicting USDC and legacy basket disclosures."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "PicWe-operated WEUSD mint/redeem contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "PicWe What is WEUSD",
+        "url": "https://docs.picwe.org/what-is-weusd"
+      },
+      {
+        "label": "PicWe WEUSD mint and redeem",
+        "url": "https://docs.picwe.org/mint-and-redeem"
+      }
+    ],
+    "uncertainty": "PicWe describes smart-contract-managed on-chain reserves and issuer-operated mint/redeem infrastructure, but does not publish legal segregation, bankruptcy remoteness, or rehypothecation terms."
+  }
+}

@@ -26,6 +26,40 @@
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "staked-yusd",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "sYUSD is an ERC-4626 staking receipt over YUSD whose exchange rate accrues strategy yield; it is not a borrower debt market with collateral liquidation oracles.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex ORCL curation batch 20",
+      "rationale": "Aegis documents sYUSD as a yield-bearing YUSD staking token with a cooldown before withdrawal. The reviewed product and smart-contract references describe receipt-token accounting and strategy yield, not borrower-specific collateral positions or oracle-triggered liquidation branches.",
+      "sources": [
+        {
+          "label": "Aegis sYUSD documentation",
+          "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+        },
+        {
+          "label": "Aegis smart-contract documentation",
+          "url": "https://docs.aegis.im/smart-contracts"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ORCL curation batch 20",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aegis sYUSD documentation",
+        "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+      },
+      {
+        "label": "Aegis smart-contract documentation",
+        "url": "https://docs.aegis.im/smart-contracts"
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://aegis.accountable.capital/",

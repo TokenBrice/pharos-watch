@@ -173,13 +173,6 @@
     }
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Physical gold bars (LBMA Good Delivery, Swiss vaults)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "tether-transparency",
     "version": 1,

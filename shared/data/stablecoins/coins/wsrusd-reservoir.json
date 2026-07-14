@@ -413,6 +413,21 @@
     "confidence": "verified",
     "summary": "wsrUSD (Savingcoin ERC-4626, non-upgradeable) is minted only via deposit() of rUSD. DEFAULT_ADMIN = EOA 0xb7570e32.... MANAGER role not granted to any address (setCap/update currently uncallable). No upgrade path. Base mint authority inherited from rUSD controls.",
     "inheritedFrom": "rusd-reservoir",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Reservoir smart contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        },
+        {
+          "label": "Blockscout verified wsrUSD Savingcoin source",
+          "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -447,9 +462,9 @@
           "url": "https://etherscan.io/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
         }
       ],
-      "evidence": "At Ethereum block 25295219: wsrUSD is a non-upgradeable Savingcoin ERC-4626 wrapper whose asset() is rUSD. DEFAULT_ADMIN = EOA 0xb7570e32... MANAGER role granted to no one (confirmed via full RoleGranted log scan). No privileged mint surface on the wrapper. rUSD controls are tracked separately.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25530817, wsrUSD is a constructor-deployed Savingcoin ERC-4626 wrapper whose verified source contains no upgrade function and whose EIP-1967 implementation, admin, and beacon slots are all zero. Its asset() is rUSD. The existing role review found DEFAULT_ADMIN = EOA 0xb7570e32... and no MANAGER role grant; the wrapper has no privileged net-claim mint surface, while rUSD controls are tracked separately.",
+      "reviewer": "Codex Safety Score V9 CTRL curation",
+      "reviewedAt": "2026-07-14"
     }
   },
   "collateralQuality": "exotic",

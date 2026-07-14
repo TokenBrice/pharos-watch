@@ -1,0 +1,62 @@
+{
+  "id": "qcad-stablecorp",
+  "reserves": [
+    {
+      "name": "CAD fiat reserves",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "QCAD Digital Trust",
+      "riskFactors": ["counterparty", "custody", "liquidity", "legal"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Stablecorp QCAD balances API",
+        "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json"
+      },
+      {
+        "label": "QCAD Digital Trust regulatory order",
+        "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
+      }
+    ],
+    "rationale": "Stablecorp's live balances API reported CAD 1,451,000 of total fiat reserves against CAD 1,451,000 QCAD supply when reviewed. The regulator identifies QCAD Digital Trust as the trust framework for the token. The reviewed primary sources support one full fiat-reserve category, but do not publish named banks or a breakdown within that category.",
+    "compositionBasis": "Stablecorp live total-fiat-reserves disclosure matched to reported total supply",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete reserve category is disclosed as CAD fiat reserves; the reviewed sources do not identify the banking providers or the allocation among them.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Regulated Canadian financial institutions (not publicly named)",
+        "role": "bank",
+        "jurisdiction": "Canada"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Stablecorp QCAD balances API",
+        "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json"
+      },
+      {
+        "label": "QCAD Digital Trust regulatory order",
+        "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
+      }
+    ],
+    "uncertainty": "The QCAD materials identify the trust framework and live fiat-reserve total but do not publish the reserve-bank names, account segregation, insolvency treatment, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

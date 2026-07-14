@@ -95,6 +95,37 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "WMXN is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x337e7456b420bd3481e7fa61fa9850343d610d34"
+      ],
+      "implementationAddresses": [
+        "0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7"
+      ],
+      "adminAddresses": [
+        "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Ripio shared WMXN admin and MINTER_ROLE holder (EOA)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Ethereum WMXN proxy and verified UUPS implementation",
+          "url": "https://etherscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34#code"
+        },
+        {
+          "label": "WMXN implementation source",
+          "url": "https://etherscan.io/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "multichain",

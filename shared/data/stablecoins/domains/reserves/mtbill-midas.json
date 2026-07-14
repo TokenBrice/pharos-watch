@@ -1,0 +1,80 @@
+{
+  "id": "mtbill-midas",
+  "reserves": [
+    {
+      "name": "Short-duration U.S. Treasury Bills and qualifying Treasury-bill funds",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury and qualifying Treasury-bill fund issuers",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "legal"],
+      "liquidityHorizon": "unknown",
+      "maturityDaysMax": 90
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Midas mTBILL product disclosure",
+        "url": "https://docs.midas.app/tokens/mtbill"
+      },
+      {
+        "label": "Midas mTBILL bankruptcy remoteness",
+        "url": "https://docs.midas.app/tokens/mtbill/bankruptcy-remoteness"
+      },
+      {
+        "label": "Midas mTBILL independent reporting",
+        "url": "https://docs.midas.app/tokens/mtbill/independent-reporting"
+      }
+    ],
+    "rationale": "Midas states that the mTBILL portfolio is exclusively short-duration U.S. Treasury Bills with maturities below three months. Its eligible-collateral disclosure permits Treasury Bills and funds or ETFs invested in Treasury Bills, but does not publish a current T-bill-versus-fund allocation. The prior 97% IB01 and 3% cash split was unsupported and is replaced with one fully identified Treasury-bill reserve class.",
+    "compositionBasis": "Current Midas mTBILL eligible-collateral and product disclosures",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete reserve class is identified as short-duration U.S. Treasury Bills and qualifying Treasury-bill funds. The issuer does not publish current holdings or weights within that class.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-duration U.S. Treasury Bills and qualifying Treasury-bill funds",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The backing consists of off-chain U.S. Treasury Bills and qualifying Treasury-bill fund shares rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed mTBILL collateral-account custodian",
+        "role": "custodian"
+      },
+      {
+        "name": "Ankura Trust Company LLC",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Midas mTBILL bankruptcy remoteness",
+        "url": "https://docs.midas.app/tokens/mtbill/bankruptcy-remoteness"
+      },
+      {
+        "label": "Midas mTBILL independent reporting",
+        "url": "https://docs.midas.app/tokens/mtbill/independent-reporting"
+      }
+    ],
+    "uncertainty": "Midas describes bankruptcy-remote collateral accounts, secured tokenholder claims, and Ankura's daily monitoring and enforcement role. It does not name the current account custodian, disclose provider shares, or publish rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -153,6 +153,56 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "JPYC is a centralized FiatToken-style ERC-20. Minting requires being a configured minter with allowance; the sole ever-configured minter (0x11f14c2b…) currently has zero allowance on all three chains. Effective mint authority runs through the minterAdmin contract (owned by a 2/3 Safe) which calls configureMinter. The token owner (3/5 Safe) controls upgrades and minterAdmin replacement. Owner Safe and minterAdmin owner Safe confirmed unchanged on Ethereum, Polygon, and Avalanche.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+      ],
+      "implementationAddresses": [
+        "0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e"
+      ],
+      "adminAddresses": [
+        "0x8E4CddC4712646ea5222B4f2E959AcecEfe763C9"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "JPYC token owner Safe",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530706,
+      "sources": [
+        {
+          "label": "JPYC Ethereum implementation and proxy",
+          "url": "https://etherscan.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#code"
+        },
+        {
+          "label": "JPYC Polygon implementation and proxy",
+          "url": "https://polygonscan.com/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#code"
+        },
+        {
+          "label": "JPYC Avalanche implementation and proxy",
+          "url": "https://snowtrace.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#code"
+        },
+        {
+          "label": "JPYC Kaia implementation and proxy",
+          "url": "https://kaiascan.io/account/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        },
+        {
+          "label": "Avalanche C-Chain RPC",
+          "url": "https://api.avax.network/ext/bc/C/rpc"
+        },
+        {
+          "label": "Kaia Mainnet RPC",
+          "url": "https://public-en.node.kaia.io"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -284,9 +334,9 @@
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5BA1b9aAf56Af1B761519F924079681D8d061F94/"
         }
       ],
-      "evidence": "At Ethereum block 25294712: Blockscout MinterConfigured scan shows one ever-configured minter (0x11f14c2b…) with zero current allowance on all chains; minterAdmin() returns 0x029ba134… on all three chains; minterAdmin.owner() returns 2/3 Safe 0x5BA1b9aAf…; token owner() returns 3/5 Safe 0x8E4CddC4… on all three chains. All Safe snapshots confirmed via Safe API with no enabled modules and zero guard.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25294712: Blockscout MinterConfigured scan shows one ever-configured minter (0x11f14c2b…) with zero current allowance on all chains; minterAdmin() returns 0x029ba134… on all three chains; minterAdmin.owner() returns 2/3 Safe 0x5BA1b9aAf…; token owner() returns 3/5 Safe 0x8E4CddC4… on all three chains. Current EIP-1967 and owner() reads on Ethereum, Polygon, Avalanche, and Kaia on 2026-07-14 matched the structured upgrade review. All Safe snapshots confirmed via Safe API with no enabled modules and zero guard.",
+      "reviewer": "Codex CTRL batch 11",
+      "reviewedAt": "2026-07-14"
     }
   },
   "custodyModel": "institutional-regulated",

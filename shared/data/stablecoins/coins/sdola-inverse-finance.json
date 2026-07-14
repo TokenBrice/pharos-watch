@@ -21,18 +21,35 @@
   "geckoId": "sdola",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "sDOLA uses internal staking-accounting exposure but inherits DOLA mint-market oracle risk from Inverse FiRM Pessimistic Price Oracles.",
-    "reviewedAt": "2026-06-12",
+    "summary": "sDOLA is an ERC-4626 savings wrapper around DOLA and has no borrower-owned collateral positions or token-level liquidation engine. Its underlying DOLA exposure inherits the external FiRM oracle risk reviewed on the parent asset.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Inverse documents sDOLA as a DOLA savings wrapper: users deposit and withdraw DOLA while FiRM revenue accrues through the exchange rate. sDOLA holders do not open FiRM borrower positions, so there are no sDOLA collateral-market or liquidation branches to inventory; the underlying DOLA parent carries the separate FiRM oracle profile.",
+      "sources": [
+        {
+          "label": "Inverse sDOLA product guide",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/tokens/sdola"
+        },
+        {
+          "label": "Inverse FiRM product guide",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/firm"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Inverse sDOLA docs",
-        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+        "label": "Inverse sDOLA product guide",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/tokens/sdola"
       },
       {
-        "label": "Inverse FiRM docs",
-        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
+        "label": "Inverse FiRM product guide",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/firm"
       }
     ]
   },

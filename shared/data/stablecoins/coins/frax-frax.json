@@ -536,76 +536,128 @@
     {
       "name": "FRAX held on the Frax balance sheet",
       "pct": 20.8,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": ["smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "WTGXX (WisdomTree Government Money Market)",
       "pct": 20.2,
       "risk": "low",
-      "coinId": "wtgxx-wisdomtree"
+      "coinId": "wtgxx-wisdomtree",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "WisdomTree Government Money Market Fund",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "frxUSD",
       "pct": 13.8,
       "risk": "low",
-      "coinId": "frxusd-frax"
+      "coinId": "frxusd-frax",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "sFRAX",
       "pct": 12.6,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": ["smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "USTB (Superstate tokenized T-bills)",
       "pct": 11.1,
       "risk": "low",
-      "coinId": "ustb-superstate"
+      "coinId": "ustb-superstate",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "sfrxUSD",
       "pct": 7.9,
       "risk": "low",
-      "coinId": "sfrxusd-frax"
+      "coinId": "sfrxusd-frax",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Protocol",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "BUIDL (BlackRock tokenized money-market fund)",
       "pct": 5.3,
       "risk": "low",
-      "coinId": "buidl-blackrock"
+      "coinId": "buidl-blackrock",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "BlackRock and institutional repo counterparties",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "USDe",
       "pct": 3.4,
       "risk": "high",
-      "coinId": "usde-ethena"
+      "coinId": "usde-ethena",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Ethena Labs and hedge counterparties",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "USDB (Bridge)",
       "pct": 0.7,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Bridge and underlying reserve counterparties",
+      "riskFactors": ["counterparty", "smart-contract", "custody"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "reUSD",
       "pct": 0.2,
       "risk": "medium",
-      "coinId": "reusd-re-protocol"
+      "coinId": "reusd-re-protocol",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Re Protocol and hedge counterparties",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "USDS",
       "pct": 0.1,
       "risk": "low",
-      "coinId": "usds-sky"
+      "coinId": "usds-sky",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Protocol",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "USDC",
       "pct": 0.1,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": ["counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "Other balance-sheet assets",
       "pct": 3.8,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Not disclosed",
+      "riskFactors": ["credit", "market", "liquidity", "counterparty", "custody"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {

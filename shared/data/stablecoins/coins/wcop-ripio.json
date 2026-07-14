@@ -95,6 +95,37 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "WCOP is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x8a1d45e102e886510e891d2ec656a708991e2d76"
+      ],
+      "implementationAddresses": [
+        "0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      ],
+      "adminAddresses": [
+        "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Ripio shared WCOP admin and MINTER_ROLE holder (EOA)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Ethereum WCOP proxy and verified UUPS implementation",
+          "url": "https://etherscan.io/address/0x8a1d45e102e886510e891d2ec656a708991e2d76#code"
+        },
+        {
+          "label": "WCOP implementation source",
+          "url": "https://etherscan.io/address/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "multichain",

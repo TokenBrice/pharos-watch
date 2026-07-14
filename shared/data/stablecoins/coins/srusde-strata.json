@@ -68,6 +68,48 @@
   "collateral": "Senior tranche (ERC-4626 meta-vault) over Strata's CDO-style risk-tranched strategy that stakes USDe into Ethena sUSDe; the junior tranche (jrUSDe) provides first-loss capital and is paid a dynamic risk premium, giving senior holders principal protection and a benchmark-rate yield floor with uncapped sUSDe upside, while a junior-exhausting insolvency event can still impair senior principal",
   "pegMechanism": "srUSDe targets a stable senior NAV backed by USDe strategy collateral and junior-tranche subordination; exits depend on Strata tranche liquidity and settlement rules rather than a simple 1:1 stablecoin redemption",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "srUSDe is a senior ERC-4626 tranche over Strata's USDe strategy and has no borrower-owned collateral positions or token-level liquidation oracle. Junior capital absorbs first loss, while underlying USDe and sUSDe risks remain inherited dependencies.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Strata documents srUSDe and jrUSDe as risk-tranched vaults with ERC-4626 deposits and withdrawals, where the junior tranche provides first-loss protection for the senior tranche. This is a shared strategy and redemption path, not borrower-specific collateralized debt, so there are no srUSDe collateral-market or liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "Strata markets",
+          "url": "https://docs.strata.markets/markets"
+        },
+        {
+          "label": "Strata FAQ",
+          "url": "https://docs.strata.markets/resources/faqs"
+        },
+        {
+          "label": "Strata protocol overview",
+          "url": "https://docs.strata.markets/technical-documentation/protocol-overview"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Strata markets",
+        "url": "https://docs.strata.markets/markets"
+      },
+      {
+        "label": "Strata FAQ",
+        "url": "https://docs.strata.markets/resources/faqs"
+      },
+      {
+        "label": "Strata protocol overview",
+        "url": "https://docs.strata.markets/technical-documentation/protocol-overview"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "strata-senior-usde",
   "links": [

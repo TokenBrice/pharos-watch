@@ -30,9 +30,26 @@
   "custodyModel": "onchain",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Public Zephyr docs mention a pricing oracle for ZSD but do not identify the oracle provider set or failure handling.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "summary": "Zephyr documents ZSD as a Djed-style stablecoin backed by one protocol-wide ZEPH reserve with a 400% minimum reserve ratio; current public materials do not identify the production oracle provider set or failure handling.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Zephyr describes ZSD as a protocol reserve liability backed by ZEPH, with minting gated by a system-wide reserve ratio. Users do not open borrower-specific collateral positions, so the reviewed design exposes no market-specific collateral or liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "Zephyr official documentation",
+          "url": "https://zephyrprotocol.com/documentation"
+        },
+        {
+          "label": "Zephyr repository",
+          "url": "https://github.com/ZephyrProtocol/zephyr"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
     "confidence": "limited",
     "sources": [
       {

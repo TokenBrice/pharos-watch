@@ -21,6 +21,40 @@
   "detailProvider": "coingecko",
   "geckoId": "staked-usd1",
   "cmcSlug": "lorenzo-staked-usd1",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "sUSD1+ is an NAV-accruing receipt over Lorenzo's USD1+ on-chain traded fund and managed strategy portfolio, not a borrower debt market with collateral liquidation oracles.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex ORCL curation batch 20",
+      "rationale": "Lorenzo describes sUSD1+ as a value-accruing stable token whose redemption value increases as managed RWA, CeFi, and DeFi strategies generate returns. The reviewed product material describes an OTF/NAV receipt flow, not borrower-specific collateral positions or oracle-triggered liquidation branches.",
+      "sources": [
+        {
+          "label": "Lorenzo Protocol product overview",
+          "url": "https://lorenzo-protocol.org/"
+        },
+        {
+          "label": "Lorenzo USD1+ OTF guide",
+          "url": "https://lorenzo-protocol.ghost.io/your-quick-guide-to-joining-the-lorenzo-usd1-otf-testnet/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ORCL curation batch 20",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Lorenzo Protocol product overview",
+        "url": "https://lorenzo-protocol.org/"
+      },
+      {
+        "label": "Lorenzo USD1+ OTF guide",
+        "url": "https://lorenzo-protocol.ghost.io/your-quick-guide-to-joining-the-lorenzo-usd1-otf-testnet/"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

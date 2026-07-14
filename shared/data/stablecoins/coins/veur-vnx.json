@@ -235,7 +235,11 @@
     {
       "name": "Aggregate EUR-value reserve (composition undisclosed)",
       "pct": 100,
-      "risk": "very-high"
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "VNX Commodities AG and undisclosed reserve banks/securities custodians",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -271,6 +275,36 @@
         "rationale": "The AUP report confirms aggregate EUR-value coverage but does not disclose reserve constituents or weights."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "VNX Commodities AG",
+        "role": "other",
+        "jurisdiction": "Liechtenstein"
+      },
+      {
+        "name": "Undisclosed reserve banks and securities custodians",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "AREVA VNX reserve report as of December 31, 2024",
+        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+      },
+      {
+        "label": "VNX Reserves Management Policy",
+        "url": "https://vnx.li/wp-content/uploads/2023/05/2023.04.30-VNX-staiblecoins-Reserves-Management-Policy.pdf"
+      }
+    ],
+    "uncertainty": "AREVA and VNX identify the issuer and aggregate bank-account or securities-custody reserve locations, but do not name current providers, publish shares, or establish account segregation, bankruptcy remoteness, or rehypothecation safeguards."
   },
   "liveReservesConfig": {
     "adapter": "single-asset",

@@ -14,6 +14,40 @@
   "collateral": "USD share class of the Spiko Digital Assets Cash & Carry Fund. Monthly allocation rotates between BTC and ETH cash-and-carry (basis) trades and short-duration Treasury bills/cash. Marex is the fund's sole strategy counterparty, spot digital assets are custodied at Coinbase, futures are cleared on CME, and CACEIS Bank (Credit Agricole Group) acts as depositary.",
   "pegMechanism": "USD-denominated NAV-accreting fund share; daily NAV is calculated by CACEIS Fund Administration and published on-chain through a Chainlink AggregatorV3-style oracle contract. Holdings are restricted to KYC-allowlisted addresses via Spiko's PermissionManager; minting is limited to the daily-operator role and burns to the Redemption contract's burner role.",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "SPKCC publishes its fund NAV on-chain through a Chainlink AggregatorV3-style oracle, so valuation depends on an external feed. It is a permissioned fund share rather than a borrower CDP, and no token-level collateral liquidation path is documented.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Spiko describes SPKCC as a regulated fund share whose strategy rotates between BTC or ETH cash-and-carry trades and Treasury bills. Primary-market access is permissioned and fund NAV is calculated and published for the share; tokenholders do not open borrower-owned collateral positions, so there are no SPKCC collateral-market or liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "Spiko Cash and Carry",
+          "url": "https://www.spiko.io/spiko-cash-and-carry"
+        },
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko Cash and Carry",
+        "url": "https://www.spiko.io/spiko-cash-and-carry"
+      },
+      {
+        "label": "Spiko smart contracts",
+        "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "spiko-digital-assets-cash-carry-fund",
   "proofOfReserves": {

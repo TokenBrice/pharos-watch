@@ -1,0 +1,81 @@
+{
+  "id": "ntbill-nest",
+  "reserves": [
+    {
+      "name": "nTBILL Treasury-vault portfolio (JTRSY, USTB, and stablecoin liquidity)",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Nest Treasury Vault and the Janus Henderson Anemoy Treasury Fund / Superstate USTB issuers",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Nest underlying assets directory",
+        "url": "https://docs.nest.credit/about/assets/"
+      },
+      {
+        "label": "Nest nTBILL integration guide",
+        "url": "https://docs.nest.credit/developers/integration-guides/ntbill/"
+      }
+    ],
+    "rationale": "Nest's current asset directory identifies JTRSY and USTB as assets used in nTBILL, while the nTBILL guide identifies the Nest Treasury Vault and its USDC/pUSD deposit and redemption rails. The reviewed public pages do not publish current weights for the fund positions or the stablecoin liquidity sleeve, so the former 82.2% / 17% / 0.8% split was not retained.",
+    "compositionBasis": "Nest underlying-asset directory and nTBILL integration disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The portfolio categories and named fund positions are identified, but current allocation weights, stablecoin-buffer composition, and custody-provider shares are not published in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "nTBILL Treasury-vault portfolio (JTRSY, USTB, and stablecoin liquidity)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Nest names JTRSY and USTB as nTBILL assets but does not expose a current percentage breakdown or the buffer split.",
+        "candidateCoinIds": ["jtrsy-anemoy", "ustb-superstate", "usdc-circle", "pusd-plume"]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Nest Treasury Vault contracts and Nest-controlled Manager",
+        "role": "other"
+      },
+      {
+        "name": "Underlying fund custodians and administrators; providers not disclosed",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Nest underlying assets directory",
+        "url": "https://docs.nest.credit/about/assets/"
+      },
+      {
+        "label": "Nest nTBILL integration guide",
+        "url": "https://docs.nest.credit/developers/integration-guides/ntbill/"
+      }
+    ],
+    "uncertainty": "Nest's public pages identify the vault and underlying asset issuers but do not disclose account-level segregation, bankruptcy treatment, rehypothecation terms, or the providers and shares for the complete portfolio.",
+    "knownUnknownExposurePct": 100
+  }
+}

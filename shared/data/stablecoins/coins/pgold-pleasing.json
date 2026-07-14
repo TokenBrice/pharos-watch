@@ -153,13 +153,6 @@
     ]
   },
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "Physical gold bullion (LBMA-standard, 99.99% purity)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

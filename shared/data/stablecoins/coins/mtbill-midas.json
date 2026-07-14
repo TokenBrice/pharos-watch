@@ -123,18 +123,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)",
-      "pct": 97,
-      "risk": "very-low"
-    },
-    {
-      "name": "USD cash buffer",
-      "pct": 3,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 1,

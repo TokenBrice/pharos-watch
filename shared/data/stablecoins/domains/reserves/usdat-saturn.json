@@ -1,0 +1,66 @@
+{
+  "id": "usdat-saturn",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "M0 Protocol",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract", "duration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Saturn USDat and sUSDat mechanics",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/solution/how-usdat-and-susdat-works"
+      },
+      {
+        "label": "Saturn transparency and audits",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits"
+      }
+    ],
+    "rationale": "Saturn documents USDat as fully collateralized, minted and redeemed 1:1 with USDC by onboarded users, with a launch target of 100% M, M0's tokenized U.S. Treasuries product. Saturn also states that all USDat capital is held directly in the USDat smart contract. The source describes a future shift of USDat reserve allocations toward digital credit but does not publish a current allocation or an independently verifiable reserve balance.",
+    "compositionBasis": "Saturn issuer documentation of the USDat launch reserve target and on-chain capital location",
+    "compositionAsOf": "2026-07-14",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The issuer identifies M as the launch reserve target but does not publish a current reserve-allocation breakdown or current token balance; its documented future allocation policy permits a shift toward digital credit.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-term U.S. Treasury Bills (via M0 Protocol)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The M exposure is a documented launch target, not a current independently attested allocation."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "USDat smart contract",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Saturn transparency and audits",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits"
+      }
+    ],
+    "uncertainty": "Saturn states that USDat capital is in the smart contract but does not publish legal ownership, segregation, insolvency treatment, or rehypothecation terms for the M reserve position.",
+    "knownUnknownExposurePct": 100
+  }
+}

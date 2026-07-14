@@ -204,18 +204,6 @@
     ]
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "U.S. Treasury bills (0-180 day maturity)",
-      "pct": 85,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash in bankruptcy-remote custody",
-      "pct": 15,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,

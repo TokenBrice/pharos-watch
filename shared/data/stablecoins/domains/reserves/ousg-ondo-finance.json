@@ -1,0 +1,88 @@
+{
+  "id": "ousg-ondo-finance",
+  "reserves": [
+    {
+      "name": "OUSG portfolio (Treasury and GSE funds, bank deposits, and USDC liquidity)",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Ondo I LP and underlying fund issuers, banks, and USDC issuer",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ondo OUSG documentation",
+        "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
+      },
+      {
+        "label": "Ondo OUSG product page",
+        "url": "https://ondo.finance/ousg"
+      },
+      {
+        "label": "Ondo OUSG proof-of-reserve reports",
+        "url": "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing"
+      }
+    ],
+    "rationale": "Ondo describes OUSG as exposure primarily to short-term U.S. Treasuries and GSE securities through funds from multiple asset managers, with bank deposits and USDC for liquidity. The reviewed public materials do not provide a current portfolio weight table, so the prior 85% / 12% / 3% allocation is not retained as current evidence.",
+    "compositionBasis": "Ondo OUSG portfolio and redemption disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The broad Treasury/GSE fund, bank-deposit, and USDC categories are identified, but current asset-manager weights, bank balances, and custody-provider shares are not published in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "OUSG portfolio (Treasury and GSE funds, bank deposits, and USDC liquidity)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Ondo names the portfolio categories and asset managers but does not publish current weights for BUIDL, other funds, bank deposits, or USDC.",
+        "candidateCoinIds": ["buidl-blackrock", "usdc-circle"]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "NAV Consulting, Inc. (fund administrator)",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Underlying fund custodians and banking providers; portfolio shares not disclosed",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ondo OUSG documentation",
+        "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
+      },
+      {
+        "label": "Ondo OUSG proof-of-reserve reports",
+        "url": "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing"
+      }
+    ],
+    "uncertainty": "Ondo identifies the fund administrator and portfolio structure, but the reviewed materials do not disclose each underlying custodian, account-level segregation, bankruptcy treatment, rehypothecation terms, or provider shares.",
+    "knownUnknownExposurePct": 100
+  }
+}
