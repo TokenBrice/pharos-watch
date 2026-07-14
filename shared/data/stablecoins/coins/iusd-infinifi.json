@@ -77,7 +77,41 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "IUSD receipt token minting is gated by RECEIPT_TOKEN_MINTER role in the infiniFi Core (0xf6D48735EcCF12BDc1dF2674b1CE3FCb3Bd25490). Four protocol contracts hold the role: MintController, PLSmoother, MigrationController, and a TransparentUpgradeableProxy. The ultimate admin is a 7/4 Gnosis Safe (0x80608f852d152024c0a2087b16939235fec2400c) holding PROPOSER_ROLE and MINOR_ROLES_MANAGER in the Core.",
+    "summary": "IUSD receipt-token minting is gated by RECEIPT_TOKEN_MINTER in the infiniFi Core. Four protocol contracts hold the role; only YieldSharing is upgradeable. Mint-role administration, ReceiptToken core replacement, and YieldSharing upgrades all require the 4-of-7 admin Safe to schedule an action through a seven-day timelock.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b"
+      ],
+      "implementationAddresses": [
+        "0x0d5dbf208a9a7540018d204a9a0ad08a091407e5"
+      ],
+      "adminAddresses": [
+        "0x094227ee5e9c3877860ac212f1e5218441e5b4eb",
+        "0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9",
+        "0x80608f852d152024c0a2087b16939235fec2400c",
+        "0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 604800,
+      "controlRef": "infiniFi admin Safe (PROPOSER_ROLE + MINOR_ROLES_MANAGER)",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25527135,
+      "sources": [
+        {
+          "label": "infiniFi YieldSharing proxy",
+          "url": "https://eth.blockscout.com/address/0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b"
+        },
+        {
+          "label": "infiniFi ProxyAdmin",
+          "url": "https://eth.blockscout.com/address/0x094227ee5e9c3877860ac212f1e5218441e5b4eb"
+        },
+        {
+          "label": "infiniFi Timelock",
+          "url": "https://eth.blockscout.com/address/0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -88,7 +122,9 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Ethereum block 25294795: Core.getRoleMember(RECEIPT_TOKEN_MINTER, 1) = 0x49877d937b9a00d50557bdc3d87287b5c3a4c256; Blockscout identifies contract as MintController."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527135,
+        "evidence": "At Ethereum block 25527135, Core role enumeration returned MintController 0x49877d937b9a00d50557bdc3d87287b5c3a4c256 as a RECEIPT_TOKEN_MINTER. It is a direct non-proxy deployment."
       },
       {
         "chain": "ethereum",
@@ -99,7 +135,9 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Ethereum block 25294795: Core.getRoleMember(RECEIPT_TOKEN_MINTER, 0) = 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b; Blockscout identifies as TransparentUpgradeableProxy."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527135,
+        "evidence": "At Ethereum block 25527135, Core role enumeration returned YieldSharing proxy 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b as a RECEIPT_TOKEN_MINTER. Its ProxyAdmin is owned by the seven-day infiniFi Timelock."
       },
       {
         "chain": "ethereum",
@@ -110,7 +148,9 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Ethereum block 25294795: Core.getRoleMember(RECEIPT_TOKEN_MINTER, 2) = 0xc324569141697045b9ede54b5d4623a691ed57a4; Blockscout identifies as PLSmoother."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527135,
+        "evidence": "At Ethereum block 25527135, Core role enumeration returned PLSmoother 0xc324569141697045b9ede54b5d4623a691ed57a4 as a RECEIPT_TOKEN_MINTER. It is a direct non-proxy deployment."
       },
       {
         "chain": "ethereum",
@@ -121,7 +161,9 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Ethereum block 25294795: Core.getRoleMember(RECEIPT_TOKEN_MINTER, 3) = 0x5f5403656e4db95accf1064a714b1bce351839f8; Blockscout identifies as MigrationController."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527135,
+        "evidence": "At Ethereum block 25527135, Core role enumeration returned MigrationController 0x5f5403656e4db95accf1064a714b1bce351839f8 as a RECEIPT_TOKEN_MINTER. It is a direct non-proxy deployment."
       },
       {
         "chain": "ethereum",
@@ -131,6 +173,7 @@
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
+        "timelockDelaySec": 604800,
         "modulesOrGuardsStatus": "none-detected",
         "threshold": 4,
         "signerCount": 7,
@@ -149,14 +192,30 @@
           "guard": null,
           "fallbackHandler": null,
           "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
-          "observedBlock": 25294795,
+          "observedBlock": 25527135,
+          "observedAt": "2026-07-13",
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25294795: Core.getRoleMember(PROPOSER_ROLE, 0) = 0x80608f852d152024c0a2087b16939235fec2400c. Storage slot 0 = GnosisSafe v1.4.1 masterCopy (0x41675c09…), slot 3 = ownerCount = 7, slot 4 = threshold = 4, slot 1 = 0 (no modules). getOwners() returned 7 addresses. Core.getRoleMember(MINOR_ROLES_MANAGER, 0) = same Safe address.",
+        "routeChecks": {
+          "signingModel": "The 4-of-7 Safe is the Timelock's sole proposer; no enabled Safe modules or transaction guard were detected.",
+          "rateLimits": "RECEIPT_TOKEN_MINTER administration, ReceiptToken.setCore calls, and YieldSharing proxy upgrades initiated by this Safe must traverse Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 with getMinDelay() = 604800 seconds.",
+          "pausersAdminsUpgraders": "The Safe is not a Core GOVERNOR and does not own ProxyAdmin directly. The Timelock holds GOVERNOR and owns ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb."
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527135,
+        "evidence": "At Ethereum block 25527135, RECEIPT_TOKEN_MINTER's admin was GOVERNOR. Safe 0x80608f852d152024c0a2087b16939235fec2400c had MINOR_ROLES_MANAGER but not GOVERNOR; direct Safe grantRole/revokeRole calls reverted requiring GOVERNOR, and ReceiptToken.setCore reverted UNAUTHORIZED. Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 held GOVERNOR, had getMinDelay() = 604800, and the Safe was its sole proposer. YieldSharing ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb was owned by that Timelock; a direct Safe upgrade call reverted as unauthorized.",
         "sources": [
           {
-            "label": "infiniFi Core (Etherscan)",
-            "url": "https://etherscan.io/address/0xf6D48735EcCF12BDc1dF2674b1CE3FCb3Bd25490"
+            "label": "infiniFi Core verified source",
+            "url": "https://eth.blockscout.com/address/0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490"
+          },
+          {
+            "label": "infiniFi Timelock verified source",
+            "url": "https://eth.blockscout.com/address/0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9"
+          },
+          {
+            "label": "IUSD ReceiptToken verified source",
+            "url": "https://eth.blockscout.com/address/0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
           }
         ]
       }
@@ -164,17 +223,25 @@
     "review": {
       "sources": [
         {
-          "label": "Sourcify infiniFi CoreRoles source",
-          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x48f9e38f3070ad8945dfeae3fa70987722e3d89c/sources/src/libraries/CoreRoles.sol"
+          "label": "IUSD ReceiptToken verified source",
+          "url": "https://eth.blockscout.com/address/0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
         },
         {
-          "label": "infiniFi Core (Etherscan)",
-          "url": "https://etherscan.io/address/0xf6D48735EcCF12BDc1dF2674b1CE3FCb3Bd25490"
+          "label": "infiniFi Core verified source",
+          "url": "https://eth.blockscout.com/address/0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490"
+        },
+        {
+          "label": "infiniFi Timelock verified source",
+          "url": "https://eth.blockscout.com/address/0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9"
+        },
+        {
+          "label": "infiniFi YieldSharing proxy",
+          "url": "https://eth.blockscout.com/address/0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b"
         }
       ],
-      "evidence": "At Ethereum block 25294795: Core contract = 0xf6D48735EcCF12BDc1dF2674b1CE3FCb3Bd25490 (confirmed from token storage slot 0). RECEIPT_TOKEN_MINTER count = 4 (all protocol contracts: MintController, proxy, PLSmoother, MigrationController). PROPOSER_ROLE (1 holder) and MINOR_ROLES_MANAGER (1 of 2 holders) both point to Safe 0x80608f852d (7 owners, threshold 4, GnosisSafe v1.4.1, no modules). All mint-capable controls confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25527135, ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, Core 0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490, MintController 0x49877d937b9a00d50557bdc3d87287b5c3a4c256, PLSmoother 0xc324569141697045b9ede54b5d4623a691ed57a4, and MigrationController 0x5f5403656e4db95accf1064a714b1bce351839f8 were direct non-proxy deployments. YieldSharing 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b was a transparent proxy with implementation 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5 and ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb. The 4-of-7 Safe had no immediate GOVERNOR or ProxyAdmin-owner path: mint-role administration, ReceiptToken core replacement, and YieldSharing upgrades all converged on Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 with a 604800-second minimum delay.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13"
     }
   },
   "collateralQuality": "exotic",
