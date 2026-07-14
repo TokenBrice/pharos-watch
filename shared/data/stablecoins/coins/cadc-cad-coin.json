@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Canadian dollars and cash equivalents (liquid securities with original maturity ≤ 90 days) held 1:1 in a segregated account at a Canadian financial institution, in trust for CADC holders",
+  "collateral": "Canadian-dollar cash held 1:1 in segregated accounts at ATB Financial, in trust for CADC holders",
   "pegMechanism": "Direct 1:1 redemption for CAD through Loon (FINTRAC-registered MSB, formerly issued by PayTrie); CADC is burned on redemption and minted on deposit",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "145",
@@ -19,7 +19,7 @@
   "geckoId": "cad-coin",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://loon.finance/",
+    "url": "https://loon.finance/transparency/",
     "provider": "Loon monthly third-party attestation for CAD reserves held at ATB Financial",
     "attestorTier": "niche",
     "cadence": "monthly",
@@ -228,11 +228,45 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "CAD & short-term securities in segregated trust",
+      "name": "Canadian-dollar cash deposits at ATB Financial",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "ATB Financial",
+      "riskFactors": ["credit", "custody", "concentration", "legal"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Loon CADC transparency and monthly attestations",
+        "url": "https://loon.finance/transparency/"
+      },
+      {
+        "label": "Loon CADC product page",
+        "url": "https://loon.finance/"
+      }
+    ],
+    "rationale": "Loon's current transparency page states that every CADC is backed 1:1 by Canadian dollars at ATB Financial, with 100% cash deposits in segregated accounts and no exposure to commercial paper or investment instruments. The reserve slice is narrowed from an unsupported cash-and-securities aggregate to the disclosed cash deposit category.",
+    "compositionBasis": "Loon transparency page and current monthly attestation history",
+    "compositionAsOf": "2026-05-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve asset class and ATB Financial custody are disclosed; the transparency page does not disclose account-level balances or provider shares beyond the single named bank.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Canadian-dollar cash deposits at ATB Financial",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Canadian-dollar bank deposits are off-chain cash reserves rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

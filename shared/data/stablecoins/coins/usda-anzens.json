@@ -150,14 +150,43 @@
   },
   "reserves": [
     {
-      "name": "USD cash deposits",
-      "pct": 60,
-      "risk": "very-low"
-    },
-    {
-      "name": "U.S. Treasury securities",
-      "pct": 40,
-      "risk": "very-low"
+      "name": "Cash, cash equivalents, U.S. Treasury bills, and Treasury-focused money-market funds",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Anzens reserve counterparties and U.S. government securities; individual holdings are not disclosed",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
+      "liquidityHorizon": "unknown"
     }
-  ]
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Anzens USDA homepage",
+        "url": "https://www.anzens.com/"
+      },
+      {
+        "label": "Anzens terms and conditions",
+        "url": "https://www.anzens.com/landing/terms-and-conditions"
+      }
+    ],
+    "rationale": "Anzens states that USDA is 100% backed by dollars and dollar equivalents, including U.S. government Treasuries. Its terms enumerate cash, cash equivalents, U.S. Treasury Bills of different durations, and Treasury-focused money-market funds as eligible reserves, but neither source publishes a current allocation among those categories. The prior 60/40 split is therefore replaced by one explicit mixed reserve envelope.",
+    "compositionBasis": "Anzens issuer homepage and terms; reserve categories disclosed without current weights",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish current category weights, holdings, counterparties, or custody-provider shares.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Cash, cash equivalents, U.S. Treasury bills, and Treasury-focused money-market funds",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Anzens names the reserve categories but does not publish a current allocation among cash, cash equivalents, Treasury Bills, and Treasury-focused money-market funds."
+      }
+    ]
+  }
 }
