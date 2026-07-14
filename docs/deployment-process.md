@@ -151,10 +151,10 @@ Reusable Pages sequence in `.github/workflows/pages-release.yml`:
 2. When `refresh_data=true`, refresh digests, confirmed depeg events, and public dataset mirrors through authenticated `https://site-api.pharos.watch`; invalid or missing inputs fail before build and publish.
 3. Clear `.next`, build once with the production feature-flag environment, and preserve the selected committed or freshly refreshed data through the prebuild hook.
 4. Run artifact-specific checks: feature-flag inlining, build size, build attribution, and static SEO.
-5. Write `out/__pharos_release.json`, publish that exact `out/` directory with one `wrangler pages deploy` command, then require one cache-busted target-SHA marker match from `https://pharos.watch` within the bounded polling window.
-6. Record the commit, run URL, artifact size/file count, refresh mode, and the manual Cloudflare Pages deployment-history rollback pointer in the job summary.
+5. Write `out/__pharos_release.json`, publish that exact `out/` directory with one `wrangler pages deploy` command, resolve the latest production deployment through `wrangler pages deployment list --json`, and require one cache-busted target-SHA marker match from that immutable `pages.dev` deployment URL within the bounded polling window.
+6. Record the commit, run URL, artifact size/file count, refresh mode, immutable deployment URL, marker result, and the manual Cloudflare Pages deployment-history rollback pointer in the job summary.
 
-There is no Pages browser installation, local proxy, prior-deployment query, GitHub Jobs API polling, deploy retry loop, broad live smoke suite, or automatic rollback in this path. A failed marker proof leaves the failed deployment and its evidence visible for operator assessment instead of automatically changing production again.
+There is no Pages browser installation, local proxy, GitHub Jobs API polling, deploy retry loop, broad live smoke suite, or automatic rollback in this path. The single post-publish deployment query identifies the just-published production deployment without depending on custom-domain edge treatment of GitHub shared egress. A failed marker proof leaves the failed deployment and its evidence visible for operator assessment instead of automatically changing production again.
 
 ## GitHub Deploy Inputs
 
@@ -222,7 +222,7 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 
 - Schedule: `17 8 * * *` UTC, after the 08:05 UTC daily digest slot.
 - The workflow has one main-only reusable job and calls `pages-release.yml` with `refresh_data: true`.
-- It refreshes all three API-backed datasets through authenticated `site-api.pharos.watch`, builds and checks the exact artifact, publishes once, and verifies the public release marker.
+- It refreshes all three API-backed datasets through authenticated `site-api.pharos.watch`, builds and checks the exact artifact, publishes once, and verifies the release marker on the immutable production deployment URL.
 - It intentionally skips Worker deployment and broad live smoke lanes. Missing or invalid refresh data fails before publication.
 - Manual rebuild dispatch uses the same path and the shared `production-deploy` lock.
 
@@ -247,7 +247,7 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 - New D1 migrations must remain backward-compatible because migrations apply before the new Worker is live. Destructive cleanup requires a separate coordinated rollout.
 - The default workflow never automatically rolls back from a broad or non-causal signal.
 - Worker rollback is an operator decision using Cloudflare deployment history or `wrangler rollback [VERSION-ID] --yes`. It does not reverse D1 migrations, KV/R2/D1 data, secrets, bindings, or other resources.
-- Pages rollback is an operator decision in Cloudflare Pages deployment history. Use the failed run's commit, marker response, and Wrangler output to identify the target.
+- Pages rollback is an operator decision in Cloudflare Pages deployment history. Use the failed run's commit, deployment URL, marker response, and Wrangler output to identify the target.
 - Persistent stale custom-domain HTML can use the guarded `purge-pages-zone-cache.yml` recovery workflow after the correct Pages deployment is confirmed.
 
 ## Runtime Measurement Notes

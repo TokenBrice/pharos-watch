@@ -591,7 +591,8 @@ describe("validate-ci parity", () => {
     const refresh = steps.find((step) => step.name === "Refresh API-backed release data");
     const build = steps.find((step) => step.name === "Build clean production export");
     const deploy = steps.find((step) => step.name === "Deploy Pages");
-    const marker = steps.find((step) => step.name === "Verify published release marker");
+    const resolveDeployment = steps.find((step) => step.name === "Resolve active Pages deployment");
+    const marker = steps.find((step) => step.name === "Verify deployment release marker");
     expect(refresh?.if).toBe("${{ inputs.refresh_data }}");
     expect(refresh?.env).toMatchObject({
       DIGEST_API_URL: "https://site-api.pharos.watch",
@@ -603,10 +604,17 @@ describe("validate-ci parity", () => {
     expect(build?.run).toContain("npm run build");
     expect(build?.env?.PUBLIC_DATASETS_API_URL).toBe("");
     expect(deploy?.run).toContain("wrangler pages deploy out");
+    expect(deploy?.run).toContain('--commit-hash="${GITHUB_SHA}"');
+    expect(resolveDeployment?.run).toContain("wrangler pages deployment list");
+    expect(resolveDeployment?.run).toContain('deployment?.Environment !== "Production"');
+    expect(resolveDeployment?.run).toContain('deployment?.Branch !== "main"');
     expect(marker?.run).toContain("wait-pages-release-marker.mjs");
+    expect(marker?.run).toContain("steps.pages-deployment.outputs.deployment_url");
+    expect(marker?.run).toContain("GITHUB_STEP_SUMMARY");
+    expect(marker?.run).not.toContain("pharos.watch");
 
     const jobText = JSON.stringify(job);
-    expect(jobText.match(/wrangler pages deploy/g)).toHaveLength(1);
+    expect(jobText.match(/wrangler pages deploy out/g)).toHaveLength(1);
     expect(jobText).toContain("npm run check:feature-flag-inlining");
     expect(jobText).toContain("npm run check:build-size");
     expect(jobText).toContain("npm run check:build-attribution");
@@ -617,7 +625,6 @@ describe("validate-ci parity", () => {
     expect(jobText).not.toContain("test:smoke-ops");
     expect(jobText).not.toContain("test:smoke-transport");
     expect(jobText).not.toContain("PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE");
-    expect(jobText).not.toContain("pages deployment list");
     expect(jobText).not.toContain("rollback-pages");
   });
 
