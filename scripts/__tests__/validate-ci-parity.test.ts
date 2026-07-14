@@ -595,6 +595,15 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
     expect(consolidatedPagesReleaseJob).toContain("Start local export smoke server");
+    expect(consolidatedPagesReleaseJob).toContain(
+      "STATIC_EXPORT_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}",
+    );
+    expect(consolidatedPagesReleaseJob).toContain(
+      "STATIC_EXPORT_SITE_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://site-api.pharos.watch' }}",
+    );
+    expect(consolidatedPagesReleaseJob).toContain(
+      "STATIC_EXPORT_SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}",
+    );
     expect(consolidatedPagesReleaseJob).toContain("Run local static pre-publish checks");
     expect(consolidatedPagesReleaseJob).toContain("Run local artifact canary smoke");
     expect(consolidatedPagesReleaseJob).not.toContain("PAGES_UI_CHANGED:");
@@ -679,6 +688,13 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain("git-history-derived sitemap/docs metadata");
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
+    expect(pagesReleaseJob).toContain(
+      "STATIC_EXPORT_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}",
+    );
+    expect(pagesReleaseJob).toContain(
+      "STATIC_EXPORT_SITE_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://site-api.pharos.watch' }}",
+    );
+    expect(pagesReleaseJob).toContain("STATIC_EXPORT_SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}");
     expectTextInOrder(pagesReleaseJob, [
       "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
       "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",
