@@ -113,7 +113,7 @@ gh run watch <run-id> --repo TokenBrice/pharos-watch --exit-status
 
 If the run fails, switch to `$pharos-ci-failure-triage` (the `pharos-ci-failure-triage` skill in Claude Code).
 
-For successful production-changing deploys, confirm the Worker authenticated health proof and/or Pages release-marker proof in the workflow summary. If the touched area needs extra live confidence, run the narrow manual smoke from `docs/testing.md`; broad live checks are not automatic rollback triggers.
+For successful production-changing deploys, confirm the Worker activation proof and/or Pages release-marker proof in the workflow summary. If the touched area needs extra live confidence, run the narrow manual smoke from `docs/testing.md`; broad live checks are not automatic rollback triggers.
 
 ## Companion Subagents
 
