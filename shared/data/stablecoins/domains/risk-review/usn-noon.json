@@ -5,17 +5,21 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.noon.capital"
+        "label": "Noon contracts and addresses",
+        "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses"
       },
       {
-        "label": "Website",
-        "url": "https://noon.capital"
+        "label": "Verified Ethereum USN implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata"
+      },
+      {
+        "label": "Ethereum USN proxy",
+        "url": "https://etherscan.io/address/0xda67b4284609d2d48e5d10cfac411572727dc1ed#code"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Noon's official contracts page identifies USN deployments as an Ethereum home token with LayerZero OFT representations, and the verified Ethereum implementation exposes upgradeable OFT and Hyperlane cross-chain administration. The reviewed primary sources do not establish a current holder blacklist or freeze function, but the upgradeable proxy and external messaging controls leave a material intervention surface. Possible is retained pending a dated control inventory for the native and bridged deployments.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

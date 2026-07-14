@@ -216,10 +216,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: GHO resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Aave GHO introduction",
+        "url": "https://governance.aave.com/t/introducing-gho/8730"
+      },
+      {
+        "label": "Etherscan GHO contract",
+        "url": "https://etherscan.io/token/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+      },
+      {
+        "label": "Aave GHO bridging documentation",
+        "url": "https://aave.com/help/gho-stablecoin/bridging-gho"
+      }
+    ],
+    "evidence": "Aave's GHO design describes a decentralized collateral-backed token whose supply is generated and burned by governance-approved facilitators. The verified Ethereum GHO token surface exposes standard transfer and transferFrom operations without a holder blacklist, freeze, or pause function. Aave's bridge documentation describes lock-and-mint or burn-and-mint bridge mechanics; those bridge contracts and reserve dependencies are separate control surfaces and do not establish a direct holder-balance freeze on GHO itself.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",

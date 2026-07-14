@@ -353,10 +353,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Freeze-only re-review: USDD has no confirmed direct holder-balance freeze in reviewed metadata, but resolves to Upstream through stablecoin reserve and DeFi exposure.",
-    "evidence": "USDD resolves to Upstream through USDT/USDC PSM and stablecoin DeFi exposure rather than direct token freeze authority.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "sources": [
+      {
+        "label": "USDD core features",
+        "url": "https://docs.usdd.io/introduction/core-features"
+      },
+      {
+        "label": "USDD deployment addresses",
+        "url": "https://docs.usdd.io/developers/deployment-addresses"
+      },
+      {
+        "label": "Etherscan USDD contract",
+        "url": "https://etherscan.io/token/0x4f8e5de400de08b164e7421b3ee387f461becd1a"
+      }
+    ],
+    "evidence": "USDD's official core-features documentation states that no centralized authority can freeze user funds. The official deployment list covers the reviewed Tron, Ethereum, and BNB Chain token contracts; the verified Ethereum token exposes Maker-style mint, burn, deny, rely, and transfer operations but no holder blacklist or freeze function. USDT/USDC PSM and DeFi reserves can carry upstream freeze exposure, which is separate from a direct USDD holder-balance control.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

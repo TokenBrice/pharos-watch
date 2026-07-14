@@ -287,10 +287,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: ZCHF resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Frankencoin documentation",
+        "url": "https://docs.frankencoin.com/"
+      },
+      {
+        "label": "Frankencoin source repository",
+        "url": "https://github.com/Frankencoin-ZCHF/FrankenCoin"
+      },
+      {
+        "label": "ZCHF Ethereum verified contract",
+        "url": "https://etherscan.io/address/0xb58e61c3098d85632df34eecfb899a1ed80921cb#code"
+      }
+    ],
+    "evidence": "Frankencoin's documentation describes ZCHF as an oracle-free collateralized ERC-20. The verified Ethereum token surface exposes standard transfer, transferFrom, mint, burn, and minter-governance functions, with no holder blacklist, freeze, or pause function identified in the reviewed ABI. The tracked L2 deployments and bridge route remain a separate control boundary, so the inherited status is retained for upstream and cross-chain exposure rather than asserting a universal no-freeze result.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

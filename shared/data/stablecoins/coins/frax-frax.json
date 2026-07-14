@@ -153,10 +153,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: FRAX resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Frax documentation",
+        "url": "https://docs.frax.finance/"
+      },
+      {
+        "label": "FRAX Ethereum deployment",
+        "url": "https://etherscan.io/address/0x853d955acef822db058eb8505911ed77f175b99e#code"
+      }
+    ],
+    "evidence": "BLOCKED: the reviewed Frax documentation and Ethereum deployment do not establish a current holder-level freeze or transfer-restriction path for every material deployment. FRAX has fourteen tracked deployments, so the Ethereum review cannot safely resolve chain-wide control reach; inherited upstream exposure remains recorded.",
+    "reviewer": "OpenAI Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",

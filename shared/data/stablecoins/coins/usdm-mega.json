@@ -180,12 +180,18 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDM resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "MegaUSD Ethereum token contract",
+        "url": "https://etherscan.io/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926#code"
+      }
+    ],
+    "evidence": "The verified Ethereum MegaUSD proxy source exposes blacklister administration, an address blacklist, and rescueBlacklistedTokens. Its _update hook rejects transfers involving a blacklisted caller, sender, or recipient, establishing direct holder-level transfer restriction capability.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "custodyModel": "institutional-regulated",
   "dependencies": [

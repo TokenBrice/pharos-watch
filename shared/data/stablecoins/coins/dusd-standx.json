@@ -86,22 +86,22 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.standx.com/"
+        "label": "StandX DUSD minting documentation",
+        "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
       },
       {
-        "label": "Website",
-        "url": "https://standx.com/"
+        "label": "Solana RPC getAccountInfo",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Solana slot 425778638, the tracked Token-2022 DUSD mint reported H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h as both mintAuthority and freezeAuthority. That authority is a PDA owned by the immutable StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB, so the program can directly freeze individual DUSD token accounts and block their transfers. The separate BSC deployment remains governed through the StandX Gateway role system.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {

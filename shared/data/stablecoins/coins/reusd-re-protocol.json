@@ -181,10 +181,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: reUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Re Protocol documentation",
+        "url": "https://docs.re.xyz/"
+      },
+      {
+        "label": "reUSD Ethereum deployment",
+        "url": "https://etherscan.io/address/0x5086bf358635b81d8c47c66d1c8b9e567db70c72#code"
+      }
+    ],
+    "evidence": "BLOCKED: reviewed issuer documentation and the Ethereum deployment do not establish a current holder-level freeze or transfer-restriction authority for reUSD across Ethereum, Avalanche, Arbitrum, Base, BNB Chain, and Ink. The review preserves the inherited upstream exposure and records the missing multi-deployment control evidence.",
+    "reviewer": "OpenAI Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

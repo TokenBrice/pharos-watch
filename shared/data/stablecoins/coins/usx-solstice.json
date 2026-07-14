@@ -46,12 +46,22 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USX resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "USX Solscan token account",
+        "url": "https://solscan.io/token/6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG"
+      },
+      {
+        "label": "Solstice USX program",
+        "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+      }
+    ],
+    "evidence": "At finalized Solana slot 421873034, the USX mint listed Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4 as its live freezeAuthority as well as mintAuthority. The authority account is owned by the Solstice USX program, so the program can directly freeze individual USX token accounts and thereby restrict their transfers.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

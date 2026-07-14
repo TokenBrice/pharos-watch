@@ -1983,10 +1983,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: satUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "River documentation",
+        "url": "https://docs.river.inc/"
+      },
+      {
+        "label": "satUSD Ethereum deployment",
+        "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2#code"
+      }
+    ],
+    "evidence": "BLOCKED: reviewed issuer documentation and the Ethereum deployment do not establish holder-level freeze or transfer-restriction reach across the eleven tracked satUSD deployments. The existing inherited upstream exposure is retained; complete native and bridged deployment authority evidence is required before resolving the access facts.",
+    "reviewer": "OpenAI Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "unproven",
   "deploymentModel": "third-party-bridge",

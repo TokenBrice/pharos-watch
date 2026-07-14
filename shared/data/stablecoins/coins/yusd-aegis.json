@@ -92,12 +92,18 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Resolved to Upstream: YUSD is a USDe-style delta-neutral synthetic dollar; freeze exposure is inherited from upstream USDT/USDC deposits and centralized custody rather than a direct token-level blacklist on YUSD.",
-    "reviewer": "Opus med-confidence verification",
-    "reviewedAt": "2026-05-23"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "YUSD Ethereum token contract",
+        "url": "https://etherscan.io/address/0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a#code"
+      }
+    ],
+    "evidence": "The verified Ethereum YUSD source gives the owner addBlackList and removeBlackList authority. Its _update hook rejects transfers where either the sender or recipient is blacklisted, establishing a direct holder-level transfer restriction on the tracked token.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",

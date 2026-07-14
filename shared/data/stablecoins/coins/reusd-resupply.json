@@ -150,10 +150,23 @@
   "governanceQuality": "dao-governance",
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Freeze-only re-review: REUSD has no confirmed direct holder-balance freeze in reviewed metadata, but resolves to Upstream through lending-vault collateral exposure.",
-    "evidence": "REUSD resolves to Upstream through crvUSD/frxUSD lending vault exposure rather than direct token freeze authority.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "sources": [
+      {
+        "label": "REUSD verified contract source",
+        "url": "https://eth.blockscout.com/address/0x57ab1e0003f623289cd798b1824be09a793e4bec"
+      },
+      {
+        "label": "Resupply governance voting",
+        "url": "https://docs.resupply.fi/resupply-governance/governance-voting"
+      },
+      {
+        "label": "Resupply admin permissions",
+        "url": "https://docs.resupply.fi/faq/multisig-and-admin-permissions"
+      }
+    ],
+    "evidence": "The verified REUSD source exposes owner/operator-controlled mint and standard ERC-20 transfers, but no holder blacklist, freeze, seizure, or global pause function. The owner is Resupply Core and proposal execution is governed by the token-weighted Voter with a seven-day vote and one-day execution delay. crvUSD and frxUSD lending-vault collateral create upstream loss exposure without granting their controllers access to REUSD holder balances.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

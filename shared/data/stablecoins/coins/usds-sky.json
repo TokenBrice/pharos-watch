@@ -228,22 +228,26 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.sky.money/"
+        "label": "Sky USDS contract repository",
+        "url": "https://github.com/sky-ecosystem/usds"
       },
       {
-        "label": "Website",
-        "url": "https://sky.money/"
+        "label": "Solscan USDS mint",
+        "url": "https://solscan.io/token/USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA"
+      },
+      {
+        "label": "Solana JSON-RPC API",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The official Sky USDS repository describes the EVM token as a standard ERC-20 with permit and UUPS upgradeability, without a holder blacklist function. The listed Solana USDS mint was queried through the Solana JSON-RPC API on 2026-07-14 and returned an active freezeAuthority (AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt), so the multichain asset has direct holder-freeze capability on its Solana deployment even though the EVM token source does not expose that function.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

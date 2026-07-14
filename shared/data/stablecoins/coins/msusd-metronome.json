@@ -846,10 +846,27 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: MSUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Metronome Synth contract registry",
+        "url": "https://docs.metronome.io/metronome-synth/contracts"
+      },
+      {
+        "label": "Metronome Synth protocol documentation",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
+      },
+      {
+        "label": "msUSD Ethereum deployment",
+        "url": "https://etherscan.io/address/0xab5eb14c09d416f0ac63661e57edb7aecdb9befa#code"
+      },
+      {
+        "label": "msUSD cross-chain proxy",
+        "url": "https://etherscan.io/address/0xf37982e3f33ac007c690ed6266f3402d24aa27ea#code"
+      }
+    ],
+    "evidence": "Metronome's official contract registry identifies the Ethereum msUSD synthetic token and a separate cross-chain ProxyOFT deployment. The documentation describes msUSD as a protocol synthetic asset and the reviewed materials do not establish a dated holder blacklist or freeze inventory across the native and bridged deployments. The inherited status is retained for protocol, collateral, and cross-chain control dependencies; no direct holder restriction is asserted without deployment-wide verified source evidence.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {

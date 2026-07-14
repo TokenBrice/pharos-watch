@@ -165,10 +165,23 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: YZUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Yuzu Money overview",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money"
+      },
+      {
+        "label": "Yuzu Money security infrastructure",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/hypernative-sentinel"
+      },
+      {
+        "label": "YZUSD Plasma deployment",
+        "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc?tab=contract"
+      }
+    ],
+    "evidence": "Yuzu's official overview describes yzUSD as an overcollateralized DeFi-suite stablecoin, while its security documentation describes protocol-level threat response and the ability to block a malicious wallet or contract from interacting with the protocol. Those materials do not establish a dated holder-level blacklist or freeze function for the tracked Plasma token contract. The inherited status is retained for the reserve, custody, and protocol-control dependencies; no direct token restriction is asserted.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "unproven",
   "collateralQuality": "exotic",

@@ -265,10 +265,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: meUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "MUSD Ethereum verified contract",
+        "url": "https://eth.blockscout.com/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+      },
+      {
+        "label": "Mezo MUSD documentation",
+        "url": "https://mezo.org/docs/users/musd"
+      },
+      {
+        "label": "Mezo MUSD bridge documentation",
+        "url": "https://mezo.org/docs/users/musd/musd-bridge/"
+      }
+    ],
+    "evidence": "The verified MUSD token source exposes owner-controlled mint and burn plus standard transfers, with fixed zero-address and self-address recipient checks, but no holder blacklist, freeze, seizure, or global pause. Mezo, Ethereum, and Base use Wormhole NTT for cross-chain supply movement; NTT managers are a bridge control boundary and do not establish a holder-level restriction in the reviewed token implementation.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",

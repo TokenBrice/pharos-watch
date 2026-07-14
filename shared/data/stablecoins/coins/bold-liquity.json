@@ -292,10 +292,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: BOLD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Liquity BOLD verified contract source",
+        "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+      },
+      {
+        "label": "Liquity V2 technical documentation",
+        "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
+      },
+      {
+        "label": "Chainlink BOLD CCIP directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+      }
+    ],
+    "evidence": "The immutable Ethereum BOLD token has renounced ownership and limits minting and burning to registered Liquity branch contracts; its verified source exposes no holder blacklist, freeze, seizure, or global pause. Non-Ethereum BOLD is transported through reviewed Chainlink CCIP lock/release and burn/mint pools, which control bridge supply but do not establish an issuer-operated holder blacklist on the canonical token.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "immutable-user-collateralized",

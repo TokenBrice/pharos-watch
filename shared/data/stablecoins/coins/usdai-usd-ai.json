@@ -13,10 +13,19 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDai resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "USD.AI documentation",
+        "url": "https://docs.usd.ai/"
+      },
+      {
+        "label": "USDai Ethereum deployment",
+        "url": "https://etherscan.io/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef#code"
+      }
+    ],
+    "evidence": "BLOCKED: reviewed issuer documentation and the Ethereum deployment do not provide a primary-source holder-control model for the native token and its Arbitrum, Base, and Plasma deployments. No direct blacklist or transfer-restriction claim is made; the existing inherited upstream exposure remains recorded.",
+    "reviewer": "OpenAI Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "collateral": "PYUSD held by the canonical USDai contract on Arbitrum and reconciled 1:1 against canonical plus bridged USDai liabilities; GPU-loan DEAL exposure belongs to the separate sUSDai yield layer",
   "pegMechanism": "Users mint and redeem canonical USDai against PYUSD through the Arbitrum hub. Satellite USDai supply is tracked as bridgedSupply against the same PYUSD pool, while sUSDai separately deploys deposited USDai into GPU-backed credit strategies.",
