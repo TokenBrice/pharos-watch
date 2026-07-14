@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-const HexBytesSchema = z.string().regex(/^0x(?:[0-9a-f]{2})*$/);
+const HexBytesSchema = z
+  .string()
+  .regex(/^0x[0-9a-f]*$/)
+  .refine((value) => value.length % 2 === 0, "Hex byte strings must contain complete bytes");
 const HexWordSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
 const DecimalStringSchema = z.string().regex(/^[0-9]+$/);
 

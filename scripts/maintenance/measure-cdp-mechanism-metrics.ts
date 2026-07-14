@@ -70,7 +70,6 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
       const outPath = resolve(join(options.outDir, parsed.assetId, `${date}-block-${parsed.block.number}.json`));
       const serialized = `${JSON.stringify(parsed, null, 2)}\n`;
       if (existsSync(outPath)) {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from measured block metadata.
         const existing = readFileSync(outPath, "utf8");
         // rpcUrl and block.selection describe how THIS run reached the block,
         // not what was measured; everything else must replay byte-identically.
@@ -87,7 +86,6 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
         return;
       }
       mkdirSync(dirname(outPath), { recursive: true });
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- path derived from measured block metadata.
       writeFileSync(outPath, serialized);
       console.log(
         `[measure-cdp] ${parsed.assetId}: block ${parsed.block.number} (${parsed.block.selection}) via ${rpcUrl}\n` +
