@@ -21,17 +21,34 @@
   "oracleRisk": {
     "tier": "oracleless-or-internal",
     "summary": "DLLR/Mynt mints and redeems against constituent BTC-backed stablecoins such as DOC and ZUSD at equivalent amounts, so the aggregator layer uses deterministic internal accounting rather than its own liquidation oracle.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Mynt documents DLLR as an aggregator token minted and redeemed 1:1 against supported bAssets such as ZUSD and DOC. The DLLR aggregation layer does not create borrower debt positions or liquidate collateral; collateral-oracle and liquidation risks remain in the independent upstream bAsset protocols.",
+      "sources": [
+        {
+          "label": "Sovryn builder portal: Mynt contracts",
+          "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
+        },
+        {
+          "label": "Sovryn Dollar product page",
+          "url": "https://sovryn.com/sovryn-dollar"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Sovryn Dollar wiki",
-        "url": "https://wiki.sovryn.com/en/sovryn-dapp/sovryn-dollar"
+        "label": "Sovryn builder portal: Mynt contracts",
+        "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
       },
       {
-        "label": "Sovryn Mynt design preview",
-        "url": "https://sovryn.com/all-things-sovryn/zero-design-preview-3-earning-btc-and-using-mynt"
+        "label": "Sovryn Dollar product page",
+        "url": "https://sovryn.com/sovryn-dollar"
       }
     ]
   },

@@ -19,14 +19,105 @@
   "geckoId": "resupply-usd",
   "oracleRisk": {
     "tier": "oracleless-or-internal",
-    "summary": "Resupply reUSD values crvUSD/frxUSD collateral at one dollar by protocol assumption, so the CDP collateral path uses internal stablecoin accounting rather than an external liquidation oracle.",
-    "reviewedAt": "2026-06-12",
+    "summary": "Resupply lending pairs value ERC-4626 collateral from its share-to-underlying conversion while treating the crvUSD or frxUSD underlying as one dollar, so liquidations use an internal vault-rate path rather than market-price feeds.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "reUSD is borrowed through separately registered Curve Lend and Fraxlend collateral pairs. At Ethereum block 25530458, 18 registered pairs pointed to the same BasicVaultOracle and shared ResupplyPair, LiquidationHandler, and InsurancePool logic; the wstUSR pair had a zero oracle and zero borrow limit. The configured pairs are therefore represented as one grouped common-engine branch and wstUSR is excluded.",
+      "sources": [
+        {
+          "label": "Resupply collateralized debt positions",
+          "url": "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions.md"
+        },
+        {
+          "label": "Resupply protocol contracts",
+          "url": "https://github.com/resupplyfi/resupply"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
         "label": "Resupply collateralized debt positions",
         "url": "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions.md"
+      },
+      {
+        "label": "Resupply protocol contracts",
+        "url": "https://github.com/resupplyfi/resupply"
+      }
+    ],
+    "branches": [
+      {
+        "id": "registered-lending-vault-pairs",
+        "label": "Registered Curve Lend and Fraxlend vault pairs",
+        "tier": "oracleless-or-internal",
+        "summary": "Enabled Resupply pairs use the common BasicVaultOracle to convert lending-vault shares to crvUSD or frxUSD units and apply the pair's configured maximum LTV without an external USD market-price feed.",
+        "collateralAssets": [
+          "Registered Curve Lend and Fraxlend ERC-4626 vault shares backed by crvUSD or frxUSD"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Resupply BasicVaultOracle",
+            "path": "ERC-4626 convertToAssets share rate, with crvUSD/frxUSD treated as $1 -> inverted pair exchange rate -> borrower LTV",
+            "address": "0xa346ba5e838d6ee40204a69549c81ab982644150",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25530458,
+            "failureDomainKeys": [
+              "resupply-basic-vault-oracle",
+              "collateral-vault-convert-to-assets",
+              "crvusd-frxusd-one-dollar-assumption",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The pair calls BasicVaultOracle on every exchange-rate update and stores a new rate only when the result changes. A reverting vault conversion or out-of-bounds share price reverts the operation; the liquidation path does not fall back to the stored exchange rate or an external stablecoin market feed.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530458,
+        "collateralParameters": [
+          {
+            "asset": "Registered Curve Lend and Fraxlend ERC-4626 vault shares backed by crvUSD or frxUSD",
+            "maximumLtvPct": 95,
+            "note": "The deployment default is 95% maximum LTV, but governance can configure maximum LTV, borrow limit, and liquidation fee per registered pair."
+          }
+        ],
+        "liquidationMechanism": "When current debt divided by vault-share value exceeds the pair maximum LTV, any caller may route a liquidation through LiquidationHandler. The pair closes the borrower's full debt, transfers collateral shares to the handler, and pays the configured liquidation incentive from recovered collateral where available.",
+        "liquidationDelaySec": 0,
+        "backstop": "LiquidationHandler redeems recovered vault shares into the Resupply InsurancePool and burns InsurancePool reUSD assets up to both recovered value and the pool's burnable balance.",
+        "shutdownOrBadDebtBehavior": "Any portion not covered by redeemable collateral or the InsurancePool remains recorded as debtByCollateral. Governance can later process collateral and clear that debt when the InsurancePool can burn it; the guardian pause sets pair borrowing capacity to zero but does not define a global settlement or alternate oracle.",
+        "failureDomainKeys": [
+          "resupply-basic-vault-oracle",
+          "resupply-pair-engine",
+          "resupply-liquidation-handler",
+          "resupply-insurance-pool",
+          "crvusd-frxusd-one-dollar-assumption",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Resupply collateralized debt positions",
+            "url": "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions.md"
+          },
+          {
+            "label": "Resupply BasicVaultOracle source",
+            "url": "https://github.com/resupplyfi/resupply/blob/main/src/protocol/BasicVaultOracle.sol"
+          },
+          {
+            "label": "Resupply pair and liquidation source",
+            "url": "https://github.com/resupplyfi/resupply"
+          },
+          {
+            "label": "Resupply registry on Ethereum",
+            "url": "https://etherscan.io/address/0x10101010e0c3171d894b71b3400668af311e7d94"
+          }
+        ]
       }
     ]
   },

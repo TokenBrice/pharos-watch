@@ -18,15 +18,108 @@
   "detailProvider": "defillama",
   "geckoId": "dola-usd",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Inverse FiRM uses Pessimistic Price Oracles for collateral valuation, but reviewed docs do not identify stronger failover or shutdown handling.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "tier": "redundant-with-failover",
+    "summary": "Inverse FiRM values isolated collateral markets through Pessimistic Price Oracles that choose the conservative value across a primary and fallback path before applying market-specific collateral and liquidation parameters.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "DOLA is borrowed from isolated FiRM markets whose collateral types have separately governed collateral factors, liquidation factors, incentives, borrow caps, and oracle configurations. The markets share the documented Pessimistic Price Oracle and FiRM liquidation architecture, so they are represented as one common mechanism branch rather than unsupported per-market parameter estimates.",
+      "sources": [
+        {
+          "label": "Inverse FiRM documentation",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
+        },
+        {
+          "label": "Inverse core concepts",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/getting-started/core-concepts"
+        },
+        {
+          "label": "Inverse risk parameter frameworks",
+          "url": "https://docs.inverse.finance/risk-working-group-digest/security/frameworks"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
     "confidence": "verified",
     "sources": [
       {
         "label": "Inverse FiRM docs",
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
+      },
+      {
+        "label": "Inverse core concepts",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/getting-started/core-concepts"
+      },
+      {
+        "label": "Inverse jrDOLA first-loss documentation",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
+      }
+    ],
+    "branches": [
+      {
+        "id": "firm-isolated-markets",
+        "label": "FiRM isolated collateral markets",
+        "tier": "redundant-with-failover",
+        "summary": "Governance-approved FiRM markets share conservative dual-path price selection, isolated collateral escrows, and third-party liquidation against market-specific risk parameters.",
+        "collateralAssets": [
+          "Governance-approved FiRM collateral markets"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Inverse Pessimistic Price Oracle",
+            "path": "Primary price source and fallback/TWAP path -> conservative lower collateral price -> FiRM market",
+            "chain": "ethereum",
+            "failureDomainKeys": [
+              "inverse-oracle-configuration",
+              "chainlink",
+              "inverse-fallback-price-source",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "FiRM's Pessimistic Price Oracle compares independent price paths and uses the lower collateral value; current documentation describes Chainlink plus a fallback or time-weighted path, with governance able to update oracle configuration.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Governance-approved FiRM collateral markets",
+            "note": "Each isolated market has governance-set collateral factor, liquidation factor, liquidation incentive, supply ceiling, and daily borrow limits; values differ by collateral and are not collapsed into one estimate."
+          }
+        ],
+        "liquidationMechanism": "When a loan breaches its market collateral factor, third-party liquidators repay DOLA debt and receive collateral plus the market liquidation incentive; depleted DBR can first trigger repeated permissionless replenishment that adds DOLA debt until liquidation eligibility is reached.",
+        "liquidationDelaySec": 0,
+        "backstop": "For governance-approved FiRM markets, jrDOLA is a voluntary first-loss DOLA vault whose assets can be slashed to repay liquidation shortfalls; uncovered losses outside that coverage remain a claim on protocol reserves.",
+        "shutdownOrBadDebtBehavior": "FiRM isolates collateral markets so a market shortfall does not directly pool collateral risk across borrowers. Selected bad debt can slash jrDOLA before protocol reserves; reviewed documentation does not describe a global DOLA shutdown or holder settlement path.",
+        "failureDomainKeys": [
+          "inverse-governance",
+          "inverse-oracle-configuration",
+          "inverse-liquidators",
+          "inverse-jrdola",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Inverse core concepts",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/getting-started/core-concepts"
+          },
+          {
+            "label": "Inverse DBR liquidation documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dbr"
+          },
+          {
+            "label": "Inverse risk parameter frameworks",
+            "url": "https://docs.inverse.finance/risk-working-group-digest/security/frameworks"
+          },
+          {
+            "label": "Inverse jrDOLA first-loss documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
+          }
+        ]
       }
     ]
   },
@@ -164,34 +257,91 @@
   "reserves": [
     {
       "name": "sUSDe collateral",
-      "pct": 88.8,
+      "pct": 82.7,
       "risk": "high",
       "coinId": "susde-ethena",
       "depType": "collateral"
     },
     {
       "name": "sUSDS collateral",
-      "pct": 7.7,
+      "pct": 12.5,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral"
     },
     {
-      "name": "Governance tokens (INV, CRV, CVX)",
-      "pct": 2,
-      "risk": "very-high"
-    },
-    {
-      "name": "ETH / liquid staking collateral",
-      "pct": 1,
+      "name": "ETH / Liquid staking (wstETH, WETH)",
+      "pct": 1.5,
       "risk": "low"
     },
     {
-      "name": "BTC collateral",
-      "pct": 0.5,
+      "name": "Other collateral",
+      "pct": 1.4,
+      "risk": "high"
+    },
+    {
+      "name": "Governance tokens (INV, CRV, CVX)",
+      "pct": 1.3,
+      "risk": "very-high"
+    },
+    {
+      "name": "BTC (WBTC, cbBTC)",
+      "pct": 0.6,
       "risk": "medium"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Inverse Finance FiRM markets API",
+        "url": "https://www.inverse.finance/api/f2/fixed-markets"
+      },
+      {
+        "label": "Inverse Finance transparency documentation",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
+      }
+    ],
+    "rationale": "Tracked dependencies use each current FiRM market's DOLA debt share from the official API. The remaining slices are not silently linked: the sDOLA-scrvUSD Curve LP needs a constituent split, while ETH/LST, governance-token, and BTC collateral are identified exogenous assets outside the stablecoin dependency graph.",
+    "compositionBasis": "Current DOLA debt outstanding by FiRM collateral market, aggregated with the reviewed DOLA live-reserve adapter",
+    "compositionAsOf": "2026-07-14",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "The 1.4% Other collateral slice is the sDOLA-scrvUSD Curve LP; its self and scrvUSD legs cannot be weighted from the aggregate market debt alone.",
+    "knownUnknownExposurePct": 1.4,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "ETH / Liquid staking (wstETH, WETH)",
+        "pct": 1.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The slice contains ETH and liquid-staking collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Other collateral",
+        "pct": 1.4,
+        "disposition": "basket-needs-split",
+        "rationale": "The API identifies this debt as an sDOLA-scrvUSD Curve LP market but does not split the self and scrvUSD constituent weights.",
+        "candidateCoinIds": ["scrvusd-curve"]
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Governance tokens (INV, CRV, CVX)",
+        "pct": 1.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Governance-token collateral is identified but is not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "BTC (WBTC, cbBTC)",
+        "pct": 0.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Bitcoin collateral is identified but is not a stablecoin dependency."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "dola-inverse",
     "version": 1,

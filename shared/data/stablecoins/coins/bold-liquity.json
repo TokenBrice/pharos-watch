@@ -347,7 +347,7 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "BOLD is Ethereum-issued by Liquity V2 and its multichain route is documented through Chainlink CCIP. The route uses an external interoperability network with token-transfer validation assumptions, not only a native rollup bridge.",
-    "reviewedAt": "2026-06-13",
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
     "protocols": [
@@ -369,6 +369,10 @@
       {
         "label": "Chainlink CCIP architecture",
         "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+      },
+      {
+        "label": "Chainlink BOLD CCIP directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
       }
     ],
     "routes": [
@@ -407,11 +411,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0x10a9de252eb9e11841fa58b18fd09ab43d4b7d92"
+        ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Liquity BOLD CCIP announcement",
@@ -420,6 +430,14 @@
           {
             "label": "Chainlink CCIP architecture",
             "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "Arbitrum BOLD BurnMintTokenPool",
+            "url": "https://arbiscan.io/address/0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92#code"
           }
         ]
       },
@@ -433,11 +451,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "controllerChain": "base",
+        "controllerAddress": "0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x10a9de252eb9e11841fa58b18fd09ab43d4b7d92"
+        ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Liquity BOLD CCIP announcement",
@@ -446,6 +470,14 @@
           {
             "label": "Chainlink CCIP architecture",
             "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "Base BOLD BurnMintTokenPool",
+            "url": "https://basescan.org/address/0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92#code"
           }
         ]
       },
@@ -459,11 +491,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:optimism:0x10a9de252eb9e11841fa58b18fd09ab43d4b7d92"
+        ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Liquity BOLD CCIP announcement",
@@ -472,6 +510,14 @@
           {
             "label": "Chainlink CCIP architecture",
             "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "OP Mainnet BOLD BurnMintTokenPool",
+            "url": "https://optimistic.etherscan.io/address/0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92#code"
           }
         ]
       },
@@ -485,11 +531,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xCfC5092583C1B2122F221F524C198ABDeCBf3D1b",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:avalanche:0xcfc5092583c1b2122f221f524c198abdecbf3d1b"
+        ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Liquity BOLD CCIP announcement",
@@ -498,6 +550,14 @@
           {
             "label": "Chainlink CCIP architecture",
             "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "Avalanche BOLD BurnMintTokenPool",
+            "url": "https://snowtrace.io/address/0xCfC5092583C1B2122F221F524C198ABDeCBf3D1b#code"
           }
         ]
       },
@@ -511,11 +571,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x48Fd11f0F21bAC2D8486E6682fE1E2Cb98f9AAb1",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:hyperevm:0x48fd11f0f21bac2d8486e6682fe1e2cb98f9aab1"
+        ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Liquity BOLD CCIP announcement",
@@ -524,6 +590,14 @@
           {
             "label": "Chainlink CCIP architecture",
             "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "HyperEVM BOLD BurnMintTokenPool",
+            "url": "https://hyperevmscan.io/address/0x48Fd11f0F21bAC2D8486E6682fE1E2Cb98f9AAb1#code"
           }
         ]
       },
@@ -537,11 +611,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "controllerChain": "sonic",
+        "controllerAddress": "0xCfC5092583C1B2122F221F524C198ABDeCBf3D1b",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:sonic:0xcfc5092583c1b2122f221f524c198abdecbf3d1b"
+        ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Liquity BOLD CCIP announcement",
@@ -550,6 +630,14 @@
           {
             "label": "Chainlink CCIP architecture",
             "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "Sonic BOLD BurnMintTokenPool",
+            "url": "https://sonicscan.org/address/0xCfC5092583C1B2122F221F524C198ABDeCBf3D1b#code"
           }
         ]
       }

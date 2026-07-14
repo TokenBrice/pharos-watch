@@ -20,7 +20,24 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "f(x) V2 combines Chainlink, DEX spot, and anchor feeds for ETH/WBTC pricing and falls back to anchor pricing when governed deviation thresholds are breached.",
-    "reviewedAt": "2026-06-12",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "f(x) deploys separate WBTC and wstETH long pools with collateral-specific price oracles, debt-ratio parameters, and position accounting. Both pools share the PoolManager, fxUSD/USDC base-pool liquidation funding, and reserve-pool shortfall path, so each collateral pool is reviewed separately.",
+      "sources": [
+        {
+          "label": "f(x) liquidation processing",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations"
+        },
+        {
+          "label": "f(x) protocol contracts",
+          "url": "https://github.com/AladdinDAO/fx-protocol-contracts"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
@@ -31,6 +48,152 @@
       {
         "label": "f(x) WBTC oracle docs",
         "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/wbtc.md"
+      },
+      {
+        "label": "f(x) liquidation processing",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations"
+      },
+      {
+        "label": "f(x) protocol contracts",
+        "url": "https://github.com/AladdinDAO/fx-protocol-contracts"
+      }
+    ],
+    "branches": [
+      {
+        "id": "wbtc-long-pool",
+        "label": "WBTC long-pool collateral branch",
+        "tier": "redundant-with-failover",
+        "summary": "The WBTC long pool prices WBTC from a Chainlink BTC/USD anchor and configured on-chain spot paths, with a 1% deviation clamp to the anchor.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "f(x) WBTCPriceOracle using Chainlink BTC/USD and configured on-chain spot sources",
+            "path": "Chainlink BTC/USD anchor plus DEX spot encodings -> WBTCPriceOracle minimum liquidation price -> WBTC long-pool debt ratio",
+            "address": "0xb3c90e64eb6f456a5f5c17aa99b6aeca6f4a6390",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25530458,
+            "failureDomainKeys": [
+              "fx-wbtc-price-oracle",
+              "chainlink-btc-usd",
+              "fx-spot-price-oracle",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The oracle includes its Chainlink-derived anchor with on-chain spot paths and replaces an outlying minimum or maximum with the anchor when deviation exceeds the governed threshold (initialized to 1%). A stale or non-positive Chainlink answer reverts rather than using a cached last-good price.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530458,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 95,
+            "note": "Published Ethereum deployment parameters set rebalancing at an 88% debt ratio and liquidation at a 95% debt ratio, with collateral-specific capacity and fee settings."
+          }
+        ],
+        "liquidationMechanism": "Once a WBTC pool tick reaches the liquidation debt ratio, callers can invoke the fxUSD base pool to supply fxUSD or USDC; the PoolManager consumes that liquidity, cancels pool debt, and transfers priced WBTC plus the configured bonus.",
+        "liquidationDelaySec": 0,
+        "backstop": "The fxUSD/USDC base pool supplies liquidation liquidity and the collateral-specific ReservePool balance can cover liquidation bonus or shortfall before socialization.",
+        "shutdownOrBadDebtBehavior": "If collateral plus reserve funds cannot cover a tick's debt, the pool removes the exhausted collateral and redistributes remaining bad debt through the pool debt index. Oracle failure reverts price-dependent liquidation, and the PoolManager pause blocks liquidation calls; the reviewed sources do not define a separate global shutdown settlement.",
+        "failureDomainKeys": [
+          "fx-wbtc-price-oracle",
+          "fx-wbtc-long-pool",
+          "fx-usd-base-pool",
+          "fx-reserve-pool",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "f(x) WBTC oracle docs",
+            "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/wbtc.md"
+          },
+          {
+            "label": "f(x) liquidation processing",
+            "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations"
+          },
+          {
+            "label": "f(x) WBTC deployment and pool source",
+            "url": "https://github.com/AladdinDAO/fx-protocol-contracts"
+          },
+          {
+            "label": "f(x) WBTC long pool on Ethereum",
+            "url": "https://etherscan.io/address/0xAB709e26Fa6B0A30c119D8c55B887DeD24952473"
+          }
+        ]
+      },
+      {
+        "id": "wsteth-long-pool",
+        "label": "wstETH long-pool collateral branch",
+        "tier": "redundant-with-failover",
+        "summary": "The wstETH long pool derives its collateral price from the ETH/USD anchor, configured on-chain spot paths, and the staking conversion, with a 1% deviation clamp to the anchor.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "f(x) StETHPriceOracle using Chainlink ETH/USD, configured on-chain spot sources, and staking conversion",
+            "path": "Chainlink ETH/USD anchor plus DEX spot encodings and stETH/wstETH conversion -> StETHPriceOracle minimum liquidation price -> wstETH long-pool debt ratio",
+            "address": "0x0c5c61025f047cb7e3e85852dc8eafd7b9a4abfb",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25530458,
+            "failureDomainKeys": [
+              "fx-steth-price-oracle",
+              "chainlink-eth-usd",
+              "fx-spot-price-oracle",
+              "lido-staking-rate",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The oracle includes its Chainlink-derived anchor with on-chain spot paths and replaces an outlying minimum or maximum with the anchor when deviation exceeds the governed threshold (initialized to 1%). A stale or non-positive Chainlink answer reverts rather than using a cached last-good price.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530458,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "maximumLtvPct": 95,
+            "note": "Published Ethereum deployment parameters set rebalancing at an 88% debt ratio and liquidation at a 95% debt ratio, with collateral-specific capacity and fee settings."
+          }
+        ],
+        "liquidationMechanism": "Once a wstETH pool tick reaches the liquidation debt ratio, callers can invoke the fxUSD base pool to supply fxUSD or USDC; the PoolManager consumes that liquidity, cancels pool debt, and transfers priced wstETH plus the configured bonus.",
+        "liquidationDelaySec": 0,
+        "backstop": "The fxUSD/USDC base pool supplies liquidation liquidity and the collateral-specific ReservePool balance can cover liquidation bonus or shortfall before socialization.",
+        "shutdownOrBadDebtBehavior": "If collateral plus reserve funds cannot cover a tick's debt, the pool removes the exhausted collateral and redistributes remaining bad debt through the pool debt index. Oracle failure reverts price-dependent liquidation, and the PoolManager pause blocks liquidation calls; the reviewed sources do not define a separate global shutdown settlement.",
+        "failureDomainKeys": [
+          "fx-steth-price-oracle",
+          "fx-wsteth-long-pool",
+          "fx-usd-base-pool",
+          "fx-reserve-pool",
+          "lido-staking-rate",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "f(x) ETH oracle docs",
+            "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/oracle/eth.md"
+          },
+          {
+            "label": "f(x) liquidation processing",
+            "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations"
+          },
+          {
+            "label": "f(x) wstETH deployment and pool source",
+            "url": "https://github.com/AladdinDAO/fx-protocol-contracts"
+          },
+          {
+            "label": "f(x) wstETH long pool on Ethereum",
+            "url": "https://etherscan.io/address/0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8"
+          }
+        ]
       }
     ]
   },

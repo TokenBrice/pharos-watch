@@ -20,12 +20,13 @@
   "pythFeedId": "0x2a0e948f637a8c251d9f06055e72eb4b3880dd57848bbdb02993c8165d7df4ee",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "GHO minting follows Aave reserve collateralization, where each reserve has a governance-selected oracle contract for market prices.",
+    "summary": "GHO borrowing in Aave V3 Ethereum Core uses governance-selected reserve price sources through AaveOracle, with the common Pool health-factor liquidation and v3.3 deficit path.",
+    "branchModel": "multi-branch",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-07-13",
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
       "reviewer": "Codex data review",
-      "rationale": "Aave V3 supports multiple collateral reserve markets, but the reviewed GHO and oracle sources do not provide a source-backed per-market feed, liquidation, fallback, and backstop inventory. Keep GHO out of branch-complete v9 evaluation until that evidence is reviewed.",
+      "rationale": "GHO can be borrowed against multiple governance-enabled reserves whose price sources and collateral thresholds are configured per reserve. Those reserves share the Aave V3 Ethereum Core AaveOracle, Pool liquidation, v3.3 deficit-accounting, and GHO Umbrella backstop path reviewed here, so the common engine is represented as one grouped collateral branch.",
       "sources": [
         {
           "label": "Aave GHO docs",
@@ -34,10 +35,14 @@
         {
           "label": "Aave Oracle docs",
           "url": "https://aave.com/docs/ecosystem/oracle"
+        },
+        {
+          "label": "Aave health factor and liquidation docs",
+          "url": "https://aave.com/help/borrowing/liquidations"
         }
       ]
     },
-    "reviewedAt": "2026-06-12",
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
@@ -48,6 +53,90 @@
       {
         "label": "Aave Oracle docs",
         "url": "https://aave.com/docs/ecosystem/oracle"
+      },
+      {
+        "label": "Aave V3 AaveOracle source",
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/main/src/contracts/misc/AaveOracle.sol"
+      },
+      {
+        "label": "Aave V3.3 feature documentation",
+        "url": "https://github.com/aave-dao/aave-v3-origin/blob/main/docs/3.3/Aave-v3.3-features.md"
+      },
+      {
+        "label": "Aave Umbrella docs",
+        "url": "https://aave.com/help/umbrella/umbrella"
+      }
+    ],
+    "branches": [
+      {
+        "id": "aave-v3-ethereum-core",
+        "label": "Aave V3 Ethereum Core collateral reserves",
+        "tier": "standard-external",
+        "summary": "GHO debt minted through the Ethereum Core facilitator uses the common AaveOracle and Pool liquidation engine across governance-enabled collateral reserves.",
+        "collateralAssets": [
+          "Governance-enabled Aave V3 Ethereum Core collateral reserves"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Aave Governance-selected Chainlink or CAPO reserve sources",
+            "path": "Per-reserve price source -> AaveOracle -> Pool account health factor",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "failureDomainKeys": [
+              "aave-governance",
+              "aave-reserve-price-sources",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "AaveOracle queries its governance-configured fallback oracle when a reserve has no configured source or its source returns a non-positive answer; the implementation does not catch a source-call revert.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Governance-enabled Aave V3 Ethereum Core collateral reserves",
+            "note": "Aave Governance configures reserve-specific LTV, liquidation threshold, and liquidation bonus parameters; the account health factor applies the value-weighted liquidation thresholds across supplied collateral."
+          }
+        ],
+        "liquidationMechanism": "When account health factor falls below 1, any participant may repay GHO debt and receive priced collateral plus the reserve liquidation bonus; current V3 logic permits 50% or 100% close factors based on health factor and position size.",
+        "liquidationDelaySec": 0,
+        "backstop": "Aave Umbrella provides asset-specific automated deficit coverage for Ethereum Core, including a GHO module that can burn staked GHO to cover a realized GHO reserve deficit after the configured deficit offset.",
+        "shutdownOrBadDebtBehavior": "Aave V3.3 checks for zero collateral with remaining debt after liquidation, burns the remaining variable GHO debt, and records the amount as a GHO reserve deficit that can subsequently be covered through Umbrella; the reviewed sources do not describe a global GHO shutdown path.",
+        "failureDomainKeys": [
+          "aave-governance",
+          "aave-reserve-price-sources",
+          "aave-liquidators",
+          "aave-umbrella-gho",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Aave GHO docs",
+            "url": "https://aave.com/docs/ecosystem/gho"
+          },
+          {
+            "label": "Aave Oracle docs",
+            "url": "https://aave.com/docs/ecosystem/oracle"
+          },
+          {
+            "label": "Aave V3 AaveOracle source",
+            "url": "https://github.com/aave-dao/aave-v3-origin/blob/main/src/contracts/misc/AaveOracle.sol"
+          },
+          {
+            "label": "Aave health factor and liquidation docs",
+            "url": "https://aave.com/help/borrowing/liquidations"
+          },
+          {
+            "label": "Aave V3.3 feature documentation",
+            "url": "https://github.com/aave-dao/aave-v3-origin/blob/main/docs/3.3/Aave-v3.3-features.md"
+          },
+          {
+            "label": "Aave Umbrella docs",
+            "url": "https://aave.com/help/umbrella/umbrella"
+          }
+        ]
       }
     ]
   },
@@ -118,6 +207,11 @@
       "chain": "monad",
       "address": "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73",
       "decimals": 18
+    },
+    {
+      "chain": "xlayer",
+      "address": "0xde6539018b095353a40753dc54c91c68c9487d4e",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -132,28 +226,51 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "GHO minting depends on DAO-approved facilitator contracts and bucket capacity rather than unrestricted issuer minting.",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530270,
+      "sources": [
+        {
+          "label": "GHO verified token source and constructor",
+          "url": "https://eth.blockscout.com/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f",
-        "label": "GHO token facilitator registry",
+        "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "label": "Aave Ethereum ACL Admin executor",
         "role": "bucket-admin",
         "authorityType": "dao-governor",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The GHO token stores facilitator bucket capacity and DAO-approved facilitator addresses.",
+        "capDescription": "The Aave ACL Admin executor holds GHO's default-admin, facilitator-manager, and bucket-manager roles and can authorize facilitators or raise their bucket capacities.",
         "sources": [
           {
             "label": "Aave GHO facilitators",
             "url": "https://aave.com/help/gho-stablecoin/facilitators"
           },
           {
+            "label": "Aave Ethereum address book",
+            "url": "https://github.com/aave-dao/aave-address-book/blob/main/src/AaveV3Ethereum.sol"
+          },
+          {
             "label": "GHO token contract",
-            "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
+            "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readContract"
           }
         ],
-        "evidence": "getFacilitatorsList() returned six facilitator addresses at Ethereum block 25165911; each facilitator has a bucket capacity and level."
+        "evidence": "At Ethereum block 25530270, hasRole() returned true for 0x5300A1a1 under DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned the six facilitator contracts represented below."
       },
       {
         "chain": "ethereum",
@@ -216,7 +333,7 @@
         "role": "facilitator",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "280M GHO bucket observed",
+        "capDescription": "310M GHO bucket observed",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -225,7 +342,7 @@
             "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
-        "evidence": "GHO getFacilitator(0xE9ac5231fAecb633dA0Fe85Fcb2785b8363427d2) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
+        "evidence": "At Ethereum block 25530270, getFacilitatorBucket(0xE9ac5231fAecb633dA0Fe85Fcb2785b8363427d2) returned 310M GHO capacity and 310M GHO level."
       },
       {
         "chain": "ethereum",
@@ -275,16 +392,16 @@
           "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
         }
       ],
-      "evidence": "Aave documentation describes DAO-approved facilitators, and Ethereum reads identify the current facilitator set and bucket capacities.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "evidence": "At Ethereum block 25530270, the verified non-proxy GHO token had zero EIP-1967 implementation and admin slots. Aave's ACL Admin executor held all three GHO administrative roles, and getFacilitatorsList() returned six cap-limited facilitator contracts. Contract-governed minting requires no off-chain reserve reconciliation; no mint-authority incident is recorded in the reviewed protocol sources.",
+      "reviewer": "Codex V9 control curation",
+      "reviewedAt": "2026-07-14"
     }
   },
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "GHO cross-chain expansion uses Chainlink CCIP pools, with Ethereum lock/release and destination burn/mint pools listed in Chainlink directory data. The route is external validated-network infrastructure governed by Aave/CCIP controls.",
-    "reviewedAt": "2026-06-13",
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
     "protocols": [
@@ -325,9 +442,16 @@
         "riskTier": "single-chain-or-native",
         "semantics": "native-mint",
         "scope": "canonical",
+        "reviewNote": "Canonical GHO is natively issued on Ethereum; its Chainlink CCIP pool locks and releases GHO when supply moves to or returns from burn/mint destination deployments.",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x06179f7C1be40863405f374E7f5F8806c728660A",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x06179f7c1be40863405f374e7f5f8806c728660a"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Chainlink GHO CCIP directory",
@@ -353,11 +477,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xB94Ab28c6869466a46a42abA834ca2B3cECCA5eB",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0xb94ab28c6869466a46a42aba834ca2b3cecca5eb"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Chainlink GHO CCIP directory",
@@ -383,11 +513,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0x98217A06721Ebf727f2C8d9aD7718ec28b7aAe34",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x98217a06721ebf727f2c8d9ad7718ec28b7aae34"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Chainlink GHO CCIP directory",
@@ -413,11 +549,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "gnosis",
+        "controllerAddress": "0xDe6539018B095353A40753Dc54C91C68c9487D4E",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:gnosis:0xde6539018b095353a40753dc54c91c68c9487d4e"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Chainlink GHO CCIP directory",
@@ -443,11 +585,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "ink",
+        "controllerAddress": "0xDe6539018B095353A40753Dc54C91C68c9487D4E",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ink:0xde6539018b095353a40753dc54c91c68c9487d4e"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Chainlink GHO CCIP directory",
@@ -473,11 +621,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xDe6539018B095353A40753Dc54C91C68c9487D4E",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:avalanche:0xde6539018b095353a40753dc54c91c68c9487d4e"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Chainlink GHO CCIP directory",
@@ -503,11 +657,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "mantle",
+        "controllerAddress": "0xDe6539018B095353A40753Dc54C91C68c9487D4E",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:mantle:0xde6539018b095353a40753dc54c91c68c9487d4e"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Chainlink GHO CCIP directory",
@@ -533,11 +693,17 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "plasma",
+        "controllerAddress": "0x360d8aa8F6b09B7BC57aF34db2Eb84dD87bf4d12",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:plasma:0x360d8aa8f6b09b7bc57af34db2eb84dd87bf4d12"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Chainlink GHO CCIP directory",
@@ -563,11 +729,53 @@
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
-        "semantics": "other",
+        "semantics": "burn-mint",
         "scope": "peripheral",
+        "controllerChain": "monad",
+        "controllerAddress": "0xA5AE05b71c3F170E12E7620Fdf7679721aec1EC8",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:monad:0xa5ae05b71c3f170e12e7620fdf7679721aec1ec8"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Chainlink GHO CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/GHO"
+          },
+          {
+            "label": "Aave GHO docs",
+            "url": "https://aave.com/docs/ecosystem/gho"
+          },
+          {
+            "label": "Chainlink CCIP docs",
+            "url": "https://docs.chain.link/ccip"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0xde6539018b095353a40753dc54c91c68c9487d4e",
+        "sourceChain": "ethereum",
+        "destinationChain": "xlayer",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xde6539018b095353a40753dc54c91c68c9487d4e",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xA5Ba213867E175A182a5dd6A9193C6158738105A",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:xlayer:0xa5ba213867e175a182a5dd6a9193c6158738105a"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Chainlink GHO CCIP directory",

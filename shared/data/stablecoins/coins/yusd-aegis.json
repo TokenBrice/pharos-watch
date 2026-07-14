@@ -17,6 +17,40 @@
   "llamaId": "255",
   "detailProvider": "defillama",
   "geckoId": "aegis-yusd",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "YUSD is issued against Aegis's pooled BTC spot and COIN-M hedge portfolio rather than borrower debt positions with oracle-triggered collateral liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Aegis documents permissioned minting from deposited USDT, USDC, or DAI and pooled backing through BTC spot positions hedged with COIN-M perpetuals. The reviewed issuer materials do not describe borrower-specific debt, collateral-ratio thresholds, or a collateral liquidation branch for YUSD issuance.",
+      "sources": [
+        {
+          "label": "Aegis YUSD minting",
+          "url": "https://aegis.im/mint"
+        },
+        {
+          "label": "Aegis YUSD backing and strategy",
+          "url": "https://aegis.im/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aegis YUSD minting",
+        "url": "https://aegis.im/mint"
+      },
+      {
+        "label": "Aegis YUSD backing and strategy",
+        "url": "https://aegis.im/"
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://aegis.accountable.capital/",
