@@ -90,6 +90,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "ousg-ondo-finance": defineStablecoinRedeemConfig({
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     executionModel: "rules-based-nav",
     costModel: documentedVariableFee(
@@ -105,6 +106,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: ["Token transfers restricted to KYC-verified whitelisted addresses on-chain"],
   }),
   "usde-ethena": defineStablecoinRedeemConfig({
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdt-tether", "usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "immediate",
     capacityModel: {
@@ -173,6 +176,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "wsrusd-reservoir": defineStablecoinRedeemConfig({
+    outputAssets: ["rusd-reservoir"],
     executionModel: "rules-based-nav",
     capacityModel: {
       kind: "reserve-sync-metadata",
@@ -374,6 +378,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "yusd-aegis": defineStablecoinRedeemConfig({
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdt-tether", "usdc-circle", "dai-makerdao"],
     accessModel: "whitelisted-onchain",
     capacityModel: { kind: "supply-ratio", ratio: 0.15, confidence: "heuristic" },
     costModel: undisclosedReviewedFee(
@@ -391,6 +397,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "usn-noon": defineStablecoinRedeemConfig({
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
     accessModel: "whitelisted-onchain",
     capacityModel: { kind: "supply-ratio", ratio: 0.15, confidence: "heuristic" },
     costModel: undisclosedReviewedFee(
@@ -448,6 +456,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usx-solstice": defineStablecoinRedeemConfig({
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssets: ["usdg-paxos"],
     accessModel: "whitelisted-onchain",
     costModel: undisclosedReviewedFee(
       "Direct minting and redemption of USX is reserved for KYC'd institutional investors depositing or withdrawing USDC and USDT through the Solstice protocol; public fee schedule not disclosed",
@@ -482,6 +491,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usd0-usual": defineStablecoinRedeemConfig({
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssets: ["asset:usyc", "asset:m", "asset:ustbl"],
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(
       "Redeemable 1:1 for underlying RWA assets via DaoCollateral contract; minting accepts USYC or USDC via gateway",
@@ -623,6 +633,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "wm-m0": defineStablecoinRedeemConfig({
+    outputAssets: ["m-m0"],
     capacityModel: { kind: "reserve-sync-metadata" },
     reviewedAt: "2026-04-16",
     totalScoreCap: 70,
@@ -703,6 +714,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "pusd-polymarket": defineStablecoinRedeemConfig({
+    outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata" },
     reviewedAt: "2026-07-09",
     outputAssetType: "stable-basket",
@@ -754,6 +766,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "xdai-gnosis": defineStablecoinRedeemConfig({
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
+    outputAssetType: "stable-basket",
+    outputAssets: ["dai-makerdao", "usds-sky"],
     costModel: undisclosedReviewedFee(
       "Gnosis bridge docs describe xDAI/DAI bridge exits; public docs reviewed do not publish a separate fixed xDAI redemption fee",
     ),
@@ -1220,6 +1234,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "aa-falconx-mev-capital": defineStablecoinRedeemConfig({
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     executionModel: "rules-based-nav",

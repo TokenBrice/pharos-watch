@@ -131,6 +131,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "gho-aave": {
     ...psmSwapBase,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: fixedFee(
       10,
@@ -232,6 +234,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "lisusd-lista": {
     ...psmSwapBase,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdt-tether", "usdc-circle"],
     capacityModel: { kind: "supply-ratio", ratio: 0.15, dailyLimitUsd: 500_000, confidence: "documented-bound" },
     costModel: fixedFee(
       200,

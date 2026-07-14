@@ -176,6 +176,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "feusd-felix": {
       ...collateralRedeemBase,
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:whype", "asset:feubtc", "asset:khype", "asset:wsthype"],
       capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       costModel: fixedFee(0, "Felix docs describe redemption as fee-free"),
@@ -217,6 +219,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "fxusd-f-x-protocol": {
       ...collateralRedeemBase,
+      outputAssets: ["asset:wsteth", "asset:wbtc"],
       capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       costModel: fixedFee(50, "Protocol docs list a 50 bps redemption fee"),
@@ -643,6 +646,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "hbd-hive": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_HIVE_HBD_AT),
+      outputAssets: ["asset:hive"],
       settlementModel: "days",
       executionModel: "rules-based-nav",
       outputAssetType: "mixed-collateral",
