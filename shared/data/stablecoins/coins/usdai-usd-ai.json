@@ -138,9 +138,7 @@
         "source": "l2beat",
         "name": "LayerZero",
         "url": "https://l2beat.com/interop/protocols/layerzero",
-        "bridgeTypes": [
-          "oft"
-        ]
+        "bridgeTypes": ["oft"]
       }
     ],
     "sources": [
@@ -221,62 +219,284 @@
     ]
   },
   "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDai token (OToken implementation) only exposes mint()/burn() behind BRIDGE_ADMIN_ROLE; that role is held by a bridge contract (0xffa10065…). DEFAULT_ADMIN_ROLE (can grant any role) is held by a 3/3 Safe with a Zodiac Delay module (7-day timelock). The upgrade path runs through a ProxyAdmin whose owner contract is also controlled by the same 3/3 Safe. Same DEFAULT_ADMIN confirmed on Arbitrum, Base, and Plasma.",
+    "summary": "USDai uses a collateralized hub implementation on Arbitrum and uncapped OToken implementations on Ethereum, Base, and Plasma. The three satellite DEFAULT_ADMIN_ROLE Safes can immediately grant themselves BRIDGE_ADMIN_ROLE and mint without a token cap. All four transparent proxies share deterministic addresses and chain-local state; their ProxyAdmins are owned by separate 48-hour DVNTimelocks governed by 3-of-3 proposer and executor Safes.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
+      ],
+      "implementationAddresses": [
+        "0x30198aa66d057a6216db471fce234b98edc1e5ad",
+        "0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4",
+        "0x30198aa66d057a6216db471fce234b98edc1e5ad",
+        "0xe306eca9a60376d2a82f40c8e1882e2ef1c8f4cc"
+      ],
+      "adminAddresses": [
+        "0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c",
+        "0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c",
+        "0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c",
+        "0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "USDai four-chain ProxyAdmin timelocks",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Sourcify exact-match USDai transparent proxy source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef?fields=sources"
+        },
+        {
+          "label": "Sourcify exact-match Ethereum and Base OToken implementation source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad?fields=sources"
+        },
+        {
+          "label": "Arbitrum exact-match USDai hub implementation source",
+          "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
+        },
+        {
+          "label": "Plasma exact-match OToken implementation source",
+          "url": "https://plasmascan.to/address/0xe306eca9a60376d2a82f40c8e1882e2ef1c8f4cc/contract/9745/code"
+        },
+        {
+          "label": "Exact-match DVNTimelock source",
+          "url": "https://eth.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
+        }
+      ]
+    },
     "controls": [
       {
-        "chain": "ethereum",
-        "address": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
-        "label": "USDai BRIDGE_ADMIN_ROLE holder (bridge contract)",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "Sourcify USDai OToken implementation",
-            "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad"
-          }
-        ],
-        "evidence": "At Ethereum block 25294801: RoleGranted event at block 22547994 grants BRIDGE_ADMIN_ROLE (0x751b795d…) to 0xffa10065…. Source code confirms mint()/burn() are gated by onlyRole(BRIDGE_ADMIN_ROLE). bridge.owner() = 0x5F0BC72F… (3/3 Safe)."
-      },
-      {
-        "chain": "ethereum",
         "address": "0x5F0BC72FB5952b2f3F2E11404398eD507B25841F",
-        "label": "USDai DEFAULT_ADMIN Safe (3/3 with Zodiac Delay 7d)",
+        "label": "USDai satellite DEFAULT_ADMIN Safes",
         "role": "minter-admin",
         "authorityType": "safe",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "direct",
         "threshold": 3,
         "signerCount": 3,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "present",
         "safe": {
-          "threshold": 3,
           "owners": [
             "0xe982B3F68981eFEA221F5B4F843757dEd2c0a69C",
             "0x986868c921075f31514015E6ecdbB4A6526579b2",
             "0xD1Affe275f09cD11bfDf38F3c9b85c016F47b75e"
           ],
-          "enabledModules": [
-            "0x719fB18e31287aB36771aB3038575253502E41AB"
-          ],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
-          "observedBlock": 25294801,
-          "source": "safe-api"
+          "threshold": 3,
+          "observedAt": "2026-07-13",
+          "source": "manual"
         },
+        "failureDomainKeys": [
+          "safe:ethereum:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+          "safe:base:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+          "safe:plasma:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+        ],
+        "routeChecks": {
+          "signingModel": "The same three owners formed distinct 3-of-3 Safe instances on every reviewed chain. Ethereum and Base enabled chain-local Zodiac Delay modules with 604,800-second cooldowns; Plasma had no enabled module. All instances had zero guard and module guard.",
+          "rateLimits": "OToken source applies no aggregate or per-call mint ceiling. DEFAULT_ADMIN_ROLE can grant BRIDGE_ADMIN_ROLE directly, so each current satellite Safe can bypass the bridge contract and mint arbitrary supply immediately.",
+          "pausersAdminsUpgraders": "The Safe was DEFAULT_ADMIN_ROLE holder on each OToken satellite and owner of each immutable OBridge contract. It is separately an executor, but not the sole proposer, for the 172,800-second upgrade timelock."
+        },
+        "observedAt": "2026-07-13",
         "sources": [
           {
-            "label": "Safe Transaction Service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5F0BC72FB5952b2f3F2E11404398eD507B25841F/"
+            "label": "Sourcify exact-match OToken implementation source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad?fields=sources"
+          },
+          {
+            "label": "Ethereum Safe account",
+            "url": "https://eth.blockscout.com/address/0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+          },
+          {
+            "label": "Base Safe account",
+            "url": "https://base.blockscout.com/address/0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+          },
+          {
+            "label": "Plasma Safe account",
+            "url": "https://plasmascan.to/address/0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
           }
         ],
-        "evidence": "At Ethereum block 25294801: RoleGranted event at block 22547979 grants DEFAULT_ADMIN_ROLE to this Safe. Safe API confirmed 3/3, one enabled module (Zodiac Delay 0x719fB18e…), zero guard. Delay module txCooldown=604800s (7 days), txExpiration=604800s; module.avatar()=this Safe. bridge contract owner also = this Safe. DEFAULT_ADMIN confirmed on Arbitrum and Base via hasRole."
+        "evidence": "At Ethereum block 25526129, Base block 48592766, and Plasma block 27034527, OToken hasRole reads returned true for DEFAULT_ADMIN_ROLE on the chain-local 0x5F0B...841F Safe and true for BRIDGE_ADMIN_ROLE on OBridge 0xffa1...bae5. The Safe owner set was 0xe982...a69C, 0x9868...79b2, and 0xD1Af...b75e with threshold 3. Ethereum enabled module 0x719f...41AB, Base enabled 0x2ab9...2803, and Plasma enabled none; the two Delay modules were owned by and targeted their respective Safes, had zero guards, and enforced 604,800-second cooldown and expiration windows."
+      },
+      {
+        "address": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+        "label": "USDai OBridge mint contracts",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "bridge:ethereum:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+          "bridge:arbitrum:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+          "bridge:base:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+          "bridge:plasma:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5"
+        ],
+        "capDescription": "Satellite mint calls are uncapped at token level but require the current OBridge caller; the Arbitrum hub implementation separately underflow-checks mint against bridgedSupply, which was 2,123,929.642271 USDai at the cutoff.",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Sourcify exact-match OToken implementation source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad?fields=sources"
+          },
+          {
+            "label": "Arbitrum exact-match USDai hub implementation source",
+            "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
+          },
+          {
+            "label": "Ethereum OBridge contract",
+            "url": "https://eth.blockscout.com/address/0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5?tab=contract"
+          }
+        ],
+        "evidence": "The same-address OBridge was a direct immutable deployment on all four chains: exact-block runtime lengths were nonzero and every EIP-1967 implementation, admin, and beacon slot was zero. owner() returned the local 0x5F0B...841F Safe everywhere. Ethereum, Base, and Plasma OTokens granted it BRIDGE_ADMIN_ROLE. Arbitrum's exact-source hub instead hard-codes it as _bridgeAdapter and decrements bridgedSupply on mint, preventing the bridge caller from creating more hub supply than was previously burned outbound."
+      },
+      {
+        "address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
+        "label": "USDai four-chain ProxyAdmin timelocks",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "safe:ethereum:0x783b08aa21de056717173f72e04be0e91328a07b",
+          "safe:arbitrum:0x783b08aa21de056717173f72e04be0e91328a07b",
+          "safe:base:0x783b08aa21de056717173f72e04be0e91328a07b",
+          "safe:plasma:0x783b08aa21de056717173f72e04be0e91328a07b"
+        ],
+        "routeChecks": {
+          "signingModel": "Each chain-local timelock was self-administered. Safe 0x783b...a07b was sole proposer and canceller and one executor; Safe 0x5F0B...841F was the other executor. Both Safes had the same three owners and threshold 3.",
+          "rateLimits": "getMinDelay() returned 172,800 seconds on Ethereum, Arbitrum, Base, and Plasma. No RoleRevoked or MinDelayChange event occurred before the cutoff after each deployment.",
+          "pausersAdminsUpgraders": "Each chain-local ProxyAdmin 0x2ddf...dc3c was owned by its local DVNTimelock. An executed operation can replace the USDai/OToken implementation and therefore remove every current mint constraint."
+        },
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Exact-match DVNTimelock source",
+            "url": "https://eth.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
+          },
+          {
+            "label": "Ethereum DVNTimelock role history",
+            "url": "https://eth.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=logs"
+          },
+          {
+            "label": "Arbitrum DVNTimelock role history",
+            "url": "https://arbitrum.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=logs"
+          },
+          {
+            "label": "Base DVNTimelock role history",
+            "url": "https://base.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=logs"
+          },
+          {
+            "label": "Plasma DVNTimelock contract",
+            "url": "https://plasmascan.to/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, Arbitrum block 483535601, Base block 48592766, and Plasma block 27034527, the shared-address ProxyAdmin 0x2ddf...dc3c owned each local token proxy and owner() returned the local DVNTimelock 0x0eea...639b. Each timelock returned a 172,800-second minimum delay. Complete RoleGranted/RoleRevoked histories resolved sole proposer and canceller Safe 0x783b...a07b plus executors 0x783b...a07b and 0x5F0B...841F, with no revocation before cutoff. The four exact block hashes were 0xd2eca668433c517ab710c73c244a2545203f12b35a83e4fb521595be762bdc3f, 0x45f33e882390a11b041d42014a808f848530c07e7c2d1738e8da692c4af5ca14, 0xa99a4dae34debb8307285b94373592fafc63005a817dbf45d54d48607a821872, and 0x32277619ba915b2f7d5ba0ba851ef2516efe0b99139c4df5fa67aaf0b17c62f5."
+      },
+      {
+        "address": "0x783b08aa21de056717173f72e04be0e91328a07b",
+        "label": "USDai timelock proposer and canceller Safes",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 3,
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "owners": [
+            "0xe982B3F68981eFEA221F5B4F843757dEd2c0a69C",
+            "0x986868c921075f31514015E6ecdbB4A6526579b2",
+            "0xD1Affe275f09cD11bfDf38F3c9b85c016F47b75e"
+          ],
+          "threshold": 3,
+          "observedAt": "2026-07-13",
+          "source": "manual"
+        },
+        "failureDomainKeys": [
+          "safe:ethereum:0x783b08aa21de056717173f72e04be0e91328a07b",
+          "safe:arbitrum:0x783b08aa21de056717173f72e04be0e91328a07b",
+          "safe:base:0x783b08aa21de056717173f72e04be0e91328a07b",
+          "safe:plasma:0x783b08aa21de056717173f72e04be0e91328a07b"
+        ],
+        "routeChecks": {
+          "signingModel": "All four chain-local Safes had owners 0xe982...a69C, 0x9868...79b2, and 0xD1Af...b75e with threshold 3. Ethereum, Arbitrum, and Base each enabled one chain-local Zodiac Delay module; Plasma enabled none.",
+          "rateLimits": "The direct Safe route can schedule and cancel upgrades immediately, but execution remains subject to the DVNTimelock's 172,800-second minimum delay.",
+          "pausersAdminsUpgraders": "The proposer Safe cannot bypass the timelock as ProxyAdmin owner. Its Delay module provides a slower alternate Safe execution path and does not remove the downstream 48-hour upgrade delay."
+        },
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Ethereum proposer Safe",
+            "url": "https://eth.blockscout.com/address/0x783b08aa21de056717173f72e04be0e91328a07b"
+          },
+          {
+            "label": "Arbitrum proposer Safe",
+            "url": "https://arbitrum.blockscout.com/address/0x783b08aa21de056717173f72e04be0e91328a07b"
+          },
+          {
+            "label": "Base proposer Safe",
+            "url": "https://base.blockscout.com/address/0x783b08aa21de056717173f72e04be0e91328a07b"
+          },
+          {
+            "label": "Plasma proposer Safe",
+            "url": "https://plasmascan.to/address/0x783b08aa21de056717173f72e04be0e91328a07b"
+          }
+        ],
+        "evidence": "Exact-block Safe reads returned the same 3-of-3 signer set on all four chains, no guard or module guard, and standard fallback handler 0xfd07...Ec99. Ethereum enabled Delay module 0xa9b6...fbc2, Arbitrum 0x0f01...96c4, and Base 0x97d9...baa4; Plasma had no module. Each Delay module was a fixed EIP-1167 clone, was owned by and targeted its local Safe, had zero guard, and used 604,800-second cooldown and expiration values."
+      },
+      {
+        "address": "0xd12d9635c57c92d32ae389db4dc143bcbe57a6a4",
+        "label": "USDai three-chain Zodiac module controller Safe",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 604800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "safe:ethereum:0xd12d9635c57c92d32ae389db4dc143bcbe57a6a4",
+          "safe:arbitrum:0xd12d9635c57c92d32ae389db4dc143bcbe57a6a4",
+          "safe:base:0xd12d9635c57c92d32ae389db4dc143bcbe57a6a4"
+        ],
+        "safe": {
+          "owners": [
+            "0xe982B3F68981eFEA221F5B4F843757dEd2c0a69C",
+            "0x986868c921075f31514015E6ecdbB4A6526579b2",
+            "0xD1Affe275f09cD11bfDf38F3c9b85c016F47b75e",
+            "0xA13Edef35775289F3CA677D348EE878165767CF3",
+            "0xCe4d6e4234885a8344ED2154722988D8e7d8267f"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "version": "1.4.1",
+          "observedAt": "2026-07-13",
+          "source": "manual"
+        },
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Ethereum Zodiac Delay module source",
+            "url": "https://eth.blockscout.com/address/0x719fb18e31287ab36771ab3038575253502e41ab?tab=contract"
+          },
+          {
+            "label": "Module-controller Safe",
+            "url": "https://eth.blockscout.com/address/0xd12d9635c57c92d32ae389db4dc143bcbe57a6a4"
+          }
+        ],
+        "evidence": "The same-address 3-of-5 Safe was the sole enabled upstream module of both Zodiac Delay paths on Ethereum, Arbitrum, and Base. Its chain-local instances had the listed owners, no enabled modules, zero guard and module guard, and the standard fallback handler. It can cause a satellite admin Safe to grant mint authority after the 604,800-second module cooldown, or queue upgrade scheduling through the proposer Safe before the additional 172,800-second DVNTimelock delay. It was not enabled on either Plasma Safe at the cutoff."
       }
     ],
     "review": {
@@ -286,21 +506,25 @@
           "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
         },
         {
-          "label": "Sourcify USDai OToken implementation",
-          "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad"
+          "label": "Sourcify exact-match OToken implementation source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad?fields=sources"
         },
         {
-          "label": "Safe Transaction Service",
-          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5F0BC72FB5952b2f3F2E11404398eD507B25841F/"
+          "label": "Arbitrum exact-match USDai hub implementation source",
+          "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
         },
         {
-          "label": "USDai RoleGranted events (Blockscout)",
-          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef&fromBlock=22300000&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          "label": "Exact-match DVNTimelock source",
+          "url": "https://eth.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
+        },
+        {
+          "label": "Ethereum OBridge source",
+          "url": "https://eth.blockscout.com/address/0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5?tab=contract"
         }
       ],
-      "evidence": "At Ethereum block 25294801: OToken source confirms only BRIDGE_ADMIN_ROLE can mint/burn. RoleGranted scan found 2 grants: DEFAULT_ADMIN_ROLE→0x5F0BC72F… (3/3 Safe with Zodiac 7d Delay module) and BRIDGE_ADMIN_ROLE→0xffa10065… (bridge contract owned by same Safe). Proxy admin 0x2ddf39c7… owned by 0x0EEA1EE0… which is controlled by same Safe. DEFAULT_ADMIN confirmed on Arbitrum and Base.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Deployment-complete review at Ethereum block 25526129, Arbitrum block 483535601, Base block 48592766, and Plasma block 27034527. The four same-address transparent proxies resolved respectively to implementations 0x3019...e5ad, 0x2af5...5bc4, 0x3019...e5ad, and 0xe306...f4cc, and all four admin slots resolved to ProxyAdmin 0x2ddf...dc3c. Satellite OTokens granted DEFAULT_ADMIN_ROLE to chain-local 3-of-3 Safe 0x5F0B...841F and BRIDGE_ADMIN_ROLE to immutable OBridge 0xffa1...bae5; the Safe can grant itself that uncapped mint role immediately. The Arbitrum hub mints only against collateral, escrowed base yield, or stored bridgedSupply under current exact-source code. Each ProxyAdmin owner was a 172,800-second DVNTimelock with exact proposer, executor, and canceller Safe identities. Chain-local Safe module inventories were reviewed through the 3-of-5 upstream Safe and 604,800-second Zodiac Delay paths; no guard or unreviewed module remained.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13"
     }
   },
   "reserves": [
