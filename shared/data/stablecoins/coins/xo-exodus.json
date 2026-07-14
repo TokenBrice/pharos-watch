@@ -11,7 +11,9 @@
     "rwa": true,
     "navToken": false
   },
-  "infrastructures": ["m0"],
+  "infrastructures": [
+    "m0"
+  ],
   "collateral": "Fully reserved 1:1 by U.S. dollar deposits and short-term U.S. Treasury bills held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; reserves issued and managed by MoonPay under U.S. Money Transmitter Licenses; native M0 yield is retained by MoonPay/Exodus rather than passed through to XO holders",
   "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay via M0 Protocol infrastructure on Solana; collateral cryptographically attested on-chain by independent M0 Validators before minting; consumer access is gated through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails (cards, Apple/Google Pay, PayPal); the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
   "mechanismArchetype": "fiat-cash",
@@ -276,7 +278,10 @@
         "name": "M0 Solana Portal / Wormhole NTT",
         "slug": "m0-solana-portal-wormhole-ntt",
         "url": "https://docs.m0.org/build/cross-chain",
-        "bridgeTypes": ["lockAndMint", "hubAndSpoke"]
+        "bridgeTypes": [
+          "lockAndMint",
+          "hubAndSpoke"
+        ]
       }
     ],
     "sources": [
@@ -347,20 +352,6 @@
       }
     ]
   },
-  "reserves": [
-    {
-      "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
-      "pct": 85,
-      "risk": "very-low",
-      "coinId": "m-m0",
-      "depType": "wrapper"
-    },
-    {
-      "name": "Cash and cash equivalents",
-      "pct": 15,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,

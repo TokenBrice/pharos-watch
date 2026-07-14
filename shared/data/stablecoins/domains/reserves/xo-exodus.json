@@ -1,0 +1,108 @@
+{
+  "id": "xo-exodus",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
+      "pct": 85,
+      "risk": "very-low",
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 Protocol permissioned minters and collateral SPVs",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Cash and cash equivalents",
+      "pct": 15,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "MoonPay reserve banking counterparties",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Exodus, MoonPay, and M0 XO announcement",
+        "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments"
+      },
+      {
+        "label": "MoonPay stablecoin terms",
+        "url": "https://www.moonpay.com/legal/stablecoin_terms"
+      },
+      {
+        "label": "M0 reserve dashboard",
+        "url": "https://dashboard.m0.org/stablecoins"
+      },
+      {
+        "label": "M0 minting and burning collateral system",
+        "url": "https://docs.m0.org/protocol/minting-burning"
+      }
+    ],
+    "rationale": "The issuer disclosure describes XO as fully reserved by U.S. dollar deposits and short-term Treasury bills through M0's SPV structure, with M0 validators attesting collateral before minting. The existing 85/15 Treasury-dependency and cash categories are retained, but no current XO-specific reserve split or dated independent report was found; the protocol dashboard is not a token-specific attestation.",
+    "compositionBasis": "XO issuer disclosure and inherited M0 collateral relationship",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current split and assurance scope for the cash slice are not independently published; M0 dashboard data is protocol-level rather than XO-specific.",
+    "knownUnknownExposurePct": 15,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Cash and cash equivalents",
+        "pct": 15,
+        "disposition": "insufficient-evidence",
+        "rationale": "MoonPay describes U.S. dollar deposits but does not identify the current reserve banks, balances, or a dated assurance report for this slice."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "M0 permissioned minters and bankruptcy-remote collateral SPVs",
+        "role": "custodian",
+        "sharePct": 85
+      },
+      {
+        "name": "MoonPay reserve banking counterparties",
+        "role": "bank",
+        "sharePct": 15
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Exodus, MoonPay, and M0 XO announcement",
+        "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments"
+      },
+      {
+        "label": "M0 SPV operator guidance",
+        "url": "https://docs.m0.org/home/fundamentals/adopted-guidance/spv-operators/"
+      },
+      {
+        "label": "MoonPay stablecoin terms",
+        "url": "https://www.moonpay.com/legal/stablecoin_terms"
+      }
+    ],
+    "uncertainty": "M0 documents SPV collateral controls, while MoonPay identifies dollar deposits and regulated issuance. The reviewed public disclosures do not identify the cash reserve banks or establish a general rehypothecation prohibition for XO holders."
+  }
+}
