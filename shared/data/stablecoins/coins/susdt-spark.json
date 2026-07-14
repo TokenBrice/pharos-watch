@@ -55,8 +55,51 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "spUSDT is a Spark ERC-4626 savings wrapper over USDT. Wrapper shares are minted against deposited USDT and inherit Tether USDT's reviewed issuer/multisig mint authority for base supply. Upgrade authority flows through Sky/Maker governance via a Dai Foundation SubProxy.",
+    "summary": "spUSDT is a Spark ERC-4626 savings wrapper over USDT. Wrapper shares are minted against deposited USDT and inherit Tether USDT's reviewed issuer/multisig mint authority for base supply. The wrapper is UUPS-upgradeable by the Spark SubProxy through Sky governance's enforceable 48-hour DSPause path.",
     "inheritedFrom": "usdt-tether",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xe2e7a17dff93280dec073c995595155283e3c372"
+      ],
+      "implementationAddresses": [
+        "0x1b992302652a92611dcd5090d1cb388c6377f455"
+      ],
+      "adminAddresses": [
+        "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "0xbE286431454714F511008713973d3B053A2d38f3",
+        "0x6605aa120fe8b656482903E7757BaBF56947E45E",
+        "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Spark/Sky SubProxy upgrade governance (48-hour DSPause)",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526129,
+      "sources": [
+        {
+          "label": "Spark Savings USDT proxy",
+          "url": "https://eth.blockscout.com/address/0xe2e7a17dff93280dec073c995595155283e3c372?tab=contract"
+        },
+        {
+          "label": "SparkVault verified implementation",
+          "url": "https://eth.blockscout.com/address/0x1b992302652a92611dcd5090d1cb388c6377f455?tab=contract"
+        },
+        {
+          "label": "Spark SubProxy verified source",
+          "url": "https://eth.blockscout.com/address/0x3300f198988e4c9c63f75df86de36421f06af8c4?tab=contract"
+        },
+        {
+          "label": "Sky DSPause",
+          "url": "https://eth.blockscout.com/address/0xbE286431454714F511008713973d3B053A2d38f3?tab=contract"
+        },
+        {
+          "label": "Sky Chief",
+          "url": "https://eth.blockscout.com/address/0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9?tab=contract"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -77,7 +120,46 @@
             "url": "https://github.com/sparkdotfi/spark-address-registry"
           }
         ],
-        "evidence": "At Ethereum block 25295175: vault is an ERC1967Proxy (impl slot 0x1b992302652a92611dcd5090d1cb388c6377f455, confirmed as SparkVault). Proxy admin slot is zero (UUPS pattern). asset() returned USDT 0xdac17f958d2ee523a2206206994597c13d831ec7. DEFAULT_ADMIN_ROLE has 1 member: 0x3300f198988e4c9c63f75df86de36421f06af8c4, confirmed as a Dai Foundation SubProxy — the Sky/Maker governance relay that controls upgrade authority for Spark contracts."
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "evidence": "At Ethereum block 25526129, the vault was an ERC1967 UUPS proxy with implementation 0x1b992302652a92611dcd5090d1cb388c6377f455 and zero admin and beacon slots. asset() returned USDT 0xdac17f958d2ee523a2206206994597c13d831ec7. DEFAULT_ADMIN_ROLE had one member, SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "label": "Spark/Sky SubProxy upgrade governance (48-hour DSPause)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The SubProxy is the vault's sole DEFAULT_ADMIN_ROLE member. Sky governance can replace the UUPS implementation or raise the deposit cap through the 48-hour DSPause path.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "sources": [
+          {
+            "label": "SparkVault verified implementation",
+            "url": "https://eth.blockscout.com/address/0x1b992302652a92611dcd5090d1cb388c6377f455?tab=contract"
+          },
+          {
+            "label": "Spark SubProxy verified source",
+            "url": "https://eth.blockscout.com/address/0x3300f198988e4c9c63f75df86de36421f06af8c4?tab=contract"
+          },
+          {
+            "label": "Sky DSPause",
+            "url": "https://eth.blockscout.com/address/0xbE286431454714F511008713973d3B053A2d38f3?tab=contract"
+          },
+          {
+            "label": "Sky Chief",
+            "url": "https://eth.blockscout.com/address/0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9?tab=contract"
+          },
+          {
+            "label": "Spark StarGuard",
+            "url": "https://eth.blockscout.com/address/0x6605aa120fe8b656482903E7757BaBF56947E45E?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, the SparkVault implementation authorized UUPS upgrades only for DEFAULT_ADMIN_ROLE, whose sole member was SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4. Its arbitrary-execution path resolved through DSPauseProxy 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB, owned by DSPause 0xbE286431454714F511008713973d3B053A2d38f3 with delay()=172800 and authority Sky Chief 0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9. StarGuard's 604800 maxDelay is an execution-expiry window rather than a mandatory delay."
       },
       {
         "chain": "ethereum",
@@ -114,9 +196,9 @@
           "url": "https://etherscan.io/address/0xe2e7a17dff93280dec073c995595155283e3c372"
         }
       ],
-      "evidence": "At Ethereum block 25295175: spUSDT vault confirmed as ERC1967Proxy (SparkVault impl). UUPS upgrade authority is DEFAULT_ADMIN_ROLE held by Dai Foundation SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4, a standard Sky/Maker governance relay. asset() confirmed USDT. Wrapper share minting is collateralized by deposited USDT and does not create base USDT supply.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25526129, spUSDT vault 0xe2e7a17dff93280dec073c995595155283e3c372 was a UUPS proxy using SparkVault implementation 0x1b992302652a92611dcd5090d1cb388c6377f455. Its sole DEFAULT_ADMIN_ROLE member was Spark SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4. Arbitrary SubProxy execution flowed through DSPauseProxy and DSPause with a mandatory 172800-second delay under live Sky Chief governance. StarGuard's seven-day maxDelay was only an expiry bound. Wrapper shares remained collateralized by deposited USDT and did not create base USDT supply.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13"
     }
   },
   "deploymentModel": "single-chain",

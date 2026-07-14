@@ -98,49 +98,85 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "BRL1 is issued by a consortium of Brazilian exchanges (Bitso, Mercado Bitcoin, Foxbit, Cainvest). The Polygon ERC1967/UUPS token (ERC20F implementation) uses AccessControl: DEFAULT_ADMIN is an EOA (0xccfc24), MINTER_ROLE is an EOA (0x04412a), UPGRADER_ROLE is an EOA (0xf0e67f). No proxy admin slot; contract upgrade path controlled by UPGRADER_ROLE EOA.",
+    "summary": "BRL1's sole Polygon deployment is an ERC1967 proxy using UUPS ERC20F logic. EOA 0x04412afc0a6fa21b255c6ccff28e97073d7750b3 is the sole MINTER_ROLE holder and can mint without a supply cap. DEFAULT_ADMIN_ROLE is held by EOA 0xccfc24f563fbd798f171d16cc0706529c4739217, which can immediately grant MINTER_ROLE or UPGRADER_ROLE. No UPGRADER_ROLE holder exists at the cutoff; the previously identified 0xf0e67fb618496fbe0a44934d370738a611bc8fd1 account holds BURNER_ROLE only.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x5c067c80c00ecd2345b05e83a3e758ef799c40b5"
+      ],
+      "implementationAddresses": [
+        "0xf7c3aceabab5b505effeab0603e11f2ed54020ac"
+      ],
+      "adminAddresses": [
+        "0xccfc24f563fbd798f171d16cc0706529c4739217"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "BRL1 DEFAULT_ADMIN EOA",
+      "observedAt": "2026-07-13",
+      "observedBlock": 90179923,
+      "sources": [
+        {
+          "label": "BRL1 Polygon ERC1967 proxy",
+          "url": "https://polygonscan.com/address/0x5c067c80c00ecd2345b05e83a3e758ef799c40b5#code"
+        },
+        {
+          "label": "BRL1 ERC20F implementation",
+          "url": "https://sourcify.dev/server/v2/contract/137/0xf7c3aceabab5b505effeab0603e11f2ed54020ac?fields=compilation,sources,abi"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "BRL1 consortium issuance backend",
+        "chain": "polygon",
+        "address": "0x04412afc0a6fa21b255c6ccff28e97073d7750b3",
+        "label": "BRL1 MINTER_ROLE EOA",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Mint/burn restricted to whitelisted institutional partners who deposit BRL via PIX; the consortium backend creates BRL1 supply against custodied BRL reserves. No permissionless or user-collateralized mint route exists.",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "ERC20F.mint(address,uint256) has no supply ceiling; AccessRegistry checks recipients but does not cap supply.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 90179923,
+        "failureDomainKeys": [
+          "polygon:0x04412afc0a6fa21b255c6ccff28e97073d7750b3"
+        ],
         "sources": [
           {
-            "label": "BRL1",
-            "url": "https://brl1.io/en/"
+            "label": "BRL1 ERC20F implementation",
+            "url": "https://sourcify.dev/server/v2/contract/137/0xf7c3aceabab5b505effeab0603e11f2ed54020ac?fields=compilation,sources,abi"
           }
-        ]
+        ],
+        "evidence": "At Polygon block 90179923, hasRole(MINTER_ROLE, 0x04412afc0a6fa21b255c6ccff28e97073d7750b3) returned true and eth_getCode returned 0x. RoleGranted and RoleRevoked history contains this sole MINTER_ROLE grant and no revocation. Source-verified mint(address,uint256) permits arbitrary uint256 issuance to an AccessRegistry-approved recipient."
       },
       {
-        "label": "BRL1 DEFAULT_ADMIN (Polygon) — EOA 0xccfc24",
+        "chain": "polygon",
+        "address": "0xccfc24f563fbd798f171d16cc0706529c4739217",
+        "label": "BRL1 DEFAULT_ADMIN EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "evidence": "At Polygon block 88288928 (0x543b6a0), hasRole(DEFAULT_ADMIN_ROLE, 0xccfc24f563fbd798f171d16cc0706529c4739217) = true. eth_getCode returns 0x (confirmed EOA). Granted at deployment block 0x40e50e6. No RoleRevoked events found.",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 90179923,
+        "failureDomainKeys": [
+          "polygon:0xccfc24f563fbd798f171d16cc0706529c4739217"
+        ],
         "sources": [
           {
             "label": "BRL1 Polygon token",
             "url": "https://polygonscan.com/address/0x5c067c80c00ecd2345b05e83a3e758ef799c40b5"
-          }
-        ]
-      },
-      {
-        "label": "BRL1 MINTER_ROLE (Polygon) — EOA 0x04412a",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": false,
-        "evidence": "At Polygon block 88288928, hasRole(MINTER_ROLE, 0x04412afc0a6fa21b255c6ccff28e97073d7750b3) = true. eth_getCode returns 0x (confirmed EOA). Granted at deployment block 0x40e50e6. No RoleRevoked events found.",
-        "sources": [
+          },
           {
-            "label": "BRL1 Polygon token",
-            "url": "https://polygonscan.com/address/0x5c067c80c00ecd2345b05e83a3e758ef799c40b5"
+            "label": "BRL1 ERC20F implementation",
+            "url": "https://sourcify.dev/server/v2/contract/137/0xf7c3aceabab5b505effeab0603e11f2ed54020ac?fields=compilation,sources,abi"
           }
-        ]
+        ],
+        "evidence": "At Polygon block 90179923, DEFAULT_ADMIN_ROLE is held by this EOA and is the admin of MINTER_ROLE and UPGRADER_ROLE. No UPGRADER_ROLE account exists, but this EOA can grant the role and execute a UUPS upgrade without an enforced delay. EIP-1967 implementation is 0xf7c3aceabab5b505effeab0603e11f2ed54020ac; admin and beacon slots are zero. EOA 0xf0e67fb618496fbe0a44934d370738a611bc8fd1 has BURNER_ROLE, not UPGRADER_ROLE."
       }
     ],
     "review": {
@@ -154,9 +190,9 @@
           "url": "https://polygonscan.com/address/0x5c067c80c00ecd2345b05e83a3e758ef799c40b5"
         }
       ],
-      "evidence": "On-chain verification at Polygon block 88288928: ERC1967/UUPS proxy (ERC20F implementation, AccessControl-based). DEFAULT_ADMIN = EOA 0xccfc24f563fbd798f171d16cc0706529c4739217. MINTER_ROLE = EOA 0x04412afc0a6fa21b255c6ccff28e97073d7750b3. UPGRADER_ROLE = EOA 0xf0e67fb618496fbe0a44934d370738a611bc8fd1. All confirmed EOA via eth_getCode. RoleGranted events show 6 grants total; 0 RoleRevoked events. PAUSER_ROLE (0x65d7a28e) granted to 0xb190f8 (EOA), RECOVERY_ROLE (0x2ce8d04a) to 0xd81d41 (EOA), SALVAGE_ROLE (0x0acf8056) to 0x91f87c (EOA) — non-mint roles. No proxy admin slot set (EIP-1967 admin slot returns zero); upgrade controlled by UPGRADER_ROLE EOA. The confirmed minter and admin EOAs belong to the issuer-consortium backend, corroborating the issuer-direct model.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Polygon block 90179923, BRL1 proxy 0x5c067c80c00ecd2345b05e83a3e758ef799c40b5 used UUPS implementation 0xf7c3aceabab5b505effeab0603e11f2ed54020ac with zero EIP-1967 admin and beacon slots. EOA 0x04412afc0a6fa21b255c6ccff28e97073d7750b3 was the sole live MINTER_ROLE holder. EOA 0xccfc24f563fbd798f171d16cc0706529c4739217 held DEFAULT_ADMIN_ROLE and could immediately grant MINTER_ROLE or UPGRADER_ROLE. No live UPGRADER_ROLE holder existed; 0xf0e67fb618496fbe0a44934d370738a611bc8fd1 held BURNER_ROLE only.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13"
     }
   },
   "launchDate": "2025-02-17"

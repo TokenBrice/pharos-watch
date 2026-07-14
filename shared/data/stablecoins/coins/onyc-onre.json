@@ -114,7 +114,47 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "ONYC SPL mint authority is a PDA (AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX) owned by the OnRe program (onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe); the program is upgradeable with upgrade authority held by OnRe team EOA FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f. Freeze authority is a separate OnRe keypair.",
+    "summary": "ONYC mint authority is PDA AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX, which is signed by the OnRe program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. The program remains upgradeable through Squads v4 vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, controlled without delay by autonomous 3-of-6 multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN. The prior record incorrectly classified the off-curve vault PDA as an EOA.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe"
+      ],
+      "implementationAddresses": [
+        "91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg"
+      ],
+      "adminAddresses": [
+        "FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f",
+        "2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "OnRe program upgrade Squads v4 multisig",
+      "observedAt": "2026-07-13",
+      "observedBlock": 432714278,
+      "sources": [
+        {
+          "label": "Solana RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "OnRe program",
+          "url": "https://explorer.solana.com/address/onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe"
+        },
+        {
+          "label": "OnRe ProgramData",
+          "url": "https://explorer.solana.com/address/91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg"
+        },
+        {
+          "label": "OnRe Squads vault",
+          "url": "https://explorer.solana.com/address/FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f"
+        },
+        {
+          "label": "OnRe Squads multisig",
+          "url": "https://explorer.solana.com/address/2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "OnRe program PDA (mint authority)",
@@ -122,9 +162,16 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "chain": "solana",
+        "address": "AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Solana slot ~405,000,000 (2026-06-11), getAccountInfo(5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5, jsonParsed) returned mintAuthority=AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX, freezeAuthority=45YnzauhsBM8CpUz96Djf8UG5vqq2Dua62wuW9H3jaJ5, supply=171456709677981373, decimals=9. getAccountInfo(AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX) confirmed owner=onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe (the OnRe BPF-upgradeable program), executable=false — confirming it is a PDA of the OnRe program. The OnRe program's programData account (91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg) shows upgradeAuthority=FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, which is a system-program-owned keypair (OnRe team EOA). Freeze authority 45Ynz... is also a system-program-owned keypair.",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe"
+        ],
+        "evidence": "At Solana slot 432714278, ONYC mint 5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5 retained mint authority AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX. The authority is an OnRe-program-owned PDA. A cutoff transaction at slot 432713422 showed the OnRe program directly invoking Tokenkeg MintToChecked with that PDA as mint authority.",
         "sources": [
           {
             "label": "ONYC SPL mint on Solana Explorer",
@@ -135,12 +182,49 @@
             "url": "https://explorer.solana.com/address/onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe"
           }
         ]
+      },
+      {
+        "chain": "solana",
+        "address": "FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f",
+        "label": "OnRe program upgrade Squads v4 multisig",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN"
+        ],
+        "sources": [
+          {
+            "label": "OnRe ProgramData",
+            "url": "https://explorer.solana.com/address/91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg"
+          },
+          {
+            "label": "OnRe Squads vault",
+            "url": "https://explorer.solana.com/address/FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f"
+          },
+          {
+            "label": "OnRe Squads multisig",
+            "url": "https://explorer.solana.com/address/2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN"
+          },
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At Solana slot 432714278, ProgramData 91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg named off-curve Squads v4 vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f as upgrade authority. The vault resolved to autonomous multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN with threshold 3, six on-curve members, zero timelock, and no config authority. Members were 2HGJuU5LhHoxn1oaRiQWc9wAsVaFSRubrgtMcomu4dJH, 5xmqRUqK33A2oBRxjyG36HgMjjM19NRt8gYEBT9u78s6, 8dk5KyDAttJYT4pa9nSQYqLEK85w7ZbcHZdZjBMHoAhz, 96yg1uazqtxT4R4mTKPDcLSfbp3AAJiXJFMKZj28bsSk, DiNi78eqjYxVdwXiAiran2Fh4sPAbvQA4oDTq2a6mDQe, and J7nrqDcSuL77TPr1Vz7n8RC4VUeN4pXfx6Xx9E4SA59e. The Squads v4 program itself had no upgrade authority."
       }
     ],
     "review": {
-      "evidence": "At Solana slot ~405,000,000 (2026-06-11): ONYC mint (5Y8NV33V...) has mintAuthority=AbpE5YL... (PDA), freezeAuthority=45YnzauhsBM8... (keypair). The PDA AbpE5YL is owned by the OnRe BPFLoaderUpgradeable program onreuGhH..., confirming it is a program-derived address. The OnRe program's programData account shows upgrade authority = FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, a system-program-owned keypair (OnRe team wallet). This means the entire mint surface is controlled by OnRe through their upgradeable on-chain program. No permissionless or user-collateralized mint route exists.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Solana slot 432714278, ONYC mint authority remained PDA AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX under OnRe program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. The live ProgramData upgrade authority was off-curve Squads vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, not an EOA. It resolved to autonomous 3-of-6 Squads multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN with zero timelock and no config authority. The Squads program itself was immutable. No permissionless mint route existed.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
       "sources": [
         {
           "label": "ONYC SPL mint on Solana Explorer",

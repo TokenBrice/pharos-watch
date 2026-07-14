@@ -50,32 +50,109 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "CGO is issued by ComTech Gold on XDC. The token contract owner is an intermediary ComTech contract, itself owned by a 2/4 multisig. The CGO token contract is non-upgradeable (no proxy implementation slot).",
+    "summary": "CGO's sole XDC token and its CGOController are direct, immutable deployments. The token owner is CGOController 0x21f74fbf81d68291704805d085982000babbf096. At the cutoff, the controller's owner, initiator, executor, and minter-wallet addresses all resolved to the same immediate 2-of-4 Safe at 0xc639b48ea44e94f1a69da11974a29e6ddb8c6fa1. Normal minting requires one Safe transaction to initiate a unique bar/warrant pair and a second Safe transaction to mint exactly 1,000 CGO, but there is no cumulative or time-window cap. The Safe can immediately replace all operational addresses or transfer token ownership to a new address, bypassing the controller's per-operation bound and exposing the token's uncapped owner-only mint function.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 104889953,
+      "sources": [
+        {
+          "label": "CGO Goldtoken verified source",
+          "url": "https://sourcify.dev/server/v2/contract/50/0x8f9920283470f52128bf11b0c14e798be704fd15?fields=compilation,deployment,proxyResolution,sources,abi"
+        },
+        {
+          "label": "CGOController verified source",
+          "url": "https://sourcify.dev/server/v2/contract/50/0x21f74fbf81d68291704805d085982000babbf096?fields=compilation,deployment,proxyResolution,sources,abi"
+        },
+        {
+          "label": "CGO Safe singleton verified source",
+          "url": "https://sourcify.dev/server/v2/contract/50/0x3e5c63644e683549055b9be8653de26e0b4cd36e?fields=compilation,sources,abi"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "ComTech Gold issuance/tokenization backend",
+        "chain": "xdc",
+        "address": "0xc639b48ea44e94f1a69da11974a29e6ddb8c6fa1",
+        "label": "CGO 2/4 Safe mint and ownership authority",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "safe",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "ComTech mints CGO on gold deposit and burns on redemption (≈0.2% tokenization fee) against gold held by Transguard under XDC Trust Company custody; supply is issuer-controlled with no permissionless mint."
-      },
-      {
-        "label": "CGO XDC token owner — ComTech intermediary contract (owned by 2/4 multisig)",
-        "role": "minter-admin",
-        "authorityType": "multisig",
-        "directMintAbility": "none",
         "canRaiseCap": true,
         "threshold": 2,
         "signerCount": 4,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At XDC block 103658516: owner() on CGO token 0x8f9920283470f52128bf11b0c14e798be704fd15 = 0x21f74fbf81d68291704805d085982000babbf096 (contract, 36740 bytes). That contract's owner() = 0xc639b48ea44e94f1a69da11974a29e6ddb8c6fa1 (344 bytes). getOwners() on 0xc639b4... returned 4 addresses (0x49c2560f..., 0x467787b5..., 0x0fae2696..., 0x13c59c35...); threshold() = 2. getModulesPaginated = empty. CGO token EIP-1967 implementation slot = 0x0 (non-upgradeable). Guard slot = 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4 (CompatibilityFallbackHandler); masterCopy slot0 = 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Safe L2 1.3.0 singleton). The intermediary contract at 0x21f74f... acts as the on-chain owner proxy for the 2/4 Safe."
+        "capDescription": "The normal controller route mints exactly 1,000 CGO per completed bar/warrant operation, but has no cumulative or time-window cap. The same Safe can transfer token ownership to an arbitrary new owner that can call Goldtoken.mint(address,uint256) without the controller bound.",
+        "routeChecks": {
+          "signingModel": "The same 2-of-4 Safe currently holds controller owner, initiator, executor, and minter-wallet authority. Initiation and execution require separate Safe transactions but the same signer threshold.",
+          "onchainAmountBounds": "CGOController.mint requires amount == 1000 and calls Goldtoken.mint(to, amount * 1e18). Each mint also requires a previously initiated unique bar/warrant pair.",
+          "caps": "No aggregate supply cap, per-period limit, or enforced delay exists. Distinct bar/warrant pairs can be repeated indefinitely.",
+          "pausersAdminsUpgraders": "The token and controller code are immutable. The Safe can immediately replace initiatorAddr, executorAddr, and minterWalletAddr, transfer controller ownership, or call transferCgoOwnership(newOwner) to bypass controller restrictions."
+        },
+        "bypassSurfaces": [
+          "CGOController.transferCgoOwnership(newOwner) lets the Safe replace the controller as token owner; the new owner can then call the token's uncapped mint(address,uint256) directly."
+        ],
+        "safe": {
+          "owners": [
+            "0x49c2560fa8bc2082affb4455308a506f96edceab",
+            "0x467787b54f48954e3e3b51909deb962b44b7e453",
+            "0x0fae26961d1e23ab9c4a04db9bdb221432af1852",
+            "0x13c59c35944cab9ab3151eec2830778bcf328e56"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "version": "1.3.0",
+          "observedAt": "2026-07-13",
+          "observedBlock": 104889953,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 104889953,
+        "failureDomainKeys": [
+          "xdc:0xc639b48ea44e94f1a69da11974a29e6ddb8c6fa1"
+        ],
+        "sources": [
+          {
+            "label": "CGO controller Safe",
+            "url": "https://xdcscan.com/address/0xc639b48ea44e94f1a69da11974a29e6ddb8c6fa1"
+          },
+          {
+            "label": "CGOController verified source",
+            "url": "https://sourcify.dev/server/v2/contract/50/0x21f74fbf81d68291704805d085982000babbf096?fields=compilation,sources,abi"
+          }
+        ],
+        "evidence": "At XDC block 104889953, CGOController.owner(), initiatorAddr(), executorAddr(), and minterWalletAddr() all returned 0xc639b48ea44e94f1a69da11974a29e6ddb8c6fa1. The Safe returned four owners, threshold 2, VERSION 1.3.0, no enabled modules, zero guard, fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4, and singleton 0x3e5c63644e683549055b9be8653de26e0b4cd36e. All four owners had empty bytecode."
+      },
+      {
+        "chain": "xdc",
+        "address": "0x21f74fbf81d68291704805d085982000babbf096",
+        "label": "Immutable CGOController two-step mint router",
+        "role": "facilitator",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Fixed code requires initiation followed by execution and exactly 1,000 CGO per bar/warrant operation; ultimate authority remains the controller-owning Safe.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 104889953,
+        "sources": [
+          {
+            "label": "CGOController verified source",
+            "url": "https://sourcify.dev/server/v2/contract/50/0x21f74fbf81d68291704805d085982000babbf096?fields=compilation,deployment,proxyResolution,sources,abi"
+          }
+        ],
+        "evidence": "CGOController is a source-verified direct deployment. Its EIP-1967 implementation, admin, and beacon slots are zero. It owns the Goldtoken and calls owner-only mint only after a current initiator creates a bar/warrant request and the current executor completes it."
       }
     ],
     "review": {
-      "evidence": "At XDC block 103658516: CGO token owner chain confirmed — token → intermediary contract (0x21f74f...) → 2/4 multisig (0xc639b4...) with 4 signers and threshold 2. The CGO token contract is not upgradeable (EIP-1967 implementation slot = 0x0, proxy admin slot = 0x0). No modules detected on the multisig.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At XDC block 104889953, Goldtoken 0x8f9920283470f52128bf11b0c14e798be704fd15 and CGOController 0x21f74fbf81d68291704805d085982000babbf096 were source-verified direct deployments with zero EIP-1967 implementation, admin, and beacon slots. The controller owned the token, and its owner, initiator, executor, and minter-wallet fields all resolved to the same immediate 2-of-4 Safe 0xc639b48ea44e94f1a69da11974a29e6ddb8c6fa1. The controller's fixed 1,000-CGO operation bound had no cumulative cap and could be bypassed by the Safe transferring token ownership to a new uncapped minter.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
       "sources": [
         {
           "label": "ComTech Gold",

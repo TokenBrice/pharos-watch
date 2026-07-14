@@ -107,7 +107,31 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
-    "summary": "USDCx is Movement's USDC representation issued 1:1 through Circle's xReserve contract on the Movement Move VM. The xReserve module stores mint/burn/transfer refs in a Management resource and gates minting through an Attester+Admin role system (usdcx::Roles). The admin EOA 0x98ebb... controls roles, attesters, and upgrade; minting requires an attester-signed message — no permissionless free-mint path exists.",
+    "summary": "USDCx is Movement's USDC representation issued 1:1 through Circle's xReserve contract. A current Circle xReserve attester authorizes mint messages, while Movement-native 4-of-6 multisig 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 can immediately replace attesters and upgrade the compatible-policy Move package. No permissionless free-mint path exists.",
+    "upgradeability": {
+      "model": "custom",
+      "implementationAddresses": [
+        "0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83::usdcx"
+      ],
+      "adminAddresses": [
+        "0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Movement USDCx admin and package-owner 4-of-6 multisig",
+      "observedAt": "2026-07-13",
+      "observedBlock": 74981963,
+      "sources": [
+        {
+          "label": "Movement USDCx package object at cutoff",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources?ledger_version=174443182"
+        },
+        {
+          "label": "Movement USDCx module bytecode at cutoff",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=174443182"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Circle xReserve mint/redeem wrapper (USDCx 1:1 against locked USDC)",
@@ -116,45 +140,78 @@
         "directMintAbility": "none",
         "chain": "movement",
         "address": "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
-        "canRaiseCap": "unknown",
-        "evidence": "Movement Aptos REST (mainnet.movementnetwork.xyz/v1): usdcx::Management resource at the token object stores mint_ref/burn_ref/transfer_ref/mutate_metadata_ref scoped to the token metadata — only the module logic can invoke them. usdcx::Roles resource stores admin = 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 and a list of 6 pausers including the admin. The module exposes mint(&signer, ...) gated on attester-signature check; no public free-mint exists. Module upgrade policy = 1 (upgradeable); upgrade controlled by ObjectCore.owner = 0x98ebb... (the same admin EOA).",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 74981963,
+        "evidence": "At Movement ledger version 174443182, usdcx::Management stored module-scoped mint, burn, transfer, and metadata refs for this token object. The module's mint entry required an attester-signed message; the wrapper object itself exposed no independent free-mint authority.",
         "sources": [
           {
-            "label": "Movement Aptos REST — usdcx account resources",
-            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources"
+            "label": "Movement USDCx resources at cutoff",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=174443182"
           }
         ]
       },
       {
-        "label": "Circle xReserve admin EOA (0x98ebb...)",
-        "role": "minter-admin",
+        "chain": "movement",
+        "label": "Movement USDCx xReserve attester",
+        "role": "backend-signer",
         "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 74981963,
+        "failureDomainKeys": [
+          "movement:xreserve-attester:0x2d4b0769063a340abaae3647366096e8b2a8b249f8bb2686d8418860592b2bb8dd6f3114c56b682f15135b60a84abf59c315ec54c49a0bb93d7d092a21bcf466"
+        ],
+        "sources": [
+          {
+            "label": "Movement USDCx resources at cutoff",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=174443182"
+          }
+        ],
+        "evidence": "At Movement ledger version 174443182, this public key was the live xReserve attester whose signed messages authorized USDCx minting. The admin multisig could replace the attester immediately, so the effective issuance ceiling remained raiseable."
+      },
+      {
+        "label": "Movement USDCx admin and package-owner 4-of-6 multisig",
+        "role": "minter-admin",
+        "authorityType": "multisig",
         "directMintAbility": "can-authorize",
         "chain": "movement",
         "address": "0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Movement Aptos REST: usdcx::Roles.admin = 0x98ebb... The admin can add/remove attesters (required for minting), set pausers, and call transfer_admin. ObjectCore of the module deployer account (0x4989d...) shows owner = 0x98ebb..., confirming upgrade control as well. Auth key matches the address (normal EOA, not a multisig resource account).",
+        "observedAt": "2026-07-13",
+        "observedBlock": 74981963,
+        "failureDomainKeys": [
+          "movement:0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1"
+        ],
+        "routeChecks": {
+          "signingModel": "Movement-native multisig account with threshold 4 and six ordinary account owners.",
+          "pausersAdminsUpgraders": "The multisig is both usdcx::Roles.admin and ObjectCore.owner of the compatible-policy Move package; it can replace attesters or upgrade function bodies without an enforced delay."
+        },
+        "evidence": "At Movement ledger version 174443182, account 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 had a zero authentication key and a live 0x1::multisig_account::MultisigAccount with threshold 4 and six owners. It was both usdcx::Roles.admin and ObjectCore.owner of package object 0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83. Package policy 1 permits compatible upgrades that preserve public layout while changing function bodies, including mint logic.",
         "sources": [
           {
-            "label": "Movement Aptos REST — usdcx module deployer ObjectCore",
-            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources"
+            "label": "Movement USDCx admin multisig at cutoff",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources?ledger_version=174443182"
+          },
+          {
+            "label": "Movement USDCx package object at cutoff",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources?ledger_version=174443182"
           }
         ]
-      },
-      {
-        "label": "Inherited Circle USDC issuer mint authority",
-        "role": "minter-admin",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "none",
-        "canRaiseCap": "unknown",
-        "evidence": "Underlying USDC is issuer-minted by Circle (Ethereum MasterMinter + token owner/admin). USDCx's value and supply derive from USDC locked in xReserve, so it inherits USDC's concentrated-admin issuer posture."
       }
     ],
     "review": {
-      "evidence": "Movement Aptos REST (mainnet.movementnetwork.xyz/v1) queried successfully. usdcx::Roles resource: admin = 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1; usdcx::Management resource confirms mint_ref is module-scoped (no external free-mint). Module deployer ObjectCore.owner = 0x98ebb... (admin EOA). mint() requires attester-signed message gated by admin. No permissionless mint path confirmed. Module upgrade policy = 1 (upgradeable by admin EOA). The minting model is Circle-operated (attester+admin roles) consistent with xReserve/CCTP architecture.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Movement block 74981963 and ledger version 174443182, USDCx minting required signatures from live xReserve attester 0x2d4b0769063a340abaae3647366096e8b2a8b249f8bb2686d8418860592b2bb8dd6f3114c56b682f15135b60a84abf59c315ec54c49a0bb93d7d092a21bcf466. Roles.admin and the package ObjectCore.owner both resolved to Movement-native 4-of-6 multisig account 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1, not an EOA. Its owners were 0xe409dcf645fed5437e8d824853846c997bbc603864062a3ef58da467e705a09f, 0x49ca66964d9932cac56acd3fe4a06fc614dfc3dfa2469cdb172d2e9ae0b8157a, 0xf0f7478905b9ee62bcb5ee938bb1da4e78809422d3fc35a52a995acf61177fba, 0x8f74be8a4e703502f222c17eecd74737b4eb9f84915ff723f6d5adafd12d843, 0xc9153e132398b925c78aac2edafd5c0f4b701b3e58244a5163434cb7596b6321, and 0x53d163b14e497aabd0fa8e2f40cb783e3fd364fe2620c430dfd08144f06e4cc9. Package policy 1 allowed compatible function-body upgrades without an on-chain delay.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
       "sources": [
         {
           "label": "Movement: Introducing USDCx",
@@ -165,8 +222,12 @@
           "url": "https://www.circle.com/xreserve"
         },
         {
-          "label": "Movement Aptos REST — usdcx account resources",
-          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources"
+          "label": "Movement USDCx resources at cutoff",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=174443182"
+        },
+        {
+          "label": "Movement USDCx admin multisig at cutoff",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources?ledger_version=174443182"
         }
       ]
     }
