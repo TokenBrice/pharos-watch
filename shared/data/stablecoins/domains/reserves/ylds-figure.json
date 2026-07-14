@@ -1,0 +1,89 @@
+{
+  "id": "ylds-figure",
+  "reserves": [
+    {
+      "name": "Overnight Treasury repo agreements (UMB Bank)",
+      "pct": 64.76,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "UMB Bank N.A.",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
+    },
+    {
+      "name": "U.S. Treasury bills",
+      "pct": 34.73,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "seven-days",
+      "maturityDaysMax": 49
+    },
+    {
+      "name": "Goldman Sachs Financial Square money market fund",
+      "pct": 0.39,
+      "risk": "very-low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "Goldman Sachs Asset Management",
+      "riskFactors": ["credit", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Cash at Flagstar Bank N.A.",
+      "pct": 0.12,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Flagstar Bank N.A.",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Figure Certificate Company Form 10-Q - March 31, 2026",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000008/fcc-20260331.htm"
+      }
+    ],
+    "rationale": "FCC's SEC-filed Schedule I reports $389.556 million of overnight UMB Bank repo, $208.906 million of U.S. Treasury bills, and $2.362 million in Goldman Sachs Financial Square against $600.824 million of investments. Schedule V adds $0.700 million of cash at Flagstar Bank, producing $601.524 million of qualified assets; the normalized weights are 64.76%, 34.73%, 0.39%, and 0.12%.",
+    "compositionBasis": "Figure Certificate Company qualified assets and investment schedules as of March 31, 2026",
+    "compositionAsOf": "2026-03-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The filing identifies every material asset class, issuer or repo counterparty, maturity, and depositary in the qualified-asset schedule; no material reserve exposure remains unclassified.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "UMB Bank N.A.",
+        "role": "custodian",
+        "sharePct": 99.88,
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Flagstar Bank N.A.",
+        "role": "bank",
+        "sharePct": 0.12,
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Figure Certificate Company Form 10-Q - March 31, 2026",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000008/fcc-20260331.htm"
+      }
+    ],
+    "uncertainty": "The SEC schedule identifies the qualified assets on deposit with UMB and Flagstar, but the certificates are unsecured obligations of FCC and the filing does not establish statutory bankruptcy remoteness or a general prohibition on collateral reuse."
+  }
+}

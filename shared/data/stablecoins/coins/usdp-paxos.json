@@ -601,23 +601,6 @@
     ]
   },
   "custodyModel": "institutional-top",
-  "reserves": [
-    {
-      "name": "U.S. Treasury bills (<90 day maturity)",
-      "pct": 60,
-      "risk": "very-low"
-    },
-    {
-      "name": "Overnight reverse repos (secured by Treasuries)",
-      "pct": 20,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash in FDIC-insured bank accounts",
-      "pct": 20,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

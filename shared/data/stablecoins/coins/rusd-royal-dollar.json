@@ -249,13 +249,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "reserves": [
-    {
-      "name": "Issuer-managed cash and liquid reserve assets",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

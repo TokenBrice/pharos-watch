@@ -296,18 +296,6 @@
     }
   },
   "custodyModel": "institutional-top",
-  "reserves": [
-    {
-      "name": "U.S. Treasury bills (<=3 month maturity)",
-      "pct": 62,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash deposits (State Street, Western Alliance Bank)",
-      "pct": 38,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

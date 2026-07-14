@@ -203,18 +203,6 @@
     }
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "U.S. Treasury bills (1-3 month maturity)",
-      "pct": 80,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash and cash equivalents",
-      "pct": 20,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

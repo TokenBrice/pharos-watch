@@ -1,0 +1,68 @@
+{
+  "id": "jpyc-jpyc",
+  "reserves": [
+    {
+      "name": "Japanese yen deposits and Japanese government bonds",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "JPYC EX launch and reserve disclosure",
+        "url": "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch"
+      },
+      {
+        "label": "JPYC corporate product disclosure",
+        "url": "https://corporate.jpyc.co.jp/"
+      }
+    ],
+    "rationale": "JPYC Inc. states that at least 100% of issued JPYC is backed by Japanese yen deposits and Japanese government bonds. It does not disclose current category weights, so the full reserve is represented as one aggregate basket.",
+    "compositionBasis": "Current JPYC issuer reserve disclosure; deposit/bond weights undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer identifies the complete deposit and Japanese-government-bond reserve basket but does not publish its current allocation.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Japanese yen deposits and Japanese government bonds",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The current deposit/JGB allocation is not publicly disclosed."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "JPYC Inc. statutory funds-transfer safeguarding arrangement",
+        "role": "other",
+        "jurisdiction": "Japan"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "JPYC EX launch and funds-transfer registration",
+        "url": "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch"
+      },
+      {
+        "label": "Japan Payment Service Association performance-guarantee guidance",
+        "url": "https://www.s-kessai.jp/businesses/funds_transfer/practice_deposit/"
+      }
+    ],
+    "uncertainty": "Japanese funds-transfer rules require protection of customer liabilities through a statutory performance-guarantee deposit, eligible guarantee contract, or trust. JPYC does not disclose which method or providers it currently uses, provider shares, segregation mechanics, or rehypothecation terms."
+  }
+}

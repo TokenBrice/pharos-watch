@@ -1,0 +1,69 @@
+{
+  "id": "usdp-paxos",
+  "reserves": [
+    {
+      "name": "USD cash deposits and permitted U.S. government-backed debt instruments",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Pax Dollar transparency and attestation index",
+        "url": "https://www.paxos.com/usdp-transparency"
+      },
+      {
+        "label": "Paxos USD stablecoin terms",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      }
+    ],
+    "rationale": "Paxos permits USDP reserves to be held as cash at insured depository institutions, U.S. government-guaranteed debt, Treasury-backed reverse repos, or money market funds composed of that debt. Paxos no longer proactively publishes USDP portfolio composition reports, so the prior 60/20/20 allocation is replaced with one policy-supported basket rather than a current allocation estimate.",
+    "compositionBasis": "Current Paxos reserve policy; current asset-class weights undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete eligible reserve envelope is known, but the current allocation among deposits, government debt, reverse repos, and Treasury money market funds is not public.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USD cash deposits and permitted U.S. government-backed debt instruments",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Paxos discloses eligible reserve categories but not the current USDP weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Paxos Trust Company, N.A.",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "U.S. insured depository institutions and deposit-placement networks",
+        "role": "bank",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Paxos USD stablecoin custody terms",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      }
+    ],
+    "uncertainty": "Paxos explicitly states that reserves are held in segregated accounts for token holders and are bankruptcy remote. It does not publish the current provider allocation or establish rehypothecation terms for every permitted reserve instrument."
+  }
+}

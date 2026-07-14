@@ -84,13 +84,6 @@
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Brazilian government bonds and BRL cash in regulated custody",
-      "pct": 100,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

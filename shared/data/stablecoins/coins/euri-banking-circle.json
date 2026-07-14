@@ -202,18 +202,6 @@
   },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Euro cash in segregated fiduciary accounts",
-      "pct": 70,
-      "risk": "very-low"
-    },
-    {
-      "name": "Low-risk liquid assets (EU government securities)",
-      "pct": 30,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

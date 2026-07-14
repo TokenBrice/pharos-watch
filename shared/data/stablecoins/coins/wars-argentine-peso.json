@@ -304,15 +304,23 @@
     "provider": "Ripio wARS collateral attestations by local public accountants",
     "attestorTier": "niche",
     "cadence": "quarterly",
-    "attestorJurisdiction": "Argentina"
-  },
-  "reserves": [
-    {
-      "name": "Argentine peso bank deposits and local-currency liquid instruments",
-      "pct": 100,
-      "risk": "high"
+    "attestorJurisdiction": "Argentina",
+    "latestReport": {
+      "periodEnd": "2026-03-31",
+      "publishedAt": "2026-04-22",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Independent public accountant certification for wARS - March 2026",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+        }
+      ]
     }
-  ],
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

@@ -257,13 +257,6 @@
       ]
     }
   },
-  "reserves": [
-    {
-      "name": "GBP reserves and short-term UK government paper",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

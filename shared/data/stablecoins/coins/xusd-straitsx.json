@@ -331,18 +331,6 @@
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Cash deposits at Tier 1 banks (DBS, Standard Chartered, UOB)",
-      "pct": 50,
-      "risk": "very-low"
-    },
-    {
-      "name": "Short-term U.S. / MAS government securities",
-      "pct": 50,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "attestation-pdf-index",
     "version": 1,

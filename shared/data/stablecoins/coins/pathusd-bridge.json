@@ -161,13 +161,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Bridge reserve portfolio",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "notices": [
     {
       "type": "info",

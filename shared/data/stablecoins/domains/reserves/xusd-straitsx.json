@@ -1,0 +1,82 @@
+{
+  "id": "xusd-straitsx",
+  "reserves": [
+    {
+      "name": "USD cash, cash equivalents, and permitted government-backed liquid instruments",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "StraitsX XUSD reserve attestations",
+        "url": "https://www.straitsx.com/xusd"
+      },
+      {
+        "label": "StraitsX reserve-backing disclosures",
+        "url": "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
+      },
+      {
+        "label": "StraitsX XUSD reserve asset description",
+        "url": "https://www.straitsx.com/blog-post/straitsxs-xusd-marks-first-anniversary-with-unprecedented-growth-expanding-utility-and-global-reach"
+      }
+    ],
+    "rationale": "StraitsX states that XUSD is fully backed by approved liquid assets such as cash, cash equivalents, and government bonds, with at least 100% reserve coverage. No current public disclosure reviewed in this pass provides the asset-class weights, so the reserve is retained as one aggregate basket rather than assigning an estimated cash/securities split.",
+    "compositionBasis": "Issuer reserve policy and current attestation index; asset-class weights undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The full reserve is covered by the disclosed eligible-asset basket, but the current allocation among cash, cash equivalents, and government-backed instruments is not public.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USD cash, cash equivalents, and permitted government-backed liquid instruments",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer discloses eligible reserve categories but not their current weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "CIMB Bank Berhad Singapore Branch",
+        "role": "bank",
+        "jurisdiction": "Singapore"
+      },
+      {
+        "name": "DBS Bank Ltd",
+        "role": "bank",
+        "jurisdiction": "Singapore"
+      },
+      {
+        "name": "Standard Chartered Bank (Singapore) Ltd",
+        "role": "bank",
+        "jurisdiction": "Singapore"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "StraitsX reserve-backing disclosures",
+        "url": "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
+      },
+      {
+        "label": "StraitsX accounts terms",
+        "url": "https://www.straitsx.com/legal/accounts"
+      }
+    ],
+    "uncertainty": "StraitsX names CIMB, DBS, and Standard Chartered Singapore and permits other MAS-approved financial institutions, but does not publish provider-level shares, the current complete provider set, or rehypothecation terms. The trust structure and exclusion from the issuer's unsecured-creditor estate are explicit."
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "id": "brla-brla-digital",
+  "reserves": [
+    {
+      "name": "Brazilian government bonds in regulated custody",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "government-security",
+      "issuerOrObligor": "Federative Republic of Brazil",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "market", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Avenia BRLA reserve disclosure",
+        "url": "https://avenia.io/brla"
+      },
+      {
+        "label": "Avenia terms and conditions",
+        "url": "https://app.avenia.io/Avenia-TC.pdf"
+      }
+    ],
+    "rationale": "Avenia's current BRLA page states that BRLA is fully collateralized and that funds are held in Brazilian government bonds under regulated custody. The prior reference to an additional BRL cash component is not retained because the current reviewed issuer disclosure does not establish that exposure or a cash weight.",
+    "compositionBasis": "Current Avenia BRLA reserve disclosure",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer identifies Brazilian government bonds as the reserve asset, but does not disclose security-level holdings, duration, or custody allocation.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Brazilian government bonds in regulated custody",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Brazilian sovereign bonds are exogenous reserve assets rather than tracked stablecoins."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Regulated Brazilian reserve custodian (not publicly named)",
+        "role": "custodian",
+        "jurisdiction": "Brazil"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Avenia BRLA reserve disclosure",
+        "url": "https://avenia.io/brla"
+      }
+    ],
+    "uncertainty": "Avenia states that reserves use regulated custody but does not name the custodian, publish provider shares, or establish segregation, bankruptcy-remoteness, and rehypothecation safeguards on the reviewed page."
+  }
+}
