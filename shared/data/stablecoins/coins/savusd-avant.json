@@ -24,7 +24,6 @@
   "collateral": "avUSD staked into Avant's savings vault as the yield-bearing Senior Tranche; yield is sourced from Avant's actively managed delta-neutral / market-neutral strategies (basis trades, lending-rate arbitrage, yield trading), with portfolio NAV calculated weekly by independent valuation provider Pennyworks. Losses are absorbed first by the avUSD Reserve Fund and then by the avUSDx Junior Tranche before reaching savUSD",
   "pegMechanism": "Stake avUSD to receive savUSD; the savUSD/avUSD exchange rate compounds as strategy yield accrues. Unstaking savUSD to avUSD has a 1-day cooldown during which no yield is earned; the final USDC exit inherits Avant's 1:1 avUSD redemption process",
   "mechanismArchetype": "synthetic-delta-neutral",
-  "archetypeOverride": true,
   "detailProvider": "coingecko",
   "geckoId": "avant-staked-usd",
   "links": [
@@ -408,7 +407,7 @@
     "disposition": "resolved",
     "reviewedAt": "2026-07-13",
     "reviewer": "Codex mechanism review",
-    "rationale": "savUSD is the senior market-neutral strategy tranche and intentionally departs from the non-yielding avUSD reserve receipt.",
+    "rationale": "savUSD inherits avUSD's synthetic-delta-neutral mechanism; its strategy-vault classification captures the senior-tranche yield and loss ordering rather than a distinct mechanism archetype.",
     "sources": [
       {
         "label": "Avant protocol docs",

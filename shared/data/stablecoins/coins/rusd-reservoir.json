@@ -586,7 +586,7 @@
     {
       "name": "USDC positions",
       "pct": 8.7,
-      "risk": "medium",
+      "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral"
     },

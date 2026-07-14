@@ -19,19 +19,403 @@
   "geckoId": "nxusd",
   "protocolSlug": "nereus-finance",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Nereus Finance integrated Chainlink Price Feeds on Avalanche and Polygon to calculate NXUSD collateral values, with no stronger failover path documented.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "tier": "single-source-or-laggy",
+    "summary": "NXUSD's 17 debt-bearing Avalanche Cauldrons use collateral-specific Chainlink, LP, TWAP, or staking-rate oracle routes without a common freshness check or alternate provider; a false oracle result preserves the Cauldron's cached rate, while a reverting route blocks the update.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "The pinned Nereus Avalanche deployment manifest contains 17 Cauldrons, and all 17 retained nonzero totalBorrow at finalized block 90297313. They share the Cauldron liquidation engine but have distinct collateral, oracle, LTV, and liquidation-multiplier configurations, so the live set is represented as one fully enumerated common-engine branch rather than inferred from the protocol-level Chainlink announcement.",
+      "sources": [
+        {
+          "label": "Nereus pinned Avalanche deployments",
+          "url": "https://github.com/nereusfinance/nereus-stablecoin-core/tree/e75e91b072a9d2346503383aafa2d40abc7ea582/deployments/avalanche"
+        },
+        {
+          "label": "Avalanche C-Chain RPC",
+          "url": "https://api.avax.network/ext/bc/C/rpc"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Nereus Chainlink integration announcement",
-        "url": "https://medium.com/nereus-protocol/nereus-finance-integrates-chainlink-price-feeds-to-help-secure-lending-and-borrowing-operations-11b85b20c020"
+        "label": "Nereus pinned Avalanche deployments",
+        "url": "https://github.com/nereusfinance/nereus-stablecoin-core/tree/e75e91b072a9d2346503383aafa2d40abc7ea582/deployments/avalanche"
       },
       {
-        "label": "Nereus on Chainlink ecosystem",
-        "url": "https://www.chainlinkecosystem.com/ecosystem/nereus-finance"
+        "label": "Nereus pinned CauldronV2 source",
+        "url": "https://github.com/nereusfinance/nereus-stablecoin-core/blob/e75e91b072a9d2346503383aafa2d40abc7ea582/contracts/CauldronV2.sol"
+      },
+      {
+        "label": "Nereus pinned oracle sources",
+        "url": "https://github.com/nereusfinance/nereus-stablecoin-core/tree/e75e91b072a9d2346503383aafa2d40abc7ea582/contracts/oracles"
+      },
+      {
+        "label": "Avalanche C-Chain RPC",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
+      }
+    ],
+    "branches": [
+      {
+        "id": "avalanche-debt-bearing-cauldrons",
+        "label": "Avalanche debt-bearing Cauldron markets",
+        "tier": "single-source-or-laggy",
+        "summary": "All 17 deployed Avalanche Cauldrons retained debt at the reviewed block and use the same immediate permissionless liquidation engine, with a complete per-market oracle and risk-parameter map below.",
+        "collateralAssets": [
+          "WAVAX",
+          "WAVAX/USDT.e Trader Joe LP",
+          "BTC.b",
+          "DAI.e",
+          "WAVAX/USDC Trader Joe LP",
+          "JOE",
+          "xJOE",
+          "LINK.e",
+          "MIM/WAVAX Trader Joe LP",
+          "MIM/WAVAX SushiSwap LP",
+          "USDC",
+          "USDC.e/WAVAX Trader Joe LP",
+          "WBTC.e",
+          "WETH.e",
+          "WXT",
+          "av3CRV",
+          "sAVAX"
+        ],
+        "chains": [
+          "avalanche"
+        ],
+        "feeds": [
+          {
+            "provider": "Nereus AVAXOracle / Chainlink",
+            "path": "Chainlink AVAX/USD 0x0A77230d17318075983913bC2145DB16C7366156 -> inverse WAVAX rate",
+            "address": "0x9141E3c09268274696c62C7bEE8dE72cbd4980Be",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "chainlink:avalanche:avax-usd",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus AvaxUsdt ProxyOracle",
+            "path": "WAVAX/USDT.e Trader Joe LP state -> AVAX LP oracle -> Chainlink AVAX/USD -> proxy implementation 0xEd5D79F369D878C9038ac156D7D71b6364756f8e",
+            "address": "0x2cA12e0Ca5c2E1EE8DC18eAA0D24EEd647aE7531",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "trader-joe:wavax-usdt.e",
+              "chainlink:avalanche:avax-usd",
+              "nereus-proxy-oracle-owner",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus BTCOracle / Chainlink",
+            "path": "Chainlink BTC/USD 0x2779D32d5166BAaa2B2b658333bA7e6Ec0C65743 -> inverse BTC.b and WBTC.e rate",
+            "address": "0x24ed1513d790f8F9A1A177F53915c45d4F590349",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "chainlink:avalanche:btc-usd",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus DAIOracle / Chainlink",
+            "path": "Chainlink DAI/USD 0x51D7180edA2260cc4F6e4EebB82FEF5c3c2B8300 -> inverse DAI.e rate",
+            "address": "0xA5FEd9f9da2c2bd3c5b6ED495936b9A2EC7705ff",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "chainlink:avalanche:dai-usd",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus JLPWAVAXUSDCOracle",
+            "path": "WAVAX/USDC Trader Joe LP reserves and supply -> Chainlink AVAX/USD 0x0A77230d17318075983913bC2145DB16C7366156 plus USDC/USD 0xF096872672F44d6EBA71458D74fe67F9a77a23B9",
+            "address": "0xf955a6694C6F5629f5Ecd514094B3bd450b59000",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "trader-joe:wavax-usdc",
+              "chainlink:avalanche:avax-usd",
+              "chainlink:avalanche:usdc-usd",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus JOEOracle / Chainlink",
+            "path": "Chainlink JOE/USD 0x02D35d3a8aC3e1626d3eE09A78Dd87286F5E8e3 -> inverse JOE rate",
+            "address": "0x7195d3A344106b877F8D5f62CA570Fd25D43D180",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "chainlink:avalanche:joe-usd",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus xJOE ProxyOracle",
+            "path": "JOE/WAVAX Trader Joe 10-minute cumulative-price TWAP -> xJOE share conversion -> Chainlink AVAX/USD -> proxy implementation 0xF675bB0C1cde2179D19B2ea0E6e5e9D2053B3D87",
+            "address": "0x59B3D5dDf93A3782F7B7A4bE1214722fc6Fecd45",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "trader-joe:joe-wavax-twap",
+              "chainlink:avalanche:avax-usd",
+              "nereus-proxy-oracle-owner",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus LINKOracle / Chainlink",
+            "path": "Chainlink LINK/USD 0x49ccd9ca821EfEab2b98c60dC60F518E765EDe9a -> inverse LINK.e rate",
+            "address": "0x67c74C56eebCDBCb84a0B69CD2D8b70D84cE0F25",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "chainlink:avalanche:link-usd",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus MimAvax ProxyOracle",
+            "path": "MIM/WAVAX LP state -> Chainlink MIM/USD 0x54EdAB30a7134A16a54218AE64C73e1DAC5a8Fb plus AVAX/USD 0x0A77230d17318075983913bC2145DB16C7366156 -> proxy implementation 0x3e6ef9E97147C266c5bddeF03E7dfba7a167d853; the same outer oracle is configured by both live Trader Joe and SushiSwap Cauldrons",
+            "address": "0x15f57fbCB7A443aC6022e051a46cAE19491bC298",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "mim-wavax-lp-state",
+              "chainlink:avalanche:mim-usd",
+              "chainlink:avalanche:avax-usd",
+              "nereus-proxy-oracle-owner",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus USDCOracle / Chainlink",
+            "path": "Chainlink USDC/USD 0xF096872672F44d6EBA71458D74fe67F9a77a23B9 -> inverse USDC rate",
+            "address": "0x9d6eC3D371431a8491dB0BB7e6eD60e3f9306d4d",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "chainlink:avalanche:usdc-usd",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus UsdcAvax ProxyOracle",
+            "path": "USDC.e/WAVAX Trader Joe LP state -> AVAX LP oracle -> Chainlink AVAX/USD -> proxy implementation 0x648Af26592C7425447B8EEe647F4106b97a27793",
+            "address": "0x0E1eA2269D6e22DfEEbce7b0A4c6c3d415b5bC85",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "trader-joe:usdc.e-wavax",
+              "chainlink:avalanche:avax-usd",
+              "nereus-proxy-oracle-owner",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus ETHOracle / Chainlink",
+            "path": "Chainlink ETH/USD 0x976B3D034E162d8bD72D6b9C989d545b839003b0 -> inverse WETH.e rate",
+            "address": "0xBAa61A86B99214323f0104089430Eb3454b0291e",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "chainlink:avalanche:eth-usd",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus WXTOracle / Chainlink",
+            "path": "Chainlink WXT/USDT 0x17F7589C98e6e58FdA9B1ceaa2021DB3779549fA -> inverse WXT rate",
+            "address": "0xd2276a18E7bF769B5C2079e4A94C929a68a2D676",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "chainlink:avalanche:wxt-usdt",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus av3CRVOracle",
+            "path": "Curve av3CRV virtual price -> minimum of Chainlink DAI/USD 0x51D7180edA2260cc4F6e4EebB82FEF5c3c2B8300, USDC/USD 0xF096872672F44d6EBA71458D74fe67F9a77a23B9, and USDT/USD 0xEBE676ee90Fe1112671f19b6B7459bC678B67e8a",
+            "address": "0xf310bD399AED40a685f159F22ef103C3E8EF6de0",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "curve:avalanche:av3crv-virtual-price",
+              "chainlink:avalanche:stablecoin-feeds",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          },
+          {
+            "provider": "Nereus sAVAXOracle / Chainlink",
+            "path": "sAVAX totalPooledAvax/totalShares conversion -> Chainlink AVAX/USD 0x0A77230d17318075983913bC2145DB16C7366156 -> inverse sAVAX rate",
+            "address": "0x396E2379119a893895FD8CA94Dd8a044E001A0C0",
+            "chain": "avalanche",
+            "observedAt": "2026-07-14",
+            "observedBlock": 90297313,
+            "failureDomainKeys": [
+              "benqi:savax-share-rate",
+              "chainlink:avalanche:avax-usd",
+              "nereus-oracle-no-staleness-check",
+              "avalanche"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Nereus oracle wrappers generally read Chainlink latestAnswer or latestRoundData without checking updatedAt, answeredInRound, or a heartbeat, and there is no alternate provider. Cauldron updateExchangeRate keeps its prior cached rate only when oracle.get returns false, as the xJOE TWAP can before initialization or its 10-minute period; an oracle revert propagates and blocks the operation. Owner-swappable ProxyOracle implementations are administrative replacements, not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 90297313,
+        "collateralParameters": [
+          {
+            "asset": "WAVAX",
+            "maximumLtvPct": 75,
+            "note": "Cauldron 0xc337467F7266Fa6677d8459D4bC531d056348Da8; liquidation multiplier 112.5%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "WAVAX/USDT.e Trader Joe LP",
+            "maximumLtvPct": 85,
+            "note": "Cauldron 0x0a1e6a80E93e62Bd0D3D3BFcF4c362C40FB1cF3D; liquidation multiplier 108%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "BTC.b",
+            "maximumLtvPct": 85,
+            "note": "Cauldron 0x13d370e3de628387FD27709aE9fA9Bc7d2bc9C29; liquidation multiplier 107%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "DAI.e",
+            "maximumLtvPct": 90,
+            "note": "Cauldron 0x42E07D41312E752143d72Fd0daE60B301ff139De; liquidation multiplier 105%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "WAVAX/USDC Trader Joe LP",
+            "maximumLtvPct": 75,
+            "note": "Cauldron 0xC0A7a7F141b6A5Bce3EC1B81823c8AFA456B6930; liquidation multiplier 112.5%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "JOE",
+            "maximumLtvPct": 50,
+            "note": "Cauldron 0x5E1A0e4bfb9329513E62E4fc7DC7Ce8C3CbBE7c7; liquidation multiplier 112.5%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "xJOE",
+            "maximumLtvPct": 75,
+            "note": "Cauldron 0x3b63f81Ad1fc724E44330b4cf5b5B6e355AD964B; liquidation multiplier 105%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "LINK.e",
+            "maximumLtvPct": 50,
+            "note": "Cauldron 0x0207B99E529310Eb413254B4504FE3F4a509f717; liquidation multiplier 112.5%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "MIM/WAVAX Trader Joe LP",
+            "maximumLtvPct": 85,
+            "note": "Cauldron 0x2450Bf8e625e98e14884355205af6F97E3E68d07; liquidation multiplier 108%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "MIM/WAVAX SushiSwap LP",
+            "maximumLtvPct": 85,
+            "note": "Cauldron 0xAcc6821d0F368b02d223158F8aDA4824dA9f28E3; liquidation multiplier 108%; nonzero totalBorrow at the observed block. The live Cauldron points to the same outer oracle as the Trader Joe market."
+          },
+          {
+            "asset": "USDC",
+            "maximumLtvPct": 90,
+            "note": "Cauldron 0xD75a20314FB7FBE79EC7474497d5Bf09e9c00cfc; liquidation multiplier 105%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "USDC.e/WAVAX Trader Joe LP",
+            "maximumLtvPct": 85,
+            "note": "Cauldron 0x95cCe62C3eCD9A33090bBf8a9eAC50b699B54210; liquidation multiplier 108%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "WBTC.e",
+            "maximumLtvPct": 85,
+            "note": "Cauldron 0x88A6414466D61b9Fb6aaFC763c1BaB6EE1462631; liquidation multiplier 107%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "WETH.e",
+            "maximumLtvPct": 85,
+            "note": "Cauldron 0x570F08643B4B1573514244d8f0B5005718Fa3e8a; liquidation multiplier 107%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "WXT",
+            "maximumLtvPct": 80,
+            "note": "Permissioned Cauldron 0xD70Bfc49f4a293920c8642e97217807a0132284B; liquidation multiplier 110%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "av3CRV",
+            "maximumLtvPct": 87.5,
+            "note": "Cauldron 0x8Fb8884C031c49038966a39895f0E141F1Ed14AD; liquidation multiplier 107%; nonzero totalBorrow at the observed block."
+          },
+          {
+            "asset": "sAVAX",
+            "maximumLtvPct": 75,
+            "note": "Cauldron 0x0194eB3520b7d7eB0b014FCe6ed464Eaea0Ca765; liquidation multiplier 112.5%; nonzero totalBorrow at the observed block."
+          }
+        ],
+        "liquidationMechanism": "Any caller can immediately liquidate one or more users after updateExchangeRate and the Cauldron solvency check fail. The liquidator repays each selected NXUSD debt part and receives the corresponding BentoBox collateral shares using that market's liquidation multiplier; optional callback data supports atomic liquidation execution.",
+        "liquidationDelaySec": 0,
+        "backstop": "The reviewed deployments and Cauldron source define no Stability Pool, insurance pool, or automatic protocol-funded shortfall backstop. Liquidation depends on an external caller supplying NXUSD in exchange for seized collateral.",
+        "shutdownOrBadDebtBehavior": "The Cauldron subtracts only the borrow parts selected and repaid by a successful liquidation. Debt that is not economically liquidated remains assigned to borrower positions and continues accruing; the reviewed source defines no global settlement or automatic write-off. The NXUSD owner Safe retains a rate-limited direct mint path, but that privilege is not an automatic bad-debt mechanism.",
+        "failureDomainKeys": [
+          "nereus-cauldrons",
+          "nereus-oracle-no-staleness-check",
+          "nereus-external-liquidators",
+          "nereus-no-automatic-backstop",
+          "avalanche"
+        ],
+        "sources": [
+          {
+            "label": "Nereus pinned Avalanche deployments",
+            "url": "https://github.com/nereusfinance/nereus-stablecoin-core/tree/e75e91b072a9d2346503383aafa2d40abc7ea582/deployments/avalanche"
+          },
+          {
+            "label": "Nereus pinned CauldronV2 source",
+            "url": "https://github.com/nereusfinance/nereus-stablecoin-core/blob/e75e91b072a9d2346503383aafa2d40abc7ea582/contracts/CauldronV2.sol"
+          },
+          {
+            "label": "Nereus pinned oracle sources",
+            "url": "https://github.com/nereusfinance/nereus-stablecoin-core/tree/e75e91b072a9d2346503383aafa2d40abc7ea582/contracts/oracles"
+          },
+          {
+            "label": "Avalanche C-Chain RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          }
+        ]
       }
     ]
   },

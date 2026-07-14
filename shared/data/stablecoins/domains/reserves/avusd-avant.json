@@ -2,46 +2,68 @@
   "id": "avusd-avant",
   "reserves": [
     {
-      "name": "USDC backing avUSD 1:1",
+      "name": "Dynamic leveraged avUSD market-neutral strategy portfolio",
       "pct": 100,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial, Inc.",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Avant Protocol and external DeFi and trading counterparties",
+      "riskFactors": ["basis", "counterparty", "credit", "custody", "liquidity", "market", "smart-contract", "concentration"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
         "label": "Avant core tokens",
         "url": "https://docs.avantprotocol.com/overview/core-tokens"
+      },
+      {
+        "label": "Avant reserve fund and avUSD backing",
+        "url": "https://docs.avantprotocol.com/security/reserve-fund"
+      },
+      {
+        "label": "Avant yield-generation strategies",
+        "url": "https://docs.avantprotocol.com/yield-strategies-and-revenue/yield-generation"
+      },
+      {
+        "label": "Avant avUSD portfolio API",
+        "url": "https://app.avantprotocol.com/api/metrics/avusd"
+      },
+      {
+        "label": "Avant avUSD reserve-fund API",
+        "url": "https://app.avantprotocol.com/api/reserve-fund/balance?product=avusd"
       }
     ],
-    "rationale": "Avant documents base avUSD as fully backed 1:1 by USDC and redeemable for USDC. The separate yield strategies and loss-absorption layers apply to staked or boosted token positions and do not support splitting the base-token reserve into estimated strategy shares.",
-    "compositionBasis": "Issuer-documented 1:1 base-token backing",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Avant states that capital backing unstaked avUSD is deployed into underlying strategies and describes avUSD as a diversified market-neutral basket. The first-party portfolio API reports a leveraged positive/negative book, including negative net USDC, while the separate reserve fund is only a small first-loss buffer. USDC is therefore the mint/redemption asset, not a 100% currently held reserve slice. Exact strategy weights remain mutable and liability-aware.",
+    "compositionBasis": "Issuer-defined dynamic strategy envelope corroborated by the live first-party avUSD balance sheet",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified reserve exposure remains in the documented avUSD base-token backing path.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "Current constituent identities, positive and negative weights, venue exposures, hedge effectiveness, and net liability attribution are intentionally unresolved in the static record and require a liability-aware live adapter.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Dynamic leveraged avUSD market-neutral strategy portfolio",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The live portfolio contains mutable positive and negative strategy positions that cannot be represented as durable gross reserve weights without liability-aware normalization."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Avant Protocol MPC custody wallets",
+        "name": "Avant strategy wallets and external trading venues",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
+    "rehypothecation": "permitted",
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "probable",
     "sources": [
       {
@@ -51,9 +73,17 @@
       {
         "label": "Avant reserve fund",
         "url": "https://docs.avantprotocol.com/security/reserve-fund"
+      },
+      {
+        "label": "Avant yield-generation strategies",
+        "url": "https://docs.avantprotocol.com/yield-strategies-and-revenue/yield-generation"
+      },
+      {
+        "label": "Avant avUSD portfolio API",
+        "url": "https://app.avantprotocol.com/api/metrics/avusd"
       }
     ],
-    "uncertainty": "Avant describes institutional-grade multi-provider MPC wallets and a reserve fund, but does not name custody providers, publish provider shares, or establish legal segregation, bankruptcy remoteness, or rehypothecation terms for the avUSD USDC backing.",
+    "uncertainty": "Avant describes MPC-secured strategy wallets and active deployment across external protocols and trading venues. It does not publish provider shares, complete venue identities, legal segregation, bankruptcy remoteness, or position-level collateral reuse limits.",
     "knownUnknownExposurePct": 100
   }
 }
