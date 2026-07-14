@@ -152,6 +152,9 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
       startSec: fetched.startSec,
       sevenDaysAgoSec: fetched.sevenDaysAgoSec,
       safetyScores: fetched.safetyScores,
+      safetySnapshotAvailable:
+        fetched.safetySnapshot.kind === "ok" && fetched.safetySnapshot.safetyScoreIdentity != null,
+      safetyScoreIdentity: fetched.safetySnapshot.safetyScoreIdentity,
       riskFreeRates: fetched.riskFreeRates,
       tier1PrevRates,
       ...historyInputs,

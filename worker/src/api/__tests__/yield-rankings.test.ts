@@ -3,6 +3,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
   SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
@@ -10,39 +11,27 @@ import {
   getSourceRiskGoldenRow,
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 
-const buildReportCardsSnapshotMock = vi.hoisted(() =>
-  vi.fn(async () => ({
-    cards: [
-      {
-        id: "rated-coin",
-        symbol: "RATE",
-        overallGrade: "B-",
-        overallScore: 66,
-        isDefunct: false,
-      },
-      {
-        id: "nr-coin",
-        symbol: "NRC",
-        overallGrade: "NR",
-        overallScore: null,
-        isDefunct: false,
-      },
-    ],
-  })),
-);
-const loadPublishedReportCardsSnapshotMock = vi.hoisted(() => vi.fn());
+const computeSafetyScoresSnapshotMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../lib/report-cards-snapshot", () => ({
-  buildReportCardsSnapshot: buildReportCardsSnapshotMock,
-}));
-
-vi.mock("../../lib/report-cards-snapshot-cache", () => ({
-  loadPublishedReportCardsSnapshot: loadPublishedReportCardsSnapshotMock,
+vi.mock("../../lib/safety-scores", () => ({
+  computeSafetyScoresSnapshot: computeSafetyScoresSnapshotMock,
 }));
 
 import { handleYieldRankings } from "../cache-handlers";
 
 const V748_RANKINGS_UPDATED_AT = 1_778_679_602;
+let currentSafetyIdentity: SafetyScoreV8PublicationIdentity | null = null;
+
+function v8Identity(publicationGenerationId: string): SafetyScoreV8PublicationIdentity {
+  return {
+    model: "v8" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    evaluationBuildDigest: "a".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+    publicationGenerationId,
+  };
+}
 
 const v748RankingsPayload = {
   rankings: [
@@ -185,7 +174,33 @@ const v748RankingsPayload = {
 } satisfies YieldRankingsResponse;
 
 function makeCacheDb(value: unknown, updatedAt: number) {
-  const jsonValue = typeof value === "string" ? value : JSON.stringify(value);
+  let payload: unknown;
+  try {
+    payload = typeof value === "string" ? JSON.parse(value) : structuredClone(value);
+  } catch {
+    const jsonValue = typeof value === "string" ? value : JSON.stringify(value);
+    return mockD1([{
+      match: "cache",
+      rows: [{ key: "yield-rankings", value: jsonValue, updated_at: updatedAt }],
+      first: { key: "yield-rankings", value: jsonValue, updated_at: updatedAt },
+    }]);
+  }
+  if (payload && typeof payload === "object" && "rankings" in payload) {
+    const response = payload as YieldRankingsResponse;
+    const generationId = response.provenance?.safetySnapshot.publicationGenerationId
+      ?? `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
+    currentSafetyIdentity = v8Identity(generationId);
+    if (response.provenance) {
+      response.provenance = {
+        ...response.provenance,
+        safetySnapshot: {
+          ...response.provenance.safetySnapshot,
+          safetyScoreIdentity: currentSafetyIdentity,
+        },
+      };
+    }
+  }
+  const jsonValue = JSON.stringify(payload);
   return mockD1([
     {
       match: "cache",
@@ -199,13 +214,20 @@ describe("handleYieldRankings", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-13T16:00:00Z"));
-    buildReportCardsSnapshotMock.mockClear();
-    loadPublishedReportCardsSnapshotMock.mockReset();
-    loadPublishedReportCardsSnapshotMock.mockResolvedValue({
-      kind: "error",
-      reason: "missing-cache",
-      updatedAt: null,
-    });
+    computeSafetyScoresSnapshotMock.mockReset();
+    computeSafetyScoresSnapshotMock.mockImplementation(async () => ({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 1,
+      trackedCount: 1,
+      coverageRatio: 1,
+      scores: new Map([["rated-coin", { score: 66, grade: "B-" }]]),
+      source: "report-card-cache",
+      safetyScoreIdentity: currentSafetyIdentity,
+      publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publishedAt: Math.floor(Date.now() / 1000),
+    }));
   });
 
   afterEach(() => {
@@ -450,7 +472,7 @@ describe("handleYieldRankings", () => {
       scoreQualified: true,
     });
 
-    expect(body.provenance.safetySnapshot).toEqual({
+    expect(body.provenance.safetySnapshot).toMatchObject({
       kind: "ok",
       coverageRatio: 0.5,
       coveredCount: 1,
@@ -461,16 +483,16 @@ describe("handleYieldRankings", () => {
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       publishedAt: updatedAt,
     });
-    expect(body.provenance.liveSafetyHydration).toEqual({
+    expect(body.provenance.liveSafetyHydration).toMatchObject({
       kind: "degraded",
       coverageRatio: 0.3333,
       coveredCount: 1,
       trackedCount: 3,
       reason: "low-row-safety-coverage",
-      source: "computed-report-cards",
-      publicationGenerationId: null,
-      methodologyVersion: null,
-      publishedAt: null,
+      source: "report-card-cache",
+      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publishedAt: expect.any(Number),
     });
     expect(body.warnings?.[0]).toMatchObject({
       code: "yield-safety-hydration-degraded",
@@ -480,11 +502,9 @@ describe("handleYieldRankings", () => {
     expect(body._meta.ageSeconds).toBe(30);
   });
 
-  it("keeps hourly publication provenance separate from a newer live report-card generation", async () => {
+  it("hydrates only from the matching compact publication identity", async () => {
     const hourlyPublishedAt = Math.floor(Date.now() / 1000) - 3_600;
-    const livePublishedAt = Math.floor(Date.now() / 1000) - 30;
     const hourlyGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${hourlyPublishedAt}`;
-    const liveGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${livePublishedAt}`;
     const payload = {
       ...v748RankingsPayload,
       rankings: [{
@@ -511,29 +531,6 @@ describe("handleYieldRankings", () => {
         },
       },
     } satisfies YieldRankingsResponse;
-    loadPublishedReportCardsSnapshotMock.mockResolvedValueOnce({
-      kind: "ok",
-      updatedAt: livePublishedAt,
-      payload: {
-        cards: [{
-          id: "rated-coin",
-          symbol: "RATE",
-          overallGrade: "B-",
-          overallScore: 66,
-          isDefunct: false,
-        }],
-        updatedAt: livePublishedAt,
-        publication: {
-          generationId: liveGenerationId,
-          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-          expectedCount: 364,
-          scoredCount: 308,
-          notRatedCount: 56,
-          notRatedIds: [],
-        },
-        liquidityStale: true,
-      },
-    });
     const db = makeCacheDb(payload, hourlyPublishedAt);
 
     const res = await handleYieldRankings(db);
@@ -544,23 +541,54 @@ describe("handleYieldRankings", () => {
       safetyScore: 66,
       safetyGrade: "B-",
     });
-    expect(body.provenance?.safetySnapshot).toEqual(payload.provenance.safetySnapshot);
-    expect(body.provenance?.liveSafetyHydration).toEqual({
-      kind: "degraded",
+    expect(body.provenance?.safetySnapshot).toMatchObject(payload.provenance.safetySnapshot);
+    expect(body.provenance?.liveSafetyHydration).toMatchObject({
+      kind: "ok",
       coverageRatio: 1,
       coveredCount: 1,
       trackedCount: 1,
-      reason: "dex-liquidity-input-stale",
-      source: "report-cards:snapshot",
-      publicationGenerationId: liveGenerationId,
+      reason: null,
+      source: "report-card-cache",
+      publicationGenerationId: hourlyGenerationId,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      publishedAt: livePublishedAt,
+      publishedAt: expect.any(Number),
     });
-    expect(body.provenance?.liveSafetyHydration?.publicationGenerationId).not.toBe(hourlyGenerationId);
-    expect(body.warnings).toContainEqual(expect.objectContaining({
-      code: "yield-safety-hydration-degraded",
-      reasons: ["dex-liquidity-input-stale"],
-    }));
+    expect(body.provenance?.liveSafetyHydration?.publicationGenerationId).toBe(hourlyGenerationId);
+  });
+
+  it("returns explicit NR fields instead of crossing compact safety identities", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const db = makeCacheDb(v748RankingsPayload, updatedAt);
+    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 1,
+      trackedCount: 1,
+      coverageRatio: 1,
+      scores: new Map([["usdc-circle", { score: 88, grade: "A" }]]),
+      source: "report-card-cache",
+      safetyScoreIdentity: v8Identity(`report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:other`),
+      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:other`,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publishedAt: updatedAt,
+    });
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+
+    expect(res.status).toBe(200);
+    expect(body.rankings[0]).toMatchObject({
+      safetyScore: null,
+      safetyGrade: "NR",
+      safetyReason: "safety-identity-mismatch",
+      pharosYieldScore: null,
+      pysNullReason: "safety-unrated",
+    });
+    expect(body.provenance?.liveSafetyHydration).toMatchObject({
+      kind: "degraded",
+      reason: "safety-identity-mismatch",
+      source: "report-card-cache",
+    });
   });
 
   it("parses a production-shaped v7.48 old rankings payload through the schema and handler", async () => {
@@ -1116,8 +1144,21 @@ describe("handleYieldRankings", () => {
     expect(res.status).toBe(503);
   });
 
-  it("keeps cached safety fields and emits Warning 199 when live safety hydration fails", async () => {
-    buildReportCardsSnapshotMock.mockRejectedValueOnce(new Error("report cards unavailable"));
+  it("returns explicit NR safety and Warning 199 when the compact safety snapshot is unavailable", async () => {
+    computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
+      kind: "degraded",
+      mode: "map",
+      coveredCount: 0,
+      trackedCount: 1,
+      coverageRatio: 0,
+      reason: "report-card-cache:missing-cache",
+      scores: new Map(),
+      source: "report-card-cache",
+      safetyScoreIdentity: null,
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      publishedAt: null,
+    });
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const db = makeCacheDb({
       rankings: [],
@@ -1138,7 +1179,7 @@ describe("handleYieldRankings", () => {
     expect(res.headers.get("Warning")).toContain("199");
     expect(body.warnings?.[0]).toMatchObject({
       code: "yield-safety-hydration-degraded",
-      reasons: ["live-report-card-hydration-failed"],
+      reasons: ["safety-snapshot-unavailable"],
     });
     expect(body._meta.ageSeconds).toBe(30);
   });
@@ -1153,7 +1194,7 @@ describe("handleYieldRankings", () => {
     await expect(res.json()).resolves.toEqual({
       error: "Cached yield-rankings payload is malformed",
     });
-    expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
+    expect(computeSafetyScoresSnapshotMock).not.toHaveBeenCalled();
   });
 
   it("returns 503 when cached rankings JSON fails schema validation", async () => {
@@ -1169,7 +1210,7 @@ describe("handleYieldRankings", () => {
     await expect(res.json()).resolves.toEqual({
       error: "Cached yield-rankings payload is malformed",
     });
-    expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
+    expect(computeSafetyScoresSnapshotMock).not.toHaveBeenCalled();
   });
 
   it("keeps hourly rankings fresh for snapshots that are under one hour old", async () => {
@@ -1187,7 +1228,7 @@ describe("handleYieldRankings", () => {
     const body = await res.json() as { _meta: { ageSeconds: number; status: string } };
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("Warning")).toBeNull();
+    expect(res.headers.get("Warning")).toContain("safety-identity-missing");
     expect(body._meta.ageSeconds).toBe(3_500);
     expect(body._meta.status).toBe("fresh");
   });

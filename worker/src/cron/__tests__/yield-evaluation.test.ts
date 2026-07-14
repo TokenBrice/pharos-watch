@@ -307,6 +307,27 @@ describe("evaluateYieldSources", () => {
     expect(notRated?.warnings).toContain("safety-unrated");
   });
 
+  it("keeps rows explicit NR when the identified compact safety snapshot is unavailable", () => {
+    const unavailable = evaluateYieldSources(baseEvaluationInput({
+      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
+      safetySnapshotAvailable: false,
+      safetyScores: new Map([["coin-a", { score: 80, grade: "B+" }]]),
+    })).evaluatedSources[0];
+
+    expect(unavailable).toMatchObject({
+      safetyScore: 40,
+      safetyGrade: "NR",
+      safetyProvenance: "safety-snapshot-unavailable",
+      safetyReason: "safety-snapshot-unavailable",
+      pharosYieldScore: null,
+      pysNullReason: "safety-unrated",
+      yieldToRisk: null,
+      scoreQualification: "NR",
+      scoreQualified: false,
+    });
+    expect(unavailable?.warnings).toContain("safety-unrated");
+  });
+
   it("uses risk-adjusted utility for same-tier arbitration when a source-risk penalty is present", () => {
     const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [

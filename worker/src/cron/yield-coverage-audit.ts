@@ -32,8 +32,7 @@ import {
   MIN_SAFETY_SCORE_FOR_YIELD,
   MIN_LENDING_POOL_APY,
 } from "../lib/constants";
-import { computeSafetyScoresSnapshot, type SafetyScoresResultMap } from "../lib/safety-scores";
-import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
+import { computeSafetyScoresSnapshot, type PublishedSafetyScoresResultMap } from "../lib/safety-scores";
 import { buildStablecoinSupplyMapFromCacheValue } from "./yield-sync/supply-map";
 import {
   YIELD_ADAPTER_LIFECYCLE,
@@ -850,32 +849,11 @@ async function loadStablecoinSupplyMapForAudit(db: D1Database): Promise<Map<stri
   }
 }
 
-async function loadSafetyScoresForAudit(db: D1Database): Promise<
-  SafetyScoresResultMap & { source: "report-card-cache" | "computed" }
-> {
-  const cached = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS });
-  if (cached.kind === "ok") {
-    const scores = new Map(Object.entries(cached.payload.scores));
-    return {
-      kind: "ok",
-      mode: "map",
-      coveredCount: scores.size,
-      trackedCount: scores.size,
-      coverageRatio: scores.size > 0 ? 1 : 0,
-      scores,
-      source: "report-card-cache",
-    };
-  }
-
-  const fallback = await computeSafetyScoresSnapshot(db, {
-    includeNavTokens: true,
+async function loadSafetyScoresForAudit(db: D1Database): Promise<PublishedSafetyScoresResultMap> {
+  return computeSafetyScoresSnapshot(db, {
     outputMode: "map",
+    sourceMode: "published-cache",
   });
-  return {
-    ...fallback,
-    reason: fallback.reason ?? `report-card-cache-${cached.reason}`,
-    source: "computed",
-  };
 }
 
 export function identifyStaleAutoLendingOverrides(
@@ -1041,7 +1019,27 @@ export async function runYieldCoverageAudit(
     safetySnapshotKind: safetySnapshot.kind,
     safetySnapshotReason: safetySnapshot.reason ?? null,
     safetySnapshotSource: safetySnapshot.source,
+    safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
   });
+  if (safetySnapshot.kind !== "ok" || safetySnapshot.safetyScoreIdentity == null) {
+    const reason = safetySnapshot.reason ?? "report-card-cache:identity-missing";
+    await reportAuditProgress("complete", "Yield coverage audit deferred pending an identified safety snapshot", 6, {
+      reason,
+      safetySnapshotSource: safetySnapshot.source,
+      safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
+    });
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: `safety-snapshot-unavailable:${reason}`,
+        safetySnapshotSource: safetySnapshot.source,
+        safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
+        safetyScoresComputed: safetySnapshot.coveredCount,
+        safetyScoresExpected: safetySnapshot.trackedCount,
+      }),
+    };
+  }
   const staleAutoLendingOverrides = identifyStaleAutoLendingOverrides(dlPools, {
     stablecoinSupplyById,
     safetyScores: safetySnapshot.scores,
@@ -1194,6 +1192,7 @@ export async function runYieldCoverageAudit(
       strategyLabels: entry.strategies.map((strategy) => strategy.label),
     })),
     poolMeta,
+    safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
   };
 
   await reportAuditProgress("cache-write", "Publishing yield coverage audit cache", 5, {
@@ -1250,6 +1249,7 @@ export async function runYieldCoverageAudit(
       protocolCategoryCount: protocolCategoryLookup.meta.categorizedProtocolCount,
       quarantineReadyToRestoreCount: quarantineProbe.readyToRestore.length,
       quarantineProbeAttemptedCount: quarantineProbe.summary.attemptedCount,
+      safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
     }),
   };
 }

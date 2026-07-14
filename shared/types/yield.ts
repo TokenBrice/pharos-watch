@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
 import { ReportCardGradeSchema } from "./report-cards";
+import { SafetyScoreV8PublicationIdentitySchema } from "./safety-score-publication";
 
 export const YIELD_ADAPTER_LIFECYCLE_VALUES = ["active", "quarantined", "intentional-gap", "experimental"] as const;
 export type YieldAdapterLifecycle = (typeof YIELD_ADAPTER_LIFECYCLE_VALUES)[number];
@@ -47,11 +48,19 @@ export const YIELD_PYS_NULL_REASONS = [
 ] as const;
 export type YieldPysNullReason = (typeof YIELD_PYS_NULL_REASONS)[number];
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
-export type YieldSafetyProvenance = "live-report-card" | "cached-publish" | "default-safety" | "opportunity-safety";
+export type YieldSafetyProvenance =
+  | "live-report-card"
+  | "cached-publish"
+  | "default-safety"
+  | "opportunity-safety"
+  | "safety-snapshot-unavailable";
 export const YIELD_SAFETY_REASON_VALUES = [
   "report-card-score-missing",
   "report-card-grade-not-rated",
   "underlying-report-card-score-missing",
+  "safety-snapshot-unavailable",
+  "safety-identity-missing",
+  "safety-identity-mismatch",
 ] as const;
 export type YieldSafetyReason = (typeof YIELD_SAFETY_REASON_VALUES)[number];
 export type YieldVenueRiskTier = "low" | "medium" | "high" | "unknown";
@@ -408,6 +417,7 @@ const YieldSafetySnapshotMetaSchema = z.object({
   trackedCount: z.number(),
   reason: z.string().nullable(),
   source: z.literal("report-card-cache").optional(),
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.nullable().optional(),
   publicationGenerationId: z.string().nullable().optional(),
   methodologyVersion: z.string().nullable().optional(),
   publishedAt: z.number().nullable().optional(),
@@ -419,7 +429,8 @@ const YieldLiveSafetyHydrationMetaSchema = z.object({
   coveredCount: z.number(),
   trackedCount: z.number(),
   reason: z.string().nullable(),
-  source: z.enum(["report-cards:snapshot", "computed-report-cards"]),
+  source: z.enum(["report-card-cache", "report-cards:snapshot", "computed-report-cards"]),
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.nullable().optional(),
   publicationGenerationId: z.string().nullable(),
   methodologyVersion: z.string().nullable(),
   publishedAt: z.number().nullable(),
@@ -442,8 +453,15 @@ const YieldRankingProvenanceSchema = z.object({
   previousBestSourceKey: z.string().nullable(),
   usedLegacyHistory: z.boolean(),
   usedDefaultSafety: z.boolean(),
-  safetyProvenance: z.enum(["live-report-card", "cached-publish", "default-safety", "opportunity-safety"]).optional(),
+  safetyProvenance: z.enum([
+    "live-report-card",
+    "cached-publish",
+    "default-safety",
+    "opportunity-safety",
+    "safety-snapshot-unavailable",
+  ]).optional(),
   safetyReason: z.enum(YIELD_SAFETY_REASON_VALUES).nullable().optional(),
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.nullable().optional(),
   benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES).optional(),
   benchmarkLabel: z.string().optional(),
   benchmarkCurrency: z.string().optional(),
