@@ -217,7 +217,50 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "tGBP is a TransparentUpgradeable proxy; the single owner EOA 0xAF4fCE...595C0 controls mint, burn, and upgrade via the ProxyAdmin contract it also owns.",
+    "summary": "tGBP uses transparent proxies on five EVM chains and a standard SPL Token mint on Solana. EOA 0xAF4fCE...595C0 controls EVM minting and four live ProxyAdmin paths; Avalanche's ProxyAdmin is self-owned. Solana minting is controlled by a 1-of-2 SPL multisig.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x27f6c8289550fce67f6b50bed1f519966afe5287"
+      ],
+      "implementationAddresses": [
+        "0x94321d80d3c5cdac63b75f723ae64ca7f94be547",
+        "0xc608f7750b91f2e655ce7702bce3d30b8504abf2",
+        "0xe6ef973354f65cefd3c3ab499712441a78e1eb9f"
+      ],
+      "adminAddresses": [
+        "0x666b8f67969a22a4015d6d523d8671ee714b114f"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "StableTokenV1OFT owner (mint/burn + upgrade authority)",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Ethereum tGBP token",
+          "url": "https://etherscan.io/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        },
+        {
+          "label": "Base tGBP token",
+          "url": "https://basescan.org/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        },
+        {
+          "label": "BSC tGBP token",
+          "url": "https://bscscan.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        },
+        {
+          "label": "Polygon tGBP token",
+          "url": "https://polygonscan.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        },
+        {
+          "label": "Avalanche tGBP token",
+          "url": "https://snowscan.xyz/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        },
+        {
+          "label": "Solana tGBP mint",
+          "url": "https://explorer.solana.com/address/2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "StableTokenV1OFT owner (mint/burn + upgrade authority)",
@@ -228,7 +271,7 @@
         "address": "0xAF4fCE2984Fb307a368f3Ff01f900909956595C0",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Ethereum block 25294789: owner() returned 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0; eth_getCode returned empty bytecode (EOA confirmed). EIP-1967 proxy admin slot = 0x666b8f67969a22a4015d6d523d8671ee714b114f (ProxyAdmin contract, 2632-byte bytecode); proxy admin owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 (same EOA). Implementation = 0x94321d80d3c5cdac63b75f723ae64ca7f94be547. One EOA controls both the token owner role (mint/burn) and the ProxyAdmin (upgrade authority).",
+        "evidence": "Current RPC reads on 2026-07-14 returned this EOA from owner() on Ethereum block 25530550, Base block 48619375, BSC block 109930595, Polygon block 90215403, and Avalanche block 90285011. All five deployments are transparent proxies using ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f. The ProxyAdmin owner is this EOA on Ethereum, Base, BSC, and Polygon; Avalanche's ProxyAdmin instead returns itself as owner, leaving that chain's implementation replacement path inaccessible through an external owner.",
         "sources": [
           {
             "label": "OpenZeppelin tGBP audit",
@@ -237,14 +280,53 @@
           {
             "label": "Ethereum tGBP token",
             "url": "https://etherscan.io/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+          },
+          {
+            "label": "Base tGBP token",
+            "url": "https://basescan.org/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+          },
+          {
+            "label": "BSC tGBP token",
+            "url": "https://bscscan.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+          },
+          {
+            "label": "Polygon tGBP token",
+            "url": "https://polygonscan.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+          },
+          {
+            "label": "Avalanche tGBP token",
+            "url": "https://snowscan.xyz/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
           }
         ]
+      },
+      {
+        "chain": "solana",
+        "address": "3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs",
+        "label": "tGBP Solana mint-authority multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 2,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Solana tGBP mint",
+            "url": "https://explorer.solana.com/address/2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW"
+          },
+          {
+            "label": "Solana tGBP mint-authority multisig",
+            "url": "https://explorer.solana.com/address/3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs"
+          }
+        ],
+        "evidence": "A finalized Solana RPC read on 2026-07-14 decoded the tGBP mint as an initialized standard SPL Token mint with this address as both mint and freeze authority. The authority account decoded as an initialized 1-of-2 SPL Token multisig."
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25294789: owner() confirmed as EOA 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 (empty bytecode). EIP-1967 proxy admin slot = 0x666b8f67969a22a4015d6d523d8671ee714b114f (ProxyAdmin contract) whose owner() = same EOA. Implementation = 0x94321d80d3c5cdac63b75f723ae64ca7f94be547. Proxy admin blocker resolved: single EOA owns both mint/burn authority and upgrade authority.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Current RPC reads on 2026-07-14 covered every tracked deployment. Ethereum, Base, BSC, Polygon, and Avalanche use transparent proxies at the common token address. Their implementations resolve to 0x94321d80... on Ethereum, 0xc608f775... on Base/BSC/Avalanche, and 0xe6ef9733... on Polygon. ProxyAdmin 0x666b8f... is owned by the reviewed EOA on four chains and self-owned on Avalanche. The Solana deployment is a standard immutable SPL Token mint controlled by a 1-of-2 multisig. The reviewed EOA therefore retains immediate mint-logic replacement on four EVM deployments, while Avalanche and Solana expose no external code-replacement authority.",
+      "reviewer": "Codex CTRL curation batch 08",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "OpenZeppelin tGBP audit",
@@ -253,6 +335,26 @@
         {
           "label": "Ethereum tGBP token",
           "url": "https://etherscan.io/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        },
+        {
+          "label": "Base tGBP token",
+          "url": "https://basescan.org/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        },
+        {
+          "label": "BSC tGBP token",
+          "url": "https://bscscan.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        },
+        {
+          "label": "Polygon tGBP token",
+          "url": "https://polygonscan.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        },
+        {
+          "label": "Avalanche tGBP token",
+          "url": "https://snowscan.xyz/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        },
+        {
+          "label": "Solana tGBP mint",
+          "url": "https://explorer.solana.com/address/2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW"
         }
       ]
     }

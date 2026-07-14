@@ -150,6 +150,21 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "StraitsX XUSD uses a Circle-style MasterMinter pattern on Ethereum; token and master-minter controls resolve to verified 3/5 Safes, and the Solana mint authority resolves to a 3/10 multisig.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Ethereum XUSD token",
+          "url": "https://etherscan.io/address/0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+        },
+        {
+          "label": "Solana XUSD mint",
+          "url": "https://explorer.solana.com/address/4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -253,6 +268,16 @@
         "signerCount": 10,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Solana XUSD mint",
+            "url": "https://explorer.solana.com/address/4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z"
+          },
+          {
+            "label": "Solana XUSD mint-authority multisig",
+            "url": "https://explorer.solana.com/address/5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj"
+          }
+        ],
         "evidence": "At finalized Solana slot 425774906, the XUSD mint account 4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z had this address as both mint and freeze authority. The authority account decoded as an initialized SPL Token multisig with m=3 and n=10."
       }
     ],
@@ -261,11 +286,19 @@
         {
           "label": "StraitsX XUSD",
           "url": "https://www.straitsx.com/xusd"
+        },
+        {
+          "label": "Ethereum XUSD token",
+          "url": "https://etherscan.io/address/0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+        },
+        {
+          "label": "Solana XUSD mint",
+          "url": "https://explorer.solana.com/address/4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z"
         }
       ],
-      "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls. Phase 0c second pass rechecked owner/masterMinter at Ethereum block 25294588, refreshed Safe owners/modules/guards, and confirmed the Solana XUSD mint/freeze authority at finalized slot 425774906 as a 3-of-10 SPL Token multisig.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls. Phase 0c second pass rechecked owner/masterMinter at Ethereum block 25294588, refreshed Safe owners/modules/guards, and confirmed the Solana XUSD mint/freeze authority at finalized slot 425774906 as a 3-of-10 SPL Token multisig. At Ethereum block 25530550, the token's EIP-1967 implementation, admin, and beacon slots were zero. A finalized Solana RPC read on 2026-07-14 confirmed the mint remains a standard immutable SPL Token account controlled by the reviewed multisig, so neither deployment exposes replaceable mint logic.",
+      "reviewer": "Codex CTRL curation batch 08",
+      "reviewedAt": "2026-07-14"
     }
   },
   "deploymentModel": "native-multichain",
