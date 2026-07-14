@@ -47,7 +47,7 @@ const dependencyWeakSignal: V9StructuralSignal = {
 const dependencyUnavailable: V9UnresolvedFact = {
   code: "material-dependency-unavailable",
   reason: "A material required dependency is unavailable.",
-  critical: true,
+  critical: false,
   path: "dependencies",
 };
 

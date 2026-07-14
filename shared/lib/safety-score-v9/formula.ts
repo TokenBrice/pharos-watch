@@ -219,12 +219,25 @@ function scoreV9InputWithCaps(
       message: "Critical evidence is insufficient for a v9 research rating.",
     });
   }
+  let pegUnverified = false;
   if (input.pegApplicable && input.pegScore === null) {
-    nrReasons.push({
-      code: "missing-applicable-peg",
-      field: "pegScore",
-      message: "A peg score is required when peg risk applies.",
-    });
+    const missingPegPolicy = resolveV9ReasonPolicy(policy, "missing-applicable-peg");
+    if (missingPegPolicy.critical) {
+      nrReasons.push({
+        code: "missing-applicable-peg",
+        field: "pegScore",
+        message: "A peg score is required when peg risk applies.",
+      });
+    } else {
+      pegUnverified = true;
+      if (missingPegPolicy.ceiling) {
+        reasonCeilings.push({
+          source: "evidence",
+          ...missingPegPolicy.ceiling,
+          reason: "Peg risk applies but no peg evidence is available; the peg multiplier is bounded at par.",
+        });
+      }
+    }
   }
   if (input.parentRequired && input.parentScore === null) {
     nrReasons.push({
@@ -261,7 +274,9 @@ function scoreV9InputWithCaps(
     : null;
   const pegMultiplierRaw = input.pegApplicable
     ? input.pegScore === null
-      ? null
+      ? pegUnverified
+        ? 1
+        : null
       : input.pegScore === 0
         ? 0
         : (input.pegScore / 100) ** formula.pegExponent
@@ -328,10 +343,27 @@ function scoreV9InputWithCaps(
   }
   for (const cap of scenarioCaps) capCandidates.push({ source: "structural", ...cap });
 
+  // Identical (source, kind, limit) candidates collapse to one trace row; the
+  // deterministically first reason survives so repeated shared-path signals do
+  // not flood the published cap list.
+  const dedupedCandidates = [
+    ...new Map(
+      [...capCandidates]
+        .sort(
+          (left, right) =>
+            left.limit - right.limit ||
+            capPriority(left.source, policy) - capPriority(right.source, policy) ||
+            compareCodeUnits(left.kind, right.kind) ||
+            compareCodeUnits(left.reason, right.reason),
+        )
+        .reverse()
+        .map((cap) => [`${cap.source} ${cap.kind} ${cap.limit}`, cap]),
+    ).values(),
+  ].reverse();
   const bindingCandidate =
     preCapScoreRaw === null
       ? null
-      : ([...capCandidates]
+      : ([...dedupedCandidates]
           .filter((cap) => cap.limit < preCapScoreRaw - EPSILON)
           .sort(
             (left, right) =>
@@ -339,7 +371,7 @@ function scoreV9InputWithCaps(
               capPriority(left.source, policy) - capPriority(right.source, policy) ||
               compareCodeUnits(left.kind, right.kind),
           )[0] ?? null);
-  const caps = capCandidates.map<V9CapTrace>((cap) => ({ ...cap, binding: cap === bindingCandidate }));
+  const caps = dedupedCandidates.map<V9CapTrace>((cap) => ({ ...cap, binding: cap === bindingCandidate }));
   const rateable = nrReasons.length === 0 && preCapScoreRaw !== null;
   const rawFinal = rateable ? Math.min(preCapScoreRaw!, bindingCandidate?.limit ?? SCORE_MAX) : null;
   const finalScore =

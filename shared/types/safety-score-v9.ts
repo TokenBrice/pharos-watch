@@ -520,9 +520,19 @@ export type V9ManualInputClassification = z.infer<typeof V9ManualInputClassifica
 const V9ReasonArchetypeSchema = z.union([z.literal("*"), z.enum(MECHANISM_ARCHETYPE_VALUES)]);
 const V9ReasonPathKindSchema = z.union([z.literal("*"), V9PathKindSchema]);
 
+export const V9NamedReasonCeilingKeySchema = z.enum([
+  "control-unverified",
+  "oracle-unverified",
+  "backing-unverified",
+  "exit-unverified",
+  "peg-unverified",
+]);
+export type V9NamedReasonCeilingKey = z.infer<typeof V9NamedReasonCeilingKeySchema>;
+
 export const V9ReasonCeilingRuleSchema = z.discriminatedUnion("source", [
   z.object({ source: z.literal("evidence-level"), level: V9EvidenceLevelSchema }).strict(),
   z.object({ source: z.literal("minimum-track-record") }).strict(),
+  z.object({ source: z.literal("named-ceiling"), key: V9NamedReasonCeilingKeySchema }).strict(),
 ]);
 export type V9ReasonCeilingRule = z.infer<typeof V9ReasonCeilingRuleSchema>;
 
@@ -858,6 +868,7 @@ const V9ControlPolicySchema = z
         "opaque-or-unknown": ScoreSchema,
       })
       .strict(),
+    boundedUnknownQuality: ScoreSchema,
   })
   .strict();
 
@@ -885,6 +896,8 @@ const V9ExitPolicySchema = z
       })
       .strict(),
     independentRouteBenefitLimit: z.number().finite().min(0).max(1),
+    boundedUnknownScore: ScoreSchema,
+    boundedCostScore: ScoreSchema,
     modeledConfidenceFactors: z
       .object({
         high: z.number().finite().min(0).max(1),
@@ -985,6 +998,15 @@ const V9StructuralPolicySchema = z
   .object({
     signalLimits: V9StructuralSignalLimitMapSchema,
     commonModeOracleLimit: ScoreSchema,
+    namedReasonCeilings: z
+      .object({
+        "control-unverified": ScoreSchema,
+        "oracle-unverified": ScoreSchema,
+        "backing-unverified": ScoreSchema,
+        "exit-unverified": ScoreSchema,
+        "peg-unverified": ScoreSchema,
+      })
+      .strict(),
   })
   .strict();
 

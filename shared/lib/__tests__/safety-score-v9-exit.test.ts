@@ -126,11 +126,13 @@ describe("evaluateV9Exit", () => {
       V9_CANDIDATE_POLICY_V1,
     );
     expect(lowerBound.score).not.toBeNull();
-    expect(diagnostic.score).toBeNull();
+    expect(diagnostic.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(diagnostic.primaryRouteKey).toBeNull();
     expect(diagnostic.reasons).toContain("unsupported-same-notional-route");
+    expect(lowerBound.score!).toBeGreaterThan(diagnostic.score!);
   });
 
-  it("scores a reviewed absence of viable routes poorly but leaves incomplete evidence unrated", () => {
+  it("scores a reviewed absence of viable routes poorly and bounds incomplete evidence", () => {
     const diagnosticRoute = route({ coverageClass: "diagnostic" });
     const reviewed = evaluateV9Exit(
       {
@@ -151,8 +153,10 @@ describe("evaluateV9Exit", () => {
 
     expect(reviewed.score).toBe(0);
     expect(reviewed.reasons).toContain("no-viable-exit-path");
-    expect(incomplete.score).toBeNull();
+    expect(incomplete.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(incomplete.primaryRouteKey).toBeNull();
     expect(incomplete.reasons).toContain("missing-same-notional-route");
+    expect(incomplete.score!).toBeGreaterThan(reviewed.score!);
   });
 
   it("keeps unresolved optional output visible without invalidating a resolved route", () => {

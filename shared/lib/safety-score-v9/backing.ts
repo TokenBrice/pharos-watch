@@ -17,7 +17,7 @@ export type { V9MechanismFactV1, V9MechanismQualityLevel } from "../../types/saf
 import type { V9MechanismFactV1 } from "../../types/safety-score-v9-backing";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
-import { assertV9ValidatedPolicyEnvelope } from "./policy";
+import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 
 type ReserveAssetClass = NonNullable<V9ReserveExposureFactV2["assetClass"]>;
 export interface V9ResolvedUpstreamExposure {
@@ -139,6 +139,74 @@ function gapReasons(
   return reasons.length > 0 ? reasons : [{ code: fallbackCode, pathKey, gapIds: uniqueSorted(gapIds), treatment }];
 }
 
+/** Like gapReasons, but each reason carries its policy-declared treatment instead of a caller-fixed one. */
+function policyGapReasons(
+  asset: V9BackingAssetInput,
+  gapIds: readonly string[],
+  pathKey: string,
+  fallbackCode: V9ReasonCode,
+  policy: V9BackingEvaluationPolicy,
+): V9BackingUnresolvedReason[] {
+  const treatmentFor = (code: V9ReasonCode) => resolveV9ReasonPolicy(policy, code).reason.defaultTreatment;
+  if (gapIds.length === 0) {
+    return [{ code: fallbackCode, pathKey, gapIds: [], treatment: treatmentFor(fallbackCode) }];
+  }
+  const reasons = gapIds
+    .map((gapId) => asset.gaps.find((gap) => gap.gapId === gapId))
+    .filter((gap): gap is V9FactGapV2 => gap !== undefined)
+    .map((gap) => ({ code: gap.reasonCode, pathKey, gapIds: [gap.gapId], treatment: treatmentFor(gap.reasonCode) }));
+  return reasons.length > 0
+    ? reasons
+    : [{ code: fallbackCode, pathKey, gapIds: uniqueSorted(gapIds), treatment: treatmentFor(fallbackCode) }];
+}
+
+/**
+ * Reserve evaluation for an envelope whose absence the policy treats as
+ * bounded: every exposure scores at the bounded-unknown quality and the
+ * reason-coded ceiling bounds the final score. No composition is claimed.
+ */
+function boundedUnknownReserveEvaluation(
+  asset: V9BackingAssetInput,
+  unresolved: readonly V9BackingUnresolvedReason[],
+  policy: V9BackingEvaluationPolicy,
+): ReserveEvaluation {
+  const backing = backingPolicy(policy);
+  const quality = backing.boundedUnknownQuality;
+  const evidenceRefIds = uniqueSorted(asset.reserveStatus.evidenceRefIds);
+  return {
+    score: quality,
+    contributions: [
+      {
+        componentKey: "reserve:unclassified-residual",
+        source: "reserve-exposure",
+        score: quality,
+        normalizedWeight: 1,
+        weightedScore: quality,
+        observationState: "bounded-unknown",
+        provenance: null,
+        evidenceRefIds,
+        failureDomains: [],
+        upstreamAssetId: null,
+      },
+      {
+        componentKey: "reserve:concentration",
+        source: "reserve-concentration",
+        score: quality,
+        normalizedWeight: backing.reserve.concentrationWeight,
+        weightedScore: quality * backing.reserve.concentrationWeight,
+        observationState: "bounded-unknown",
+        provenance: null,
+        evidenceRefIds,
+        failureDomains: [],
+        upstreamAssetId: null,
+      },
+    ],
+    structuralReasons: [],
+    unresolved,
+    rateability: "rateable",
+  };
+}
+
 function scoreFromMaturity(
   assetClass: ReserveAssetClass,
   maturityDaysMax: number | null,
@@ -222,34 +290,30 @@ export function evaluateV9ReserveExposures(
     return { score: null, contributions: [], structuralReasons: [], unresolved: [], rateability: "rateable" };
   }
   if (asset.reserveStatus.applicability.state === "unresolved") {
-    return {
-      score: null,
-      contributions: [],
-      structuralReasons: [],
-      unresolved: gapReasons(
-        asset,
-        asset.reserveStatus.gapIds,
-        "reserve-envelope",
-        "NR",
-        "unreviewed-reserve-envelope",
-      ),
-      rateability: "NR",
-    };
+    const unresolved = policyGapReasons(
+      asset,
+      asset.reserveStatus.gapIds,
+      "reserve-envelope",
+      "unreviewed-reserve-envelope",
+      policy,
+    );
+    if (unresolved.some((reason) => reason.treatment === "NR")) {
+      return { score: null, contributions: [], structuralReasons: [], unresolved, rateability: "NR" };
+    }
+    return boundedUnknownReserveEvaluation(asset, unresolved, policy);
   }
   if (asset.reserveStatus.observationState === "missing" || asset.reserveStatus.observationState === "unsupported") {
-    return {
-      score: null,
-      contributions: [],
-      structuralReasons: [],
-      unresolved: gapReasons(
-        asset,
-        asset.reserveStatus.gapIds,
-        "reserve-envelope",
-        "NR",
-        "missing-reserve-composition",
-      ),
-      rateability: "NR",
-    };
+    const unresolved = policyGapReasons(
+      asset,
+      asset.reserveStatus.gapIds,
+      "reserve-envelope",
+      "missing-reserve-composition",
+      policy,
+    );
+    if (unresolved.some((reason) => reason.treatment === "NR")) {
+      return { score: null, contributions: [], structuralReasons: [], unresolved, rateability: "NR" };
+    }
+    return boundedUnknownReserveEvaluation(asset, unresolved, policy);
   }
 
   const upstreamByExposure = new Map(
@@ -623,24 +687,54 @@ export function createUnavailableV9BackingResult(
     const gap = asset.gaps.find((candidate) => candidate.gapId === gapId);
     return gap ? [gap.reasonCode] : [];
   });
-  const reasonCodes = uniqueSorted(gapCodes.length > 0 ? gapCodes : ["missing-pillar-evidence"]);
-  return finalizeBackingResult({
+  const reasonCodes = uniqueSorted(gapCodes.length > 0 ? gapCodes : (["missing-pillar-evidence"] as V9ReasonCode[]));
+  const unresolved = reasonCodes.map((code) => ({
+    code,
+    pathKey: "mechanism:review",
+    gapIds: uniqueSorted(asset.mechanismRiskReview.status.gapIds),
+    treatment: resolveV9ReasonPolicy(policy, code).reason.defaultTreatment,
+  }));
+  const shared = {
     assetId: asset.assetId,
     archetype: asset.archetype,
     policyId: policy.policy.policyId,
     policySemanticDigest: policy.semanticDigest,
-    rateability: "NR",
-    score: null,
-    pillarCeiling: null,
-    contributions: [],
     structuralReasons: [],
-    unresolved: reasonCodes.map((code) => ({
-      code,
-      pathKey: "mechanism:review",
-      gapIds: uniqueSorted(asset.mechanismRiskReview.status.gapIds),
-      treatment: "NR" as const,
-    })),
+    unresolved,
     evidenceRefIds: uniqueSorted(asset.mechanismRiskReview.status.evidenceRefIds),
     failureDomains: [],
+  } as const;
+  if (unresolved.some((reason) => reason.treatment === "NR")) {
+    return finalizeBackingResult({
+      ...shared,
+      rateability: "NR",
+      score: null,
+      pillarCeiling: null,
+      contributions: [],
+    });
+  }
+  // The policy treats the absent mechanism review as bounded: the pillar
+  // scores at the bounded-unknown quality with the reason-coded ceiling, and
+  // no mechanism claim is made.
+  const quality = backingPolicy(policy).boundedUnknownQuality;
+  return finalizeBackingResult({
+    ...shared,
+    rateability: "rateable",
+    score: quality,
+    pillarCeiling: null,
+    contributions: [
+      {
+        componentKey: "mechanism:review",
+        source: "mechanism",
+        score: quality,
+        normalizedWeight: 1,
+        weightedScore: quality,
+        observationState: "bounded-unknown",
+        provenance: null,
+        evidenceRefIds: uniqueSorted(asset.mechanismRiskReview.status.evidenceRefIds),
+        failureDomains: [],
+        upstreamAssetId: null,
+      },
+    ],
   });
 }

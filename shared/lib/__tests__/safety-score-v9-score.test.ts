@@ -73,7 +73,7 @@ describe("scoreV9EvaluatedAsset", () => {
       input({
         pillars: {
           backing: pillar(90, {
-            reasons: [{ code: "unreviewed-reserve-envelope", path: "reserve", message: "Missing review" }],
+            reasons: [{ code: "missing-pillar-evidence", path: "reserve", message: "Missing review" }],
           }),
           exit: pillar(90),
           control: pillar(90),

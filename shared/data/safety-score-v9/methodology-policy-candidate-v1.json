@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "policyId": "safety-score-v9-candidate-v1",
+  "policyId": "safety-score-v9-candidate-v2",
   "lifecycle": "candidate",
   "releaseVersion": null,
   "semantic": {
@@ -733,7 +733,9 @@
         "pre-incident-holder": 0.85,
         "issuer-discretionary": 0.6,
         "unknown": 0.85
-      }
+      },
+      "boundedUnknownScore": 35,
+      "boundedCostScore": 50
     },
     "control": {
       "mintPostureQuality": {
@@ -742,7 +744,7 @@
         "partially-bounded-admin": 70,
         "concentrated-admin": 55,
         "unbounded-or-compromised": 25,
-        "unknown": 0
+        "unknown": 45
       },
       "oracleTierQuality": {
         "oracleless-or-internal": 95,
@@ -750,7 +752,7 @@
         "medianized-with-delay": 80,
         "standard-external": 70,
         "single-source-or-laggy": 45,
-        "opaque-or-unknown": 0
+        "opaque-or-unknown": 45
       },
       "bridgeTierQuality": {
         "single-chain-or-native": 95,
@@ -760,8 +762,9 @@
         "external-validated-network": 65,
         "liquidity-or-intent-route": 65,
         "external-lock-mint": 45,
-        "opaque-or-unknown": 0
-      }
+        "opaque-or-unknown": 45
+      },
+      "boundedUnknownQuality": 45
     },
     "structural": {
       "signalLimits": {
@@ -832,7 +835,14 @@
           "critical": 49
         }
       },
-      "commonModeOracleLimit": 49
+      "commonModeOracleLimit": 49,
+      "namedReasonCeilings": {
+        "control-unverified": 55,
+        "oracle-unverified": 55,
+        "backing-unverified": 60,
+        "exit-unverified": 65,
+        "peg-unverified": 60
+      }
     },
     "historicalValidation": {
       "noRiskSignalScore": 90,
@@ -1032,15 +1042,19 @@
       "pathKinds": [
         "optional-exit"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Exit routes were measured under different stress requests",
-      "auditClassification": "unresolved-methodology"
+      "auditClassification": "unresolved-methodology",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "exit-unverified"
+      }
     },
     {
       "code": "incomplete-dex-route-coverage",
@@ -1051,15 +1065,19 @@
       "pathKinds": [
         "optional-exit"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "DEX route coverage is incomplete",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "exit-unverified"
+      }
     },
     {
       "code": "incomplete-oracle-liquidation-branch",
@@ -1070,15 +1088,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Oracle and liquidation branch is incomplete",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "oracle-unverified"
+      }
     },
     {
       "code": "insufficient-evidence",
@@ -1108,15 +1130,19 @@
       "pathKinds": [
         "deployment-control"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Material deployment supply is not mapped to a bridge route",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "material-dependency-unavailable",
@@ -1128,16 +1154,19 @@
         "collateral-exposure",
         "serial-dependency"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "ceiling",
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Material upstream dependency is unavailable",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "evidence-level",
+        "level": "limited"
+      }
     },
     {
       "code": "material-reserve-slice-unstructured",
@@ -1192,15 +1221,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Mint control question is unresolved",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "missing-applicable-peg",
@@ -1211,15 +1244,19 @@
       "pathKinds": [
         "peg"
       ],
-      "defaultFactClass": "missing-serial-required",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Applicable peg evidence is missing",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "peg-unverified"
+      }
     },
     {
       "code": "missing-archetype",
@@ -1249,15 +1286,19 @@
       "pathKinds": [
         "deployment-control"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Bridge profile lacks deployment routes",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "missing-bridge-routes",
@@ -1268,15 +1309,19 @@
       "pathKinds": [
         "deployment-control"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Material bridge routes are not reviewed",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "missing-custody-profile",
@@ -1287,15 +1332,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "missing-serial-required",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Custody profile is missing",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "backing-unverified"
+      }
     },
     {
       "code": "missing-implementation-date",
@@ -1353,15 +1402,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "missing-serial-required",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Mint authority path is missing",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "missing-oracle-profile",
@@ -1372,15 +1425,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "missing-serial-required",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Oracle and liquidation profile is missing",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "oracle-unverified"
+      }
     },
     {
       "code": "missing-parent-score",
@@ -1410,15 +1467,19 @@
       "pathKinds": [
         "peg"
       ],
-      "defaultFactClass": "missing-serial-required",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Peg input is missing",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "peg-unverified"
+      }
     },
     {
       "code": "missing-pillar",
@@ -1467,15 +1528,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Required oracle branches are missing",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "oracle-unverified"
+      }
     },
     {
       "code": "missing-reserve-composition",
@@ -1486,15 +1551,19 @@
       "pathKinds": [
         "collateral-exposure"
       ],
-      "defaultFactClass": "missing-serial-required",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Reserve composition is missing",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "backing-unverified"
+      }
     },
     {
       "code": "missing-runtime-route-evidence",
@@ -1505,15 +1574,19 @@
       "pathKinds": [
         "optional-exit"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Runtime exit-route evidence is missing",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "exit-unverified"
+      }
     },
     {
       "code": "missing-same-notional-route",
@@ -1524,15 +1597,19 @@
       "pathKinds": [
         "optional-exit"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Comparable exit route is missing",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "exit-unverified"
+      }
     },
     {
       "code": "missing-upgrade-control",
@@ -1543,15 +1620,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "missing-serial-required",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Upgrade authority is not linked to a reviewed control",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "missing-upgradeability-review",
@@ -1562,15 +1643,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "missing-serial-required",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Upgradeability review is missing",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "nonmaterial-dependency-unavailable",
@@ -1663,15 +1748,19 @@
       "pathKinds": [
         "deployment-control"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Bridge deployment materiality is unavailable",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "selected-bridge-route-missing",
@@ -1682,15 +1771,19 @@
       "pathKinds": [
         "deployment-control"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Selected bridge route is missing",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "selected-bridge-route-unresolved",
@@ -1701,15 +1794,19 @@
       "pathKinds": [
         "deployment-control"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Selected bridge route is unresolved",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "unknown-control-cap-authority",
@@ -1720,15 +1817,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Control cap authority is unknown",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "unknown-control-mint-ability",
@@ -1739,15 +1840,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Control mint ability is unknown",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "unknown-upgrade-authority",
@@ -1758,15 +1863,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Upgrade authority is unknown",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "unresolved-control-identity",
@@ -1777,15 +1886,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Critical control identity is unresolved",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "unresolved-exit-output",
@@ -1815,15 +1928,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Mint authority is unresolved",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "control-unverified"
+      }
     },
     {
       "code": "unresolved-oracle-branch-applicability",
@@ -1834,15 +1951,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Oracle branch applicability is unresolved",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "oracle-unverified"
+      }
     },
     {
       "code": "unsupported-same-notional-route",
@@ -1853,16 +1974,19 @@
       "pathKinds": [
         "optional-exit"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR",
-        "diagnostic"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "No comparable route is supported",
-      "auditClassification": "unsupported-design"
+      "auditClassification": "unsupported-design",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "exit-unverified"
+      }
     },
     {
       "code": "unreviewed-dependency-relationships",
@@ -1874,15 +1998,19 @@
         "collateral-exposure",
         "serial-dependency"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Dependency relationships are not reviewed",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "evidence-level",
+        "level": "limited"
+      }
     },
     {
       "code": "unreviewed-oracle-profile",
@@ -1893,15 +2021,19 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "stale-material",
-      "boundedness": "unbounded",
+      "defaultFactClass": "stale-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR"
+        "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Oracle profile lacks review provenance",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "oracle-unverified"
+      }
     },
     {
       "code": "unreviewed-reserve-envelope",
@@ -1912,16 +2044,19 @@
       "pathKinds": [
         "collateral-exposure"
       ],
-      "defaultFactClass": "applicability-unresolved",
-      "boundedness": "unbounded",
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
       "permittedTreatments": [
-        "NR",
         "ceiling"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
       "publicLabel": "Reserve envelope is not reviewed",
-      "auditClassification": "missing-data"
+      "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "backing-unverified"
+      }
     }
   ]
 }

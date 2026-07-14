@@ -475,11 +475,19 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       failureDomains: componentFailureDomains,
     });
     if (posture === "unbounded-or-compromised") {
+      // Reconciled unbounded minting is a graduated severity: supply is
+      // provably matched against reserves even though the mint path itself
+      // carries no on-chain bound. Compromise and unreconciled unbounded
+      // minting remain critical.
+      const reconciled =
+        !compromised && (mint.reconciliation === "continuous" || mint.reconciliation === "periodic");
       addStructuralFailure({
         kind: "centralized-mint",
-        severity: "critical",
+        severity: reconciled ? "high" : "critical",
         binding: mintBinding,
-        reason: "Economically effective minting is unbounded or compromised.",
+        reason: reconciled
+          ? "Minting is economically unbounded but supply is reconciled against reserves."
+          : "Economically effective minting is unbounded or compromised.",
         materialSharePct: null,
         controlKeys: componentControlKeys,
         failureDomains: componentFailureDomains,
@@ -689,6 +697,29 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     if (unknownBridgeShare >= materialShareThreshold) {
       addReason("material-bridge-supply-unmatched", "deployment-control", "bridge:supply");
     }
+  }
+
+  // An unverified review leaves its section with reasons but no component.
+  // When the policy treats those reasons as bounded (non-critical), the
+  // section scores at the bounded-unknown control quality instead of nulling
+  // the pillar; the reason-coded ceiling still bounds the final score. Under
+  // critical reasons the pillar stays null regardless of these components.
+  const boundedFallbacks = [
+    { kind: "mint", componentKey: "mint", posture: "unknown" },
+    { kind: "oracle", componentKey: "oracle", posture: "opaque-or-unknown" },
+    { kind: "bridge", componentKey: "bridge:unverified", posture: "opaque-or-unknown" },
+  ] as const;
+  for (const fallback of boundedFallbacks) {
+    if (components.some((component) => component.kind === fallback.kind)) continue;
+    components.push({
+      componentKey: fallback.componentKey,
+      kind: fallback.kind,
+      posture: fallback.posture,
+      score: policy.control.boundedUnknownQuality,
+      binding: true,
+      controlKeys: [],
+      failureDomains: [],
+    });
   }
 
   const normalizedReasons = [...reasons.values()].sort(

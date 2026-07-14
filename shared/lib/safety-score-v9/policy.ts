@@ -158,6 +158,12 @@ export function resolveV9ReasonPolicy(envelope: V9ValidatedPolicyEnvelope, code:
       }
       return { kind: `reason:${code}`, limit: minimumBand.limit };
     }
+    if (reason.ceilingRule?.source === "named-ceiling") {
+      return {
+        kind: `reason:${code}`,
+        limit: envelope.policy.semantic.structural.namedReasonCeilings[reason.ceilingRule.key],
+      };
+    }
     return null;
   })();
   return {

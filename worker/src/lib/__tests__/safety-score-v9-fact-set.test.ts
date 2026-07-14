@@ -658,7 +658,13 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     const fiatCompiled = compileSafetyScoreV9FactSetFromFixedInput(withoutPegRow(), extension());
     expect(fiatCompiled.assets[0]!.peg.status.observationState).toBe("missing");
-    expect(evaluateV9FactSet(fiatCompiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).toBe("NR");
+    // A fiat asset without a peg row stays rateable under the bounded policy:
+    // the peg multiplier floors at par and the peg-unverified ceiling caps the
+    // final score instead of reason-coding NR.
+    const fiatTrace = evaluateV9FactSet(fiatCompiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace;
+    expect(fiatTrace.finalGrade).not.toBe("NR");
+    expect(fiatTrace.pegMultiplier).toBe(1);
+    expect(fiatTrace.caps.map((cap) => cap.kind)).toContain("reason:missing-peg-input");
   });
 
   it("canonicalizes extension ordering and produces a deterministic digest", () => {

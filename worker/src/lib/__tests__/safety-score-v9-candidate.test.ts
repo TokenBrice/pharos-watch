@@ -470,8 +470,9 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(result.extension.assets[0]).toMatchObject({
       assetId: "usdc-circle",
       // Reviewed reserve/proof-of-reserves and mint-authority evidence enriches
-      // the mechanism, control, and mint reviews to resolved states, but the
-      // critical exit-route reviews remain absent, so the asset stays NR.
+      // the mechanism, control, and mint reviews to resolved states; the
+      // absent exit-route reviews stay bounded, so the asset rates under the
+      // exit-unverified ceiling instead of reason-coding NR.
       mechanismRiskReview: {
         archetype: "fiat-cash",
         claimAndSegregation: { status: { observationState: "bounded-unknown" } },
@@ -489,13 +490,14 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       accessReview: { transfer: { posture: "restrictable" } },
     });
     expect(result.candidate.cards).toHaveLength(1);
-    expect(result.candidate.cards[0]).toMatchObject({ id: "usdc-circle", score: null, grade: "NR" });
-    expect(result.candidate.cards[0]!.nrReasons.length).toBeGreaterThan(0);
+    expect(result.candidate.cards[0]).toMatchObject({ id: "usdc-circle", score: 55, grade: "C" });
+    expect(result.candidate.cards[0]!.nrReasons).toEqual([]);
+    expect(result.candidate.cards[0]!.caps.map((cap) => cap.kind)).toContain("reason:missing-same-notional-route");
     expect(result.candidate.completeness).toEqual({
       expectedCount: 1,
-      ratedCount: 0,
-      notRatedCount: 1,
-      notRatedIds: ["usdc-circle"],
+      ratedCount: 1,
+      notRatedCount: 0,
+      notRatedIds: [],
     });
   });
 
@@ -510,7 +512,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(result.candidate).toMatchObject({
       model: "v9-critical-path",
       lifecycle: "candidate",
-      policyVersion: "candidate-v1",
+      policyVersion: "candidate-v2",
       completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     });
     expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 82, grade: "A-" });

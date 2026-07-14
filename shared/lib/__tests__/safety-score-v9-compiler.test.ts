@@ -268,9 +268,9 @@ describe("production-to-v9 research compiler", () => {
       dexLiquidityById: new Map([[meta.id, partialCoverage]]),
     });
 
-    expect(compiled.pillars.exit.score).toBeNull();
+    expect(compiled.pillars.exit.score).not.toBeNull();
     expect(compiled.pillars.exit.unresolved).toContainEqual(
-      expect.objectContaining({ code: "incomplete-dex-route-coverage", critical: true }),
+      expect.objectContaining({ code: "incomplete-dex-route-coverage", critical: false }),
     );
   });
 
@@ -307,18 +307,21 @@ describe("production-to-v9 research compiler", () => {
     );
   });
 
-  it("fails closed with itemized facts when production evidence is missing", () => {
+  it("itemizes missing production evidence as bounded non-critical facts", () => {
     const sparse = { ...meta, reserves: undefined, reserveReview: undefined, mintAuthority: undefined };
     const compiled = compileReportCardToV9Input(sparse, card, {
       ...options,
       metaById: new Map([[sparse.id, sparse]]),
     });
-    expect(compiled.pillars.backing.score).toBeNull();
-    expect(compiled.pillars.exit.score).toBeNull();
-    expect(compiled.pillars.control.score).toBeNull();
-    expect(compiled.pillars.backing.unresolved.map((fact) => fact.code)).toContain("missing-reserve-composition");
-    expect(compiled.pillars.exit.unresolved.map((fact) => fact.code)).toContain("missing-runtime-route-evidence");
-    expect(compiled.pillars.control.unresolved.map((fact) => fact.code)).toContain("missing-mint-authority");
+    expect(compiled.pillars.backing.unresolved).toContainEqual(
+      expect.objectContaining({ code: "missing-reserve-composition", critical: false }),
+    );
+    expect(compiled.pillars.exit.unresolved).toContainEqual(
+      expect.objectContaining({ code: "missing-runtime-route-evidence", critical: false }),
+    );
+    expect(compiled.pillars.control.unresolved).toContainEqual(
+      expect.objectContaining({ code: "missing-mint-authority", critical: false }),
+    );
   });
 
   it("fails closed when a CDP has unresolved oracle branch applicability", () => {
@@ -340,7 +343,7 @@ describe("production-to-v9 research compiler", () => {
     });
 
     expect(compiled.pillars.control.unresolved).toContainEqual(
-      expect.objectContaining({ code: "unresolved-oracle-branch-applicability", critical: true }),
+      expect.objectContaining({ code: "unresolved-oracle-branch-applicability", critical: false }),
     );
   });
 
@@ -447,11 +450,11 @@ describe("production-to-v9 research compiler", () => {
       dexLiquidityById: new Map([[bridgeMeta.id, dexRow]]),
     });
 
-    expect(compiled.pillars.control.score).toBeNull();
+    expect(compiled.pillars.control.score).not.toBeNull();
     expect(compiled.pillars.control.unresolved).toContainEqual(
       expect.objectContaining({
         code: "selected-bridge-route-missing",
-        critical: true,
+        critical: false,
         path: "rawInputs.bridgeRouteSelectedRouteId",
       }),
     );

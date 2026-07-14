@@ -6,7 +6,7 @@ import type {
   V9AssetFactsV2,
   V9ExitRouteFactV2,
 } from "../../types/safety-score-v9-facts";
-import { assertV9ValidatedPolicyEnvelope } from "./policy";
+import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 
 export type V9ExitAccess = "permissionless-onchain" | "whitelisted-onchain" | "issuer-api" | "manual";
 export type V9ExitSettlement = "atomic" | "immediate" | "same-day" | "days" | "queued";
@@ -306,7 +306,14 @@ function evaluateRoute(
     executionCertainty: policy.executionScores[route.execution],
     capacity,
     outputAssetQuality: policy.outputAssetScores[route.outputQuality] * route.outputValueRetention,
-    cost: clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, request.maxCostBps))),
+    // A cost sitting exactly on the request bound is an upper bound, not a
+    // measurement: producers report execution inside maxCostBps without the
+    // realized marginal cost. Bounded-unknown cost scores at the policy
+    // midpoint instead of pricing the worst case as if it were observed.
+    cost:
+      capacityPoint.executionCostBps >= request.maxCostBps
+        ? policy.boundedCostScore
+        : clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, request.maxCostBps))),
   };
   const weights = policy.componentWeights;
   let score =
@@ -500,10 +507,16 @@ export function evaluateV9Exit(
   envelope: V9ValidatedPolicyEnvelope,
 ): V9ExitEvaluationResult {
   assertV9ValidatedPolicyEnvelope(envelope);
+  // When the policy treats a missing same-notional route as bounded rather
+  // than critical, the pillar floors at the bounded-unknown exit score and
+  // the reason-coded ceiling bounds the final score.
+  const boundedFloor = resolveV9ReasonPolicy(envelope, "missing-same-notional-route").critical
+    ? null
+    : envelope.policy.semantic.exit.boundedUnknownScore;
   const stressRequest = selectV9ExitStressRequest(args.circulatingUsd, envelope);
   if (stressRequest === null) {
     return {
-      score: null,
+      score: boundedFloor,
       stressRequest: null,
       primaryRouteKey: null,
       diversificationRouteKey: null,
@@ -521,7 +534,7 @@ export function evaluateV9Exit(
   if (evaluated.length === 0) {
     const portfolioReviewed = args.portfolioStatus === "reviewed-complete";
     return {
-      score: portfolioReviewed ? 0 : null,
+      score: portfolioReviewed ? 0 : boundedFloor,
       stressRequest,
       primaryRouteKey: null,
       diversificationRouteKey: null,

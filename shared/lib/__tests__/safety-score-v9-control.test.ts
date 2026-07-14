@@ -200,8 +200,10 @@ describe("Safety Score v9 economic control", () => {
     expect(raiseable.components.find((component) => component.kind === "mint")?.posture).toBe(
       "partially-bounded-admin",
     );
-    expect(unknown).toMatchObject({ score: null, state: "not-rated" });
+    expect(unknown).toMatchObject({ score: 45, state: "rated" });
+    expect(unknown.components.find((component) => component.kind === "mint")?.posture).toBe("unknown");
     expect(unknown.reasons.map((reason) => reason.code)).toContain("unknown-control-cap-authority");
+    expect(unknown.reasons.every((reason) => !reason.critical)).toBe(true);
   });
 
   it("treats a reviewed non-claiming mint surface as not applicable", () => {
@@ -277,14 +279,16 @@ describe("Safety Score v9 economic control", () => {
     );
   });
 
-  it("fails closed when a material control is stale", () => {
+  it("bounds a stale material control with a non-critical reason instead of failing closed", () => {
     const staleMintControl = control("mint:stale", "mint", { status: stale("mint-control") });
     const result = evaluateV9EconomicControl(
       args({ facts: facts([staleMintControl]), mint: boundedMint(staleMintControl.controlKey) }),
     );
 
-    expect(result).toMatchObject({ score: null, state: "not-rated" });
-    expect(result.reasons.map((reason) => reason.code)).toContain("unresolved-mint-authority");
+    expect(result).toMatchObject({ score: 85, state: "rated" });
+    const staleReason = result.reasons.find((reason) => reason.code === "unresolved-mint-authority");
+    expect(staleReason).toBeDefined();
+    expect(staleReason?.critical).toBe(false);
   });
 
   it("surfaces an unreviewed mint-critical upgrade path structurally", () => {
@@ -299,7 +303,7 @@ describe("Safety Score v9 economic control", () => {
       }),
     );
 
-    expect(result).toMatchObject({ score: null, state: "not-rated" });
+    expect(result).toMatchObject({ score: 85, state: "rated" });
     expect(result.reasons.map((reason) => reason.code)).toContain("unknown-upgrade-authority");
     expect(result.structuralFailures).toContainEqual(
       expect.objectContaining({
@@ -309,6 +313,39 @@ describe("Safety Score v9 economic control", () => {
         controlKeys: [mintControl.controlKey],
       }),
     );
+  });
+
+  it("scores a fully-unverified control surface at the bounded-unknown quality", () => {
+    const unresolvedStatus: V9FactStatusV2 = {
+      applicability: { state: "required", policyRuleId: "fixture.unresolved", rationale: null, gapId: null },
+      observationState: "bounded-unknown",
+      evidenceRefIds: [],
+      gapIds: [],
+    };
+    const result = evaluateV9EconomicControl(
+      args({
+        mint: {
+          status: unresolvedStatus,
+          controlKey: null,
+          reconciliation: "unknown",
+          upgrade: { state: "unknown", controlKey: null },
+        },
+        oracle: { status: unresolvedStatus, tier: null, branches: [] },
+        bridge: { status: unresolvedStatus, routes: [] },
+      }),
+    );
+
+    expect(result).toMatchObject({
+      score: V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality,
+      state: "rated",
+    });
+    expect(result.components.map((component) => component.componentKey).sort()).toEqual([
+      "bridge:unverified",
+      "mint",
+      "oracle",
+    ]);
+    expect(result.reasons.length).toBeGreaterThan(0);
+    expect(result.reasons.every((reason) => !reason.critical)).toBe(true);
   });
 
   it("keeps a weak peripheral bridge scoped but lets a canonical route bind", () => {

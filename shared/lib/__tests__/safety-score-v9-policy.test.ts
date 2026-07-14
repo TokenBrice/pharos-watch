@@ -22,11 +22,11 @@ function candidateClone(): V9MethodologyPolicy {
 
 describe("Safety Score v9 methodology policy", () => {
   it("loads the committed candidate with a frozen semantic digest", () => {
-    expect(V9_CANDIDATE_POLICY_V1.policy.policyId).toBe("safety-score-v9-candidate-v1");
+    expect(V9_CANDIDATE_POLICY_V1.policy.policyId).toBe("safety-score-v9-candidate-v2");
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("candidate");
     expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBeNull();
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "204dc01eb2ca995b874b55323ed8c7d7fbab150f6f8b61c42aa374082839c17a",
+      "46a73c3cca66ed800b42f3f0ce17d458ca9234c367f732480df17f744df92c3f",
     );
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
   });
