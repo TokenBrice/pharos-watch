@@ -464,6 +464,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probePath: API_PATHS.safetyScoreHistoryProbe("usdt-tether"),
   }),
   publicGet({
+    key: "safety-score-history-v2",
+    path: API_PATHS.safetyScoreHistoryV2Base(),
+    probeGroup: "public",
+    probePath: API_PATHS.safetyScoreHistoryV2("usdt-tether"),
+  }),
+  publicGet({
     key: "stability-index",
     path: API_PATHS.stabilityIndex(),
     strictContract: true,

@@ -262,4 +262,84 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(metadata.reportCardCacheOwner).toBe("publish-report-card-cache");
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
   });
+
+  it("fails closed instead of comparing V8 cards with a latest V9 history row", async () => {
+    mockSnapshot([makeCard("usdt-tether", "B", 72)]);
+    const db = mockD1([
+      { match: "FROM safety_grade_history h", rows: [{ stablecoin_id: "usdt-tether", grade: "A", score: 84, recorded_at: 1_777_760_000 }] },
+      {
+        match: "FROM safety_score_history_v2",
+        rows: [
+          {
+            history_id: "v9-boundary",
+            stablecoin_id: "usdt-tether",
+            recorded_at: 1_777_770_000,
+            model: "v9",
+            identity_schema_version: 1,
+            methodology_version: "9.0",
+            policy_id: "v9-rc-1",
+            policy_digest: "c".repeat(64),
+            evaluation_build_digest: "d".repeat(64),
+            base_input_generation_id: BASE_INPUT_GENERATION_ID,
+            model_publication_generation_id: "safety-score-v9:1",
+            transition_kind: "methodology-boundary-baseline",
+            grade: "A",
+            score: 84,
+            prev_grade: null,
+            prev_score: null,
+          },
+        ],
+      },
+    ]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result).toMatchObject({ status: "degraded", itemCount: 0 });
+    expect(batchExecute).not.toHaveBeenCalled();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      identityHistorySuppressed: true,
+      suppressedIdentityTransitions: 1,
+    });
+  });
+
+  it("keeps organic V8 transitions comparable across refreshed input and publication generations", async () => {
+    mockSnapshot([makeCard("usdt-tether", "B", 72)]);
+    const db = mockD1([
+      { match: "FROM safety_grade_history h", rows: [{ stablecoin_id: "usdt-tether", grade: "A", score: 84, recorded_at: 1_777_760_000 }] },
+      {
+        match: "FROM safety_score_history_v2",
+        rows: [
+          {
+            history_id: "v8-previous-publication",
+            stablecoin_id: "usdt-tether",
+            recorded_at: 1_777_770_000,
+            model: "v8",
+            identity_schema_version: 1,
+            methodology_version: SAFETY_SCORE_METHODOLOGY_VERSION,
+            policy_id: null,
+            policy_digest: null,
+            evaluation_build_digest: DIGEST,
+            base_input_generation_id: `report-cards-input:v1:${"c".repeat(64)}`,
+            model_publication_generation_id: "report-cards:8.17:1777680000",
+            transition_kind: "organic-grade-change",
+            grade: "A",
+            score: 84,
+            prev_grade: "A-",
+            prev_score: 80,
+          },
+        ],
+      },
+    ]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result).toMatchObject({ itemCount: 1 });
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(batchExecute).mock.calls[0][1]).toHaveLength(2);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      changed: 1,
+      identityHistorySuppressed: false,
+      suppressedIdentityTransitions: 0,
+    });
+  });
 });

@@ -14,6 +14,13 @@ function gradeRow(overrides: Record<string, unknown> = {}): Record<string, unkno
     prev_grade: "B",
     prev_score: 75,
     methodology_version: "8.11",
+    model: "v8",
+    identity_schema_version: 1,
+    policy_id: null,
+    policy_digest: null,
+    evaluation_build_digest: null,
+    base_input_generation_id: null,
+    model_publication_generation_id: null,
     transition_kind: "organic-grade-change",
     source_table: "safety_grade_history",
     source_row_id: `usdt-tether:${SEC}`,
@@ -133,6 +140,9 @@ describe("score projector", () => {
           source_table: "safety_score_history_v2",
           source_row_id: "safety-score-history:v2:event:123",
           row_sort_id: "v2:safety-score-history:v2:event:123",
+          evaluation_build_digest: "a".repeat(64),
+          base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
+          model_publication_generation_id: "report-cards:8.11:123",
         }),
       ]),
     ) as MockD1Database;
@@ -143,6 +153,83 @@ describe("score projector", () => {
     const inserts = extractInsertBinds(db);
     expect(inserts[0]?.[12]).toBe("safety_score_history_v2");
     expect(inserts[0]?.[13]).toBe("safety-score-history:v2:event:123");
+    expect(JSON.parse(String(inserts[0]?.[11]))).toMatchObject({
+      safetyScore: {
+        identityStatus: "complete",
+        identity: { model: "v8", evaluationBuildDigest: "a".repeat(64) },
+      },
+    });
+  });
+
+  it("retains V8 identity for dual-written legacy rows while marking true legacy rows unidentified", async () => {
+    const dualWrittenSourceRowId = `usdt-tether:${SEC}`;
+    const trueLegacySourceRowId = `usdc-circle:${SEC}`;
+    const db = mockD1(
+      tables([
+        gradeRow({
+          source_table: "safety_grade_history",
+          source_row_id: dualWrittenSourceRowId,
+          row_sort_id: "v2:safety-score-history:v2:usdt-tether:1700000000",
+          evaluation_build_digest: "a".repeat(64),
+          base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
+          model_publication_generation_id: "report-cards:8.11:1700000000",
+        }),
+        gradeRow({
+          stablecoin_id: "usdc-circle",
+          source_table: "safety_grade_history",
+          source_row_id: trueLegacySourceRowId,
+          row_sort_id: `legacy:${trueLegacySourceRowId}`,
+        }),
+      ]),
+    ) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result).toEqual({ projected: 2, advanced: SEC });
+    const provenanceBySourceRowId = Object.fromEntries(
+      extractInsertBinds(db).map((binds) => [
+        String(binds[13]),
+        (JSON.parse(String(binds[11])) as { safetyScore: unknown }).safetyScore,
+      ]),
+    );
+    expect(provenanceBySourceRowId[dualWrittenSourceRowId]).toEqual({
+      identityStatus: "complete",
+      identity: {
+        model: "v8",
+        schemaVersion: 1,
+        methodologyVersion: "8.11",
+        evaluationBuildDigest: "a".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+        publicationGenerationId: "report-cards:8.11:1700000000",
+      },
+    });
+    expect(provenanceBySourceRowId[trueLegacySourceRowId]).toEqual({
+      identityStatus: "legacy-v8-unidentified",
+      identity: null,
+    });
+  });
+
+  it("skips a V9 row whose policy identity is incomplete", async () => {
+    const db = mockD1(
+      tables([
+        gradeRow({
+          source_table: "safety_score_history_v2",
+          source_row_id: "safety-score-history:v2:v9:123",
+          row_sort_id: "v2:safety-score-history:v2:v9:123",
+          model: "v9",
+          policy_id: null,
+          policy_digest: null,
+          evaluation_build_digest: "a".repeat(64),
+          base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
+          model_publication_generation_id: "safety-score-v9:123",
+        }),
+      ]),
+    ) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result).toEqual({ projected: 0, advanced: SEC });
+    expect(extractInsertBinds(db)).toHaveLength(0);
   });
 
   it("does not project methodology-boundary baselines as organic movements", async () => {

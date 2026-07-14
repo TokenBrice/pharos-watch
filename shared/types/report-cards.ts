@@ -20,7 +20,10 @@ import type { BluechipGrade, CustodyModel } from "./core";
 import { RedemptionModelConfidenceSchema, RedemptionRouteFamilySchema } from "./redemption";
 import { DependencyWeightSchema, StablecoinLinkSchema } from "./stablecoin-meta-schemas";
 import { DexExitEvidenceKindSchema, LiquidityCoverageClassSchema, LiquidityEvidenceClassSchema } from "./market";
-import { SafetyScoreV8PublicationIdentitySchema } from "./safety-score-publication";
+import {
+  SafetyScorePublicationIdentitySchema,
+  SafetyScoreV8PublicationIdentitySchema,
+} from "./safety-score-publication";
 
 export type ReportCardGrade = BluechipGrade | "NR";
 const REPORT_CARD_GRADE_VALUES = [...BLUECHIP_GRADE_VALUES, "NR"] as const;
@@ -40,6 +43,33 @@ export type SafetyScoreHistoryPoint = z.infer<typeof SafetyScoreHistoryPointSche
 
 export const SafetyScoreHistoryResponseSchema = z.array(SafetyScoreHistoryPointSchema);
 export type SafetyScoreHistoryResponse = z.infer<typeof SafetyScoreHistoryResponseSchema>;
+
+export const SafetyScoreHistoryV2TransitionKindSchema = z.enum([
+  "initial-baseline",
+  "organic-grade-change",
+  "methodology-boundary-baseline",
+  "rollback-baseline",
+  "restoration-baseline",
+]);
+export type SafetyScoreHistoryV2TransitionKind = z.infer<typeof SafetyScoreHistoryV2TransitionKindSchema>;
+
+const SafetyScoreHistoryV2PointSchema = z.object({
+  date: z.number(),
+  grade: ReportCardGradeSchema,
+  score: z.number().nullable(),
+  prevGrade: ReportCardGradeSchema.nullable(),
+  prevScore: z.number().nullable(),
+  transitionKind: SafetyScoreHistoryV2TransitionKindSchema,
+  safetyScoreIdentity: SafetyScorePublicationIdentitySchema,
+});
+export type SafetyScoreHistoryV2Point = z.infer<typeof SafetyScoreHistoryV2PointSchema>;
+
+/** Versioned, boundary-aware history. The legacy array remains V8-compatible. */
+export const SafetyScoreHistoryV2ResponseSchema = z.object({
+  schemaVersion: z.literal(2),
+  history: z.array(SafetyScoreHistoryV2PointSchema),
+});
+export type SafetyScoreHistoryV2Response = z.infer<typeof SafetyScoreHistoryV2ResponseSchema>;
 
 const DependencyDimensionDiagnosticsSchema = z.object({
   rawTotalWeight: z.number().finite().nonnegative(),

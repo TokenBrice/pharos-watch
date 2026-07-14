@@ -18,8 +18,8 @@ import {
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
-  SafetyScoreV8PublicationIdentitySchema,
-  type SafetyScoreV8PublicationIdentity,
+  SafetyScorePublicationIdentitySchema,
+  type SafetyScorePublicationIdentity,
 } from "@shared/types/safety-score-publication";
 
 const IMMUTABLE_CACHE_CONTROL = "public, s-maxage=31536000, max-age=31536000, immutable";
@@ -64,11 +64,11 @@ function safeParseMethodology(value: string): Record<string, string> | null {
   }
 }
 
-function safeParseSafetyScoreIdentity(value: string): SafetyScoreV8PublicationIdentity | null {
+function safeParseSafetyScoreIdentity(value: string): SafetyScorePublicationIdentity | null {
   try {
     const parsed = JSON.parse(value);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    return SafetyScoreV8PublicationIdentitySchema.safeParse(
+    return SafetyScorePublicationIdentitySchema.safeParse(
       (parsed as { safetyScoreIdentity?: unknown }).safetyScoreIdentity,
     ).data ?? null;
   } catch {
@@ -162,7 +162,7 @@ export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
     snapshotDate?: string;
     generatedAt?: number;
     methodologyVersions?: Record<string, string>;
-    safetyScoreIdentity?: SafetyScoreV8PublicationIdentity;
+    safetyScoreIdentity?: SafetyScorePublicationIdentity;
     stablecoins?: { id: string }[];
     reportCards?: { scores?: Record<string, unknown> } | null;
     psi?: unknown;

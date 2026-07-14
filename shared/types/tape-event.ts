@@ -3,6 +3,7 @@ import {
   TAPE_EVENT_SEVERITY_VALUES,
   TAPE_EVENT_TRANSITION_VALUES,
 } from "./tape-event-constants";
+import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 
 // Wire schemas for the /api/events endpoint backed by the `tape_events` D1
 // table. The Zod-free display constants and simple types live in
@@ -14,6 +15,22 @@ export * from "./tape-event-constants";
 const TapeEventSeveritySchema = z.enum(TAPE_EVENT_SEVERITY_VALUES);
 
 const TapeEventTransitionSchema = z.enum(TAPE_EVENT_TRANSITION_VALUES);
+
+/** Provenance embedded in score.upgraded and score.downgraded payloads. */
+export const SafetyScoreTapeProvenanceSchema = z.object({
+  identityStatus: z.enum(["complete", "legacy-v8-unidentified"]),
+  identity: SafetyScorePublicationIdentitySchema.nullable(),
+});
+export type SafetyScoreTapeProvenance = z.infer<typeof SafetyScoreTapeProvenanceSchema>;
+
+export const ScoreTapeEventPayloadSchema = z.object({
+  prevGrade: z.string(),
+  newGrade: z.string(),
+  prevScore: z.number().nullable(),
+  newScore: z.number().nullable(),
+  safetyScore: SafetyScoreTapeProvenanceSchema,
+});
+export type ScoreTapeEventPayload = z.infer<typeof ScoreTapeEventPayloadSchema>;
 
 const TapeEventSchema = z.object({
   id: z.string(),
