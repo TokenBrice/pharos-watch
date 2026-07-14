@@ -14,6 +14,22 @@
   "collateral": "Delta-hedged crypto positions (spot crypto such as ETH offset by equal short futures to collect funding fees), staked crypto (e.g. ETH staking via Binance Earn), and a USDT-seeded BFUSD Reserve Fund (~1.1M USDT, ~105% collateral value ratio at Nov 2024 launch); all assets are legally and beneficially owned by Binance, with no holder claim",
   "pegMechanism": "Binance account product purchased and redeemed 1:1 against supported USD stablecoins inside Binance, with Binance-controlled fees, limits, delays, and suspension rights",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "Binance describes BFUSD as an account product backed by a managed collateral, hedging, staking, and reserve-fund strategy, which supports the synthetic-delta-neutral classification; current strategy assurance and allocation semantics remain undisclosed.",
+    "sources": [
+      {
+        "label": "Binance BFUSD FAQ",
+        "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0"
+      },
+      {
+        "label": "Binance BFUSD product page",
+        "url": "https://www.binance.com/en/bfusd"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "bfusd",
   "cmcSlug": "bfusd",
@@ -101,6 +117,35 @@
       "risk": "very-high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Binance BFUSD FAQ",
+        "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0"
+      },
+      {
+        "label": "Binance BFUSD product page",
+        "url": "https://www.binance.com/en/bfusd"
+      }
+    ],
+    "rationale": "Binance identifies the BFUSD collateral pool, hedging portfolio, and reserve fund but does not publish a dated constituent allocation or current custody and provider split.",
+    "compositionBasis": "Binance BFUSD product disclosures",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The full BFUSD collateral, hedge, and reserve-fund composition and allocation are undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Binance BFUSD collateral pool, hedging portfolio, and reserve fund",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Binance describes the aggregate product envelope but does not publish the current underlying assets, weights, or failure-domain identity."
+      }
+    ]
+  },
   "yieldConfig": {
     "yieldSource": "Binance BFUSD daily APR / rewards",
     "yieldType": "governance-set"

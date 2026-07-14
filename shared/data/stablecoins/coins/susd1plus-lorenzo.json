@@ -185,6 +185,17 @@
       "depType": "wrapper"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [{ "label": "Lorenzo documentation", "url": "https://lorenzo-protocol.gitbook.io/docs" }],
+    "rationale": "sUSD1+ is documented as a staked receipt over Lorenzo USD1+ that ultimately settles into WLFI USD1. The named USD1 wrapper relationship is complete; strategy allocation and yield realization remain dynamic.",
+    "compositionBasis": "Lorenzo USD1+ wrapper documentation",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "The linked USD1 relationship is disclosed; dynamic delta-neutral strategy allocations are not fixed in static metadata.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "Lorenzo USD1+ staking",
     "yieldType": "nav-appreciation"

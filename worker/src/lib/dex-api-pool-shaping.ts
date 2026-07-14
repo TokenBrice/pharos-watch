@@ -290,14 +290,37 @@ function buildAmmExecutionModel(
       ? "constant-product"
       : pool.source === "balancer" && pool.poolType === "balancer-weighted"
         ? "weighted-constant-mean"
-        : null;
+        : pool.source === "balancer" &&
+            pool.poolType === "balancer-stable" &&
+            toPositiveFiniteNumberOrNull(pool.amp) != null
+          ? "stableswap"
+          : null;
   if (invariant == null) return null;
 
-  const tokens = pool.tokens.map((token, index) =>
+  // Composable stable pools list the pool's own phantom BPT as a token; it is
+  // not a swappable counter-asset and must not enter the invariant.
+  const poolAddress = pool.poolAddress.trim().toLowerCase();
+  const entries = pool.tokens.map((token, index) => ({ token, balance: pool.balances![index]!, index }));
+  const modelEntries =
+    invariant === "stableswap"
+      ? entries.filter(({ token }) => token.address.trim().toLowerCase() !== poolAddress)
+      : entries;
+  if (modelEntries.length < 2 || modelEntries.length > 8) return null;
+  const modelTrackedIndex = modelEntries.findIndex(({ index }) => index === trackedTokenIndex);
+  if (modelTrackedIndex === -1) return null;
+
+  // Stable math runs on rate-scaled balances; every modeled token needs a measured rate.
+  const priceRates =
+    invariant === "stableswap"
+      ? modelEntries.map(({ token }) => toPositiveFiniteNumberOrNull(token.priceRate))
+      : null;
+  if (priceRates != null && priceRates.some((rate) => rate == null)) return null;
+
+  const tokens = modelEntries.map(({ token, balance }) =>
     resolveExecutionToken(
       pool,
       token,
-      pool.balances![index]!,
+      balance,
       chainAddressToId,
       symbolToChainScopedIds,
       validationReferences,
@@ -305,7 +328,7 @@ function buildAmmExecutionModel(
     ),
   );
   if (tokens.some((token) => token == null)) return null;
-  const exactTokens = tokens as DexAmmExecutionToken[];
+  let exactTokens = tokens as DexAmmExecutionToken[];
   const identityKeys = exactTokens.map((token) => canonicalExitRouteScopedId(pool.chain, token.address));
   if (new Set(identityKeys).size !== identityKeys.length) return null;
 
@@ -316,11 +339,30 @@ function buildAmmExecutionModel(
     if (!Number.isFinite(weightSum) || Math.abs(weightSum - 1) > 0.0001) return null;
   }
 
+  let amplification: number | undefined;
+  if (invariant === "stableswap") {
+    const rates = priceRates as number[];
+    // Balancer StableMath operates on scaled balances (balance * priceRate).
+    // Scaling each balance and dividing its reference price by the same rate
+    // keeps every USD quantity unchanged while the invariant sees the
+    // on-chain scaled units.
+    exactTokens = exactTokens.map((token, index) => ({
+      ...token,
+      balance: token.balance * rates[index]!,
+      referencePriceUsd: token.referencePriceUsd / rates[index]!,
+    }));
+    // The API reports the contract amplification (Ann = amp * n); the model
+    // stores the plain paper convention (Ann = A * n^n), so convert by n^(n-1).
+    const n = exactTokens.length;
+    amplification = pool.amp! / n ** (n - 1);
+  }
+
   return {
     source: invariant === "constant-product" ? "raydium" : "balancer",
     invariant,
-    trackedTokenIndex,
+    trackedTokenIndex: modelTrackedIndex,
     feeRate: pool.feeRate,
+    ...(amplification != null ? { amplification } : {}),
     tokens: exactTokens,
   };
 }

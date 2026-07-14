@@ -13,10 +13,24 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: stcUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Cap stcUSD mechanics",
+        "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+      },
+      {
+        "label": "stcUSD Ethereum deployment",
+        "url": "https://etherscan.io/address/0x88887be419578051ff9f4eb6c858a951921d8888#code"
+      },
+      {
+        "label": "Cap protocol repository",
+        "url": "https://github.com/cap-labs-dev"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: Cap documentation and the verified Ethereum deployment establish the stcUSD mechanics, but do not establish a complete holder-level blacklist or freeze inventory for the token and its collateral dependencies.",
+    "evidence": "The reviewed Cap sources describe stcUSD issuance and the Ethereum token deployment, but no deployment-wide holder-control function is proven. Upstream collateral exposure remains separate from direct stcUSD holder access and is not inferred as a direct blacklist.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

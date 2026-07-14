@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CurvePoolEntry, LlamaPool } from "../dex-liquidity/types";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
+import { buildPoolFingerprint } from "../dex-liquidity/pool-helpers";
 import { buildChainAddressToId, buildSymbolToChainScopedIds } from "./dex-liquidity-fixtures";
 
 function makePool(overrides: Partial<LlamaPool>): LlamaPool {
@@ -700,5 +701,67 @@ describe("processPoolMetrics", () => {
     // Curve stableswap A<500 mechanism = 0.85x, so qualityAdjustedTvl ≤ 850K.
     expect(usdc?.qualityAdjustedTvl).toBeLessThanOrEqual(1_000_000);
     expect(usdc?.effectiveTvl).toBeLessThanOrEqual(1_000_000);
+  });
+
+  it("joins UUID-id DeFiLlama rows to Curve pools via the coin-set fingerprint", () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const USDC = "0x00000000000000000000000000000000000000c1";
+    const USDT = "0x00000000000000000000000000000000000000c2";
+    const addressToId = new Map([
+      [USDC, "usdc-circle"],
+      [USDT, "usdt-tether"],
+    ]);
+    const chainAddressToId = buildChainAddressToId(addressToId, ["ethereum"]);
+    const symbolToIds = new Map<string, string[]>();
+    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
+
+    const entry = makeCurveEntry({
+      A: 200,
+      registryId: "factory-stable-ng",
+      metapoolAdjustedTvl: 900_000,
+      executionCoins: [
+        { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+        { address: USDT, symbol: "USDT", decimals: 6, balance: 5_000_000, usdPrice: 0.9995 },
+      ],
+    });
+    const fingerprintKey = buildPoolFingerprint("ethereum", "curve", [USDC, USDT]);
+    expect(fingerprintKey).not.toBeNull();
+    const curvePoolMap = new Map([[fingerprintKey!, entry]]);
+
+    // Production DeFiLlama yields rows carry UUID pool ids, never addresses.
+    const uuidRow = makePool({
+      pool: "4dbfda50-1111-2222-3333-444455556666",
+      project: "curve-dex",
+      symbol: "USDC-USDT",
+      tvlUsd: 1_500_000,
+      underlyingTokens: [USDT, USDC],
+      count: 3,
+    });
+
+    const metrics = processPoolMetrics(
+      [uuidRow],
+      new Set(["curve-dex"]),
+      symbolToIds,
+      symbolToChainScopedIds,
+      new Map(),
+      chainAddressToId,
+      curvePoolMap,
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    const usdc = metrics.get("usdc-circle");
+    expect(usdc).toBeDefined();
+    const topPool = usdc!.topPools[0]!;
+    // Address-grade fingerprint match: metapool-adjusted TVL replaces the row's own TVL.
+    expect(topPool.tvlUsd).toBe(900_000);
+    const model = topPool.extra?.ammExecutionModel;
+    expect(model).toBeDefined();
+    expect(model).toMatchObject({
+      source: "curve",
+      invariant: "stableswap",
+      amplification: 100,
+    });
   });
 });

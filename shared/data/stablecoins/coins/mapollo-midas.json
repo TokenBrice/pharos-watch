@@ -124,6 +124,35 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas mAPOLLO product page",
+        "url": "https://midas.app/mapollo"
+      },
+      {
+        "label": "Midas transparency dashboard",
+        "url": "https://midas.app/transparency"
+      }
+    ],
+    "rationale": "Midas identifies the live mAPOLLO exposure as an Apollo Crypto managed-yield strategy NAV but does not disclose the current underlying assets, venue allocations, or custody providers.",
+    "compositionBasis": "Midas mAPOLLO product and transparency disclosures",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The complete current underlying strategy and allocation are undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Apollo Crypto managed yield strategy",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The product is disclosed only as a managed strategy NAV without a current structured underlying asset and failure-domain inventory."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 1,

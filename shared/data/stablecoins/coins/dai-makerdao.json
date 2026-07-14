@@ -263,10 +263,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Freeze-only re-review: DAI has no direct holder-balance freeze in the reviewed token source, but resolves to Upstream through PSM stablecoins and RWA/custody exposure.",
-    "evidence": "DAI resolves to Upstream through Maker/Sky PSM exposure to freezable stablecoins plus centralized RWA and custody dependencies.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "sources": [
+      {
+        "label": "Maker Dai Module documentation",
+        "url": "https://docs.makerdao.com/smart-contract-modules/dai-module"
+      },
+      {
+        "label": "Etherscan DAI contract",
+        "url": "https://etherscan.io/token/0x6b175474e89094c44da98b954eedeac495271d0f"
+      }
+    ],
+    "evidence": "The Maker Dai Module documentation describes DAI's user-facing token as a standard ERC-20 surface with mint, burn, push, pull, move, approve, and permit operations. The verified Ethereum DAI contract exposes no holder blacklist, freeze, or pause function. DAI's PSM/RWA/custody dependencies can carry upstream freeze exposure, but that is separate from a direct holder-balance control on DAI itself.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

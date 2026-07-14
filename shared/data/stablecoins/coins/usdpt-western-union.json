@@ -14,6 +14,22 @@
   "collateral": "U.S. dollar reserves held for USDPT, including bank deposits, U.S. Treasury bills, and similar cash equivalents",
   "pegMechanism": "Issuer-managed 1:1 redemption for U.S. dollars; Anchorage Digital Bank N.A. issues USDPT, with each token matched by an equal amount of U.S. dollar reserves",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "Western Union and Anchorage disclosures support the fiat-cash classification, but do not disclose current reserve assurance, custody allocation, reconciliation, or recovery terms for the deployment-wide issuance and redemption system; that risk boundary remains unresolved.",
+    "sources": [
+      {
+        "label": "westernunion.com",
+        "url": "https://www.westernunion.com/us/en/press-release/2025/western-union-to-launch-usdpt-stablecoin.html"
+      },
+      {
+        "label": "anchorage.com",
+        "url": "https://www.anchorage.com/updates/anchorage-digital-bank-to-issue-western-unions-usdpt-stablecoin"
+      }
+    ]
+  },
   "detailProvider": "defillama",
   "llamaId": "386",
   "links": [

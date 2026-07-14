@@ -69,10 +69,24 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: GBPm resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Mento V3 stablecoin documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "GBPm Celo token deployment",
+        "url": "https://celo.blockscout.com/address/0xccf663b1ff11028f0b19058d0f7b674004a40746?tab=contract"
+      },
+      {
+        "label": "GBPm Monad token deployment",
+        "url": "https://monad.blockscout.com/address/0x39bb4e0a204412bb98e821d25e7d955e69d40fd1?tab=contract"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: two tracked GBPm deployments are identified, but the reviewed issuer materials and deployment references do not establish a complete holder-level blacklist or freeze inventory across both deployments.",
+    "evidence": "GBPm is a Mento stablecoin with Celo and Monad deployments. The reviewed primary sources establish the token and deployment scope but do not prove a deployment-wide holder-control function; inherited reserve exposure remains unresolved at the access layer.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

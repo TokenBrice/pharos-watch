@@ -86,22 +86,22 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.standx.com/"
+        "label": "StandX DUSD minting documentation",
+        "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
       },
       {
-        "label": "Website",
-        "url": "https://standx.com/"
+        "label": "Solana RPC getAccountInfo",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Solana slot 425778638, the tracked Token-2022 DUSD mint reported H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h as both mintAuthority and freezeAuthority. That authority is a PDA owned by the immutable StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB, so the program can directly freeze individual DUSD token accounts and block their transfers. The separate BSC deployment remains governed through the StandX Gateway role system.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
@@ -172,6 +172,53 @@
       "risk": "medium"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-2 Safety Score V9 reserve review",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "StandX DUSD architecture",
+        "url": "https://docs.standx.com/docs/dusd-solutions"
+      },
+      {
+        "label": "StandX risks and hedging system",
+        "url": "https://docs.standx.com/docs/dusd-solutions/risks-hedging-system"
+      },
+      {
+        "label": "StandX DUSD redemption",
+        "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+      }
+    ],
+    "rationale": "The official StandX sources describe the three reserve categories retained in the existing fallback, but they do not publish a dated current balance-sheet or custody allocation that verifies the 50/45/5 weights. The categories are retained for context and no constituent percentages or dependency edges are inferred beyond the documented boundary.",
+    "compositionBasis": "Existing curated category fallback cross-checked against StandX architecture, hedging, and redemption documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current reserve weights, exact spot constituents, exchange counterparties, and the Stability Reserve Fund composition are not disclosed in the reviewed primary sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Spot crypto (BTC/ETH/SOL/BNB, delta-hedged via perp shorts)",
+        "pct": 50,
+        "disposition": "basket-needs-split",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Perpetual short futures positions (CEX via Ceffu custody)",
+        "pct": 45,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Stability reserve fund (stablecoins, multisig)",
+        "pct": 5,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

@@ -104,17 +104,21 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Docs",
+        "label": "sBOLD documentation",
         "url": "https://k3-capital.gitbook.io/sbold"
       },
       {
-        "label": "GitHub",
+        "label": "K3 Capital GitHub",
         "url": "https://github.com/K3Capital"
+      },
+      {
+        "label": "Tracked sBOLD Ethereum deployment",
+        "url": "https://etherscan.io/address/0x50bd66d59911f5e086ec87ae43c811e0d059dd11#code"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "BLOCKED: sBOLD documentation, the K3 Capital public repository, and the tracked Ethereum token address identify the product and deployment, but the public source set does not establish the verified implementation, administrator, or holder-control inventory. Possible is retained rather than asserting a direct no-freeze result.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

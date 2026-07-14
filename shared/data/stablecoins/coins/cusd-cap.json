@@ -24,12 +24,22 @@
     "cadence": "real-time",
     "provider": "Cap reserves dashboard"
   },
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: CUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Cap protocol documentation",
+        "url": "https://docs.cap.app/"
+      },
+      {
+        "label": "Cap Ethereum cUSD deployment",
+        "url": "https://etherscan.io/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc#code"
+      }
+    ],
+    "evidence": "The verified CapToken implementation behind the tracked Ethereum cUSD proxy exposes pauseProtocol() and pauseAsset(), which can halt transfers at the protocol or individual reserve-asset scope. Cap's documentation identifies the tracked cUSD deployment and its governance-controlled vault; the reviewed source therefore establishes direct system-wide transfer-pause capability for cUSD. Reserve and route dependencies add separate upstream exposure.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

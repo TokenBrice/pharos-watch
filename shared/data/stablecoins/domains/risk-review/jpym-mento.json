@@ -2,10 +2,23 @@
   "id": "jpym-mento",
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: JPYm resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Mento JPYm documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento deployment registry",
+        "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
+      },
+      {
+        "label": "JPYm Celo deployment",
+        "url": "https://explorer.celo.org/mainnet/address/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
+      }
+    ],
+    "evidence": "BLOCKED: JPYm is a Mento CDP asset whose upstream USDm reserve includes tracked freezable stablecoins. The official deployment registry and Celo explorer identify the current JPYm branch, but the public source set does not establish a complete holder-control inventory for the token and every upstream reserve route. Inherited exposure is retained and no direct no-freeze conclusion is asserted.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "oracleRisk": {
     "tier": "standard-external",

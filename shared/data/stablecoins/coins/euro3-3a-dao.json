@@ -399,6 +399,36 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-6 V9 reserve review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "3A DAO EURO3 documentation",
+        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      },
+      {
+        "label": "3A DAO audit documentation",
+        "url": "https://docs.3adao.org/3a-protocol/technical-documentation/audit-report"
+      }
+    ],
+    "rationale": "3A documentation identifies the approved vault collateral categories and redemption model, but no reproducible current collateral-composition feed was found for Polygon or Linea. The category envelope is retained while the live allocation remains explicitly unknown.",
+    "compositionBasis": "3A DAO documented EURO3 vault collateral allowlist",
+    "compositionAsOf": "2026-07-14",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "Current balances by collateral asset, chain, vault, and liquidation liquidity are not published in a reproducible source.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Whitelisted vault crypto and stablecoin collateral",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      }
+    ]
+  },
   "notices": [
     {
       "type": "info",

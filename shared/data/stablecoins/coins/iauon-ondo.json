@@ -184,6 +184,39 @@
       "risk": "low"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ondo IAUon product page",
+        "url": "https://app.ondo.finance/assets/iauon"
+      },
+      {
+        "label": "Ondo Global Markets overview",
+        "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+      },
+      {
+        "label": "Ondo Global Markets important notes",
+        "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      }
+    ],
+    "rationale": "Ondo identifies IAUon as economic exposure to iShares Gold Trust through Ondo Global Markets. The reviewed product and risk materials do not publish a dated, reconciled current share inventory, collateral-account allocation, or custody breakdown, so the reserve remains an explicitly bounded aggregate exposure.",
+    "compositionBasis": "Ondo IAUon product disclosure and Global Markets documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current IAU share inventory, collateral-account balances, custody arrangements, and independent reserve reconciliation are not disclosed in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "iShares Gold Trust (IAU) economic exposure via Ondo Global Markets collateral accounts",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The direct economic exposure is identified, but the current reserve slice and its failure-domain details cannot be independently reconciled from the reviewed public materials."
+      }
+    ]
+  },
   "notices": [
     {
       "type": "info",

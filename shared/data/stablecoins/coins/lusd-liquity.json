@@ -165,10 +165,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: LUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "LUSD verified token source",
+        "url": "https://etherscan.io/address/0x5f98805A4E8be255a32880FDeC7F6728C6568bA0#code"
+      },
+      {
+        "label": "Liquity V1 resources",
+        "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
+      },
+      {
+        "label": "Liquity LUSD cross-chain strategy",
+        "url": "https://www.liquity.org/blog/liquity-lusd-x-chain-strategy"
+      }
+    ],
+    "evidence": "The immutable LUSD token exposes no administrator, holder blacklist, freeze, seizure, or global pause. Its transfer checks permanently reject only the zero address, the token itself, and core Liquity contracts such as StabilityPool, TroveManager, and BorrowerOperations to prevent accidental deposits; those fixed protocol-recipient guards are not discretionary holder censorship. L2 representations depend on bridge controls rather than an issuer freeze role.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "immutable-user-collateralized",

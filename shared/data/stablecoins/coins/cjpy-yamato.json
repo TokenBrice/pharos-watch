@@ -259,6 +259,18 @@
       "risk": "very-low"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [{ "label": "Yamato documentation", "url": "https://docs.yamato.fi/v/en" }, { "label": "Yamato Ethereum contract", "url": "https://etherscan.io/address/0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257" }],
+    "rationale": "Yamato documents CJPY as minted against ETH pledges with a 130% minimum collateral ratio. The tracked reserve envelope is therefore the sole ETH collateral category; live position weights change onchain and are not represented as a static allocation.",
+    "compositionBasis": "Yamato ETH-CDP collateral design",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve exposure outside ETH pledges is documented; current individual pledge positions are dynamic.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "ETH", "pct": 100, "disposition": "untracked-exogenous-asset", "rationale": "Native ETH collateral is an external asset rather than a tracked stablecoin dependency." }]
+  },
   "liveReservesConfig": {
     "adapter": "yamato",
     "version": 1,

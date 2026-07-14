@@ -427,6 +427,35 @@
       "risk": "low"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ondo Global Markets overview",
+        "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+      },
+      {
+        "label": "SLVon trust and transparency",
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      }
+    ],
+    "rationale": "Ondo identifies SLVon as economic exposure to the iShares Silver Trust held through Global Markets collateral accounts, but does not publish a current underlying inventory or custody allocation for the full token supply.",
+    "compositionBasis": "Ondo Global Markets product and trust disclosures",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The complete current SLV exposure, collateral account allocation, and custody-provider split are undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "iShares Silver Trust (SLV) economic exposure via Ondo Global Markets collateral accounts",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Product disclosures identify the economic exposure but do not provide the current structured collateral and custody inventory."
+      }
+    ]
+  },
   "notices": [
     {
       "type": "info",

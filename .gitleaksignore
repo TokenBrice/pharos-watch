@@ -84,6 +84,7 @@
 58102b4c10defb3535078bd63505214332a66918:shared/lib/stablecoins.ts:generic-api-key:3926
 58102b4c10defb3535078bd63505214332a66918:shared/lib/stablecoins.ts:generic-api-key:610
 5ad00d4d3a432a96ee3de0df7c271c8cc3142d52:worker/src/__tests__/index.fetch.test.ts:generic-api-key:11
+5f4b19ba8c0aef3bbb5186e9033d3ef8b0e599b8:scripts/lib/mechanism-measurement/targets.ts:generic-api-key:37
 61ac302976e332fd1d337c8360661a452cd74776:worker/src/cron/reserve-adapters/__tests__/chainlink-nav.test.ts:generic-api-key:7
 6756d391b44b1214e996ac0d4324894d458c56d7:worker/src/lib/__tests__/yield-source-links.test.ts:generic-api-key:39
 688aa4125e02f2b260839f4e49f376366c86bb15:docs/plans/implemented/CCIP-mint-burn-processing.md:generic-api-key:24

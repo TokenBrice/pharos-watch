@@ -17,6 +17,22 @@
   "collateral": "frxUSD deposited into Frax's savings vault; the wrapper remains fully backed by frxUSD while protocol income and custodian yield accrue through the vault exchange rate",
   "pegMechanism": "Deposit frxUSD to mint sfrxUSD and redeem sfrxUSD for the current convertToAssets amount of frxUSD; the share price rises as Frax routes frxUSD yield to the staking vault",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SONG Safety Score V9 mechanism review",
+    "rationale": "Frax's sfrxUSD materials establish the token and its reserve/yield mechanics, but the reviewed sources do not provide the current independent assurance, reconciliation, custody continuity, valuation, seniority, and loss-recovery inputs required for a complete mechanism review.",
+    "sources": [
+      {
+        "label": "Frax sfrxUSD documentation",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+      },
+      {
+        "label": "Frax sfrxUSD addresses",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd/addresses"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "staked-frax-usd",
   "links": [

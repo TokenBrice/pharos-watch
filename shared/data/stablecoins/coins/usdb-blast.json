@@ -14,6 +14,22 @@
   "collateral": "USDC and USDT bridged to Blast L2; yield from Maker DSR and T-bills",
   "pegMechanism": "Automatic rebasing with yield from underlying centralized stablecoin strategies",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SONG Safety Score V9 mechanism review",
+    "rationale": "Blast documentation establishes the USDB route and yield-bearing reserve framework, but the reviewed sources do not provide the complete current assurance, reconciliation, custody continuity, valuation, seniority, and loss-recovery inputs required for a full mechanism review.",
+    "sources": [
+      {
+        "label": "Blast documentation",
+        "url": "https://docs.blast.io/"
+      },
+      {
+        "label": "Blast official site",
+        "url": "https://blast.io/"
+      }
+    ]
+  },
   "llamaId": "172",
   "detailProvider": "defillama",
   "geckoId": "usdb",
@@ -122,10 +138,24 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDB resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Blast documentation",
+        "url": "https://docs.blast.io/"
+      },
+      {
+        "label": "Blast native USDB deployment",
+        "url": "https://blastscan.io/address/0x4300000000000000000000000000000000000003#code"
+      },
+      {
+        "label": "Blast official site",
+        "url": "https://blast.io/"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: Blast documentation and the native USDB deployment identify the tracked route, but do not establish a complete holder-level blacklist or freeze inventory for the native token.",
+    "evidence": "USDB is represented by Blast's native deployment at 0x4300000000000000000000000000000000000003. The reviewed Blast sources establish the route but do not prove a direct holder-control function or a deployment-wide control inventory.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "stage1-l2",
   "collateralQuality": "alt-lst-bridged-or-mixed",

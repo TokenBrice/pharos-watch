@@ -170,11 +170,24 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDf resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Falcon Finance smart-contract addresses",
+        "url": "https://docs.falcon.finance/resources/smart-contracts"
+      },
+      {
+        "label": "Etherscan USDf proxy",
+        "url": "https://etherscan.io/token/0xfa2b947eec368f42195f24f36d2af29f7c24cec2"
+      },
+      {
+        "label": "Etherscan USDf implementation",
+        "url": "https://etherscan.io/address/0x3adf34c09dac24e4baefb1b1df4c2992edc2b789"
+      }
+    ],
+    "evidence": "Falcon's official contract directory identifies the reviewed USDf Ethereum proxy. Its verified USDf implementation exposes an AddressRestrictionSet event, isRestricted(address) view, and setRestriction(address,bool) function; transfer and transferFrom reject restricted accounts. This is a direct holder transfer restriction controlled through the implementation's role system, so USDf has known blacklist/restriction capability even though its reserve dependencies add separate upstream exposure.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

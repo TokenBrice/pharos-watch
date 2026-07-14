@@ -671,10 +671,23 @@
   "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: UUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Youves documentation",
+        "url": "https://docs.youves.com/"
+      },
+      {
+        "label": "Youves governance documentation",
+        "url": "https://docs.youves.com/governance/Governance-Mechanism/"
+      },
+      {
+        "label": "TzKT uUSD engine administrator",
+        "url": "https://tzkt.io/KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4/"
+      }
+    ],
+    "evidence": "Youves documents uUSD as a collateralized Tezos asset administered through Youves engine contracts and governance. The reviewed TzKT state identifies the shared 4-of-7 FlatYouves DEX Admin as the operative engine administrator; collateral includes USDt on Tezos, which carries upstream issuer freeze exposure. No direct uUSD holder blacklist is proven in the reviewed source, so inherited exposure is retained.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "established-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",

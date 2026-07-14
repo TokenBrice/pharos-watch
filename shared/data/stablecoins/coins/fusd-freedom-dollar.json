@@ -63,8 +63,8 @@
     "sourceFreeRationale": "Resolved from the follow-up FreezeWatch audit: FUSD is a Zano Confidential Asset and the public project materials do not identify a direct token freeze, blacklist, pause, seize, or arbitrary-burn surface.",
     "upstreamSuppressionRationale": "The text-based resolver can infer upstream exposure from ZANO reserve language, but ZANO reserve volatility is collateral risk, not an issuer or upstream stablecoin freeze surface under FreezeWatch semantics.",
     "evidence": "Follow-up audit retained: FUSD resolves to No because existing metadata and public materials describe ZANO-backed minting without an identified direct or upstream freeze authority.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "reserves": [
     {

@@ -29,7 +29,7 @@
     "compositionBasis": "BlackRock/Securitize stated investment categories",
     "compositionAsOf": "2026-04-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The allocation among cash, Treasury bills, and repurchase agreements is not captured in the reviewed durable sources.",
+    "knownUnknownExposure": "The allocation among cash, Treasury bills, and repurchase agreements is not captured in the reviewed durable sources. The reviewed public materials also do not provide a current assets-and-liabilities assurance report or documented loss-recovery waterfall for token holders, so the mechanism loss-recovery component remains unresolved.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

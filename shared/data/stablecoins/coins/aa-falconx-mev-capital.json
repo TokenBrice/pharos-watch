@@ -13,10 +13,24 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: AA_FalconXUSDC resolves to Upstream because USDC and USDf collateral inside the senior tranche inherit Circle and Falcon admin surfaces.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sourceFreeRationale": "AA_FalconXUSDC is an inherited tranche exposure; the reviewed token and upstream reserve sources establish inherited access risk but do not establish a complete holder-level freeze or transfer-control inventory for the tranche and its current collateral routes.",
+    "evidence": "Current Pareto and IdleCDO evidence identifies the AA_FalconXUSDC tranche, its deposit-only IdleCDO minter, and underlying USDC/USDf exposure. The inherited posture is retained because the reviewed sources do not prove a direct AA_FalconXUSDC blacklist path or a complete transfer-control inventory across the inherited collateral surfaces.",
+    "sources": [
+      {
+        "label": "Pareto live credit vaults",
+        "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+      },
+      {
+        "label": "Ethereum Blockscout AA FalconX tranche",
+        "url": "https://eth.blockscout.com/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c"
+      },
+      {
+        "label": "Ethereum Blockscout IdleCDO",
+        "url": "https://eth.blockscout.com/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
+      }
+    ],
+    "reviewer": "SONG-2 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
@@ -67,6 +81,39 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-2 Safety Score V9 reserve review",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "Pareto live credit vaults",
+        "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+      },
+      {
+        "label": "Ethereum Blockscout AA FalconX tranche",
+        "url": "https://eth.blockscout.com/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c"
+      },
+      {
+        "label": "Ethereum Blockscout IdleCDO",
+        "url": "https://eth.blockscout.com/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
+      }
+    ],
+    "rationale": "Official Pareto materials identify AA_FalconXUSDC as a senior tranche backed through the IdleCDO and underlying USDC/USDf credit-vault exposure, but the reviewed sources do not publish a current balance sheet, constituent weights, or custody and counterparty allocation for the tranche. The existing generic credit-line row is retained as a bounded projection; no additional reserve dependency edges are inferred.",
+    "compositionBasis": "Current product and contract identity review; no dated allocation snapshot was available.",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current tranche assets, credit-vault constituent weights, custody, counterparty, and impairment allocation are not disclosed in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "FalconX institutional credit-line exposure via Pareto vault",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The Pareto/FalconX materials identify the credit-line tranche but do not disclose the current underlying collateral instruments or weights, so the slice cannot be split or linked."
+      }
+    ]
+  },
   "yieldConfig": {
     "yieldSource": "Pareto FalconX Credit Vault",
     "yieldType": "lending-vault"

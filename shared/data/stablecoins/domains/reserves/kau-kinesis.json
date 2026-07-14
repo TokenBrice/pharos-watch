@@ -2,7 +2,7 @@
   "id": "kau-kinesis",
   "reserves": [
     {
-      "name": "Physical gold bullion (LBMA-approved, ABX/Brink's/Loomis vaults)",
+      "name": "Physical gold reserves",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "other",
@@ -40,10 +40,10 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Physical gold bullion (LBMA-approved, ABX/Brink's/Loomis vaults)",
+        "reserveName": "Physical gold reserves",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Allocated physical gold is an exogenous commodity reserve rather than a tracked stablecoin dependency."
+        "rationale": "Allocated physical gold is an exogenous commodity reserve rather than a tracked stablecoin dependency. Kinesis discloses LBMA-approved bullion held in ABX/Brink's/Loomis vault networks; the slice name matches the live captured exposure key."
       }
     ]
   },

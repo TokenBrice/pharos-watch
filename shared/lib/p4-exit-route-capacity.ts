@@ -18,7 +18,7 @@ import {
   normalizeExitRouteCorrelationKey,
 } from "./exit-route-identity";
 
-const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.2";
+const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.3";
 
 const DEFAULT_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 const REFERENCE_NOTIONAL_USD = 1_000_000;
@@ -128,6 +128,28 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
       "Requires exact per-token balances, decimals, addresses, and the pool amplification coefficient.",
       "The source does not publish per-pool fees; the model carries a documented conservative fee bound, so capacity is an exact lower bound.",
       "Plain StableSwap pools only; metapools are excluded at capture.",
+    ],
+  },
+  {
+    id: "balancer-stableswap-exact",
+    sourceFamilies: ["direct_api"],
+    model: "stableswap",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "exact",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "producer-run",
+    outputEvidenceKind: "reserve-based-amm-simulation",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin", "collateral"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: [
+      "Requires exact per-token balances, decimals, addresses, rate-provider price rates, and the pool amplification.",
+      "Hook-free stable-math pools with reviewed rate providers only; the phantom BPT of composable pools is excluded from the model.",
+      "Balances are rate-scaled and the amplification is converted to the plain paper convention before simulation.",
+      "Amp ramps and rate-cache refresh between producer runs bound residual error: ramps are protocol-capped at 2x/day and measured expired-cache drift was +0.09%.",
     ],
   },
   {
@@ -328,7 +350,9 @@ function capabilityForPool(pool: P4DexRoutePoolInput): DexRouteSourceCapability 
     return capabilityById("balancer-weighted-constant-mean-exact");
   }
   if (pool.extra?.ammExecutionModel?.invariant === "stableswap") {
-    return capabilityById("curve-stableswap-exact");
+    return capabilityById(
+      pool.extra.ammExecutionModel.source === "balancer" ? "balancer-stableswap-exact" : "curve-stableswap-exact",
+    );
   }
   if (pool.extra?.measurement?.synthetic === true) {
     return capabilityById("synthetic-or-fallback-shaped");
@@ -410,7 +434,7 @@ function validateAmmExecutionModel(
   if (model.invariant === "constant-product") {
     if (model.source !== "raydium" || model.tokens.length !== 2) issues.push("invalid-constant-product-model");
   } else if (model.invariant === "stableswap") {
-    if (model.source !== "curve") issues.push("invalid-stableswap-model-source");
+    if (model.source !== "curve" && model.source !== "balancer") issues.push("invalid-stableswap-model-source");
     if (model.amplification == null || !Number.isFinite(model.amplification) || model.amplification <= 0) {
       issues.push("invalid-amplification");
     }

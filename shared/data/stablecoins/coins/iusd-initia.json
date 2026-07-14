@@ -44,10 +44,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: iUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Initia documentation",
+        "url": "https://docs.initia.xyz"
+      },
+      {
+        "label": "Initia explorer",
+        "url": "https://scan.initia.xyz"
+      }
+    ],
+    "evidence": "BLOCKED: the tracked Initia iUSD Move asset and issuer documentation establish its Agora AUSD bridge-backed design, but the reviewed public materials do not provide a current module-level inventory of holder freeze, denylist, or transfer-control authority. The inherited classification is retained for the bridged AUSD exposure; no direct holder-control posture is asserted without verified Move-module authority evidence.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",

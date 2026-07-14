@@ -36,7 +36,7 @@
     "rationale": "Bridge's issuer terms identify the eligible reserve categories but do not publish CASH's current allocation among them. The prior 50/15/15/10/10 split had no source support and was replaced by one evidenced aggregate basket.",
     "compositionBasis": "Bridge issuer terms and reserve FAQ; current category weights undisclosed",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish current asset-class, tokenized-asset, counterparty, or provider weights for CASH.",
+    "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish current asset-class, tokenized-asset, counterparty, or provider weights for CASH. The reviewed issuer terms and reserve FAQ also do not provide a dated independent attestation, audit, or reconciliation procedure for CASH reserves; that assurance boundary was rechecked on 2026-07-14 by SONG Safety Score V9 mechanism review.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

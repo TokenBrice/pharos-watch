@@ -86,10 +86,23 @@
   "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: EURm resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Mento V3 smart contracts",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+      },
+      {
+        "label": "Mento V3 deployment addresses",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "Celo EURm contract",
+        "url": "https://celoscan.io/address/0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
+      }
+    ],
+    "evidence": "Mento's official deployment and contract materials identify EURm's Celo token, Mento Broker minter, and Mento governance controls. The reviewed materials do not establish a direct holder-balance blacklist on EURm; inherited exposure is retained through the EURm/Upstream dependency path resolved by the dashboard.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

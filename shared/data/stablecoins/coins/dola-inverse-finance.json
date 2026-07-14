@@ -175,10 +175,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Freeze-only re-review: DOLA has no confirmed direct holder-balance freeze in the reviewed token source, but resolves to Upstream through parent and collateral exposure.",
-    "evidence": "DOLA resolves to Upstream through sUSDe/sUSDS collateral and parent stablecoin exposure rather than direct token freeze authority.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "sources": [
+      {
+        "label": "DOLA verified Ethereum contract",
+        "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+      },
+      {
+        "label": "Inverse DOLA documentation",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola"
+      },
+      {
+        "label": "Inverse governance overview",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/governance/overview"
+      }
+    ],
+    "evidence": "The verified Ethereum DOLA source exposes operator-controlled mint and burn plus standard ERC-20 transfer methods, but no holder blacklist, freeze, seizure, or global pause path. The operator is the INV GovernorBravo-controlled Compound Timelock with a 48-hour delay, so governance controls supply rather than arbitrary holder transfers. sUSDe and sUSDS collateral create upstream impairment exposure but do not give their issuers direct control over DOLA balances.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

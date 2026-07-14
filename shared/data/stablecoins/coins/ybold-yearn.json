@@ -182,6 +182,17 @@
       "depType": "wrapper"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [{ "label": "Yearn yBOLD documentation", "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold" }, { "label": "Yearn yBOLD vault", "url": "https://yearn.fi/v3/1/0x9f4330700a36b29952869fac9b33f45eedd8a3d8" }],
+    "rationale": "Yearn documents yBOLD as vault shares over BOLD deployed in Liquity V2 Stability Pools and redeemable for BOLD. The named BOLD wrapper relationship is complete; live Stability Pool allocation is dynamic.",
+    "compositionBasis": "Yearn yBOLD vault documentation",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "The linked BOLD backing is disclosed; live Stability Pool allocation is not fixed in static metadata.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "Yearn yBOLD Stability Pool vault",
     "yieldType": "lending-vault"

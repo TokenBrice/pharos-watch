@@ -357,24 +357,110 @@
     {
       "name": "wETH",
       "pct": 25,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum, Quill Finance, and wETH custodial contracts",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "wstETH (Lido)",
       "pct": 25,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido, Ethereum, and Quill Finance markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "weETH (Ether.fi)",
       "pct": 25,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ether.fi, Ethereum, and Quill Finance markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "SCR (Scroll)",
       "pct": 25,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Scroll and Quill Finance markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-6 V9 reserve review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Quill USDQ documentation",
+        "url": "https://docs.quill.finance/faq/usdusdq"
+      },
+      {
+        "label": "Quill Finance app",
+        "url": "https://app.quill.finance/"
+      }
+    ],
+    "rationale": "Quill documentation identifies the Scroll CDP collateral universe represented by the four static slices, but no dated reproducible market or vault snapshot was found to validate the equal 25% weights or current collateral balances.",
+    "compositionBasis": "Quill documented USDQ CDP collateral categories",
+    "compositionAsOf": "2026-07-14",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "Current vault-level collateral balances, liquidation liquidity, and the aggregate live mix are not publicly reconciled.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "wETH",
+        "pct": 25,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "wstETH (Lido)",
+        "pct": 25,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "weETH (Ether.fi)",
+        "pct": 25,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "SCR (Scroll)",
+        "pct": 25,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "liquity-v2-branches",
     "version": 1,

@@ -91,6 +91,11 @@
       "type": "info",
       "title": "Current reserve and redemption evidence unavailable",
       "message": "The verified portal establishes an issuer-controlled deposit-and-mint path. It does not establish current collateral assets or coverage, 1:1 USDC redemption, custody arrangements, or a durable peg-maintenance route."
+    },
+    {
+      "type": "warning",
+      "title": "Implementation date not established",
+      "message": "SONG Safety Score V9 implementation-date review on 2026-07-15 checked the Goal3 documentation and public site but found no reliable dated implementation or launch event; no date is inferred."
     }
   ],
   "mintAuthority": {

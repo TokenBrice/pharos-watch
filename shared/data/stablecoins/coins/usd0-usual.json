@@ -4,6 +4,22 @@
   "symbol": "USD0",
   "oneLiner": "USD0 is Usual's RWA-backed dollar, collateralized by tokenized U.S. T-bills and cash-equivalent products such as USYC, M by M0, USDtb by Ethena, and USDC.",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SONG Safety Score V9 mechanism review",
+    "rationale": "Usual documentation establishes USD0's RWA/custody-backed issuance path, but the reviewed sources do not provide the complete current assurance, reconciliation, custody continuity, valuation, seniority, and loss-recovery inputs required for a full mechanism review.",
+    "sources": [
+      {
+        "label": "Usual USD0 documentation",
+        "url": "https://tech.usual.money/smart-contracts/token-contracts/usd0"
+      },
+      {
+        "label": "Usual USD0 flow and architecture",
+        "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
+      }
+    ]
+  },
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,12 +28,22 @@
     "rwa": true,
     "navToken": false
   },
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USD0 resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Usual USD0 token documentation",
+        "url": "https://tech.usual.money/smart-contracts/token-contracts/usd0"
+      },
+      {
+        "label": "USD0 Ethereum token contract",
+        "url": "https://etherscan.io/address/0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5#code"
+      }
+    ],
+    "evidence": "Usual's USD0 token documentation describes blacklist and unBlacklist functions restricted to BLACKLIST_ROLE, rejects transfers when either party is blacklisted, and permits PAUSING_CONTRACTS_ROLE to halt all transfers. The documented token is the Ethereum USD0 deployment tracked here, so an authorized role can directly restrict individual holder transfers and pause the token system-wide.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",

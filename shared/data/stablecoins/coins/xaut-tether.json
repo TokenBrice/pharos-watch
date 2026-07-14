@@ -139,6 +139,37 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "XAUT is issuer-minted by Tether Gold; the Ethereum implementation exposes onlyOwner mint/redeem and the token owner is a verified 3/6 legacy multisig contract.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x68749665ff8d2d112fa859aa293f07a622782f38"
+      ],
+      "implementationAddresses": [
+        "0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+      ],
+      "adminAddresses": [
+        "0x856fcc085290ac1e40392442211e6a333afb873e"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "XAUT owner legacy multisig",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25533143,
+      "sources": [
+        {
+          "label": "XAUT proxy verified source",
+          "url": "https://etherscan.io/address/0x68749665ff8d2d112fa859aa293f07a622782f38#code"
+        },
+        {
+          "label": "XAUT ProxyAdmin",
+          "url": "https://etherscan.io/address/0x856fcc085290ac1e40392442211e6a333afb873e#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

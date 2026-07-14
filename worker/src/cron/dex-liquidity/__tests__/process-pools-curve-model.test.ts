@@ -38,7 +38,8 @@ describe("buildCurveStableswapExecutionModel", () => {
       source: "curve",
       invariant: "stableswap",
       trackedTokenIndex: 0,
-      amplification: 200,
+      // Contract A=200 for a 2-coin pool is 200 / 2^(2-1) in the model's plain paper convention.
+      amplification: 100,
       tokens: [
         { trackedAssetId: "usdc-circle", balance: 5_000_000 },
         { trackedAssetId: "usdt-tether", referencePriceUsd: 0.9995 },
@@ -47,6 +48,21 @@ describe("buildCurveStableswapExecutionModel", () => {
     // Fee is the documented conservative bound, never zero and never large.
     expect(model!.feeRate).toBeGreaterThan(0);
     expect(model!.feeRate).toBeLessThanOrEqual(0.001);
+  });
+
+  it("converts the contract amplification convention by coin count", () => {
+    const DAI = "0x00000000000000000000000000000000000000c3";
+    const threeCoin = entry({
+      A: 4000,
+      executionCoins: [
+        { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+        { address: USDT, symbol: "USDT", decimals: 6, balance: 5_000_000, usdPrice: 0.9995 },
+        { address: DAI, symbol: "DAI", decimals: 18, balance: 5_000_000, usdPrice: 1.0001 },
+      ],
+    });
+    const model = buildCurveStableswapExecutionModel(threeCoin, "ethereum", "usdc-circle", chainAddressToId);
+    // 3pool-style: contract A=4000 -> paper A = 4000 / 3^2.
+    expect(model?.amplification).toBeCloseTo(4000 / 9, 10);
   });
 
   it("fails closed on metapools, missing capture, and untracked input", () => {
@@ -63,6 +79,45 @@ describe("buildCurveStableswapExecutionModel", () => {
     ).toBeNull();
     expect(buildCurveStableswapExecutionModel(entry(), "ethereum", "dai-makerdao", chainAddressToId)).toBeNull();
     expect(buildCurveStableswapExecutionModel(undefined, "ethereum", "usdc-circle", chainAddressToId)).toBeNull();
+  });
+
+  it("fails closed on CryptoSwap registries despite a published amplification", () => {
+    expect(
+      buildCurveStableswapExecutionModel(
+        entry({ registryId: "factory-twocrypto", A: 20_000_000 }),
+        "ethereum",
+        "usdc-circle",
+        chainAddressToId,
+      ),
+    ).toBeNull();
+    expect(
+      buildCurveStableswapExecutionModel(
+        entry({ registryId: "factory-tricrypto" }),
+        "ethereum",
+        "usdc-circle",
+        chainAddressToId,
+      ),
+    ).toBeNull();
+  });
+
+  it("fails closed on rate-bearing pools via the coin price spread gate", () => {
+    // A persistent >1% per-coin USD price spread marks a rate-scaled pool
+    // (e.g. DOLA/sUSDe at ~1.24): raw-balance stableswap overstates output.
+    const rateBearing = entry({
+      executionCoins: [
+        { address: USDC, symbol: "DOLA", decimals: 18, balance: 5_000_000, usdPrice: 1 },
+        { address: USDT, symbol: "sUSDe", decimals: 18, balance: 4_000_000, usdPrice: 1.24 },
+      ],
+    });
+    expect(buildCurveStableswapExecutionModel(rateBearing, "ethereum", "usdc-circle", chainAddressToId)).toBeNull();
+    // A sub-1% spread (normal peg noise) still models.
+    const pegNoise = entry({
+      executionCoins: [
+        { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+        { address: USDT, symbol: "USDT", decimals: 6, balance: 5_000_000, usdPrice: 0.9945 },
+      ],
+    });
+    expect(buildCurveStableswapExecutionModel(pegNoise, "ethereum", "usdc-circle", chainAddressToId)).not.toBeNull();
   });
 
   it("rejects duplicate coin addresses instead of emitting an ambiguous model", () => {

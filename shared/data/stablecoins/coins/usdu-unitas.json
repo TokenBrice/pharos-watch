@@ -89,10 +89,27 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Freeze-only re-review: USDU has no confirmed direct holder-balance freeze in reviewed metadata, but resolves to Upstream through centralized off-exchange and operational rails.",
-    "evidence": "USDU resolves to Upstream through Binance off-exchange/perp margin exposure and centralized operational rails rather than direct token freeze authority.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "sources": [
+      {
+        "label": "Unitas Terms of Service",
+        "url": "https://docs.unitas.so/resources/terms-of-service"
+      },
+      {
+        "label": "Unitas documentation",
+        "url": "https://docs.unitas.so/"
+      },
+      {
+        "label": "Unitas BNB deployment",
+        "url": "https://bscscan.com/token/0xea953ea6634d55dac6697c436b1e81a679db5882"
+      },
+      {
+        "label": "Unitas Solana mint",
+        "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+      }
+    ],
+    "evidence": "Unitas's Terms of Service reserve the right to freeze, burn, or otherwise restrict USDu and sUSDu under a user's control for legal or terms violations, while the same terms describe the tokens as issued through open-source contracts and state that Unipay cannot unilaterally modify user balances. This is a material issuer/operational restriction signal, but it does not by itself prove a live token-level blacklist or freeze function across the BNB and Solana deployments. The inherited status is retained for the documented centralized operational rails and the unresolved contract-level boundary.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

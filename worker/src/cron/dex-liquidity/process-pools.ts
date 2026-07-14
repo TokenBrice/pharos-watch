@@ -31,6 +31,16 @@ const CURVE_STABLESWAP_FEE_BOUND = 0.001;
  * Curve pool whose complete per-coin capture survived shaping. Returns null
  * whenever any identity, balance, or tracked-token requirement fails.
  */
+/**
+ * StableSwap math assumes pool units exchange near 1:1. Rate-bearing pools
+ * (sUSDe, sfrxUSD, stUSDS legs) run the invariant on rate-scaled balances the
+ * Curve pools endpoint does not expose; modeling them on raw balances
+ * overstated on-chain get_dy by 6-24% in live probes. A persistent per-coin
+ * USD price spread is the observable signature of such a pool, so any spread
+ * beyond this bound fails closed to shaped TVL evidence.
+ */
+const CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD = 1.01;
+
 export function buildCurveStableswapExecutionModel(
   curveData: CurvePoolEntry | undefined,
   chainNorm: string,
@@ -39,6 +49,14 @@ export function buildCurveStableswapExecutionModel(
 ): DexAmmExecutionModel | null {
   const coins = curveData?.executionCoins;
   if (!coins || curveData.isMetaPool || !Number.isFinite(curveData.A) || curveData.A <= 0) return null;
+  // CryptoSwap (Curve v2) pools publish an amplification coefficient too, but
+  // price on a different invariant; a stableswap model overstates their
+  // capacity massively (1.5x+ measured on EURS/USDC).
+  if (isCryptoSwap(curveData.registryId)) return null;
+  const prices = coins.map((coin) => coin.usdPrice);
+  const maxPrice = Math.max(...prices);
+  const minPrice = Math.min(...prices);
+  if (!(minPrice > 0) || maxPrice / minPrice > CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD) return null;
   const tokens = coins.map((coin) => {
     const trackedAssetId = chainAddressToId.get(`${chainNorm}:${coin.address.toLowerCase()}`);
     return {
@@ -55,12 +73,18 @@ export function buildCurveStableswapExecutionModel(
   if (trackedTokenIndex === -1) return null;
   const addresses = tokens.map((token) => `${chainNorm}:${token.address.toLowerCase()}`);
   if (new Set(addresses).size !== addresses.length) return null;
+  // The Curve API reports the contract amplification (Ann = A_contract * n); the
+  // execution model stores the plain paper convention (Ann = A * n^n). Converting by
+  // n^(n-1) reproduces on-chain get_dy exactly (verified against 3pool and the
+  // crvUSD/USDC NG pool at a pinned block); passing the contract value through
+  // overstates amplification and therefore exit capacity.
+  const n = tokens.length;
   return {
     source: "curve",
     invariant: "stableswap",
     trackedTokenIndex,
     feeRate: CURVE_STABLESWAP_FEE_BOUND,
-    amplification: curveData.A,
+    amplification: curveData.A / n ** (n - 1),
     tokens,
   };
 }
@@ -104,19 +128,30 @@ export function processPoolMetrics(
       const vol1d = pool.volumeUsd1d ?? 0;
       const vol7d = pool.volumeUsd7d ?? 0;
 
-      // Try to find Curve enrichment data (address-based first, symbol-combo fallback)
+      // Try to find Curve enrichment data (address-based first, then the
+      // coin-set fingerprint — DeFiLlama yields rows carry UUID pool ids, so
+      // the address key alone never matches them — then symbol-combo fallback)
       const chainNorm = canonicalExitRouteChain(pool.chain);
       const addrCurveKey = canonicalExitRouteAssetKey(chainNorm, pool.pool);
+      const fpCurveKey =
+        protocol === "curve" ? buildPoolFingerprint(chainNorm, "curve", pool.underlyingTokens ?? []) : null;
       const symCurveKey = `${chainNorm}:${poolSymbols
         .map((s) => s.toUpperCase())
         .sort()
         .join("-")}`;
       const curveData =
-        protocol === "curve" ? (curvePoolMap.get(addrCurveKey) ?? curvePoolMap.get(symCurveKey)) : undefined;
-      // Track whether the match was address-based: metapoolAdjustedTvl is only valid for
-      // the specific Curve pool whose address matched. Symbol fallbacks may hit a different
-      // physical pool sharing the same token pair, so we preserve their own TVL.
-      const curveAddressMatch = curvePoolMap.has(addrCurveKey);
+        protocol === "curve"
+          ? (curvePoolMap.get(addrCurveKey) ??
+            (fpCurveKey != null ? curvePoolMap.get(fpCurveKey) : undefined) ??
+            curvePoolMap.get(symCurveKey))
+          : undefined;
+      // Track whether the match was address-grade (exact address or unambiguous
+      // coin-set fingerprint): metapoolAdjustedTvl and the execution model are only
+      // valid for the specific physical Curve pool that matched. Symbol fallbacks
+      // may hit a different pool sharing the same token pair, so they keep their
+      // own TVL and never carry a model.
+      const curveAddressMatch =
+        curvePoolMap.has(addrCurveKey) || (fpCurveKey != null && curvePoolMap.has(fpCurveKey));
 
       // --- v2: Enhanced quality resolution ---
       let qualMult: number;

@@ -232,10 +232,28 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USX resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "dForce USX documentation",
+        "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+      },
+      {
+        "label": "dForce official site",
+        "url": "https://dforce.network/"
+      },
+      {
+        "label": "USX Ethereum deployment",
+        "url": "https://etherscan.io/address/0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8#code"
+      },
+      {
+        "label": "USX BSC deployment",
+        "url": "https://bscscan.com/address/0xb5102cee1528ce2c760893034a4603663495fd72#code"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: dForce documentation and tracked EVM deployments establish USX's multi-chain scope and upstream reserve exposure, but do not establish a complete holder-level blacklist or freeze inventory across all routes.",
+    "evidence": "USX is tracked across Ethereum, BSC, Arbitrum, Optimism, Base, Polygon, Kava, and Avalanche deployments. The reviewed dForce sources establish the asset scope but do not prove deployment-wide holder-control behavior; inherited exposure is not treated as a direct USX blacklist.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

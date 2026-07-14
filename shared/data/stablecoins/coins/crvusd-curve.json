@@ -728,10 +728,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Freeze-only re-review: crvUSD has no confirmed direct holder-balance freeze in the reviewed token source, but resolves to Upstream through centralized-custody collateral and tracked freezable stablecoin dependencies.",
-    "evidence": "crvUSD resolves to Upstream through WBTC/cbBTC centralized-custody collateral and pegkeeper/dependency exposure to tracked freezable stablecoins.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "sources": [
+      {
+        "label": "Curve crvUSD source repository",
+        "url": "https://github.com/curvefi/curve-stablecoin"
+      },
+      {
+        "label": "crvUSD Ethereum deployment",
+        "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+      }
+    ],
+    "evidence": "BLOCKED: reviewed Curve source and the Ethereum deployment do not establish a direct holder-level freeze or transfer restriction. The asset still has eleven tracked deployments, whose bridge and token control surfaces have not been evidenced as a group; inherited WBTC/cbBTC and stablecoin exposure remains recorded.",
+    "reviewer": "OpenAI Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

@@ -98,7 +98,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "USTBL Ethereum mint surface confirmed: restricted by Spiko PermissionManager (UUPS, immutable admin slot) whose admin = issuer EOA 0xed608cf...7375. Non-Ethereum chain mint surfaces (Arbitrum, Polygon, Base, Etherlink, Starknet, Stellar) remain unverified.",
+    "summary": "USTBL's Ethereum, Polygon, Base, and Etherlink deployments use the same verified Token implementation and PermissionManager authority. Arbitrum is a UUPS proxy with a distinct implementation and authority contract whose permission configuration is not yet verified; Starknet and Stellar remain unverified.",
     "controls": [
       {
         "chain": "ethereum",
@@ -137,6 +137,54 @@
           }
         ],
         "evidence": "ERC1967 UUPS proxy wrapping PermissionManager impl 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e. Proxy admin slot = 0x0 (immutable; upgrade via _authorizeUpgrade gated to ADMIN group). Initialized with admin = 0xed608cf38968c0ba09676843d90b33dd59dd7375 (deployer EOA). ADMIN group getGroupAdmins(0) = mask 0x01 = deployer EOA. Issuer EOA controls who can mint and can upgrade the PermissionManager."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "label": "USTBL Polygon restricted mint/burn",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [{"label":"Polygon mainnet RPC","url":"https://polygon-bor-rpc.publicnode.com"},{"label":"Sourcify Spiko Token source","url":"https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"}],
+        "evidence": "Observed 2026-07-14: name() and symbol() return Spiko US T-Bills Money Market Fund / USTBL; EIP-1967 implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472, matching Ethereum."
+      },
+      {
+        "chain": "base",
+        "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "label": "USTBL Base restricted mint/burn",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [{"label":"Base mainnet RPC","url":"https://mainnet.base.org"},{"label":"Sourcify Spiko Token source","url":"https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"}],
+        "evidence": "Observed 2026-07-14: name() and symbol() return Spiko US T-Bills Money Market Fund / USTBL; EIP-1967 implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472, matching Ethereum."
+      },
+      {
+        "chain": "etherlink",
+        "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "label": "USTBL Etherlink restricted mint/burn",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [{"label":"Etherlink mainnet RPC","url":"https://node.mainnet.etherlink.com"},{"label":"Sourcify Spiko Token source","url":"https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"}],
+        "evidence": "Observed 2026-07-14: name() and symbol() return Spiko US T-Bills Money Market Fund / USTBL; EIP-1967 implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472, matching Ethereum."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x021289588cd81dc1ac87ea91e91607eef68303f5",
+        "label": "USTBL Arbitrum token authority",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [{"label":"Arbitrum mainnet RPC","url":"https://arb1.arbitrum.io/rpc"}],
+        "evidence": "Observed 2026-07-14: name() and symbol() return Spiko US T-Bills Money Market Fund / USTBL. The 708-byte token proxy resolves to implementation 0xa0769f7a8fc65e47de93797b4e21c073c117fc80 and authority() = 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a; the authority permission configuration requires separate review."
       }
     ],
     "review": {
@@ -154,11 +202,11 @@
           "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
         }
       ],
-      "evidence": "Ethereum mint surface confirmed: Token.sol restricted() gated by PermissionManager (immutable proxy, EOA admin 0xed608cf...7375). Non-Ethereum chains (Arbitrum, Polygon, Base, Etherlink, Starknet, Stellar) not yet verified — USTBL is multi-chain with native issuance on each chain, not bridged.",
+      "evidence": "Ethereum, Polygon, Base, and Etherlink USTBL token proxies resolve to the same verified Token.sol implementation and PermissionManager authority. Arbitrum resolves to a distinct implementation and authority contract; its permission configuration was not reviewed. Starknet and Stellar remain unverified. USTBL is multi-chain with native issuance on each chain, not bridged.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
-        "Verify Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar token mint authority (native issuance on each chain, not bridge-minted); confirm whether the same PermissionManager is deployed on each or separate authority contracts exist."
+        "Review Arbitrum authority contract 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a and implementation 0xa0769f7a8fc65e47de93797b4e21c073c117fc80; verify Starknet and Stellar token authority."
       ]
     }
   },

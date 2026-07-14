@@ -13,10 +13,19 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "eEARN is a USDC vault/share token and inherits Circle USDC's upstream blacklist surface through the underlying asset.",
-    "reviewer": "Codex Royco coverage addition",
-    "reviewedAt": "2026-06-13"
+    "sources": [
+      {
+        "label": "eEARN Ethereum ERC1967 proxy",
+        "url": "https://eth.blockscout.com/address/0x9be9294722f8aad37b11a9792be2c782182cafa2?tab=contract"
+      },
+      {
+        "label": "Ember eEARN product page",
+        "url": "https://ember.so/earn/eEARN"
+      }
+    ],
+    "evidence": "BLOCKED: the Ethereum explorer resolves the tracked ERC1967 proxy to implementation 0xAB222201C5bD8A18Dc6B340Ba78a709589E01781, but that implementation has no verified source in the explorer and issuer materials reviewed do not publish a current holder-control authority inventory. eEARN's USDC vault exposure retains the inherited classification; no direct holder blacklist, freeze, or transfer posture is asserted without implementation evidence.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

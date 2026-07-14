@@ -2,31 +2,20 @@
   "id": "usd1-world-liberty-financial",
   "reserves": [
     {
-      "name": "Fidelity Government Portfolio (FRGXX)",
-      "pct": 85,
+      "name": "U.S. Treasury Bills, Money Market Funds & Cash",
+      "pct": 100,
       "risk": "low",
-      "assetClass": "money-market-fund",
-      "issuerOrObligor": "Fidelity Investments Money Market Government Portfolio",
+      "assetClass": "other",
+      "issuerOrObligor": "U.S. Treasury, government money-market funds, and U.S. commercial banks",
       "riskFactors": [
+        "credit",
         "counterparty",
         "duration",
         "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "Cash and cash equivalents in demand deposit accounts",
-      "pct": 15,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "U.S. commercial banks regulated by the Federal Reserve (not individually disclosed)",
-      "riskFactors": [
-        "counterparty",
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
@@ -41,14 +30,27 @@
       {
         "label": "Fidelity Government Portfolio institutional fund literature",
         "url": "https://institutional.fidelity.com/app/tabbed/literature/FIIS_FL_REGDOCS_CASH_DPL3.html?navId=325&productLine=3&tab=literature"
+      },
+      {
+        "label": "USD1 proof of reserves",
+        "url": "https://por.worldlibertyfinancial.com"
       }
     ],
-    "rationale": "The May 31 Crowe examination reports $4.024481921 billion in Government Money Market fund CUSIP 31607A703 and $710.202692 million in demand deposit accounts against $4.734684613 billion of total redemption assets. Those examined amounts normalize exactly to 85% and 15%, respectively; no direct Treasury-bill position was reported at that date.",
-    "compositionBasis": "Crowe examination of the USD1 Reserve Report as of May 31, 2026",
+    "rationale": "The current USD1 proof-of-reserves adapter exposes one aggregate U.S. Treasury Bills, Money Market Funds & Cash slice. The May 31 Crowe examination provides the latest reviewed underlying split of 85% government money-market fund and 15% demand deposits, but the live aggregate is retained as one exact source-native row rather than pretending the adapter provides a current constituent split.",
+    "compositionBasis": "Current USD1 proof-of-reserves aggregate with Crowe examination of the May 31, 2026 reserve report",
     "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
     "knownUnknownExposure": "No material unclassified reserve exposure is present in the examined report; individual deposit banks and the money-market fund's current underlying positions are not enumerated in the USD1 report.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. Treasury Bills, Money Market Funds & Cash",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The aggregate Treasury, money-market-fund, and cash reserve envelope is external backing rather than a tracked stablecoin dependency."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

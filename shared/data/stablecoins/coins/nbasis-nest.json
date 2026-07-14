@@ -171,35 +171,87 @@
     {
       "name": "Superstate USCC cash-and-carry fund",
       "pct": 79.6368,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Superstate USCC fund and CME futures counterparties",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Superstate USTB Treasury Fund",
       "pct": 18.9772,
       "risk": "low",
       "coinId": "ustb-superstate",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Superstate USTB Treasury Fund",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Liquid USDC balances",
       "pct": 1.0463,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and Nest Basis Vault",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "pUSD liquid balance",
       "pct": 0.3396,
       "risk": "high",
       "coinId": "pusd-plume",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Plume PUSD and Nest Basis Vault",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Liquid USDT balances",
       "pct": 0.0001,
       "risk": "low",
       "coinId": "usdt-tether",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether and Nest Basis Vault",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {

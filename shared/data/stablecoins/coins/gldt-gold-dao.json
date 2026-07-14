@@ -69,6 +69,35 @@
       "risk": "low"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Gold DAO key canisters",
+        "url": "https://docs.gold-dao.org/other/key-canisters"
+      },
+      {
+        "label": "Gold DAO GLDT",
+        "url": "https://gldt.org/"
+      }
+    ],
+    "rationale": "Gold DAO describes GLDT as the gold-backed token issued through the GLD NFT swap route. The reviewed composition therefore retains one aggregate 100% locked-gold-NFT category; bar-level weights, serial numbers, and current custody allocation are not publicly reconciled.",
+    "compositionBasis": "Gold DAO GLDT documentation and current swap/ledger control review",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The backing class is identified as locked GLD NFTs representing physical gold, but current bar inventory, serial-level allocation, and custody-provider shares are not disclosed in the reviewed sources.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Locked GLD NFTs representing physical gold bars in Swiss vaults",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Physical gold represented by GLD NFTs is external backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

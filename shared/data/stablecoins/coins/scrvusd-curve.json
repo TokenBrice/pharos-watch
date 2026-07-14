@@ -13,10 +13,19 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: scrvUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "scrvUSD Ethereum contract",
+        "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367"
+      },
+      {
+        "label": "Curve crvUSD resources",
+        "url": "https://resources.curve.finance/crvusd/"
+      }
+    ],
+    "evidence": "The reviewed scrvUSD contract is an immutable ERC-4626 wrapper whose asset() points to crvUSD; its wrapper has no owner or direct holder-freeze function. The parent crvUSD control and reserve path remains the relevant upstream failure domain, so inherited exposure is retained with the parent identity recorded by mintAuthority.inheritedFrom.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

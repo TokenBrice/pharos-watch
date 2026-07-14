@@ -6,6 +6,11 @@ export interface DexApiPoolToken {
   priceUsd?: number | null;
   /** Optional target pool weight for protocols like Balancer weighted pools. */
   weight?: number | null;
+  /**
+   * Rate-provider price rate for Balancer stable-math pools (scaled balance =
+   * balance * priceRate). 1.0 for plain tokens; null when the source omits it.
+   */
+  priceRate?: number | null;
 }
 
 export interface DexApiPool {
@@ -32,6 +37,13 @@ export interface DexApiPool {
   balancesNormalized?: boolean;
   /** Optional per-token raw 24h volumes in native token units. */
   tokenVolumes24h?: number[] | null;
+  /**
+   * Stable-math amplification in the source contract convention (Ann = amp * n),
+   * as reported by the source API. Only set for genuine stableswap pool types on
+   * hook-free pools with reviewed rate providers; consumers convert to the plain
+   * paper convention before simulation.
+   */
+  amp?: number | null;
 }
 
 export type DexPaginationPersistenceErrorClass =

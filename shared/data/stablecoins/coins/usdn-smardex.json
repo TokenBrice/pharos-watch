@@ -228,6 +228,18 @@
       "risk": "medium"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "unknown",
+    "sources": [{ "label": "SMARDEX USDN protocol documentation", "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol" }],
+    "rationale": "BLOCKED: protocol documentation establishes a shared wstETH vault and long-side mechanics but does not publish a current vault collateral balance, composition, or independently attested allocation.",
+    "compositionBasis": "Documented USDN vault design; current collateral state undisclosed",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The entire recorded vault category lacks a current sourced collateral allocation.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "wstETH-backed USDN vault", "pct": 100, "disposition": "insufficient-evidence", "rationale": "No current vault collateral composition is published." }]
+  },
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",
     "version": 1,

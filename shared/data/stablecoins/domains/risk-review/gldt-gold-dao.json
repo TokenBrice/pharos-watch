@@ -4,13 +4,17 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Website",
+        "label": "GLDT Ethereum contract",
+        "url": "https://etherscan.io/address/0x86856814e74456893cfc8946bedcbb472b5fa856"
+      },
+      {
+        "label": "GLDT website",
         "url": "https://gldt.org/"
       }
     ],
-    "evidence": "GLDT resolves to Upstream because its backing depends on GLD NFT, vault, and bridge infrastructure; reviewed materials do not document a separate direct holder-balance freeze path for GLDT.",
-    "reviewer": "Codex data addition",
-    "reviewedAt": "2026-05-24"
+    "evidence": "The reviewed EVM GLDT source is an Ownable ERC-20 whose owner controls minting and burn/withdraw bridge operations; the route review identifies the owner/minter as a single off-chain bridge signer. No separate direct holder blacklist or freeze function is documented, but the issuer-operated bridge and physical-gold custody route remain inherited control and failure-domain exposure.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

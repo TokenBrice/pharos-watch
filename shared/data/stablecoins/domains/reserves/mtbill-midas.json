@@ -2,14 +2,13 @@
   "id": "mtbill-midas",
   "reserves": [
     {
-      "name": "Short-duration U.S. Treasury Bills and qualifying Treasury-bill funds",
+      "name": "BlackRock IB01 T-Bill ETF",
       "pct": 100,
       "risk": "very-low",
-      "assetClass": "treasury-bill",
-      "issuerOrObligor": "United States Treasury and qualifying Treasury-bill fund issuers",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "iShares plc / BlackRock Asset Management Ireland Limited",
       "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "legal"],
-      "liquidityHorizon": "unknown",
-      "maturityDaysMax": 90
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -28,18 +27,22 @@
       {
         "label": "Midas mTBILL independent reporting",
         "url": "https://docs.midas.app/tokens/mtbill/independent-reporting"
+      },
+      {
+        "label": "iShares IB01 product page",
+        "url": "https://www.ishares.com/uk/individual/en/products/307243/ishares-treasury-bond-0-1yr-ucits"
       }
     ],
-    "rationale": "Midas states that the mTBILL portfolio is exclusively short-duration U.S. Treasury Bills with maturities below three months. Its eligible-collateral disclosure permits Treasury Bills and funds or ETFs invested in Treasury Bills, but does not publish a current T-bill-versus-fund allocation. The prior 97% IB01 and 3% cash split was unsupported and is replaced with one fully identified Treasury-bill reserve class.",
-    "compositionBasis": "Current Midas mTBILL eligible-collateral and product disclosures",
+    "rationale": "The current live NAV adapter emits one 100% BlackRock IB01 T-Bill ETF slice. Midas documents mTBILL's short-duration Treasury-bill mandate, and BlackRock identifies IB01 as the iShares $ Treasury Bond 0-1yr UCITS ETF holding U.S. Treasury bonds. The ETF's changing security-level holdings remain outside this direct reserve-slice identity.",
+    "compositionBasis": "Current mTBILL live NAV identity cross-checked against Midas disclosures and BlackRock's IB01 product page",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete reserve class is identified as short-duration U.S. Treasury Bills and qualifying Treasury-bill funds. The issuer does not publish current holdings or weights within that class.",
+    "knownUnknownExposure": "The exact captured reserve slice is identified as IB01; the ETF's changing security-level holdings, custody allocation, and mTBILL tokenholder assurance remain outside this direct fund-share classification.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Short-duration U.S. Treasury Bills and qualifying Treasury-bill funds",
+        "reserveName": "BlackRock IB01 T-Bill ETF",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The backing consists of off-chain U.S. Treasury Bills and qualifying Treasury-bill fund shares rather than a tracked stablecoin dependency."

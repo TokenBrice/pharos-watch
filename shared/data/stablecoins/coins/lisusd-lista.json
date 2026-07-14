@@ -152,10 +152,19 @@
   "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: LISUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Lista lisUSD CDP documentation",
+        "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd"
+      },
+      {
+        "label": "Lista lisUSD contract deployment",
+        "url": "https://bscscan.com/token/0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5"
+      }
+    ],
+    "evidence": "Lista's official documentation describes lisUSD as an open-source, collateralized CDP stablecoin and explicitly contrasts it with fiat-backed frozen funds. The verified BSC LisUSD implementation exposes Maker-style wards, mint, burn, and standard ERC-20 transfer operations; no holder blacklist, freeze, or pause control is present in the reviewed token surface. Upstream collateral and PSM assets can carry separate freeze exposure, but no direct lisUSD holder restriction is asserted.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

@@ -14,7 +14,7 @@ import {
   CURVE_API_BASE, CURVE_CHAINS,
 } from "./constants";
 import {
-  normalizeProtocol, classifyPoolType, isCryptoSwap,
+  normalizeProtocol, classifyPoolType, isCryptoSwap, buildPoolFingerprint,
 } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -231,6 +231,11 @@ export async function buildCurveLookups(
 ): Promise<CurveLookups> {
   const curvePoolMap = new Map<string, CurvePoolEntry>();
   const priceObservations = new Map<string, DexPriceObs[]>();
+  // DeFiLlama yields rows carry UUID pool ids, so the address key alone never
+  // matches them; the coin-set fingerprint gives an address-grade join. Two
+  // physical pools sharing an identical coin set are ambiguous and fail
+  // closed to the weaker symbol path.
+  const ambiguousFingerprints = new Set<string>();
 
   for (let i = 0; i < CURVE_CHAINS.length; i++) {
     const json = curvePayloads[i];
@@ -335,6 +340,15 @@ export async function buildCurveLookups(
           `${chain}:${pool.address.toLowerCase()}`,
           entry,
         );
+        const fingerprintKey = buildPoolFingerprint(chain, "curve", pool.coins.map((coin) => coin.address));
+        if (fingerprintKey && !ambiguousFingerprints.has(fingerprintKey)) {
+          if (curvePoolMap.has(fingerprintKey)) {
+            curvePoolMap.delete(fingerprintKey);
+            ambiguousFingerprints.add(fingerprintKey);
+          } else {
+            curvePoolMap.set(fingerprintKey, entry);
+          }
+        }
         // Also store by symbol combo for fallback matching
         curvePoolMap.set(
           `${chain}:${coinSymbols}`,

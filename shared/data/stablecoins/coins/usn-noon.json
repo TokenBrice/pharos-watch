@@ -422,5 +422,46 @@
       }
     }
   },
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "unknown",
+    "sources": [{"label":"Noon documentation","url":"https://docs.noon.capital/"}],
+    "rationale": "No dated issuer reserve statement was located to verify current allocation or reserve-slice identity.",
+    "compositionBasis": "Unverified legacy categories",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "Current weights, obligors, and custody are undisclosed.",
+    "knownUnknownExposurePct": 87,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Private Credit (Fasanara FTAC)",
+        "pct": 68.4,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "DeFi Lending",
+        "pct": 8,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Principal Tokens (PTs)",
+        "pct": 6.9,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "US Treasury Bills",
+        "pct": 3.7,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      }
+    ]
+  },
   "launchDate": "2025-01-27"
 }

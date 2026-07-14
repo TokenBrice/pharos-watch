@@ -77,9 +77,9 @@
         "url": "https://api.coingecko.com/api/v3/coins/lumi-finance-luausd"
       }
     ],
-    "evidence": "Verified UtilityToken source exposes owner mint authority and allowance-based burnFrom, but no direct holder freeze, blacklist, pause, seize, or arbitrary burn function. Lumi materials describe protocol reserves that include stablecoins, so FreezeWatch resolves upstream exposure.",
-    "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-05-25"
+    "evidence": "The verified UtilityToken source exposes owner mint authority and allowance-based burnFrom, but no direct holder freeze, blacklist, pause, seize, or arbitrary burn function. Lumi's protocol materials and the reviewed reserve metadata describe stablecoin collateral, so FreezeWatch retains inherited upstream exposure while keeping the token-level direct-control finding conservative.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

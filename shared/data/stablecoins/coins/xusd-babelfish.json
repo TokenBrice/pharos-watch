@@ -44,10 +44,24 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: XUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sourceFreeRationale": "XUSD is a reserve-backed aggregator whose current DLLR and Rootstock bridged USDT exposures inherit upstream issuer or protocol access surfaces; the reviewed XUSD controller evidence does not establish a separate holder-level blacklist path for every branch.",
+    "evidence": "Current BabelFish and Rootstock evidence identifies the XUSD masset manager controller and the linked DLLR, bridged USDT, and DOC reserve branches. The inherited posture is retained because the reviewed sources do not prove a complete holder freeze or transfer-control inventory across XUSD and every upstream reserve branch.",
+    "sources": [
+      {
+        "label": "BabelFish XUSD overview",
+        "url": "https://wiki.sovryn.com/en/technical-documents/xusd-overview"
+      },
+      {
+        "label": "BabelFish XUSD composition",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/tutorials-and-guides/xusd-statistics"
+      },
+      {
+        "label": "Rootstock XUSD masset manager",
+        "url": "https://rootstock.blockscout.com/address/0x1440d19436beeaf8517896bffb957a88ec95a00f"
+      }
+    ],
+    "reviewer": "SONG-2 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",

@@ -45,9 +45,9 @@ describe("fetchBalancerPools sanity cap and pool.price footgun", () => {
   });
 
   it("rejects pools with totalLiquidity above the per-source sanity cap", async () => {
-    mockFetch.mockResolvedValueOnce(
-      jsonResponse({ data: { poolGetPools: [fantomJunkPool(), cleanPool()] } }),
-    );
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ data: { poolGetPools: [fantomJunkPool(), cleanPool()] } }))
+      .mockResolvedValueOnce(jsonResponse({ data: { aggregatorPools: [] } }));
     const result = await fetchBalancerPools();
     // Junk row must be dropped
     expect(result.pools.find((p) => p.tvlUsd > 2_000_000_000)).toBeUndefined();
@@ -59,11 +59,109 @@ describe("fetchBalancerPools sanity cap and pool.price footgun", () => {
   });
 
   it("sets pool.price to null (per-token priceUsd is authoritative)", async () => {
-    mockFetch.mockResolvedValueOnce(jsonResponse({ data: { poolGetPools: [cleanPool()] } }));
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ data: { poolGetPools: [cleanPool()] } }))
+      .mockResolvedValueOnce(jsonResponse({ data: { aggregatorPools: [] } }));
     const result = await fetchBalancerPools();
     expect(result.pools.length).toBeGreaterThanOrEqual(1);
     for (const pool of result.pools) {
       expect(pool.price).toBeNull();
     }
+  });
+});
+
+describe("fetchBalancerPools stable-math amp join", () => {
+  afterEach(() => {
+    mockFetch.mockReset();
+    vi.unstubAllGlobals();
+    vi.stubGlobal("fetch", mockFetch);
+  });
+
+  function dispatchByQuery(pools: unknown[], ampRows: unknown[]) {
+    mockFetch.mockImplementation((_url: unknown, init?: { body?: unknown }) => {
+      const body = typeof init?.body === "string" ? init.body : "";
+      if (body.includes("aggregatorPools")) {
+        return Promise.resolve(jsonResponse({ data: { aggregatorPools: ampRows } }));
+      }
+      return Promise.resolve(jsonResponse({ data: { poolGetPools: pools } }));
+    });
+  }
+
+  function stablePool() {
+    const pool = cleanPool();
+    pool.type = "COMPOSABLE_STABLE";
+    pool.poolTokens = pool.poolTokens.map((token) => ({ ...token, priceRate: "1.02" }));
+    return pool;
+  }
+
+  function gyroPool() {
+    const pool = cleanPool();
+    pool.id = "0x11bbccddeeff00112233445566778899aabbccdd000200000000000000000002";
+    pool.address = "0x11bbccddeeff00112233445566778899aabbccdd";
+    pool.type = "GYRO";
+    return pool;
+  }
+
+  it("attaches amp to stable-math pools present in the aggregator sweep", async () => {
+    dispatchByQuery(
+      [stablePool(), gyroPool()],
+      [{ id: stablePool().id, chain: "MAINNET", amp: "250.0" }, { id: gyroPool().id, chain: "MAINNET", amp: "999" }],
+    );
+    const result = await fetchBalancerPools();
+    const stable = result.pools.find((pool) => pool.poolAddress === "0xaabbccddeeff00112233445566778899aabbccdd");
+    const gyro = result.pools.find((pool) => pool.poolAddress === "0x11bbccddeeff00112233445566778899aabbccdd");
+    expect(stable?.amp).toBe(250);
+    expect(stable?.tokens.every((token) => token.priceRate === 1.02)).toBe(true);
+    // Gyro pools do not use stable math; amp must never attach even if the sweep returns a row.
+    expect(gyro?.amp).toBeUndefined();
+  });
+
+  it("drops paused and swap-disabled pools entirely", async () => {
+    const paused = {
+      ...stablePool(),
+      id: "0x33bbccddeeff00112233445566778899aabbccdd000200000000000000000003",
+      address: "0x33bbccddeeff00112233445566778899aabbccdd",
+      dynamicData: { totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", isPaused: true },
+    };
+    const disabled = {
+      ...gyroPool(),
+      dynamicData: { totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", swapEnabled: false },
+    };
+    dispatchByQuery([paused, disabled, cleanPool()], []);
+    const result = await fetchBalancerPools();
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]!.poolAddress).toBe("0xaabbccddeeff00112233445566778899aabbccdd");
+  });
+
+  it("keys the amp join by chain so same-id pools on other chains cannot cross-attach", async () => {
+    const mainnetPool = stablePool();
+    const arbitrumPool = stablePool();
+    arbitrumPool.chain = "ARBITRUM";
+    dispatchByQuery(
+      [mainnetPool, arbitrumPool],
+      [
+        { id: mainnetPool.id, chain: "MAINNET", amp: "250.0" },
+        { id: arbitrumPool.id, chain: "ARBITRUM", amp: "5000" },
+      ],
+    );
+    const result = await fetchBalancerPools();
+    const mainnet = result.pools.find((pool) => pool.chain === "ethereum");
+    const arbitrum = result.pools.find((pool) => pool.chain === "arbitrum");
+    expect(mainnet?.amp).toBe(250);
+    expect(arbitrum?.amp).toBe(5000);
+  });
+
+  it("degrades to no amp when the sweep fails, without dropping pools", async () => {
+    mockFetch.mockImplementation((_url: unknown, init?: { body?: unknown }) => {
+      const body = typeof init?.body === "string" ? init.body : "";
+      if (body.includes("aggregatorPools")) {
+        return Promise.resolve(jsonResponse({ errors: [{ message: "nope" }] }, 500));
+      }
+      return Promise.resolve(jsonResponse({ data: { poolGetPools: [stablePool()] } }));
+    });
+    const result = await fetchBalancerPools();
+    expect(result.pools.length).toBe(1);
+    expect(result.pools[0]!.amp).toBeUndefined();
+    expect(result.ok).toBe(true);
   });
 });

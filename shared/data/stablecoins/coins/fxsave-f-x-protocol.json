@@ -96,7 +96,16 @@
       "pct": 100,
       "risk": "medium",
       "coinId": "fxusd-f-x-protocol",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "f(x) Protocol fxUSD Stability Pool",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "yieldConfig": {

@@ -522,17 +522,43 @@
     {
       "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
       "pct": 37.8,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "USDC issuer and United States Treasury; split undisclosed",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "STRC (Strategy preferred equity, BTC-linked)",
       "pct": 62.18,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Strategy, Inc.",
+      "riskFactors": [
+        "market",
+        "credit",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "SATA (Strive preferred equity, BTC-linked)",
       "pct": 0.01,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Strive, Inc.",
+      "riskFactors": [
+        "market",
+        "credit",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Other",
@@ -541,19 +567,27 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-12",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
     "confidence": "verified",
     "sources": [
       {
         "label": "APYX Accountable dashboard",
         "url": "https://accountable.apyx.fi/"
+      },
+      {
+        "label": "Apyx STRC collateral documentation",
+        "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc"
+      },
+      {
+        "label": "Apyx SATA collateral documentation",
+        "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/sata"
       }
     ],
     "rationale": "The cash-equivalents category mixes USDC with Treasury bills and does not publish their internal allocation.",
     "compositionBasis": "Accountable reserves_split categories",
     "scope": "selected-slices",
-    "knownUnknownExposure": "USDC cannot be isolated from exogenous Treasury backing in the aggregate bucket.",
+    "knownUnknownExposure": "USDC cannot be isolated from exogenous Treasury backing in the aggregate bucket. The live Accountable feed additionally emits dynamic Inventory and Protocol Owned Liquidity categories not reconciled to a dated issuer composition disclosure; no asset-class, obligor, or failure-domain attributes are inferred for those runtime-only slices.",
     "knownUnknownExposurePct": 37.8,
     "nonLinkDispositions": [
       {

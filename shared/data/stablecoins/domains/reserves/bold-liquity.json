@@ -2,13 +2,31 @@
   "id": "bold-liquity",
   "reserves": [
     {
-      "name": "WETH, wstETH, and rETH collateral basket",
-      "pct": 100,
+      "name": "wstETH (Lido)",
+      "pct": 63.9,
       "risk": "low",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "Liquity V2 collateral branches and borrowers",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
+      "issuerOrObligor": "Lido DAO and Ethereum validators",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody"],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "WETH",
+      "pct": 19.6,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum protocol and WETH9 contract",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "rETH (Rocket Pool)",
+      "pct": 16.5,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Rocket Pool DAO and node operators",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
@@ -27,23 +45,22 @@
       {
         "label": "Liquity V2 risk disclosure",
         "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+      },
+      {
+        "label": "Liquity V2 Ethereum stats API",
+        "url": "https://api.liquity.org/v2/ethereum.json"
+      },
+      {
+        "label": "Ethereum PublicNode RPC used by the configured adapter",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Liquity documents BOLD as overcollateralized by WETH, wstETH, and rETH only, with direct redemptions. The redemption documentation states that the collateral mix is dynamic and depends on current Stability Pool backing, so the prior 50/30/20 split is replaced by one complete permitted-collateral basket.",
-    "compositionBasis": "Liquity V2 permitted collateral and dynamic redemption disclosures; current branch weights are undisclosed",
+    "rationale": "Liquity documents BOLD as overcollateralized by WETH, wstETH, and rETH only, with direct redemptions. The configured on-chain adapter's current branch snapshot resolves all three live collateral rows and supplies the point-in-time weights below; those weights remain dynamic and are not treated as permanent composition.",
+    "compositionBasis": "Liquity V2 permitted collateral, official stats, and the configured Ethereum branch snapshot; percentages rounded to one decimal",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "Liquity identifies the complete permitted collateral set but does not publish current WETH, wstETH, and rETH weights in the reviewed sources.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "WETH, wstETH, and rETH collateral basket",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The permitted collateral assets are identified, but the current branch allocation is dynamic and not published as a stable percentage split."
-      }
-    ]
+    "knownUnknownExposure": "No material collateral row is unclassified in this snapshot; branch weights are point-in-time and may change with protocol activity.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

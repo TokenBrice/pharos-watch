@@ -84,6 +84,35 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "OnRe tokenized reinsurance documentation",
+        "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
+      },
+      {
+        "label": "OnRe FAQ",
+        "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions"
+      }
+    ],
+    "rationale": "OnRe describes ONYC as exposure to its structured insurance and reinsurance portfolio. The reviewed source envelope retains one aggregate 100% portfolio category because current policy, counterparty, and claim-level allocations are not publicly reconciled.",
+    "compositionBasis": "OnRe ONYC product documentation; current portfolio allocation undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The portfolio backing class is identified, but current insurance layers, reinsurer shares, policy maturities, claims, and custody or recovery terms are not disclosed in the reviewed sources.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "OnRe structured insurance and reinsurance yield portfolio",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Insurance and reinsurance positions are external backing rather than tracked stablecoin dependencies."
+      }
+    ]
+  },
   "yieldConfig": {
     "yieldSource": "OnRe insurance collateral yield",
     "yieldType": "nav-appreciation"

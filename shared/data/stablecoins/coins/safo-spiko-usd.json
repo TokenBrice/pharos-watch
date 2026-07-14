@@ -117,6 +117,18 @@
       "risk": "medium"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "unknown",
+    "sources": [{ "label": "Spiko Dollar product page", "url": "https://www.spiko.io/spiko-dollar" }, { "label": "Amundi Smart Cash announcement", "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4?inline=" }],
+    "rationale": "BLOCKED: issuer materials describe fully collateralized overnight total-return swaps and money-market exposure, but do not publish current counterparty, collateral, or swap allocation details.",
+    "compositionBasis": "Spiko/Amundi fund strategy description; current swap portfolio undisclosed",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The entire recorded swap-exposure category lacks current sourced counterparty and collateral composition.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "Fully collateralized overnight total-return swap exposure", "pct": 100, "disposition": "insufficient-evidence", "rationale": "No current swap portfolio or collateral allocation is published." }]
+  },
   "yieldConfig": {
     "yieldSource": "Spiko Amundi Overnight Swap Fund USD NAV",
     "yieldType": "nav-appreciation"

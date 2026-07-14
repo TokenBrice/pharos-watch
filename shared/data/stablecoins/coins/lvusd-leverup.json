@@ -87,7 +87,16 @@
       "pct": 100,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and LeverUp liquidity layer",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {

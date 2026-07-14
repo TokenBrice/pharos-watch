@@ -2,13 +2,22 @@
   "id": "usdat-saturn",
   "reserves": [
     {
-      "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
-      "pct": 100,
+      "name": "Tokenized treasury collateral",
+      "pct": 97.9,
       "risk": "very-low",
       "assetClass": "tokenized-security",
-      "issuerOrObligor": "M0 Protocol",
+      "issuerOrObligor": "M0 Protocol and underlying U.S. Treasury reserve providers",
       "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract", "duration"],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Cash",
+      "pct": 2.1,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed M0 reserve institutions",
+      "riskFactors": ["counterparty", "custody", "liquidity", "concentration"],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
@@ -23,10 +32,14 @@
       {
         "label": "Saturn transparency and audits",
         "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits"
+      },
+      {
+        "label": "M0 protocol API",
+        "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "Saturn documents USDat as fully collateralized, minted and redeemed 1:1 with USDC by onboarded users, with a launch target of 100% M, M0's tokenized U.S. Treasuries product. Saturn also states that all USDat capital is held directly in the USDat smart contract. The source describes a future shift of USDat reserve allocations toward digital credit but does not publish a current allocation or an independently verifiable reserve balance.",
-    "compositionBasis": "Saturn issuer documentation of the USDat launch reserve target and on-chain capital location",
+    "rationale": "The current M0 protocol API snapshot exposes 97.9% Tokenized treasury collateral and 2.1% Cash for the M0 reserve categories used by USDat. Saturn documents a launch target of 100% M and states that USDat capital is held in the token contract, but it does not publish a USDat-specific current reserve allocation or independently reconcile the M0 categories to USDat supply.",
+    "compositionBasis": "Current M0 protocol category snapshot combined with Saturn USDat mechanics and transparency documentation",
     "compositionAsOf": "2026-07-14",
     "scope": "selected-slices",
     "knownUnknownExposure": "The issuer identifies M as the launch reserve target but does not publish a current reserve-allocation breakdown or current token balance; its documented future allocation policy permits a shift toward digital credit.",
@@ -34,10 +47,17 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Short-term U.S. Treasury Bills (via M0 Protocol)",
-        "pct": 100,
+        "reserveName": "Tokenized treasury collateral",
+        "pct": 97.9,
         "disposition": "insufficient-evidence",
-        "rationale": "The M exposure is a documented launch target, not a current independently attested allocation."
+        "rationale": "The M0 category is visible in the current API, but Saturn does not publish a USDat-specific allocation or reconciliation to current supply."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Cash",
+        "pct": 2.1,
+        "disposition": "insufficient-evidence",
+        "rationale": "The current API identifies a cash category, but Saturn does not publish its USDat-specific institution or allocation."
       }
     ]
   },

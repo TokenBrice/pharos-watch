@@ -151,6 +151,18 @@
       "coinId": "ntbill-nest"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "unknown",
+    "sources": [{ "label": "Nest documentation", "url": "https://docs.nest.credit/" }],
+    "rationale": "BLOCKED: the recorded Nest collateral categories identify the BlackOpal credit position, stablecoin buffer, and nTBILL buffer, but issuer materials reviewed do not provide a current independently sourced composition or valuation for the first two categories.",
+    "compositionBasis": "Documented Nest vault categories; current underlying allocations undisclosed",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "BlackOpal credit positions and the stablecoin liquidity buffer lack current public constituent and valuation evidence.",
+    "knownUnknownExposurePct": 99.1,
+    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "BlackOpal LiquidStone II tokenized credit positions", "pct": 96.66, "disposition": "insufficient-evidence", "rationale": "No current position-level credit composition is published." }, { "reserveIndex": 1, "reserveName": "Stablecoin liquidity buffer", "pct": 2.44, "disposition": "insufficient-evidence", "rationale": "No current stablecoin constituent split is published." }]
+  },
   "liveReservesConfig": {
     "adapter": "nest-vault-positions",
     "version": 1,

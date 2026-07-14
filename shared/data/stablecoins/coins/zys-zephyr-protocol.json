@@ -155,6 +155,30 @@
       "depType": "wrapper"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Zephyr Protocol documentation",
+        "url": "https://zephyrprotocol.com/documentation"
+      },
+      {
+        "label": "Zephyr Protocol yield documentation",
+        "url": "https://zephyrprotocol.com/yield"
+      },
+      {
+        "label": "Zephyr Protocol source repository",
+        "url": "https://github.com/ZephyrProtocol/zephyr"
+      }
+    ],
+    "rationale": "The reviewed Zephyr materials describe ZYS as the yield-bearing share exposure to the ZSD reserve, matching the exact 100% tracked zsd-zephyr-protocol dependency in the fixed metadata. The underlying ZSD reserve is an upstream asset composition and is not duplicated as a second ZYS reserve slice.",
+    "compositionBasis": "Zephyr Protocol documentation, yield description, and source repository",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct ZYS reserve slice is identified; underlying ZSD backing remains the upstream asset's reserve question.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "Zephyr Scanner ZYS returns",
     "yieldType": "nav-appreciation"

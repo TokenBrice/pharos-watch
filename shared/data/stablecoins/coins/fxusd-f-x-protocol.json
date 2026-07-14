@@ -223,12 +223,30 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: fxUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "f(x) Protocol risk parameters",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management/risk-parameters"
+      },
+      {
+        "label": "f(x) Protocol risk framework",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/risk-management"
+      },
+      {
+        "label": "fxUSD Ethereum contract",
+        "url": "https://etherscan.io/address/0x085780639cc2cacd35e474e71f4d000e2405d8f6#code"
+      },
+      {
+        "label": "fxUSD Base contract",
+        "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5#code"
+      }
+    ],
+    "evidence": "The verified Base FxUSD OFT implementation exposes owner-controlled pause() and unpause() functions alongside transfer and transferFrom, so the tracked fxUSD deployment has direct system-wide transfer-pause capability. The official f(x) risk documentation describes protocol halts during peg stress, while the Ethereum deployment is separately upgradeable through the reviewed timelock. USDC, Aave, and collateral dependencies add separate upstream exposure.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "reserves": [
     {

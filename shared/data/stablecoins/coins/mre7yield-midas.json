@@ -206,7 +206,18 @@
     {
       "name": "Re7-managed DeFi lending, liquidity, restaking, funding-rate, and options strategies",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Re7 Capital strategy and Midas issuer",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "yieldConfig": {

@@ -311,9 +311,25 @@
     {
       "name": "Fully collateralized overnight total-return swap exposure",
       "pct": 100,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Spiko AMF-authorized GBP overnight swap fund and swap counterparties",
+      "riskFactors": ["counterparty", "liquidity", "custody", "market"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "unknown",
+    "sources": [{"label": "Spiko Pound product page", "url": "https://www.spiko.io/spiko-pound"}],
+    "rationale": "Spiko describes GBPsAFO as a tokenized GBP overnight total-return swap fund. The reviewed public product materials do not publish current collateral instruments, swap counterparties, or position weights.",
+    "compositionBasis": "Spiko GBP fund product disclosure",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The live collateral and overnight swap counterparty allocation are not publicly disclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [{"reserveIndex": 0, "reserveName": "Fully collateralized overnight total-return swap exposure", "pct": 100, "disposition": "basket-needs-split", "rationale": "Issuer disclosure does not provide component weights or counterparties."}]
+  },
   "yieldConfig": {
     "yieldSource": "Spiko Amundi Overnight Swap Fund GBP NAV",
     "yieldType": "nav-appreciation"

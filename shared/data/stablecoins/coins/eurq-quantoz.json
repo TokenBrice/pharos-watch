@@ -15,6 +15,22 @@
   "collateral": "Euro-denominated cash deposits and government bonds held in segregated reserves with reserve ratio disclosed on Quantoz's transparency page",
   "pegMechanism": "Direct 1:1 redemption through Quantoz Payments",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 mechanism review",
+    "rationale": "Quantoz describes EURQ as euro cash and government-bond backed, but the reviewed product and transparency materials do not provide all current assurance, reconciliation, claim segregation, custody continuity, or loss-recovery inputs required for a complete mechanism review.",
+    "sources": [
+      {
+        "label": "Quantoz EURQ/US DQ product page",
+        "url": "https://www.quantoz.com/products/eurq-usdq"
+      },
+      {
+        "label": "Quantoz transparency",
+        "url": "https://quantoz.com/transparency"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "quantoz-eurq",
   "llamaId": "274",

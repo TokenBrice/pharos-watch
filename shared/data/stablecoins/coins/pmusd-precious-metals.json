@@ -85,9 +85,54 @@
     {
       "name": "On-chain TokenBlender (TB) backed by ION.au / in-situ gold claims",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "RAAC RWf(x) Treasury and I-ON Digital ION.au",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-6 V9 reserve review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "RAAC pmUSD documentation",
+        "url": "https://docs.raac.io/"
+      },
+      {
+        "label": "Chainlink ION proof of reserve feed",
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por"
+      },
+      {
+        "label": "pmUSD official website",
+        "url": "https://pmusd.raac.io/"
+      }
+    ],
+    "rationale": "RAAC documentation and the ION proof-of-reserve feed establish the TokenBlender and ION.au dependency boundary, but they do not independently reconcile TokenBlender custody, the in-situ gold claim, or same-notional redemption liquidity for the complete pmUSD backing envelope.",
+    "compositionBasis": "RAAC TokenBlender dependency on ION.au and its gold claim",
+    "compositionAsOf": "2026-07-14",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "TokenBlender custody, ION.au legal claim terms, and pmUSD redemption liquidity remain unresolved.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "On-chain TokenBlender (TB) backed by ION.au / in-situ gold claims",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      }
+    ]
+  },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",

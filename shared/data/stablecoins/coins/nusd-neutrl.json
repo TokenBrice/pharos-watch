@@ -102,18 +102,80 @@
   "reserves": [
     {
       "name": "Stablecoin reserves",
-      "pct": 93.5,
-      "risk": "low"
+      "pct": 64.2,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Undisclosed stablecoin issuers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "JLP (Jupiter Perps LP token)",
+      "pct": 14.7,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Jupiter Perpetuals protocol and liquidity providers",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "OTC aggregate positions",
-      "pct": 3.4,
-      "risk": "high"
+      "pct": 10.7,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed OTC counterparties",
+      "riskFactors": [
+        "credit",
+        "market",
+        "liquidity",
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Other reserve assets",
-      "pct": 3.1,
-      "risk": "high"
+      "pct": 7.4,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed Neutrl reserve counterparties",
+      "riskFactors": [
+        "market",
+        "credit",
+        "liquidity",
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Protocol Owned Liquidity",
+      "pct": 3,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Neutrl protocol-owned liquidity",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -121,18 +183,46 @@
     "reviewer": "OpenAI Codex dependency review",
     "confidence": "verified",
     "sources": [{ "label": "Neutrl Accountable dashboard", "url": "https://accountable.neutrl.finance/" }],
-    "rationale": "The source exposes a generic Stablecoin category rather than constituent identities and weights.",
+    "rationale": "The current Accountable type_split snapshot exposes five named reserve categories and weights: Stablecoin, JLP, OTC Aggregate, Other, and Protocol Owned Liquidity. The category weights are captured below, but the source does not identify stablecoin constituents, OTC counterparties, JLP positions, or the composition and custody of the other and protocol-owned-liquidity buckets.",
     "compositionBasis": "Accountable type_split categories",
     "scope": "selected-slices",
-    "knownUnknownExposure": "The stablecoin reserve category is unresolved at asset level.",
-    "knownUnknownExposurePct": 93.5,
+    "knownUnknownExposure": "Stablecoin constituents, OTC counterparties, JLP underlying positions, and the composition and custody of the Other and Protocol Owned Liquidity categories are not disclosed in the reviewed snapshot.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Stablecoin reserves",
-        "pct": 93.5,
+        "pct": 64.2,
         "disposition": "basket-needs-split",
         "rationale": "No constituent weights are available for a canonical dependency mapping."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "JLP (Jupiter Perps LP token)",
+        "pct": 14.7,
+        "disposition": "insufficient-evidence",
+        "rationale": "The dashboard names the JLP category but does not expose the current underlying position or custody detail needed for a tracked dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "OTC aggregate positions",
+        "pct": 10.7,
+        "disposition": "insufficient-evidence",
+        "rationale": "The dashboard reports an aggregate OTC category without identifying current counterparties, contracts, or settlement terms."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Other reserve assets",
+        "pct": 7.4,
+        "disposition": "insufficient-evidence",
+        "rationale": "The dashboard does not disclose the asset classes or providers included in the Other category."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Protocol Owned Liquidity",
+        "pct": 3,
+        "disposition": "insufficient-evidence",
+        "rationale": "The dashboard names protocol-owned liquidity but does not expose pool identities, underlying assets, or custody details."
       }
     ]
   },

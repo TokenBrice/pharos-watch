@@ -138,6 +138,33 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "USDSC is an M0-backed extension on Soneium; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+      ],
+      "implementationAddresses": [
+        "0xc435b33c017da7ef313bf2d3132c99c7673a194b"
+      ],
+      "adminAddresses": [
+        "0x0f38d8a5583f9316084e9c40737244870c565924"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "M0 SwapFacility extension router",
+      "observedAt": "2026-06-11",
+      "observedBlock": 24028800,
+      "sources": [
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "M0 SwapFacility docs",
+          "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -230,7 +257,7 @@
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
+      "name": "M token held by Startale USDSC",
       "pct": 100,
       "risk": "very-low",
       "coinId": "m-m0",

@@ -275,10 +275,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDX resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Kava Mint documentation",
+        "url": "https://help.app.kava.io/article/15-what-is-kava-mint"
+      },
+      {
+        "label": "Tracked Osmosis IBC USDX denom",
+        "url": "https://www.mintscan.io/osmosis/ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
+      }
+    ],
+    "evidence": "BLOCKED: the tracked record is an Osmosis IBC denomination rather than a native Kava token contract. Kava Mint documentation establishes the CDP-origin design, but the reviewed public materials do not provide a current native Kava and IBC-path holder freeze, denylist, or transfer-control authority inventory. The inherited classification is retained; no direct holder-control posture is asserted without that evidence.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

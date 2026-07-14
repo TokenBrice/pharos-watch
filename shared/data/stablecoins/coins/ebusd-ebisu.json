@@ -1032,10 +1032,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: ebUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Ebisu Ethereum deployments",
+        "url": "https://ebisu.gitbook.io/ebisu-money/developers/deployment-addresses-mainnet"
+      },
+      {
+        "label": "ebUSD Ethereum contract",
+        "url": "https://eth.blockscout.com/address/0x09fd37d9aa613789c517e76df1c53aece2b60df4?tab=contract"
+      },
+      {
+        "label": "Ebisu Plasma deployments",
+        "url": "https://ebisu.gitbook.io/ebisu-money/developers/deployment-addresses-plasma"
+      }
+    ],
+    "evidence": "The reviewed Ebisu deployment materials and verified Ethereum and Plasma token deployments do not establish a direct holder-balance blacklist or freeze inventory for ebUSD. The inherited status is retained for upstream collateral, reserve, custody, and cross-chain dependency exposure.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

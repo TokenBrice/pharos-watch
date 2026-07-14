@@ -90,11 +90,40 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Tradable product documentation",
+        "url": "https://doc.tradable.xyz/product-docs"
+      },
+      {
+        "label": "Tradable smart-contract addresses",
+        "url": "https://doc.tradable.xyz/product-docs/smart-contract-addresses"
+      },
+      {
+        "label": "Tradable platform",
+        "url": "https://www.tradable.xyz/"
+      }
+    ],
+    "rationale": "Tradable describes the product as institutional-grade yield-generating assets and identifies PC0000031 as a senior secured rent-financing note. The static reserve classification is therefore the disclosed private-credit receivables/senior secured note envelope at 100%; deal-level asset allocation is not publicly disclosed in the reviewed docs.",
+    "compositionBasis": "Tradable product and PC0000031 metadata",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Deal-level receivable and note allocation is undisclosed beyond the 100% private-credit envelope.",
+    "knownUnknownExposurePct": 0
+  },
   "notices": [
     {
       "type": "warning",
       "title": "Contract-priced private credit",
       "message": "CoinGecko reports a live $1 price and market cap but zero 24h volume; Pharos treats this as a par-valued private-credit note rather than a liquid stablecoin."
+    },
+    {
+      "type": "warning",
+      "title": "Launch date not publicly established",
+      "message": "Tradable's reviewed product documentation and zkSync contract-address page identify the token and current contract architecture but do not publish a reliable PC0000031 launch or implementation date."
     }
   ],
   "mintAuthority": {

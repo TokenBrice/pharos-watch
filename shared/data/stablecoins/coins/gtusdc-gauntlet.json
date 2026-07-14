@@ -13,10 +13,19 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: gtUSDC resolves to Upstream because the vault holds USDC routed through Morpho markets, inheriting Circle's blacklist surface.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Verified gtUSDC MetaMorpho vault source",
+        "url": "https://eth.blockscout.com/address/0xdd0f28e19c1780eb6396170735d45153d261490d?tab=contract"
+      },
+      {
+        "label": "Morpho vault curation documentation",
+        "url": "https://docs.morpho.org/curate/"
+      }
+    ],
+    "evidence": "The verified gtUSDC MetaMorpho vault source exposes ERC-4626-style share accounting and curator allocation operations but no holder blacklist, freeze, pause, or transfer-restriction function. The inherited classification is retained because the vault holds USDC through Morpho markets, preserving Circle issuer-side freeze exposure.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

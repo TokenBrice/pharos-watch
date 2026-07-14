@@ -247,6 +247,39 @@
       "risk": "medium"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Money On Chain DOC documentation",
+        "url": "https://moneyonchain.com/doc-stablecoin/"
+      },
+      {
+        "label": "Money On Chain platform concepts",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+      },
+      {
+        "label": "Money On Chain dapp",
+        "url": "https://dapp.moneyonchain.com/"
+      }
+    ],
+    "rationale": "The reviewed Money On Chain materials identify DOC as backed by Rootstock BTC collateral, matching the exact 100% reserve label in the fixed metadata. They do not provide a dated, reconciled collateral composition or current account-level exposure sufficient to classify the reserve beyond that aggregate identity.",
+    "compositionBasis": "Money On Chain documentation and the fixed rBTC collateral description",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current collateral balances, account or vault allocation, and a dated reserve reconciliation are not exposed by the reviewed public sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Rootstock BTC (rBTC) collateral",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The direct collateral identity is documented, but the reviewed sources do not establish a current independently reconciled reserve slice or custody profile."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

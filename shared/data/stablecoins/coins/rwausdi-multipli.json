@@ -140,10 +140,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: rwaUSDi resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Multipli documentation",
+        "url": "https://docs.multipli.fi/"
+      },
+      {
+        "label": "rwaUSDi Ethereum deployment",
+        "url": "https://etherscan.io/address/0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4#code"
+      }
+    ],
+    "evidence": "BLOCKED: the reviewed issuer documentation and Ethereum deployment identify the product and native token, but do not establish current holder-level freeze or transfer-restriction authority across the Ethereum, Arbitrum, Base, and Monad deployments. The inherited upstream exposure remains recorded; material deployment-control evidence is still required.",
+    "reviewer": "OpenAI Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",

@@ -165,10 +165,23 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: YZUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Yuzu Money overview",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money"
+      },
+      {
+        "label": "Yuzu Money security infrastructure",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/hypernative-sentinel"
+      },
+      {
+        "label": "YZUSD Plasma deployment",
+        "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc?tab=contract"
+      }
+    ],
+    "evidence": "Yuzu's official overview describes yzUSD as an overcollateralized DeFi-suite stablecoin, while its security documentation describes protocol-level threat response and the ability to block a malicious wallet or contract from interacting with the protocol. Those materials do not establish a dated holder-level blacklist or freeze function for the tracked Plasma token contract. The inherited status is retained for the reserve, custody, and protocol-control dependencies; no direct token restriction is asserted.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "unproven",
   "collateralQuality": "exotic",
@@ -196,6 +209,53 @@
       "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-2 Safety Score V9 reserve review",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "Yuzu Stablecoin (yzUSD) docs",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+      },
+      {
+        "label": "Yuzu Protection Pool docs",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/yuzu-protection-pool-yzpp"
+      },
+      {
+        "label": "Yuzu proof of reserve",
+        "url": "https://yuzu.accountable.capital/"
+      }
+    ],
+    "rationale": "Official Yuzu materials describe Pendle and other curated DeFi strategies, lending exposure, and a USDT0 liquidity/backstop structure, but do not publish a dated current balance-sheet allocation for the catalog's 50/20/20/10 fallback categories or the underlying counterparties and position identities. The existing categories are retained as a bounded projection; no exact reserve weights or extra dependency edges are inferred.",
+    "compositionBasis": "Existing curated strategy-category projection cross-checked against official Yuzu product and protection-pool documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current reserve weights, strategy positions, lending venues, counterparties, and the protection-pool composition are not disclosed in a dated allocation.",
+    "knownUnknownExposurePct": 90,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Pendle PT/LP positions (leveraged DeFi yield)",
+        "pct": 50,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Euler/Morpho lending positions",
+        "pct": 20,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Other DeFi strategies (Equilibria, Penpie, AutoFinance, TermFinance)",
+        "pct": 20,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "accountable",
     "version": 1,

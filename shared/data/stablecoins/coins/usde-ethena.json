@@ -232,11 +232,19 @@
       {
         "label": "Sourcify USDe.sol",
         "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3/sources/contracts/USDe.sol"
+      },
+      {
+        "label": "Ethena staking documentation",
+        "url": "https://docs.ethena.fi/solution-design/staking-usde/staking-key-functions"
+      },
+      {
+        "label": "Solscan USDe mint",
+        "url": "https://solscan.io/token/DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT"
       }
     ],
-    "evidence": "Freeze-only re-review: USDe's verified token source exposes owner-set minter and mint authority but no holder freeze or blacklist function. USDe resolves to Upstream through liquid stablecoin reserve exposure plus CEX/off-exchange custody rails.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "evidence": "The verified Ethereum USDe.sol source exposes owner-set minter authority and standard ERC-20 transfers but no holder freeze or blacklist function. Ethena's own documentation states that its blacklist and repossession controls apply to the sUSDe staking contract, not USDe. The listed Solana USDe mint was queried through the Solana JSON-RPC API on 2026-07-14 and returned freezeAuthority=null. Reserve and custody dependencies can carry upstream freeze exposure, but no direct holder-balance freeze was found for the reviewed USDe deployments.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",

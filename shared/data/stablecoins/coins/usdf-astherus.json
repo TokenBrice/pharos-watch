@@ -82,12 +82,18 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDF resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Aster USDF BNB Chain token contract",
+        "url": "https://bscscan.com/address/0x5a110fc00474038f6c02e89c707d638602ea44b5#code"
+      }
+    ],
+    "evidence": "The verified USDF token source exposes an ADMIN_ROLE-gated pause() function. Its paused transfer hook makes the contract-wide transfer path directly restrictable by the administrator, regardless of the separate inferred upstream exposure.",
+    "reviewer": "OpenAI Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

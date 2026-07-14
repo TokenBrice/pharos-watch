@@ -235,9 +235,38 @@
       "pct": 100,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and MonetrixVault",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-6 V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Monetrix mint guide",
+        "url": "https://doc.monetrix.xyz/guide/mint"
+      },
+      {
+        "label": "Monetrix architecture",
+        "url": "https://doc.monetrix.xyz/how-it-works/architecture"
+      },
+      {
+        "label": "Monetrix audits and contracts",
+        "url": "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts"
+      }
+    ],
+    "rationale": "Monetrix documents USDM minting against USDC through MonetrixVault and separately describes deployment into a delta-neutral Hyperliquid strategy. The static envelope identifies the documented USDC input, but the public sources do not expose a dated, independently reconciled breakdown of strategy custody, margin, or redeemable balances; those exposures remain explicitly unknown rather than being split into invented slices.",
+    "compositionBasis": "Monetrix documented USDC mint input and strategy architecture",
+    "compositionAsOf": "2026-07-14",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "Current strategy positions, exchange custody, margin balances, and redemption liquidity are not independently published as a reconciled reserve snapshot.",
+    "knownUnknownExposurePct": 0
+  },
   "notices": [
     {
       "type": "info",

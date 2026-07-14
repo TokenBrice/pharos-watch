@@ -1246,10 +1246,24 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDXL resolves to Upstream because the reserve/liquidity description includes USDT0 stablecoin exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Last USDXL documentation",
+        "url": "https://www.last.net/"
+      },
+      {
+        "label": "USDXL HyperEVM token deployment",
+        "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645?tab=contract"
+      },
+      {
+        "label": "USDXL Hyperliquid deployment",
+        "url": "https://hypurrscan.io/address/0xf448c3cad413cdf0feb1746d7b057967"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: USDXL's tracked HyperEVM and Hyperliquid deployments and inherited USDT0 exposure are identified, but a complete holder-level blacklist or freeze inventory is not established across both routes.",
+    "evidence": "The reviewed Last/HypurrFi materials and deployment references establish USDXL's two tracked routes and inherited USDT0 exposure. They do not prove deployment-wide holder-control behavior, so no direct blacklist status is asserted.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",

@@ -136,10 +136,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: EUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Reserve Protocol documentation",
+        "url": "https://docs.reserve.org/"
+      },
+      {
+        "label": "eUSD RToken on Etherscan",
+        "url": "https://etherscan.io/address/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f"
+      },
+      {
+        "label": "eUSD Central Auth on Etherscan",
+        "url": "https://etherscan.io/address/0xe1ec57c8ee970280f237863910b606059e9641c9"
+      }
+    ],
+    "evidence": "Reserve's documentation and the verified eUSD RToken and Central Auth deployments establish a governed basket with protocol-level pause, freeze, and basket controls. The reviewed materials do not establish a separate direct holder blacklist on eUSD itself; inherited exposure is retained through the governed basket and upstream reserve dependencies.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

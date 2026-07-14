@@ -342,6 +342,39 @@
       "risk": "very-low"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ondo Global Markets available assets",
+        "url": "https://docs.ondo.finance/ondo-global-markets/available-assets"
+      },
+      {
+        "label": "Ondo Global Markets addresses",
+        "url": "https://docs.ondo.finance/addresses"
+      },
+      {
+        "label": "Ondo Global Markets trust and transparency",
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      }
+    ],
+    "rationale": "Ondo's Global Markets materials identify USDON as a dollar-denominated brokerage-account product, matching the fixed aggregate reserve description. The reviewed sources do not publish a dated current cash-equivalent allocation, account-level balances, or independent reserve reconciliation for USDON.",
+    "compositionBasis": "Ondo Global Markets product, address, and trust documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current brokerage-account balances, cash-equivalent instruments, provider allocation, custody, and independent reserve assurance are not disclosed in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. dollar cash and cash equivalents in Global Markets brokerage accounts",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The aggregate reserve category is documented, but the current instrument and account composition cannot be reconciled from public evidence."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
