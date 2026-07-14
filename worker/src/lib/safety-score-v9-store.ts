@@ -824,6 +824,9 @@ export async function persistSafetyScoreV9ShadowState(
     if (existing?.selectedRun === null || existing === null) {
       throw new Error("A newly selected Safety Score v9 daily run must persist its latest envelope and diff");
     }
+    if (stableJsonStringifyV1(existing.selectedRun) !== stableJsonStringifyV1(daily.selectedRun)) {
+      throw new Error("A re-selected Safety Score v9 daily run must persist its latest envelope and diff");
+    }
   }
   if (localBundle === null) {
     for (const artifact of artifacts) {
@@ -854,14 +857,22 @@ export async function persistSafetyScoreV9ShadowState(
   if (existingDaily) {
     const oldAttempts = existingDaily.attemptCounts.successful + existingDaily.attemptCounts.failed;
     const newAttempts = daily.attemptCounts.successful + daily.attemptCounts.failed;
-    if (newAttempts < oldAttempts || daily.updatedAtSec < existingDaily.updatedAtSec) {
-      throw new SafetyScoreV9StoreConflictError(`Stale Safety Score v9 daily update for ${daily.utcDay}`);
-    }
-    if (
-      existingDaily.selectedRun !== null &&
-      stableJsonStringifyV1(existingDaily.selectedRun) !== stableJsonStringifyV1(daily.selectedRun)
-    ) {
-      throw new SafetyScoreV9StoreConflictError(`Selected Safety Score v9 daily run conflict for ${daily.utcDay}`);
+    const existingDailyJson = stableJsonStringifyV1(existingDaily);
+    if (existingDailyJson !== dailyJson) {
+      if (newAttempts <= oldAttempts || daily.updatedAtSec < existingDaily.updatedAtSec) {
+        throw new SafetyScoreV9StoreConflictError(`Stale Safety Score v9 daily update for ${daily.utcDay}`);
+      }
+      if (existingDaily.selectedRun !== null) {
+        const selected = daily.selectedRun;
+        if (
+          selected === null ||
+          selected.selectedAtSec < existingDaily.selectedRun.selectedAtSec ||
+          (selected.selectedAtSec === existingDaily.selectedRun.selectedAtSec &&
+            stableJsonStringifyV1(selected) !== stableJsonStringifyV1(existingDaily.selectedRun))
+        ) {
+          throw new SafetyScoreV9StoreConflictError(`Selected Safety Score v9 daily run conflict for ${daily.utcDay}`);
+        }
+      }
     }
   }
 
@@ -916,20 +927,52 @@ export async function persistSafetyScoreV9ShadowState(
            latest_error_code = excluded.latest_error_code,
            latest_error_message = excluded.latest_error_message,
            daily_json = CASE
-             WHEN (safety_score_v9_shadow_daily.successful_attempt_count + safety_score_v9_shadow_daily.failed_attempt_count
-                     < excluded.successful_attempt_count + excluded.failed_attempt_count
-                   OR safety_score_v9_shadow_daily.daily_json = excluded.daily_json)
-                  AND safety_score_v9_shadow_daily.updated_at_sec <= excluded.updated_at_sec
-                  AND (safety_score_v9_shadow_daily.selected_run_at_sec IS NULL
-                       OR safety_score_v9_shadow_daily.daily_json = excluded.daily_json)
+             WHEN safety_score_v9_shadow_daily.daily_json = excluded.daily_json
+                  OR (
+                    safety_score_v9_shadow_daily.successful_attempt_count
+                      + safety_score_v9_shadow_daily.failed_attempt_count
+                      < excluded.successful_attempt_count + excluded.failed_attempt_count
+                    AND safety_score_v9_shadow_daily.updated_at_sec <= excluded.updated_at_sec
+                    AND (
+                      safety_score_v9_shadow_daily.selected_run_at_sec IS NULL
+                      OR (
+                        excluded.selected_run_at_sec IS NOT NULL
+                        AND (
+                          safety_score_v9_shadow_daily.selected_run_at_sec < excluded.selected_run_at_sec
+                          OR (
+                            safety_score_v9_shadow_daily.selected_run_at_sec = excluded.selected_run_at_sec
+                            AND json_extract(safety_score_v9_shadow_daily.daily_json, '$.selectedRun')
+                              = json_extract(excluded.daily_json, '$.selectedRun')
+                          )
+                        )
+                      )
+                    )
+                  )
                THEN excluded.daily_json
              ELSE NULL
            END,
            updated_at_sec = CASE
-             WHEN (safety_score_v9_shadow_daily.successful_attempt_count + safety_score_v9_shadow_daily.failed_attempt_count
-                     < excluded.successful_attempt_count + excluded.failed_attempt_count
-                   OR safety_score_v9_shadow_daily.daily_json = excluded.daily_json)
-                  AND safety_score_v9_shadow_daily.updated_at_sec <= excluded.updated_at_sec
+             WHEN safety_score_v9_shadow_daily.daily_json = excluded.daily_json
+                  OR (
+                    safety_score_v9_shadow_daily.successful_attempt_count
+                      + safety_score_v9_shadow_daily.failed_attempt_count
+                      < excluded.successful_attempt_count + excluded.failed_attempt_count
+                    AND safety_score_v9_shadow_daily.updated_at_sec <= excluded.updated_at_sec
+                    AND (
+                      safety_score_v9_shadow_daily.selected_run_at_sec IS NULL
+                      OR (
+                        excluded.selected_run_at_sec IS NOT NULL
+                        AND (
+                          safety_score_v9_shadow_daily.selected_run_at_sec < excluded.selected_run_at_sec
+                          OR (
+                            safety_score_v9_shadow_daily.selected_run_at_sec = excluded.selected_run_at_sec
+                            AND json_extract(safety_score_v9_shadow_daily.daily_json, '$.selectedRun')
+                              = json_extract(excluded.daily_json, '$.selectedRun')
+                          )
+                        )
+                      )
+                    )
+                  )
                THEN excluded.updated_at_sec
              ELSE -1
            END`,

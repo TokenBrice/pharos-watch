@@ -662,6 +662,61 @@ describe("Safety Score v9 shadow state persistence", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_artifacts").get()).toEqual({ count: 5 });
   });
 
+  it("atomically re-selects a newer intra-day success and records later failures", async () => {
+    const { sqlite, db } = createTestDatabase();
+    const original = await successfulState();
+    await persistSafetyScoreV9ShadowState(db, original);
+
+    const refreshedCandidate = {
+      ...candidate(),
+      candidateId: "candidate-v9-store-refreshed",
+      policyVersion: "candidate-v9-store-refreshed",
+      publicationGenerationId: "v9-shadow:refreshed-generation",
+      resultDigest: digest("8"),
+    };
+    const refreshed = await successfulState(false, refreshedCandidate);
+    refreshed.daily = buildSafetyScoreV9ShadowDailySuccess({
+      utcDay: original.daily.utcDay,
+      selectedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60,
+      updatedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60 + 1,
+      previous: original.daily,
+      envelope: refreshed.envelope,
+      diff: refreshed.diff,
+    });
+
+    await expect(persistSafetyScoreV9ShadowState(db, refreshed)).resolves.toBeUndefined();
+    await expect(loadSafetyScoreV9ShadowHistory(db)).resolves.toEqual([refreshed.daily]);
+    await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(refreshed.envelope);
+    await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(refreshed.diff);
+
+    const failure = buildSafetyScoreV9ShadowDailyFailure({
+      utcDay: refreshed.daily.utcDay,
+      updatedAtSec: refreshed.daily.updatedAtSec + 1,
+      previous: refreshed.daily,
+      failure: {
+        atSec: refreshed.daily.updatedAtSec + 1,
+        stage: "shadow-write",
+        code: "write-failed",
+        message: "write failed",
+      },
+    });
+    await expect(persistSafetyScoreV9ShadowState(db, { daily: failure })).resolves.toBeUndefined();
+    expect(
+      sqlite
+        .prepare(
+          `SELECT successful_attempt_count, failed_attempt_count, selected_run_at_sec,
+                  latest_error_code
+           FROM safety_score_v9_shadow_daily`,
+        )
+        .get(),
+    ).toEqual({
+      successful_attempt_count: 2,
+      failed_attempt_count: 1,
+      selected_run_at_sec: refreshed.daily.selectedRun?.selectedAtSec,
+      latest_error_code: "write-failed",
+    });
+  });
+
   it("rolls back selected artifacts, daily state, and envelope when the atomic latest write fails", async () => {
     const { sqlite, db } = createTestDatabase();
     const state = await successfulState(true);
@@ -692,6 +747,45 @@ describe("Safety Score v9 shadow state persistence", () => {
       resultDigest: digest("8"),
     };
     const winner = await successfulState(false, winnerCandidate);
+    const originalBatch = db.batch.bind(db);
+    vi.spyOn(db, "batch").mockImplementation(async (statements) => {
+      await persistSafetyScoreV9ShadowState(raceDb, winner);
+      return originalBatch(statements);
+    });
+
+    await expect(persistSafetyScoreV9ShadowState(db, loser)).rejects.toThrow();
+
+    await expect(loadSafetyScoreV9ShadowHistory(raceDb)).resolves.toEqual([winner.daily]);
+    await expect(loadLatestSafetyScoreV9ShadowEnvelope(raceDb)).resolves.toEqual(winner.envelope);
+    await expect(loadLatestSafetyScoreV9DiffReport(raceDb)).resolves.toEqual(winner.diff);
+  });
+
+  it("keeps the winning intra-day refresh when a stale refresh passed preflight", async () => {
+    const { sqlite, db } = createTestDatabase();
+    const raceDb = createSqliteD1(sqlite);
+    const original = await successfulState();
+    await persistSafetyScoreV9ShadowState(raceDb, original);
+
+    const buildRefresh = async (label: string, selectedAtSec: number) => {
+      const refreshed = await successfulState(false, {
+        ...candidate(),
+        candidateId: `candidate-v9-race-${label}`,
+        policyVersion: `candidate-v9-race-${label}`,
+        publicationGenerationId: `v9-shadow:race-${label}`,
+        resultDigest: digest(label === "winner" ? "8" : "9"),
+      });
+      refreshed.daily = buildSafetyScoreV9ShadowDailySuccess({
+        utcDay: original.daily.utcDay,
+        selectedAtSec,
+        updatedAtSec: selectedAtSec + 1,
+        previous: original.daily,
+        envelope: refreshed.envelope,
+        diff: refreshed.diff,
+      });
+      return refreshed;
+    };
+    const loser = await buildRefresh("loser", SCHEDULED_FOR_SEC + 3 * 60 * 60);
+    const winner = await buildRefresh("winner", SCHEDULED_FOR_SEC + 3 * 60 * 60 + 1);
     const originalBatch = db.batch.bind(db);
     vi.spyOn(db, "batch").mockImplementation(async (statements) => {
       await persistSafetyScoreV9ShadowState(raceDb, winner);
