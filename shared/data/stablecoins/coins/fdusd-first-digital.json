@@ -172,20 +172,67 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "FDUSD is issuer-backed; Ethereum/BSC token ownership resolves to a 4/6 Safe that controls mint/admin authority.",
+    "summary": "FDUSD has six issuer-native mint domains. A shared 4-of-6 signer set controls the Ethereum, BSC, and Arbitrum tokens and proxy admins; BSC also exposes a 2,000,000-FDUSD-per-call operator module. Sui uses a 4-of-7 native multisig over the TreasuryCap and UpgradeCap, Solana uses an immutable 4-of-6 SPL multisig mint authority, and TON uses a 4-of-6 multisig that can mint and replace Jetton code immediately.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+        "0x93c9932e4afa59201f0b5e63f7d816516f1669fe",
+        "0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a",
+        "EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89"
+      ],
+      "implementationAddresses": [
+        "0xa6b2c3d2910246fb0adb02e5f6b39e29026e6d50",
+        "TON-code-hash:18d5b6e780ff0bb451254c2c760d09d6e485638cd1407abb97078752c3c1c9ee"
+      ],
+      "adminAddresses": [
+        "0xbb812b978e41929e86ad9ea8c1025710fee85957",
+        "0x1f8c4b8a1a89309b0443fc3804424819e092a250",
+        "0x0033c220ed73c33c2a92a3af7cdf0b3698551e8231ec0061a6ca7b1be8ada4c9",
+        "EQDgLAD13SZpaYOyyof0pP6VuHo87SyAArtn6YYh29br7Srw"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "FDUSD deployment-wide immediate upgrade authorities",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Ethereum StablecoinV2 implementation",
+          "url": "https://eth.blockscout.com/address/0xa6b2C3D2910246FB0ADB02e5f6B39e29026e6D50"
+        },
+        {
+          "label": "Sui FDUSD UpgradeCap",
+          "url": "https://suiscan.xyz/mainnet/object/0x0033c220ed73c33c2a92a3af7cdf0b3698551e8231ec0061a6ca7b1be8ada4c9"
+        },
+        {
+          "label": "TON FDUSD Jetton master",
+          "url": "https://tonviewer.com/EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89"
+        },
+        {
+          "label": "TON stablecoin Jetton minter source",
+          "url": "https://github.com/ton-blockchain/stablecoin-contract/blob/main/contracts/jetton-minter.fc"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66",
-        "label": "FDUSD token owner Safe",
+        "label": "Ethereum FDUSD token and proxy-admin owner Safe",
         "role": "direct-minter",
         "authorityType": "safe",
         "directMintAbility": "direct",
         "threshold": 4,
         "signerCount": 6,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "capDescription": "StablecoinV2 exposes owner-only mint functions with no numeric cap; the same Safe owns the Ethereum ProxyAdmin and can replace mint logic immediately.",
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": ["issuer:fd121-bvi-limited", "fdusd:evm:shared-4-of-6-safe-signer-set"],
         "safe": {
+          "version": "1.3.0",
           "threshold": 4,
           "owners": [
             "0x418DfC379BD6C0964d7b47F0c14Fce71084811A6",
@@ -198,44 +245,336 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "observedBlock": 25294485,
-          "source": "safe-api"
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedAt": "2026-07-13",
+          "observedBlock": 25526129,
+          "source": "onchain"
         },
         "sources": [
-          {
-            "label": "First Digital USD",
-            "url": "https://www.firstdigitallabs.com/fdusd"
-          },
           {
             "label": "Ethereum FDUSD contract",
             "url": "https://etherscan.io/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409#readProxyContract"
           },
           {
-            "label": "Safe transaction service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
+            "label": "Ethereum Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
           },
           {
-            "label": "Safe Transaction Service",
-            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
+            "label": "StablecoinV2 implementation",
+            "url": "https://eth.blockscout.com/address/0xa6b2C3D2910246FB0ADB02e5f6b39e29026e6D50"
           }
         ],
-        "evidence": "Phase 0c Safe verification refreshed the current Safe Transaction Service state: 4/6 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294485."
+        "evidence": "At Ethereum block 25526129 (hash 0xd2eca668433c517ab710c73c244a2545203f12b35a83e4fb521595be762bdc3f), token owner() and ProxyAdmin owner() both returned this 4-of-6 Safe; pendingOwner() was zero. The Safe had nonce 2156, no enabled modules, zero guard, and the recorded fallback handler. The EIP-1967 implementation was StablecoinV2 0xa6b2..., whose owner-only mint functions have no numeric cap."
+      },
+      {
+        "chain": "bsc",
+        "address": "0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66",
+        "label": "BSC FDUSD token and proxy-admin owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "capDescription": "The Safe can call the uncapped token mint functions directly; an enabled SafeMint module separately permits whitelisted operator mints up to 2,000,000 FDUSD per call.",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "failureDomainKeys": ["issuer:fd121-bvi-limited", "fdusd:evm:shared-4-of-6-safe-signer-set"],
+        "bypassSurfaces": [
+          "Enabled SafeMint module 0x75C08fffa8C4A5977d48D2a10eBFE04F9a7a50D0 lets operator 0x15a07DA3F5247109bAA9506FA6f85C246cE13fC0 mint to whitelisted recipients within the per-call limit.",
+          "The Safe owns the module and its ProxyAdmin, so it can replace the operator, recipient whitelist, per-call limit, or module logic immediately."
+        ],
+        "safe": {
+          "version": "1.3.0",
+          "threshold": 4,
+          "owners": [
+            "0x418DfC379BD6C0964d7b47F0c14Fce71084811A6",
+            "0xE1Bb6D44e9e9Ba5F59Deaa89AF0970020a9a9722",
+            "0xD92b6fB17777a6e1Bb7709250AA4E60472c77e7D",
+            "0x82A5AAd82f309d476565ef20e9768FddD7C37231",
+            "0x1cD3586BAc47e31C070fa5cDF54dEF0d1519DaA9",
+            "0x80EEF36e9963B92373Da348CE1543357cBaAAc62"
+          ],
+          "enabledModules": ["0x75C08fffa8C4A5977d48D2a10eBFE04F9a7a50D0"],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedAt": "2026-07-13",
+          "observedBlock": 109812367,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "BSC FDUSD contract",
+            "url": "https://bscscan.com/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409#code"
+          },
+          {
+            "label": "BSC Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/bsc/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
+          },
+          {
+            "label": "BSC SafeMint module",
+            "url": "https://bscscan.com/address/0x75C08fffa8C4A5977d48D2a10eBFE04F9a7a50D0#code"
+          }
+        ],
+        "evidence": "At BSC block 109812367 (hash 0x958afa5b82a24f0ee89387646d589882bf448dbb5fac8dce521b4911ae834202), token owner() and ProxyAdmin owner() both returned this 4-of-6 Safe; pendingOwner() was zero. The Safe had nonce 1149, zero guard, and one enabled module, 0x75C08.... The token used the same uncapped StablecoinV2 implementation as Ethereum."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x15a07DA3F5247109bAA9506FA6f85C246cE13fC0",
+        "label": "BSC FDUSD SafeMint operator",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "capDescription": "SafeMint currently permits this EOA to mint at most 2,000,000 FDUSD per call to Safe-whitelisted recipients. The limit is per call, with no cumulative or time-window bound, and the owner Safe can raise or remove it immediately.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "failureDomainKeys": ["issuer:fd121-bvi-limited", "eoa:bsc:0x15a07da3f5247109baa9506fa6f85c246ce13fc0"],
+        "bypassSurfaces": [
+          "The 4-of-6 Safe can change the operator, whitelist, and mint limit or upgrade the SafeMint module without delay."
+        ],
+        "sources": [
+          {
+            "label": "BSC SafeMint proxy",
+            "url": "https://bscscan.com/address/0x75C08fffa8C4A5977d48D2a10eBFE04F9a7a50D0#code"
+          },
+          {
+            "label": "BSC SafeMint implementation",
+            "url": "https://bscscan.com/address/0xA2D9A37D17FF4D29BeF0DFE4deAc0f3a40B7D87f#code"
+          },
+          {
+            "label": "Last pre-cutoff BSC operator mint",
+            "url": "https://bscscan.com/tx/0x7d71b799ce686011cbe95a2a31f2d7114215d4ab311aad7cd6781e4b269c2418"
+          }
+        ],
+        "evidence": "At the cutoff, SafeMint owner and ProxyAdmin owner were the FDUSD Safe, pendingOwner was zero, operator was this code-free EOA, stableToken was FDUSD, mintLimit was 2,000,000 FDUSD, and the module was unpaused. Its last pre-cutoff mint was nonce 48 for 100 FDUSD; that recipient remained whitelisted and eligible."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66",
+        "label": "Arbitrum FDUSD token and proxy-admin owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "capDescription": "StablecoinV2 exposes owner-only mint functions with no numeric cap; the same Safe owns the Arbitrum ProxyAdmin and can replace mint logic immediately.",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-13",
+        "observedBlock": 483535601,
+        "failureDomainKeys": ["issuer:fd121-bvi-limited", "fdusd:evm:shared-4-of-6-safe-signer-set"],
+        "safe": {
+          "version": "1.3.0",
+          "threshold": 4,
+          "owners": [
+            "0xE1Bb6D44e9e9Ba5F59Deaa89AF0970020a9a9722",
+            "0x418DfC379BD6C0964d7b47F0c14Fce71084811A6",
+            "0xD92b6fB17777a6e1Bb7709250AA4E60472c77e7D",
+            "0x82A5AAd82f309d476565ef20e9768FddD7C37231",
+            "0x1cD3586BAc47e31C070fa5cDF54dEF0d1519DaA9",
+            "0x80EEF36e9963B92373Da348CE1543357cBaAAc62"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedAt": "2026-07-13",
+          "observedBlock": 483535601,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Arbitrum FDUSD contract",
+            "url": "https://arbiscan.io/address/0x93c9932e4afa59201f0b5e63f7d816516f1669fe#code"
+          },
+          {
+            "label": "Arbitrum Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/arb1/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
+          },
+          {
+            "label": "First Digital native FDUSD on Arbitrum",
+            "url": "https://www.firstdigitallabs.com/news-and-insights/native-fdusd-now-live-on-arbitrum"
+          }
+        ],
+        "evidence": "At Arbitrum block 483535601 (hash 0x45f33e882390a11b041d42014a808f848530c07e7c2d1738e8da692c4af5ca14), token owner() and ProxyAdmin owner() both returned this 4-of-6 Safe; pendingOwner() was zero. The Safe had nonce 11, no modules, zero guard, and the same signer set as Ethereum and BSC, with the first two owners returned in reverse order."
+      },
+      {
+        "chain": "sui",
+        "address": "0x045dadba87e5ad53f12075a1f0fa94bd94550a3bcf2abbe316e2d3b16ceb9440",
+        "label": "Sui FDUSD TreasuryCap and UpgradeCap multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 4,
+        "signerCount": 7,
+        "canRaiseCap": true,
+        "capDescription": "The multisig owns the uncapped FDUSD TreasuryCap and the package UpgradeCap; neither path has a timelock.",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 298226093,
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "multisig:sui:0x045dadba87e5ad53f12075a1f0fa94bd94550a3bcf2abbe316e2d3b16ceb9440"
+        ],
+        "sources": [
+          {
+            "label": "Sui FDUSD TreasuryCap",
+            "url": "https://suiscan.xyz/mainnet/object/0xc4b759d57eb50224888dac4a9233ec8824c6175e9bf7656f8ebdae88ad094bc8"
+          },
+          {
+            "label": "Sui FDUSD UpgradeCap",
+            "url": "https://suiscan.xyz/mainnet/object/0x0033c220ed73c33c2a92a3af7cdf0b3698551e8231ec0061a6ca7b1be8ada4c9"
+          },
+          {
+            "label": "Sui FDUSD package",
+            "url": "https://suiscan.xyz/mainnet/object/0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a"
+          },
+          {
+            "label": "Sui mainnet RPC",
+            "url": "https://fullnode.mainnet.sui.io:443"
+          }
+        ],
+        "evidence": "At checkpoint 298226093 (digest 2gTsxnFY8GFpXAbpv5G3BDKDU6REWYaGKrRasCdyeU3x), TreasuryCap 0xc4b7..., DenyCap 0x2cfb..., and UpgradeCap 0x0033... were owned by this 4-of-7 native multisig. The seven equal-weight ED25519 signer addresses were 0xcdd528cc3594b169746c860498bd0a687891ccb73762f81d8c057dcc65efc5b5, 0x32bc81f38e409bbf64595604e784563c8c333e34ce514fedca025305f91b1a22, 0x3eaf8a7f21405a34194caa4d14d99e7f3a04ea83f5ff72a29cb825ee35308899, 0xb1b2300a0739a9494b239ad972944c7e412e528b2b6ee4c17a2c20bc4f2436cb, 0x6ad5d57e3d7c2d2d8f256c94574235bc982c736228caae40f3df486b3ef40308, 0x01a8d12415411bbc702e776fc84dfbe3a4badc1d236854e4d48b6269cc3fe6dc, and 0x07ea31a5d353c425fa687c517511b9142c5d4f0003f58c3e6e5970c93a1121c0. Upgrade policy was zero-delay policy 0."
+      },
+      {
+        "chain": "solana",
+        "address": "9eXtLy4zFu2kKdWDJBfAKD7TvwtTA1zrZHHJXnCkUpGf",
+        "label": "Solana FDUSD SPL mint-authority multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "capDescription": "Classic SPL Token mintTo has no numeric issuance cap; the immutable 4-of-6 multisig is the mint authority.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "multisig:solana:9eXtLy4zFu2kKdWDJBfAKD7TvwtTA1zrZHHJXnCkUpGf"
+        ],
+        "sources": [
+          {
+            "label": "Solscan FDUSD token",
+            "url": "https://solscan.io/token/9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u"
+          },
+          {
+            "label": "Solscan FDUSD mint multisig",
+            "url": "https://solscan.io/account/9eXtLy4zFu2kKdWDJBfAKD7TvwtTA1zrZHHJXnCkUpGf"
+          },
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At slot 432714278 (blockhash 2zmgf9eoeHxnc8cU4jzyYSRPi8RkxAXhPWutQwR9w9ZS), the classic SPL mint authority was this immutable 4-of-6 multisig with signers FBfW4uMzAWDk2arq7gJUMuGnSQ3L8xhXxxuhCgs7qi1N, EP6iZAMqh3MevWwdmny2xiouspRTavJLJDLhisgwPB3u, FWki3jkv9drXucHezeMdnAJf1qJdiPLcHtGxo2jhFVE5, JBscmwkV38BHEXZ41VD1PcMkMnjbmfj715sY5bkVs948, BvZVf43EoD9LTmbVLDZeo1a7PNivquWRc5FRTGmdo4XK, and 8MrNHbio34ZhK7dXyzsmnPtF9LiFY1u5WeQpiJEQRXDi. The separate freeze authority is not mint-capable. SPL Token ProgramData had no upgrade authority, and every post-cutoff mint-address transaction through the audit time was checked for setAuthority with none found."
+      },
+      {
+        "chain": "ton",
+        "address": "EQDgLAD13SZpaYOyyof0pP6VuHo87SyAArtn6YYh29br7Srw",
+        "label": "TON FDUSD Jetton admin multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "capDescription": "The Jetton master is mintable without a numeric cap; its multisig admin can also replace code and data immediately.",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 79471628,
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "multisig:ton:0:e02c00f5dd26696983b2ca87f4a4fe95b87a3ced2c8002bb67e98621dbd6ebed"
+        ],
+        "sources": [
+          {
+            "label": "TON FDUSD Jetton master",
+            "url": "https://tonviewer.com/EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89"
+          },
+          {
+            "label": "TON FDUSD admin multisig",
+            "url": "https://tonviewer.com/EQDgLAD13SZpaYOyyof0pP6VuHo87SyAArtn6YYh29br7Srw"
+          },
+          {
+            "label": "TON API multisig state",
+            "url": "https://tonapi.io/v2/multisig/EQDgLAD13SZpaYOyyof0pP6VuHo87SyAArtn6YYh29br7Srw"
+          },
+          {
+            "label": "TON stablecoin Jetton minter source",
+            "url": "https://github.com/ton-blockchain/stablecoin-contract/blob/main/contracts/jetton-minter.fc"
+          }
+        ],
+        "evidence": "At masterchain seqno 79471628 (root hash n0gw418+m5lTfMy5nnolQIH1NhLOY3gCJ0tL6MCMJSw=), the mintable Jetton master admin was this multisig_v2 wallet, with threshold 4, six signers, no proposers, and no pending next admin. The signer raw addresses were 0:d062c0a1d4e488529bf12870446328da739bc6da88b4d11593d8ddb363843827, 0:3e5f91e9cc1ad5326ceb24879d4e36af55f34cce80192bc5a032b68ec2a3577f, 0:93ae8e1bf81fea3e7baf8deec24b3cf30fb263dfc0d42d45df015c26f34f7df4, 0:cb7f0a416fd0c4901fad19ca72c2255a70301d3581c7b3ad97c65c0eb0cda644, 0:cdd5448de2863575ad8cb1875bddd954e42c6f499dd69252cbedc475b45fcef7, and 0:b15db0a38382b07c07c4edf55fa860397a303f620f9c2cfea1782d5585fa975d. Deployed code hash 18d5b6e7... matched the reviewed source, whose admin-only upgrade operation replaces code and data without delay."
+      },
+      {
+        "label": "FDUSD deployment-wide immediate upgrade authorities",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "fdusd:evm:shared-4-of-6-safe-signer-set",
+          "multisig:sui:0x045dadba87e5ad53f12075a1f0fa94bd94550a3bcf2abbe316e2d3b16ceb9440",
+          "multisig:ton:0:e02c00f5dd26696983b2ca87f4a4fe95b87a3ced2c8002bb67e98621dbd6ebed"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum StablecoinV2 implementation",
+            "url": "https://eth.blockscout.com/address/0xa6b2C3D2910246FB0ADB02e5f6b39e29026e6D50"
+          },
+          {
+            "label": "Sui FDUSD UpgradeCap",
+            "url": "https://suiscan.xyz/mainnet/object/0x0033c220ed73c33c2a92a3af7cdf0b3698551e8231ec0061a6ca7b1be8ada4c9"
+          },
+          {
+            "label": "TON stablecoin Jetton minter source",
+            "url": "https://github.com/ton-blockchain/stablecoin-contract/blob/main/contracts/jetton-minter.fc"
+          }
+        ],
+        "evidence": "This is a schema-level umbrella for independently verified upgrade domains, not a common quorum. The shared 4-of-6 EVM signer set owns the Ethereum/BSC ProxyAdmin at 0xbb812... and Arbitrum ProxyAdmin at 0x1f8c...; the Sui 4-of-7 multisig owns UpgradeCap 0x0033...; and the TON 4-of-6 admin can execute the Jetton master's code-and-data upgrade operation. Each path has zero on-chain delay. Solana is excluded because the classic SPL Token program is immutable."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "First Digital USD",
+          "label": "First Digital FDUSD deployment directory",
           "url": "https://www.firstdigitallabs.com/fdusd"
         },
         {
-          "label": "Safe Transaction Service",
+          "label": "Ethereum Safe Transaction Service",
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
+        },
+        {
+          "label": "Sui mainnet RPC",
+          "url": "https://fullnode.mainnet.sui.io:443"
+        },
+        {
+          "label": "Solana mainnet RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "TON FDUSD Jetton master",
+          "url": "https://tonviewer.com/EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89"
         }
       ],
-      "evidence": "First Digital materials describe FDUSD as issuer-backed, and token owner reads identify a 4/6 Safe as the on-chain mint/admin owner path. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294485.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11"
+      "evidence": "All six positive-supply issuer-native deployments were traced at cutoff 2026-07-13T20:34:40Z. Ethereum block 25526129, BSC block 109812367, Arbitrum block 483535601, Sui checkpoint 298226093, Solana slot 432714278, and TON masterchain seqno 79471628 resolved exact mint principals, thresholds, signer counts, module or guard state, pending-admin state, and every issuer-controlled mint-logic upgrade path. No unresolved native deployment or mint-capable controller remains.",
+      "reviewer": "Codex fixed-cutoff authority audit",
+      "reviewedAt": "2026-07-13",
+      "disposition": "scoreable"
     }
   },
   "deploymentModel": "native-multichain",
@@ -284,23 +623,30 @@
   "launchDate": "2023-04-28",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "FDUSD is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "First Digital identifies the Ethereum, BSC, Arbitrum, Sui, TON, and Solana contracts as native FDUSD deployments. Each deployment has an independently verified issuer-controlled mint authority rather than a third-party bridge lockbox; the shared FD121 issuer domain is the common route failure mode.",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex fixed-cutoff route audit",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
-        "name": "FDUSD issuer-operated multichain issuance",
-        "bridgeTypes": [
-          "issuer-native-mint-redeem"
-        ]
+        "name": "First Digital native issuance",
+        "url": "https://www.firstdigitallabs.com/fdusd",
+        "bridgeTypes": ["issuer-native-mint-redeem"]
       }
     ],
     "sources": [
       {
-        "label": "First Digital FDUSD",
+        "label": "First Digital FDUSD deployment directory",
         "url": "https://www.firstdigitallabs.com/fdusd"
+      },
+      {
+        "label": "First Digital native FDUSD on Arbitrum",
+        "url": "https://www.firstdigitallabs.com/news-and-insights/native-fdusd-now-live-on-arbitrum"
+      },
+      {
+        "label": "First Digital native FDUSD on TON",
+        "url": "https://www.firstdigitallabs.com/news-and-insights/first-digital-usd-stablecoin-is-natively-live-on-ton"
       }
     ],
     "routes": [
@@ -308,91 +654,198 @@
         "id": "ethereum:0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
         "destinationChain": "ethereum",
         "contractAddress": "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66",
+        "failureDomainKeys": ["issuer:fd121-bvi-limited", "fdusd:evm:shared-4-of-6-safe-signer-set"],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "sources": [
+          {
+            "label": "First Digital FDUSD deployment directory",
+            "url": "https://www.firstdigitallabs.com/fdusd"
+          },
+          {
+            "label": "Ethereum FDUSD contract",
+            "url": "https://etherscan.io/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409#readProxyContract"
+          }
+        ]
       },
       {
         "id": "bsc:0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
         "destinationChain": "bsc",
         "contractAddress": "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "bsc",
+        "controllerAddress": "0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66",
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "fdusd:evm:shared-4-of-6-safe-signer-set",
+          "eoa:bsc:0x15a07da3f5247109baa9506fa6f85c246ce13fc0"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "sources": [
+          {
+            "label": "First Digital FDUSD deployment directory",
+            "url": "https://www.firstdigitallabs.com/fdusd"
+          },
+          {
+            "label": "BSC FDUSD contract",
+            "url": "https://bscscan.com/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409#code"
+          },
+          {
+            "label": "BSC SafeMint module",
+            "url": "https://bscscan.com/address/0x75C08fffa8C4A5977d48D2a10eBFE04F9a7a50D0#code"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x93c9932e4afa59201f0b5e63f7d816516f1669fe",
         "destinationChain": "arbitrum",
         "contractAddress": "0x93c9932e4afa59201f0b5e63f7d816516f1669fe",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66",
+        "failureDomainKeys": ["issuer:fd121-bvi-limited", "fdusd:evm:shared-4-of-6-safe-signer-set"],
+        "observedAt": "2026-07-13",
+        "observedBlock": 483535601,
+        "sources": [
+          {
+            "label": "First Digital native FDUSD on Arbitrum",
+            "url": "https://www.firstdigitallabs.com/news-and-insights/native-fdusd-now-live-on-arbitrum"
+          },
+          {
+            "label": "Arbitrum FDUSD contract",
+            "url": "https://arbiscan.io/address/0x93c9932e4afa59201f0b5e63f7d816516f1669fe#code"
+          }
+        ]
       },
       {
         "id": "sui:0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a::fdusd::FDUSD",
         "destinationChain": "sui",
         "contractAddress": "0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a::fdusd::FDUSD",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "sui",
+        "controllerAddress": "0x045dadba87e5ad53f12075a1f0fa94bd94550a3bcf2abbe316e2d3b16ceb9440",
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "multisig:sui:0x045dadba87e5ad53f12075a1f0fa94bd94550a3bcf2abbe316e2d3b16ceb9440"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 298226093,
+        "sources": [
+          {
+            "label": "First Digital FDUSD deployment directory",
+            "url": "https://www.firstdigitallabs.com/fdusd"
+          },
+          {
+            "label": "Sui FDUSD package",
+            "url": "https://suiscan.xyz/mainnet/object/0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a"
+          },
+          {
+            "label": "Sui FDUSD TreasuryCap",
+            "url": "https://suiscan.xyz/mainnet/object/0xc4b759d57eb50224888dac4a9233ec8824c6175e9bf7656f8ebdae88ad094bc8"
+          }
+        ]
       },
       {
         "id": "ton:EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89",
         "destinationChain": "ton",
         "contractAddress": "EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "ton",
+        "controllerAddress": "EQDgLAD13SZpaYOyyof0pP6VuHo87SyAArtn6YYh29br7Srw",
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "multisig:ton:0:e02c00f5dd26696983b2ca87f4a4fe95b87a3ced2c8002bb67e98621dbd6ebed"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 79471628,
+        "sources": [
+          {
+            "label": "First Digital native FDUSD on TON",
+            "url": "https://www.firstdigitallabs.com/news-and-insights/first-digital-usd-stablecoin-is-natively-live-on-ton"
+          },
+          {
+            "label": "First Digital FDUSD on TON guide",
+            "url": "https://www.firstdigitallabs.com/news-and-insights/fdusd-on-ton-a-quick-start-guide"
+          },
+          {
+            "label": "TON FDUSD Jetton master",
+            "url": "https://tonviewer.com/EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89"
+          }
+        ]
       },
       {
         "id": "solana:9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u",
         "destinationChain": "solana",
         "contractAddress": "9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "solana",
+        "controllerAddress": "9eXtLy4zFu2kKdWDJBfAKD7TvwtTA1zrZHHJXnCkUpGf",
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "multisig:solana:9eXtLy4zFu2kKdWDJBfAKD7TvwtTA1zrZHHJXnCkUpGf"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "sources": [
+          {
+            "label": "First Digital FDUSD deployment directory",
+            "url": "https://www.firstdigitallabs.com/fdusd"
+          },
+          {
+            "label": "Solscan FDUSD token",
+            "url": "https://solscan.io/token/9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u"
+          },
+          {
+            "label": "Solscan FDUSD mint multisig",
+            "url": "https://solscan.io/account/9eXtLy4zFu2kKdWDJBfAKD7TvwtTA1zrZHHJXnCkUpGf"
+          }
+        ]
       }
     ]
   }
