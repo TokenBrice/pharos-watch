@@ -174,6 +174,31 @@
       "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Usual EUR0 collateral documentation",
+        "url": "https://tech.usual.money/smart-contracts/eur0-collateral"
+      },
+      {
+        "label": "Usual contract deployments",
+        "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+      },
+      {
+        "label": "EUR0 TokenMapping contract",
+        "url": "https://etherscan.io/address/0xf20Ba8F5195fCC094d94a937F0d2719f6Da14A4a"
+      }
+    ],
+    "rationale": "At Ethereum block 25530533, EUR0's deployed TokenMapping returned exactly one eligible collateral token, Spiko euTBL at 0xa0769f7a8fc65e47de93797b4e21c073c117fc80. The published EUR0 collateral treasury held 192,323.85243 euTBL against 191,181.471117208263827024 EUR0 supply. The sole eligible and held collateral therefore maps the full dependency relationship to the tracked EUTBL asset.",
+    "compositionBasis": "Deployed EUR0 TokenMapping eligible-collateral set and euTBL balance of the published EUR0 collateral treasury at Ethereum block 25530533",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The deployed token mapping contains one collateral token and the published treasury holds that token; no additional eligible collateral was present.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
