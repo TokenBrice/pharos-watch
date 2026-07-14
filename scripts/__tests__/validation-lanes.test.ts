@@ -82,7 +82,7 @@ describe("validation lane authority", () => {
     expect(buildValidatePrebuildCommands({ surface: "worker", includeAdvisory: true })).toContain(
       "npm run check:fetch-body-timeouts",
     );
-    expect(ALL_VALIDATE_PREBUILD_COMMANDS).toHaveLength(42);
+    expect(ALL_VALIDATE_PREBUILD_COMMANDS).toHaveLength(41);
 
     const skipCommands = ["npm run audit:deps", "npm run check:generated-artifacts"];
     expect(buildValidatePrebuildCommands({ surface: "pages", skipCommands, includeAdvisory: true })).not.toEqual(

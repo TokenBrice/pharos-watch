@@ -69,12 +69,60 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Nereus reports DAI as part of a broader overcollateralized crypto collateral set, so a single DAI coinId would overstate the reserve dependency.",
   ],
   [
-    "frax-frax::Protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity::FRAX",
-    "FRAX's intra-protocol slice is a mixed self/protocol-owned bucket, not an upstream reserve asset that should inherit a single coinId.",
+    "frax-frax::FRAX held on the Frax balance sheet::FRAX",
+    "FRAX held on its own balance sheet is subject self exposure, not an upstream dependency edge.",
   ],
   [
-    "frax-frax::Protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity::FRXUSD",
-    "FRAX's intra-protocol slice mixes frxUSD and related Frax-owned wrappers, so no single tracked coinId is representative.",
+    "frax-frax::sFRAX::FRAX",
+    "sFRAX is a staked claim on FRAX and remains subject self exposure rather than an upstream dependency edge.",
+  ],
+  [
+    "susdt-spark::USDT deposited in Spark Savings vault::USDT",
+    "Spark does not publish the current spUSDT-specific split between idle USDT and downstream strategies.",
+  ],
+  [
+    "susdc-spark::USDC deposited in Spark Savings vault::USDC",
+    "Spark does not publish the current spUSDC-specific split between idle USDC and downstream strategies.",
+  ],
+  [
+    "usx-solstice::USDC, USDT, and DAI collateral basket::USDC",
+    "Solstice publishes the basket constituents but not current constituent weights.",
+  ],
+  [
+    "usx-solstice::USDC, USDT, and DAI collateral basket::USDT",
+    "Solstice publishes the basket constituents but not current constituent weights.",
+  ],
+  [
+    "usx-solstice::USDC, USDT, and DAI collateral basket::DAI",
+    "Solstice publishes the basket constituents but not current constituent weights.",
+  ],
+  [
+    "usda-avalon::FBTC-backed CDP positions and USDT/USDC 1:1 mint reserves::USDC",
+    "Avalon combines CDP and stablecoin mint paths without publishing current path-level weights.",
+  ],
+  [
+    "usda-avalon::FBTC-backed CDP positions and USDT/USDC 1:1 mint reserves::USDT",
+    "Avalon combines CDP and stablecoin mint paths without publishing current path-level weights.",
+  ],
+  [
+    "usdf-astherus::USDT-funded spot crypto and corresponding short futures positions::USDT",
+    "USDT funds the strategy, but Aster does not publish the retained-USDT and deployed-position weights.",
+  ],
+  [
+    "reusd-re-protocol::Onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral::USDe",
+    "Re documents sUSDe-centered liquidity and trust collateral without a current reconciled split.",
+  ],
+  [
+    "usdu-usdu-finance::USDU constituent of Curve USDU/USDC LP backing::USDC",
+    "The named USDU leg is subject self exposure; the separate USDC leg carries the dependency link.",
+  ],
+  [
+    "syrupusdt-maple::USDT (deployed as overcollateralized institutional loans)::USDT",
+    "Maple does not publish the current split between retained USDT and deployed institutional-credit strategies.",
+  ],
+  [
+    "xmd-metal-dollar::USDC, PYUSD, and XPAX stablecoin reserve basket::USDC",
+    "Metal Dollar discloses the basket constituents but not current constituent weights.",
   ],
   [
     "usde-ethena::Liquid Stables (USDtb / USDC / USDT)::USDC",
@@ -101,40 +149,12 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "USG's static reserve slice is an aggregate productive-collateral bucket; USDC is one paired LP route rather than a separately weighted reserve slice.",
   ],
   [
-    "ylds-figure::Digital assets (USDC + USDT, operational)::USDC",
-    "YLDS reports this as a de minimis mixed operational digital-asset bucket without stablecoin-level weights.",
-  ],
-  [
-    "ylds-figure::Digital assets (USDC + USDT, operational)::USDT",
-    "YLDS reports this as a de minimis mixed operational digital-asset bucket without stablecoin-level weights.",
-  ],
-  [
-    "zeusd-zoth::Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)::USYC",
-    "ZeUSD reports this as a mixed tokenized T-bill/MMF bucket; current metadata lacks reliable per-asset weights for a single coinId.",
-  ],
-  [
     "iusd-infinifi::Aave Horizon USDC/RLUSD (institutional pools)::USDC",
     "infiniFi's static fallback groups Aave Horizon USDC and RLUSD into one small mixed bucket; live farm data carries exact coinIds when the source separates positions.",
   ],
   [
-    "msusd-metronome::Vesper yield tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH)::USDC",
-    "Metronome reports this as a mixed Vesper vault-token bucket spanning USDC and ETH-family vaults, so a single USDC coinId would overstate the reserve dependency.",
-  ],
-  [
-    "ceur-celo::Other small reserve assets (axlUSDC, USDT0, WETH)::USDC",
-    "EURm reports this as one tiny mixed residual bucket across axlUSDC, USDT0, and WETH, so no single stablecoin coinId is representative.",
-  ],
-  [
-    "ceur-celo::Other small reserve assets (axlUSDC, USDT0, WETH)::USDT",
-    "EURm reports this as one tiny mixed residual bucket across axlUSDC, USDT0, and WETH, so no single stablecoin coinId is representative.",
-  ],
-  [
     "silk-shade-protocol::Stablecoin redemption pools (USDC, other stables)::USDC",
     "SILK reports a mixed stablecoin redemption pool without stable-level weights, so no single tracked stablecoin coinId is representative.",
-  ],
-  [
-    "ntbill-nest::Stablecoin liquidity buffer (USDC / pUSD)::USDC",
-    "Nest's static fallback bucket mixes USDC with untracked pUSD; the live positions adapter emits USDC coinId when it sees exact liquid USDC balances.",
   ],
   [
     "vndc-jade-labs::Issuer-disclosed VNDC 2.0 USDT/USDC collateral pools::USDC",
@@ -145,12 +165,8 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "VNDC reports this as a mixed issuer-disclosed USDT/USDC collateral pool without stablecoin-level weights, so no single tracked coinId is representative.",
   ],
   [
-    "weusd-picwe::Disputed USDC versus USDT/MOVE backing disclosure::USDC",
-    "WEUSD's disclosure notes competing stablecoin exposures, and live adapter data is not yet granular enough to attribute a single upstream stablecoin coinId safely.",
-  ],
-  [
-    "weusd-picwe::Disputed USDC versus USDT/MOVE backing disclosure::USDT",
-    "WEUSD's disclosure notes competing stablecoin exposures, and live adapter data is not yet granular enough to attribute a single upstream stablecoin coinId safely.",
+    "weusd-picwe::PicWe WEUSD backing (current 100% USDC claim; legacy basket conflict)::USDC",
+    "WEUSD's current USDC claim conflicts with older basket evidence and lacks a reconciled reserve inventory.",
   ],
 ]);
 
