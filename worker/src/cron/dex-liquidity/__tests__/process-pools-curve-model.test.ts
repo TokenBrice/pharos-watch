@@ -1,0 +1,77 @@
+import { describe, expect, it } from "vitest";
+import { DexAmmExecutionModelSchema } from "@shared/types/market";
+import { buildCurveStableswapExecutionModel } from "../process-pools";
+import type { CurvePoolEntry } from "../types";
+
+const USDC = "0x00000000000000000000000000000000000000c1";
+const USDT = "0x00000000000000000000000000000000000000c2";
+
+function entry(overrides: Partial<CurvePoolEntry> = {}): CurvePoolEntry {
+  return {
+    A: 200,
+    balanceRatio: 1,
+    tvl: 10_000_000,
+    registryId: "factory-stable-ng",
+    isMetaPool: false,
+    metapoolAdjustedTvl: 10_000_000,
+    creationTs: 0,
+    balanceDetails: [],
+    tokenPrices: {},
+    executionCoins: [
+      { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+      { address: USDT, symbol: "USDT", decimals: 6, balance: 5_000_000, usdPrice: 0.9995 },
+    ],
+    ...overrides,
+  };
+}
+
+const chainAddressToId = new Map([
+  [`ethereum:${USDC}`, "usdc-circle"],
+  [`ethereum:${USDT}`, "usdt-tether"],
+]);
+
+describe("buildCurveStableswapExecutionModel", () => {
+  it("builds a schema-valid stableswap model with the tracked input token", () => {
+    const model = buildCurveStableswapExecutionModel(entry(), "ethereum", "usdc-circle", chainAddressToId);
+    expect(model).not.toBeNull();
+    expect(DexAmmExecutionModelSchema.parse(model)).toMatchObject({
+      source: "curve",
+      invariant: "stableswap",
+      trackedTokenIndex: 0,
+      amplification: 200,
+      tokens: [
+        { trackedAssetId: "usdc-circle", balance: 5_000_000 },
+        { trackedAssetId: "usdt-tether", referencePriceUsd: 0.9995 },
+      ],
+    });
+    // Fee is the documented conservative bound, never zero and never large.
+    expect(model!.feeRate).toBeGreaterThan(0);
+    expect(model!.feeRate).toBeLessThanOrEqual(0.001);
+  });
+
+  it("fails closed on metapools, missing capture, and untracked input", () => {
+    expect(
+      buildCurveStableswapExecutionModel(entry({ isMetaPool: true }), "ethereum", "usdc-circle", chainAddressToId),
+    ).toBeNull();
+    expect(
+      buildCurveStableswapExecutionModel(
+        entry({ executionCoins: undefined }),
+        "ethereum",
+        "usdc-circle",
+        chainAddressToId,
+      ),
+    ).toBeNull();
+    expect(buildCurveStableswapExecutionModel(entry(), "ethereum", "dai-makerdao", chainAddressToId)).toBeNull();
+    expect(buildCurveStableswapExecutionModel(undefined, "ethereum", "usdc-circle", chainAddressToId)).toBeNull();
+  });
+
+  it("rejects duplicate coin addresses instead of emitting an ambiguous model", () => {
+    const duplicated = entry({
+      executionCoins: [
+        { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+        { address: USDC, symbol: "USDC2", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+      ],
+    });
+    expect(buildCurveStableswapExecutionModel(duplicated, "ethereum", "usdc-circle", chainAddressToId)).toBeNull();
+  });
+});

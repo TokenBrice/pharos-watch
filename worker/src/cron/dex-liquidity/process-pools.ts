@@ -16,6 +16,54 @@ import {
 } from "./pool-helpers";
 import { isTrustworthyExactPoolId } from "./pool-identity";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
+import type { DexAmmExecutionModel } from "@shared/types/market";
+
+/**
+ * The Curve pools endpoint does not publish per-pool fees. Standard
+ * stableswap pools charge 1-4 bps; the model carries this conservative
+ * upper bound so simulated output understates rather than overstates
+ * execution, keeping the capacity result an exact lower bound.
+ */
+const CURVE_STABLESWAP_FEE_BOUND = 0.001;
+
+/**
+ * Builds the exact StableSwap execution model for an address-matched plain
+ * Curve pool whose complete per-coin capture survived shaping. Returns null
+ * whenever any identity, balance, or tracked-token requirement fails.
+ */
+export function buildCurveStableswapExecutionModel(
+  curveData: CurvePoolEntry | undefined,
+  chainNorm: string,
+  stablecoinId: string,
+  chainAddressToId: Map<string, string>,
+): DexAmmExecutionModel | null {
+  const coins = curveData?.executionCoins;
+  if (!coins || curveData.isMetaPool || !Number.isFinite(curveData.A) || curveData.A <= 0) return null;
+  const tokens = coins.map((coin) => {
+    const trackedAssetId = chainAddressToId.get(`${chainNorm}:${coin.address.toLowerCase()}`);
+    return {
+      address: coin.address,
+      symbol: coin.symbol,
+      decimals: coin.decimals,
+      balance: coin.balance,
+      referencePriceUsd: coin.usdPrice,
+      referencePriceSource: "source-token-usd" as const,
+      ...(trackedAssetId ? { trackedAssetId } : {}),
+    };
+  });
+  const trackedTokenIndex = tokens.findIndex((token) => token.trackedAssetId === stablecoinId);
+  if (trackedTokenIndex === -1) return null;
+  const addresses = tokens.map((token) => `${chainNorm}:${token.address.toLowerCase()}`);
+  if (new Set(addresses).size !== addresses.length) return null;
+  return {
+    source: "curve",
+    invariant: "stableswap",
+    trackedTokenIndex,
+    feeRate: CURVE_STABLESWAP_FEE_BOUND,
+    amplification: curveData.A,
+    tokens,
+  };
+}
 
 /** Match DeFiLlama pools to tracked stablecoins and compute per-pool metrics. */
 export function processPoolMetrics(
@@ -218,6 +266,17 @@ export function processPoolMetrics(
         // Pool-level price: use Curve per-token price when available
         const poolPrice = curveData?.tokenPrices[meta.symbol.toUpperCase()];
 
+        // Exact stableswap execution model: address-matched plain Curve pools
+        // whose complete per-coin inputs survived capture. The fee is not
+        // published by the pools endpoint, so the model carries a documented
+        // conservative bound and the capacity result is an exact lower bound.
+        const ammExecutionModel = buildCurveStableswapExecutionModel(
+          curveAddressMatch ? curveData : undefined,
+          chainNorm,
+          id,
+          chainAddressToId,
+        );
+
         // Pool entry with enriched extra
         m.topPools.push({
           poolId: isTrustworthyExactPoolId(pool.pool, pool.project)
@@ -245,6 +304,7 @@ export function processPoolMetrics(
               : feeTierForExtra != null
                 ? { feeTier: Math.round(feeTierForExtra / 100) }
                 : {}),
+            ...(ammExecutionModel ? { ammExecutionModel } : {}),
             qualityAdjustedTvl: Math.round(poolQualityAdjustedTvl),
             effectiveTvl: Math.round(poolEffTvl),
             organicFraction: Math.round(organicFraction * 100) / 100,

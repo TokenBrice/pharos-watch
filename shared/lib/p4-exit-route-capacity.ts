@@ -111,13 +111,13 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
   },
   {
     id: "curve-stableswap-exact",
-    sourceFamilies: ["direct_api"],
+    sourceFamilies: ["dl"],
     model: "stableswap",
     tokenIdentity: "exact",
     exactBalancesOrReserves: "exact",
     poolInvariantParameters: "exact",
     outputIdentity: "exact",
-    fees: "exact",
+    fees: "partial",
     observationTime: "producer-run",
     outputEvidenceKind: "reserve-based-amm-simulation",
     confidence: "high",
@@ -125,8 +125,9 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
     scoreEligible: true,
     limitations: [
-      "Requires exact per-token balances, decimals, addresses, fee, and the pool amplification coefficient.",
-      "Assumes the plain StableSwap invariant; metapools and rate-scaled variants must be captured against their underlying balances.",
+      "Requires exact per-token balances, decimals, addresses, and the pool amplification coefficient.",
+      "The source does not publish per-pool fees; the model carries a documented conservative fee bound, so capacity is an exact lower bound.",
+      "Plain StableSwap pools only; metapools are excluded at capture.",
     ],
   },
   {

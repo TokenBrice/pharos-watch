@@ -201,6 +201,13 @@ export interface CurvePoolEntry {
   balanceDetails: { symbol: string; balancePct: number; isTracked: boolean }[];
   /** Normalized symbol → USD price for each coin in the pool (from Curve API). */
   tokenPrices: Record<string, number>;
+  /**
+   * Exact per-coin execution inputs for plain (non-meta) stableswap pools:
+   * address, decimals, token-unit balance, and the source USD price. Absent
+   * when any coin's identity or balance is incomplete or the pool is a
+   * metapool, so downstream simulation fails closed instead of guessing.
+   */
+  executionCoins?: { address: string; symbol: string; decimals: number; balance: number; usdPrice: number }[];
 }
 
 export interface SymbolLookups {

@@ -287,6 +287,36 @@ export async function buildCurveLookups(
             tokenPrices[normalizeDexSymbol(c.symbol)] = c.usdPrice;
           }
         }
+        // Exact execution inputs: plain pools only, every coin complete.
+        const executionCoins = coinBalances.map(({ coin }) => {
+          const balance = parseFloat(coin.poolBalance);
+          const decimals = parseInt(coin.decimals, 10);
+          if (
+            !coin.address?.trim() ||
+            coin.isBasePoolLpToken === true ||
+            !Number.isFinite(balance) ||
+            balance <= 0 ||
+            !Number.isInteger(decimals) ||
+            decimals < 0 ||
+            decimals > 255 ||
+            !(coin.usdPrice > 0)
+          ) {
+            return null;
+          }
+          return {
+            address: coin.address,
+            symbol: coin.symbol,
+            decimals,
+            balance: balance / 10 ** decimals,
+            usdPrice: coin.usdPrice,
+          };
+        });
+        const executionComplete =
+          pool.isMetaPool !== true &&
+          pool.coins.length >= 2 &&
+          pool.coins.length <= 8 &&
+          executionCoins.every((coin) => coin !== null);
+
         const entry: CurvePoolEntry = {
           A,
           balanceRatio,
@@ -297,6 +327,9 @@ export async function buildCurveLookups(
           creationTs: pool.creationTs ?? 0,
           balanceDetails,
           tokenPrices,
+          ...(executionComplete
+            ? { executionCoins: executionCoins as NonNullable<CurvePoolEntry["executionCoins"]> }
+            : {}),
         };
         curvePoolMap.set(
           `${chain}:${pool.address.toLowerCase()}`,
