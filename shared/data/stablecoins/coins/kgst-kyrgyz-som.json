@@ -51,13 +51,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "Kyrgyz som fiat reserves and cash equivalents",
-      "pct": 100,
-      "risk": "medium"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

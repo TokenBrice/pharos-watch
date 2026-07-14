@@ -168,13 +168,5 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Open Voucher KRW vouchers / OV tokens",
-      "pct": 100,
-      "risk": "high",
-      "blacklistable": true
-    }
-  ],
   "launchDate": "2025-01-20"
 }
