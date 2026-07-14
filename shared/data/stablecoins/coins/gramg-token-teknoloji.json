@@ -233,26 +233,5 @@
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
-  "liveReservesConfig": {
-    "adapter": "single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "gramg-token-teknoloji",
-    "display": {
-      "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/",
-      "label": "Token Teknoloji"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "avalanche",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "label": "Physical gold reserves",
-      "risk": "low"
-    }
-  },
   "launchDate": "2022-11-01"
 }
