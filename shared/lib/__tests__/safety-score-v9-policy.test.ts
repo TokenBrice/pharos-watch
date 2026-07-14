@@ -58,6 +58,34 @@ describe("Safety Score v9 methodology policy", () => {
     ).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
   });
 
+  it("freezes the stays-NR reason set to integrity and classification failures", () => {
+    // The rating-parity contract: missing research evidence is bounded, never
+    // NR. Only pipeline-integrity and classification failures may reason-code
+    // NR. Re-tiering a code back to NR must be an explicit, reviewed edit of
+    // this list (see agents/safety-score-v9/rating-parity-plan.md §2).
+    const staysNR = V9_CANDIDATE_POLICY_V1.policy.reasonRegistry
+      .filter((entry) => entry.defaultTreatment === "NR")
+      .map((entry) => entry.code)
+      .sort();
+    expect(staysNR).toEqual([
+      "critical-unresolved",
+      "future-dated-input-fact",
+      "historical-critical-input",
+      "implementation-parent-cycle",
+      "insufficient-evidence",
+      "missing-archetype",
+      "missing-parent-score",
+      "missing-pillar",
+      "missing-pillar-evidence",
+      "parent-cycle",
+    ]);
+    for (const entry of V9_CANDIDATE_POLICY_V1.policy.reasonRegistry) {
+      if (entry.defaultTreatment !== "ceiling") continue;
+      expect(entry.ceilingRule, entry.code).not.toBeNull();
+      expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, entry.code).ceiling?.limit, entry.code).toBeGreaterThan(0);
+    }
+  });
+
   it("excludes lifecycle identity but includes every semantic decision", () => {
     const relabeled = candidateClone();
     relabeled.policyId = "safety-score-v9-candidate-v2";

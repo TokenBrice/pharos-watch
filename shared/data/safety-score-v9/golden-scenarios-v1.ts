@@ -674,6 +674,120 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
       expectedRated: true,
     },
   },
+  {
+    id: "unverified-mint-anchor",
+    name: "Sound anchor with unverified mint authority",
+    archetype: "fiat-backed-anchor",
+    description:
+      "Reserves and exit evidence are solid, but the mint and upgrade authority surface has not been reviewed; control scores at the bounded-unknown quality under the control-unverified ceiling.",
+    pillars: { backing: 60, exit: 70, control: 45 },
+    pegScore: 99,
+    pegApplicable: true,
+    evidenceLevel: "limited",
+    trackRecordMonths: 48,
+    structuralCaps: [
+      {
+        kind: "reason:unresolved-mint-authority",
+        limit: 55,
+        reason: "Mint authority is unresolved; the control-unverified ceiling bounds the score.",
+      },
+    ],
+    expected: {
+      allowedGrades: ["C", "C-"],
+      minScore: 50,
+      maxScore: 57,
+      expectedBindingCapKind: "reason:unresolved-mint-authority",
+      expectedRated: true,
+    },
+  },
+  {
+    id: "unbounded-unreconciled-mint-anchor",
+    name: "Verified unbounded mint without reconciliation",
+    archetype: "fiat-backed-anchor",
+    description:
+      "The same asset profile with a reviewed, economically unbounded mint path and no supply reconciliation; the critical centralized-mint cap binds.",
+    pillars: { backing: 60, exit: 70, control: 25 },
+    pegScore: 99,
+    pegApplicable: true,
+    evidenceLevel: "strong",
+    trackRecordMonths: 48,
+    structuralCaps: [
+      {
+        kind: "signal:centralized-mint:critical",
+        limit: 39,
+        reason: "Economically effective minting is unbounded or compromised.",
+      },
+    ],
+    expected: {
+      allowedGrades: ["F"],
+      minScore: 30,
+      maxScore: 39,
+      expectedBindingCapKind: "signal:centralized-mint:critical",
+      expectedRated: true,
+    },
+  },
+  {
+    id: "reconciled-unbounded-mint-anchor",
+    name: "Verified unbounded mint with supply reconciliation",
+    archetype: "fiat-backed-anchor",
+    description:
+      "The same unbounded mint path, but supply is provably reconciled against reserves; the graduated high-severity cap applies instead of the critical one.",
+    pillars: { backing: 60, exit: 70, control: 25 },
+    pegScore: 99,
+    pegApplicable: true,
+    evidenceLevel: "strong",
+    trackRecordMonths: 48,
+    structuralCaps: [
+      {
+        kind: "signal:centralized-mint:high",
+        limit: 59,
+        reason: "Minting is economically unbounded but supply is reconciled against reserves.",
+      },
+    ],
+    expected: {
+      allowedGrades: ["D"],
+      minScore: 42,
+      maxScore: 47,
+      expectedBindingCapKind: "bounded-compensability",
+      expectedRated: true,
+    },
+  },
+  {
+    id: "fully-unverified-parity-cohort",
+    name: "Fully unverified parity-cohort asset",
+    archetype: "fiat-backed-anchor",
+    description:
+      "No reviewed control, backing, or exit evidence at all: every pillar floors at its bounded-unknown level under the unverified ceilings. The archetype of the long-tail parity cohort.",
+    pillars: { backing: 35, exit: 35, control: 45 },
+    pegScore: 99,
+    pegApplicable: true,
+    evidenceLevel: "limited",
+    trackRecordMonths: 48,
+    structuralCaps: [
+      {
+        kind: "reason:unresolved-mint-authority",
+        limit: 55,
+        reason: "Mint authority is unresolved; the control-unverified ceiling bounds the score.",
+      },
+      {
+        kind: "reason:missing-reserve-composition",
+        limit: 60,
+        reason: "Reserve composition is missing; the backing-unverified ceiling bounds the score.",
+      },
+      {
+        kind: "reason:missing-same-notional-route",
+        limit: 65,
+        reason: "No same-notional exit route is reviewed; the exit-unverified ceiling bounds the score.",
+      },
+    ],
+    expected: {
+      allowedGrades: ["F", "D"],
+      minScore: 28,
+      maxScore: 42,
+      expectedBindingCapKind: null,
+      expectedRated: true,
+    },
+  },
 ];
 
 export const PAIRWISE_CONSTRAINTS: PairwiseConstraint[] = [
@@ -862,5 +976,31 @@ export const PAIRWISE_CONSTRAINTS: PairwiseConstraint[] = [
     minGap: 16,
     rationale:
       "A newer but institutionally controlled native anchor should outrank an asset whose core supply depends on a bridge.",
+  },
+  {
+    higherId: "usdc-like-anchor",
+    lowerId: "unverified-mint-anchor",
+    minGap: 8,
+    rationale: "Verified strong controls must score above the same profile with an unverified control surface.",
+  },
+  {
+    higherId: "unverified-mint-anchor",
+    lowerId: "unbounded-unreconciled-mint-anchor",
+    minGap: 10,
+    rationale:
+      "An unverified control surface is at most as bad as a verified unbounded one: unverified caps at the control-unverified ceiling while verified-bad binds at the critical centralized-mint cap.",
+  },
+  {
+    higherId: "reconciled-unbounded-mint-anchor",
+    lowerId: "unbounded-unreconciled-mint-anchor",
+    minGap: 5,
+    rationale:
+      "Provable supply reconciliation must be worth a clear margin on an otherwise unbounded mint path; bounded compensability limits the spread while the control pillar itself stays weak.",
+  },
+  {
+    higherId: "unverified-mint-anchor",
+    lowerId: "fully-unverified-parity-cohort",
+    minGap: 10,
+    rationale: "Partial verification with solid backing and exit evidence must outrank a fully unverified asset.",
   },
 ];

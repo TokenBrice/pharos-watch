@@ -5,7 +5,7 @@ import { scoreV9GoldenScenario } from "../safety-score-v9/scenario-evaluator";
 
 describe("Safety Score v9 durable golden corpus", () => {
   it("passes every absolute scenario expectation under the committed candidate", () => {
-    expect(GOLDEN_SCENARIOS).toHaveLength(30);
+    expect(GOLDEN_SCENARIOS).toHaveLength(34);
     expect(new Set(GOLDEN_SCENARIOS.map((scenario) => scenario.id)).size).toBe(GOLDEN_SCENARIOS.length);
 
     for (const scenario of GOLDEN_SCENARIOS) {
@@ -28,7 +28,7 @@ describe("Safety Score v9 durable golden corpus", () => {
   });
 
   it("passes the complete ordering-constraint set", () => {
-    expect(PAIRWISE_CONSTRAINTS).toHaveLength(28);
+    expect(PAIRWISE_CONSTRAINTS).toHaveLength(32);
     const traces = new Map(
       GOLDEN_SCENARIOS.map((scenario) => [scenario.id, scoreV9GoldenScenario(scenario, V9_CANDIDATE_POLICY_V1)]),
     );

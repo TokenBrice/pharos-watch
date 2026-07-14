@@ -44,9 +44,34 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
   candidate deterministically. The current policy semantic digest is
-  `204dc01eb2ca995b874b55323ed8c7d7fbab150f6f8b61c42aa374082839c17a`;
+  `46a73c3cca66ed800b42f3f0ce17d458ca9234c367f732480df17f744df92c3f`;
   the current evaluation-build digest is
-  `f5784711ca5982a50cf227fbce8f84c7bde3c20b887d9e951a6a48a46aa80403`.
+  `ccb940148c708783791c8115633a8140e63f755f66a5556d47dfe9d473aa07b8`.
+- The 2026-07-14 `safety-score-v9-candidate-v2` policy revision implements the
+  rating-parity re-tier: missing research evidence no longer reason-codes
+  `NR`. Thirty-two registry codes moved from `NR` to `ceiling` treatments
+  through a new `named-ceiling` rule source
+  (`semantic.structural.namedReasonCeilings`: control/oracle-unverified 55,
+  backing-unverified 60, exit-unverified 65, peg-unverified 60); the two
+  dependency-availability codes use the limited-evidence ceiling. Pillar
+  evaluators score the corresponding absences at explicit bounded-unknown
+  levels (`control.boundedUnknownQuality` 45, backing
+  `boundedUnknownQuality` 35, `exit.boundedUnknownScore` 35) instead of
+  nulling the pillar, a missing applicable peg floors the multiplier at par
+  under the peg-unverified ceiling, bound-only exit costs score at
+  `exit.boundedCostScore`, cap candidates deduplicate by (source, kind,
+  limit), and the centralized-mint structural severity graduates to `high`
+  when unbounded minting is reconciled against reserves. `NR` remains for
+  integrity and classification failures only; that stays-NR set is frozen by
+  a policy test, and `scripts/maintenance/check-safety-score-v9-parity.mjs`
+  gates that every V8-graded asset is V9-rateable up to that allowlist.
+  Against the 2026-07-14T04:49Z exact capture (replayed with the local
+  extension builder across registry drift, so a labeled drift measurement
+  rather than activation evidence) the candidate rates 358 of 361 assets and
+  100.00% of tracked supply weight; the three `NR` assets are
+  unresolved-archetype classifications. Grade-band re-anchoring against the
+  resulting compressed distribution remains an open owner calibration
+  decision recorded in the research corpus.
 - The shadow extension builder now maps reviewed repository evidence into the
   strict fact set instead of clamping every fact to an unresolved state: peg
   references from the registry peg currency, chain-supply bridge materiality
@@ -69,13 +94,14 @@ The V9 implementation establishes candidate infrastructure without changing prod
   rather than arming the reviewed-complete zero-score path. Pure NAV tokens
   (`flags.navToken`) publish a known not-applicable peg fact (the v8 pure NAV
   carve-over): they have no fixed peg by design, so the formula skips the peg
-  multiplier instead of reason-coding `missing-applicable-peg`. With
-  the 2026-07-13 exact publication capture, the candidate produces real
-  scores for `usdt-tether` and `usdc-circle` (83.15% of tracked supply
-  weight); every other asset remains reason-coded `NR` pending exit-route
-  producer coverage, upgradeability/control curation, reserve envelopes, and
-  peg coverage. The 305-asset and 99%-weight rateability floors therefore
-  still fail and every shadow day remains non-qualifying.
+  multiplier instead of reason-coding `missing-applicable-peg`. Under the
+  candidate-v2 bounded re-tier, unverified control, backing, exit, and peg
+  evidence scores at bounded-unknown levels beneath labeled reason ceilings,
+  so the 2026-07-14 drift-labeled replay rates 358 of 361 assets (100.00%
+  supply weight) with only unresolved-archetype assets reason-coded `NR`.
+  The rateability floors are met in that research measurement, but every
+  shadow day remains non-qualifying until a publication-exact capture with a
+  matching registry reproduces it and the remaining activation gates pass.
 - After a valid V8 publication commits, the Worker runs V9 in a separate
   failure domain. It retains latest candidate/diff state and one compact daily
   summary. Full replay artifacts are retained only for selected first, final,
