@@ -51,7 +51,42 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USDF uses AccessControl; MINTER_AND_BURN_ROLE (0x144dc672...) is held by the USDFEarn UUPS proxy (0xc271fc70...) which mints USDF 1:1 on USDT deposit. DEFAULT_ADMIN_ROLE (0x0) is held by a 6h OZ TimelockController whose PROPOSER_ROLE includes a 4-of-8 Gnosis Safe.",
+    "summary": "USDF uses AccessControl; MINTER_AND_BURN_ROLE (0x144dc672...) is held by the USDFEarn UUPS proxy (0xc271fc70...) which mints USDF 1:1 on USDT deposit. The token's DEFAULT_ADMIN_ROLE and USDFEarn's immutable upgrade authority are the same 6-hour TimelockController. A 4-of-8 Safe is the timelock's sole external proposer, executor, and canceller, and separately holds USDFEarn's ADMIN_ROLE for direct changes to the 500 million USDF supply cap.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xc271fc70dd9e678ac1ab632f797894fe4be2c345"
+      ],
+      "implementationAddresses": [
+        "0x9be60400d043864a99a8fe1be479c9eb299198c1"
+      ],
+      "adminAddresses": [
+        "0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 21600,
+      "controlRef": "USDF token admin and USDFEarn UUPS upgrade timelock",
+      "observedAt": "2026-07-13",
+      "observedBlock": 109812367,
+      "sources": [
+        {
+          "label": "Sourcify exact-match USDFEarn implementation source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x9be60400d043864a99a8fe1be479c9eb299198c1?fields=sources"
+        },
+        {
+          "label": "Sourcify exact-match Astherus timelock source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861?fields=sources"
+        },
+        {
+          "label": "Astherus official USDFEarn repository",
+          "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/USDFEarn.sol"
+        },
+        {
+          "label": "BSC exact replay-cutoff block",
+          "url": "https://bscscan.com/block/109812367"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "bsc",
@@ -60,29 +95,56 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At BSC block 103622485: hasRole(MINTER_AND_BURN_ROLE=0x144dc672..., 0xc271fc70...) on USDF token returned true. eth_getCode returned CONTRACT (len=1712). EIP-1967 impl slot = 0x000...9be60400d043864a99a8fe1be479c9eb299198c1 (UUPS proxy). Confirmed by Transfer(from=0x0, to=AstherusVault) events in USDF minting txs; AstherusVault source shows depositUSDF() calls USDF_EARN.deposit() which internally mints.",
+        "capDescription": "USDFEarn enforces USDFMaxSupply = 500,000,000 USDF at the replay cutoff. The contract cannot change that cap itself; its separate ADMIN_ROLE holder can.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "evidence": "At exact replay-cutoff BSC block 109812367, the USDF token recognized USDFEarn as a MINTER_AND_BURN_ROLE holder. USDFEarn's EIP-1967 implementation was 0x9be60400d043864a99a8fe1be479c9eb299198c1, with zero admin and beacon slots, and USDFMaxSupply() was 500,000,000 USDF. The exact-match implementation source mints only after receiving USDT and enforces that cap. A complete post-cutoff log scan through block 109868579 found no Upgraded, role-change, or cap-change event, so the current authority state projects back to the cutoff.",
         "sources": [
           {
             "label": "Sourcify USDF verified source",
-            "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0x5A110fC00474038f6c02E89C707D638602EA44B5/sources/contracts/oft/USDF.sol"
+            "url": "https://sourcify.dev/server/v2/contract/56/0x5a110fc00474038f6c02e89c707d638602ea44b5?fields=sources"
+          },
+          {
+            "label": "Sourcify exact-match USDFEarn implementation source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x9be60400d043864a99a8fe1be479c9eb299198c1?fields=sources"
           }
         ]
       },
       {
         "chain": "bsc",
         "address": "0xe829a87F4Dfa41B032D8B6Feca6C2213d6ee1861",
-        "label": "USDF DEFAULT_ADMIN_ROLE (OZ TimelockController, 6h delay)",
+        "label": "USDF token admin and USDFEarn UUPS upgrade timelock",
         "role": "minter-admin",
         "authorityType": "timelock",
         "directMintAbility": "can-authorize",
+        "timelockDelaySec": 21600,
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At BSC block 103622485: eth_getCode = CONTRACT (len=15848). getMinDelay() = 21600 (6h). hasRole(DEFAULT_ADMIN_ROLE=0x0, this_address) on USDF = true. getRoleMember(DEFAULT_ADMIN_ROLE, 0) on timelock = itself (self-administered). PROPOSER_ROLE count = 2: [4-of-8 Safe 0xa8c0c6ee..., timelock itself]. getRoleAdmin(MINTER_AND_BURN_ROLE) = DEFAULT_ADMIN_ROLE, confirming timelock governs minter grants.",
+        "failureDomainKeys": [
+          "bsc:0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f"
+        ],
+        "routeChecks": {
+          "signingModel": "The sole external proposer, executor, and canceller is Safe 0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f, threshold 4 of 8. The timelock also lists itself as proposer and executor so its wrappers can call the underlying controller, but it cannot originate an unscheduled operation.",
+          "rateLimits": "getMinDelay() returned 21,600 seconds. The custom timelock's MAX_DELAY was 172,800 seconds, an execution-expiry window rather than an additional mandatory delay.",
+          "pausersAdminsUpgraders": "USDFEarn's exact-match implementation restricts _authorizeUpgrade to the immutable TIMELOCK_ADDRESS. The same timelock is the USDF token's DEFAULT_ADMIN_ROLE holder and can grant or revoke MINTER_AND_BURN_ROLE after the delay."
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "evidence": "At exact replay-cutoff BSC block 109812367 (hash 0x958afa5b82a24f0ee89387646d589882bf448dbb5fac8dce521b4911ae834202), USDFEarn's immutable TIMELOCK_ADDRESS resolved to this contract, whose getMinDelay() was 21,600 seconds. The timelock remained USDF's DEFAULT_ADMIN_ROLE holder; the token's MINTER_AND_BURN_ROLE is administered by DEFAULT_ADMIN_ROLE. Timelock roles were self-admin plus Safe 0xa8c0...1c3f as the sole external proposer/executor and sole canceller. No upgrade, role, or delay change appeared in the complete post-cutoff scan through block 109868579.",
         "sources": [
           {
             "label": "Sourcify USDF verified source",
-            "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0x5A110fC00474038f6c02E89C707D638602EA44B5/sources/contracts/oft/USDF.sol"
+            "url": "https://sourcify.dev/server/v2/contract/56/0x5a110fc00474038f6c02e89c707d638602ea44b5?fields=sources"
+          },
+          {
+            "label": "Sourcify exact-match USDFEarn implementation source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x9be60400d043864a99a8fe1be479c9eb299198c1?fields=sources"
+          },
+          {
+            "label": "Sourcify exact-match Astherus timelock source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861?fields=sources"
           }
         ]
       },
@@ -93,6 +155,7 @@
         "role": "governor",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "threshold": 4,
         "signerCount": 8,
@@ -112,14 +175,24 @@
           "guard": null,
           "fallbackHandler": null,
           "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
-          "observedBlock": 103622485,
+          "observedBlock": 109812367,
           "source": "onchain"
         },
-        "evidence": "At BSC block 103622485: getOwners() returned 8 owners; getThreshold() = 4; masterCopy() = 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Gnosis Safe L2 1.3.0). This Safe is PROPOSER_ROLE[0] and EXECUTOR_ROLE[0] on the TimelockController.",
+        "failureDomainKeys": [
+          "bsc:0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f"
+        ],
+        "capDescription": "This Safe directly holds USDFEarn's ADMIN_ROLE and can change the 500 million USDF maximum supply without the timelock. It separately governs delayed token-role and implementation changes through the timelock.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "evidence": "At exact replay-cutoff BSC block 109812367, this Safe had 8 owners and threshold 4, with no enabled modules, guard, or fallback handler. It was the timelock's sole external proposer, executor, and canceller and the sole USDFEarn ADMIN_ROLE member. A complete post-cutoff scan through block 109868579 found no owner, threshold, module, guard, fallback-handler, or role changes.",
         "sources": [
           {
             "label": "Sourcify AstherusVault source",
-            "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0x2cc878ac49c3bf8b0f2b053af7845ba6590eec4f/sources/contracts/AstherusVault.sol"
+            "url": "https://sourcify.dev/server/v2/contract/56/0x2cc878ac49c3bf8b0f2b053af7845ba6590eec4f?fields=sources"
+          },
+          {
+            "label": "BSC Safe account",
+            "url": "https://bscscan.com/address/0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f#readProxyContract"
           }
         ]
       }
@@ -128,7 +201,7 @@
       "sources": [
         {
           "label": "Sourcify USDF verified source",
-          "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0x5A110fC00474038f6c02E89C707D638602EA44B5/sources/contracts/oft/USDF.sol"
+          "url": "https://sourcify.dev/server/v2/contract/56/0x5a110fc00474038f6c02e89c707d638602ea44b5?fields=sources"
         },
         {
           "label": "Sourcify USDF verification record",
@@ -136,12 +209,12 @@
         },
         {
           "label": "Sourcify AstherusVault source",
-          "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0x2cc878ac49c3bf8b0f2b053af7845ba6590eec4f/sources/contracts/AstherusVault.sol"
+          "url": "https://sourcify.dev/server/v2/contract/56/0x2cc878ac49c3bf8b0f2b053af7845ba6590eec4f?fields=sources"
         }
       ],
-      "evidence": "At BSC block 103622485: USDF (0x5a110fc0...) is NOT a proxy (EIP-1967 slots zero). hasRole(MINTER_AND_BURN_ROLE=0x144dc672..., USDFEarn=0xc271fc70...) = true; hasRole(DEFAULT_ADMIN_ROLE=0x0, timelock=0xe829a87F...) = true. TimelockController getMinDelay() = 21600s (6h), PROPOSER_ROLE count = 2 [4-of-8 Safe, timelock itself]. USDFEarn is a UUPS proxy (impl 0x9be60400...). Mint path confirmed by Transfer(from=0x0) events and AstherusVault source (depositUSDF → USDF_EARN.deposit()).",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At exact replay-cutoff BSC block 109812367 (2026-07-13T20:34:40Z; hash 0x958afa5b82a24f0ee89387646d589882bf448dbb5fac8dce521b4911ae834202), USDF remained a non-proxy token with USDFEarn 0xc271fc70... recognized as a MINTER_AND_BURN_ROLE holder and timelock 0xe829a87f... recognized as DEFAULT_ADMIN_ROLE. USDFEarn was a UUPS proxy with implementation 0x9be60400..., zero admin/beacon slots, immutable upgrade authority equal to that timelock, and a 500 million USDF cap directly administered by Safe 0xa8c0c6ee.... The timelock delay was 21,600 seconds; its sole external proposer/executor/canceller was the same 4-of-8 Safe, with no module, guard, or fallback-handler bypass detected. Authority-sensitive logs across all affected contracts from block 109812368 through 109868579 contained no upgrade, role, delay, cap, owner, threshold, module, guard, or fallback-handler change.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13"
     }
   },
   "collateralQuality": "exotic",
