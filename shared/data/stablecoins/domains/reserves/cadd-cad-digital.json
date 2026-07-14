@@ -19,7 +19,7 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "probable",
     "sources": [
       {
@@ -33,17 +33,16 @@
     ],
     "rationale": "Tetra's disclosure identifies daily reserve ratios and monthly Baker Tilly attestations, establishing a 100% Canadian-dollar reserve trust envelope. The underlying instruments, banking counterparties, balances, maturities, and liquidity terms are not disclosed on the current page.",
     "compositionBasis": "Tetra CADD reserve-attestation disclosure; reserve instrument and provider weights are undisclosed",
-    "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
     "knownUnknownExposure": "The full reserve is identified as Canadian-dollar trust reserves, but instruments, banks, balances, maturities, and liquidity are undisclosed.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Canadian dollar reserve trust",
         "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The reserve is an offchain Canadian-dollar trust balance rather than a tracked stablecoin dependency."
+        "disposition": "basket-needs-split",
+        "rationale": "The aggregate trust envelope is supported, but the current instruments, banks, balances, maturities, and liquidity terms are not disclosed."
       }
     ]
   },
@@ -64,7 +63,7 @@
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "probable",
     "sources": [
       {

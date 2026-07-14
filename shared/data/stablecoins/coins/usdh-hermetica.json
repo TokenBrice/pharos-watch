@@ -136,7 +136,7 @@
         "label": "Hermetica hq-v1 minting contracts (confirm-mint operators)",
         "role": "backend-signer",
         "authorityType": "issuer-backend",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "cap-limited",
         "chain": "stacks",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
@@ -222,8 +222,8 @@
     ],
     "review": {
       "evidence": "Hiro API reads on hq-v1 (SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.hq-v1): (1) owner = SM1QXYXZG78DCWJZJKY0901KTK3350071W9YYRPMT (SM-prefix P2SH multisig, transferred 2026-02-10 via 1008-block timelock); (2) active minting-contracts: minting-otc-v1-1 (primary OTC route) and emergency-recover-v1, both deployed by Hermetica deployer; minting-auto-v1-1 deactivated 2026-03-23. No permissionless mint path. hq-v1 enforces 7-day timelock on owner changes and new minting-contract activations. Minting model confirmed as backend-attested OTC with a multisig-governed admin layer.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "owner-triage",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Hermetica mint mechanism",
