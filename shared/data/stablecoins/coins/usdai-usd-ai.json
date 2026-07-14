@@ -2,7 +2,7 @@
   "id": "usdai-usd-ai",
   "name": "USD.AI",
   "symbol": "USDai",
-  "oneLiner": "USDai is USD.AI's non-yielding base dollar, minted 1:1 from USDC/USDT and separately stakeable into sUSDai for GPU-loan yield.",
+  "oneLiner": "USDai is USD.AI's non-yielding base dollar, backed 1:1 by PYUSD and separately stakeable into sUSDai for GPU-loan yield.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -18,8 +18,8 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "collateral": "USDai backing is unresolved across conflicting primary evidence: the deployed implementation reports PYUSD as its base token, the technical documentation describes an M-backed architecture, and the proof-of-reserves feed includes PYUSD plus DEAL rows without reconciling their liability scope.",
-  "pegMechanism": "The deployed USDai implementation reports PYUSD as its base token and exposes deposit and withdrawal operations. That establishes the contract's PYUSD issuance path, but the conflicting M-backed documentation and broader proof-of-reserves feed prevent treating PYUSD as the complete economic backing without further reconciliation.",
+  "collateral": "PYUSD held by the canonical USDai contract on Arbitrum and reconciled 1:1 against canonical plus bridged USDai liabilities; GPU-loan DEAL exposure belongs to the separate sUSDai yield layer",
+  "pegMechanism": "Users mint and redeem canonical USDai against PYUSD through the Arbitrum hub. Satellite USDai supply is tracked as bridgedSupply against the same PYUSD pool, while sUSDai separately deploys deposited USDai into GPU-backed credit strategies.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "309",
   "detailProvider": "defillama",

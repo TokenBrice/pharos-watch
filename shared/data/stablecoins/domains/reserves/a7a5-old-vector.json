@@ -2,64 +2,64 @@
   "id": "a7a5-old-vector",
   "reserves": [
     {
-      "name": "Russian-ruble deposits",
+      "name": "Russian-ruble reserve basket (deposits and short-term assets; allocation undisclosed)",
       "pct": 100,
       "risk": "very-high",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed reserve banks",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed reserve banks and short-term asset issuers",
       "riskFactors": ["credit", "liquidity", "custody", "counterparty", "legal", "concentration"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewer": "owner-triage",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "A7A5 reserve transparency documentation",
-        "url": "https://docs.a7a5.io/legal/transparency"
+        "url": "https://docs.a7a5.io/legal/transparency.md"
       },
       {
         "label": "A7A5 terms of use",
-        "url": "https://docs.a7a5.io/legal/terms-of-use"
+        "url": "https://docs.a7a5.io/legal/terms-of-use.md"
       }
     ],
-    "rationale": "A7A5's current transparency documentation states that each token is backed one-for-one by Russian-ruble deposits, and its terms describe a basket of fiat deposits held at banks. The reviewed pages do not identify a reserve bank, account type, institution allocation, or usable current assurance artifact.",
-    "compositionBasis": "Current A7A5 issuer disclosure of one-for-one Russian-ruble deposit backing",
+    "rationale": "A7A5's transparency page describes one-for-one backing by Russian-ruble deposits, while section 4.3 of its terms describes a diversified basket of fiat deposits and short-term assets. The issuer does not reconcile those descriptions or publish current constituent weights, institutions, account terms, or a retrievable assurance artifact, so the complete reserve is represented as one unresolved aggregate.",
+    "compositionBasis": "Conflicting current issuer descriptions of the eligible Russian-ruble reserve envelope",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer identifies the reserve currency and deposit asset class but does not disclose reserve-bank identities, allocations, account terms, or liquidity details on the reviewed pages.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "Reserve-bank identities, deposit and short-term-asset weights, instrument identities, account terms, custody, liquidity, and current assurance evidence are undisclosed.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Russian-ruble deposits",
+        "reserveName": "Russian-ruble reserve basket (deposits and short-term assets; allocation undisclosed)",
         "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Russian-ruble bank deposits are external reserve assets rather than tracked stablecoin dependencies."
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer sources identify deposits and short-term assets but do not publish a current constituent split or instrument-level reserve schedule."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed reserve banks",
-        "role": "bank"
+        "name": "Undisclosed reserve banks and asset custodians",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "manual-review",
     "sources": [
       {
         "label": "A7A5 terms of use",
-        "url": "https://docs.a7a5.io/legal/terms-of-use"
+        "url": "https://docs.a7a5.io/legal/terms-of-use.md"
       }
     ],
-    "uncertainty": "A7A5 refers generally to deposits held at banks but does not identify the institutions, jurisdictions, provider shares, segregation, bankruptcy remoteness, rehypothecation terms, or account restrictions.",
+    "uncertainty": "A7A5 refers to deposits and short-term assets but does not identify the institutions, asset custodians, jurisdictions, provider shares, segregation, bankruptcy remoteness, rehypothecation terms, or account restrictions.",
     "knownUnknownExposurePct": 100
   }
 }
