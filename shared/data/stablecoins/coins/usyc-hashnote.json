@@ -182,70 +182,419 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "USYC issuance is issuer-controlled. On Ethereum and BSC the token owner() is an issuer EOA (MPC/HSM custody expected). On Solana the mint/freeze authority is a PDA of an unidentified BPFLoaderUpgradeable program owned by EMfvuBR8 — consistent with issuer-operated custodial minting.",
+    "summary": "USYC has uncapped max-allowance issuance paths on Ethereum and BSC, where a shared FundAdmin can authorize new max-allowance minters and separate RolesAuthority owners can change permissions. Separate token-owner EOAs can immediately upgrade each UUPS token. On Solana, a program-controlled PDA mints USYC and the documented Teller and Permissions program has a single no-delay upgrade key.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+        "0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311",
+        "EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm"
+      ],
+      "implementationAddresses": [
+        "0xbf0f2f3aad6b99893d80c550fbacec915545eb92",
+        "0x191fb6f3ba332f1b8789caf67abbaba56147445b",
+        "DwbKhT65kW49dw6e3cjz1qwhkm2akDehGsraLBau7s7M"
+      ],
+      "adminAddresses": [
+        "0x13ff8cabb86edf94a2df4f98773bda4005182dd6",
+        "0xcd636d955a95385ec5e2776b167b92e89ef6f70e",
+        "P3S7WBL3BviBuhW5HYtm8aicQQcivhJCs1Ewq9Xvb7B"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "USYC deployment-wide immediate upgrade authorities",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Official USYC smart contracts",
+          "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
+        },
+        {
+          "label": "Ethereum USYC implementation",
+          "url": "https://eth.blockscout.com/address/0xbf0f2f3aad6b99893d80c550fbacec915545eb92"
+        },
+        {
+          "label": "BSC USYC implementation",
+          "url": "https://bscscan.com/address/0x191fb6f3ba332f1b8789caf67abbaba56147445b#code"
+        },
+        {
+          "label": "Solana USYC Teller and Permissions program",
+          "url": "https://solscan.io/account/EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "USYC Ethereum token owner (EOA)",
-        "role": "direct-minter",
+        "address": "0xDbE01f447040F78ccbC8Dfd101BEc1a2C21f800D",
+        "label": "USYC shared EVM FundAdmin and Ethereum max-allowance minter",
+        "role": "minter-admin",
         "authorityType": "eoa",
-        "address": "0x13ff8cabb86edf94a2df4f98773bda4005182dd6",
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "eoa:evm:0xdbe01f447040f78ccbc8dfd101bec1a2c21f800d"
+        ],
+        "observedAt": "2026-07-13",
         "sources": [
           {
-            "label": "Ethereum: USYC owner() at block 25294716",
+            "label": "Ethereum USYC token",
             "url": "https://eth.blockscout.com/address/0x136471a34f6ef19fe571effc1ca711fdb8e49f2b"
+          },
+          {
+            "label": "Ethereum USYC RolesAuthority",
+            "url": "https://eth.blockscout.com/address/0x902d906b8d988092213be799b18bd2cbd64f808c"
+          },
+          {
+            "label": "BSC USYC RolesAuthority",
+            "url": "https://bscscan.com/address/0x6b7d54003f73be979cf92bf369432ac534853692#code"
           }
         ],
-        "evidence": "At Ethereum block 25294716, owner() on 0x136471a34f6ef19fe571effc1ca711fdb8e49f2b returned 0x13ff8cabb86edf94a2df4f98773bda4005182dd6; eth_getCode returned 0x (EOA). No proxy admin (EIP-1967 admin slot = 0x0). Implementation at 0xbf0f2f3aad6b99893d80c550fbacec915545eb92 (23856 bytes)."
+        "evidence": "At Ethereum block 25526129 and BSC block 109812367, this zero-code EOA was the current FundAdmin on both RolesAuthority contracts. It can immediately set any minter allowance to uint256.max. It was itself an Ethereum max-allowance minter; max allowance is not decremented and USYC has no global supply cap."
       },
       {
-        "label": "USYC BSC token owner (EOA)",
+        "chain": "ethereum",
+        "address": "0xeE35F963BFC71b51eC95147f26c030D674ea30e6",
+        "label": "USYC Ethereum Teller max-allowance minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "mint:ethereum:0xee35f963bfc71b51ec95147f26c030d674ea30e6"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "sources": [
+          {
+            "label": "Ethereum USYC Teller",
+            "url": "https://eth.blockscout.com/address/0xee35f963bfc71b51ec95147f26c030d674ea30e6"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, minterAllowance(0xeE35...30e6) returned uint256.max. The allowance is not decremented by minting and there is no global supply cap."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfd78EE919681417d192449715b2594ab58f5D002",
+        "label": "USYC Ethereum Circle TokenMinterV2",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "mint:ethereum:0xfd78ee919681417d192449715b2594ab58f5d002"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "sources": [
+          {
+            "label": "Ethereum USYC TokenMinterV2",
+            "url": "https://eth.blockscout.com/address/0xfd78ee919681417d192449715b2594ab58f5d002"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, minterAllowance(0xfd78...D002) returned uint256.max. The allowance is not decremented by minting and there is no global supply cap."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6A41494C22cb69F639CD6e43CE3A68818dB8C378",
+        "label": "USYC Ethereum TokenManagerProxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "mint:ethereum:0x6a41494c22cb69f639cd6e43ce3a68818db8c378"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "sources": [
+          {
+            "label": "Ethereum USYC TokenManagerProxy",
+            "url": "https://eth.blockscout.com/address/0x6a41494c22cb69f639cd6e43ce3a68818db8c378"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, minterAllowance(0x6A41...C378) returned uint256.max. The allowance is not decremented by minting and there is no global supply cap."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9fde717a21c5b272B8956d3AA0c3551E1FFd23D7",
+        "label": "USYC Ethereum PriceReporterProxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "mint:ethereum:0x9fde717a21c5b272b8956d3aa0c3551e1ffd23d7"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "sources": [
+          {
+            "label": "Ethereum USYC PriceReporterProxy",
+            "url": "https://eth.blockscout.com/address/0x9fde717a21c5b272b8956d3aa0c3551e1ffd23d7"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, minterAllowance(0x9fde...23D7) returned uint256.max. The allowance is not decremented by minting and there is no global supply cap."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x85fBFb6a6EF755797Cf65A4C7D7A90423f96d011",
+        "label": "USYC shared EVM secondary EOA max-allowance minter",
         "role": "direct-minter",
         "authorityType": "eoa",
-        "address": "0xcd636d955a95385ec5e2776b167b92e89ef6f70e",
         "directMintAbility": "direct",
-        "canRaiseCap": true,
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "eoa:evm:0x85fbfb6a6ef755797cf65a4c7d7a90423f96d011"
+        ],
+        "observedAt": "2026-07-13",
         "sources": [
           {
-            "label": "BSC: USYC owner() at block 103622902",
-            "url": "https://bscscan.com/address/0x8D0fA28f221eB5735BC71d3a0Da67EE5bC821311"
+            "label": "Ethereum USYC token",
+            "url": "https://eth.blockscout.com/address/0x136471a34f6ef19fe571effc1ca711fdb8e49f2b"
+          },
+          {
+            "label": "BSC USYC token",
+            "url": "https://bscscan.com/address/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311#code"
           }
         ],
-        "evidence": "At BSC block 103622902, owner() on 0x8D0fA28f221eB5735BC71d3a0Da67EE5bC821311 returned 0xcd636d955a95385ec5e2776b167b92e89ef6f70e; eth_getCode returned 0x (EOA). No proxy admin slot set."
+        "evidence": "At Ethereum block 25526129 and BSC block 109812367, this zero-code EOA had uint256.max minter allowance on both tokens. The allowance is not decremented by minting and neither token has a global supply cap."
       },
       {
-        "label": "USYC Solana mint authority (issuer-controlled PDA)",
+        "chain": "bsc",
+        "address": "0xfd78EE919681417d192449715b2594ab58f5D002",
+        "label": "USYC BSC TokenMinterV2 max-allowance minter",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "mint:bsc:0xfd78ee919681417d192449715b2594ab58f5d002"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
         "sources": [
           {
-            "label": "Solana mint account: 7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn",
-            "url": "https://solscan.io/token/7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn"
+            "label": "BSC USYC TokenMinterV2",
+            "url": "https://bscscan.com/address/0xfd78ee919681417d192449715b2594ab58f5d002#code"
           }
         ],
-        "evidence": "Solana SPL mint 7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn has mint_authority and freeze_authority = DZ7j2YLDq7847t2HtCWaDQUTpLJ4BinPGsY8w9Aai63y. DZ7j2YL is a non-executable account owned by BPFLoaderUpgradeable program EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm (unknown program, likely issuer multisig/custody PDA)."
+        "evidence": "At BSC block 109812367, minterAllowance(0xfd78...D002) returned uint256.max. The allowance is not decremented by minting and there is no global supply cap."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8fB098D65B38f8425de8f80Ad54eE990fB5d2fC0",
+        "label": "USYC Ethereum RolesAuthority owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "eoa:ethereum:0x8fb098d65b38f8425de8f80ad54ee990fb5d2fc0"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "sources": [
+          {
+            "label": "Ethereum USYC RolesAuthority",
+            "url": "https://eth.blockscout.com/address/0x902d906b8d988092213be799b18bd2cbd64f808c"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, this zero-code EOA owned RolesAuthority 0x902d...808c. It could immediately grant or revoke the FundAdmin role and modify authority capability assignments, enabling a new unbounded minter."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x2D833EF0B55a7578e6F0F86FBF29674e4a250782",
+        "label": "USYC BSC RolesAuthority owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "eoa:bsc:0x2d833ef0b55a7578e6f0f86fbf29674e4a250782"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "sources": [
+          {
+            "label": "BSC USYC RolesAuthority",
+            "url": "https://bscscan.com/address/0x6b7d54003f73be979cf92bf369432ac534853692#code"
+          }
+        ],
+        "evidence": "At BSC block 109812367, this zero-code EOA owned RolesAuthority 0x6b7d...3692. It could immediately grant or revoke the FundAdmin role and modify authority capability assignments, enabling a new unbounded minter."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x13ff8cabb86edf94a2df4f98773bda4005182dd6",
+        "label": "USYC Ethereum token upgrade owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "eoa:ethereum:0x13ff8cabb86edf94a2df4f98773bda4005182dd6"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "sources": [
+          {
+            "label": "Ethereum USYC implementation",
+            "url": "https://eth.blockscout.com/address/0xbf0f2f3aad6b99893d80c550fbacec915545eb92"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, this zero-code EOA was token owner. The UUPS implementation's _authorizeUpgrade is onlyOwner, so the account could replace mint logic immediately with no on-chain delay. The current implementation still requires minterAllowance and does not give owner a direct mint path by itself."
+      },
+      {
+        "chain": "bsc",
+        "address": "0xcd636d955a95385ec5e2776b167b92e89ef6f70e",
+        "label": "USYC BSC token upgrade owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "eoa:bsc:0xcd636d955a95385ec5e2776b167b92e89ef6f70e"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "sources": [
+          {
+            "label": "BSC USYC implementation",
+            "url": "https://bscscan.com/address/0x191fb6f3ba332f1b8789caf67abbaba56147445b#code"
+          }
+        ],
+        "evidence": "At BSC block 109812367, this zero-code EOA was token owner. The UUPS implementation's _authorizeUpgrade is onlyOwner, so the account could replace mint logic immediately with no on-chain delay. The current implementation still requires minterAllowance and does not give owner a direct mint path by itself."
+      },
+      {
+        "chain": "solana",
+        "address": "DZ7j2YLDq7847t2HtCWaDQUTpLJ4BinPGsY8w9Aai63y",
+        "label": "USYC Solana mint authority PDA and Permissions program",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "failureDomainKeys": [
+          "program:solana:emfvubr8rre2f7snqddypzqw7kgbusvtxg7nx93ywadm"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "sources": [
+          {
+            "label": "Official USYC smart contracts",
+            "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
+          },
+          {
+            "label": "Solana USYC mint",
+            "url": "https://solscan.io/token/7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn"
+          },
+          {
+            "label": "Solana USYC Teller and Permissions program",
+            "url": "https://solscan.io/account/EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm"
+          }
+        ],
+        "evidence": "At Solana slot 432714278, Token-2022 mint and freeze authority were this PDA, controlled by the officially documented EMfvu...YwAdm Teller and Permissions program. The deployed binary exposes ForceMint, SetMinterAllowance, IncreaseMinterAllowance, DecreaseMinterAllowance, and SetTellerMinterAllowance. Permission accounts govern operational callers; their off-chain custody and threshold identities remain undisclosed."
+      },
+      {
+        "chain": "solana",
+        "address": "P3S7WBL3BviBuhW5HYtm8aicQQcivhJCs1Ewq9Xvb7B",
+        "label": "USYC Solana program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "eoa:solana:p3s7wbl3bvibuhw5hytm8aicqqcivhjcs1ewq9xvb7b"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "sources": [
+          {
+            "label": "Solana USYC Teller and Permissions program",
+            "url": "https://solscan.io/account/EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm"
+          },
+          {
+            "label": "Solana USYC ProgramData",
+            "url": "https://solscan.io/account/DwbKhT65kW49dw6e3cjz1qwhkm2akDehGsraLBau7s7M"
+          }
+        ],
+        "evidence": "At Solana slot 432714278, ProgramData DwbK...s7M retained this system-owned single-account upgrade authority. It could replace the mint and permissions program immediately, with no on-chain delay."
+      },
+      {
+        "label": "USYC deployment-wide immediate upgrade authorities",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "eoa:ethereum:0x13ff8cabb86edf94a2df4f98773bda4005182dd6",
+          "eoa:bsc:0xcd636d955a95385ec5e2776b167b92e89ef6f70e",
+          "eoa:solana:p3s7wbl3bvibuhw5hytm8aicqqcivhjcs1ewq9xvb7b"
+        ],
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Ethereum USYC implementation",
+            "url": "https://eth.blockscout.com/address/0xbf0f2f3aad6b99893d80c550fbacec915545eb92"
+          },
+          {
+            "label": "BSC USYC implementation",
+            "url": "https://bscscan.com/address/0x191fb6f3ba332f1b8789caf67abbaba56147445b#code"
+          },
+          {
+            "label": "Solana USYC Teller and Permissions program",
+            "url": "https://solscan.io/account/EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm"
+          }
+        ],
+        "evidence": "This umbrella registry record preserves three independent immediate upgrade domains solely because the current upgradeability schema accepts one controlRef. It does not represent one common signer or quorum: Ethereum owner 0x13ff...dd6, BSC owner 0xcd63...f70e, and Solana program upgrader P3S7...vb7B are separate keys."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "USYC docs",
-          "url": "https://usyc.docs.hashnote.com/"
+          "label": "Official USYC smart contracts",
+          "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
         },
         {
-          "label": "Ethereum: USYC token contract",
+          "label": "Ethereum USYC token",
           "url": "https://eth.blockscout.com/address/0x136471a34f6ef19fe571effc1ca711fdb8e49f2b"
+        },
+        {
+          "label": "Ethereum USYC RolesAuthority",
+          "url": "https://eth.blockscout.com/address/0x902d906b8d988092213be799b18bd2cbd64f808c"
+        },
+        {
+          "label": "BSC USYC token",
+          "url": "https://bscscan.com/address/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311#code"
+        },
+        {
+          "label": "BSC USYC RolesAuthority",
+          "url": "https://bscscan.com/address/0x6b7d54003f73be979cf92bf369432ac534853692#code"
+        },
+        {
+          "label": "Solana USYC mint",
+          "url": "https://solscan.io/token/7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn"
+        },
+        {
+          "label": "Solana USYC Teller and Permissions program",
+          "url": "https://solscan.io/account/EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm"
         }
       ],
-      "evidence": "Ethereum and BSC owner() confirmed as EOAs at blocks 25294716 and 103622902; eth_getCode returns 0x (no bytecode) on both. Solana mint authority is DZ7j2YL (issuer-controlled PDA of BPFLoaderUpgradeable program). EOA ownership on main chains is expected for enterprise MPC/HSM custody and corroborates the issuer-operated model; no permissionless mint route exists.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At exact cutoff Ethereum block 25526129, six accounts had uint256.max minter allowance: Teller 0xeE35..., TokenMinterV2 0xfd78..., TokenManagerProxy 0x6A41..., PriceReporterProxy 0x9fde..., FundAdmin 0xDbE0..., and EOA 0x85fB.... At BSC block 109812367, TokenMinterV2 0xfd78... and EOA 0x85fB... had uint256.max allowance. The shared FundAdmin could immediately set new max allowances; chain-local RolesAuthority-owner EOAs could change FundAdmin permissions. Ethereum and BSC UUPS implementations had separate no-delay token-owner EOAs. At Solana slot 432714278, the mint/freeze PDA was controlled by the documented Teller and Permissions program, whose ProgramData retained one no-delay upgrade EOA. No source supports the prior MPC/HSM custody assertion, so it is not repeated.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13"
     }
   },
   "deploymentModel": "native-multichain",
