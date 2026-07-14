@@ -122,7 +122,7 @@ const OverlaySourceSchema = z
 const MechanismReviewOverlaySchema = z
   .object({
     assetId: z.string().min(1),
-    archetype: z.enum(["cdp", "synthetic-delta-neutral", "algorithmic", "rwa-credit-fund"]),
+    archetype: z.enum(["cdp", "synthetic-delta-neutral", "algorithmic", "rwa-credit-fund", "fiat-cash", "tbill"]),
     reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     sources: z.array(OverlaySourceSchema).min(1),
     notes: z.string().min(1),
@@ -158,7 +158,7 @@ const MechanismReviewOverlayFileSchema = z
     }
   });
 
-type MechanismReviewOverlay = z.infer<typeof MechanismReviewOverlaySchema>;
+export type MechanismReviewOverlay = z.infer<typeof MechanismReviewOverlaySchema>;
 
 // Component fields (camelCase) per archetype; numeric metric fields separate.
 const OVERLAY_ARCHETYPE_COMPONENTS: Record<MechanismReviewOverlay["archetype"], readonly string[]> = {
@@ -194,6 +194,12 @@ const OVERLAY_ARCHETYPE_COMPONENTS: Record<MechanismReviewOverlay["archetype"], 
     "custody",
     "recovery",
   ],
+  // Fiat-cash and tbill components are compiler-bounded by design; a curated
+  // overlay may claim them only under the owner-approved evidence standard
+  // (see the FORGE owner decision packet). Until such overlays exist this
+  // path is inert and the built bounded review stands.
+  "fiat-cash": ["claimAndSegregation", "custodyContinuity", "assuranceAndReconciliation"],
+  tbill: ["fundClaimAndSeniority", "navValuation", "durationAndLiquidity", "lossRecoveryDesign"],
 };
 
 const OVERLAY_ARCHETYPE_METRICS: Record<MechanismReviewOverlay["archetype"], readonly string[]> = {
@@ -201,13 +207,18 @@ const OVERLAY_ARCHETYPE_METRICS: Record<MechanismReviewOverlay["archetype"], rea
   "synthetic-delta-neutral": ["hedgeCoverageRatio", "marginBufferPct", "lossAbsorptionShare"],
   algorithmic: ["exogenousBackingShare", "reflexiveBackingShare", "contractionCapacityRatio"],
   "rwa-credit-fund": ["weightedAverageMaturityDays", "valuationCadenceDays"],
+  "fiat-cash": [],
+  tbill: [],
 };
 
 function kebabCase(value: string): string {
   return value.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
 }
 
-function expandOverlayReview(overlay: MechanismReviewOverlay): V9MechanismRiskReview {
+export function expandOverlayReview(
+  overlay: MechanismReviewOverlay,
+  fallbackReview?: V9MechanismRiskReview | null,
+): V9MechanismRiskReview {
   const componentKeys = OVERLAY_ARCHETYPE_COMPONENTS[overlay.archetype];
   const metricKeys = OVERLAY_ARCHETYPE_METRICS[overlay.archetype];
   for (const key of Object.keys(overlay.components)) {
@@ -225,17 +236,23 @@ function expandOverlayReview(overlay: MechanismReviewOverlay): V9MechanismRiskRe
       throw new Error(`Unknown ${overlay.archetype} mechanism metric in overlay ${overlay.assetId}: ${key}`);
     }
   }
+  const fallbackComponents =
+    fallbackReview && fallbackReview.archetype === overlay.archetype
+      ? (fallbackReview as unknown as Record<string, V9MechanismFactV1>)
+      : null;
   const review: Record<string, unknown> = { archetype: overlay.archetype, ...overlay.metrics };
   if (overlay.archetype === "synthetic-delta-neutral") {
     review.venueShares = overlay.venueShares ?? [];
   }
   for (const componentField of componentKeys) {
     const curated = overlay.components[componentField];
-    // A component the curated review does not evidence stays bounded-unknown;
-    // serial mechanism components are never published as missing.
+    // A component the curated review does not evidence keeps the built
+    // review's fact when one exists (e.g. PoR-derived assurance), otherwise
+    // stays bounded-unknown; serial mechanism components are never published
+    // as missing.
     review[componentField] = curated
       ? knownFact(kebabCase(componentField), curated.quality)
-      : boundedFact(kebabCase(componentField), true);
+      : (fallbackComponents?.[componentField] ?? boundedFact(kebabCase(componentField), true));
   }
   return V9MechanismRiskReviewSchema.parse(review);
 }
@@ -263,7 +280,15 @@ export function buildSafetyScoreV9MechanismReview(
   archetype: string,
 ): V9MechanismRiskReview | null {
   const overlay = MECHANISM_REVIEW_OVERLAYS.get(meta.id);
-  if (overlay && overlay.archetype === archetype) return expandOverlayReview(overlay);
+  if (overlay && overlay.archetype === archetype) {
+    const fallbackReview =
+      archetype === "fiat-cash"
+        ? buildFiatCashReview(fixedInput, meta)
+        : archetype === "tbill"
+          ? buildTbillReview(fixedInput, meta)
+          : null;
+    return expandOverlayReview(overlay, fallbackReview);
+  }
   if (archetype === "fiat-cash") return buildFiatCashReview(fixedInput, meta);
   if (archetype === "tbill") return buildTbillReview(fixedInput, meta);
   return null;
