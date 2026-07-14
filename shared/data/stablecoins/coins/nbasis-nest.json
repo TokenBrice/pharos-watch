@@ -136,16 +136,68 @@
   "reserves": [
     {
       "name": "Superstate USCC cash-and-carry fund",
-      "pct": 64,
+      "pct": 79.6368,
       "risk": "low"
     },
     {
       "name": "Superstate USTB Treasury Fund",
-      "pct": 36,
+      "pct": 18.9772,
+      "risk": "very-low",
+      "coinId": "ustb-superstate",
+      "depType": "collateral"
+    },
+    {
+      "name": "Liquid USDC balances",
+      "pct": 1.0463,
       "risk": "low",
-      "coinId": "ustb-superstate"
+      "coinId": "usdc-circle",
+      "depType": "collateral"
+    },
+    {
+      "name": "pUSD liquid balance",
+      "pct": 0.3396,
+      "risk": "high",
+      "coinId": "pusd-plume",
+      "depType": "collateral"
+    },
+    {
+      "name": "Liquid USDT balances",
+      "pct": 0.0001,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Nest Basis Vault positions API",
+        "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions"
+      },
+      {
+        "label": "Nest Basis Vault price-update API",
+        "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/last-price-update"
+      }
+    ],
+    "rationale": "The official positions API reported $23,354,538.89 of USCC, $5,565,328.70 of USTB, $306,841.67 of USDC, $99,601.11 of pUSD, and $21.35 of USDT-family balances. Normalizing every positive active position through the repository adapter's grouping logic produces the exact four-decimal fallback composition; pending transactions are outside that adapter's active-position scope.",
+    "compositionBasis": "Positive Nest Basis Vault API position values grouped with the nest-vault-positions adapter semantics",
+    "compositionAsOf": "2026-07-13",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Every positive active API position is identified. USCC remains an identified exogenous fund share rather than a tracked stablecoin dependency.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Superstate USCC cash-and-carry fund",
+        "pct": 79.6368,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USCC is an identified Superstate cash-and-carry fund share with no active tracked stablecoin record."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "nest-vault-positions",
     "version": 1,

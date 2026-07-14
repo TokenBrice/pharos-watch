@@ -17,6 +17,40 @@
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "astherus-staked-usdf",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "asUSDF is a NAV-accreting staking wrapper minted from deposited USDF and withdrawn back to USDF through Aster's queue, not a borrower debt market with oracle-triggered collateral liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Aster documents asUSDF as the yield-bearing wrapper received by staking USDF. Minting and withdrawal change wrapper shares and return the upstream USDF asset; asUSDF does not create collateralized borrower positions or expose collateral-health liquidation branches of its own.",
+      "sources": [
+        {
+          "label": "Aster: mint asUSDF",
+          "url": "https://docs.asterdex.com/product/aster-earn/mint-asusdf"
+        },
+        {
+          "label": "Aster USDF and asUSDF tutorials",
+          "url": "https://docs.asterdex.com/product/usdf-stablecoin/tutorials"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aster: mint asUSDF",
+        "url": "https://docs.asterdex.com/product/aster-earn/mint-asusdf"
+      },
+      {
+        "label": "Aster USDF and asUSDF tutorials",
+        "url": "https://docs.asterdex.com/product/usdf-stablecoin/tutorials"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
