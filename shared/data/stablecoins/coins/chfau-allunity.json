@@ -196,13 +196,6 @@
   ],
   "deploymentModel": "single-chain",
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "CHF bank deposits (CRR credit institutions, EU)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

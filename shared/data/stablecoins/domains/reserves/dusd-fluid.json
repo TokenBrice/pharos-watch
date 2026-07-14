@@ -44,8 +44,8 @@
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "structured",
-    "rehypothecation": "prohibited",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",

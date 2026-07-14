@@ -215,18 +215,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Naira deposits at licensed Nigerian commercial banks",
-      "pct": 54,
-      "risk": "medium"
-    },
-    {
-      "name": "Naira money-market funds and short-term FGN treasury bills",
-      "pct": 46,
-      "risk": "medium"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

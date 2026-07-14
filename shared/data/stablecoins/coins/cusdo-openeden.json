@@ -169,15 +169,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "USDO wrapper shares",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "usdo-openeden",
-      "depType": "wrapper"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "OpenEden cUSDO wrapper",
     "yieldType": "nav-appreciation"

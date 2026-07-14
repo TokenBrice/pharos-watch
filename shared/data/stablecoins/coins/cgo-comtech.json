@@ -166,13 +166,6 @@
     }
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Physical gold (24K 999.9, Transguard vaults UAE)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "contracts": [
     {
       "chain": "xdc",

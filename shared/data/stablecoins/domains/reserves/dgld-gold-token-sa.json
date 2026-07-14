@@ -1,0 +1,75 @@
+{
+  "id": "dgld-gold-token-sa",
+  "reserves": [
+    {
+      "name": "Allocated LBMA Good Delivery PAMP gold (Swiss vaults)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Allocated LBMA-certified PAMP physical gold",
+      "riskFactors": [
+        "custody",
+        "liquidity",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Gold Token SA DGLD Litepaper 2025",
+        "url": "https://s3.eu-central-1.amazonaws.com/gtsa.s8/dgld/DGLD-LitePaper_2025.docx.pdf"
+      },
+      {
+        "label": "DGLD public gold bar mapper",
+        "url": "https://explorer.dgld.ch/"
+      }
+    ],
+    "rationale": "Gold Token SA states that each DGLD represents one fine troy ounce of allocated LBMA-certified PAMP gold in MKS PAMP Swiss vaults. Each token or fraction is linked to numbered bars through the public mapper, supporting a single 100% allocated-gold reserve slice.",
+    "compositionBasis": "Issuer litepaper and public bar-mapping architecture",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The mapper provides bar-level verification, but the static record does not reproduce changing individual bar weights or identifiers.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Allocated LBMA Good Delivery PAMP gold (Swiss vaults)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Allocated physical gold is external reserve backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "MKS PAMP SA",
+        "role": "custodian",
+        "sharePct": 100,
+        "jurisdiction": "Switzerland"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Gold Token SA DGLD Litepaper 2025",
+        "url": "https://s3.eu-central-1.amazonaws.com/gtsa.s8/dgld/DGLD-LitePaper_2025.docx.pdf"
+      },
+      {
+        "label": "DGLD public gold bar mapper",
+        "url": "https://explorer.dgld.ch/"
+      }
+    ],
+    "uncertainty": "The issuer states that allocated gold ownership remains off balance sheet of Gold Token SA and MKS PAMP and is preserved in insolvency. The public litepaper does not explicitly state a rehypothecation prohibition."
+  }
+}
