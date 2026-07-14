@@ -120,56 +120,102 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "GRAMG is issuer-minted by Token Teknoloji against physical gold reserves; the Avalanche token owner is an EOA shared with EUROT and GRAMS.",
+    "summary": "GRAMG uses direct, immutable StableCoin deployments on Avalanche and Polygon. On Avalanche, EOA 0xff80b391b286887d446b1124820f87d5b049b4fb is both owner and supply manager. On Polygon, EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077 is both owner and supply manager, while the Avalanche EOA is the live proposed owner and can claim ownership immediately. Each current owner or supply manager can mint without an on-chain supply cap.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 90233120,
+      "sources": [
+        {
+          "label": "GRAMG Avalanche verified source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+        },
+        {
+          "label": "GRAMG Polygon contract",
+          "url": "https://polygonscan.com/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9#code"
+        },
+        {
+          "label": "Avalanche C-Chain RPC",
+          "url": "https://api.avax.network/ext/bc/C/rpc"
+        },
+        {
+          "label": "Polygon dRPC",
+          "url": "https://polygon.drpc.org"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "Token Teknoloji issuer-operated mint authority",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "sources": [
-          {
-            "label": "Token Teknoloji GRAMG",
-            "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
-          }
-        ],
-        "evidence": "Token Teknoloji materials describe issuer-managed reserve-token mint/redeem mechanics for GRAMG."
-      },
-      {
         "chain": "avalanche",
-        "address": "0xff80B391B286887d446B1124820F87D5b049b4fB",
-        "label": "GRAMG Avalanche token owner",
-        "role": "minter-admin",
+        "address": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "label": "GRAMG Avalanche supply-manager and owner EOA",
+        "role": "direct-minter",
         "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "StableCoin.mint(uint256) has no aggregate supply ceiling and permits either supplyManager() or owner() to mint.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 90233120,
+        "failureDomainKeys": [
+          "avalanche:0xff80b391b286887d446b1124820f87d5b049b4fb"
+        ],
         "sources": [
           {
-            "label": "Avalanche GRAMG token",
-            "url": "https://snowtrace.io/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+            "label": "GRAMG Avalanche verified source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
           }
         ],
-        "evidence": "Avalanche owner() still returns 0xff80B391B286887d446B1124820F87D5b049b4fB at block 87749923; code read returned no contract bytecode (EOA confirmed)."
+        "evidence": "At Avalanche block 90233120, owner() and supplyManager() both returned 0xff80b391b286887d446b1124820f87d5b049b4fb, proposedOwner() was zero, and eth_getCode on the authority returned 0x. Verified StableCoin source permits the owner or supply manager to call uncapped mint(uint256)."
       },
       {
         "chain": "polygon",
         "address": "0xd61c0129f6c35a675db6e2a067b31e75b2573077",
-        "label": "GRAMG Polygon token owner",
+        "label": "GRAMG Polygon supply-manager and owner EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "StableCoin.mint(uint256) has no aggregate supply ceiling and permits either supplyManager() or owner() to mint.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 90179923,
+        "failureDomainKeys": [
+          "polygon:0xd61c0129f6c35a675db6e2a067b31e75b2573077"
+        ],
+        "sources": [
+          {
+            "label": "GRAMG Polygon contract",
+            "url": "https://polygonscan.com/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9#code"
+          }
+        ],
+        "evidence": "At Polygon block 90179923, owner() and supplyManager() both returned 0xd61c0129f6c35a675db6e2a067b31e75b2573077 and eth_getCode returned 0x. The runtime hash matched Avalanche exactly for this asset, and verified StableCoin source permits the owner or supply manager to call uncapped mint(uint256)."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "label": "GRAMG Polygon pending-owner EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 90179923,
+        "failureDomainKeys": [
+          "polygon:0xff80b391b286887d446b1124820f87d5b049b4fb"
+        ],
         "sources": [
           {
-            "label": "PolygonScan GRAMG token",
-            "url": "https://polygonscan.com/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+            "label": "GRAMG Polygon contract",
+            "url": "https://polygonscan.com/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9#code"
           }
         ],
-        "evidence": "Polygon owner() returned 0xd61c0129f6c35a675db6e2a067b31e75b2573077 at block 88323540; eth_getCode returned 0x (EOA confirmed). Same EOA as EUROT/GRAMS Polygon; all three Token Teknoloji tokens share the same Polygon owner."
+        "evidence": "At Polygon block 90179923, proposedOwner() returned 0xff80b391b286887d446b1124820f87d5b049b4fb. Verified Claimable ownership lets this EOA call claimOwnership without another current-owner action, after which owner() can mint or replace the supply manager immediately. eth_getCode returned 0x."
       }
     ],
     "review": {
@@ -179,9 +225,9 @@
           "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
         }
       ],
-      "evidence": "Avalanche block 87749923: owner() = 0xff80B391B286887d446B1124820F87D5b049b4fB (EOA confirmed). Polygon block 88323540: owner() = 0xd61c0129f6c35a675db6e2a067b31e75b2573077 (EOA confirmed). Polygon blocker resolved; all mint-capable surfaces confirmed across both chains.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Avalanche block 90233120 and Polygon block 90179923, both GRAMG deployments were direct contracts with zero EIP-1967 implementation, admin, and beacon slots. Their runtime hashes matched at 0xffab59d79ea7dc35c20554c87d8fbc7e0b0ec34a81001f9f412dc5ba18d8b8f8. Avalanche owner and supply manager were EOA 0xff80b391b286887d446b1124820f87d5b049b4fb. Polygon owner and supply manager were EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077, with the Avalanche EOA staged as proposed owner. Verified source permits each current owner or supply manager to mint uncapped supply and permits the proposed owner to claim Polygon ownership without delay.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13"
     }
   },
   "deploymentModel": "native-multichain",

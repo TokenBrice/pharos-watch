@@ -73,56 +73,102 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "EUROT is issuer-minted by Token Teknoloji; the Avalanche token owner is an EOA shared with the reviewed Token Teknoloji metal-token deployments.",
+    "summary": "EUROT uses direct, immutable StableCoin deployments on Avalanche and Polygon. On Avalanche, EOA 0xff80b391b286887d446b1124820f87d5b049b4fb is both owner and supply manager. On Polygon, EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077 is both owner and supply manager, while the Avalanche EOA is the live proposed owner and can claim ownership immediately. Each current owner or supply manager can mint without an on-chain supply cap.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 90233120,
+      "sources": [
+        {
+          "label": "EUROT Avalanche verified source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        },
+        {
+          "label": "EUROT Polygon contract",
+          "url": "https://polygonscan.com/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c#code"
+        },
+        {
+          "label": "Avalanche C-Chain RPC",
+          "url": "https://api.avax.network/ext/bc/C/rpc"
+        },
+        {
+          "label": "Polygon dRPC",
+          "url": "https://polygon.drpc.org"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "Token Teknoloji issuer-operated mint authority",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "sources": [
-          {
-            "label": "Token Teknoloji EUROT",
-            "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
-          }
-        ],
-        "evidence": "Token Teknoloji materials describe issuer-managed mint and burn for reserve tokens."
-      },
-      {
         "chain": "avalanche",
-        "address": "0xff80B391B286887d446B1124820F87D5b049b4fB",
-        "label": "EUROT Avalanche token owner",
-        "role": "minter-admin",
+        "address": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "label": "EUROT Avalanche supply-manager and owner EOA",
+        "role": "direct-minter",
         "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "StableCoin.mint(uint256) has no aggregate supply ceiling and permits either supplyManager() or owner() to mint.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 90233120,
+        "failureDomainKeys": [
+          "avalanche:0xff80b391b286887d446b1124820f87d5b049b4fb"
+        ],
         "sources": [
           {
-            "label": "Avalanche EUROT token",
-            "url": "https://snowtrace.io/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+            "label": "EUROT Avalanche verified source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
           }
         ],
-        "evidence": "Avalanche owner() still returns 0xff80B391B286887d446B1124820F87D5b049b4fB at block 87749923; code read returned no contract bytecode (EOA confirmed)."
+        "evidence": "At Avalanche block 90233120, owner() and supplyManager() both returned 0xff80b391b286887d446b1124820f87d5b049b4fb, proposedOwner() was zero, and eth_getCode on the authority returned 0x. Verified StableCoin source permits the owner or supply manager to call uncapped mint(uint256)."
       },
       {
         "chain": "polygon",
         "address": "0xd61c0129f6c35a675db6e2a067b31e75b2573077",
-        "label": "EUROT Polygon token owner",
+        "label": "EUROT Polygon supply-manager and owner EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "StableCoin.mint(uint256) has no aggregate supply ceiling and permits either supplyManager() or owner() to mint.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 90179923,
+        "failureDomainKeys": [
+          "polygon:0xd61c0129f6c35a675db6e2a067b31e75b2573077"
+        ],
+        "sources": [
+          {
+            "label": "EUROT Polygon contract",
+            "url": "https://polygonscan.com/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c#code"
+          }
+        ],
+        "evidence": "At Polygon block 90179923, owner() and supplyManager() both returned 0xd61c0129f6c35a675db6e2a067b31e75b2573077 and eth_getCode returned 0x. The runtime hash matched Avalanche exactly for this asset, and verified StableCoin source permits the owner or supply manager to call uncapped mint(uint256)."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xff80b391b286887d446b1124820f87d5b049b4fb",
+        "label": "EUROT Polygon pending-owner EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 90179923,
+        "failureDomainKeys": [
+          "polygon:0xff80b391b286887d446b1124820f87d5b049b4fb"
+        ],
         "sources": [
           {
-            "label": "PolygonScan EUROT token",
-            "url": "https://polygonscan.com/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+            "label": "EUROT Polygon contract",
+            "url": "https://polygonscan.com/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c#code"
           }
         ],
-        "evidence": "Polygon owner() returned 0xd61c0129f6c35a675db6e2a067b31e75b2573077 at block 88323540; eth_getCode returned 0x (EOA confirmed). Different EOA from Avalanche owner; both are issuer-operated."
+        "evidence": "At Polygon block 90179923, proposedOwner() returned 0xff80b391b286887d446b1124820f87d5b049b4fb. Verified Claimable ownership lets this EOA call claimOwnership without another current-owner action, after which owner() can mint or replace the supply manager immediately. eth_getCode returned 0x."
       }
     ],
     "review": {
@@ -132,9 +178,9 @@
           "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
         }
       ],
-      "evidence": "Avalanche block 87749923: owner() = 0xff80B391B286887d446B1124820F87D5b049b4fB (EOA confirmed). Polygon block 88323540: owner() = 0xd61c0129f6c35a675db6e2a067b31e75b2573077 (EOA confirmed). Polygon blocker resolved; all mint-capable surfaces confirmed across both chains.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Avalanche block 90233120 and Polygon block 90179923, both EUROT deployments were direct contracts with zero EIP-1967 implementation, admin, and beacon slots. Their runtime hashes matched at 0x45c952bb677029fdf5df5248fe477025904a47d39ff185773834541e8e520f5c. Avalanche owner and supply manager were EOA 0xff80b391b286887d446b1124820f87d5b049b4fb. Polygon owner and supply manager were EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077, with the Avalanche EOA staged as proposed owner. Verified source permits each current owner or supply manager to mint uncapped supply and permits the proposed owner to claim Polygon ownership without delay.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13"
     }
   },
   "chainTier": "mature-alt-l1",
