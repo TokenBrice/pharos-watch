@@ -52,6 +52,7 @@ export interface DexRouteSourceCapability {
     | "direct-orderbook"
     | "constant-product"
     | "weighted-constant-mean"
+    | "stableswap"
     | "curve-stableswap-retained"
     | "amm-tvl-proxy"
     | "synthetic-fallback";
@@ -107,6 +108,26 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
     scoreEligible: true,
     limitations: ["Requires complete positive normalized weights and supports direct token-to-token swaps only."],
+  },
+  {
+    id: "curve-stableswap-exact",
+    sourceFamilies: ["direct_api"],
+    model: "stableswap",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "exact",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "producer-run",
+    outputEvidenceKind: "reserve-based-amm-simulation",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin", "collateral"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: [
+      "Requires exact per-token balances, decimals, addresses, fee, and the pool amplification coefficient.",
+      "Assumes the plain StableSwap invariant; metapools and rate-scaled variants must be captured against their underlying balances.",
+    ],
   },
   {
     id: "cg-tickers-orderbook-depth-2pct",
@@ -305,6 +326,9 @@ function capabilityForPool(pool: P4DexRoutePoolInput): DexRouteSourceCapability 
   if (pool.extra?.ammExecutionModel?.invariant === "weighted-constant-mean") {
     return capabilityById("balancer-weighted-constant-mean-exact");
   }
+  if (pool.extra?.ammExecutionModel?.invariant === "stableswap") {
+    return capabilityById("curve-stableswap-exact");
+  }
   if (pool.extra?.measurement?.synthetic === true) {
     return capabilityById("synthetic-or-fallback-shaped");
   }
@@ -384,6 +408,11 @@ function validateAmmExecutionModel(
   }
   if (model.invariant === "constant-product") {
     if (model.source !== "raydium" || model.tokens.length !== 2) issues.push("invalid-constant-product-model");
+  } else if (model.invariant === "stableswap") {
+    if (model.source !== "curve") issues.push("invalid-stableswap-model-source");
+    if (model.amplification == null || !Number.isFinite(model.amplification) || model.amplification <= 0) {
+      issues.push("invalid-amplification");
+    }
   } else {
     if (model.source !== "balancer") issues.push("invalid-weighted-model-source");
     const weights = model.tokens.map((token) => token.weight);
@@ -397,6 +426,53 @@ function validateAmmExecutionModel(
   return [...new Set(issues)];
 }
 
+/** StableSwap invariant D for balances x under amplification A (plain paper convention). */
+function stableswapInvariantD(balances: readonly number[], amplification: number): number {
+  const n = balances.length;
+  const sum = balances.reduce((total, balance) => total + balance, 0);
+  if (sum <= 0) return 0;
+  const ann = amplification * n ** n;
+  let d = sum;
+  for (let iteration = 0; iteration < 256; iteration++) {
+    let dProduct = d;
+    for (const balance of balances) dProduct = (dProduct * d) / (balance * n);
+    const previous = d;
+    d = ((ann * sum + dProduct * n) * d) / ((ann - 1) * d + (n + 1) * dProduct);
+    if (Math.abs(d - previous) <= 1e-10 * d) return d;
+  }
+  return d;
+}
+
+/** Output-token balance that keeps the invariant after the input balance moves to newInputBalance. */
+function stableswapOutputBalance(
+  balances: readonly number[],
+  inputIndex: number,
+  outputIndex: number,
+  newInputBalance: number,
+  amplification: number,
+): number {
+  const n = balances.length;
+  const d = stableswapInvariantD(balances, amplification);
+  const ann = amplification * n ** n;
+  let c = d;
+  let sum = 0;
+  for (let index = 0; index < n; index++) {
+    if (index === outputIndex) continue;
+    const balance = index === inputIndex ? newInputBalance : balances[index]!;
+    sum += balance;
+    c = (c * d) / (balance * n);
+  }
+  c = (c * d) / (ann * n);
+  const b = sum + d / ann;
+  let y = d;
+  for (let iteration = 0; iteration < 256; iteration++) {
+    const previous = y;
+    y = (y * y + c) / (2 * y + b - d);
+    if (Math.abs(y - previous) <= 1e-10 * Math.max(1, y)) return y;
+  }
+  return y;
+}
+
 function simulateAmmOutput(model: DexAmmExecutionModel, outputTokenIndex: number, inputAmount: number): number {
   const input = model.tokens[model.trackedTokenIndex]!;
   const output = model.tokens[outputTokenIndex]!;
@@ -405,6 +481,18 @@ function simulateAmmOutput(model: DexAmmExecutionModel, outputTokenIndex: number
 
   if (model.invariant === "constant-product") {
     return (output.balance * effectiveInput) / (input.balance + effectiveInput);
+  }
+
+  if (model.invariant === "stableswap") {
+    const balances = model.tokens.map((token) => token.balance);
+    const newOutputBalance = stableswapOutputBalance(
+      balances,
+      model.trackedTokenIndex,
+      outputTokenIndex,
+      input.balance + effectiveInput,
+      model.amplification!,
+    );
+    return Math.max(0, output.balance - newOutputBalance);
   }
 
   const inputWeight = input.weight!;
@@ -422,14 +510,23 @@ function executableAmmInputUsd(
   const input = model.tokens[model.trackedTokenIndex]!;
   const output = model.tokens[outputTokenIndex]!;
   const minimumOutputRatio = Math.max(0, 1 - maxCostBps / 10_000);
+  // StableSwap has no simple closed-form spot price; an epsilon trade through
+  // the invariant gives the fee-inclusive marginal ratio deterministically.
+  const stableswapMarginalRatio = () => {
+    const epsilon = Math.max(input.balance * 1e-6, 1e-6);
+    const marginalOutput = simulateAmmOutput(model, outputTokenIndex, epsilon);
+    return ((marginalOutput / epsilon) * output.referencePriceUsd) / input.referencePriceUsd;
+  };
   const marginalOutputRatio =
     model.invariant === "constant-product"
       ? ((output.balance / input.balance) * (1 - model.feeRate) * output.referencePriceUsd) / input.referencePriceUsd
-      : ((output.balance / input.balance) *
-          (input.weight! / output.weight!) *
-          (1 - model.feeRate) *
-          output.referencePriceUsd) /
-        input.referencePriceUsd;
+      : model.invariant === "stableswap"
+        ? stableswapMarginalRatio()
+        : ((output.balance / input.balance) *
+            (input.weight! / output.weight!) *
+            (1 - model.feeRate) *
+            output.referencePriceUsd) /
+          input.referencePriceUsd;
   if (!Number.isFinite(marginalOutputRatio) || marginalOutputRatio + 1e-12 < minimumOutputRatio) return 0;
 
   const qualifies = (inputUsd: number): boolean => {

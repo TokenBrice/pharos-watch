@@ -194,7 +194,7 @@ describe("derived supply-model route observations", () => {
       stablecoinId: "dai-makerdao",
       routeFamily: "psm-swap",
       accessModel: "permissionless-onchain",
-      executionModel: "deterministic",
+      executionModel: "deterministic-onchain",
       outputAssetType: "stable-single",
     };
     const observation = deriveSupplyModelExitRouteObservation(daiEntry, now);
