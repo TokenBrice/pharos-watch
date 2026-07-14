@@ -4,9 +4,6 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { parseWorkerDeploymentArgs } from "../../.github/scripts/deploy-worker-version.mjs";
-import { parseWranglerRetryArgs } from "../../.github/scripts/retry-wrangler-control-plane.mjs";
-import { parseWorkflowWaitArgs } from "../../.github/scripts/wait-for-workflow-job.mjs";
 import { parseWorkerDeployGuardArgs } from "../ci/guard-worker-deploy.mjs";
 import { syncJson } from "../lib/sync-from-api";
 import {
@@ -16,7 +13,6 @@ import {
 import { parseFreezeStablecoinArgs } from "../maintenance/freeze-stablecoin";
 import { parseZoneCachePurgeArgs } from "../maintenance/purge-cloudflare-zone-cache.mjs";
 import { parseTelegramRegistrationArgs } from "../maintenance/register-telegram";
-import { parsePagesRollbackArgs } from "../maintenance/rollback-pages-deployment.mjs";
 import { parseDepegSyncArgs } from "../maintenance/sync-depeg-events";
 import { parseDigestSyncArgs } from "../maintenance/sync-digests";
 import {
@@ -99,51 +95,44 @@ describe("priority operator CLI parsers", () => {
     expect(() => parseFreezeStablecoinArgs(["--coin", "usdc-circle"])).toThrow("Unknown option");
   });
 
-  it("strictly parses rollback and release-deploy guards", () => {
+  it("strictly parses Cloudflare mutation and release-deploy guards", () => {
     expect(parseZoneCachePurgeArgs(["--zone", "PHAROS.WATCH", "--dry-run"])).toEqual({
       dryRun: true,
       help: false,
       zone: "pharos.watch",
     });
-    expect(parsePagesRollbackArgs(["--dry-run"])).toEqual({ dryRun: true, help: false });
-    expect(parseWorkerDeploymentArgs(["--version-id", "v1", "--name", "api", "--dry-run"]))
-      .toMatchObject({ dryRun: true, name: "api", versionId: "v1" });
     expect(parseWorkerDeployGuardArgs(["--help"])).toEqual({ help: true });
     expect(() => parseZoneCachePurgeArgs(["--zone", "one", "--zone", "two"])).toThrow(
       "may only be specified once",
     );
-    expect(() => parsePagesRollbackArgs(["--force"])).toThrow("Unknown option");
-    expect(() => parseWorkerDeploymentArgs(["--dry-run=true"])).toThrow("does not take an argument");
     expect(() => parseWorkerDeployGuardArgs(["production"])).toThrow("Unexpected argument");
   });
 
-  it("allows only the intentional repeated release-marker URL option", () => {
+  it("strictly parses the release-marker verifier", () => {
     expect(
       parseReleaseMarkerArgs([
         "--url", "https://one.test/marker.json",
-        "--url=https://two.test/marker.json",
         "--attempts", "5",
         "--delay-ms", "0",
-        "--stable-count", "3",
       ], {}),
-    ).toMatchObject({ attempts: 5, delayMs: 0, stableCount: 3, urls: [
-      "https://one.test/marker.json",
-      "https://two.test/marker.json",
-    ] });
+    ).toMatchObject({ attempts: 5, delayMs: 0, url: "https://one.test/marker.json" });
     expect(() => parseReleaseMarkerArgs(["--attempts", "5x"], {})).toThrow("must be an integer");
-    expect(() => parseReleaseMarkerArgs(["--stable-count", "0"], {})).toThrow("must be between");
+    expect(() => parseReleaseMarkerArgs(["--url", "one", "--url", "two"], {})).toThrow(
+      "may only be specified once",
+    );
     expect(() => parseReleaseMarkerArgs(["--marker", "one", "--marker", "two"], {})).toThrow(
       "may only be specified once",
     );
   });
 
-  it("requires an uninterrupted release-marker stability window", async () => {
+  it("accepts the first cache-busted matching release marker", async () => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-release-marker-"));
     tempDirs.push(directory);
     const markerPath = join(directory, "marker.json");
     writeFileSync(markerPath, JSON.stringify({ commit: "target" }));
-    const commits = ["target", "target", "old", "target", "target", "target"];
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+    const commits = ["old", "target"];
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      expect(new URL(String(input)).searchParams.get("expected")).toBe("target");
       const commit = commits.shift();
       return new Response(JSON.stringify({ commit }), {
         headers: { "content-type": "application/json" },
@@ -155,40 +144,15 @@ describe("priority operator CLI parsers", () => {
       await waitForReleaseMarker([
         "--url", "https://one.test/marker.json",
         "--marker", markerPath,
-        "--attempts", "6",
+        "--attempts", "2",
         "--delay-ms", "0",
-        "--stable-count", "3",
       ]);
-      expect(fetchMock).toHaveBeenCalledTimes(6);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     } finally {
       fetchMock.mockRestore();
     }
   });
 
-  it("validates workflow-job polling options before network access", () => {
-    expect(parseWorkflowWaitArgs(["--job", "validate / validate", "--attempts", "2", "--sleep-sec", "0"]))
-      .toMatchObject({ attempts: 2, jobName: "validate / validate", sleepSec: 0 });
-    expect(() => parseWorkflowWaitArgs([])).toThrow("--job is required");
-    expect(() => parseWorkflowWaitArgs(["--job", "validate", "--attempts", "0"])).toThrow(
-      "must be between",
-    );
-    expect(() => parseWorkflowWaitArgs(["--job", "one", "--job", "two"])).toThrow(
-      "may only be specified once",
-    );
-  });
-
-  it("strictly bounds the Wrangler control-plane retry contract", () => {
-    expect(parseWranglerRetryArgs(["--operation", "version-upload", "--attempts", "4"]))
-      .toMatchObject({ attempts: 4, operation: "version-upload" });
-    expect(() => parseWranglerRetryArgs(["--operation", "unknown"])).toThrow("must be deployment-status");
-    expect(() => parseWranglerRetryArgs(["--operation", "deployment-status", "--attempts", "0"]))
-      .toThrow("must be between");
-    expect(() =>
-      parseWranglerRetryArgs(["--operation", "deployment-status", "--operation", "version-upload"]),
-    ).toThrow("may only be specified once");
-    expect(() => parseWranglerRetryArgs(["--operation", "deployment-status", "--unknown"]))
-      .toThrow("Unknown option");
-  });
 });
 
 describe("operator dry-run mutation boundaries", () => {

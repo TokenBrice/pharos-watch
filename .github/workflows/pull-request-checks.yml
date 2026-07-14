@@ -124,3 +124,34 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: /tmp/gitleaks git --no-banner --redact --exit-code 1 --log-opts="--no-merges ${BASE_SHA}..${HEAD_SHA}" .
+
+  pr-gate:
+    name: PR gate
+    if: ${{ always() }}
+    needs:
+      - detect-changes
+      - validate
+      - validate-docs
+      - gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DETECT_RESULT: ${{ needs.detect-changes.result }}
+      DOCS_RESULT: ${{ needs.validate-docs.result }}
+      GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+      VALIDATE_RESULT: ${{ needs.validate.result }}
+    steps:
+      - name: Require the selected validation path and secret scan
+        run: |
+          if [ "${DETECT_RESULT}" != "success" ] || [ "${GITLEAKS_RESULT}" != "success" ]; then
+            echo "Required PR setup failed: detect=${DETECT_RESULT}, gitleaks=${GITLEAKS_RESULT}."
+            exit 1
+          fi
+
+          if { [ "${VALIDATE_RESULT}" = "success" ] && [ "${DOCS_RESULT}" = "skipped" ]; } \
+            || { [ "${VALIDATE_RESULT}" = "skipped" ] && [ "${DOCS_RESULT}" = "success" ]; }; then
+            exit 0
+          fi
+
+          echo "Exactly one validation path must succeed: validate=${VALIDATE_RESULT}, docs=${DOCS_RESULT}."
+          exit 1

@@ -364,11 +364,11 @@ For local/manual use, point it at the intended environment explicitly:
 npx tsx scripts/maintenance/sync-digests.ts --api-url https://ops-api.example.com
 ```
 
-CI now runs digest sync inside `.github/workflows/pages-release.yml`:
+The scheduled/manual Pages refresh runs digest sync inside `.github/workflows/pages-release.yml`:
 
-1. The `pages-release` job fetches `GET /api/digest-archive` once from the selected API environment and writes the normalized JSON directly to `data/digests.json` before `next build`.
-2. In production deploys and scheduled rebuilds, that selected API environment is `vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`; callers can still override it through `api_base_url`.
-3. The scheduled `Rebuild Pages` workflow runs at 08:10 UTC after the 08:05 UTC daily digest slot, with an 08:25 UTC catch-up run for slower digest generation or a missed schedule tick.
+1. When `refresh_data=true`, the `pages-release` job fetches `GET /api/digest-archive` once and writes normalized `data/digests.json` before `next build`. Ordinary code releases use the committed snapshot.
+2. The refresh calls authenticated `https://site-api.pharos.watch` with `SITE_API_SHARED_SECRET`; it does not depend on the public API/WAF lane.
+3. The scheduled `Rebuild Pages` workflow runs once at 08:17 UTC after the 08:05 UTC daily digest slot.
 
 This keeps the Pages build itself network-independent once the digest snapshot has been fetched and avoids hard-coding `https://api.pharos.watch` into the build path.
 
@@ -419,5 +419,5 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Telegram delivery i
 | `src/app/digest/[date]/page.tsx` | Detail page (SSG, JSON-LD, prev/next nav) |
 | `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useDailyDigest()`, `useDigestArchive()`, and `useDigestSnapshot()` |
 | `scripts/maintenance/sync-digests.ts` | Pre-build script: fetches archive → writes `data/digests.json` |
-| `.github/workflows/pages-release.yml` | CI Pages path: syncs digests, builds Pages export, runs local browser smoke, deploys the verified artifact, and runs live browser smoke |
+| `.github/workflows/pages-release.yml` | CI Pages path: optionally syncs API-backed data, builds/checks one export, deploys it once, and verifies the public release marker |
 | `data/digests.json` | Static digest list for SSG (generated, not hand-edited) |

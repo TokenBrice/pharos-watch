@@ -4,7 +4,7 @@
 
 ## Overview
 
-The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-next`) for linting. The shared validation suite runs in CI on pull requests to `main`, while push/manual production deploys reuse the same validate workflow with deploy-surface-aware conditionals.
+The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-next`) for linting. The shared validation suite runs on pull requests to protected `main`. Post-merge production workflows consume the classifier result and rerun only mutation-adjacent migration or artifact checks.
 
 ## Commands
 
@@ -60,7 +60,7 @@ CI shape:
 
 1. Pull requests run through `.github/workflows/pull-request-checks.yml`. Internal-docs-only diffs run verified-link, source-path, doc-sync, agent-doc-sync, and doc-count checks; other diffs run the reusable validate workflow. The deploy-impact classifier decides whether validation also needs a Pages build, Worker typechecking, or neither. Test-only Pages diffs still run the shared tests but do not request a Pages build or production publish.
 2. `validate` runs the source-owned reduced blocking prebuild set from `scripts/lib/validation-lanes.mjs`, normal Vitest shards, optional Worker runtime typecheck, and optional Pages build/SEO/static copy checks. The reusable workflow invokes the fixed `validate:pages` and `validate:worker` phase entrypoints instead of copying either command sequence into YAML. The scheduled Worker entrypoint suite is covered by the normal Vitest shards and the scheduled/manual critical coverage ratchet, not by `validate:worker`.
-3. Push/manual production deploys reuse the same validate result before mutating D1, promoting Workers, or publishing Pages. During the transition window the deploy caller enables `include_advisory_prebuild: true`, so advisory maintenance checks still run before production mutation while PRs use the slimmer default. Pages build/publish/live-smoke details live in [Deployment Process](./deployment-process.md).
+3. A successful protected merge triggers the production deploy classifier. The deploy workflow does not rerun the full PR suite: Worker mutation keeps a focused migration check and authenticated health proof; Pages publication keeps build-artifact checks and a release-marker proof. Details live in [Deployment Process](./deployment-process.md).
 4. `npm run test:merge-gate` mirrors the deploy-impact validation-lane plan locally and skips cleanly for non-deploy-impacting diffs. Use `MERGE_GATE_DRY_RUN=1` to print the plan without requiring a fresh install. The pre-push hook does not run this heavy gate by default; set `PHAROS_PRE_PUSH_GATE=main` or `PHAROS_PRE_PUSH_GATE=all` when an exact-range local rehearsal is desired.
 5. `npm run test:merge-gate:discover` runs the same deploy-impact command plan for large failure-discovery passes, but keeps advisory prebuild checks opt-in via `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1`. It keeps reduced prebuild and independent postbuild lanes running after failures, skips smoke by default, caps diagnostic fan-out at 3 unless `MERGE_GATE_DISCOVERY_MAX_PARALLEL` is set, and is diagnostic only. GitHub Actions owns the authoritative release gate.
 
@@ -91,7 +91,7 @@ npm run test:profile -- --output /tmp/pharos-src-profile.json -- --dir src
 npm run test:profile -- --output /tmp/pharos-vitest-threads.json --baseline /tmp/pharos-vitest-profile.json -- --pool=threads
 ```
 
-In CI, `npm run test:noncritical` and `npm run coverage:critical` append `--silent=passed-only` unless an explicit `--silent` option is already supplied. Set `PHAROS_CI_VITEST_COMPACT=0` to restore full console output while debugging a CI-only failure. The PR/deploy reusable validate workflow shards `test:noncritical` across two runners and includes critical tests in that normal Vitest lane; local `npm run test:merge-gate` emits the same two shard commands and auto-enables its parallel matrix when at least 12 cores are available, staying serial below that threshold unless `MERGE_GATE_PARALLEL` overrides it.
+In CI, `npm run test:noncritical` and `npm run coverage:critical` append `--silent=passed-only` unless an explicit `--silent` option is already supplied. Set `PHAROS_CI_VITEST_COMPACT=0` to restore full console output while debugging a CI-only failure. The PR reusable validate workflow shards `test:noncritical` across two runners and includes critical tests in that normal Vitest lane; local `npm run test:merge-gate` emits the same two shard commands and auto-enables its parallel matrix when at least 12 cores are available, staying serial below that threshold unless `MERGE_GATE_PARALLEL` overrides it.
 
 `npm run coverage:critical` also forwards trailing Vitest options to the critical suite. Use this to validate candidate pool behavior before any global `vitest.config.ts` change:
 

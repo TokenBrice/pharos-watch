@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  collectSourceEnvKeys,
   extractExportedEnvInterfaceBody,
   parseWorkerEnvInterfaceBindings,
   parseWorkerEnvInterfaceKeys,
@@ -93,6 +94,26 @@ describe("check-env-contract worker Env parser", () => {
     const filePath = withTempEnvSource("export interface NotEnv { API_KEY: string; }\n");
     try {
       expect(() => parseWorkerEnvInterfaceKeys(filePath)).toThrow(/missing export interface Env/);
+    } finally {
+      rmSync(dirname(filePath), { recursive: true, force: true });
+    }
+  });
+});
+
+describe("check-env-contract source references", () => {
+  it("finds env names passed through shared helper APIs", () => {
+    const filePath = withTempEnvSource(`
+      const TOOL_ENV_NAMES = ["TOOL_API_KEY"];
+      requireEnv("ACCESS_CLIENT_ID");
+      apiFetchHeaders(["DIRECT_API_KEY"]);
+    `);
+
+    try {
+      expect([...collectSourceEnvKeys([filePath])].sort()).toEqual([
+        "ACCESS_CLIENT_ID",
+        "DIRECT_API_KEY",
+        "TOOL_API_KEY",
+      ]);
     } finally {
       rmSync(dirname(filePath), { recursive: true, force: true });
     }

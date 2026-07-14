@@ -10,7 +10,7 @@ Use this skill from the Pharos repository root when the user asks to:
 
 - commit pending work in logical or thematic batches
 - run the local merge/push gate
-- push `main`
+- publish through the protected `main` pull-request gate
 - watch GitHub Actions or Cloudflare deployment until it clears
 - take the local state to production
 
@@ -18,9 +18,9 @@ Do not use this for a pure review with no requested commit/push, or while anothe
 
 ## Core Rules
 
-- Default to `main`. Do not create a branch, worktree, or PR unless the user explicitly asks.
+- Default to `main` for inspection. Direct pushes are protected; do not create the release branch/PR unless the user explicitly asks to publish through that gate.
 - Preserve unrelated dirty files. Never stash, reset, checkout, or delete work you did not create unless instructed.
-- Commit before pushing. GitHub Actions owns the authoritative release gate; the repo pre-push hook is advisory-only by default and runs the exact-range local merge gate only when `PHAROS_PRE_PUSH_GATE=main` or `PHAROS_PRE_PUSH_GATE=all` is set.
+- Commit before publishing. The required `PR gate` check owns the authoritative release gate; the repo pre-push hook remains an optional local rehearsal.
 - The pushed state must match the validated state. Re-run `git status --short --branch` after long builds or generators.
 - If the user says other agents are working, skip broad validation/push unless explicitly requested and run only targeted checks for your scope.
 
@@ -91,15 +91,16 @@ Useful controls:
 
 Fix failures locally, commit the fixes, and rerun the failing focused command. Use the local merge gate manually only for deliberate rehearsal or failure investigation.
 
-### 4. Push
+### 4. Publish Through The Protected Gate
 
-When focused checks pass and the intended commit stack is clean:
+When focused checks pass and the intended commit stack is clean, use the maintainer-authorized branch/PR path:
 
 ```bash
-git push origin main
+git push -u origin <release-branch>
+gh pr create --base main --head <release-branch>
 ```
 
-By default the pre-push hook prints that GitHub Actions is authoritative and lets `main` pushes continue. If `PHAROS_PRE_PUSH_GATE=main` is set, the hook runs the merge gate against the exact pushed range and blocks the push on failure. Do not use `--no-verify` to bypass an intentionally enabled local gate.
+Wait for the required `PR gate` check, then merge through GitHub. Do not bypass branch protection or an intentionally enabled local gate. The merge push triggers the deploy classifier.
 
 ### 5. Watch Deployment
 
@@ -112,7 +113,7 @@ gh run watch <run-id> --repo TokenBrice/pharos-watch --exit-status
 
 If the run fails, switch to `$pharos-ci-failure-triage` (the `pharos-ci-failure-triage` skill in Claude Code).
 
-For successful production-changing deploys, confirm the relevant live smokes from the workflow summary. If the touched area needs extra live confidence, run the narrow smoke command from `docs/testing.md` rather than a broad ad hoc probe.
+For successful production-changing deploys, confirm the Worker authenticated health proof and/or Pages release-marker proof in the workflow summary. If the touched area needs extra live confidence, run the narrow manual smoke from `docs/testing.md`; broad live checks are not automatic rollback triggers.
 
 ## Companion Subagents
 

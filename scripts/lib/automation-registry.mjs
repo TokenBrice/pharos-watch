@@ -1,9 +1,4 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { VALIDATION_IMPACT_PATHS } from "./validation-lanes.mjs";
-
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 function getValidationCommandDeployImpactPaths(...impacts) {
   return [...new Set(impacts.flatMap((impact) => VALIDATION_IMPACT_PATHS[impact] ?? []))].sort();
@@ -13,49 +8,12 @@ function uniqueSorted(values) {
   return [...new Set(values)].sort();
 }
 
-function readPackageLock(rootDir = REPO_ROOT) {
-  return JSON.parse(readFileSync(resolve(rootDir, "package-lock.json"), "utf8"));
-}
-
-function packageLockKeyForPackageName(name) {
-  return `node_modules/${name}`;
-}
-
-export function deriveWorkerRuntimePackageClosure(packageLock = readPackageLock()) {
-  const packages = packageLock.packages ?? {};
-  const workerPackage = packages.worker;
-  const runtimePackages = new Set();
-
-  function visitPackage(name) {
-    if (runtimePackages.has(name)) return;
-    runtimePackages.add(name);
-
-    const entry = packages[packageLockKeyForPackageName(name)];
-    if (!entry) return;
-
-    const dependencies = {
-      ...(entry.dependencies ?? {}),
-      ...(entry.optionalDependencies ?? {}),
-    };
-    for (const dependencyName of Object.keys(dependencies)) {
-      visitPackage(dependencyName);
-    }
-  }
-
-  for (const packageName of Object.keys(workerPackage?.dependencies ?? {})) {
-    visitPackage(packageName);
-  }
-
-  return [...runtimePackages].sort();
-}
-
 const FULL_DEPLOY_GUARDRAIL_EXTRA_PATHS = [
   "scripts/ci/check-critical-coverage.mjs",
   "scripts/ci/check-seo-static.mjs",
   "scripts/ci/check-verified-doc-links.mjs",
   "scripts/maintenance/generate-cemetery-dataset.ts",
   "scripts/maintenance/generate-public-datasets.ts",
-  "scripts/maintenance/rollback-pages-deployment.mjs",
   "scripts/maintenance/run-generated-artifacts.mjs",
   "scripts/maintenance/run-merge-gate-discovery.mjs",
   "scripts/maintenance/smoke-api.mjs",
@@ -153,7 +111,13 @@ export const DEPLOY_IMPACT_REGISTRY = {
   },
   workerPromotion: {
     excludedPaths: ["worker/migrations/MANIFEST.md"],
-    exactPaths: ["worker/package.json", "worker/tsconfig.json", "worker/wrangler.toml"],
+    exactPaths: [
+      "package-lock.json",
+      "package.json",
+      "worker/package.json",
+      "worker/tsconfig.json",
+      "worker/wrangler.toml",
+    ],
     prefixes: ["worker/assets/", "worker/migrations/", "worker/src/"],
     sharedExcludedPaths: [
       "shared/lib/pharosville-api-contract.ts",
@@ -162,7 +126,6 @@ export const DEPLOY_IMPACT_REGISTRY = {
     ],
     sharedExcludedPrefixes: ["shared/data/funding/", "shared/lib/selector/"],
   },
-  workerRootRuntimePackages: deriveWorkerRuntimePackageClosure(),
 };
 
 export function findDuplicateDeployImpactExactPaths(registry = DEPLOY_IMPACT_REGISTRY) {

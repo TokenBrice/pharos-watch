@@ -7,7 +7,6 @@ import {
   hasPagesDeployImpact,
   hasPagesPublishImpact,
   hasPagesUiImpact,
-  hasWorkerPackagePromotionImpact,
   hasWorkerDeployImpact,
   hasWorkerPromotionImpact,
   normalizeRepoPath,
@@ -23,7 +22,6 @@ export {
   hasPagesPublishImpact,
   hasPagesUiImpact,
   hasWorkerDeployImpact,
-  hasWorkerPackagePromotionImpact,
   hasWorkerPromotionImpact,
 };
 
@@ -32,26 +30,6 @@ export function normalizeChangedFiles(rawOutput) {
     .split(/\r?\n/g)
     .map((line) => normalizeRepoPath(line.trim()))
     .filter(Boolean);
-}
-
-function hasRootPackageDiff(files) {
-  return files.includes("package.json") || files.includes("package-lock.json");
-}
-
-function hasWorkerPackagePromotionDiff({ baseSha, changedFiles, execFile, headSha }) {
-  if (!hasRootPackageDiff(changedFiles)) {
-    return false;
-  }
-  try {
-    const raw = execFile(
-      "git",
-      ["diff", "--unified=0", `${baseSha}...${headSha}`, "--", "package.json", "package-lock.json"],
-      { encoding: "utf8" },
-    );
-    return hasWorkerPackagePromotionImpact(raw);
-  } catch {
-    return true;
-  }
 }
 
 /**
@@ -70,7 +48,6 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
       docsOnly: false,
       pagesChanged: true,
       pagesDeployRequired: true,
-      pagesUiChanged: true,
       reason: `Non-push event (${eventName ?? "unknown"}) runs the full deploy workflow`,
       workerChanged: true,
       workerPromotionRequired: true,
@@ -84,7 +61,6 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
       docsOnly: false,
       pagesChanged: true,
       pagesDeployRequired: true,
-      pagesUiChanged: true,
       reason: "Missing push diff base/head; falling back to full deploy path",
       workerChanged: true,
       workerPromotionRequired: true,
@@ -104,7 +80,6 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
       docsOnly: false,
       pagesChanged: true,
       pagesDeployRequired: true,
-      pagesUiChanged: true,
       reason: `Failed to diff ${baseSha}...${headSha}; falling back to full deploy path`,
       workerChanged: true,
       workerPromotionRequired: true,
@@ -113,18 +88,14 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
 
   const pagesChanged = hasPagesDeployImpact(changedFiles);
   const pagesDeployRequired = hasPagesPublishImpact(changedFiles);
-  const pagesUiChanged = pagesChanged && hasPagesUiImpact(changedFiles);
   const workerChanged = hasWorkerDeployImpact(changedFiles);
-  const workerPromotionRequired =
-    hasWorkerPromotionImpact(changedFiles) ||
-    hasWorkerPackagePromotionDiff({ baseSha, changedFiles, execFile, headSha });
+  const workerPromotionRequired = hasWorkerPromotionImpact(changedFiles);
   return {
     changedFiles,
     deployRequired: hasDeployImpact(changedFiles),
     docsOnly: hasOnlyInternalDocsImpact(changedFiles),
     pagesChanged,
     pagesDeployRequired,
-    pagesUiChanged,
     reason:
       changedFiles.length > 0
         ? `Detected ${changedFiles.length} changed file(s) in push range`
@@ -143,7 +114,6 @@ export function emitGithubOutputs(classification) {
   writeGithubOutputLine("docs_only", classification.docsOnly ? "true" : "false");
   writeGithubOutputLine("pages_changed", classification.pagesChanged ? "true" : "false");
   writeGithubOutputLine("pages_deploy_required", classification.pagesDeployRequired ? "true" : "false");
-  writeGithubOutputLine("pages_ui_changed", classification.pagesUiChanged ? "true" : "false");
   writeGithubOutputLine("worker_changed", classification.workerChanged ? "true" : "false");
   writeGithubOutputLine("worker_promotion_required", classification.workerPromotionRequired ? "true" : "false");
 }
@@ -163,7 +133,6 @@ function runCli(env = process.env) {
   }
   console.error(`[deploy-changes] pages_changed=${classification.pagesChanged}`);
   console.error(`[deploy-changes] pages_deploy_required=${classification.pagesDeployRequired}`);
-  console.error(`[deploy-changes] pages_ui_changed=${classification.pagesUiChanged}`);
   console.error(`[deploy-changes] worker_changed=${classification.workerChanged}`);
   console.error(`[deploy-changes] worker_promotion_required=${classification.workerPromotionRequired}`);
   console.error(`[deploy-changes] deploy_required=${classification.deployRequired}`);

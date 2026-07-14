@@ -1,21 +1,34 @@
 name: Deploy to Cloudflare
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      surface:
+        description: Production surface to deploy.
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - pages
+          - worker
 
 concurrency:
   group: production-deploy
   cancel-in-progress: false
 
 permissions:
-  actions: read
   contents: read
 
 jobs:
-  guard-production-ref:
+  plan:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      pages_required: ${{ steps.classify.outputs.pages_deploy_required }}
+      worker_required: ${{ steps.classify.outputs.worker_promotion_required }}
     steps:
       - name: Require production deploys from main
         run: |
@@ -23,63 +36,49 @@ jobs:
             echo "Production deploys must run from refs/heads/main; got ${GITHUB_REF}."
             exit 1
           fi
-
-  detect-changes:
-    needs: guard-production-ref
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      deploy_required: ${{ steps.classify.outputs.deploy_required }}
-      pages_changed: ${{ steps.classify.outputs.pages_changed }}
-      pages_deploy_required: ${{ steps.classify.outputs.pages_deploy_required }}
-      pages_ui_changed: ${{ steps.classify.outputs.pages_ui_changed }}
-      worker_changed: ${{ steps.classify.outputs.worker_changed }}
-      worker_promotion_required: ${{ steps.classify.outputs.worker_promotion_required }}
-    steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           persist-credentials: false
-          token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - id: classify
+        name: Select production surfaces
         env:
           DEPLOY_BASE_SHA: ${{ github.event.before }}
           DEPLOY_EVENT_NAME: ${{ github.event_name }}
           DEPLOY_HEAD_SHA: ${{ github.sha }}
-        run: node scripts/ci/classify-deploy-changes.mjs >> "$GITHUB_OUTPUT"
+          MANUAL_SURFACE: ${{ inputs.surface }}
+        run: |
+          if [ "${DEPLOY_EVENT_NAME}" = "workflow_dispatch" ]; then
+            case "${MANUAL_SURFACE}" in
+              both)
+                echo "pages_deploy_required=true" >> "$GITHUB_OUTPUT"
+                echo "worker_promotion_required=true" >> "$GITHUB_OUTPUT"
+                ;;
+              pages)
+                echo "pages_deploy_required=true" >> "$GITHUB_OUTPUT"
+                echo "worker_promotion_required=false" >> "$GITHUB_OUTPUT"
+                ;;
+              worker)
+                echo "pages_deploy_required=false" >> "$GITHUB_OUTPUT"
+                echo "worker_promotion_required=true" >> "$GITHUB_OUTPUT"
+                ;;
+              *)
+                echo "Unsupported manual surface: ${MANUAL_SURFACE}"
+                exit 1
+                ;;
+            esac
+          else
+            node scripts/ci/classify-deploy-changes.mjs >> "$GITHUB_OUTPUT"
+          fi
 
-  validate:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.deploy_required == 'true' }}
-    uses: ./.github/workflows/validate-ci.yml
-    secrets:
-      ACTIONS_CHECKOUT_TOKEN: ${{ secrets.ACTIONS_CHECKOUT_TOKEN }}
-    with:
-      include_advisory_prebuild: true
-      pages_changed: ${{ needs.detect-changes.outputs.pages_changed == 'true' }}
-      run_pages_build_and_seo: false
-      worker_changed: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}
-
-  no-deploy-required:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.deploy_required != 'true' }}
+  deploy-worker:
+    needs: plan
+    if: ${{ needs.plan.outputs.worker_required == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - run: echo "No Pages or worker deploy surfaces changed in this push; skipping the production workflow."
-
-  upload-worker-version:
-    needs:
-      - detect-changes
-      - validate
-    if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}
-    runs-on: ${{ vars.CI_WORKER_DEPLOY_RUNNER != '' && vars.CI_WORKER_DEPLOY_RUNNER || vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 25
-    outputs:
-      previous_version_id: ${{ steps.current-deployment.outputs.previous_version_id }}
-      version_id: ${{ steps.upload-version.outputs.version_id }}
-      preview_url: ${{ steps.upload-version.outputs.preview_url }}
-      version_upload_unavailable: ${{ steps.upload-version.outputs.version_upload_unavailable }}
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://api.pharos.watch
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -87,262 +86,80 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-          token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
-      - name: Capture current production version
-        id: current-deployment
-        run: |
-          node .github/scripts/retry-wrangler-control-plane.mjs \
-            --operation deployment-status \
-            --attempts 4 \
-            --base-delay-sec 5 \
-            --cwd worker \
-            --log-file /tmp/wrangler-deployment-status.log \
-            --stdout-file /tmp/wrangler-deployment-status.json
-          node <<'NODE' >> "$GITHUB_OUTPUT"
-          const fs = require("node:fs");
-          const status = JSON.parse(fs.readFileSync("/tmp/wrangler-deployment-status.json", "utf8"));
-          const previousVersionId =
-            status?.versions?.find((entry) => entry?.percentage === 100)?.version_id ?? "";
-          process.stdout.write(`previous_version_id=${previousVersionId}\n`);
-          NODE
-      - name: Upload candidate worker version
-        id: upload-version
+      - name: Check Worker migrations
+        run: npm run check:migrations
+      - name: Apply production D1 migrations
+        run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
+      - name: Deploy Worker
+        run: >-
+          cd worker
+          && npx --no-install wrangler deploy --strict
+          --message "GitHub Actions deploy ${GITHUB_SHA}"
+      - name: Verify authenticated Worker health
         env:
-          WRANGLER_OUTPUT_FILE_PATH: /tmp/wrangler-output.jsonl
+          SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
         run: |
-          set +e
-          node .github/scripts/retry-wrangler-control-plane.mjs \
-            --operation version-upload \
-            --attempts 4 \
-            --base-delay-sec 5 \
-            --cwd worker \
-            --log-file /tmp/wrangler-versions-upload.log \
-            --message "GitHub Actions candidate ${GITHUB_SHA}"
-          upload_status="$?"
-          set -e
+          node <<'NODE'
+          const url = new URL("https://site-api.pharos.watch/api/health");
+          url.searchParams.set("deploy", process.env.GITHUB_SHA);
+          const accepted = new Set(["healthy", "degraded", "stale"]);
+          let lastError = "not attempted";
 
-          if [ "$upload_status" -ne 0 ]; then
-            if grep -q "entitlements.not_available \\[code: 10007\\]" /tmp/wrangler-versions-upload.log; then
-              echo "version_upload_unavailable=true" >> "$GITHUB_OUTPUT"
-              {
-                echo "## Worker Versions upload unavailable"
-                echo ""
-                echo "Cloudflare returned \`entitlements.not_available [code: 10007]\` for \`wrangler versions upload\`."
-                echo "The deploy-worker job will use the validated legacy \`wrangler deploy\` fallback after the validation and migration gates."
-                echo ""
-                echo "This fallback has reduced rollback safety: the workflow cannot preview-smoke and later re-promote an immutable Worker Version, so any post-deploy failure requires operator-led Worker rollback from Cloudflare deployment history."
-              } >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            exit "$upload_status"
-          fi
+          for (let attempt = 1; attempt <= 6; attempt += 1) {
+            try {
+              const response = await fetch(url, {
+                cache: "no-store",
+                headers: {
+                  Accept: "application/json",
+                  "X-Pharos-Site-Proxy-Secret": process.env.SITE_API_SHARED_SECRET,
+                },
+                signal: AbortSignal.timeout(10_000),
+              });
+              const body = await response.json().catch(() => null);
+              if (response.ok && accepted.has(body?.status)) {
+                console.log(`[worker-health] OK status=${body.status}`);
+                process.exit(0);
+              }
+              lastError = `HTTP ${response.status}, status=${body?.status ?? "missing"}`;
+            } catch (error) {
+              lastError = error instanceof Error ? error.message : String(error);
+            }
+            console.log(`[worker-health] attempt ${attempt}/6 failed: ${lastError}`);
+            if (attempt < 6) await new Promise((resolve) => setTimeout(resolve, 5_000));
+          }
 
-          echo "version_upload_unavailable=false" >> "$GITHUB_OUTPUT"
-          node .github/scripts/parse-version-upload.mjs >> "$GITHUB_OUTPUT"
+          throw new Error(`Authenticated Worker health check failed: ${lastError}`);
+          NODE
+      - name: Summarize Worker release
+        if: always()
+        run: |
+          {
+            echo "## Worker release"
+            echo ""
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- Rollback: use Cloudflare deployment history or \`wrangler rollback [VERSION-ID] --yes\`."
+            echo "- Warning: Worker rollback does not reverse D1 migrations or other bound-resource changes."
+          } >> "$GITHUB_STEP_SUMMARY"
 
-  deploy-worker:
+  pages-release:
     needs:
-      - upload-worker-version
-      - detect-changes
+      - plan
+      - deploy-worker
     if: >-
       ${{
         always()
-        && needs.detect-changes.outputs.worker_promotion_required == 'true'
-        && needs.upload-worker-version.result == 'success'
+        && needs.plan.result == 'success'
+        && needs.plan.outputs.pages_required == 'true'
+        && (
+          needs.plan.outputs.worker_required != 'true'
+          || needs.deploy-worker.result == 'success'
+        )
       }}
-    runs-on: ${{ vars.CI_WORKER_DEPLOY_RUNNER != '' && vars.CI_WORKER_DEPLOY_RUNNER || vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 45
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
-      - uses: ./.github/actions/setup-workspace
-      - name: Rehearse D1 migrations locally
-        env:
-          PHAROS_MIGRATION_SCHEMA_FINGERPRINT_PATH: ${{ runner.temp }}/worker-migration-schema-fingerprint.json
-        run: |
-          npm run check:migrations -- --schema-fingerprint
-          {
-            echo "## Worker migration schema fingerprint"
-            echo ""
-            echo "\`\`\`json"
-            cat "$PHAROS_MIGRATION_SCHEMA_FINGERPRINT_PATH"
-            echo "\`\`\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-      - name: Capture previous worker trigger config for rollback
-        id: previous-worker-trigger-config
-        env:
-          DEPLOY_BASE_SHA: ${{ github.event.before }}
-        run: |
-          if [ -z "${DEPLOY_BASE_SHA:-}" ] || [[ "${DEPLOY_BASE_SHA}" =~ ^0+$ ]]; then
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "No push base SHA available; trigger rollback will keep the current checked-out config."
-            exit 0
-          fi
-
-          if git cat-file -e "${DEPLOY_BASE_SHA}:worker/wrangler.toml"; then
-            git show "${DEPLOY_BASE_SHA}:worker/wrangler.toml" > worker/.rollback-wrangler.toml
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "Could not read worker/wrangler.toml at ${DEPLOY_BASE_SHA}; trigger rollback restoration will be skipped."
-          fi
-      - name: Require previous worker version for automatic rollback
-        if: >-
-          ${{
-            needs.upload-worker-version.outputs.version_upload_unavailable != 'true'
-            && needs.upload-worker-version.outputs.previous_version_id == ''
-          }}
-        run: |
-          {
-            echo "## Worker rollback is not armed"
-            echo ""
-            echo "Worker Versions upload is available, but the workflow could not capture a current production Worker version before promotion."
-            echo "Stopping before production D1 mutation or Worker promotion so a broken deploy cannot be left live without an automatic rollback target."
-          } >> "$GITHUB_STEP_SUMMARY"
-          exit 1
-      - name: Apply production D1 migrations
-        run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
-      - name: Smoke uploaded preview worker
-        if: ${{ needs.upload-worker-version.outputs.version_upload_unavailable != 'true' }}
-        run: npm run test:smoke-api
-        env:
-          SMOKE_API_BASE: ${{ needs.upload-worker-version.outputs.preview_url }}
-          SMOKE_API_SCOPE: "canary"
-          SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
-          SMOKE_API_REQUIRE_KEY: "true"
-      - name: Promote uploaded worker version to production
-        if: ${{ needs.upload-worker-version.outputs.version_upload_unavailable != 'true' }}
-        env:
-          WORKER_NAME: stablecoin-api
-          WORKER_VERSION_ID: ${{ needs.upload-worker-version.outputs.version_id }}
-        run: |
-          node .github/scripts/deploy-worker-version.mjs \
-            --message "GitHub Actions deploy ${GITHUB_SHA}"
-      - name: Deploy worker with legacy Wrangler deploy fallback
-        if: ${{ needs.upload-worker-version.outputs.version_upload_unavailable == 'true' }}
-        run: cd worker && npx --no-install wrangler deploy
-      - name: Sync worker triggers
-        id: sync-worker-triggers
-        continue-on-error: true
-        run: cd worker && npx --no-install wrangler triggers deploy
-      - name: Smoke production worker
-        if: ${{ steps.sync-worker-triggers.outcome == 'success' }}
-        id: production-smoke-api
-        continue-on-error: true
-        run: npm run test:smoke-api
-        env:
-          SMOKE_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
-          SMOKE_API_SCOPE: "canary"
-          SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
-          SMOKE_API_REQUIRE_KEY: "true"
-          SMOKE_API_RETRY_COUNT: "3"
-          SMOKE_API_RETRY_DELAY_MS: "5000"
-          SMOKE_API_TIMEOUT_MS: "15000"
-      - name: Run worker-only live smokes
-        if: >-
-          ${{
-            needs.detect-changes.outputs.pages_deploy_required != 'true'
-            && steps.sync-worker-triggers.outcome == 'success'
-            && steps.production-smoke-api.outcome == 'success'
-          }}
-        id: worker-only-live-smokes
-        continue-on-error: true
-        run: |
-          set +e
-
-          npm run test:smoke-ui -- --url https://pharos.watch --mode live &
-          ui_pid=$!
-          OPS_SMOKE_CF_ACCESS_CLIENT_ID='${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}' \
-            OPS_SMOKE_CF_ACCESS_CLIENT_SECRET='${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}' \
-            npm run test:smoke-ops &
-          ops_pid=$!
-          npm run test:smoke-transport &
-          transport_pid=$!
-
-          wait "$ui_pid"
-          ui_status=$?
-          wait "$ops_pid"
-          ops_status=$?
-          wait "$transport_pid"
-          transport_status=$?
-
-          if [ "$ui_status" -ne 0 ] || [ "$ops_status" -ne 0 ] || [ "$transport_status" -ne 0 ]; then
-            echo "worker-only smoke statuses: ui=${ui_status}, ops=${ops_status}, transport=${transport_status}"
-            exit 1
-          fi
-        env:
-          SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
-          SMOKE_UI_BROWSER_CHANNEL: chrome
-          SMOKE_UI_OVERFLOW_ROUTES: /depeg/
-          SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
-          SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
-          SMOKE_OPS_SCOPE: "canary"
-      - name: Roll back production worker to previous stable version
-        if: >-
-          ${{
-            (
-              steps.sync-worker-triggers.outcome == 'failure'
-              || steps.production-smoke-api.outcome == 'failure'
-              || steps.worker-only-live-smokes.outcome == 'failure'
-            )
-            && needs.upload-worker-version.outputs.version_upload_unavailable != 'true'
-            && needs.upload-worker-version.outputs.previous_version_id != ''
-          }}
-        env:
-          PREVIOUS_WORKER_VERSION_ID: ${{ needs.upload-worker-version.outputs.previous_version_id }}
-        run: >-
-          cd worker
-          && npx --no-install wrangler rollback "${PREVIOUS_WORKER_VERSION_ID}"
-          --message "Auto rollback after Worker deploy post-check failure for ${GITHUB_SHA}"
-          --yes
-      - name: Restore worker triggers after rollback
-        if: >-
-          ${{
-            (
-              steps.sync-worker-triggers.outcome == 'failure'
-              || steps.production-smoke-api.outcome == 'failure'
-              || steps.worker-only-live-smokes.outcome == 'failure'
-            )
-            && needs.upload-worker-version.outputs.version_upload_unavailable != 'true'
-            && needs.upload-worker-version.outputs.previous_version_id != ''
-            && steps.previous-worker-trigger-config.outputs.available == 'true'
-          }}
-        run: cd worker && npx --no-install wrangler triggers deploy --config .rollback-wrangler.toml
-      - name: Fail after worker deploy post-check failure
-        if: >-
-          ${{
-            steps.sync-worker-triggers.outcome == 'failure'
-            || steps.production-smoke-api.outcome == 'failure'
-            || steps.worker-only-live-smokes.outcome == 'failure'
-          }}
-        run: exit 1
-
-  pages-release:
-    # Keep the secret-bearing Pages release job behind the validate job so
-    # repository-controlled build and smoke scripts do not run with production
-    # secrets before validation succeeds.
-    needs:
-      - detect-changes
-      - validate
-    if: ${{ needs.detect-changes.outputs.pages_deploy_required == 'true' }}
     uses: ./.github/workflows/pages-release.yml
     with:
-      wait_for_worker_promotion: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}
+      refresh_data: false
     secrets:
-      DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
-      DEPEG_EVENTS_API_KEY: ${{ secrets.DEPEG_EVENTS_API_KEY }}
-      PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY }}
-      SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
-      SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
-      OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
-      ACTIONS_CHECKOUT_TOKEN: ${{ secrets.ACTIONS_CHECKOUT_TOKEN }}
