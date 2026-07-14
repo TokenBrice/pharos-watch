@@ -94,6 +94,7 @@ function bucketLiquidToken(token: NestPositionToken): SliceValue {
       value,
       name: "pUSD liquid balance",
       risk: "high",
+      coinId: "pusd-plume",
     };
   }
   return {
