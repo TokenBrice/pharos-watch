@@ -149,43 +149,134 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "GUSD is issuer-minted by Gemini through a custodian-controlled contract model. The custodian address is confirmed on-chain; the custodian contract itself has no on-chain custodian (issuer-backend operated).",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd",
+        "0xc42b14e49744538e3c239f8ae48a1eaaf35e68a0"
+      ],
+      "implementationAddresses": [
+        "0x6704ba24b8640bccee6bf2fd276a6a1b8edf4ade"
+      ],
+      "adminAddresses": [
+        "0xb983ed57aeaa180bc7a0078ddadf1ea217f2e421"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "GUSD Proxy and Store 2-of-3 upgrade custodian (two-day delay)",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526129,
+      "sources": [
+        {
+          "label": "Gemini Dollar source",
+          "url": "https://github.com/gemini/dollar"
+        },
+        {
+          "label": "Gemini Dollar whitepaper",
+          "url": "https://www.gemini.com/static/dollar/gemini-dollar-whitepaper.pdf"
+        },
+        {
+          "label": "Ethereum GUSD token",
+          "url": "https://etherscan.io/address/0x056fd409e1d7a124bd7017459dfea2f387b6d5cd#code"
+        },
+        {
+          "label": "GUSD Store",
+          "url": "https://etherscan.io/address/0xc42b14e49744538e3c239f8ae48a1eaaf35e68a0#code"
+        },
+        {
+          "label": "GUSD Proxy and Store custodian",
+          "url": "https://etherscan.io/address/0xb983ed57aeaa180bc7a0078ddadf1ea217f2e421"
+        }
+      ]
+    },
+    "summary": "GUSD uses Gemini's custom Proxy, Store, implementation, PrintLimiter, and dual-custodian architecture. A limited-printer EOA can mint immediately under the current 1.36 billion GUSD ceiling; a 2-of-3 issuance custodian can raise or bypass that ceiling after one hour; a separate 2-of-3 upgrade custodian can replace both Proxy and Store logic after two days.",
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0xb983eD57aEaA180BC7a0078DDAdf1Ea217F2e421",
-        "label": "GUSD custodian contract",
+        "address": "0xd24400ae8bfebb18ca49be86258a3c749cf46853",
+        "label": "GUSD limited-printer EOA",
         "role": "direct-minter",
-        "authorityType": "contract",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "PrintLimiter 0x72519fa6cd095c99d5d67e31ddc117409bc5c047 permits this EOA to mint immediately while total supply remains at or below 136,000,000,000 raw units, equal to 1.36 billion GUSD at two decimals. That is more than 33 times cutoff supply, so V9 treats the live path as economically direct even though the EOA cannot raise the ceiling unilaterally.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "ethereum:0xd24400ae8bfebb18ca49be86258a3c749cf46853"
+        ],
         "sources": [
           {
-            "label": "Gemini Dollar",
-            "url": "https://www.gemini.com/en-GB/dollar"
+            "label": "GUSD PrintLimiter exact source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x72519fa6cd095c99d5d67e31ddc117409bc5c047?fields=compilation,sources,abi"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, PrintLimiter limitedPrinter() returned this EOA, erc20Impl() returned 0x6704ba24b8640bccee6bf2fd276a6a1b8edf4ade, totalSupplyCeiling() returned 136000000000, and GUSD totalSupply() returned 3876566681 raw units. The EOA had no bytecode."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1789cca7430aacbdb7c89f9b5695a9c06e4764eb",
+        "label": "GUSD issuance 2-of-3 custodian (one-hour delay)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "timelockDelaySec": 3600,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Two of the three embedded signer EOAs can complete a primary-requested callback after one hour to raise the PrintLimiter ceiling, confirm an arbitrary print, or replace the active implementation's custodian. Non-primary requests use the longer one-day delay.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "ethereum:0x1789cca7430aacbdb7c89f9b5695a9c06e4764eb"
+        ],
+        "sources": [
+          {
+            "label": "GUSD issuance custodian exact source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x1789cca7430aacbdb7c89f9b5695a9c06e4764eb?fields=compilation,sources,abi"
           },
+          {
+            "label": "Gemini Custodian source",
+            "url": "https://github.com/gemini/dollar/blob/master/Custodian.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, defaultTimeLock() was 3600, extendedTimeLock() was 86400, and primary() was limited-printer EOA 0xd24400ae8bfebb18ca49be86258a3c749cf46853. Constructor data and signerSet reads resolved three active EOA signers: 0xa94488c17686cefc08c1de70a4aeb6a2301599d9, 0x3af7a2ff52c6e2388bac918b3776b82c99b5f268, and 0x6ff0408efc41b2250c9e9ff820b9fac593f50191."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb983ed57aeaa180bc7a0078ddadf1ea217f2e421",
+        "label": "GUSD Proxy and Store 2-of-3 upgrade custodian (two-day delay)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "ethereum:0xb983ed57aeaa180bc7a0078ddadf1ea217f2e421"
+        ],
+        "sources": [
           {
             "label": "Gemini Dollar source",
             "url": "https://github.com/gemini/dollar"
           },
           {
-            "label": "Ethereum GUSD token",
-            "url": "https://etherscan.io/address/0x056fd409e1d7a124bd7017459dfea2f387b6d5cd#code"
+            "label": "Gemini Dollar whitepaper",
+            "url": "https://www.gemini.com/static/dollar/gemini-dollar-whitepaper.pdf"
+          },
+          {
+            "label": "GUSD Proxy and Store custodian",
+            "url": "https://etherscan.io/address/0xb983ed57aeaa180bc7a0078ddadf1ea217f2e421"
           }
         ],
-        "evidence": "At Ethereum block 25294735, ERC20Proxy storage slot 1 (custodian) = 0xb983eD57aEaA180BC7a0078DDAdf1Ea217F2e421 (unchanged from prior read at block 25166610). Custodian contract code size confirmed nonzero (contract, 11430 bytes). Custodian contract itself has no on-chain custodian (slot1=0x0) — Gemini operates it as issuer-backend. Verified source exposes requestPrint/confirmPrint mint flow."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0x6704BA24B8640BCcEE6bf2Fd276A6a1b8EdF4Ade",
-        "label": "GUSD current implementation",
-        "role": "other",
-        "authorityType": "contract",
-        "directMintAbility": "none",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "ERC20Proxy storage slot 1 confirmed custodian address; implementation (erc20Impl) slot confirmed at 0x6704BA24B8640BCcEE6bf2Fd276A6a1b8EdF4Ade at Ethereum block 25166610. Direct print authority is represented by the custodian control above."
+        "evidence": "At Ethereum block 25526129, both ERC20Proxy 0x056fd409e1d7a124bd7017459dfea2f387b6d5cd and ERC20Store 0xc42b14e49744538e3c239f8ae48a1eaaf35e68a0 returned this custodian and current implementation 0x6704ba24b8640bccee6bf2fd276a6a1b8edf4ade. The custodian exposed Gemini's request/complete callback interface with defaultTimeLock() 172800, extendedTimeLock() 604800, and three active EOA signers decoded from deployment data and confirmed through signerSet: 0x7a6390ca97a7babdf10a7ce6edaa83a51be8b783, 0xc7990cdf6b076f4fc1c1a89008bed3844aa4c2a1, and 0xabf27274a828b492dfd5bcb2e885ffb00aa698c7. Gemini's source and whitepaper require coordinated Proxy and Store implementation replacement through this custodian."
       }
     ],
     "review": {
@@ -199,9 +290,9 @@
           "url": "https://www.gemini.com/static/dollar/gemini-dollar-whitepaper.pdf"
         }
       ],
-      "evidence": "At Ethereum block 25294735: ERC20Proxy slot 1 custodian = 0xb983eD57aEaA180BC7a0078DDAdf1Ea217F2e421 confirmed; custodian contract has nonzero code (11430 bytes) and no on-chain custodian of its own (issuer-backend model). All on-chain addressable mint surfaces confirmed. Issuer-backend control is consistent with Gemini's custodianship model per verified source.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25526129, the complete live graph was ERC20Proxy and ERC20Store -> implementation 0x6704ba24b8640bccee6bf2fd276a6a1b8edf4ade, with both custom upgrade pointers controlled by two-day 2-of-3 custodian 0xb983ed57aeaa180bc7a0078ddadf1ea217f2e421. The implementation's custodian was PrintLimiter 0x72519fa6cd095c99d5d67e31ddc117409bc5c047, whose limited printer was EOA 0xd24400ae8bfebb18ca49be86258a3c749cf46853 under a 136000000000-raw-unit ceiling and whose cap/direct-print custodian was one-hour 2-of-3 contract 0x1789cca7430aacbdb7c89f9b5695a9c06e4764eb.",
+      "reviewer": "Codex Safety Score V9 evidence audit",
+      "reviewedAt": "2026-07-13"
     }
   },
   "custodyModel": "institutional-top",
