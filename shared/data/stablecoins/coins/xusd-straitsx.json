@@ -164,15 +164,30 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "StraitsX XUSD uses a Circle-style MasterMinter pattern on Ethereum; token and master-minter controls resolve to verified 3/5 Safes, and the Solana mint authority resolves to a 3/10 multisig.",
+    "summary": "StraitsX XUSD uses Circle-style MasterMinter deployments on Ethereum and BNB Chain with separate chain-local 3/5 owner and master-minter Safes. The BNB Chain token is a legacy ZeppelinOS proxy controlled by another 3/5 Safe; the Solana mint authority is a 3/10 multisig.",
     "upgradeability": {
-      "model": "immutable",
-      "canChangeMintLogic": false,
+      "model": "custom",
+      "proxyAddresses": [
+        "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"
+      ],
+      "implementationAddresses": [
+        "0xCD6c1A317222F51FD406D84c31B921Df7F49A599"
+      ],
+      "adminAddresses": [
+        "0xf4c8B80ff929b15A21A89B0cA754D176D88F5a14"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "BNB Chain XUSD legacy proxy-admin Safe",
       "observedAt": "2026-07-14",
+      "observedBlock": 109962664,
       "sources": [
         {
           "label": "Ethereum XUSD token",
           "url": "https://etherscan.io/address/0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+        },
+        {
+          "label": "BNB Chain XUSD token",
+          "url": "https://bscscan.com/address/0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9#code"
         },
         {
           "label": "Solana XUSD mint",
@@ -273,6 +288,149 @@
         "evidence": "Phase 0c second pass refreshed Safe Transaction Service state against Ethereum block 25294588: threshold 3, five owners, no modules, and zero guard."
       },
       {
+        "chain": "bsc",
+        "address": "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
+        "label": "BNB Chain XUSD token MasterMinter path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 109962131,
+        "sources": [
+          {
+            "label": "BNB Chain XUSD token",
+            "url": "https://bscscan.com/address/0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9#readContract"
+          },
+          {
+            "label": "BNB Chain PublicNode RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At BNB Chain block 109962664, owner() returned 0x7942337923d89D27e801B6DC05274fA9417968F5 and masterMinter() returned 0x31b964870f90d25837afC995239273F72931e7A3 through the proxy. Standard EIP-1967 slots were zero, but the legacy ZeppelinOS implementation and admin slots resolved the live proxy path."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x31b964870f90d25837afC995239273F72931e7A3",
+        "label": "BNB Chain XUSD MasterMinter Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-14",
+        "observedBlock": 109962131,
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "owners": [
+            "0x99c1F7dfeA0e4c0C089752E113bE840AbA869468",
+            "0x7ddEb8aee3499190990F7636d2BCEdD42151c701",
+            "0x6BA8c6793C376c04730f76f854D5a59EED93754B",
+            "0x1647ABd62E70595C972717995714c02d2F78A11B",
+            "0xa5149891595b6a693a5aEaE40B3aB399D77deD3B"
+          ],
+          "enabledModules": [],
+          "guard": "0x3653d1306f5332a9dd851686703ad900529f6b89",
+          "observedBlock": 109962131,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "BNB Chain XUSD MasterMinter Safe",
+            "url": "https://bscscan.com/address/0x31b964870f90d25837afC995239273F72931e7A3#readProxyContract"
+          },
+          {
+            "label": "BNB Chain PublicNode RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At BNB Chain block 109962131, getOwners() returned five owners, getThreshold() returned 3, VERSION() returned 1.4.1, getModulesPaginated() returned no modules, and the guard storage slot resolved 0x3653d1306f5332a9dd851686703ad900529f6b89."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x7942337923d89D27e801B6DC05274fA9417968F5",
+        "label": "BNB Chain XUSD token owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 109962131,
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "owners": [
+            "0x99c1F7dfeA0e4c0C089752E113bE840AbA869468",
+            "0x97D0299f9C945393ae415b85d8ADB3A577e810BA",
+            "0x7ddEb8aee3499190990F7636d2BCEdD42151c701",
+            "0xEc0f004A0b57DF88e617b913b246DCc44d646e9C",
+            "0xa5149891595b6a693a5aEaE40B3aB399D77deD3B"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 109962131,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "BNB Chain XUSD owner Safe",
+            "url": "https://bscscan.com/address/0x7942337923d89D27e801B6DC05274fA9417968F5#readProxyContract"
+          },
+          {
+            "label": "BNB Chain PublicNode RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At BNB Chain block 109962131, getOwners() returned five owners, getThreshold() returned 3, VERSION() returned 1.4.1, getModulesPaginated() returned no modules, and the guard storage slot was zero."
+      },
+      {
+        "chain": "bsc",
+        "address": "0xf4c8B80ff929b15A21A89B0cA754D176D88F5a14",
+        "label": "BNB Chain XUSD legacy proxy-admin Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 109962664,
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "owners": [
+            "0x99c1F7dfeA0e4c0C089752E113bE840AbA869468",
+            "0x97D0299f9C945393ae415b85d8ADB3A577e810BA",
+            "0x7ddEb8aee3499190990F7636d2BCEdD42151c701",
+            "0xEc0f004A0b57DF88e617b913b246DCc44d646e9C",
+            "0xa5149891595b6a693a5aEaE40B3aB399D77deD3B"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 109962664,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "BNB Chain XUSD legacy proxy",
+            "url": "https://bscscan.com/address/0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9#code"
+          },
+          {
+            "label": "BNB Chain PublicNode RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At BNB Chain block 109962664, the org.zeppelinos.proxy.implementation slot resolved 0xCD6c1A317222F51FD406D84c31B921Df7F49A599 and org.zeppelinos.proxy.admin resolved this Safe. Safe reads returned five owners, threshold 3, version 1.4.1, no enabled modules, and a zero guard."
+      },
+      {
         "chain": "solana",
         "address": "5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj",
         "label": "StraitsX Solana mint authority",
@@ -307,12 +465,16 @@
           "url": "https://etherscan.io/address/0xc08e7e23c235073c6807c2efe7021304cb7c2815"
         },
         {
+          "label": "BNB Chain XUSD token",
+          "url": "https://bscscan.com/address/0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9#code"
+        },
+        {
           "label": "Solana XUSD mint",
           "url": "https://explorer.solana.com/address/4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z"
         }
       ],
-      "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls. Phase 0c second pass rechecked owner/masterMinter at Ethereum block 25294588, refreshed Safe owners/modules/guards, and confirmed the Solana XUSD mint/freeze authority at finalized slot 425774906 as a 3-of-10 SPL Token multisig. At Ethereum block 25530550, the token's EIP-1967 implementation, admin, and beacon slots were zero. A finalized Solana RPC read on 2026-07-14 confirmed the mint remains a standard immutable SPL Token account controlled by the reviewed multisig, so neither deployment exposes replaceable mint logic.",
-      "reviewer": "Codex CTRL curation batch 08",
+      "evidence": "Direct reads identify chain-local XUSD owner and MasterMinter controls on Ethereum and BNB Chain. At BNB Chain block 109962664, owner() and masterMinter() resolved separate 3-of-5 Safe v1.4.1 instances; neither had enabled modules, while the MasterMinter Safe carried guard 0x3653d130.... Although standard EIP-1967 slots were zero, legacy ZeppelinOS slots resolved implementation 0xCD6c...A599 and a separate 3-of-5 proxy-admin Safe. Ethereum remains a direct immutable deployment, and the Solana mint/freeze authority remains a 3-of-10 SPL Token multisig.",
+      "reviewer": "owner-triage",
       "reviewedAt": "2026-07-14"
     }
   },
