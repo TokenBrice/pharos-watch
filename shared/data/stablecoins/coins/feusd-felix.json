@@ -407,7 +407,37 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "feUSD is minted from Liquity-v2-fork CDPs on Hyperliquid (HyperEVM) against HYPE, kHYPE, wstHYPE, and bridged BTC at user-set interest rates. The feUSD token (0x02c6a2fa) is an EIP-1967 proxy whose ProxyAdmin (0x44a600c0) is owned by a central admin contract (0xf42fdd95, itself a UUPS proxy). That admin proxy's own ProxyAdmin (0xdf1293b4) is owned by a Gnosis Safe 1.3.0 multisig (0x699090e7, 3-of-6, no modules, no guard). The same multisig is the ultimate upgrade authority for the entire Felix protocol.",
+    "summary": "feUSD is minted from Liquity-v2-fork CDPs on Hyperliquid (HyperEVM) against HYPE, kHYPE, wstHYPE, and bridged BTC at user-set interest rates. The feUSD token (0x02c6a2fa) is an EIP-1967 proxy whose ProxyAdmin (0x44a600c0) is owned by a central admin proxy (0xf42fdd95). That admin proxy's own ProxyAdmin (0xdf1293b4) is owned by a Gnosis Safe 1.3.0 multisig (0x699090e7, 3-of-6, no modules, no guard). The same multisig is the ultimate upgrade authority for the entire Felix protocol.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
+        "0xF42fDD953E68D0010F5fA9d61ef1ba0Fc997Ef2F"
+      ],
+      "implementationAddresses": [
+        "0x444322c3c54908fa5a7842a4f3ff085ec67f2598",
+        "0xd2fe30df10e6c130fa23da2db6c68b48c8584c4b"
+      ],
+      "adminAddresses": [
+        "0x44a600c031dbdf652500f4a6d84b168056f13692",
+        "0xdf1293b46d3d8f6c090ab98094805db68922ce30",
+        "0x699090E73c4077eF2aF42773b31788C6564F079c"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Felix admin multisig (ultimate upgrade and parameter authority)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 40435040,
+      "sources": [
+        {
+          "label": "feUSD token on HyperEVM",
+          "url": "https://explorer.hyperliquid.xyz/address/0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70"
+        },
+        {
+          "label": "Felix docs",
+          "url": "https://usefelix.gitbook.io/docs"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Felix CDP branch contracts (collateral mint)",
@@ -451,9 +481,9 @@
       }
     ],
     "review": {
-      "evidence": "On-chain reads at HyperEVM block 37553335 traced the full Felix admin chain: feUSD token (0x02c6a2fa) → ProxyAdmin (0x44a600c0, owner=0xf42fdd95) → 0xf42fdd95 is a UUPS proxy (impl=0xd2fe30, proxyAdmin=0xdf1293b4) → 0xdf1293b4 owner()=0x699090e7 → Gnosis Safe 1.3.0 (3-of-6, 6 current EOA signers, no modules, no guard, fallback handler=0x017062a1). The same 0xf42f proxy is confirmed as owner of the Felix AddressesRegistry (0x9de1e57049c475736289cb006212f3e1dce4711b). The 3-of-6 Safe is the ultimate admin authority.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "On-chain reads traced the full Felix admin chain: feUSD token (0x02c6a2fa) → ProxyAdmin (0x44a600c0, owner=0xf42fdd95) → nested admin proxy 0xf42fdd95 (implementation 0xd2fe30df..., ProxyAdmin 0xdf1293b4) → 0xdf1293b4 owner()=0x699090e7 → Gnosis Safe 1.3.0 (3-of-6, 6 current EOA signers, no modules, no guard, fallback handler=0x017062a1). Rechecked at HyperEVM block 40435040; the proxy, implementation, and ownership chain is unchanged. The same 0xf42f proxy owns the Felix AddressesRegistry (0x9de1e57049c475736289cb006212f3e1dce4711b). The 3-of-6 Safe is the ultimate admin authority.",
+      "reviewer": "Codex CTRL batch 07",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Felix docs",
