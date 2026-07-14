@@ -12,8 +12,10 @@ import { classifyFreshnessRatio } from "../../shared/lib/status-thresholds";
 import {
   apiFetchHeaders,
   GENERATOR_API_KEY_ENV_NAMES,
+  resolveApiPathUrl,
   resolveGeneratorApiBase,
 } from "../lib/sync-from-api";
+import { SITE_DATA_PATH_PREFIX } from "../../shared/lib/site-data-lane";
 import { ApiMetaSchema, type ApiMeta } from "../../shared/types/api-meta";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "../../src/lib/api-query-descriptors";
 import { buildHomepageBootstrapDescriptors } from "../../src/lib/homepage-bootstrap-shared";
@@ -127,6 +129,7 @@ function hasConfiguredApiKey(): boolean {
 
 function assertSafeApiKeyDestination(apiBase: string): void {
   if (!hasConfiguredApiKey()) return;
+  if (isSiteDataApiBase(apiBase)) return;
 
   const origin = apiBaseOrigin(apiBase);
   if (!origin || !TRUSTED_API_KEY_ORIGINS.has(origin)) {
@@ -137,13 +140,29 @@ function assertSafeApiKeyDestination(apiBase: string): void {
   }
 }
 
-function fetchHeaders(apiBase: string): Record<string, string> {
-  const origin = apiBaseOrigin(apiBase);
-  if (!origin || !TRUSTED_API_KEY_ORIGINS.has(origin)) {
+function isSiteDataApiBase(apiBase: string): boolean {
+  try {
+    return new URL(apiBase).pathname.replace(/\/+$/, "") === SITE_DATA_PATH_PREFIX;
+  } catch {
+    return false;
+  }
+}
+
+function isSiteDataRequestUrl(url: string): boolean {
+  try {
+    return new URL(url).pathname.startsWith(`${SITE_DATA_PATH_PREFIX}/`);
+  } catch {
+    return false;
+  }
+}
+
+function fetchHeaders(url: string): Record<string, string> {
+  const origin = apiBaseOrigin(url);
+  if (!isSiteDataRequestUrl(url) && (!origin || !TRUSTED_API_KEY_ORIGINS.has(origin))) {
     return { Accept: "application/json" };
   }
 
-  return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES);
+  return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES, { url });
 }
 
 function extractMeta(json: unknown, ageHeader: string | null, maxAgeSec: number): {
@@ -183,10 +202,10 @@ async function fetchBootstrapQuery(
   maxAgeSec: number,
   schemaSource: SchemaLikeSource<unknown> | undefined,
 ): Promise<HomepageBootstrapQuery | null> {
-  const url = `${apiBase}${path}`;
+  const url = resolveApiPathUrl(apiBase, path);
   try {
     const schema = await resolveSchemaLike(schemaSource);
-    const response = await fetch(url, { headers: fetchHeaders(apiBase) });
+    const response = await fetch(url, { headers: fetchHeaders(url) });
     if (!response.ok) {
       console.warn(`[generate-homepage-bootstrap] ${path} -> HTTP ${response.status}`);
       return null;

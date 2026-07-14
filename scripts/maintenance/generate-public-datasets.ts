@@ -44,6 +44,7 @@ import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
 import { type CsvColumn, escapeCsvField } from "../lib/csv-helpers";
 import {
   generatorFetchHeaders,
+  resolveApiPathUrl,
   resolveGeneratorApiBase,
 } from "../lib/sync-from-api";
 
@@ -142,7 +143,7 @@ function resolveSnapshotDate(): string {
 
 async function safeFetchJson<T>(url: string): Promise<T | null> {
   try {
-    const res = await fetch(url, { headers: generatorFetchHeaders() });
+    const res = await fetch(url, { headers: generatorFetchHeaders(url) });
     if (!res.ok) {
       console.warn(`[generate-public-datasets] ${url} → HTTP ${res.status}`);
       return null;
@@ -155,7 +156,7 @@ async function safeFetchJson<T>(url: string): Promise<T | null> {
 }
 
 async function fetchSnapshot(apiBase: string, date: string): Promise<SnapshotEnvelope | null> {
-  return safeFetchJson<SnapshotEnvelope>(`${apiBase}/api/snapshots/${date}.json`);
+  return safeFetchJson<SnapshotEnvelope>(resolveApiPathUrl(apiBase, `/api/snapshots/${date}.json`));
 }
 
 async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[] | null> {
@@ -168,7 +169,7 @@ async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[] | null> {
     if (nextCursor) params.set("cursor", nextCursor);
 
     const payload = await safeFetchJson<{ events: DepegEvent[]; nextCursor?: string | null }>(
-      `${apiBase}/api/depeg-events?${params.toString()}`,
+      resolveApiPathUrl(apiBase, `/api/depeg-events?${params.toString()}`),
     );
     if (!payload) return null;
 
@@ -191,10 +192,10 @@ async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[] | null> {
 
 async function fetchLiveEndpointEnvelope(apiBase: string, snapshotDate: string): Promise<SnapshotEnvelope | null> {
   const [stablecoins, reportCards, stressSignals, dexLiquidity] = await Promise.all([
-    safeFetchJson<StablecoinsResponse>(`${apiBase}/api/stablecoins`),
-    safeFetchJson<ReportCardsResponse>(`${apiBase}/api/report-cards`),
-    safeFetchJson<StressSignalsResponse>(`${apiBase}/api/stress-signals`),
-    safeFetchJson<DexLiquidityResponse>(`${apiBase}/api/dex-liquidity`),
+    safeFetchJson<StablecoinsResponse>(resolveApiPathUrl(apiBase, "/api/stablecoins")),
+    safeFetchJson<ReportCardsResponse>(resolveApiPathUrl(apiBase, "/api/report-cards")),
+    safeFetchJson<StressSignalsResponse>(resolveApiPathUrl(apiBase, "/api/stress-signals")),
+    safeFetchJson<DexLiquidityResponse>(resolveApiPathUrl(apiBase, "/api/dex-liquidity")),
   ]);
 
   if (!stablecoins?.peggedAssets || !reportCards?.cards || !stressSignals?.signals || !dexLiquidity) {
@@ -696,7 +697,7 @@ function asOfIsoFromEnvelope(envelope: SnapshotEnvelope, snapshotDate: string): 
 
 async function fetchLatestSnapshotDate(apiBase: string): Promise<string | null> {
   const indexPayload = await safeFetchJson<{ snapshots: Array<{ snapshotDate: string }> }>(
-    `${apiBase}/api/snapshots/index`,
+    resolveApiPathUrl(apiBase, "/api/snapshots/index"),
   );
   return indexPayload?.snapshots[0]?.snapshotDate ?? null;
 }

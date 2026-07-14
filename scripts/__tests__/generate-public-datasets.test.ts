@@ -13,6 +13,7 @@ const tempRoots: string[] = [];
 afterEach(async () => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   await Promise.all(tempRoots.splice(0).map((root) => rm(root, { force: true, recursive: true })));
 });
 
@@ -184,6 +185,36 @@ describe("generate-public-datasets", () => {
     expect(scoreRows[0]?.pegScore).toBe(99);
     expect(scoreRows[0]?.safetyScore).toBe(98);
     expect(specs.find((spec) => spec.topic === "depeg-history")?.rows).toHaveLength(1);
+  });
+
+  it("can fetch release inputs through the site-data lane without exposing service credentials", async () => {
+    vi.stubEnv("PUBLIC_DATASETS_API_KEY", "public-key");
+    vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const href = String(url);
+      const headers = new Headers(init?.headers);
+      expect(headers.get("Origin")).toBe("https://pharos.watch");
+      expect(headers.has("X-API-Key")).toBe(false);
+      expect(headers.has("X-Pharos-Site-Proxy-Secret")).toBe(false);
+
+      if (href.endsWith("/_site-data/snapshots/2026-05-16.json")) {
+        return jsonResponse(makeEnvelope("2026-05-16"));
+      }
+      if (href.endsWith("/_site-data/depeg-events?limit=1000")) {
+        return jsonResponse({ events: [makeEvent("large-cap"), makeCoverageSentinel("2026-05-16")] });
+      }
+      return jsonResponse({ error: "unexpected" }, { status: 500 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const inputs = await loadPublicDatasetLiveInputs("https://pharos.watch/_site-data", "2026-05-16");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://pharos.watch/_site-data/snapshots/2026-05-16.json",
+      expect.anything(),
+    );
+    expect(inputs.effectiveSnapshotDate).toBe("2026-05-16");
+    expect(inputs.depegEvents).toHaveLength(2);
   });
 
   it("preserves snapshot report-card safety scores without reusing them as peg scores", () => {

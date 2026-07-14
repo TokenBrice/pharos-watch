@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiFetchHeaders, fetchWithRetry } from "../lib/sync-from-api";
+import { apiFetchHeaders, fetchWithRetry, resolveApiPathUrl } from "../lib/sync-from-api";
 
 describe("fetchWithRetry", () => {
   afterEach(() => {
@@ -15,6 +15,25 @@ describe("fetchWithRetry", () => {
       Accept: "application/json",
       "X-API-Key": "public-key",
       "X-Pharos-Site-Proxy-Secret": "site-secret",
+    });
+  });
+
+  it("maps API paths onto the browser-facing site-data lane", () => {
+    expect(resolveApiPathUrl("https://pharos.watch/_site-data", "/api/digest-archive")).toBe(
+      "https://pharos.watch/_site-data/digest-archive",
+    );
+    expect(resolveApiPathUrl("https://pharos.watch/_site-data/", "/api/depeg-events?limit=1000")).toBe(
+      "https://pharos.watch/_site-data/depeg-events?limit=1000",
+    );
+  });
+
+  it("keeps site-data release reads browser-shaped", () => {
+    vi.stubEnv("DIGEST_API_KEY", "public-key");
+    vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");
+
+    expect(apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://pharos.watch/_site-data/digest-archive" })).toEqual({
+      Accept: "application/json",
+      Origin: "https://pharos.watch",
     });
   });
 

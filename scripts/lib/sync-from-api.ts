@@ -9,7 +9,12 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
+import {
+  SITE_DATA_PATH_PREFIX,
+  SITE_DATA_PROXY_SECRET_HEADER,
+  toSiteDataPath,
+} from "@shared/lib/site-data-lane";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 
 import { sleep } from "./smoke-runtime.mjs";
 
@@ -47,8 +52,7 @@ export function resolveApiUrl(options: ResolveApiUrlOptions): string {
       `Provide ${argName} or set ${envNames.join(" / ")} before running ${scriptName}.`,
     );
   }
-  if (explicit.endsWith(apiPath)) return explicit;
-  return `${explicit.replace(/\/+$/, "")}${apiPath}`;
+  return resolveApiPathUrl(explicit, apiPath);
 }
 
 interface FetchWithRetryOptions {
@@ -167,17 +171,64 @@ export function resolveApiBaseFromEnv(envNames: readonly string[]): string | nul
   return raw ? raw.replace(/\/+$/, "") : null;
 }
 
+function pathWithoutTrailingSlashes(pathname: string): string {
+  return pathname.replace(/\/+$/, "") || "/";
+}
+
+function isSiteDataBase(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl);
+    return pathWithoutTrailingSlashes(url.pathname) === SITE_DATA_PATH_PREFIX;
+  } catch {
+    return false;
+  }
+}
+
+function isSiteDataRequestUrl(rawUrl: string | undefined): boolean {
+  if (!rawUrl) return false;
+  try {
+    return new URL(rawUrl).pathname.startsWith(`${SITE_DATA_PATH_PREFIX}/`);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolve either a direct `/api/*` URL or the equivalent same-origin
+ * `/_site-data/*` URL. The latter is used by production Pages release syncs so
+ * hosted runners can fetch through the same Pages Function lane browsers use.
+ */
+export function resolveApiPathUrl(apiBaseOrEndpoint: string, apiPath: string): string {
+  const trimmed = apiBaseOrEndpoint.trim();
+  const base = trimmed.replace(/\/+$/, "");
+  const siteDataPath = toSiteDataPath(apiPath);
+
+  if (base.endsWith(apiPath) || base.endsWith(siteDataPath)) {
+    return base;
+  }
+  if (isSiteDataBase(base)) {
+    return `${base}${siteDataPath.slice(SITE_DATA_PATH_PREFIX.length)}`;
+  }
+  return `${base}${apiPath}`;
+}
+
 /**
  * Build request headers (`Accept` + optional `X-API-Key`) from the first
  * non-empty API key among `envNames`.
  */
-export function apiFetchHeaders(envNames: readonly string[]): Record<string, string> {
+export function apiFetchHeaders(
+  envNames: readonly string[],
+  options: { url?: string } = {},
+): Record<string, string> {
   const apiKey = envNames.map((name) => process.env[name]?.trim()).find((value) => value);
   const siteApiSharedSecret = process.env.SITE_API_SHARED_SECRET?.trim();
+  const isSiteDataRequest = isSiteDataRequestUrl(options.url);
+  const siteDataOrigin = isSiteDataRequest ? SITE_ORIGIN : null;
   return {
     Accept: "application/json",
-    ...(apiKey ? { "X-API-Key": apiKey } : {}),
-    ...(siteApiSharedSecret ? { [SITE_DATA_PROXY_SECRET_HEADER]: siteApiSharedSecret } : {}),
+    ...(siteDataOrigin ? { Origin: siteDataOrigin } : {}),
+    ...(apiKey && !isSiteDataRequest ? { "X-API-Key": apiKey } : {}),
+    ...(siteApiSharedSecret && !isSiteDataRequest ? { [SITE_DATA_PROXY_SECRET_HEADER]: siteApiSharedSecret } : {}),
   };
 }
 
@@ -193,6 +244,6 @@ export function resolveGeneratorApiBase(): string | null {
  * Convenience wrapper used by both generator scripts. Builds fetch headers
  * from GENERATOR_API_KEY_ENV_NAMES.
  */
-export function generatorFetchHeaders(): Record<string, string> {
-  return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES);
+export function generatorFetchHeaders(url?: string): Record<string, string> {
+  return apiFetchHeaders(GENERATOR_API_KEY_ENV_NAMES, { url });
 }

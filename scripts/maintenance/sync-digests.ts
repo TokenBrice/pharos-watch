@@ -103,7 +103,7 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
   console.log("Fetching digest archive...");
   console.log(`Digest source: ${apiUrl}`);
   const fetchUrl = cacheBustedUrl(apiUrl);
-  const headers = new Headers(apiFetchHeaders(["DIGEST_API_KEY"]));
+  const headers = new Headers(apiFetchHeaders(["DIGEST_API_KEY"], { url: fetchUrl }));
   headers.set("Cache-Control", "no-cache");
   headers.set("Pragma", "no-cache");
 

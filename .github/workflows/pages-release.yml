@@ -51,11 +51,11 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      DIGEST_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://site-api.pharos.watch' }}
+      DIGEST_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://pharos.watch/_site-data' }}
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
-      DEPEG_EVENTS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://site-api.pharos.watch' }}
+      DEPEG_EVENTS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://pharos.watch/_site-data' }}
       DEPEG_EVENTS_API_KEY: ${{ secrets.DEPEG_EVENTS_API_KEY || secrets.DIGEST_API_KEY }}
-      PUBLIC_DATASETS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://site-api.pharos.watch' }}
+      PUBLIC_DATASETS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://pharos.watch/_site-data' }}
       PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY || secrets.DIGEST_API_KEY }}
       PUBLIC_DATASETS_REQUIRE_API: "1"
       SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}

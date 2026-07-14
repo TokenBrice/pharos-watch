@@ -616,6 +616,7 @@ describe("validate-ci parity", () => {
 
     expect(workflow).toContain("DEPEG_EVENTS_API_KEY:");
     expect(workflow).toContain("PUBLIC_DATASETS_API_KEY:");
+    expect(pagesReleaseJob).toContain("https://pharos.watch/_site-data");
     expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_URL:");
     expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
