@@ -18,15 +18,959 @@
   "geckoId": "alto-dusd",
   "llamaId": "366",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Alto DUSD do not identify the collateral oracle setup or failure handling.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
-    "confidence": "limited",
+    "tier": "standard-external",
+    "summary": "Twelve registry-authorized debt-bearing Ethereum markets use market-local Chainlink compositions, with ERC-4626 or native exchange-rate legs where required. Each oracle reverts on stale, non-positive, incomplete, or reverting input and has no cache or automatic fallback; the affected market therefore fails closed. Wrapper-rate modules cap upward growth from stored checkpoints while accepting decreases. Every market, oracle, and liquidation engine is owned by AltoTimelockController with a contract-enforced 3,600-second minimum delay; administrative replacement is not automatic failover. The separate fixed-price USM/PSM routes do not create borrower debt positions and are excluded from liquidation branches.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 ORCL curation",
+      "rationale": "At Ethereum block 25531915, the on-chain Market Registry returned seven mint markets and five borrow markets, all with nonzero debt. All twelve are retained as isolated oracle/liquidation branches, including mETH and tBTC mint markets omitted by Alto's public snapshot: both were frozen for new activity but debt-bearing and liquidation-active. The separate USDC and frxUSD USM/PSM deployments exchange at administrator-configured fixed-price strategies and create no borrower-owned collateral position, collateral-ratio test, or liquidation path, so they are reviewed as not applicable to the branch inventory.",
+      "sources": [
+        {
+          "label": "Alto live protocol snapshot",
+          "url": "https://www.altofoundation.org/api/protocol-snapshot"
+        },
+        {
+          "label": "Pinned Alto mainnet deployment registry",
+          "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+        },
+        {
+          "label": "Finalized Ethereum block 25531915",
+          "url": "https://etherscan.io/block/25531915"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 ORCL curation",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Alto DUSD docs",
-        "url": "https://docs.alto.money/"
+        "label": "Alto live protocol snapshot",
+        "url": "https://www.altofoundation.org/api/protocol-snapshot"
+      },
+      {
+        "label": "Pinned Alto mainnet deployment registry",
+        "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+      },
+      {
+        "label": "Verified Alto borrow-market implementation",
+        "url": "https://etherscan.io/address/0x52ff3b59915286c7d6c0a8ef94fa9e44ba4e9375#code"
+      },
+      {
+        "label": "Verified Alto mint-market implementation",
+        "url": "https://etherscan.io/address/0x60da676bdf3d205e980a3276713796f8230572bd#code"
+      },
+      {
+        "label": "Verified Alto liquidation engine",
+        "url": "https://etherscan.io/address/0xAfe82dAD7EE47E8c050046b723cCc11DeF9AD7cB#code"
+      },
+      {
+        "label": "Verified AltoTimelockController",
+        "url": "https://etherscan.io/address/0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86#code"
+      },
+      {
+        "label": "Finalized Ethereum block 25531915",
+        "url": "https://etherscan.io/block/25531915"
+      }
+    ],
+    "branches": [
+      {
+        "id": "ethereum-borrow-susde",
+        "label": "Ethereum sUSDe borrow market",
+        "tier": "standard-external",
+        "summary": "The isolated borrow market values sUSDe from Chainlink USDe/USD multiplied by the canonical ERC-4626 redemption rate.",
+        "collateralAssets": [
+          "sUSDe"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink USDe/USD",
+            "path": "Market 0x133cf03d2A7a87B9239b1a3a8Dd62f3f27c46788 -> oracle 0xDBa31C2F3AB8542a48bA2d2B3E77fd900662954D -> USDe/USD -> sUSDe.convertToAssets(1 ether)",
+            "address": "0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961",
+            "chain": "ethereum",
+            "stalenessBoundSec": 83100,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-usde-usd",
+              "ethereum:0xa569d910839ae8865da8f8e70fffb0cba869f961",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Canonical sUSDe ERC-4626 rate",
+            "path": "Oracle 0xDBa31C2F3AB8542a48bA2d2B3E77fd900662954D -> sUSDe.convertToAssets(1 ether)",
+            "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:canonical-susde-rate",
+              "ethereum:0x9d39a5de30e57443bfF2A8307A4256c8797a3497",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both legs are required. The rate module accepts decreases but caps upward sUSDe growth at 18.5% per year from 1.229022613632657150 recorded at Unix time 1765370147. A reverting, non-positive, incomplete, or more-than-83100-second-old Chainlink answer, or a reverting canonical-rate read, makes getPrice revert. The market has no last-good-price cache or alternate feed and fails closed. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "sUSDe",
+            "maximumLtvPct": 91,
+            "minimumCollateralRatioPct": 107.53,
+            "note": "Liquidation LTV is 93%. Market/controller 0x133cf03d2A7a87B9239b1a3a8Dd62f3f27c46788; oracle 0xDBa31C2F3AB8542a48bA2d2B3E77fd900662954D; liquidation engine 0xAfe82dAD7EE47E8c050046b723cCc11DeF9AD7cB. The market was active and debt-bearing at the fixed block."
+          }
+        ],
+        "liquidationMechanism": "Any caller can trigger the engine's dynamic partial liquidation once LTV exceeds 93%. Priority liquidation was disabled and every tagging/grace/window field was zero at the fixed block, so there is no time delay. The owner-only governance liquidation is an emergency fallback when normal liquidation reverts.",
+        "liquidationDelaySec": 0,
+        "backstop": "Liquidators repay debt for collateral; there is no Stability Pool, auction, or committed insurance fund. Any insolvent remainder reduces totalSupply.assets and is therefore socialized to this isolated market's suppliers.",
+        "shutdownOrBadDebtBehavior": "Oracle failure reverts risk-sensitive market actions rather than serving cached data. A normal or governance liquidation can write off residual debt; in this borrow market the write-off reduces supplier assets. Pausing/freezing is owner-controlled and does not provide an oracle fallback.",
+        "failureDomainKeys": [
+          "alto:market:0x133cf03d2a7a87b9239b1a3a8dd62f3f27c46788",
+          "alto:borrow-market-supplier-loss",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "Verified sUSDe borrow oracle",
+            "url": "https://etherscan.io/address/0xDBa31C2F3AB8542a48bA2d2B3E77fd900662954D#code"
+          },
+          {
+            "label": "Verified borrow-market implementation",
+            "url": "https://etherscan.io/address/0x52ff3b59915286c7d6c0a8ef94fa9e44ba4e9375#code"
+          },
+          {
+            "label": "Verified liquidation engine",
+            "url": "https://etherscan.io/address/0xAfe82dAD7EE47E8c050046b723cCc11DeF9AD7cB#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-mint-susde",
+        "label": "Ethereum sUSDe mint market",
+        "tier": "standard-external",
+        "summary": "The isolated mint market values sUSDe from Chainlink USDe/USD multiplied by the canonical ERC-4626 redemption rate.",
+        "collateralAssets": [
+          "sUSDe"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink USDe/USD",
+            "path": "Market 0x210bF54092B66443FddFec0f3F156e74B04CD2a2 -> oracle 0x317fcb245D2038C0214cE7b97b723EfDD4a56603 -> USDe/USD -> sUSDe.convertToAssets(1 ether)",
+            "address": "0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961",
+            "chain": "ethereum",
+            "stalenessBoundSec": 83100,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-usde-usd",
+              "ethereum:0xa569d910839ae8865da8f8e70fffb0cba869f961",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Canonical sUSDe ERC-4626 rate",
+            "path": "Oracle 0x317fcb245D2038C0214cE7b97b723EfDD4a56603 -> sUSDe.convertToAssets(1 ether)",
+            "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:canonical-susde-rate",
+              "ethereum:0x9d39a5de30e57443bfF2A8307A4256c8797a3497",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both legs are required. The rate module accepts decreases but caps upward sUSDe growth at 18.5% per year from 1.241061497050914383 recorded at Unix time 1772797271. Invalid or stale Chainlink data or a failing canonical-rate read makes getPrice revert; there is no cache or alternate provider. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "sUSDe",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "Liquidation LTV is 85%. Market/controller 0x210bF54092B66443FddFec0f3F156e74B04CD2a2; oracle 0x317fcb245D2038C0214cE7b97b723EfDD4a56603; liquidation engine 0xE81419819a776404d318864C3A462E5cdac783fA. Active and debt-bearing at the fixed block."
+          }
+        ],
+        "liquidationMechanism": "Permissionless dynamic partial liquidation begins above 85% LTV. Priority mode was disabled and tagging/grace/window fields were zero, producing no time delay; owner-only governance liquidation remains an emergency fallback.",
+        "liquidationDelaySec": 0,
+        "backstop": "Liquidators repay DUSD for collateral; no Stability Pool, auction, or committed insurance fund exists. Residual debt is removed from totalBorrowed and accumulated in badDebtAssets, which was zero at block 25531915.",
+        "shutdownOrBadDebtBehavior": "Oracle failure reverts rather than using cached data. Insolvent residual debt is recorded in badDebtAssets and continues to count against the mint market's debt ceiling; it is not automatically recapitalized. This market's observed badDebtAssets value was zero.",
+        "failureDomainKeys": [
+          "alto:market:0x210bf54092b66443fddfec0f3f156e74b04cd2a2",
+          "alto:mint-market-bad-debt",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "Verified sUSDe mint oracle",
+            "url": "https://etherscan.io/address/0x317fcb245D2038C0214cE7b97b723EfDD4a56603#code"
+          },
+          {
+            "label": "Verified mint-market implementation",
+            "url": "https://etherscan.io/address/0x60da676bdf3d205e980a3276713796f8230572bd#code"
+          },
+          {
+            "label": "sUSDe liquidation engine",
+            "url": "https://etherscan.io/address/0xE81419819a776404d318864C3A462E5cdac783fA#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-borrow-syrupusdc",
+        "label": "Ethereum syrupUSDC borrow market",
+        "tier": "standard-external",
+        "summary": "The isolated borrow market values syrupUSDC from Chainlink USDC/USD multiplied by the canonical ERC-4626 redemption rate.",
+        "collateralAssets": [
+          "syrupUSDC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink USDC/USD",
+            "path": "Market 0x33B24510233281350bF8679A7c427d04db0ed208 -> oracle 0x4fB469361062de6f2Cad3610348C5B0A5620B245 -> USDC/USD -> syrupUSDC.convertToExitAssets(1e6)",
+            "address": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-usdc-usd",
+              "ethereum:0x8ffffffd4afb6115b954bd326cbe7b4ba576818f6",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Canonical syrupUSDC ERC-4626 rate",
+            "path": "Oracle 0x4fB469361062de6f2Cad3610348C5B0A5620B245 -> syrupUSDC.convertToExitAssets(1e6)",
+            "address": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:canonical-syrupusdc-rate",
+              "ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both legs are required. The rate module accepts decreases but caps upward syrupUSDC growth at 12% per year from 1.154411 recorded at Unix time 1769434715. Invalid, reverting, non-positive, or over-86700-second-old input makes getPrice revert; no cache or alternate provider exists. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "syrupUSDC",
+            "maximumLtvPct": 91,
+            "minimumCollateralRatioPct": 107.53,
+            "note": "Liquidation LTV is 93%. Market/controller 0x33B24510233281350bF8679A7c427d04db0ed208; oracle 0x4fB469361062de6f2Cad3610348C5B0A5620B245; liquidation engine 0xf86Fc229a93692CdEEfc82A3D9bdB6656A71e9a4. Active and debt-bearing at the fixed block."
+          }
+        ],
+        "liquidationMechanism": "Permissionless dynamic partial liquidation starts above 93% LTV. Priority mode was disabled and all tag/grace/window fields were zero, so the delay is zero; owner-only governance liquidation is the emergency path.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, auction, or insurance fund. Liquidators fund normal resolution, and insolvent residual debt reduces isolated-market supplier assets.",
+        "shutdownOrBadDebtBehavior": "Oracle failure makes the market fail closed. Residual bad debt is socialized by reducing totalSupply.assets; owner pause/freeze controls do not add an oracle fallback.",
+        "failureDomainKeys": [
+          "alto:market:0x33b24510233281350bf8679a7c427d04db0ed208",
+          "alto:borrow-market-supplier-loss",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "Verified syrupUSDC borrow oracle",
+            "url": "https://etherscan.io/address/0x4fB469361062de6f2Cad3610348C5B0A5620B245#code"
+          },
+          {
+            "label": "Verified borrow-market implementation",
+            "url": "https://etherscan.io/address/0x52ff3b59915286c7d6c0a8ef94fa9e44ba4e9375#code"
+          },
+          {
+            "label": "syrupUSDC liquidation engine",
+            "url": "https://etherscan.io/address/0xf86Fc229a93692CdEEfc82A3D9bdB6656A71e9a4#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-mint-weth",
+        "label": "Ethereum WETH mint market",
+        "tier": "standard-external",
+        "summary": "The isolated mint market directly uses Chainlink ETH/USD for WETH collateral.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink ETH/USD",
+            "path": "Market 0x8DED9e2B8Bc5128B862dD534b97c8a32991959ff -> oracle 0xFaa114a9f19d86837c373D13fbf3cC154d03459D -> ETH/USD",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-eth-usd",
+              "ethereum:0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "A reverting, incomplete, non-positive, or over-3900-second-old answer makes getPrice revert. No cache or alternate provider exists. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "Liquidation LTV is 85%. Market/controller 0x8DED9e2B8Bc5128B862dD534b97c8a32991959ff; oracle 0xFaa114a9f19d86837c373D13fbf3cC154d03459D; liquidation engine 0x984E3D783E78ac5c5192CaEB562bE84306724A86. Active and debt-bearing at the fixed block."
+          }
+        ],
+        "liquidationMechanism": "Permissionless dynamic partial liquidation begins above 85% LTV. Priority liquidation was disabled and tag/grace/window values were zero; governance liquidation is owner-only emergency handling.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or committed insurance fund exists. Residual DUSD debt is accumulated in badDebtAssets and still consumes debt-ceiling capacity; badDebtAssets was 2.792786924391007704 DUSD at block 25531915.",
+        "shutdownOrBadDebtBehavior": "Oracle failure reverts and fails the branch closed. Bad debt is written off from totalBorrowed, accumulated in badDebtAssets, and not automatically recapitalized. The fixed-block raw badDebtAssets value was 2792786924391007704.",
+        "failureDomainKeys": [
+          "alto:market:0x8ded9e2b8bc5128b862dd534b97c8a32991959ff",
+          "alto:mint-market-bad-debt",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "Verified WETH oracle",
+            "url": "https://etherscan.io/address/0xFaa114a9f19d86837c373D13fbf3cC154d03459D#code"
+          },
+          {
+            "label": "Verified mint-market implementation",
+            "url": "https://etherscan.io/address/0x60da676bdf3d205e980a3276713796f8230572bd#code"
+          },
+          {
+            "label": "WETH liquidation engine",
+            "url": "https://etherscan.io/address/0x984E3D783E78ac5c5192CaEB562bE84306724A86#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-mint-meth",
+        "label": "Ethereum mETH mint market",
+        "tier": "standard-external",
+        "summary": "The registry-authorized mint market values mETH from Chainlink ETH/USD multiplied by Mantle staking's canonical mETH-to-ETH rate.",
+        "collateralAssets": [
+          "mETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink ETH/USD",
+            "path": "Market 0xF897188DCd300Fa80a2f7f0f0290F9eF64F2D47b -> oracle 0x98a253d9Cec9dFad9c40a9Edcf5e35Fe33A45a6A -> ETH/USD -> mETH staking conversion",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-eth-usd",
+              "ethereum:0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Canonical Mantle mETH staking rate",
+            "path": "Oracle 0x98a253d9Cec9dFad9c40a9Edcf5e35Fe33A45a6A -> IMethStaking 0xe3cBd06D7dadB3F4e6557bAb7EdD924CD1489E8f -> mETHToETH(1 ether)",
+            "address": "0xe3cBd06D7dadB3F4e6557bAb7EdD924CD1489E8f",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:canonical-meth-rate",
+              "ethereum:0xe3cbd06d7dadb3f4e6557bab7edd924cd1489e8f",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both legs are required. The rate module accepts decreases but caps upward mETH growth at 8% per year from 1.087840551345101674 recorded at Unix time 1765368323. Invalid, stale, non-positive, or reverting Chainlink data or a reverting mETHToETH call makes getPrice revert; no cache or alternate provider exists. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "mETH",
+            "maximumLtvPct": 65,
+            "minimumCollateralRatioPct": 138.888889,
+            "note": "Liquidation LTV is 72%. Market/controller 0xF897188DCd300Fa80a2f7f0f0290F9eF64F2D47b; oracle 0x98a253d9Cec9dFad9c40a9Edcf5e35Fe33A45a6A; liquidation engine 0x61786D966f3FE8c4a83317af680Ea8B0eF70f4A9. Fixed state was paused=false, frozen=true: new activity was frozen, but the debt-bearing market remained liquidation-active and held 7.104541931362014158 DUSD totalBorrowed.assets despite omission from the public snapshot."
+          }
+        ],
+        "liquidationMechanism": "Permissionless dynamic partial liquidation begins above 72% LTV. Priority liquidation was disabled and tag, grace, and window values were zero, so liquidation delay is zero. The deployed mint-market liquidation gate checks pause rather than freeze, so fixed state paused=false, frozen=true leaves liquidation callable; owner-only governance liquidation remains emergency handling.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or committed insurance fund exists. Residual DUSD debt is removed from totalBorrowed and accumulated in badDebtAssets, which was zero at block 25531915 and remains counted against the market's 20,000 DUSD ceiling.",
+        "shutdownOrBadDebtBehavior": "Oracle failure reverts and fails closed. Insolvent DUSD debt is accumulated in badDebtAssets, is not automatically recapitalized, and reduces future mint capacity; the observed value was zero.",
+        "failureDomainKeys": [
+          "alto:market:0xf897188dcd300fa80a2f7f0f0290f9ef64f2d47b",
+          "alto:mint-market-bad-debt",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "Verified mETH oracle",
+            "url": "https://eth.blockscout.com/address/0x98a253d9Cec9dFad9c40a9Edcf5e35Fe33A45a6A?tab=contract"
+          },
+          {
+            "label": "Verified mint-market implementation",
+            "url": "https://etherscan.io/address/0x60da676bdf3d205e980a3276713796f8230572bd#code"
+          },
+          {
+            "label": "mETH liquidation engine",
+            "url": "https://etherscan.io/address/0x61786D966f3FE8c4a83317af680Ea8B0eF70f4A9#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-mint-tbtc",
+        "label": "Ethereum tBTC mint market",
+        "tier": "single-source-or-laggy",
+        "summary": "The registry-authorized tBTC mint market directly uses Chainlink BTC/USD and has no independent tBTC/BTC depeg leg.",
+        "collateralAssets": [
+          "tBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink BTC/USD",
+            "path": "Market 0xE17F10f8535336143d4F2FE304f3Dcf7B23671e1 -> oracle 0x3365e8DE476d416BF7bE20E8adBaA7f6E3CAaF3a -> BTC/USD; no tBTC/BTC rate leg",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-btc-usd",
+              "ethereum:0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Invalid, stale, non-positive, or reverting BTC/USD input makes getPrice revert; no cache, alternate provider, or tBTC/BTC rate leg exists. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "tBTC",
+            "maximumLtvPct": 70,
+            "minimumCollateralRatioPct": 129.87013,
+            "note": "Liquidation LTV is 77%. Market/controller 0xE17F10f8535336143d4F2FE304f3Dcf7B23671e1; oracle 0x3365e8DE476d416BF7bE20E8adBaA7f6E3CAaF3a; liquidation engine 0xBD284dD74479F3cBf4B59eE8479eCe2bB48f96a7. Fixed state was paused=false, frozen=true: new activity was frozen, but the debt-bearing market remained liquidation-active and held 1,557.355057209927214220 DUSD totalBorrowed.assets despite omission from the public snapshot."
+          }
+        ],
+        "liquidationMechanism": "Permissionless dynamic partial liquidation begins above 77% LTV. Priority liquidation was disabled and tag, grace, and window values were zero, so liquidation delay is zero. The deployed mint-market liquidation gate checks pause rather than freeze, so fixed state paused=false, frozen=true leaves liquidation callable; owner-only governance liquidation remains emergency handling.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or committed insurance fund exists. Residual DUSD debt is removed from totalBorrowed and accumulated in badDebtAssets, which was zero at block 25531915 and remains counted against the market's 4,000 DUSD ceiling.",
+        "shutdownOrBadDebtBehavior": "Oracle failure reverts and fails closed. Insolvent DUSD debt is accumulated in badDebtAssets, is not automatically recapitalized, and reduces future mint capacity; the observed value was zero.",
+        "failureDomainKeys": [
+          "alto:market:0xe17f10f8535336143d4f2fe304f3dcf7b23671e1",
+          "alto:mint-market-bad-debt",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "Verified tBTC oracle",
+            "url": "https://eth.blockscout.com/address/0x3365e8DE476d416BF7bE20E8adBaA7f6E3CAaF3a?tab=contract"
+          },
+          {
+            "label": "Verified mint-market implementation",
+            "url": "https://etherscan.io/address/0x60da676bdf3d205e980a3276713796f8230572bd#code"
+          },
+          {
+            "label": "tBTC liquidation engine",
+            "url": "https://etherscan.io/address/0xBD284dD74479F3cBf4B59eE8479eCe2bB48f96a7#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-borrow-paxg",
+        "label": "Ethereum PAXG borrow market",
+        "tier": "standard-external",
+        "summary": "The isolated borrow market directly uses Chainlink PAXG/USD.",
+        "collateralAssets": [
+          "PAXG"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink PAXG/USD",
+            "path": "Market 0x99f538Ec7c840197DcAf30A25B635482ba9e8817 -> oracle 0x9517603dB77d82BF61F56297E6019A0501a3D25a -> PAXG/USD",
+            "address": "0x9944D86CEB9160aF5C5feB251FD671923323f8C3",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-paxg-usd",
+              "ethereum:0x9944d86ceb9160af5c5feb251fd671923323f8c3",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "A reverting, incomplete, non-positive, or over-86700-second-old answer makes getPrice revert. No cache or alternate provider exists. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; administrative replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "PAXG",
+            "maximumLtvPct": 75,
+            "minimumCollateralRatioPct": 125,
+            "note": "Liquidation LTV is 80%. Market/controller 0x99f538Ec7c840197DcAf30A25B635482ba9e8817; oracle 0x9517603dB77d82BF61F56297E6019A0501a3D25a; liquidation engine 0xd4Ff4C427664645D357d3E6dC0Fd6F52DF1d3005. Active and debt-bearing at the fixed block."
+          }
+        ],
+        "liquidationMechanism": "Permissionless dynamic partial liquidation begins above 80% LTV. Priority mode was disabled and all timing fields were zero; governance liquidation is owner-only emergency handling.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or committed insurance fund exists. Residual bad debt is socialized to this isolated market's suppliers through totalSupply.assets.",
+        "shutdownOrBadDebtBehavior": "Oracle failure reverts and fails closed. Insolvent write-off reduces supplier assets; pause/freeze controls do not supply a fallback price.",
+        "failureDomainKeys": [
+          "alto:market:0x99f538ec7c840197dcaf30a25b635482ba9e8817",
+          "alto:borrow-market-supplier-loss",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "PAXG market oracle",
+            "url": "https://etherscan.io/address/0x9517603dB77d82BF61F56297E6019A0501a3D25a#code"
+          },
+          {
+            "label": "Chainlink PAXG/USD",
+            "url": "https://data.chain.link/feeds/ethereum/mainnet/paxg-usd"
+          },
+          {
+            "label": "PAXG liquidation engine",
+            "url": "https://etherscan.io/address/0xd4Ff4C427664645D357d3E6dC0Fd6F52DF1d3005#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-mint-syrupusdc",
+        "label": "Ethereum syrupUSDC mint market",
+        "tier": "standard-external",
+        "summary": "The isolated mint market values syrupUSDC from Chainlink USDC/USD multiplied by the canonical ERC-4626 redemption rate.",
+        "collateralAssets": [
+          "syrupUSDC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink USDC/USD",
+            "path": "Market 0xD2eA320713158a7b7eaE46025B8Ad4CBF3cdc87e -> oracle 0x72c7DC92D39850619c622f512e50B53f75A05D13 -> USDC/USD -> syrupUSDC.convertToExitAssets(1e6)",
+            "address": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-usdc-usd",
+              "ethereum:0x8ffffffd4afb6115b954bd326cbe7b4ba576818f6",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Canonical syrupUSDC ERC-4626 rate",
+            "path": "Oracle 0x72c7DC92D39850619c622f512e50B53f75A05D13 -> syrupUSDC.convertToExitAssets(1e6)",
+            "address": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:canonical-syrupusdc-rate",
+              "ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both legs are required. The rate module accepts decreases but caps upward syrupUSDC growth at 12% per year from 1.160137 recorded at Unix time 1772800139. Invalid or over-86700-second-old input makes getPrice revert; no cache or alternate provider exists. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "syrupUSDC",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "Liquidation LTV is 85%. Market/controller 0xD2eA320713158a7b7eaE46025B8Ad4CBF3cdc87e; oracle 0x72c7DC92D39850619c622f512e50B53f75A05D13; liquidation engine 0xa6c519d3EC7763EA21F77A83017618CD51c0d118. Active and debt-bearing at the fixed block."
+          }
+        ],
+        "liquidationMechanism": "Permissionless dynamic partial liquidation begins above 85% LTV. Priority mode was disabled and all timing fields were zero; governance liquidation remains owner-only emergency handling.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or committed insurance fund exists. Residual debt accumulates in badDebtAssets and remains counted against the debt ceiling; badDebtAssets was zero at block 25531915.",
+        "shutdownOrBadDebtBehavior": "Oracle failure reverts and fails closed. Insolvent debt is removed from totalBorrowed, accumulated in badDebtAssets, and not automatically recapitalized. This market's observed badDebtAssets value was zero.",
+        "failureDomainKeys": [
+          "alto:market:0xd2ea320713158a7b7eae46025b8ad4cbf3cdc87e",
+          "alto:mint-market-bad-debt",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "Verified syrupUSDC mint oracle",
+            "url": "https://etherscan.io/address/0x72c7DC92D39850619c622f512e50B53f75A05D13#code"
+          },
+          {
+            "label": "Verified mint-market implementation",
+            "url": "https://etherscan.io/address/0x60da676bdf3d205e980a3276713796f8230572bd#code"
+          },
+          {
+            "label": "syrupUSDC liquidation engine",
+            "url": "https://etherscan.io/address/0xa6c519d3EC7763EA21F77A83017618CD51c0d118#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-borrow-cbbtc",
+        "label": "Ethereum cbBTC borrow market",
+        "tier": "standard-external",
+        "summary": "The isolated cbBTC borrow market directly uses Chainlink BTC/USD.",
+        "collateralAssets": [
+          "cbBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink BTC/USD",
+            "path": "Market 0xaE4f2B998783e2041E87E08Da73985e4E0420159 -> oracle 0x070EAF353B9E884B4C93B44F8105C31348477f29 -> BTC/USD",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-btc-usd",
+              "ethereum:0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "A reverting, incomplete, non-positive, or over-3900-second-old answer makes getPrice revert. No cache, wrapper-rate adjustment, or alternate provider exists. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "cbBTC",
+            "maximumLtvPct": 75,
+            "minimumCollateralRatioPct": 125,
+            "note": "Liquidation LTV is 80%. Market/controller 0xaE4f2B998783e2041E87E08Da73985e4E0420159; oracle 0x070EAF353B9E884B4C93B44F8105C31348477f29; liquidation engine 0xCB28c27539D7B57E802b9BC6E58501B8f2d6d898. Active and debt-bearing at the fixed block."
+          }
+        ],
+        "liquidationMechanism": "Permissionless dynamic partial liquidation starts above 80% LTV. Priority mode was disabled and all timing fields were zero; owner-only governance liquidation is the emergency path.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or committed insurance fund exists. Residual bad debt reduces this isolated market's supplier assets.",
+        "shutdownOrBadDebtBehavior": "Oracle failure reverts and fails closed. Insolvent write-off is socialized to suppliers through totalSupply.assets.",
+        "failureDomainKeys": [
+          "alto:market:0xae4f2b998783e2041e87e08da73985e4e0420159",
+          "alto:borrow-market-supplier-loss",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "cbBTC market oracle",
+            "url": "https://etherscan.io/address/0x070EAF353B9E884B4C93B44F8105C31348477f29#code"
+          },
+          {
+            "label": "Verified borrow-market implementation",
+            "url": "https://etherscan.io/address/0x52ff3b59915286c7d6c0a8ef94fa9e44ba4e9375#code"
+          },
+          {
+            "label": "cbBTC liquidation engine",
+            "url": "https://etherscan.io/address/0xCB28c27539D7B57E802b9BC6E58501B8f2d6d898#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-mint-reth",
+        "label": "Ethereum rETH mint market",
+        "tier": "standard-external",
+        "summary": "The isolated mint market values rETH from Chainlink ETH/USD multiplied by Rocket Pool's canonical exchange rate.",
+        "collateralAssets": [
+          "rETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink ETH/USD",
+            "path": "Market 0xc0E2DdB06bB034c1F980531EC5CAd944D71AfFbf -> oracle 0x3073a5143AFdCA2EFE6d91758d66C657c7b214A0 -> ETH/USD -> rETH.getExchangeRate()",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-eth-usd",
+              "ethereum:0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Canonical Rocket Pool rETH rate",
+            "path": "Oracle 0x3073a5143AFdCA2EFE6d91758d66C657c7b214A0 -> rETH.getExchangeRate()",
+            "address": "0xae78736Cd615f374D3085123A210448E74Fc6393",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:canonical-reth-rate",
+              "ethereum:0xae78736cd615f374d3085123a210448e74fc6393",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both legs are required. The rate module accepts decreases but caps upward rETH growth at 7% per year from 1.158153401049882028 recorded at Unix time 1765367783. Invalid or over-3900-second-old Chainlink data or a reverting canonical-rate read makes getPrice revert; no cache or alternate provider exists. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "rETH",
+            "maximumLtvPct": 70,
+            "minimumCollateralRatioPct": 133.33,
+            "note": "Liquidation LTV is 75%. Market/controller 0xc0E2DdB06bB034c1F980531EC5CAd944D71AfFbf; oracle 0x3073a5143AFdCA2EFE6d91758d66C657c7b214A0; liquidation engine 0x2a3fB51184183405c975Bd8b355d4Dc43209f45B. Active and debt-bearing at the fixed block."
+          }
+        ],
+        "liquidationMechanism": "Permissionless dynamic partial liquidation starts above 75% LTV. Priority mode and all timing fields were zero; owner-only governance liquidation remains an emergency fallback.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or committed insurance fund exists. Residual debt is accumulated in badDebtAssets and counts against the debt ceiling; badDebtAssets was zero at block 25531915.",
+        "shutdownOrBadDebtBehavior": "Oracle failure reverts and fails closed. Insolvent debt is recorded, not automatically recapitalized, and continues to reduce available mint capacity. This market's observed badDebtAssets value was zero.",
+        "failureDomainKeys": [
+          "alto:market:0xc0e2ddb06bb034c1f980531ec5cad944d71affbf",
+          "alto:mint-market-bad-debt",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "Verified rETH oracle",
+            "url": "https://etherscan.io/address/0x3073a5143AFdCA2EFE6d91758d66C657c7b214A0#code"
+          },
+          {
+            "label": "Verified mint-market implementation",
+            "url": "https://etherscan.io/address/0x60da676bdf3d205e980a3276713796f8230572bd#code"
+          },
+          {
+            "label": "rETH liquidation engine",
+            "url": "https://etherscan.io/address/0x2a3fB51184183405c975Bd8b355d4Dc43209f45B#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-borrow-wbtc",
+        "label": "Ethereum WBTC borrow market",
+        "tier": "standard-external",
+        "summary": "The isolated borrow market composes Chainlink WBTC/BTC with Chainlink BTC/USD.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink WBTC/BTC",
+            "path": "Market 0xefd78a5970a43e25b30426C3952065217c55e5E4 -> oracle 0x61fe27CeAeEf51332e9ca82Df603168efEE184b7 -> WBTC/BTC",
+            "address": "0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86700,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-wbtc-btc",
+              "ethereum:0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Chainlink BTC/USD",
+            "path": "Oracle 0x61fe27CeAeEf51332e9ca82Df603168efEE184b7 -> WBTC/BTC -> BTC/USD",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-btc-usd",
+              "ethereum:0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both feeds are required. Any reverting, incomplete, non-positive, or stale leg makes getPrice revert; no cached price or alternate provider exists. The 86700-second WBTC/BTC and 3900-second BTC/USD bounds are independently enforced. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 75,
+            "minimumCollateralRatioPct": 125,
+            "note": "Liquidation LTV is 80%. Market/controller 0xefd78a5970a43e25b30426C3952065217c55e5E4; oracle 0x61fe27CeAeEf51332e9ca82Df603168efEE184b7; liquidation engine 0x5B7a27B467C4B111c780210475d527aD91e30277. Active and debt-bearing at the fixed block."
+          }
+        ],
+        "liquidationMechanism": "Permissionless dynamic partial liquidation starts above 80% LTV. Priority mode and all timing fields were zero; governance liquidation is owner-only emergency handling.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or committed insurance fund exists. Insolvent residual debt reduces this market's supplier assets.",
+        "shutdownOrBadDebtBehavior": "Failure of either feed makes the market fail closed. Residual bad debt is socialized through totalSupply.assets rather than transferred to a protocol backstop.",
+        "failureDomainKeys": [
+          "alto:market:0xefd78a5970a43e25b30426c3952065217c55e5e4",
+          "alto:borrow-market-supplier-loss",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "WBTC market oracle",
+            "url": "https://etherscan.io/address/0x61fe27CeAeEf51332e9ca82Df603168efEE184b7#code"
+          },
+          {
+            "label": "Verified borrow-market implementation",
+            "url": "https://etherscan.io/address/0x52ff3b59915286c7d6c0a8ef94fa9e44ba4e9375#code"
+          },
+          {
+            "label": "WBTC liquidation engine",
+            "url": "https://etherscan.io/address/0x5B7a27B467C4B111c780210475d527aD91e30277#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum-mint-wsteth",
+        "label": "Ethereum wstETH mint market",
+        "tier": "standard-external",
+        "summary": "The isolated mint market values wstETH from Chainlink ETH/USD multiplied by the canonical wstETH/STETH conversion rate.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink ETH/USD",
+            "path": "Market 0xfd8c25047f4397dC5461B919999585a2a3EaC2eF -> oracle 0xCf041e3266152e07EED37D32d4476c16028070A4 -> ETH/USD -> wstETH.stEthPerToken()",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "stalenessBoundSec": 3900,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:chainlink-eth-usd",
+              "ethereum:0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Canonical Lido wstETH rate",
+            "path": "Oracle 0xCf041e3266152e07EED37D32d4476c16028070A4 -> wstETH.stEthPerToken()",
+            "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531915,
+            "failureDomainKeys": [
+              "ethereum:canonical-wsteth-rate",
+              "ethereum:0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both legs are required. The rate module accepts decreases but caps upward wstETH growth at 7% per year from 1.227484728213044086 recorded at Unix time 1765367303. Invalid or over-3900-second-old ETH/USD data or a failing canonical-rate read makes getPrice revert; no cache or alternate provider exists. Market, oracle, and liquidation-engine administration is behind AltoTimelockController 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86 with getMinDelay() = 3,600 seconds; replacement is not automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531915,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "maximumLtvPct": 78,
+            "minimumCollateralRatioPct": 120.48,
+            "note": "Liquidation LTV is 83%. Market/controller 0xfd8c25047f4397dC5461B919999585a2a3EaC2eF; oracle 0xCf041e3266152e07EED37D32d4476c16028070A4; liquidation engine 0xB9724552a774369E8319d8EDC00A7cb95fc5dDe2. Active and debt-bearing at the fixed block."
+          }
+        ],
+        "liquidationMechanism": "Permissionless dynamic partial liquidation starts above 83% LTV. Priority mode and all timing fields were zero; owner-only governance liquidation remains the emergency path.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, auction, or committed insurance fund exists. Residual DUSD debt is recorded in badDebtAssets and remains in debt-ceiling accounting; badDebtAssets was 0.011547222592138533 DUSD at block 25531915.",
+        "shutdownOrBadDebtBehavior": "Oracle failure reverts and fails closed. Insolvent debt is accumulated, not automatically recapitalized, and reduces future mint capacity. The fixed-block raw badDebtAssets value was 11547222592138533.",
+        "failureDomainKeys": [
+          "alto:market:0xfd8c25047f4397dc5461b919999585a2a3eac2ef",
+          "alto:mint-market-bad-debt",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Pinned Alto deployments",
+            "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+          },
+          {
+            "label": "Verified wstETH oracle",
+            "url": "https://etherscan.io/address/0xCf041e3266152e07EED37D32d4476c16028070A4#code"
+          },
+          {
+            "label": "Verified mint-market implementation",
+            "url": "https://etherscan.io/address/0x60da676bdf3d205e980a3276713796f8230572bd#code"
+          },
+          {
+            "label": "wstETH liquidation engine",
+            "url": "https://etherscan.io/address/0xB9724552a774369E8319d8EDC00A7cb95fc5dDe2#code"
+          }
+        ]
       }
     ]
   },
