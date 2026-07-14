@@ -1116,8 +1116,16 @@ export function buildSafetyScoreV9ShadowDailySuccess(input: {
   artifactKeys?: readonly string[];
 }): SafetyScoreV9ShadowDaily {
   const previous = assertDailyPredecessor(input.previous, input.utcDay, input.updatedAtSec);
-  if (previous?.selectedRun !== null && previous?.selectedRun !== undefined) {
-    throw new Error("Safety Score v9 daily history already has a selected successful run");
+  // Intra-day refreshes re-select: the day's selected run is the LATEST
+  // success, so the compact daily row, the retained latest candidate/diff
+  // rows, and any evidence-day artifacts stay coherent while the candidate
+  // iterates during the day. The gate still counts the day once.
+  if (
+    previous?.selectedRun !== null &&
+    previous?.selectedRun !== undefined &&
+    input.selectedAtSec < previous.selectedRun.selectedAtSec
+  ) {
+    throw new Error("Safety Score v9 daily re-selection cannot move the selected run backwards");
   }
   const envelope = SafetyScoreV9ShadowEnvelopeSchema.parse(input.envelope);
   const diff = SafetyScoreV9DiffReportSchema.parse(input.diff);

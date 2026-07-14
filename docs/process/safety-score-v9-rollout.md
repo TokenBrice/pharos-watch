@@ -73,7 +73,11 @@ budget.
 successful and failed attempt counts, the selected run identity, exact-set and
 coverage evidence, movement/review counts, qualification, selected artifact
 keys, and a bounded latest error. A failed run does not prevent a later retry
-from becoming that day's selected success.
+from becoming that day's selected success, and the shadow refreshes on a
+bounded intra-day cadence (three-hour minimum age, up to eight runs per UTC
+day): each later success re-selects the day so the compact row, the retained
+latest candidate/diff state, and any evidence-day artifacts stay coherent
+while the candidate iterates. The gate still counts each day once.
 
 Normal successful runs do not retain a full replay bundle. Content-addressed
 exact input, fact set, policy, evaluation-build manifest, and result artifacts
