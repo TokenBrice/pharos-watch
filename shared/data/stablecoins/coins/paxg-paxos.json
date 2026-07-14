@@ -69,62 +69,139 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "PAXG supply is controlled by Paxos-operated infrastructure. The token (AdminUpgradeabilityProxy) delegates to a SupplyControl proxy with multiple SUPPLY_CONTROLLER_ROLE holders; the SupplyControl defaultAdmin and the token defaultAdmin/owner are the same Paxos-operated EOA.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x45804880de22913dafe09f4980848ece6ecbaf78",
+        "0xbe62db8ed4838e10e1318593ac9e3eb9ccfb2dc7",
+        "0xd09ede557ef195983c9544a5724046fbd6e8a3c6"
+      ],
+      "implementationAddresses": [
+        "0x7da4c5d9eca180a03765a6d27196f2a0380fa543",
+        "0xbb9f637fae6972ea9adeb2ac717c16590cec33e3",
+        "0xc54ca36efe594e4c774ba8463adf67ba3de1236f"
+      ],
+      "adminAddresses": [
+        "0xc94bcf6e1d8b3558e3b62e743630d50497e3851c",
+        "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "PAXG independent token and supply-path upgrade EOAs",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526129,
+      "sources": [
+        {
+          "label": "PAXG legacy proxy source",
+          "url": "https://github.com/paxosglobal/paxos-gold-contract/blob/master/contracts/zeppelin/AdminUpgradeabilityProxy.sol"
+        },
+        {
+          "label": "PAXG V2 and SupplyControl source",
+          "url": "https://github.com/paxosglobal/paxos-token-contracts/tree/ac239fd78bb4330e94c78e306bc1539db9544e16"
+        },
+        {
+          "label": "PAXG token proxy",
+          "url": "https://etherscan.io/address/0x45804880de22913dafe09f4980848ece6ecbaf78#code"
+        },
+        {
+          "label": "PAXG SupplyControl proxy",
+          "url": "https://etherscan.io/address/0xbe62db8ed4838e10e1318593ac9e3eb9ccfb2dc7#code"
+        },
+        {
+          "label": "PAXG LayerZero adapter proxy",
+          "url": "https://etherscan.io/address/0xd09ede557ef195983c9544a5724046fbd6e8a3c6#code"
+        }
+      ]
+    },
+    "summary": "PAXG's legacy token proxy delegates to PAXG V2, which accepts mint requests through a UUPS SupplyControl proxy. Three current controllers can mint under rate limits, while one immediate Paxos EOA can raise limits, add controllers, redirect SupplyControl, and upgrade both SupplyControl and the LayerZero controller. A separate immediate EOA can replace the outer token implementation.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xbe62db8ed4838e10e1318593ac9e3eb9ccfb2dc7",
-        "label": "PAXG SupplyControl proxy (multi-controller mint surface)",
+        "label": "PAXG SupplyControl three-controller mint surface",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "EOAs 0xf845a0a05cbd91ac15c3e59d126de5dfbc2aabb7 and 0x2fb074fa59c9294c71246825c1c9a0c7782d41a4 each had a 177,000-PAXG capacity and 50-PAXG-per-second refill. LayerZero adapter proxy 0xd09ede557ef195983c9544a5724046fbd6e8a3c6 had a 13,320-PAXG capacity and 0.155-PAXG-per-second refill. The controller-manager EOA can change these bounds immediately.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "ethereum:0xf845a0a05cbd91ac15c3e59d126de5dfbc2aabb7",
+          "ethereum:0x2fb074fa59c9294c71246825c1c9a0c7782d41a4",
+          "ethereum:0xd09ede557ef195983c9544a5724046fbd6e8a3c6"
+        ],
         "sources": [
           {
             "label": "Ethereum PAXG token supplyControl()",
             "url": "https://etherscan.io/address/0x45804880de22913dafe09f4980848ece6ecbaf78#readContract"
           },
           {
-            "label": "Paxos PAXG contract repository",
-            "url": "https://github.com/paxosglobal/paxos-gold-contract"
+            "label": "Exact SupplyControl source",
+            "url": "https://github.com/paxosglobal/paxos-token-contracts/blob/ac239fd78bb4330e94c78e306bc1539db9544e16/contracts/SupplyControl.sol"
           }
         ],
-        "evidence": "At Ethereum block 25295096, supplyControl() on the PAXG proxy returned 0xbe62db8ed4838e10e1318593ac9e3eb9ccfb2dc7. This SupplyControl proxy (ERC1967Proxy over SupplyControl implementation 0xbb9f637f) holds multiple SUPPLY_CONTROLLER_ROLE EOAs: 0xf845a0a0, 0x2fb074fa, plus one sub-proxy 0xd09ede55. Previously recorded supplyController EOA 0x2fb074FA is now one of three controllers within the SupplyControl proxy."
+        "evidence": "At Ethereum block 25526129, token supplyControl() returned this proxy and getAllSupplyControllerAddresses() returned exactly the two EOAs plus LayerZero adapter proxy listed in the failure domains. getSupplyControllerConfig() returned the recorded capacities, refill rates, whitelists, and allow-any flags. Recompiling pinned Paxos source with Solidity 0.8.28 matched implementation 0xbb9f637fae6972ea9adeb2ac717c16590cec33e3 byte-for-byte after substituting standard UUPS self-address immutables."
       },
       {
         "chain": "ethereum",
-        "address": "0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B",
-        "label": "PAXG token defaultAdmin and SupplyControl defaultAdmin (Paxos EOA)",
+        "address": "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b",
+        "label": "PAXG DEFAULT_ADMIN and controller-manager EOA",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "ethereum:0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b"
+        ],
         "sources": [
           {
             "label": "Ethereum PAXG token defaultAdmin()/owner()",
             "url": "https://etherscan.io/address/0x45804880de22913dafe09f4980848ece6ecbaf78#readContract"
+          },
+          {
+            "label": "Exact SupplyControl source",
+            "url": "https://github.com/paxosglobal/paxos-token-contracts/blob/ac239fd78bb4330e94c78e306bc1539db9544e16/contracts/SupplyControl.sol"
           }
         ],
-        "evidence": "At Ethereum block 25295096, defaultAdmin() and owner() on the PAXG proxy both returned 0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B; eth_getCode returned no bytecode (EOA). The same address is defaultAdmin of the SupplyControl proxy."
+        "evidence": "At Ethereum block 25526129, this no-code EOA was token defaultAdmin/owner, SupplyControl defaultAdmin, SupplyControl SUPPLY_CONTROLLER_MANAGER_ROLE holder, and owner of LayerZero adapter proxy 0xd09ede557ef195983c9544a5724046fbd6e8a3c6. It can immediately redirect token supplyControl, change or add mint controllers, change rate limits and whitelists, and upgrade both UUPS proxies. The three-hour default-admin delay applies only to transferring DEFAULT_ADMIN_ROLE, not these current-admin actions."
       },
       {
         "chain": "ethereum",
         "address": "0xc94bcf6e1d8b3558e3b62e743630d50497e3851c",
-        "label": "PAXG proxy admin (upgrade authority)",
-        "role": "minter-admin",
+        "label": "PAXG independent token and supply-path upgrade EOAs",
+        "role": "proxy-admin",
         "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "ethereum:0xc94bcf6e1d8b3558e3b62e743630d50497e3851c",
+          "ethereum:0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b"
+        ],
+        "bypassSurfaces": [
+          "Separate EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b can independently upgrade SupplyControl and the LayerZero adapter or redirect SupplyControl without the outer proxy admin."
+        ],
         "sources": [
           {
             "label": "Ethereum PAXG proxy admin slot",
             "url": "https://etherscan.io/address/0x45804880de22913dafe09f4980848ece6ecbaf78"
+          },
+          {
+            "label": "PAXG V2 and SupplyControl source",
+            "url": "https://github.com/paxosglobal/paxos-token-contracts/tree/ac239fd78bb4330e94c78e306bc1539db9544e16"
           }
         ],
-        "evidence": "At Ethereum block 25295096, proxy admin slot (0x10d6a54a...) on PAXG returned 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c; eth_getCode returned no bytecode (EOA). The PAXG token is an AdminUpgradeabilityProxy."
+        "evidence": "At Ethereum block 25526129, the legacy Zeppelinos proxy admin slot returned no-code EOA 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c, which can replace outer PAXG logic immediately. The separate no-code DEFAULT_ADMIN EOA can independently upgrade SupplyControl and its LayerZero controller or redirect the token to a different supply controller. Both paths have zero execution delay."
       }
     ],
     "review": {
@@ -138,9 +215,9 @@
           "url": "https://github.com/paxosglobal/paxos-gold-contract"
         }
       ],
-      "evidence": "At Ethereum block 25295096: PAXG is an AdminUpgradeabilityProxy (impl 0x7da4c5d9, proxy admin EOA 0xc94bcf6e). supplyControl() returned SupplyControl proxy 0xbe62db8e with 3 SUPPLY_CONTROLLER_ROLE holders including the old EOA 0x2fb074fa. defaultAdmin/owner = Paxos EOA 0x3af3e85f. Data corrected from prior record which listed supplyController as a single EOA.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25526129, legacy token proxy 0x45804880de22913dafe09f4980848ece6ecbaf78 used implementation 0x7da4c5d9eca180a03765a6d27196f2a0380fa543 and proxy-admin EOA 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c. Its SupplyControl UUPS proxy used exact-source implementation 0xbb9f637fae6972ea9adeb2ac717c16590cec33e3 and three live controllers. DEFAULT_ADMIN EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b could immediately manage controllers, redirect SupplyControl, upgrade SupplyControl, and upgrade controller proxy 0xd09ede557ef195983c9544a5724046fbd6e8a3c6. No pending default-admin transfer existed.",
+      "reviewer": "Codex Safety Score V9 evidence audit",
+      "reviewedAt": "2026-07-13"
     }
   },
   "custodyModel": "institutional-top",
