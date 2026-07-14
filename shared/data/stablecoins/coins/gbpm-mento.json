@@ -216,6 +216,31 @@
       "coinId": "cusd-celo"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento CDP deployments",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "Mento StableToken documentation",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+      }
+    ],
+    "rationale": "Both active GBPm troves in the official reserve API are collateralized exclusively by USDm. The API reports $386,121.22 of USDm collateral against $131,465.11 of GBPm debt, so the complete current collateral composition maps to the tracked USDm dependency.",
+    "compositionBasis": "Active GBPm cdp_troves rows grouped by collateral_token in the Mento reserve analytics API",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All active GBPm CDP collateral rows identify USDm as the collateral token.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,

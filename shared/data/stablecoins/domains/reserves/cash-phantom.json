@@ -1,0 +1,82 @@
+{
+  "id": "cash-phantom",
+  "reserves": [
+    {
+      "name": "Short-dated Treasuries, Treasury repo, government money-market funds, deposits, and tokenized equivalents",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury, regulated financial institutions, and undisclosed tokenized-asset issuers",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Bridge Building Inc Stablecoin Terms",
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+      },
+      {
+        "label": "Bridge stablecoins reserve and custody FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+      }
+    ],
+    "rationale": "Bridge's issuer terms identify the eligible reserve categories but do not publish CASH's current allocation among them. The prior 50/15/15/10/10 split had no source support and was replaced by one evidenced aggregate basket.",
+    "compositionBasis": "Bridge issuer terms and reserve FAQ; current category weights undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish current asset-class, tokenized-asset, counterparty, or provider weights for CASH.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-dated Treasuries, Treasury repo, government money-market funds, deposits, and tokenized equivalents",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Current reserve category and tokenized-asset weights are not publicly disclosed by Bridge."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "BlackRock",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Fidelity",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Bridge Building Inc Stablecoin Terms",
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+      },
+      {
+        "label": "Bridge stablecoins reserve and custody FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+      }
+    ],
+    "uncertainty": "Bridge states that stablecoin reserves use segregated bankruptcy-remote accounts and identifies BlackRock and Fidelity as custody partners, but does not disclose provider shares, account-level placement, or rehypothecation terms for CASH."
+  }
+}

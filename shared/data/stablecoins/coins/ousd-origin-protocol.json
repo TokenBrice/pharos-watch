@@ -53,22 +53,6 @@
   },
   "collateralQuality": "exotic",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "USDC (via Morpho/Yearn vault)",
-      "pct": 90,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    },
-    {
-      "name": "USDC (via Curve OUSD/USDC AMO LP)",
-      "pct": 10,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "origin-vault-balances",
     "version": 1,

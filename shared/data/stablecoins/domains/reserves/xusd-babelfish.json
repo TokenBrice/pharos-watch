@@ -1,0 +1,90 @@
+{
+  "id": "xusd-babelfish",
+  "reserves": [
+    {
+      "name": "Sovryn Dollar DLLR",
+      "pct": 89.94,
+      "risk": "medium",
+      "coinId": "dllr-sovryn",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sovryn protocol",
+      "riskFactors": ["smart-contract", "liquidity", "counterparty"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Rootstock Bridged USDT",
+      "pct": 9.61,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether and the Rootstock bridge",
+      "riskFactors": ["counterparty", "smart-contract", "custody", "liquidity"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Dollar on Chain DOC",
+      "pct": 0.45,
+      "risk": "medium",
+      "coinId": "doc-money-on-chain",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Money on Chain protocol",
+      "riskFactors": ["smart-contract", "liquidity", "counterparty"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BabelFish XUSD composition documentation",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/tutorials-and-guides/xusd-statistics"
+      },
+      {
+        "label": "Rootstock RPC",
+        "url": "https://public-node.rsk.co"
+      },
+      {
+        "label": "BabelFish reserve contract",
+        "url": "https://rootstock.blockscout.com/address/0x1440d19436bEEaf8517896bffB957A88ec95a00F"
+      }
+    ],
+    "rationale": "Direct balanceOf reads at Rootstock block 9,050,920 returned 950,504.343218 DLLR, 101,544.643077 bridged USDT, and 4,724.102040 DOC in the BabelFish reserve contract. The configured USDC and DAI branch balances were zero. Normalizing the three dollar-pegged balances gives 89.94%, 9.61%, and 0.45%.",
+    "compositionBasis": "Rootstock reserve-contract balances at block 9,050,920",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The composition is fully linked, but each constituent retains its issuer, bridge, smart-contract, and liquidity risks.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "BabelFish XUSD reserve contract",
+        "role": "other",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BabelFish XUSD composition documentation",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/tutorials-and-guides/xusd-statistics"
+      },
+      {
+        "label": "BabelFish reserve contract",
+        "url": "https://rootstock.blockscout.com/address/0x1440d19436bEEaf8517896bffB957A88ec95a00F"
+      }
+    ],
+    "uncertainty": "Constituent balances are directly observable in the dedicated on-chain reserve contract, but public documentation does not establish legal bankruptcy remoteness or whether governance can deploy or rehypothecate the basket."
+  }
+}

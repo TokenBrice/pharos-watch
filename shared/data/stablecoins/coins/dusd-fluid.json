@@ -72,13 +72,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "USD cash in safeguarded accounts at regulated European banks (Lloyd's of London insured)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
@@ -118,7 +111,10 @@
         "capDescription": "Contract refuses to mint above verifiedOffchainAssetBalance, an oracle-published figure controlled by the issuer reflecting the attested treasury balance.",
         "evidence": "Fluid materials describe a whitelisted-wallet mint/redeem against the issuer treasury; an issuer-controlled oracle publishes the safeguarded-bank balance on-chain, and the contract caps minted supply at that balance.",
         "sources": [
-          { "label": "Fluid DUSD", "url": "https://fluid.ch/dusd/" }
+          {
+            "label": "Fluid DUSD",
+            "url": "https://fluid.ch/dusd/"
+          }
         ]
       },
       {
@@ -130,7 +126,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "evidence": "At Arbitrum block 472412309, EIP-1967 proxy admin slot (0xb531…) of 0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709 returned 0xdeab81c9ff7528de932890058579c0c2341f7223; eth_getCode on that address returned no bytecode (EOA). Implementation at 0xe825f4f14b93a329fbae230ef6b222f26cca4028 is deployed but unverified; the token's mint owner could not be read because owner() reverts through the transparent proxy for admin callers and the impl ABI is not published.",
         "sources": [
-          { "label": "DUSD contract on Arbiscan", "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709" }
+          {
+            "label": "DUSD contract on Arbiscan",
+            "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709"
+          }
         ]
       }
     ],
@@ -139,8 +138,14 @@
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [
-        { "label": "Fluid DUSD", "url": "https://fluid.ch/dusd/" },
-        { "label": "DUSD contract on Arbiscan", "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709" }
+        {
+          "label": "Fluid DUSD",
+          "url": "https://fluid.ch/dusd/"
+        },
+        {
+          "label": "DUSD contract on Arbiscan",
+          "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709"
+        }
       ],
       "unresolvedQuestions": [
         "The implementation contract 0xe825f4f14b93a329fbae230ef6b222f26cca4028 is unverified; the internal mint-capable owner/role address cannot be read. Verify or obtain the ABI to confirm the mint-surface owner before raising confidence."

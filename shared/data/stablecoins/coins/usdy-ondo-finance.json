@@ -144,6 +144,36 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "USDY issuance is Ondo-operated; Ethereum AccessControl role reads identify a 4/7 Safe as the default admin/minter role holder.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x96F6eF951840721AdBF46Ac996b59E0235CB985C"
+      ],
+      "implementationAddresses": [
+        "0xea0f7eebdc2ae40edfe33bf03d332f8a7f617528"
+      ],
+      "adminAddresses": [
+        "0x3eD61633057da0Bc58F84b2B9002845E56f94c19"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDY default admin / minter Safe",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530195,
+      "sources": [
+        {
+          "label": "Ondo USDY upgradeable-token architecture",
+          "url": "https://github.com/ondoprotocol/usdy"
+        },
+        {
+          "label": "USDY Ethereum verified proxy",
+          "url": "https://eth.blockscout.com/address/0x96F6eF951840721AdBF46Ac996b59E0235CB985C?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -420,21 +450,76 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "Short-Term U.S. Treasuries",
-      "pct": 80,
-      "risk": "very-low"
-    },
-    {
-      "name": "iShares Short Treasury Bond ETF",
-      "pct": 15,
-      "risk": "very-low"
-    },
-    {
-      "name": "Bank Demand Deposits",
-      "pct": 5,
-      "risk": "very-low"
+      "name": "Short-term U.S. Treasuries and bank deposits",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury, iShares SHV, and U.S. bank counterparties",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ondo USDY basics",
+        "url": "https://docs.ondo.finance/general-access-products/usdy/basics"
+      },
+      {
+        "label": "Ondo trust and security",
+        "url": "https://docs.ondo.finance/trust-and-security"
+      }
+    ],
+    "rationale": "Current Ondo documentation identifies the USDY collateral envelope as short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and U.S. bank demand deposits, but does not publish a durable current category allocation. The reviewed row preserves the exact aggregate identity emitted by the Chainlink NAV adapter.",
+    "compositionBasis": "Current Ondo USDY collateral and legal-structure disclosures",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current allocation among Treasury bills, SHV shares, and bank demand deposits and the bank identities are not disclosed in the reviewed public materials.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-term U.S. Treasuries and bank deposits",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The public collateral envelope identifies eligible asset categories but not current category weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ankura Trust Company",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "U.S. bank counterparties (not publicly identified)",
+        "role": "bank",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ondo USDY comparison to stablecoins",
+        "url": "https://docs.ondo.finance/general-access-products/usdy/comparison-stablecoins"
+      },
+      {
+        "label": "Ondo trust and security",
+        "url": "https://docs.ondo.finance/trust-and-security"
+      }
+    ],
+    "uncertainty": "Ondo documents a bankruptcy-remote issuer, perfected security interest, and Ankura's collateral-agent authority, but does not identify the custody banks, provider shares, account segregation, or rehypothecation terms in the reviewed public materials."
+  },
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 1,

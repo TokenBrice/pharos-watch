@@ -351,35 +351,84 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "satUSD (River, formerly Satoshi Protocol) is a Liquity-v1-derived omni-CDP: users lock BTC/ETH/BNB/LSTs on a source chain and LayerZero OFT messaging authorizes a native satUSD mint on the destination chain. The OFT contracts on Ethereum and Base are UUPS proxies owned by a single EOA.",
+    "confidence": "manual-review",
+    "summary": "satUSD's Ethereum and Base DebtTokenWithLz proxies mint for chain-specific SatoshiXApp and enabled TroveManager contracts, plus owner-appointed wards. Both UUPS proxies share one EOA owner that can upgrade mint logic or appoint unrestricted wards, but the ward and TroveManager sets cannot be exhaustively enumerated from contract state or events.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x1958853a8be062dc4f401750eb233f5850f0d0d2",
+        "0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+      ],
+      "implementationAddresses": [
+        "0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d",
+        "0x256bd26fddc17a1d1a9b974bcd268f89bfe15789"
+      ],
+      "adminAddresses": [
+        "0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "satUSD UUPS owner and ward administrator",
+      "sources": [
+        {
+          "label": "satUSD Ethereum proxy",
+          "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2#code"
+        },
+        {
+          "label": "satUSD Base proxy",
+          "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162#code"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "River omni-CDP borrower-operations / OFT mint",
+        "chain": "ethereum",
+        "address": "0xb8374e4DfF99202292da2FE34425e1dE665b67E6",
+        "label": "satUSD Ethereum SatoshiXApp mint path",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Mint capped by per-branch overcollateralized CDP debt; cross-chain mint is authorized by LayerZero OFT messages confirming source-chain collateral lockup.",
-        "evidence": "River docs and LayerZero integration coverage describe a Liquity-v1-style CDP whose collateral stays source-chain; OFT _lzSend/_lzReceive messages relay collateral state to authorize satUSD mint on the destination chain.",
+        "capDescription": "The verified debt token permits this SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedBlock": 25530324,
+        "evidence": "At Ethereum block 25530324, satoshiXApp() on proxy 0x195885... returned this contract. Verified DebtTokenWithLz source permits satoshiXApp to call mint(), mintWithGasCompensation(), and enableTroveManager().",
         "sources": [
           {
-            "label": "River docs",
-            "url": "https://docs.river.inc"
+            "label": "satUSD Ethereum proxy",
+            "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2#code"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0x9a3c724ee9603A7550499bE73DC743B371811dd3",
+        "label": "satUSD Base SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified debt token permits this SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedBlock": 48618018,
+        "evidence": "At Base block 48618018, satoshiXApp() on proxy 0x70654... returned this contract. The Base proxy uses the same verified DebtTokenWithLz mint checks as Ethereum.",
+        "sources": [
+          {
+            "label": "satUSD Base proxy",
+            "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162#code"
           }
         ]
       },
       {
         "chain": "ethereum",
         "address": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
-        "label": "satUSD OFT owner (EOA)",
-        "role": "minter-admin",
+        "label": "satUSD UUPS owner and ward administrator",
+        "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Ethereum block 25294721, owner() on the satUSD Ethereum contract (0x1958853a8be062dc4f401750eb233f5850f0d0d2, UUPS proxy with impl 0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d) returned 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47; eth_getCode returned 0x (EOA). Base OFT (0x70654aad8b7734dc319d0c3608ec7b32e03fa162) owner() also returned the same EOA.",
+        "observedBlock": 25530324,
+        "evidence": "At Ethereum block 25530324 and Base block 48618018, owner() on both satUSD UUPS proxies returned this address and eth_getCode returned empty bytecode. Verified implementation source gates _authorizeUpgrade(), rely(), and deny() with onlyOwner; a relied ward may call mint() without a numeric token-contract cap.",
         "sources": [
           {
             "label": "satUSD on Etherscan",
@@ -393,9 +442,9 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25294721: owner() on satUSD ETH UUPS proxy = 0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47; eth_getCode = 0x (confirmed EOA). Base OFT owner() = same EOA. The ETH contract has an EIP-1967 implementation slot pointing to 0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d (no separate proxy admin). EOA ownership is issuer-standard enterprise custody (MPC/HSM indistinguishable on-chain); per brief, this does not block verification.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "RPC reads establish both current SatoshiXApp addresses, both UUPS implementations, and the shared owner. Verified DebtTokenWithLz source shows three mint-authorized classes: satoshiXApp, troveManager mapping entries, and owner-managed wards. Because rely(), deny(), and enableTroveManager() emit no membership events and neither mapping is enumerable, exact current ward and TroveManager membership cannot be reconstructed safely from the contract interface alone.",
+      "reviewer": "Codex Safety Score V9 CTRL curation",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "River docs",
@@ -404,7 +453,15 @@
         {
           "label": "satUSD on Etherscan",
           "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2"
+        },
+        {
+          "label": "satUSD on Basescan",
+          "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
         }
+      ],
+      "unresolvedQuestions": [
+        "Enumerate every currently enabled wards(address) entry on Ethereum and Base despite the mappings having no iterable getter or membership events.",
+        "Enumerate every currently enabled troveManager(address) entry on Ethereum and Base despite enableTroveManager() emitting no event."
       ]
     }
   },

@@ -241,20 +241,6 @@
     ]
   },
   "chainTier": "ethereum",
-  "reserves": [
-    {
-      "name": "Short-term U.S. Treasury Bills (via $M / M0 Protocol)",
-      "pct": 99,
-      "risk": "very-low",
-      "coinId": "m-m0",
-      "depType": "wrapper"
-    },
-    {
-      "name": "Stability Reserve buffer",
-      "pct": 1,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "m0-wrapper-underlying",
     "version": 1,

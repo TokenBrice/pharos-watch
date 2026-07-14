@@ -426,13 +426,6 @@
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "SGD at Tier-1 banks (DBS, Standard Chartered)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "attestation-pdf-index",
     "version": 1,

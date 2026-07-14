@@ -88,14 +88,46 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "CADC is issued by Loon (FINTRAC-registered MSB); on-chain owner/masterMinter across the EVM deployments is a set of Gnosis Safe multisigs with identical 3 signers (2/3 threshold) operated by the issuer.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "CADC Ethereum contract",
+          "url": "https://etherscan.io/address/0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef"
+        },
+        {
+          "label": "CADC Base contract",
+          "url": "https://basescan.org/address/0x043eb4b75d0805c43d7c834902e335621983cf03"
+        },
+        {
+          "label": "Solana mainnet RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Loon CADC issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Loon controls 1:1 mint on CAD deposit and burn on redemption against segregated trust reserves; minting is issuer-operated with no permissionless route."
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "issuer:loon-finance"
+        ],
+        "sources": [
+          {
+            "label": "Loon Finance",
+            "url": "https://loon.finance/"
+          },
+          {
+            "label": "CADC Ethereum contract",
+            "url": "https://etherscan.io/address/0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef"
+          }
+        ],
+        "evidence": "Loon controls 1:1 mint on CAD deposit and burn on redemption against segregated trust reserves; minting is issuer-operated with no permissionless route. The issuer-controlled masterMinter Safes can authorize minters and change mint allowances, so this issuer failure domain can raise the effective mint cap."
       },
       {
         "label": "CADC Ethereum owner/masterMinter — Gnosis Safe v1.3.0 (2/3)",
@@ -174,9 +206,9 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295003 and Base block 47200682: all five CADC deployments confirmed. ETH owner/masterMinter = Safe 1.3.0 2/3 at 0x3e30d340... Polygon owner = Safe L2 1.3.0 2/3 at 0x9bba7ae7... Arbitrum owner = Safe L2 1.3.0 2/3 at 0xf7828042... Base/Linea owner = Safe 1.4.1 2/3 at 0x3de34058... All Safes share the same 3 issuer-controlled signers. No modules detected on any chain.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "All five EVM deployments are direct contracts controlled by issuer Safes: ETH owner/masterMinter = Safe 1.3.0 2/3 at 0x3e30d340..., Polygon owner = Safe L2 1.3.0 2/3 at 0x9bba7ae7..., Arbitrum owner = Safe L2 1.3.0 2/3 at 0xf7828042..., and Base/Linea owner = Safe 1.4.1 2/3 at 0x3de34058.... All Safes share the same 3 issuer-controlled signers. Rechecked on 2026-07-14 at ETH block 25530517, Polygon 90215137, Arbitrum 483747006, Base 48619177, and Linea 31367606: every ERC-1967 implementation slot is zero and each owner remains the reviewed Safe. Solana mint 9ewjJpmD... is owned by the immutable SPL Token program and exposes mint authority 5PtbcryL... and freeze authority CwAYsAH3....",
+      "reviewer": "Codex CTRL batch 04",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Loon Finance",

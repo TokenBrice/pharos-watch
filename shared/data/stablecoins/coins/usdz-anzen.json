@@ -2,7 +2,7 @@
   "id": "usdz-anzen",
   "name": "Anzen USDz",
   "symbol": "USDz",
-  "oneLiner": "USDz is Anzen's RWA dollar backed mainly by Percent-underwritten U.S. private credit (SPCT), plus a Superstate tokenized-T-bill and cash sleeve.",
+  "oneLiner": "USDz is Anzen's RWA dollar backed 1:1 by SPCT, a permissioned token representing a diversified portfolio of U.S. private-credit assets.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -11,8 +11,8 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Primarily diversified U.S. private credit assets (SMB merchant receivables, factored invoices, PO financing, auto lease financing, consumer installment lending) tokenized as Secured Private Credit Tokens (SPCT) underwritten by Percent (U.S.-licensed broker-dealer), alongside a Superstate USTB/USCC tokenized-Treasury sleeve and a cash buffer",
-  "pegMechanism": "Each USDz backed 1:1 by its reserve basket — majority SPCT private credit plus a Superstate USTB/USCC tokenized-Treasury sleeve and cash — locked in the smart contract; peg maintained by arbitrage — if below $1, traders buy at discount; if above $1, Qualified Market Makers mint at 1:1 USDz/USDC and sell",
+  "collateral": "Diversified U.S. private-credit assets tokenized as permissioned Secured Private Credit Tokens (SPCT), with USDz backed 1:1 by SPCT",
+  "pegMechanism": "USDz is minted and redeemed 1:1 against SPCT through audited smart contracts; secondary-market arbitrage supports the dollar peg",
   "mechanismArchetype": "rwa-credit-fund",
   "llamaId": "202",
   "detailProvider": "defillama",
@@ -249,22 +249,49 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "U.S. private credit ABS (SMB receivables, auto leases, consumer lending, litigation finance via Percent)",
-      "pct": 80,
+      "name": "SPCT (Secured Private Credit Token)",
+      "pct": 100,
       "risk": "high"
-    },
-    {
-      "name": "Superstate USTB/USCC (tokenized T-bills and crypto carry)",
-      "pct": 15,
-      "risk": "medium",
-      "coinId": "ustb-superstate"
-    },
-    {
-      "name": "Cash and cash equivalents",
-      "pct": 5,
-      "risk": "very-low"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Anzen USDz transparency documentation",
+        "url": "https://docs.anzen.finance/usdz-101/transparency"
+      },
+      {
+        "label": "Anzen USDz collateral documentation",
+        "url": "https://docs.anzen.finance/usdz-101/backing-assets-collateral"
+      },
+      {
+        "label": "USDz Ethereum contract",
+        "url": "https://eth.blockscout.com/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+      },
+      {
+        "label": "SPCT pool Ethereum contract",
+        "url": "https://eth.blockscout.com/address/0xf30a29f1c540724fd8c5c4be1af604a6c6800d29"
+      }
+    ],
+    "rationale": "Anzen states that each USDz is backed 1:1 by SPCT and identifies SPCT as the permissioned on-chain representation of its private-credit portfolio. At Ethereum block 25530452 and contemporaneous configured-chain heads, SPCT totalSupply was 8,225,104.203284636303620608 while aggregate USDz totalSupply across Ethereum, Base, Arbitrum, Blast, and Manta was 8,120,206.614623636303620608, reconciling the documented single-asset reserve path without any USTB dependency.",
+    "compositionBasis": "Anzen issuer disclosure corroborated by SPCT and multichain USDz totalSupply reads",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "SPCT is fully identified as the direct reserve asset; its underlying private-credit loan-level weights are not a tracked-stablecoin dependency question.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "SPCT (Secured Private Credit Token)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "SPCT represents private-credit collateral rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "anzen-usdz",
     "version": 1,

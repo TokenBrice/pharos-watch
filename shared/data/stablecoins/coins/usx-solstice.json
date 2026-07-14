@@ -157,20 +157,48 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "USDC",
-      "pct": 55,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    },
-    {
-      "name": "USDT",
-      "pct": 45,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "collateral"
+      "name": "USDC and USDT collateral basket",
+      "pct": 100,
+      "risk": "low"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Solstice USX product page",
+        "url": "https://solstice.finance/usx"
+      },
+      {
+        "label": "Solstice documentation",
+        "url": "https://docs.solstice.finance"
+      },
+      {
+        "label": "Solstice attestation API",
+        "url": "https://attestation-api.solstice.finance/dashboard"
+      }
+    ],
+    "rationale": "Solstice identifies USDC and USDT as USX collateral, while its attestation API publishes aggregate reserve coverage rather than asset-level balances. Exact constituent weights therefore cannot be authored defensibly.",
+    "compositionBasis": "Solstice collateral disclosure and aggregate reserve attestation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The USDC and USDT constituent split is not published by the aggregate attestation source.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USDC and USDT collateral basket",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Both tracked stablecoins are named as collateral, but no source establishes their current individual weights.",
+        "candidateCoinIds": [
+          "usdc-circle",
+          "usdt-tether"
+        ]
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "solstice-attestation",
     "version": 1,

@@ -1,0 +1,61 @@
+{
+  "id": "wusd-worldwide",
+  "reserves": [
+    {
+      "name": "Cash, cash equivalents, and short-term Treasury bills",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed reserve banks and United States Treasury",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown",
+      "maturityDaysMax": 89
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "WSPN whitepaper reserve-management policy",
+        "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf"
+      }
+    ],
+    "rationale": "WSPN's reserve policy limits backing to cash, cash equivalents, and Treasury bills and describes a possible 70-80% cash-equivalent and 20-30% sub-90-day Treasury allocation. Because the disclosed ranges are policy targets rather than a dated current composition, the prior fixed 75/25 estimate is replaced with one evidenced aggregate basket.",
+    "compositionBasis": "WSPN reserve-management policy; current asset-class weights undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The eligible reserve categories and maximum Treasury maturity are disclosed, but current category weights, instruments, banks, and provider shares are not public in the reviewed source.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Cash, cash equivalents, and short-term Treasury bills",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "WSPN describes possible allocation ranges, not a dated current reserve split."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed WSPN reserve banks",
+        "role": "bank"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "WSPN whitepaper reserve-segregation policy",
+        "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf"
+      }
+    ],
+    "uncertainty": "WSPN states that reserve and operating funds use separate bank accounts, but the reviewed source does not identify the banks, provider shares, legal account structure, bankruptcy treatment, or rehypothecation terms."
+  }
+}

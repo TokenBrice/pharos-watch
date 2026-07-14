@@ -1,0 +1,89 @@
+{
+  "id": "europ-schuman",
+  "reserves": [
+    {
+      "name": "Euro cash held at regulated financial institutions",
+      "pct": 32.31,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Societe Generale S.A. and Banking Circle S.A.",
+      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Euro cash equivalents held at regulated financial institutions (instruments undisclosed)",
+      "pct": 67.69,
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "Societe Generale S.A. and Banking Circle S.A.; underlying instruments undisclosed",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "KPMG EUROP Q1 2026 attestation",
+        "url": "https://schuman.io/wp-content/uploads/2026/04/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_31_03_2026.pdf"
+      },
+      {
+        "label": "Schuman Financial reserve audit index",
+        "url": "https://schuman.io/reserve-audits/"
+      }
+    ],
+    "rationale": "The KPMG-attested Q1 2026 reserve report lists EUR 2.386687 million of cash and EUR 5.000000 million of cash equivalents against EUR 7.386687 million of total reserves. Those balances normalize to 32.31% cash and 67.69% cash equivalents and replace the prior unsupported 98% cash-equivalent / 2% additional-fund estimate.",
+    "compositionBasis": "KPMG attestation of the EUROP Reserve Report as of March 31, 2026",
+    "compositionAsOf": "2026-03-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The report discloses the cash-equivalent total but not its underlying instruments, maturities, or liquidity terms.",
+    "knownUnknownExposurePct": 67.69,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Euro cash held at regulated financial institutions",
+        "pct": 32.31,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The reserve is euro cash rather than another tracked stablecoin."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Euro cash equivalents held at regulated financial institutions (instruments undisclosed)",
+        "pct": 67.69,
+        "disposition": "insufficient-evidence",
+        "rationale": "KPMG confirms the aggregate cash-equivalent balance but the report does not identify the instruments or their maturity and liquidity terms."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Societe Generale S.A.",
+        "role": "bank",
+        "sharePct": 70.46,
+        "jurisdiction": "France"
+      },
+      {
+        "name": "Banking Circle S.A.",
+        "role": "bank",
+        "sharePct": 29.54,
+        "jurisdiction": "Luxembourg"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "KPMG EUROP Q1 2026 attestation",
+        "url": "https://schuman.io/wp-content/uploads/2026/04/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_31_03_2026.pdf"
+      }
+    ],
+    "uncertainty": "The report identifies both financial institutions and their complete period-end balances and describes the accounts as segregated and unencumbered on behalf of holders. It does not establish statutory bankruptcy remoteness or disclose a standing rehypothecation policy."
+  }
+}

@@ -896,16 +896,49 @@
   "custodyModel": "institutional-top",
   "reserves": [
     {
-      "name": "Deposits at Systemically Important Institutions (EUR)",
-      "pct": 99,
-      "risk": "very-low"
+      "name": "Other Bank Deposits",
+      "pct": 98,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Other regulated financial institutions in the EEA",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
     },
     {
-      "name": "Other Bank Deposits (EUR)",
-      "pct": 1,
-      "risk": "very-low"
+      "name": "Deposits at Systemically Important Institutions",
+      "pct": 2,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Systemically important financial institutions in the EEA",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Circle transparency",
+        "url": "https://www.circle.com/transparency"
+      },
+      {
+        "label": "Circle EURC reserve overview",
+        "url": "https://www.circle.com/eurc"
+      },
+      {
+        "label": "Circle EURC terms",
+        "url": "https://www.circle.com/legal/eurc-terms"
+      }
+    ],
+    "rationale": "Circle's July 9 weekly disclosure reports EUR 369.85 million of other bank deposits and EUR 7.38 million of deposits at systemically important institutions. Percentages normalize those two disclosed amounts to their EUR 377.23 million total and preserve the live Circle adapter's reserve identities.",
+    "compositionBasis": "Circle weekly EURC reserve composition disclosure",
+    "compositionAsOf": "2026-07-09",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material unclassified reserve exposure is present in Circle's two-category disclosure; individual deposit institutions are not named.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "circle-transparency",
     "version": 1,

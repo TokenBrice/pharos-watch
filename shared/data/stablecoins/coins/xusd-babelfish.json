@@ -54,45 +54,6 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
-  "reserves": [
-    {
-      "name": "Sovryn Dollar DLLR",
-      "pct": 42.8,
-      "risk": "medium",
-      "coinId": "dllr-sovryn",
-      "depType": "collateral"
-    },
-    {
-      "name": "USDT Rootstock bridge variants",
-      "pct": 31.99,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "collateral",
-      "blacklistable": true
-    },
-    {
-      "name": "USDC Rootstock bridge variants",
-      "pct": 14.21,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "blacklistable": true
-    },
-    {
-      "name": "DAI Rootstock bridge variants",
-      "pct": 10.91,
-      "risk": "low",
-      "coinId": "dai-makerdao",
-      "depType": "collateral"
-    },
-    {
-      "name": "DOC and other Rootstock stablecoin dust",
-      "pct": 0.09,
-      "risk": "medium",
-      "coinId": "doc-money-on-chain",
-      "depType": "collateral"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",
     "version": 1,

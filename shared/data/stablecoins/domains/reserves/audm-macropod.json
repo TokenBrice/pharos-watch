@@ -1,0 +1,93 @@
+{
+  "id": "audm-macropod",
+  "reserves": [
+    {
+      "name": "AUD cash in the Westpac AUDM Trust Class A Reserve",
+      "pct": 95.81,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Westpac Banking Corporation",
+      "riskFactors": ["counterparty", "custody", "legal", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "AUD cash in the Australian Settlements Limited AUDM Trust Class A Reserve",
+      "pct": 4.19,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Australian Settlements Limited trading as Banking Circle",
+      "riskFactors": ["counterparty", "custody", "legal"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Macropod AUDM reserve verification as of July 1, 2026",
+        "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a4c45fc27ad45b67c2b0d4f_260701%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20July%202026.pdf"
+      },
+      {
+        "label": "Macropod AUDM transparency",
+        "url": "https://www.macropod.com/transparency"
+      }
+    ],
+    "rationale": "Macropod's July 1 verification reports AUD 4,282,521.86 at Westpac and AUD 187,297.00 at Australian Settlements Limited against AUD 4,469,818.86 total reserve accounts. Those balances normalize to 95.81% and 4.19% and are both identified as cash in named AUDM Trust Class A Reserve accounts.",
+    "compositionBasis": "Macropod issuer verification of AUDM reserve accounts as of July 1, 2026",
+    "compositionAsOf": "2026-07-01",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The report masks the account numbers but identifies both reserve banks and reconciles the complete reserve total to on-chain supply.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "AUD cash in the Westpac AUDM Trust Class A Reserve",
+        "pct": 95.81,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "AUD bank cash is external reserve backing rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "AUD cash in the Australian Settlements Limited AUDM Trust Class A Reserve",
+        "pct": 4.19,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "AUD bank cash is external reserve backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Westpac Banking Corporation",
+        "role": "bank",
+        "sharePct": 95.81,
+        "jurisdiction": "Australia"
+      },
+      {
+        "name": "Australian Settlements Limited trading as Banking Circle",
+        "role": "bank",
+        "sharePct": 4.19,
+        "jurisdiction": "Australia"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Macropod AUDM reserve verification as of July 1, 2026",
+        "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a4c45fc27ad45b67c2b0d4f_260701%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20July%202026.pdf"
+      },
+      {
+        "label": "Macropod AUDM transparency and trust disclosures",
+        "url": "https://www.macropod.com/transparency"
+      }
+    ],
+    "uncertainty": "The reserve banks and exact shares are disclosed and the accounts are held by Macropod as trustee for the AUDM Trust. The public verification does not state whether reserve cash may be rehypothecated."
+  }
+}

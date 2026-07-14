@@ -97,65 +97,6 @@
     "reviewer": "Codex DefiLlama path addition",
     "reviewedAt": "2026-05-14"
   },
-  "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "XOFm uses StableTokenV2 with minting restricted to broker/validator paths; the token owner is the Mento Timelock (2-day delay, MentoGovernor as sole proposer, open executor). BorrowerOperations is immutable.",
-    "controls": [
-      {
-        "chain": "celo",
-        "address": "0x8ec9A81871F816F1EF007a82293703057A943B8A",
-        "label": "Mento BorrowerOperations (immutable CDP minter)",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "XOFm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot — immutable.",
-        "sources": [
-          {
-            "label": "Mento V3 deployments",
-            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
-          }
-        ],
-        "evidence": "At Celo block 69291577, BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A: 46358-byte code, owner() empty, EIP-1967 impl and admin slots zero — immutable."
-      },
-      {
-        "chain": "celo",
-        "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
-        "label": "Mento Timelock (XOFm token owner)",
-        "role": "timelock",
-        "authorityType": "timelock",
-        "directMintAbility": "can-authorize",
-        "timelockDelaySec": 172800,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "Mento V3 deployments",
-            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
-          }
-        ],
-        "evidence": "At Celo block 69291577, XOFm owner() = 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() = 172800; hasRole(PROPOSER_ROLE, MentoGovernor 0x47036d78bB3169b4F5560dD77BF93f4412A59852) = true; hasRole(EXECUTOR_ROLE, 0x0) = true (open executor — standard OZ TimelockController). Prior read also confirmed broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD."
-      }
-    ],
-    "review": {
-      "evidence": "At Celo block 69291577: XOFm owner() = Mento Timelock 0x890DB...; getMinDelay() = 172800s; MentoGovernor 0x47036... is sole PROPOSER; executor open (0x0); BorrowerOperations confirmed immutable. All addressable mint surfaces confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "sources": [
-        {
-          "label": "Mento V3 docs",
-          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
-        },
-        {
-          "label": "Mento V3 deployments",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
-        }
-      ]
-    }
-  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
@@ -177,6 +118,8 @@
       "message": "XOFm follows Mento's CDP-backed stablecoin model, but Pharos does not yet publish XOFm-specific live CDP reserve rows. Curated reserves use the documented USDm collateral path meanwhile."
     }
   ],
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "launchDate": "2023-08-17"
 }

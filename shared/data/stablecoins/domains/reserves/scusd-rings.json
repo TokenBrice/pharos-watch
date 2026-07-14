@@ -1,0 +1,66 @@
+{
+  "id": "scusd-rings",
+  "reserves": [
+    {
+      "name": "Pooled stablecoin and Veda DeFi strategy basket",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Trevee Veda BoringVault and its underlying lending protocols",
+      "riskFactors": ["smart-contract", "counterparty", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Trevee scUSD treasury and backing addresses",
+        "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address"
+      },
+      {
+        "label": "Trevee documentation",
+        "url": "https://docs.trevee.xyz/"
+      }
+    ],
+    "rationale": "Trevee identifies the Veda BoringVault backing addresses, accepted stablecoins, and strategy deployment across external protocols, but does not publish a current asset-versus-strategy allocation. The prior 70/30 split is therefore replaced by one explicit 100% mixed basket rather than preserving unsupported weights.",
+    "compositionBasis": "Trevee disclosed Veda BoringVault backing architecture",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current balances by accepted stablecoin, lending protocol, and strategy are not published in a source suitable for a defensible static split.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Pooled stablecoin and Veda DeFi strategy basket",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The backing addresses accept multiple tracked stablecoins and deploy into multiple protocols without publishing current constituent weights.",
+        "candidateCoinIds": ["usdc-circle", "usdt-tether", "dai-makerdao", "gho-aave"]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Veda BoringVault backing contracts on Ethereum and Sonic",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Trevee scUSD treasury and backing addresses",
+        "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address"
+      }
+    ],
+    "uncertainty": "Trevee publishes the dedicated backing addresses and states that funds are deployed across protocols. It does not publish current chain shares, strategy shares, legal bankruptcy-remoteness terms, or a complete controller/custodian inventory.",
+    "knownUnknownExposurePct": 100
+  }
+}

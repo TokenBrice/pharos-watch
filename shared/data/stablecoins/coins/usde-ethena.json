@@ -18,6 +18,48 @@
   "detailProvider": "defillama",
   "geckoId": "ethena-usde",
   "pythFeedId": "0x6ec879b1e9963de5ee97e9c8710b742d6228252a5e2ca12d4ae81d7fe5ee8c5d",
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "Ethena's offchain hedging system prices mint and redeem requests from exchange market data and validates internal pricing with Pyth and RedStone, but USDe has no permissionless CDP liquidation oracle.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "USDe is minted and redeemed through signed orders accepted by Ethena's offchain pricing and hedging services, while backing assets are paired with centrally managed derivatives hedges. It does not expose user CDP markets with per-collateral onchain liquidation thresholds, liquidation auctions, backstops, or shutdown branches, so the V9 collateral-liquidation branch families do not apply.",
+      "sources": [
+        {
+          "label": "Ethena minting USDe documentation",
+          "url": "https://docs.ethena.fi/solution-design/minting-usde"
+        },
+        {
+          "label": "Ethena hedging system documentation",
+          "url": "https://docs.ethena.fi/solution-design/hedging-system"
+        },
+        {
+          "label": "Ethena oracle documentation",
+          "url": "https://docs.ethena.fi/solution-design/use-of-oracles"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ethena oracle documentation",
+        "url": "https://docs.ethena.fi/solution-design/use-of-oracles"
+      },
+      {
+        "label": "Ethena hedging system documentation",
+        "url": "https://docs.ethena.fi/solution-design/hedging-system"
+      },
+      {
+        "label": "Ethena mint and redeem key functions",
+        "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.ethena.fi/dashboards/transparency",

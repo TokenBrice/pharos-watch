@@ -168,36 +168,6 @@
     ]
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "reserves": [
-    {
-      "name": "USDC",
-      "pct": 30,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "DAI",
-      "pct": 20,
-      "risk": "low",
-      "coinId": "dai-makerdao"
-    },
-    {
-      "name": "Vesper yield tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH)",
-      "pct": 25,
-      "risk": "high"
-    },
-    {
-      "name": "ETH / WBTC / sfrxETH",
-      "pct": 20,
-      "risk": "medium"
-    },
-    {
-      "name": "FRAX / vaFRAX (inactive)",
-      "pct": 5,
-      "risk": "high",
-      "coinId": "frax-frax"
-    }
-  ],
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

@@ -393,13 +393,6 @@
       ]
     }
   },
-  "reserves": [
-    {
-      "name": "Tokenized U.S. Treasury bill and money-market fund reserves",
-      "pct": 100,
-      "risk": "low"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "FinChain FUSD daily reserve-yield rebase",
     "yieldType": "rebase"

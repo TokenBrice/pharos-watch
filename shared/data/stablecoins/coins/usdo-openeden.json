@@ -287,29 +287,56 @@
   "reserves": [
     {
       "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
-      "pct": 80,
+      "pct": 79.7,
       "risk": "very-low",
       "coinId": "tbill-openeden"
     },
     {
-      "name": "Ripple USD (RLUSD) cash-equivalent buffer",
-      "pct": 9,
-      "risk": "low",
-      "coinId": "rlusd-ripple"
-    },
-    {
       "name": "BlackRock BUIDL (tokenized money market fund)",
-      "pct": 8,
+      "pct": 9.7,
       "risk": "low",
       "coinId": "buidl-blackrock"
     },
     {
+      "name": "Ripple USD (RLUSD) cash-equivalent buffer",
+      "pct": 7.7,
+      "risk": "low",
+      "coinId": "rlusd-ripple"
+    },
+    {
       "name": "VanEck VBILL (tokenized U.S. T-bill fund)",
-      "pct": 3,
+      "pct": 2.8,
       "risk": "low",
       "coinId": "vbill-vaneck"
+    },
+    {
+      "name": "USDC redemption buffer",
+      "pct": 0.1,
+      "risk": "low",
+      "coinId": "usdc-circle"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "OpenEden USDO reserve composition API",
+        "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+      },
+      {
+        "label": "OpenEden USDO reserve assets",
+        "url": "https://docs.openeden.com/usdo/usdo-token/reserve-assets"
+      }
+    ],
+    "rationale": "The issuer reserve API reports current USD values for TBILL, BUIDL, RLUSD, VBILL, and USDC. The displayed weights are the official adapter's one-decimal normalization of those values; zero-balance USYC, BENJI, and pending-USDC fields do not create slices.",
+    "compositionBasis": "OpenEden issuer reserve API asset values normalized by total reserve assets",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All positive reserve components reported by the issuer API are identified.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "OpenEden USDO daily rebase",
     "yieldType": "rebase"

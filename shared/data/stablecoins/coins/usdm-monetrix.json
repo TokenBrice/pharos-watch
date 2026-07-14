@@ -16,6 +16,7 @@
   "collateral": "USDC at mint, then deployed into Monetrix's on-chain Hyperliquid delta-neutral portfolio including spot assets, matching short perpetual positions, portfolio-margin slots, and vault or redeem-escrow USDC. Liquid USDM is the base dollar receipt; strategy yield accrues only via the separate sUSDM wrapper.",
   "pegMechanism": "USDM targets 1:1 USDC convertibility through Monetrix mint/redeem flows while backing is deployed into a delta-neutral Hyperliquid portfolio. The sUSDM staking wrapper accrues strategy yield separately and is not admitted as an active Pharos stablecoin until a maintained price and market-cap runtime source exists.",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "launchDate": "2026-06-10",
   "geckoId": "monetrix-usd",
   "proofOfReserves": {
     "type": "self-reported",

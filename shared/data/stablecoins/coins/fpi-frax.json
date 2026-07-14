@@ -17,6 +17,40 @@
   "llamaId": "66",
   "detailProvider": "defillama",
   "geckoId": "frax-price-index",
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "FPI's redemption target uses a specialized Chainlink oracle that commits the monthly CPI-U rate, but FPI is minted and redeemed through the FRAX-backed Controller Pool and stabilized through AMOs rather than borrower positions subject to collateral-price liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Frax documents FPI as a 100%-collateral-ratio protocol balance sheet: users mint or redeem FPI for Legacy Frax Dollar through the Controller Pool, AMOs deploy the collateral, and FPIS sales replenish backing when yield trails CPI. It does not document borrower-specific debt positions, collateral health ratios, or oracle-triggered collateral liquidations, so liquidation branches are not applicable.",
+      "sources": [
+        {
+          "label": "Frax FPI overview",
+          "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+        },
+        {
+          "label": "Frax FPI Controller Pool",
+          "url": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax FPI overview",
+        "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+      },
+      {
+        "label": "Frax FPI Controller Pool",
+        "url": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",

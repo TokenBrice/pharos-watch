@@ -113,13 +113,6 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-sanctioned",
-  "reserves": [
-    {
-      "name": "Russian ruble deposits at Promsvyazbank (sanctioned)",
-      "pct": 100,
-      "risk": "very-high"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Central Bank of Russia key rate minus 1pp issuer distribution",
     "yieldType": "governance-set"

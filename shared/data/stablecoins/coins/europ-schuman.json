@@ -24,7 +24,26 @@
     "provider": "KPMG",
     "attestorTier": "big4",
     "cadence": "quarterly",
-    "attestorJurisdiction": "France"
+    "attestorJurisdiction": "France",
+    "latestReport": {
+      "periodEnd": "2026-03-31",
+      "publishedAt": "2026-04-01",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "KPMG EUROP Q1 2026 attestation",
+          "url": "https://schuman.io/wp-content/uploads/2026/04/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_31_03_2026.pdf"
+        },
+        {
+          "label": "Schuman Financial reserve audit index",
+          "url": "https://schuman.io/reserve-audits/"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -221,18 +240,6 @@
     ]
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Euro cash and cash equivalents (EU banks incl. Societe Generale)",
-      "pct": 98,
-      "risk": "very-low"
-    },
-    {
-      "name": "Additional reserve fund",
-      "pct": 2,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "attestation-pdf-index",
     "version": 1,

@@ -19,8 +19,25 @@
   },
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "Money On Chain uses a decentralized oracle/medianizer process for BTC/USD reference pricing, but reviewed sources do not show a stronger failover tier.",
-    "reviewedAt": "2026-06-12",
+    "summary": "Money On Chain's pooled rBTC system consumes the OMoC BTC/USD feed, where up to ten staked operators use off-chain quorum signatures and elected fallback publishers. An April 2026 consensus-bypass flaw prompted a protocol panic pause; the protocol's incident report states the bug was fixed.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Money On Chain documents one shared C0 bucket whose global rBTC coverage determines protocol states. DOC holders mint and redeem against the pooled system rather than opening borrower-specific debt positions, and the terminal liquidation state is a global, irreversible settlement that permits DOC redemption at the last available price. There are therefore no collateral-market liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "Money On Chain main concepts",
+          "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+        },
+        {
+          "label": "Money On Chain system states",
+          "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/system-states"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
@@ -29,8 +46,16 @@
         "url": "https://moneyonchain.com/moc-decentralized-oracles/"
       },
       {
-        "label": "Money On Chain price feeder",
-        "url": "https://github.com/money-on-chain/price-feeder"
+        "label": "Money On Chain oracle incident report",
+        "url": "https://forum.moneyonchain.com/t/panic-button-activation-incident-report/462"
+      },
+      {
+        "label": "Money On Chain main concepts",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+      },
+      {
+        "label": "Money On Chain system states",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/system-states"
       }
     ]
   },

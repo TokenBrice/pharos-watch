@@ -67,18 +67,6 @@
       "message": "Live reserve tracking for scUSD is pending Trevee/Rings publishing canonical BoringVault and treasury backing addresses. Check https://docs.trevee.xyz/backing for the latest published addresses."
     }
   ],
-  "reserves": [
-    {
-      "name": "Accepted stablecoin collateral",
-      "pct": 70,
-      "risk": "low"
-    },
-    {
-      "name": "Veda/Rings DeFi strategy exposure",
-      "pct": 30,
-      "risk": "high"
-    }
-  ],
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",

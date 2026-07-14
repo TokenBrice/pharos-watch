@@ -188,26 +188,33 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
+  "dependencies": [
     {
-      "name": "USDtb (BlackRock BUIDL tokenized U.S. Treasuries via Securitize)",
-      "pct": 90,
-      "risk": "low",
-      "coinId": "usdtb-ethena"
-    },
-    {
-      "name": "Liquid stablecoins (USDC) for redemptions",
-      "pct": 5,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "Liquid stablecoins (USDT) for redemptions",
-      "pct": 5,
-      "risk": "low",
-      "coinId": "usdt-tether"
+      "id": "usdtb-ethena",
+      "weight": 1,
+      "type": "mechanism"
     }
   ],
+  "dependencyReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "MegaETH introduces USDm",
+        "url": "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
+      }
+    ],
+    "rationale": "MegaETH documents USDm v1 as issued on Ethena's USDtb rails. The cited approximately 90% BUIDL allocation is USDtb's target reserve mix, not a measured USDm composition, so the evidenced relationship is a serial mechanism dependency rather than estimated parallel reserve weights.",
+    "relationships": [
+      {
+        "id": "usdtb-ethena",
+        "weight": 1,
+        "type": "mechanism",
+        "reason": "USDm v1 issuance and backing operate through Ethena's USDtb stablecoin rails."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

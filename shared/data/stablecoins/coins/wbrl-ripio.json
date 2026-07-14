@@ -53,7 +53,10 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": ["liquidity", "intent"]
+        "bridgeTypes": [
+          "liquidity",
+          "intent"
+        ]
       },
       {
         "source": "l2beat",
@@ -322,17 +325,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Brazilian-real cash deposited in a Brazilian bank account",
-      "pct": 100,
-      "risk": "high",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed Brazilian financial institution",
-      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
-      "liquidityHorizon": "unknown"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -353,27 +345,6 @@
       "label": "Brazilian-real cash deposited in a Brazilian bank account",
       "risk": "high"
     }
-  },
-  "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
-    "sources": [
-      {
-        "label": "Independent public accountant certification for wBRL - March 2026",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf"
-      },
-      {
-        "label": "Ripio local stablecoins",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
-      }
-    ],
-    "rationale": "The March 31, 2026 certification reconciles 719,448 outstanding wBRL across six chains and R$809,597.28 of collateral to a Brazilian bank statement, then certifies that all outstanding tokens are backed by Brazilian reais at a financial institution in Brazil. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed.",
-    "compositionBasis": "Independent public accountant certification of the wBRL collateral as of March 31, 2026",
-    "compositionAsOf": "2026-03-31",
-    "scope": "full-composition",
-    "knownUnknownExposure": "No reserve asset class is unclassified; the Brazilian financial institution, account type, and withdrawal liquidity are undisclosed.",
-    "knownUnknownExposurePct": 0
   },
   "launchDate": "2025-10-10"
 }

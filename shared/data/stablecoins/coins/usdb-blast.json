@@ -42,8 +42,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDB is a Blast-native asset whose supply tracks stablecoins escrowed in the Ethereum USDYieldManager and minted on Blast through the L1 bridge/yield-manager path. The route is reviewed as external lock/mint infrastructure because holder-facing USDB supply depends on bridge-admin/yield-manager controls, not on issuer-native burn/mint finality.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex L2BEAT route review",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 BRDG curation",
     "confidence": "verified",
     "protocols": [
       {
@@ -62,6 +62,41 @@
         "label": "Blast USDYieldManager (Etherscan)",
         "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438"
       }
+    ],
+    "routes": [
+      {
+        "id": "blast:0x4300000000000000000000000000000000000003",
+        "sourceChain": "ethereum",
+        "destinationChain": "blast",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x4300000000000000000000000000000000000003",
+        "protocol": "Blast USDYieldManager / L1-L2 bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDB is minted on Blast against stablecoins deposited through the Ethereum USDYieldManager and Blast bridge path.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xa230285d5683C74935aD14c446e137c8c8828438",
+        "failureDomainKeys": [
+          "contract:ethereum:0xa230285d5683c74935ad14c446e137c8c8828438",
+          "contract:blast:0x4200000000000000000000000000000000000010"
+        ],
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Blast mainnet contract directory",
+            "url": "https://metalayerlabs.mintlify.app/building/contracts"
+          },
+          {
+            "label": "Blast USDYieldManager (Etherscan)",
+            "url": "https://etherscan.io/address/0xa230285d5683C74935aD14c446e137c8c8828438"
+          }
+        ]
+      }
     ]
   },
   "blacklistabilityReview": {
@@ -73,14 +108,6 @@
   },
   "chainTier": "stage1-l2",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "reserves": [
-    {
-      "name": "MakerDAO DSR / DAI yield manager",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "dai-makerdao"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "blast-usdb-yield-manager",
     "version": 1,
@@ -119,7 +146,7 @@
       {
         "label": "Blast USDYieldManager (L1 stablecoin escrow/yield manager)",
         "role": "bridge-admin",
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "chain": "ethereum",
         "address": "0xa230285d5683C74935aD14c446e137c8c8828438",

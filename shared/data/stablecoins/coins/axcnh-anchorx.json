@@ -51,13 +51,6 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "CNH cash reserves at regulated financial institutions",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

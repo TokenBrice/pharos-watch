@@ -309,12 +309,5 @@
     }
   ],
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "AUD reserves and cash-equivalent reserve assets",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "launchDate": "2024-01-09"
 }

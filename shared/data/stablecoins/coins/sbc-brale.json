@@ -24,7 +24,22 @@
     "attestorTier": "regional",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
-    "attestorLicense": "AICPA attestation standards"
+    "attestorLicense": "AICPA attestation standards",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-09",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "MCCPA SBC Reserve Attestation Report - May 2026",
+          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-05-2026.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -419,18 +434,6 @@
     ]
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Cash and cash equivalents",
-      "pct": 71,
-      "risk": "very-low"
-    },
-    {
-      "name": "Short-duration U.S. Treasury securities",
-      "pct": 29,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

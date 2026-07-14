@@ -21,7 +21,24 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Liquity V1 uses a Chainlink primary feed with Tellor fallback and automated switching/last-good-price logic for LUSD collateral pricing.",
-    "reviewedAt": "2026-06-12",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Liquity V1 exposes one ETH-backed Trove market whose oracle price, 110% minimum collateral ratio, permissionless liquidation, Stability Pool offset, redistribution fallback, and Recovery Mode behavior form one collateral-liquidation branch.",
+      "sources": [
+        {
+          "label": "Liquity V1 Stability Pool and liquidations",
+          "url": "https://docs.liquity.org/liquity-v1/faq/stability-pool-and-liquidations"
+        },
+        {
+          "label": "Liquity V1 Recovery Mode",
+          "url": "https://docs.liquity.org/liquity-v1/faq/recovery-mode"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
@@ -32,6 +49,71 @@
       {
         "label": "Liquity V1 contracts",
         "url": "https://github.com/liquity/dev"
+      }
+    ],
+    "branches": [
+      {
+        "id": "liquity-v1-eth",
+        "label": "Liquity V1 ETH Troves",
+        "tier": "redundant-with-failover",
+        "summary": "The sole Liquity V1 collateral branch prices ETH through Chainlink with Tellor fallback and liquidates undercollateralized ETH Troves through the Stability Pool and redistribution path.",
+        "collateralAssets": [
+          "ETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink with Tellor fallback",
+            "path": "ETH/USD price feed -> Liquity PriceFeed last-good-price state machine -> Trove collateral ratio",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "failureDomainKeys": [
+              "chainlink-eth-usd",
+              "tellor-eth-usd",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Liquity falls back from Chainlink to Tellor when the Chainlink call fails, returns invalid data, is more than four hours stale, or moves by more than 50% between consecutive updates; the PriceFeed contract retains a last-good price across oracle status transitions.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "ETH",
+            "minimumCollateralRatioPct": 110,
+            "note": "Normal Mode liquidates Troves below the fixed 110% MCR; Recovery Mode starts when system TCR is below 150% and applies its documented ICR- and Stability-Pool-dependent liquidation cases."
+          }
+        ],
+        "liquidationMechanism": "Any caller may liquidate an ETH Trove below the 110% minimum collateral ratio in Normal Mode. Stability Pool LUSD is burned against the debt and depositors receive the collateral; batch liquidation is supported.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Stability Pool is the first liquidation backstop. When it cannot cover the full debt, Liquity redistributes the uncovered debt and collateral pro rata across active Troves according to the documented Normal and Recovery Mode rules.",
+        "shutdownOrBadDebtBehavior": "Liquity V1 documents no global shutdown path. When the Stability Pool is empty or insufficient, liquidation debt and collateral are redistributed to active Troves; Recovery Mode below 150% system TCR restricts risk-increasing borrowing and expands the set of Troves eligible for liquidation.",
+        "failureDomainKeys": [
+          "chainlink-eth-usd",
+          "tellor-eth-usd",
+          "liquity-v1-stability-pool",
+          "liquity-v1-active-troves",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Liquity V1 Stability Pool and liquidations",
+            "url": "https://docs.liquity.org/liquity-v1/faq/stability-pool-and-liquidations"
+          },
+          {
+            "label": "Liquity V1 borrowing parameters",
+            "url": "https://docs.liquity.org/liquity-v1/faq/borrowing"
+          },
+          {
+            "label": "Liquity V1 Recovery Mode",
+            "url": "https://docs.liquity.org/liquity-v1/faq/recovery-mode"
+          },
+          {
+            "label": "Liquity V1 PriceFeed source",
+            "url": "https://github.com/liquity/dev/blob/main/packages/contracts/contracts/PriceFeed.sol"
+          }
+        ]
       }
     ]
   },

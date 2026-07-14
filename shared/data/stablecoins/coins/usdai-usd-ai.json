@@ -18,7 +18,7 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "collateral": "USDai is the non-yielding base token of USD.AI, currently backed 1:1 by PayPal's PYUSD stablecoin held in the USDai contract (live proof-of-reserves shows the entire base reserve is PYUSD on Arbitrum). USDC/USDT serve as retail deposit and secondary-market exit currencies, not the reserve asset. Yield and GPU-collateralized loan exposure accrue to staked sUSDai, not to base USDai.",
+  "collateral": "USDai is the non-yielding base token of USD.AI, backed 1:1 by M held in the USDai contract. Supported stablecoin deposits such as USDC and USDT are converted internally into M; yield and GPU-collateralized loan exposure accrue to staked sUSDai, not to base USDai.",
   "pegMechanism": "USDai is minted and redeemed 1:1 against its PYUSD reserve via the contract deposit()/withdraw() functions; direct mint/redeem is KYC-gated to whitelisted institutions, with no withdrawal queue. Retail users deposit USDC/USDT and can exit via supported currencies. Staking into the yield-bearing sUSDai vault is optional.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "309",
@@ -529,12 +529,30 @@
   },
   "reserves": [
     {
-      "name": "PYUSD (PayPal USD) held by USDai contract",
+      "name": "M held by the USDai contract",
       "pct": 100,
       "risk": "low",
-      "coinId": "pyusd-paypal"
+      "coinId": "m-m0",
+      "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USD.AI technical protocol overview",
+        "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+      }
+    ],
+    "rationale": "USD.AI documents USDai as M-backed: supported deposit stablecoins are swapped internally into M, and M is held by the USDai contract. This is a direct 100% reserve-derived collateral relationship rather than a PYUSD dependency.",
+    "compositionBasis": "Documented base backing asset held by the USDai contract",
+    "compositionAsOf": "2026-07-14",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "No unidentified reserve dependency remains in the documented base-token backing path.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 2,
@@ -551,13 +569,6 @@
         "rpcMode": "public-rpc"
       }
     }
-  },
-  "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
-    "provider": "USD.AI proof-of-reserves API",
-    "attestorTier": "self",
-    "cadence": "real-time"
   },
   "launchDate": "2025-05-23"
 }

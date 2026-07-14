@@ -1,0 +1,67 @@
+{
+  "id": "audx-aussie-dollar-token",
+  "reserves": [
+    {
+      "name": "Australian-dollar reserves in designated bank accounts",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed Australian financial institutions",
+      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aura Partners AUDX Limited Assurance Report - April 2026",
+        "url": "https://www.audxtoken.com/_files/ugd/539754_d3b6f8c78ec04b63b1df788050e271d9.pdf"
+      },
+      {
+        "label": "AUDX reserve transparency archive",
+        "url": "https://www.audxtoken.com/transparency"
+      }
+    ],
+    "rationale": "The April 30, 2026 report records AUD 3,651,079.23 in designated reserve bank accounts against AUD 3,647,956 of AUDX supply. Aura Partners independently confirmed the reserve balances with the relevant financial institutions and reconciled them to the issued supply; the institutions and account-level allocation are not disclosed.",
+    "compositionBasis": "AUDX reserve verification subject to Aura Partners limited assurance as of April 30, 2026",
+    "compositionAsOf": "2026-04-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The report establishes that the full reserve is held in designated bank accounts, but does not name the financial institutions or disclose provider shares and deposit terms.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Australian-dollar reserves in designated bank accounts",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Australian-dollar bank balances are external reserve assets rather than tracked stablecoin dependencies."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed Australian financial institutions",
+        "role": "bank",
+        "sharePct": 100,
+        "jurisdiction": "Australia"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aura Partners AUDX Limited Assurance Report - April 2026",
+        "url": "https://www.audxtoken.com/_files/ugd/539754_d3b6f8c78ec04b63b1df788050e271d9.pdf"
+      }
+    ],
+    "uncertainty": "The report states that all reserves are segregated from operating and corporate funds and remain unencumbered, but it does not name the financial institutions or establish statutory bankruptcy remoteness."
+  }
+}

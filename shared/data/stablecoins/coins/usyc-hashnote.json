@@ -601,16 +601,75 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "U.S. Treasury Bills",
-      "pct": 80,
-      "risk": "very-low"
-    },
-    {
-      "name": "Reverse Repo Agreements",
-      "pct": 20,
-      "risk": "very-low"
+      "name": "U.S. Treasury Bills and reverse repos",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury and institutional reverse-repo counterparties",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Circle USYC product disclosure",
+        "url": "https://www.circle.com/usyc"
+      },
+      {
+        "label": "Circle USYC developer overview",
+        "url": "https://developers.circle.com/tokenized/usyc/overview"
+      }
+    ],
+    "rationale": "Current Circle disclosures identify the fund strategy as short-term U.S. Treasury bills and reverse repurchase agreements backed by U.S. government securities, but do not publish a durable current allocation between those categories. The reviewed row therefore preserves the exact aggregate identity emitted by the Chainlink NAV adapter.",
+    "compositionBasis": "Circle USYC fund and developer disclosures",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The allocation between Treasury bills and reverse-repo positions and the repo counterparties are not disclosed in the reviewed public materials.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. Treasury Bills and reverse repos",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The public fund description identifies both categories but does not provide current category weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Marex",
+        "role": "prime-broker"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Circle USYC product disclosure",
+        "url": "https://www.circle.com/usyc"
+      },
+      {
+        "label": "Hashnote USYC Arbitrum STEP application",
+        "url": "https://forum.arbitrum.foundation/t/hashnote-usyc-step-application/23587"
+      }
+    ],
+    "uncertainty": "The issuer's 2024 application identifies BNY Mellon custody through Marex and describes the Cayman fund as bankruptcy-remote, but current public Circle materials do not restate provider shares, account segregation, or rehypothecation terms."
+  },
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 2,

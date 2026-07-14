@@ -13,6 +13,7 @@
   },
   "collateral": "Apollo Crypto managed yield strategy tracked through a Midas liquid-yield token.",
   "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "midas-mapollo",
   "proofOfReserves": {
@@ -323,14 +324,14 @@
   },
   "launchDate": "2025-07-15",
   "mechanismArchetypeReview": {
-    "disposition": "unresolved",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex mechanism review",
-    "rationale": "The reviewed managed crypto-yield NAV fund does not disclose a stable strategy mix that fits one of the six archetypes without overstating the evidence.",
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ARCH curation",
+    "rationale": "Midas's signed mAPOLLO final terms define the underlying as a crypto-denominated stablecoin-yield strategy that dynamically allocates to market-neutral opportunities across spot, lending, arbitrage, derivatives, and token rewards. That market-neutral mandate fits the synthetic-delta-neutral archetype.",
     "sources": [
       {
-        "label": "Midas smart-contract docs",
-        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+        "label": "Midas mAPOLLO final terms",
+        "url": "https://docs.midas.app/resources/legal-documents/prospectus-documents"
       }
     ]
   }

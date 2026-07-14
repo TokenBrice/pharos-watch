@@ -88,47 +88,6 @@
     "reviewedAt": "2026-07-13"
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Aggregate GBP-value reserve (composition undisclosed)",
-      "pct": 100,
-      "risk": "very-high"
-    }
-  ],
-  "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
-    "sources": [
-      {
-        "label": "AREVA VNX reserve report as of December 31, 2024",
-        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
-      },
-      {
-        "label": "VNX Reserves Management Policy",
-        "url": "https://vnx.li/wp-content/uploads/2023/05/2023.04.30-VNX-staiblecoins-Reserves-Management-Policy.pdf"
-      },
-      {
-        "label": "VNX current transparency page",
-        "url": "https://vnx.li/transparency/"
-      }
-    ],
-    "rationale": "AREVA reconciled the December 31, 2024 circulating VGBP liability to at least the same aggregate GBP value held in bank accounts or securities custody accounts. The report does not disclose constituents or weights, while VNX's non-binding policy permits a broader mix of debt securities, ETFs, derivatives, deposits, repos, money-market instruments, and currency hedges. The current VNX transparency page publishes no later VGBP reserve report.",
-    "compositionBasis": "AREVA aggregate reserve-value reconciliation and VNX non-binding reserve policy",
-    "compositionAsOf": "2024-12-31",
-    "scope": "full-composition",
-    "knownUnknownExposure": "All reserve value is reported only as an aggregate. The bank-account versus securities-custody allocation, underlying holdings, issuers, maturities, custodians, and liquidity terms are undisclosed.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Aggregate GBP-value reserve (composition undisclosed)",
-        "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "The AUP report confirms aggregate GBP-value coverage but does not disclose reserve constituents or weights."
-      }
-    ]
-  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -199,7 +158,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 48592766,
-        "failureDomainKeys": ["issuer:vnx", "eoa:0xd63052e09af164cef57695d3b96043ea848b051f"],
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xd63052e09af164cef57695d3b96043ea848b051f"
+        ],
         "sources": [
           {
             "label": "Base VNX direct minter",
@@ -221,7 +183,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 48592766,
-        "failureDomainKeys": ["issuer:vnx", "base:0x7ed9f1458200e21cc7482c288db7cf5e6280493e"],
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "base:0x7ed9f1458200e21cc7482c288db7cf5e6280493e"
+        ],
         "bypassSurfaces": [
           "Role-0 bearers can grant themselves minter role 2 and set an arbitrary allowance immediately.",
           "Role-0 bearers can transfer token ownership through VNXManager and replace the token RBAC address."
@@ -253,7 +218,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 48592766,
-        "failureDomainKeys": ["issuer:vnx", "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"],
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+        ],
         "sources": [
           {
             "label": "Base VNX role-0 bearer",
@@ -275,7 +243,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 72074122,
-        "failureDomainKeys": ["issuer:vnx", "celo:0x7ed9f1458200e21cc7482c288db7cf5e6280493e"],
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "celo:0x7ed9f1458200e21cc7482c288db7cf5e6280493e"
+        ],
         "bypassSurfaces": [
           "Role-0 bearers can grant themselves minter role 2 and set an arbitrary allowance immediately.",
           "Role-0 bearers can transfer token ownership through VNXManager and replace the token RBAC address."
@@ -307,7 +278,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 72074122,
-        "failureDomainKeys": ["issuer:vnx", "eoa:0xd63052e09af164cef57695d3b96043ea848b051f"],
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xd63052e09af164cef57695d3b96043ea848b051f"
+        ],
         "sources": [
           {
             "label": "Celo VNX direct minter",
@@ -331,7 +305,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 72074122,
-        "failureDomainKeys": ["issuer:vnx", "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"],
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+        ],
         "sources": [
           {
             "label": "Celo VNX role-0 bearer",
@@ -355,8 +332,13 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 432714278,
-        "failureDomainKeys": ["issuer:vnx", "solana:51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY"],
-        "bypassSurfaces": ["The authority can rotate the mint and freeze authorities without a timelock."],
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "solana:51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY"
+        ],
+        "bypassSurfaces": [
+          "The authority can rotate the mint and freeze authorities without a timelock."
+        ],
         "sources": [
           {
             "label": "Solana VGBP mint",
@@ -436,12 +418,17 @@
     },
     "upgradeability": {
       "model": "custom",
-      "proxyAddresses": ["0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411", "0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f"],
+      "proxyAddresses": [
+        "0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
+        "0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f"
+      ],
       "implementationAddresses": [
         "0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1",
         "0xf3e535d35b662015765a2d73e81db5735562b569"
       ],
-      "adminAddresses": ["0xa5d680c17abcd0df3b9b4d5a7c7d1cae0051dcb4"],
+      "adminAddresses": [
+        "0xa5d680c17abcd0df3b9b4d5a7c7d1cae0051dcb4"
+      ],
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "VGBP deployment-wide upgrade authorities",

@@ -19,8 +19,25 @@
   "geckoId": "hydrated-dollar",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "HOLLAR mints through Hydration Borrow, and DIA says it powers Hydration money-market collateral pricing with custom price feeds, but no stronger failover is documented.",
-    "reviewedAt": "2026-06-12",
+    "summary": "HOLLAR uses Hydration's enshrined per-block money-market oracles and automated partial-liquidation engine across its governance-enabled collateral set; public protocol docs do not identify a secondary oracle or a separate bad-debt backstop.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "HOLLAR can be minted against multiple reserves with asset-specific LTV and liquidation parameters. Hydration documents one common Borrow engine, per-block oracle update path, and automated liquidation mechanism, so those reserves are represented as one grouped collateral branch without inventing reserve-level thresholds.",
+      "sources": [
+        {
+          "label": "Hydration HOLLAR docs",
+          "url": "https://docs.hydration.net/products/hollar/"
+        },
+        {
+          "label": "Hydration borrowing overview",
+          "url": "https://docs.hydration.net/products/borrowing/overview/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "probable",
     "sources": [
@@ -31,6 +48,65 @@
       {
         "label": "DIA Hydration money-market oracle case study",
         "url": "https://www.diadata.org/use-cases/vaults-lending/"
+      }
+    ],
+    "branches": [
+      {
+        "id": "hydration-borrow-hollar-collateral",
+        "label": "Hydration Borrow HOLLAR collateral reserves",
+        "tier": "standard-external",
+        "summary": "Hydration's common Borrow engine values the governance-enabled HOLLAR collateral set with enshrined per-block oracle updates before evaluating health and liquidation.",
+        "collateralAssets": [
+          "Governance-enabled Hydration Borrow collateral reserves for HOLLAR"
+        ],
+        "chains": [
+          "hydration"
+        ],
+        "feeds": [
+          {
+            "provider": "Hydration enshrined money-market oracle with DIA-supported custom feeds",
+            "path": "Per-reserve market price -> Hydration runtime oracle update at block start -> Borrow health factor",
+            "chain": "hydration",
+            "observedAt": "2026-07-14",
+            "failureDomainKeys": [
+              "hydration-runtime-oracle",
+              "hydration-money-market",
+              "hydration"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Hydration documents oracle updates at the beginning of every block but does not identify a secondary price source or a failover mode for unavailable or invalid reserve prices.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Governance-enabled Hydration Borrow collateral reserves for HOLLAR",
+            "note": "Each reserve has its own displayed LTV and liquidation threshold; HOLLAR positions are exposed to liquidation once their aggregate health factor falls below 1.0. No static per-reserve values are asserted here."
+          }
+        ],
+        "liquidationMechanism": "Hydration evaluates positions at the beginning of each block and automatically performs partial liquidations to restore health. Its Borrow overview also documents protocol custom flash loans that repay debt, swap seized collateral through the Omnipool, and burn the flash-minted amount.",
+        "liquidationDelaySec": 0,
+        "backstop": "The documented liquidation path uses protocol-funded custom flash loans and Omnipool execution rather than requiring liquidator capital; the reviewed docs do not identify a separate reserve or insurance backstop for residual debt.",
+        "shutdownOrBadDebtBehavior": "Hydration's public HOLLAR and Borrow documentation does not specify an oracle-failure shutdown state or how debt remaining after failed liquidation execution is allocated, so no stronger recovery claim is made.",
+        "failureDomainKeys": [
+          "hydration-runtime-oracle",
+          "hydration-money-market",
+          "hydration-omnipool-liquidation",
+          "hydration"
+        ],
+        "sources": [
+          {
+            "label": "Hydration HOLLAR docs",
+            "url": "https://docs.hydration.net/products/hollar/"
+          },
+          {
+            "label": "Hydration borrowing overview",
+            "url": "https://docs.hydration.net/products/borrowing/overview/"
+          },
+          {
+            "label": "DIA Hydration money-market oracle case study",
+            "url": "https://www.diadata.org/use-cases/vaults-lending/"
+          }
+        ]
       }
     ]
   },

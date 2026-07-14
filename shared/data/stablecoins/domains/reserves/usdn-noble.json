@@ -1,0 +1,70 @@
+{
+  "id": "usdn-noble",
+  "reserves": [
+    {
+      "name": "M token locked through the M0 Portal for Noble USDN",
+      "pct": 100,
+      "risk": "very-low",
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 Protocol minters and their bankruptcy-remote collateral SPVs",
+      "riskFactors": ["counterparty", "smart-contract", "custody", "liquidity"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Noble USDN overview",
+        "url": "https://docs.noble.xyz/learn/usdn/overview/"
+      },
+      {
+        "label": "Noble USDN architecture",
+        "url": "https://docs.noble.xyz/usdn/architecture/"
+      },
+      {
+        "label": "Noble Dollar collateral disclosure",
+        "url": "https://dollar.noble.xyz/how-noble-dollar-works"
+      }
+    ],
+    "rationale": "Noble documents USDN as an extension of M0's M token and states that M principal is locked on Ethereum through the M0 Portal before equivalent USDN is minted on Noble. The direct reserve relationship is therefore 100% M; M0's Treasury collateral remains an inherited underlying exposure.",
+    "compositionBasis": "Noble documented M0 Portal lock-and-mint architecture",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "The public USDN documentation does not publish the current allocation among M0 minters or the individual Treasury positions behind M.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "M0 minter bankruptcy-remote collateral SPVs",
+        "role": "custodian"
+      },
+      {
+        "name": "M0 Portal and Wormhole NTT contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Noble Dollar collateral disclosure",
+        "url": "https://dollar.noble.xyz/how-noble-dollar-works"
+      },
+      {
+        "label": "Noble USDN architecture",
+        "url": "https://docs.noble.xyz/usdn/architecture/"
+      }
+    ],
+    "uncertainty": "Noble identifies bankruptcy-remote SPVs and the on-chain M Portal path, but does not publish current minter shares, named custody providers for every SPV, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

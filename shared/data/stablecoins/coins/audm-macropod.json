@@ -19,12 +19,27 @@
   "geckoId": "macropod",
   "cmcSlug": "macropod",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://www.macropod.com/transparency",
-    "provider": "Macropod independent monthly reserve attestation",
-    "attestorTier": "niche",
-    "cadence": "monthly",
-    "attestorJurisdiction": "Australia"
+    "provider": "Macropod Global",
+    "attestorTier": "self",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Australia",
+    "latestReport": {
+      "periodEnd": "2026-07-01",
+      "publishedAt": "2026-07-01",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Macropod AUDM reserve verification as of July 1, 2026",
+          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a4c45fc27ad45b67c2b0d4f_260701%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20July%202026.pdf"
+        }
+      ]
+    }
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -180,13 +195,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "AUD cash held in segregated AUDM Trust account at a Big 4 Australian bank (NAB per public reporting)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "attestation-pdf-index",
     "version": 1,

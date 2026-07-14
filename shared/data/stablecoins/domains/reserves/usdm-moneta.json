@@ -1,0 +1,109 @@
+{
+  "id": "usdm-moneta",
+  "reserves": [
+    {
+      "name": "USD bank deposits at insured and regulated banks",
+      "pct": 20,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed tier-one U.S. banks and Sparebanken Norge",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Institutional money market funds and short-duration Treasury exposure",
+      "pct": 80,
+      "risk": "very-low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "Fidelity, Western Asset Management, and Amundi",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty"],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Moneta USDM reserve composition",
+        "url": "https://moneta.global/"
+      },
+      {
+        "label": "Moneta USDM reserve and segregation litepaper",
+        "url": "https://moneta.global/USDM%20Lite%20Paper.pdf"
+      },
+      {
+        "label": "NBX USDM reserve and co-issuer disclosure",
+        "url": "https://nbx.com/en/usdm"
+      }
+    ],
+    "rationale": "Moneta's current transparency display reports an 80% money-market-fund allocation and 20% USD bank deposits. Its reserve policy identifies institutional money-market funds and short-duration Treasury exposure, while NBX identifies the named managers and banking counterparties used across the separately maintained issuer pools.",
+    "compositionBasis": "Moneta current USDM reserve-composition publication",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer does not publish position-level fund holdings, bank balances, or the split between the separately maintained Moneta and NBX reserve pools.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USD bank deposits at insured and regulated banks",
+        "pct": 20,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Bank deposits are external reserve assets rather than tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Institutional money market funds and short-duration Treasury exposure",
+        "pct": 80,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The disclosed funds and Treasury exposure are external reserve assets rather than tracked stablecoin dependencies."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed tier-one U.S. financial institutions",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Sparebanken Norge",
+        "role": "bank",
+        "jurisdiction": "Norway"
+      },
+      {
+        "name": "Fidelity and Western Asset Management",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Amundi",
+        "role": "other",
+        "jurisdiction": "France"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Moneta USDM reserve and segregation litepaper",
+        "url": "https://moneta.global/USDM%20Lite%20Paper.pdf"
+      },
+      {
+        "label": "NBX USDM reserve and co-issuer disclosure",
+        "url": "https://nbx.com/en/usdm"
+      },
+      {
+        "label": "NBX USDM terms",
+        "url": "https://nbx.com/en/usdm-terms"
+      }
+    ],
+    "uncertainty": "The sources establish separate reserve pools, segregated accounts, and no rehypothecation for Moneta's reserve, but do not publish provider shares or establish statutory bankruptcy remoteness for every pool."
+  }
+}

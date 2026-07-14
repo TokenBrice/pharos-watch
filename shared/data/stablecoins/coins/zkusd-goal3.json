@@ -17,14 +17,35 @@
   "detailProvider": "defillama",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Goal3 zkUSD do not identify the collateral oracle setup or failure handling.",
-    "reviewedAt": "2026-06-12",
+    "summary": "Goal3's verified portal implementation transfers approved stablecoins to a treasury and mints a configured return token through a vesting flow; it does not implement borrower collateral valuation or liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "The verified Goal3 portal implementation accepts owner-configured stable tokens, transfers deposits to a treasury, and mints and vests the configured return token. It contains no borrower debt positions, collateral-ratio checks, or collateral liquidation functions, so per-collateral oracle and liquidation branches do not apply to this issuance path.",
+      "sources": [
+        {
+          "label": "Verified Goal3 portal implementation",
+          "url": "https://explorer.zksync.io/address/0xd3227d2b5c616dcf566ace0fec42507afef8e28d#contract"
+        },
+        {
+          "label": "Verified zkUSD token implementation",
+          "url": "https://explorer.zksync.io/address/0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b#contract"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "limited",
     "sources": [
       {
-        "label": "Goal3 X",
-        "url": "https://x.com/Goal3_xyz"
+        "label": "Verified Goal3 portal implementation",
+        "url": "https://explorer.zksync.io/address/0xd3227d2b5c616dcf566ace0fec42507afef8e28d#contract"
+      },
+      {
+        "label": "Verified zkUSD token implementation",
+        "url": "https://explorer.zksync.io/address/0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b#contract"
       }
     ]
   },

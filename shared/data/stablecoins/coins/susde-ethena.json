@@ -253,8 +253,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "Ethena lists sUSDe deployments across many chains and LayerZero OFT is the reviewed cross-chain token pattern for unified multichain supply. The route is treated as external lock/burn-and-mint infrastructure with Ethena multisig controls on destination deployments.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 BRDG curation",
     "confidence": "probable",
     "protocols": [
       {
@@ -318,7 +318,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -328,7 +328,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "plasma",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "linea:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -344,7 +346,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -354,7 +356,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "fraxtal:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -370,7 +374,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -380,7 +384,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "hyperevm:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -396,7 +402,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -406,7 +412,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "berachain:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -422,7 +430,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -432,7 +440,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "berachain",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "zircuit:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -448,7 +458,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -458,7 +468,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "zircuit",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "metis:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -474,7 +486,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -484,7 +496,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "metis",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "xlayer:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -500,7 +514,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -510,7 +524,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "xlayer",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "base:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -526,7 +542,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -536,7 +552,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "bsc:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -552,7 +570,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -562,7 +580,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "morph-l2:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -578,7 +598,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -588,7 +608,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "morph-l2",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "scroll:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -604,7 +626,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -614,7 +636,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "scroll",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "kava:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -630,7 +654,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -640,7 +664,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "kava",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "swellchain:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -656,7 +682,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -666,7 +692,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "swellchain",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "mode:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -682,7 +710,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -692,7 +720,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "mode",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "mantle:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -708,7 +738,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -718,7 +748,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "mantle",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "arbitrum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -734,7 +766,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -744,7 +776,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "manta:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -760,7 +794,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -770,7 +804,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "manta",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "blast:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -786,7 +822,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -796,7 +832,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "blast",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "optimism:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -812,7 +850,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -822,7 +860,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "ton:EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr",
@@ -838,7 +878,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -848,7 +888,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "ton",
+        "controllerAddress": "EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr"
       },
       {
         "id": "solana:Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",
@@ -864,7 +906,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -874,7 +916,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN"
       },
       {
         "id": "zksync:0xad17da2f6ac76746ef261e835c50b2651ce36da8",
@@ -890,7 +934,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -900,7 +944,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "zksync",
+        "controllerAddress": "0xad17da2f6ac76746ef261e835c50b2651ce36da8"
       },
       {
         "id": "avalanche:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -916,7 +962,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -926,7 +972,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
       },
       {
         "id": "aptos:0xb30a694a344edee467d9f82330bbe7c3b89f440a1ecd2da1f3bca266560fce69",
@@ -942,7 +990,7 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -952,7 +1000,9 @@
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
-        ]
+        ],
+        "controllerChain": "aptos",
+        "controllerAddress": "0xb30a694a344edee467d9f82330bbe7c3b89f440a1ecd2da1f3bca266560fce69"
       }
     ]
   },

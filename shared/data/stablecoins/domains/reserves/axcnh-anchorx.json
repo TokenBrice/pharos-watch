@@ -1,0 +1,60 @@
+{
+  "id": "axcnh-anchorx",
+  "reserves": [
+    {
+      "name": "Offshore-yuan high-quality liquid reserve assets",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed regulated financial institutions",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "AnchorX AxCNH reserve disclosure",
+        "url": "https://anchorx.org/"
+      }
+    ],
+    "rationale": "AnchorX states that AxCNH is fully backed by high-quality liquid reserve assets safeguarded in segregated custody accounts at regulated financial institutions. The issuer does not disclose the current asset classes, instruments, institutions, or allocation weights, so the reserve is represented as one aggregate basket.",
+    "compositionBasis": "Current AnchorX issuer reserve disclosure; internal composition undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The full backing, currency denomination, high-quality-liquid-asset policy, and regulated custody are disclosed, but current asset classes, instruments, providers, and weights are not public.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Offshore-yuan high-quality liquid reserve assets",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "AnchorX does not publish current asset-class or provider weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed regulated financial institutions",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "AnchorX AxCNH reserve and custody disclosure",
+        "url": "https://anchorx.org/"
+      }
+    ],
+    "uncertainty": "AnchorX states that reserves use segregated custody accounts at regulated financial institutions but does not name the institutions, disclose provider shares, establish bankruptcy-remoteness, or state rehypothecation terms."
+  }
+}

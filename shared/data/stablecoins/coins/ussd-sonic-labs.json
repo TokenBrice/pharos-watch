@@ -294,24 +294,59 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "BlackRock BUIDL (USD Institutional Digital Liquidity Fund)",
-      "pct": 50,
+      "name": "WTGXX (WisdomTree Government Money Market)",
+      "pct": 54.1,
       "risk": "low",
-      "coinId": "buidl-blackrock"
+      "coinId": "wtgxx-wisdomtree"
     },
     {
-      "name": "Superstate USTB (Short Duration U.S. Government Securities Fund)",
-      "pct": 30,
+      "name": "USTB (Superstate tokenized T-bills)",
+      "pct": 29.9,
       "risk": "low",
       "coinId": "ustb-superstate"
     },
     {
-      "name": "WisdomTree WTGXX (Government Money Market Digital Fund)",
-      "pct": 20,
+      "name": "BUIDL (BlackRock tokenized T-bills)",
+      "pct": 14.2,
       "risk": "low",
-      "coinId": "wtgxx-wisdomtree"
+      "coinId": "buidl-blackrock"
+    },
+    {
+      "name": "USDB (Bridge)",
+      "pct": 1.8,
+      "risk": "low"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax balance-sheet API",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      },
+      {
+        "label": "Sonic USSD launch disclosure",
+        "url": "https://blog.soniclabs.com/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/"
+      }
+    ],
+    "rationale": "USSD uses Frax's frxUSD reserve infrastructure. The official balance-sheet feed identifies every current positive asset row and supports exact tracked links for WTGXX, USTB, and BUIDL; USDB remains an identified but inactive exogenous stablecoin rather than an active dependency edge.",
+    "compositionBasis": "Official Frax balance-sheet asset values normalized through the repository's frax-balance-sheet adapter",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified balance-sheet exposure; USDB is identified but intentionally remains outside the active dependency graph.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 3,
+        "reserveName": "USDB (Bridge)",
+        "pct": 1.8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The source identifies USDB, but the tracked USDB record is inactive and must not be promoted into the active dependency graph."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "frax-balance-sheet",
     "version": 1,

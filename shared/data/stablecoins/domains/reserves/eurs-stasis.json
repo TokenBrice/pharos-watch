@@ -1,0 +1,87 @@
+{
+  "id": "eurs-stasis",
+  "reserves": [
+    {
+      "name": "Euro cash in designated reserve accounts at licensed European financial institutions",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Licensed European financial institutions",
+      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BDO Malta EURS Cash Reserves Report - August 1, 2024",
+        "url": "https://api-site.stasis.net/api/weeklyStatement/download?id=205"
+      },
+      {
+        "label": "STASIS EURS transparency index",
+        "url": "https://eurs.stasis.net/transparency"
+      },
+      {
+        "label": "STASIS EURS daily NexPay reserve statement - December 12, 2025",
+        "url": "https://api-site.stasis.net/api/dailyStatement/download?id=2301"
+      }
+    ],
+    "rationale": "BDO Malta directly confirmed EUR 32.448 million across three designated cash reserve accounts at licensed European financial institutions on August 1, 2024. STASIS's latest published daily statement is a December 12, 2025 NexPay euro account statement, which corroborates the continued cash-account model but does not support splitting the complete reserve across current providers.",
+    "compositionBasis": "Latest complete third-party EURS cash-reserve procedures report; current provider allocation undisclosed",
+    "compositionAsOf": "2024-08-01",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material reserve asset class is unclassified; current account-level provider shares are not publicly disclosed by the latest complete report set.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Euro cash in designated reserve accounts at licensed European financial institutions",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The reserve is euro cash held at financial institutions rather than another tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Cyprus SEC-licensed investment services company (not named in report)",
+        "role": "bank",
+        "sharePct": 0.08,
+        "jurisdiction": "Cyprus"
+      },
+      {
+        "name": "MFSA Category 3 investment services company (not named in report)",
+        "role": "bank",
+        "sharePct": 59,
+        "jurisdiction": "Malta"
+      },
+      {
+        "name": "Central Bank of Lithuania-authorized electronic money institution (not named in report)",
+        "role": "bank",
+        "sharePct": 40.92,
+        "jurisdiction": "Lithuania"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BDO Malta EURS Cash Reserves Report - August 1, 2024",
+        "url": "https://api-site.stasis.net/api/weeklyStatement/download?id=205"
+      },
+      {
+        "label": "STASIS EURS daily NexPay reserve statement - December 12, 2025",
+        "url": "https://api-site.stasis.net/api/dailyStatement/download?id=2301"
+      }
+    ],
+    "uncertainty": "BDO identifies the three providers only by license category and jurisdiction, so their names are intentionally not inferred. The report calls the accounts designated cash reserve accounts but does not establish statutory bankruptcy remoteness or disclose rehypothecation terms; the later daily statement identifies NexPay but covers only one account."
+  }
+}

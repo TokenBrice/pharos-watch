@@ -232,16 +232,9 @@
       "risk": "very-low"
     },
     {
-      "name": "USDT deposits (minting collateral)",
-      "pct": 12.5,
-      "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "USDC deposits (minting collateral)",
-      "pct": 12.5,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "name": "Stablecoin reserve and minting collateral (USDT/USDC/USD1)",
+      "pct": 25,
+      "risk": "low"
     },
     {
       "name": "Yield strategies (CEX-managed, undisclosed composition)",
@@ -249,6 +242,44 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 dependency review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Gate GUSD product page",
+        "url": "https://www.gate.com/gusd"
+      },
+      {
+        "label": "Gate GUSD minting and redemption guide",
+        "url": "https://www.gate.com/blog/how-to-mint-and-redeem-gate-gusd"
+      },
+      {
+        "label": "Gate GUSD launch announcement",
+        "url": "https://chainwire.org/2025/08/29/gate-launches-gusd-a-stable-investment-backed-by-real-world-assets/"
+      }
+    ],
+    "rationale": "Gate identifies USDT, USDC, and USD1 as stablecoin minting or reserve assets but does not publish current constituent percentages. The curated fallback's stablecoin allocation is therefore retained only as an unresolved aggregate rather than split into unsupported weighted dependencies.",
+    "compositionBasis": "Curated aggregate fallback aligned to Gate reserve and minting disclosures",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The stablecoin reserve allocation is not split among USDT, USDC, and USD1 by a current primary source.",
+    "knownUnknownExposurePct": 25,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Stablecoin reserve and minting collateral (USDT/USDC/USD1)",
+        "pct": 25,
+        "disposition": "basket-needs-split",
+        "rationale": "Gate names the eligible stablecoins but does not disclose their individual reserve weights.",
+        "candidateCoinIds": [
+          "usdt-tether",
+          "usdc-circle",
+          "usd1-world-liberty-financial"
+        ]
+      }
+    ]
+  },
   "yieldConfig": {
     "yieldSource": "Gate USD redemption yield",
     "yieldType": "governance-set"

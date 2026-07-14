@@ -20,7 +20,28 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Hylo values LST collateral internally via Sanctum stake-pool accounting but uses the Pyth EMA SOL/USD oracle for hyUSD NAV and collateral-ratio calculations.",
-    "reviewedAt": "2026-06-12",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Hylo issues hyUSD and xSOL against one shared LST collateral pool. Its Pyth-priced system collateral ratio drives protocol-wide mint/redeem fee modes and a Stability Pool conversion from hyUSD to xSOL; users do not maintain borrower-specific collateralized debt positions with independently liquidatable collateral branches.",
+      "sources": [
+        {
+          "label": "Hylo hyUSD and xSOL design",
+          "url": "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL"
+        },
+        {
+          "label": "Hylo risk management",
+          "url": "https://docs.hylo.so/protocol-overview/risk-management"
+        },
+        {
+          "label": "Hylo equations",
+          "url": "https://docs.hylo.so/technical-addendum/hylo-equations"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [

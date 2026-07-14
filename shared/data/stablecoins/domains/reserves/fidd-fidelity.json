@@ -1,0 +1,76 @@
+{
+  "id": "fidd-fidelity",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bills",
+      "pct": 64.08,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 83
+    },
+    {
+      "name": "Cash in bank deposit accounts",
+      "pct": 35.92,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "The Bank of New York Mellon",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "PwC FIDD Reserve Attestation Report - May 2026",
+        "url": "https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026"
+      },
+      {
+        "label": "Fidelity Digital Assets FIDD transparency",
+        "url": "https://www.fidelitydigitalassets.com/stablecoin"
+      }
+    ],
+    "rationale": "PwC's May examination reports $38.17962770 million of U.S. Treasury bills and $21.40396255 million of cash deposits at May 29, 2026. Excluding the separately disclosed negative $5.07224849 million net-other-assets-and-liabilities adjustment, gross reserve assets normalize to 64.08% Treasury bills and 35.92% cash.",
+    "compositionBasis": "PwC examination of the FIDD Reserve Report as of May 29, 2026",
+    "compositionAsOf": "2026-05-29",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material gross reserve asset-class exposure is unclassified; the report separately discloses a negative net-other-assets-and-liabilities adjustment and identifies BNY Mellon as the sole reserve account provider at period end.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon",
+        "role": "custodian",
+        "sharePct": 100,
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "PwC FIDD Reserve Attestation Report - May 2026",
+        "url": "https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026"
+      }
+    ],
+    "uncertainty": "The report states that all reserve investments and cash deposits were held in segregated accounts at BNY Mellon on both May report dates. It does not establish statutory bankruptcy remoteness or disclose rehypothecation terms."
+  }
+}

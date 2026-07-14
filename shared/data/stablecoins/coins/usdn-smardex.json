@@ -14,6 +14,44 @@
   "collateral": "Synthetic dollar backed by the SMARDEX USDN vault, initially using wstETH as the underlying asset and protocol long-side mechanics to target delta-neutral exposure",
   "pegMechanism": "Users mint USDN by depositing supported underlying assets into the USDN vault and redeem by burning USDN for the corresponding underlying asset value. Mint and redemption flows can be temporarily restricted by protocol imbalance and use a two-step oracle validation flow.",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "USDN protocol actions and long-position liquidations use user-supplied Pyth prices with Chainlink fallback, but USDN itself is issued from a shared wstETH vault rather than borrower-specific debt positions.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "USDN is minted and redeemed against the protocol's shared wstETH vault while a separate long-only perpetual supplies matched trading exposure. The oracle liquidates leveraged long positions, not borrower-specific USDN collateralized debt positions, so there are no stablecoin collateral-market branches to inventory.",
+      "sources": [
+        {
+          "label": "USDN protocol balance",
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/protocol-balance"
+        },
+        {
+          "label": "USDN price submission and validation",
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/inside-the-protocol/1.-providing-a-price"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDN oracle design",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/oracles"
+      },
+      {
+        "label": "USDN protocol internal processing",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/inside-the-protocol"
+      },
+      {
+        "label": "USDN long-position liquidations",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/long-side/liquidations-and-minimum-position"
+      }
+    ]
+  },
   "llamaId": "277",
   "detailProvider": "defillama",
   "geckoId": "smardex-usdn",

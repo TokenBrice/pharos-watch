@@ -23,7 +23,22 @@
     "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
     "provider": "Big Four accounting firm via Anchorage Digital Bank",
     "attestorTier": "big4",
-    "cadence": "monthly"
+    "cadence": "monthly",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-26",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "USDtb Reserve Report - May 2026",
+          "url": "https://learn.anchorage.com/05.31.26_USDtb_Stablecoin_Attestation_Report_signed.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -289,16 +304,99 @@
   "reserves": [
     {
       "name": "BlackRock BUIDL (U.S. T-Bills, cash, repos)",
-      "pct": 90,
+      "pct": 98.8,
       "risk": "low",
-      "coinId": "buidl-blackrock"
+      "coinId": "buidl-blackrock",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
     },
     {
-      "name": "Cash and cash-equivalent redemption reserve",
-      "pct": 10,
-      "risk": "low"
+      "name": "Assets in motion (settlement float)",
+      "pct": 1.2,
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed USD settlement counterparties",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDtb current backing and supply",
+        "url": "https://usdtb.money/api/transparency/backing-and-supply/current"
+      },
+      {
+        "label": "USDtb transparency dashboard",
+        "url": "https://usdtb.money/transparency"
+      },
+      {
+        "label": "USDtb reserve introduction",
+        "url": "https://docs.usdtb.money/introduction.md"
+      }
+    ],
+    "rationale": "The current issuer endpoint reports BUIDL held at the published Anchorage custody address plus assetsInMotion, and the transparency dashboard presents assetsInMotion as USD. The BUIDL row is linked to the tracked fund; the settlement-float counterparty and timing remain undisclosed.",
+    "compositionBasis": "USDtb backing-and-supply endpoint",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The assets-in-motion USD settlement float has no disclosed banking counterparty or settlement timing.",
+    "knownUnknownExposurePct": 1.2,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Assets in motion (settlement float)",
+        "pct": 1.2,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer reports this amount as USD assets in motion but does not identify its banking counterparty or settlement timeline."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Anchorage Digital Bank, N.A.",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Undisclosed FDIC-insured major commercial banks",
+        "role": "bank",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDtb Reserve Report - May 2026",
+        "url": "https://learn.anchorage.com/05.31.26_USDtb_Stablecoin_Attestation_Report_signed.pdf"
+      },
+      {
+        "label": "USDtb reserve attestations",
+        "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations"
+      }
+    ],
+    "uncertainty": "Anchorage reports that BUIDL is self-custodied in segregated wallets and cash is held in segregated fiduciary trust accounts at major commercial banks. The banks are not identified, current provider allocations can change, and the legal treatment has not been independently adjudicated."
+  },
   "liveReservesConfig": {
     "adapter": "usdtb-transparency",
     "version": 1,

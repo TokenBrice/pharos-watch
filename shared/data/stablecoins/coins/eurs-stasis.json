@@ -24,7 +24,26 @@
     "provider": "BDO Malta",
     "attestorTier": "regional",
     "cadence": "quarterly",
-    "attestorJurisdiction": "Malta"
+    "attestorJurisdiction": "Malta",
+    "latestReport": {
+      "periodEnd": "2024-08-01",
+      "publishedAt": "2024-08-02",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-only",
+      "liabilityReconciliation": "partial",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "BDO Malta EURS Cash Reserves Report - August 1, 2024",
+          "url": "https://api-site.stasis.net/api/weeklyStatement/download?id=205"
+        },
+        {
+          "label": "STASIS EURS transparency index",
+          "url": "https://eurs.stasis.net/transparency"
+        }
+      ]
+    }
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -306,13 +325,6 @@
   },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Euro balances at licensed EU institutions",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

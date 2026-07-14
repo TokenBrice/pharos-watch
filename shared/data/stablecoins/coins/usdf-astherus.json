@@ -18,6 +18,48 @@
   "detailProvider": "defillama",
   "geckoId": "astherus-usdf",
   "cmcSlug": "usdf",
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Aster manages USDF backing through custodial USDT and offchain delta-neutral positions, without publishing a user-CDP liquidation oracle or market-specific feed inventory.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "USDF mints and redeems against USDT while Aster manages backing and hedge positions through Ceffu and Binance. Holders do not open permissionless collateralized debt positions with onchain per-collateral liquidation thresholds, auctions, backstops, or shutdown branches, so the V9 CDP branch inventory does not apply.",
+      "sources": [
+        {
+          "label": "Aster USDF FAQ",
+          "url": "https://docs.asterdex.com/product/usdf-stablecoin/faqs"
+        },
+        {
+          "label": "Aster USDF fund custody and risk management",
+          "url": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
+        },
+        {
+          "label": "Aster USDF capital flows",
+          "url": "https://docs.asterdex.com/product/usdf-stablecoin/how-usdf-works"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aster USDF FAQ",
+        "url": "https://docs.asterdex.com/product/usdf-stablecoin/faqs"
+      },
+      {
+        "label": "Aster USDF fund custody and risk management",
+        "url": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
+      },
+      {
+        "label": "Aster USDF peg mechanism",
+        "url": "https://docs.asterdex.com/product/usdf-stablecoin/maintaining-the-peg"
+      }
+    ]
+  },
   "links": [
     {
       "label": "Website",
@@ -221,22 +263,70 @@
   "custodyModel": "cex",
   "reserves": [
     {
-      "name": "USDT (held in Ceffu custody)",
-      "pct": 50,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "collateral"
-    },
-    {
-      "name": "Spot crypto (BTC/ETH, delta-hedged via perp shorts)",
-      "pct": 25,
-      "risk": "high"
-    },
-    {
-      "name": "Perpetual short positions margin (Binance via MirrorX)",
-      "pct": 25,
+      "name": "USDT-funded spot crypto and corresponding short futures positions",
+      "pct": 100,
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex dependency review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Aster USDF",
+        "url": "https://www.asterdex.com/en/usdf"
+      },
+      {
+        "label": "Ceffu MirrorX",
+        "url": "https://www.ceffu.com/solutions/mirrorx"
+      }
+    ],
+    "rationale": "Aster identifies crypto assets and corresponding short futures positions as the backing, with Ceffu custody, but does not disclose current spot, margin, or retained-USDT weights. The prior 50/25/25 split was unsupported and is replaced by one conservative reviewed basket.",
+    "compositionBasis": "Officially documented delta-neutral backing structure; constituent shares are undisclosed",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Aster does not publish current weights for retained USDT, spot BTC/ETH, or futures-margin exposure.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USDT-funded spot crypto and corresponding short futures positions",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "USDT funds the strategy, but no current constituent weights support treating a portion of the aggregate basket as direct USDT collateral.",
+        "candidateCoinIds": [
+          "usdt-tether"
+        ]
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "id": "usdt-tether",
+      "weight": 1,
+      "type": "mechanism"
+    }
+  ],
+  "dependencyReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aster USDF",
+        "url": "https://www.asterdex.com/en/usdf"
+      }
+    ],
+    "rationale": "USDF is minted from and redeemed to USDT at the protocol's 1:1 reference. This is a serial mechanism dependency on USDT, separate from the undisclosed composition of the actively managed backing basket.",
+    "relationships": [
+      {
+        "id": "usdt-tether",
+        "weight": 1,
+        "type": "mechanism",
+        "reason": "USDT is the protocol's 1:1 mint input, redemption output, and unit of account for USDF."
+      }
+    ]
+  },
   "launchDate": "2024-11-14"
 }

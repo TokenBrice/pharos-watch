@@ -1,0 +1,73 @@
+{
+  "id": "susd-solayer",
+  "reserves": [
+    {
+      "name": "Wrapped tokenized U.S. Treasury bill and RWA partner basket",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Qualified Solayer liquidity providers and undisclosed RWA issuers",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "legal"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Solayer sUSD subscription and redemption process",
+        "url": "https://docs.solayer.org/susd/decentralized-rfq-protocol/process"
+      },
+      {
+        "label": "Solayer sUSD transparency and security",
+        "url": "https://docs.solayer.org/susd/protocol-info/transparency%26security"
+      },
+      {
+        "label": "Solayer sUSD litepaper",
+        "url": "https://docs.solayer.org/susd/protocol-info/litepaper"
+      }
+    ],
+    "rationale": "Solayer documents that qualified liquidity providers exchange deposited USDC for wrapped T-bill assets, which the sUSD program locks before minting sUSD at a one-to-one value. The docs permit a broader low-risk RWA basket but do not identify current products or weights, so the reserve remains one structured aggregate slice.",
+    "compositionBasis": "Solayer wrapped-T-bill RFQ mint and redemption architecture",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current RWA issuers, instruments, maturity profile, and liquidity-provider allocation are not disclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Wrapped tokenized U.S. Treasury bill and RWA partner basket",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The protocol identifies the wrapped T-bill asset class but not the current tokenized products or their weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Solayer sUSD program and market-maker PDAs",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Solayer sUSD transparency and security",
+        "url": "https://docs.solayer.org/susd/protocol-info/transparency%26security"
+      },
+      {
+        "label": "Solayer program directory",
+        "url": "https://docs.solayer.org/resources/solayer-programs"
+      }
+    ],
+    "uncertainty": "Solayer states that isolated program-derived accounts hold each market maker's wrapped T-bill balance, but does not identify the RWA custodians, market-maker shares, bankruptcy-remoteness terms, or rehypothecation policy.",
+    "knownUnknownExposurePct": 100
+  }
+}

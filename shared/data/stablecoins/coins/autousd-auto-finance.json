@@ -120,15 +120,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "USDC deployed through Auto Finance autoUSD autopool strategies",
-      "pct": 100,
-      "risk": "high",
-      "coinId": "usdc-circle",
-      "depType": "wrapper"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Auto Finance autoUSD autopool",
     "yieldType": "nav-appreciation"

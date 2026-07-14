@@ -24,7 +24,22 @@
     "provider": "William Buck",
     "attestorTier": "regional",
     "cadence": "monthly",
-    "attestorJurisdiction": "Australia"
+    "attestorJurisdiction": "Australia",
+    "latestReport": {
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-06",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "William Buck AUDD Agreed-Upon Procedures Report - June 2026",
+          "url": "https://www.audd.digital/wp-content/uploads/2026/07/AUDC-Agreed-upon-procedures-report-Jun26_.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -172,13 +187,6 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "AUD cash & Treasury bills at ADIs",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

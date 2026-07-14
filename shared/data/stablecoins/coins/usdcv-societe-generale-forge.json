@@ -245,13 +245,6 @@
       ]
     }
   },
-  "reserves": [
-    {
-      "name": "USD cash deposits at BNY Mellon (segregated)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "sgforge-coinvertible",
     "version": 1,

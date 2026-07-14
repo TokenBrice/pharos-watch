@@ -13,6 +13,7 @@
   },
   "collateral": "MEV Capital-managed DeFi lending, liquidity, arbitrage, carry, and liquidation strategies allocated through Midas liquid-yield token rails.",
   "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "midas-mmev",
   "proofOfReserves": {
@@ -470,18 +471,18 @@
   },
   "launchDate": "2025-02-04",
   "mechanismArchetypeReview": {
-    "disposition": "unresolved",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex mechanism review",
-    "rationale": "The reviewed managed DeFi NAV fund combines lending, liquidity, arbitrage, carry, and liquidation strategies; none of the six archetypes represents that mechanism without implying a narrower backing model.",
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ARCH curation",
+    "rationale": "Midas describes mMEV as tracking delta-neutral DeFi crypto yields under a stable-asset exposure mandate. Its documented same-underlying liquidity provision, statistical arbitrage, and carry trades are explicitly market-neutral, which fits the synthetic-delta-neutral archetype.",
     "sources": [
       {
-        "label": "Midas docs",
-        "url": "https://docs.midas.app/"
+        "label": "Midas mMEV docs",
+        "url": "https://docs.midas.app/tokens/mmev"
       },
       {
-        "label": "Midas risk disclosures",
-        "url": "https://docs.midas.app/legal/investment-risks-1-0-1"
+        "label": "Midas mMEV risk disclosures",
+        "url": "https://docs.midas.app/tokens/mmev/risks"
       }
     ]
   }

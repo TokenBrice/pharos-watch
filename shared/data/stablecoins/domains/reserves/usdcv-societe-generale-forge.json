@@ -1,0 +1,66 @@
+{
+  "id": "usdcv-societe-generale-forge",
+  "reserves": [
+    {
+      "name": "USD cash deposits at BNY Mellon (segregated)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "The Bank of New York Mellon SA/NV",
+      "riskFactors": ["counterparty", "custody", "legal", "concentration"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SG-FORGE CoinVertible product and daily reserve disclosure",
+        "url": "https://www.sgforge.com/product/coinvertible/"
+      },
+      {
+        "label": "SG-FORGE USDCV MiCA white paper",
+        "url": "https://www.sgforge.com/wp-content/uploads/2025/09/USDCV-White-Paper_iXBRL_202508.html"
+      }
+    ],
+    "rationale": "SG-FORGE's current product disclosure states that CoinVertible reserves are 100% cash. The MiCA white paper identifies BNY's Belgian entity as the initial custodian and the account as segregated, while permitting future eligible securities; no such securities appear in the current issuer composition.",
+    "compositionBasis": "SG-FORGE current daily CoinVertible reserve-composition disclosure",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The public page does not disclose the deposit account balance or any sub-account allocation beyond the current 100% cash classification.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USD cash deposits at BNY Mellon (segregated)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USD cash at BNY is external reserve backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon SA/NV",
+        "role": "bank",
+        "jurisdiction": "Belgium"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SG-FORGE USDCV MiCA white paper",
+        "url": "https://www.sgforge.com/wp-content/uploads/2025/09/USDCV-White-Paper_iXBRL_202508.html"
+      }
+    ],
+    "uncertainty": "The white paper establishes statutory segregation and an exclusive pro-rata holder claim, but does not disclose account-level placement or rehypothecation terms. It also permits additional qualifying custodians in the future without naming any current provider beyond BNY."
+  }
+}

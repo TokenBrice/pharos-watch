@@ -292,54 +292,6 @@
     }
   },
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)",
-      "pct": 70,
-      "risk": "low"
-    },
-    {
-      "name": "USD0++ (Usual)",
-      "pct": 15,
-      "risk": "medium",
-      "coinId": "busd0-usual"
-    },
-    {
-      "name": "Wrapped M (M0 tokenized T-bills)",
-      "pct": 15,
-      "risk": "medium",
-      "coinId": "wm-m0"
-    }
-  ],
-  "reserveReview": {
-    "reviewedAt": "2026-07-12",
-    "reviewer": "OpenAI Codex dependency review",
-    "confidence": "probable",
-    "sources": [
-      {
-        "label": "Zoth ZeUSD documentation",
-        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
-      }
-    ],
-    "rationale": "The tokenized-Treasury bucket names tracked and untracked instruments but does not disclose constituent weights.",
-    "compositionBasis": "Curated product composition",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "USYC and TBILL are plausible tracked upstreams inside an unsplit four-instrument basket.",
-    "knownUnknownExposurePct": 70,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)",
-        "pct": 70,
-        "disposition": "basket-needs-split",
-        "rationale": "The named instruments have no published individual percentages.",
-        "candidateCoinIds": [
-          "usyc-hashnote",
-          "tbill-openeden"
-        ]
-      }
-    ]
-  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

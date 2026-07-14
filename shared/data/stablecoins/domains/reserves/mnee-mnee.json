@@ -1,0 +1,83 @@
+{
+  "id": "mnee-mnee",
+  "reserves": [
+    {
+      "name": "U.S. Treasury bills (<=90-day duration)",
+      "pct": 84.79,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "unknown",
+      "maturityDaysMax": 90
+    },
+    {
+      "name": "USD cash at regulated financial institutions",
+      "pct": 15.21,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed regulated financial institutions",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Wolf & Company MNEE May 2026 reserve examination",
+        "url": "https://mnee.ghost.io/content/files/2026/06/MNEE---Attestation-Opinion--May-2026--Final.pdf"
+      },
+      {
+        "label": "MNEE reserve policy disclosure",
+        "url": "https://www.mnee.io/news/mnee-expands-transparency-with-monthly-third-party-reserve-attestations-audited-by-wolf-company-p-c"
+      }
+    ],
+    "rationale": "Wolf & Company's May 29 examination reports $86,958,906.65 of U.S. Treasury securities and $15,601,788.71 of cash against $102,560,695.36 of total reserve assets. Those balances normalize to 84.79% and 15.21%; MNEE separately states that Treasury bills have no more than 90 days of duration.",
+    "compositionBasis": "Wolf & Company examination of MNEE reserve assets as of May 29, 2026",
+    "compositionAsOf": "2026-05-29",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The public examination does not name the regulated custodians or financial institutions holding the reserve assets, and it does not publish the individual Treasury maturities.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. Treasury bills (<=90-day duration)",
+        "pct": 84.79,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Direct U.S. Treasury securities are external reserve assets rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "USD cash at regulated financial institutions",
+        "pct": 15.21,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USD cash at regulated financial institutions is external reserve backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed regulated custodians and financial institutions",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Wolf & Company MNEE May 2026 reserve examination",
+        "url": "https://mnee.ghost.io/content/files/2026/06/MNEE---Attestation-Opinion--May-2026--Final.pdf"
+      }
+    ],
+    "uncertainty": "The report confirms regulated custodians and financial institutions but does not identify them, disclose provider shares, or establish segregation, bankruptcy remoteness, or rehypothecation safeguards.",
+    "knownUnknownExposurePct": 100
+  }
+}

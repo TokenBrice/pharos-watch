@@ -224,18 +224,6 @@
     }
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "Treasury-collateralized reverse repos",
-      "pct": 80,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash deposits",
-      "pct": 20,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -263,7 +251,22 @@
     "provider": "Deloitte & Touche (published via Anchorage Digital Bank)",
     "attestorTier": "big4",
     "cadence": "monthly",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-26",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Deloitte USA₮ Reserve Report - May 2026",
+          "url": "https://learn.anchorage.com/05.31.26_USAT_Stablecoin_Attestation_Report_signed.pdf"
+        }
+      ]
+    }
   },
   "launchDate": "2026-01-27"
 }

@@ -512,33 +512,6 @@
   },
   "chainTier": "mature-alt-l1",
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "U.S. Treasury bills (<=3mo maturity)",
-      "pct": 50,
-      "risk": "very-low"
-    },
-    {
-      "name": "Reverse repos (overnight, UST-collateralized)",
-      "pct": 15,
-      "risk": "very-low"
-    },
-    {
-      "name": "U.S. government money-market funds",
-      "pct": 15,
-      "risk": "very-low"
-    },
-    {
-      "name": "Bank deposit accounts",
-      "pct": 10,
-      "risk": "very-low"
-    },
-    {
-      "name": "Tokenized equivalents of eligible reserve assets",
-      "pct": 10,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

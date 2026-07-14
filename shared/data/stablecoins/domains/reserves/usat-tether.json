@@ -1,0 +1,86 @@
+{
+  "id": "usat-tether",
+  "reserves": [
+    {
+      "name": "Reverse repurchase agreements collateralized by U.S. Treasury securities",
+      "pct": 90.07,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "Undisclosed U.S. broker-dealer counterparty",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
+    },
+    {
+      "name": "Cash in demand deposit accounts",
+      "pct": 9.93,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed major U.S. commercial banks",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Deloitte USA₮ Reserve Report - May 2026",
+        "url": "https://learn.anchorage.com/05.31.26_USAT_Stablecoin_Attestation_Report_signed.pdf"
+      },
+      {
+        "label": "Anchorage Digital USA₮ reserve attestations",
+        "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
+      }
+    ],
+    "rationale": "Deloitte's May examination reports $141.444 million of Treasury-collateralized reverse repurchase agreements and $15.589006 million of cash against $157.033006 million of reserve assets at May 31, 2026. Those amounts normalize to 90.07% repo and 9.93% cash.",
+    "compositionBasis": "Deloitte examination of the USA₮ Reserve Report as of May 31, 2026",
+    "compositionAsOf": "2026-05-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material asset-class exposure is unclassified; the report does not identify the repo counterparty, commercial banks, or custodian and sub-custodian used for the reported accounts.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Cantor Fitzgerald",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Major U.S. commercial banks (not individually disclosed)",
+        "role": "bank",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Deloitte USA₮ Reserve Report - May 2026",
+        "url": "https://learn.anchorage.com/05.31.26_USAT_Stablecoin_Attestation_Report_signed.pdf"
+      },
+      {
+        "label": "Tether USA₮ launch and reserve custody disclosure",
+        "url": "https://tether.io/news/tether-announces-the-launch-of-usat-the-federally-regulated-dollar-backed-stablecoin-made-in-america/"
+      }
+    ],
+    "uncertainty": "The report confirms segregated, unencumbered fiduciary trust accounts held for token holders and Tether identifies Cantor Fitzgerald as designated reserve custodian. The report does not name the commercial banks, repo counterparty, custodian or sub-custodian at account level, disclose provider shares, or establish a standing rehypothecation policy."
+  }
+}

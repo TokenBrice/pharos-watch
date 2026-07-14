@@ -25,19 +25,112 @@
     "cadence": "ad-hoc"
   },
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "TRON DAO says Chainlink Data Feeds are the official oracle solution securing TRON DeFi including the USDD protocol, with no stronger USDD-specific failover documented.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "tier": "medianized-with-delay",
+    "summary": "USDD CDP collateral prices pass through per-collateral Median, OSM, and Spot modules before reaching Vat, with Chainlink and WinkLink documented as the primary feed sources.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "USDD supports governed CDP collateral types with per-ilk oracle modules, collateral ratios, liquidation parameters, and auction contracts. The documented collateral types share one Median-to-OSM-to-Spot and Dog-to-Clipper mechanism family; PSM stablecoin conversion is a fixed-price issuance rail rather than a collateral-liquidation branch.",
+      "sources": [
+        {
+          "label": "USDD oracle architecture",
+          "url": "https://docs.usdd.io/developers/oracle"
+        },
+        {
+          "label": "USDD liquidation and auction architecture",
+          "url": "https://docs.usdd.io/developers/liquidation-and-auction"
+        },
+        {
+          "label": "USDD system architecture",
+          "url": "https://docs.usdd.io/system-architecture/system-architecture"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "TRON DAO Chainlink oracle announcement",
-        "url": "https://trondao.medium.com/tron-dao-upgrades-to-chainlink-data-feeds-as-official-oracle-solution-securing-5-5-905dc3c0f984"
+        "label": "USDD oracle architecture",
+        "url": "https://docs.usdd.io/developers/oracle"
       },
       {
-        "label": "USDD docs",
-        "url": "https://docs.usdd.io"
+        "label": "USDD liquidation and auction architecture",
+        "url": "https://docs.usdd.io/developers/liquidation-and-auction"
+      },
+      {
+        "label": "USDD deployment addresses",
+        "url": "https://docs.usdd.io/developers/deployment-addresses"
+      }
+    ],
+    "branches": [
+      {
+        "id": "usdd-cdp-ilks",
+        "label": "USDD governed CDP collateral types",
+        "tier": "medianized-with-delay",
+        "summary": "Governed USDD collateral types share per-ilk Median, OSM, and Spot pricing followed by Dog and collateral-specific Clipper liquidation auctions.",
+        "collateralAssets": [
+          "Governance-approved USDD CDP collateral types"
+        ],
+        "chains": [
+          "tron",
+          "ethereum",
+          "bsc"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink and WinkLink data feeds",
+            "path": "Supported feeds -> per-collateral Median -> OSM current/next price -> Spot -> Vat",
+            "chain": "tron, ethereum, and bsc",
+            "failureDomainKeys": [
+              "chainlink",
+              "winklink",
+              "usdd-governance"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The OSM retains a current value and separately stages the next Median value; if updates stop, Vat continues using the last Spot value and the collateral price can become stale.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Governance-approved USDD CDP collateral types",
+            "note": "Each collateral type has a governed Spot liquidation ratio and Dog liquidation capacity; USDD documentation states the minimum ratio varies by asset and illustrates a 130% liquidation threshold."
+          }
+        ],
+        "liquidationMechanism": "When a Vault falls below its collateral-specific minimum ratio, Dog initiates liquidation and the corresponding Clipper sells collateral through a descending-price Dutch auction; proceeds repay USDD debt and penalties and surplus collateral returns to the user.",
+        "liquidationDelaySec": 0,
+        "backstop": "Collateral-auction proceeds cover Vault debt; the documented system architecture provides Vow accounting and a Flop debt-auction path that sells governance tokens to recapitalize a protocol deficit.",
+        "shutdownOrBadDebtBehavior": "Uncovered system deficits can proceed to the documented debt-auction path. Deployment records also identify End and ESM contracts on supported CDP chains for emergency shutdown and settlement.",
+        "failureDomainKeys": [
+          "chainlink",
+          "winklink",
+          "usdd-governance",
+          "usdd-auction-keepers"
+        ],
+        "sources": [
+          {
+            "label": "USDD oracle architecture",
+            "url": "https://docs.usdd.io/developers/oracle"
+          },
+          {
+            "label": "USDD liquidation example",
+            "url": "https://docs.usdd.io/developers/liquidation-and-auction/example-process"
+          },
+          {
+            "label": "USDD Dog contract",
+            "url": "https://docs.usdd.io/developers/core-contracts/dog"
+          },
+          {
+            "label": "USDD system architecture",
+            "url": "https://docs.usdd.io/system-architecture/system-architecture"
+          },
+          {
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          }
+        ]
       }
     ]
   },
@@ -539,7 +632,7 @@
       "pct": 4.9,
       "risk": "low",
       "coinId": "usdt-tether",
-      "depType": "mechanism"
+      "depType": "collateral"
     },
     {
       "name": "sTRX (direct vaults)",
@@ -548,16 +641,24 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-12",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 dependency review",
     "confidence": "verified",
     "sources": [
       {
         "label": "USDD reserve dashboard",
         "url": "https://usdd.io/data"
+      },
+      {
+        "label": "USDD Peg Stability Module documentation",
+        "url": "https://docs.usdd.io/user-guide/psm-peg-stability-module"
+      },
+      {
+        "label": "USDD Smart Allocator documentation",
+        "url": "https://docs.usdd.io/smart-allocator"
       }
     ],
-    "rationale": "USDD reports Smart Allocator positions as a protocol aggregate while separately identifying direct USDT PSM exposure.",
+    "rationale": "USDD reports Smart Allocator positions as a protocol aggregate while separately identifying a fractional USDT PSM reserve holding. The USDT relationship is proportional collateral exposure, not a serial mechanism dependency.",
     "compositionBasis": "USDD data-platform collateral categories",
     "scope": "selected-slices",
     "knownUnknownExposure": "Stablecoin positions inside Smart Allocator cannot be assigned individual dependency weights.",

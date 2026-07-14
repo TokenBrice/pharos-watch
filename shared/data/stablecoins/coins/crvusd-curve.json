@@ -140,46 +140,87 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "crvUSD combines user borrowing markets with Curve ControllerFactory debt-ceiling and market-admin surfaces that can affect supply; the factory admin is a Vyper intermediary contract delegating to Curve DAO and an emergency multisig.",
+    "summary": "crvUSD's immutable ControllerFactory is the token minter and pre-mints inventory to each lending controller up to its debt ceiling. Curve DAO can raise those ceilings through an immutable Vyper intermediary; a 5-of-9 emergency multisig can only reduce ceilings and adjust controller parameters.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedBlock": 25530324,
+      "sources": [
+        {
+          "label": "crvUSD token verified contract",
+          "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+        },
+        {
+          "label": "crvUSD ControllerFactory verified contract",
+          "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC",
         "label": "crvUSD ControllerFactory",
-        "role": "cap-admin",
+        "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": true,
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "ControllerFactory manages collateral markets, controller deployments, and debt ceilings for crvUSD borrow markets. minter() on the crvUSD token returns this address.",
+        "capDescription": "The factory mints crvUSD inventory to each controller only when an admin-set market debt ceiling is created or raised; user borrowing remains bounded by that inventory and the controller's collateral checks.",
+        "observedBlock": 25530324,
         "sources": [
-          {
-            "label": "Curve crvUSD resources",
-            "url": "https://resources.curve.finance/crvusd/"
-          },
           {
             "label": "crvUSD ControllerFactory",
             "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
           }
         ],
-        "evidence": "At Ethereum block 25294733: ControllerFactory.admin() returned 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79. crvUSD token minter() returned ControllerFactory address. No proxy admin slot set (not upgradeable). eth_getCode confirms contract."
+        "evidence": "At Ethereum block 25530324, crvUSD.minter() returned the ControllerFactory and ControllerFactory.admin() returned 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79. Verified factory source shows _set_debt_ceiling() calls STABLECOIN.mint() only for the increase over residual inventory. Token and factory EIP-1967 slots are unset."
       },
       {
         "chain": "ethereum",
-        "address": "0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79",
-        "label": "crvUSD ControllerFactory admin (Vyper intermediary)",
+        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "label": "Curve DAO Agent for crvUSD factory",
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "parameter-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 25530324,
         "sources": [
           {
             "label": "crvUSD ControllerFactory admin Etherscan",
             "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
+          },
+          {
+            "label": "Curve DAO Agent",
+            "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968#code"
           }
         ],
-        "evidence": "At Ethereum block 25294733: Verified as Vyper 0.4.3 contract (Blockscout source confirmed). Storage slot 0 = dao=0x40907540d8a6C65c637785e8f8B742ae6b0b9968 (Curve DAO Aragon Agent — AppProxyUpgradeable). Storage slot 1 = emergency=0x467947EE34aF926cF1DCac093870f613C96B1E0C (5-of-9 Gnosis Safe — getThreshold()=5, getOwners()=9 addresses; nonce=13). Contract enforces _check_dao() (DAO-only) for ownership transfers and _check_authorized() (DAO or emergency) for parameter adjustments. No upgrade admin on this contract."
+        "evidence": "At Ethereum block 25530324, the immutable Vyper factory-admin contract's dao() is this Curve DAO Aragon Agent. Verified intermediary source restricts execute(), factory ownership transfer, and emergency replacement to dao(), allowing DAO governance to call factory set_debt_ceiling() and raise market inventory. Blockscout identifies the Agent as an AppProxyUpgradeable with implementation 0x3A93C17FC82CC33420d1809dDA9Fb715cc89dd37."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0C",
+        "label": "crvUSD emergency multisig",
+        "role": "cap-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "parameter-only",
+        "threshold": 5,
+        "signerCount": 9,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedBlock": 25530324,
+        "sources": [
+          {
+            "label": "crvUSD emergency multisig",
+            "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0C#code"
+          },
+          {
+            "label": "crvUSD factory-admin intermediary",
+            "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25530324, getThreshold() returned 5, getOwners() returned nine owners, and getModulesPaginated() returned no enabled modules. The intermediary's verified reduce_debt_ceiling() function accepts the emergency address but asserts the new ceiling cannot exceed the current ceiling; arbitrary execute() remains DAO-only."
       }
     ],
     "review": {
@@ -197,9 +238,10 @@
           "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
         }
       ],
-      "evidence": "At Ethereum block 25294733: ControllerFactory.admin()=Vyper intermediary 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79; crvUSD.minter()=ControllerFactory. The Vyper admin contract has dao=Curve DAO Aragon Agent (0x40907540, AppProxyUpgradeable) and emergency=5-of-9 multisig (0x467947EE). DAO path executes via Aragon vote; emergency multisig can reduce debt ceilings and adjust parameters. Neither component is upgradeable via proxy admin. All addresses confirmed as contracts.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Ethereum RPC at block 25530324 and verified Vyper source establish the full mint path: immutable token minter -> immutable ControllerFactory -> per-market debt-ceiling inventory. Factory admin is the immutable intermediary at 0xb740..., whose DAO path can raise ceilings while its 5-of-9 emergency path can only reduce them or change bounded controller parameters. The DAO Agent is upgradeable, but it is an upstream governance executor and cannot change the immutable token or factory mint logic.",
+      "reviewer": "Codex Safety Score V9 CTRL curation",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable"
     }
   },
   "chainTier": "ethereum",
@@ -491,101 +533,59 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "WBTC / cbBTC",
-      "pct": 69,
+      "name": "WBTC",
+      "pct": 52.36,
       "risk": "medium",
       "blacklistable": true
     },
     {
-      "name": "tBTC",
-      "pct": 11,
-      "risk": "medium"
-    },
-    {
-      "name": "wstETH / sfrxETH / weETH",
-      "pct": 12,
+      "name": "wstETH",
+      "pct": 23.95,
       "risk": "low"
     },
     {
-      "name": "ETH",
-      "pct": 8,
+      "name": "tBTC",
+      "pct": 9.9,
+      "risk": "medium"
+    },
+    {
+      "name": "WETH",
+      "pct": 5.26,
       "risk": "very-low"
+    },
+    {
+      "name": "sfrxETH",
+      "pct": 4.29,
+      "risk": "low"
+    },
+    {
+      "name": "cbBTC",
+      "pct": 3.73,
+      "risk": "medium",
+      "blacklistable": true
+    },
+    {
+      "name": "weETH",
+      "pct": 0.5,
+      "risk": "low"
     }
   ],
-  "dependencies": [
-    {
-      "id": "usdc-circle",
-      "weight": 0.2,
-      "type": "mechanism"
-    },
-    {
-      "id": "usdt-tether",
-      "weight": 0.2,
-      "type": "mechanism"
-    },
-    {
-      "id": "pyusd-paypal",
-      "weight": 0.2,
-      "type": "mechanism"
-    },
-    {
-      "id": "frxusd-frax",
-      "weight": 0.2,
-      "type": "mechanism"
-    },
-    {
-      "id": "gho-aave",
-      "weight": 0.2,
-      "type": "mechanism"
-    }
-  ],
-  "dependencyReview": {
-    "reviewedAt": "2026-07-12",
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex dependency review",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Curve stablecoin design",
-        "url": "https://resources.curve.finance/pdf/curve-stablecoin.pdf"
-      },
-      {
-        "label": "crvUSD balance sheet",
-        "url": "https://dune.com/warshine/crvusd-balance-sheet"
+        "label": "Curve crvUSD markets API",
+        "url": "https://prices.curve.finance/v1/crvusd/markets"
       }
     ],
-    "rationale": "PegKeeper pools are a required stabilization path rather than proportional vault collateral. The equal weights model mechanism criticality across the five currently curated paired-stablecoin routes, so the relationships remain manual instead of being mixed into the crypto-collateral reserve composition.",
-    "relationships": [
-      {
-        "id": "usdc-circle",
-        "weight": 0.2,
-        "type": "mechanism",
-        "reason": "USDC is a curated crvUSD PegKeeper pool counterasset."
-      },
-      {
-        "id": "usdt-tether",
-        "weight": 0.2,
-        "type": "mechanism",
-        "reason": "USDT is a curated crvUSD PegKeeper pool counterasset."
-      },
-      {
-        "id": "pyusd-paypal",
-        "weight": 0.2,
-        "type": "mechanism",
-        "reason": "PYUSD is a curated crvUSD PegKeeper pool counterasset."
-      },
-      {
-        "id": "frxusd-frax",
-        "weight": 0.2,
-        "type": "mechanism",
-        "reason": "frxUSD is a curated crvUSD PegKeeper pool counterasset."
-      },
-      {
-        "id": "gho-aave",
-        "weight": 0.2,
-        "type": "mechanism",
-        "reason": "GHO is a curated crvUSD PegKeeper pool counterasset."
-      }
-    ]
+    "rationale": "Weights are each market's current debt share from the official API. PegKeeper counterassets are stabilization-pool counterparties, not serial claims or proportional collateral, so the prior equal-weight dependency links are removed.",
+    "compositionBasis": "Current crvUSD debt outstanding by LLAMMA collateral market",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material collateral market is unidentified; rounding and the de minimis LBTC market explain the 0.01% display remainder.",
+    "knownUnknownExposurePct": 0
   },
   "liveReservesConfig": {
     "adapter": "crvusd",

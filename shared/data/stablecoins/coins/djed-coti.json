@@ -20,15 +20,24 @@
   "mechanismArchetype": "cdp",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Djed describe the reserve mechanism but do not identify the production oracle setup or failure handling.",
-    "reviewedAt": "2026-06-12",
+    "summary": "Djed uses one shared ADA reserve contract and an external pricing index for system-wide mint and redemption accounting; the reviewed primary sources do not identify the production oracle provider or failure handling.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Djed is an autonomous reserve contract that mints and burns DJED and the SHEN reserve coin against one shared base-coin reserve. Users do not open borrower-specific collateral positions, and the reviewed design exposes no market-specific oracle or liquidation branches.",
+      "sources": [
+        {
+          "label": "IOG Djed design article",
+          "url": "https://www.iog.io/news/djed-implementing-algorithmic-stablecoins-for-proven-price-stability"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "limited",
     "sources": [
-      {
-        "label": "COTI Djed FAQ",
-        "url": "https://faq.coticommunity.com/djed-and-shen/djed"
-      },
       {
         "label": "IOG Djed design article",
         "url": "https://www.iog.io/news/djed-implementing-algorithmic-stablecoins-for-proven-price-stability"

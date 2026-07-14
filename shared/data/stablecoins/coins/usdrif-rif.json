@@ -19,18 +19,39 @@
   "geckoId": "rif-us-dollar",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "RIF on Chain inherits the Money On Chain oracle/medianizer model for Rootstock collateral pricing, with no stronger failover tier verified in public docs.",
-    "reviewedAt": "2026-06-12",
+    "summary": "RIF on Chain uses a replaceable RIF/USD PriceProvider and published Medianizer for one global RIF reserve bucket; no stronger failover tier is documented.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "USDRIF is minted and redeemed against the single C0 RIF reserve bucket, whose global coverage and system states use one RIF/USD price path. The protocol has no borrower-specific collateral positions or market-specific oracle and liquidation branches; below its final coverage threshold it enters one irreversible system-wide liquidation state.",
+      "sources": [
+        {
+          "label": "RIF on Chain main concepts",
+          "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/main-concepts"
+        },
+        {
+          "label": "RIF on Chain system states",
+          "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/system-states"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "RIF on Chain docs",
-        "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc"
+        "label": "RIF on Chain main concepts",
+        "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/main-concepts"
       },
       {
-        "label": "Money On Chain decentralized oracles",
-        "url": "https://moneyonchain.com/moc-decentralized-oracles/"
+        "label": "RIF on Chain verified contracts",
+        "url": "https://docs.moneyonchain.com/rdoc-contract/smart-contracts/contracts-verification"
+      },
+      {
+        "label": "RIF on Chain system states",
+        "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/system-states"
       }
     ]
   },

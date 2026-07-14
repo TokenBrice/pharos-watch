@@ -24,7 +24,22 @@
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
-    "attestorLicense": "PCAOB-registered"
+    "attestorLicense": "PCAOB-registered",
+    "latestReport": {
+      "periodEnd": "2026-05-29",
+      "publishedAt": "2026-06-25",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "PwC FIDD Reserve Attestation Report - May 2026",
+          "url": "https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -252,18 +267,6 @@
     }
   },
   "custodyModel": "institutional-top",
-  "reserves": [
-    {
-      "name": "U.S. Treasury securities (short-term)",
-      "pct": 80,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash and cash equivalents",
-      "pct": 20,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

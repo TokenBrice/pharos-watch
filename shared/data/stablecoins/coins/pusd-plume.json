@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "1:1 backed by USDC and USDT deposited into a Nucleus BoringVault; USD1 and AUSD also approved as collateral",
+  "collateral": "1:1 backed by USDC deposited into a Nucleus BoringVault",
   "pegMechanism": "Zero-fee mint/redeem at 1:1 for USDC on Ethereum or Plume Chain; reserves managed by Nucleus BoringVault contracts with OFAC compliance checks",
   "llamaId": "266",
   "detailProvider": "defillama",
@@ -174,6 +174,22 @@
       "depType": "collateral"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Plume USD documentation",
+        "url": "https://docs.plume.org/plume/tokens/plume-usd"
+      }
+    ],
+    "rationale": "Plume documents pUSD as a non-interest-bearing wrapper backed 1:1 by USDC in a BoringVault, redeemable for USDC at a 1:1 ratio, with collateral risk consisting entirely of reliance on Circle's USDC. The sole reserve slice therefore maps directly to the tracked USDC asset.",
+    "compositionBasis": "Current Plume issuer documentation for pUSD reserve composition and redemption",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unresolved reserve constituent exposure in the issuer-documented single-asset composition.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

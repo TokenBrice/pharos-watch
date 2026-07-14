@@ -19,14 +19,100 @@
   "geckoId": "bitcoin-usd-btcfi",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for BTCfi Bitcoin USD do not identify the collateral oracle setup or failure handling.",
-    "reviewedAt": "2026-06-12",
+    "summary": "BTCFi documents 50% maximum LTV and liquidation risk, while Bifrost publishes native WBTC and BTCB price feeds; BTCFi's own docs do not prove which feed is wired into BtcUSD or document liquidation recovery and oracle-failure handling.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "BtcUSD is minted against Bitcoin collateral and therefore requires an oracle/liquidation branch review. The public BTCFi documentation describes one Bifrost-side mint workflow but does not expose separate market contracts or prove distinct collateral engines, so the documented collateral set is represented as one grouped branch and retained as opaque.",
+      "sources": [
+        {
+          "label": "BTCFi Bitcoin USD docs",
+          "url": "https://docs.bifrostnetwork.com/eng.btcfi.one"
+        },
+        {
+          "label": "BTCFi mint guide",
+          "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "limited",
     "sources": [
       {
         "label": "BTCfi Bitcoin USD docs",
         "url": "https://docs.bifrostnetwork.com/eng.btcfi.one"
+      },
+      {
+        "label": "BTCFi mint guide",
+        "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
+      },
+      {
+        "label": "Bifrost native price-oracle API",
+        "url": "https://docs.bifrostnetwork.com/bifrost-network/developer-documentations/cross-chain-transaction-and-oracle-api/price-oracle-contract-api"
+      }
+    ],
+    "branches": [
+      {
+        "id": "btcfi-bifrost-bitcoin-collateral",
+        "label": "BTCFi Bifrost Bitcoin collateral",
+        "tier": "opaque-or-unknown",
+        "summary": "BTCFi exposes a single Bifrost-side BtcUSD borrowing workflow, but its docs do not identify the price-feed contract consumed by the collateral and liquidation logic.",
+        "collateralAssets": [
+          "BTCFi-supported Bitcoin collateral"
+        ],
+        "chains": [
+          "bifrost"
+        ],
+        "feeds": [
+          {
+            "provider": "Unverified BTCFi collateral-price source",
+            "path": "Undocumented collateral price input -> BtcUSD LTV and liquidation checks; Bifrost's published WBTC/BTCB feeds are candidates, not proven BTCFi wiring",
+            "chain": "bifrost",
+            "observedAt": "2026-07-14",
+            "failureDomainKeys": [
+              "btcfi-undocumented-price-source",
+              "bifrost"
+            ]
+          }
+        ],
+        "fallbackBehavior": "BTCFi's public documentation does not describe staleness checks, a secondary oracle, or the behavior taken when its collateral-price source is unavailable.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "BTCFi-supported Bitcoin collateral",
+            "maximumLtvPct": 50,
+            "note": "The BTCFi mint guide says users may mint up to 50% of collateral value and warns of liquidation at the liquidation threshold, but it does not publish a separate liquidation-ratio value."
+          }
+        ],
+        "liquidationMechanism": "The BTCFi mint and repay guides warn that positions reaching the liquidation threshold can be liquidated, but do not document who executes liquidation, the sale or offset sequence, or any execution delay.",
+        "backstop": "No Stability Pool, insurance reserve, debt auction, or other liquidation backstop is identified in the reviewed BTCFi documentation.",
+        "shutdownOrBadDebtBehavior": "The reviewed BTCFi documentation does not specify an oracle-failure pause, emergency shutdown, or how collateral shortfall and residual bad debt would be allocated.",
+        "failureDomainKeys": [
+          "btcfi-undocumented-price-source",
+          "btcfi-undocumented-liquidation-backstop",
+          "bifrost"
+        ],
+        "sources": [
+          {
+            "label": "BTCFi Bitcoin USD docs",
+            "url": "https://docs.bifrostnetwork.com/eng.btcfi.one"
+          },
+          {
+            "label": "BTCFi mint guide",
+            "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
+          },
+          {
+            "label": "BTCFi repayment guide",
+            "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/4.-repay-btcusd"
+          },
+          {
+            "label": "Bifrost native price-oracle API",
+            "url": "https://docs.bifrostnetwork.com/bifrost-network/developer-documentations/cross-chain-transaction-and-oracle-api/price-oracle-contract-api"
+          }
+        ]
       }
     ]
   },

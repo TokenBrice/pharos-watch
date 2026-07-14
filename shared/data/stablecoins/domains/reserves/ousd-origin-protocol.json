@@ -1,0 +1,36 @@
+{
+  "id": "ousd-origin-protocol",
+  "reserves": [
+    {
+      "name": "USDC deployed through Morpho lending and Curve liquidity strategies",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Origin OUSD Vault strategies using Morpho and Curve",
+      "riskFactors": ["liquidity", "custody", "counterparty", "smart-contract", "concentration"],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Origin Dollar OUSD documentation",
+        "url": "https://docs.originprotocol.com/yield-bearing-tokens/origin-dollar-ousd"
+      },
+      {
+        "label": "Origin OUSD collateral analytics",
+        "url": "https://analytics.originprotocol.com/ousd/collateral/"
+      }
+    ],
+    "rationale": "Origin states that OUSD became 100% USDC-backed after the November 2025 simplification and deploys the collateral across Morpho lending and Curve liquidity provision. The reviewed current disclosure does not publish a fixed strategy allocation, so the prior 90/10 Morpho/Curve estimate was replaced with one aggregate USDC protocol-position basket.",
+    "compositionBasis": "Current Origin OUSD collateral and strategy disclosure; strategy weights undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve exposure is unlinked: the full basket is USDC collateral. Origin identifies Morpho and Curve as the complete strategy set but does not publish current per-strategy weights in the reviewed disclosure.",
+    "knownUnknownExposurePct": 0
+  }
+}

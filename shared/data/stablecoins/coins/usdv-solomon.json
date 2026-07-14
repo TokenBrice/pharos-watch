@@ -18,6 +18,48 @@
   "collateral": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin used by Solomon Labs to back USDv",
   "pegMechanism": "USDv targets $1 through Solomon-managed strategy collateral, market liquidity, and approved/whitelisted participant redemption into USDC against a small documented protocol reserve buffer; no permissionless public holder redemption rail is disclosed",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "USDv is issued against Solomon-managed custody assets and delta-neutral hedge positions rather than borrower debt positions with oracle-triggered collateral liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Solomon documents minting and redemption by approved entities, followed by protocol-managed off-exchange custody and derivative hedging. The reviewed issuer material does not describe borrower-specific debt positions, collateral-ratio thresholds, or liquidatable collateral branches for USDv issuance.",
+      "sources": [
+        {
+          "label": "Solomon USDv minting",
+          "url": "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv"
+        },
+        {
+          "label": "Solomon rewards engine",
+          "url": "https://docs.solomonlabs.org/usdv/yield-engine"
+        },
+        {
+          "label": "Solomon peg arbitrage mechanism",
+          "url": "https://docs.solomonlabs.org/usdv/usdv-and-susdv/peg-arbitrage-mechanism"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Solomon USDv minting",
+        "url": "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv"
+      },
+      {
+        "label": "Solomon rewards engine",
+        "url": "https://docs.solomonlabs.org/usdv/yield-engine"
+      },
+      {
+        "label": "Solomon peg arbitrage mechanism",
+        "url": "https://docs.solomonlabs.org/usdv/usdv-and-susdv/peg-arbitrage-mechanism"
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://docs.solomonlabs.org/transparency/asset-attestations",

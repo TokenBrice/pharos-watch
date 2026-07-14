@@ -19,14 +19,207 @@
   "geckoId": "usbd",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "Bima discloses reliance on third-party oracle services for collateral price data, but public docs reviewed do not identify stronger failover handling.",
-    "reviewedAt": "2026-06-12",
+    "summary": "Bima's documented USBD collateral markets use listed external oracle contracts through a shared PriceFeed that rejects stale, invalid, or greater-than-50% round changes, retains the last valid price only within the configured heartbeat, and otherwise reverts price-dependent operations.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Bima deploys a distinct TroveManager for each collateral while sharing the same PriceFeed, LiquidationManager, and multi-collateral Stability Pool implementation. The official address registry maps the documented collateral markets to their external oracle contracts, so the markets are reviewed as one grouped common-engine branch with every listed active TroveManager collateral enumerated.",
+      "sources": [
+        {
+          "label": "Bima mainnet addresses",
+          "url": "https://docs.bima.money/security/mainnet-addresses"
+        },
+        {
+          "label": "Bima TroveManager source",
+          "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/TroveManager.sol"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Bima terms oracle-risk disclosure",
-        "url": "https://docs.bima.money/terms-of-use"
+        "label": "Bima mainnet addresses",
+        "url": "https://docs.bima.money/security/mainnet-addresses"
+      },
+      {
+        "label": "Bima PriceFeed source",
+        "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/PriceFeed.sol"
+      },
+      {
+        "label": "Bima LiquidationManager source",
+        "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/LiquidationManager.sol"
+      }
+    ],
+    "branches": [
+      {
+        "id": "documented-evm-trove-markets",
+        "label": "Documented Bima EVM TroveManager markets",
+        "tier": "standard-external",
+        "summary": "Nine collateral markets with published TroveManager and oracle addresses use Bima's common Liquity-derived liquidation engine and multi-collateral Stability Pool across Ethereum, Hemi, Plume, Sonic, GOAT, BSC, and Nibiru.",
+        "collateralAssets": [
+          "Ethereum WBTC",
+          "Ethereum tacBTC",
+          "Ethereum strBTC",
+          "Hemi iBTC",
+          "Plume enzoBTC",
+          "Sonic LBTC",
+          "GOAT esBTC",
+          "BSC bfBTC",
+          "Nibiru uBTC"
+        ],
+        "chains": [
+          "ethereum",
+          "hemi",
+          "plume",
+          "sonic",
+          "goat",
+          "bsc",
+          "nibiru"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "BTC/USD for Ethereum WBTC, tacBTC, and strBTC",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "failureDomainKeys": [
+              "oracle:chainlink:btc-usd"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "iBTC collateral oracle",
+            "address": "0xDA44aa5C42C020147625cCe1f1878075D106f92a",
+            "chain": "hemi",
+            "failureDomainKeys": [
+              "oracle:hemi:0xda44aa5c42c020147625cce1f1878075d106f92a"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "enzoBTC collateral oracle",
+            "address": "0xDA44aa5C42C020147625cCe1f1878075D106f92a",
+            "chain": "plume",
+            "failureDomainKeys": [
+              "oracle:plume:0xda44aa5c42c020147625cce1f1878075d106f92a"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "LBTC collateral oracle",
+            "address": "0x8Bcd59Cb7eEEea8e2Da3080C891609483dae53EF",
+            "chain": "sonic",
+            "failureDomainKeys": [
+              "oracle:sonic:0x8bcd59cb7eeeea8e2da3080c891609483dae53ef"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "esBTC collateral oracle",
+            "address": "0xDA44aa5C42C020147625cCe1f1878075D106f92a",
+            "chain": "goat",
+            "failureDomainKeys": [
+              "oracle:goat:0xda44aa5c42c020147625cce1f1878075d106f92a"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "bfBTC collateral oracle",
+            "address": "0x264990fbd0A4796A3E3d8E37C4d5F87a3aCa5Ebf",
+            "chain": "bsc",
+            "failureDomainKeys": [
+              "oracle:bsc:0x264990fbd0a4796a3e3d8e37c4d5f87a3aca5ebf"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "uBTC collateral oracle",
+            "address": "0xc8FD30cA96B6D120Fc7646108E11c13E8bb128Eb",
+            "chain": "nibiru",
+            "failureDomainKeys": [
+              "oracle:nibiru:0xc8fd30ca96b6d120fc7646108e11c13e8bb128eb"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed accepts a new external-oracle round only when the current and previous responses are valid, the current response is within the configured per-token heartbeat, and the round-to-round change is at most 50%. Otherwise it returns the stored last valid price only while that record remains within the heartbeat; after that it reverts rather than switching providers.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Ethereum WBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Ethereum tacBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Ethereum strBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Hemi iBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Plume enzoBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Sonic LBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "GOAT esBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "BSC bfBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Nibiru uBTC",
+            "minimumCollateralRatioPct": 150
+          }
+        ],
+        "liquidationMechanism": "Any external actor may immediately call the shared LiquidationManager for an eligible Trove. Below MCR, USBD in the Stability Pool offsets debt and depositors receive collateral; any debt and collateral not offset are redistributed to remaining active Troves, with Recovery Mode adding liquidations below system TCR.",
+        "liquidationDelaySec": 0,
+        "backstop": "The multi-collateral Stability Pool is the first liquidation backstop. It burns deposited USBD against eligible Trove debt and credits the seized collateral to depositors; any portion beyond pool capacity is redistributed across active Troves in the same collateral market.",
+        "shutdownOrBadDebtBehavior": "During collateral sunsetting, new loans are disabled and Stability Pool collateral handoff is disabled, so liquidations redistribute debt and collateral to remaining active Troves. The LiquidationManager preserves one final Trove per market by design, and the reviewed contracts do not define a separate global settlement or external bad-debt fund.",
+        "failureDomainKeys": [
+          "oracle:bima:price-feed",
+          "liquidation:bima:liquidation-manager",
+          "backstop:bima:stability-pool"
+        ],
+        "sources": [
+          {
+            "label": "Bima mainnet addresses",
+            "url": "https://docs.bima.money/security/mainnet-addresses"
+          },
+          {
+            "label": "Bima configuration details",
+            "url": "https://docs.bima.money/configuration-details"
+          },
+          {
+            "label": "Bima liquidation documentation",
+            "url": "https://docs.bima.money/risk-management-+-liquidations"
+          },
+          {
+            "label": "Bima PriceFeed source",
+            "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/PriceFeed.sol"
+          },
+          {
+            "label": "Bima LiquidationManager source",
+            "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/LiquidationManager.sol"
+          },
+          {
+            "label": "Bima StabilityPool source",
+            "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/StabilityPool.sol"
+          }
+        ]
       }
     ]
   },
