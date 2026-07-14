@@ -62,20 +62,3 @@ When changing portfolio behavior, update this doc alongside the relevant runtime
 2. Holdings persistence / share encoding -> `src/hooks/use-portfolio.ts`, `src/lib/portfolio-codec.ts`
 3. Exposure math or grouping -> `src/lib/portfolio-analysis.ts`
 4. Portfolio-grade semantics -> `docs/report-cards.md` and any affected methodology copy
-
----
-
-## File Index
-
-| File | Role |
-|------|------|
-| `src/app/portfolio/page.tsx` | Static route shell, metadata, breadcrumb/shell config |
-| `src/app/portfolio/client.tsx` | Client orchestration, hooks, actions, and URL workflow |
-| `src/app/portfolio/components.tsx` | Route-local holdings, summary, and exposure presentation |
-| `src/app/portfolio/model.ts` | Route-local projections and display helpers |
-| `src/app/portfolio/presets.ts` | Curated portfolio preset definitions |
-| `src/hooks/use-portfolio.ts` | Browser persistence, share-link helpers, portfolio score derivation |
-| `src/lib/portfolio-codec.ts` | Query/localStorage encoding + canonical-only validation |
-| `src/lib/portfolio-analysis.ts` | Upstream exposure grouping and collateral categorization |
-| `src/components/portfolio-empty-state.tsx` | Preset-first onboarding and empty-state copy |
-| `docs/report-cards.md` | Underlying scoring model consumed by the portfolio page |

@@ -14,7 +14,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 - **Current methodology version:** `v3.04`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`)
-- **Version timeline:** [depeg-resolver-timeline.md](./depeg-resolver-timeline.md)
+- **Structured changelog:** `shared/data/methodology-changelogs/depeg-resolver/`
 
 DDR versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. A bump is warranted when the resolution rubric, duration stratification, incident grouping, support-gate rules, or reviewer scoring/public audit contract changes.
 
@@ -182,7 +182,7 @@ For calibration passes, run `npm run calibrate:ddrr` to generate the advisory DD
 ## Honest Limitations & Failure Modes
 
 - **Stage 1 is calibrated, not learned.** There are roughly 90 terminal labels, mostly month-precision and not event-linked. Verdicts are domain-prior judgments validated on a small set plus DDRR reviewed forecast outcomes. We state this plainly; forecast readiness is a publication trigger, not a stronger/weaker verdict label.
-- **Supply resolution is coarse.** Supply history is daily, so it can miss intra-day spikes; mint/burn coverage exists for 134 of 411 tracked coins (134 contract configs across the configured issuance chains). A coin with neither usable source degrades to `insufficient_signal` on the supply-dependent kill signals rather than guessing.
+- **Supply resolution is coarse.** Supply history is daily, so it can miss intra-day spikes; mint/burn coverage is limited to the contracts and issuance chains in `MINT_BURN_CONFIGS`. A coin with neither usable source degrades to `insufficient_signal` on the supply-dependent kill signals rather than guessing.
 - **Empty provenance, so no verdict gating.** The depeg-event provenance side-table is unpopulated in production (0 rows). Audit-verdict filtering would discard the entire corpus, so DDR treats a null verdict as included and relies on incident grouping, quarantine, and the severity floor for quality. Provenance is a future enrichment, not a v1 dependency.
 - **Terminal ≠ event-recovery.** A backfilled dead coin (for example IRON) shows "recovered" events because replay closed them on a transient in-band print. Stage 1 terminal truth derives from cemetery / frozen `status` and the live deep-and-sustained-open or orphan pattern (the USR signature), never from the presence of a `recovery_price` on a historical row.
 - **Survivorship / selection.** The event corpus spans only the tracking window plus backfill (roughly 2026 onward plus replays). Pre-tracking deaths are not event-linked, so the recovery corpus skews toward the modern, surviving set. Stage 2 bands describe *recovered* incidents — a coin that ultimately dies will look "overdue" before it is reclassified.
@@ -208,26 +208,3 @@ Both stages are precomputed by the `compute-depeg-resolver` job in the shared qu
 The runtime-neutral engine lives in `shared/lib/depeg-resolver/` (`inputs.ts`, `strata.ts`, `incident-groups.ts`, `resolution.ts`, `duration.ts`, `public-contract.ts`, and `index.ts` exposing `resolveDepeg`). Shared types and Zod schemas live in `shared/types/depeg-resolver.ts`. The worker precompute writer seals first-publication manifests through `worker/src/cron/depeg-resolver/publication.ts`, projects public rows through `worker/src/cron/depeg-resolver/public-projection.ts`, and the cache-backed `GET /api/depeg-resolver` handler degrades to a `200` with empty rows when the cache is missing, and serves stale rows with warnings. Pre-publication rows never expose verdicts or duration bands; frozen rows expose anchored predictions plus immutable trigger/readiness metadata and live overlay facts.
 
 The runtime-neutral reviewer lives in `shared/lib/depeg-resolver-review/`, with shared schemas in `shared/types/depeg-resolver-review.ts`. The worker snapshot builder lives in `worker/src/cron/compute-depeg-resolver-review.ts`; its public cache helper and endpoint are `worker/src/lib/depeg-resolver-review-snapshot-cache.ts` and `worker/src/api/depeg-resolver-review.ts`. When an accidental duplicate incident is superseded by a canonical incident, DDRR follows the superseded alias to the effective current source event before classifying the canonical prediction outcome.
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `shared/lib/depeg-resolver/index.ts` | Engine entrypoint (`resolveDepeg`): Stage 1 verdict + Stage 2 duration per active event |
-| `shared/lib/depeg-resolver/resolution.ts` | Stage 1 kill-signal / recovery-anchor rubric and verdict mapping |
-| `shared/lib/depeg-resolver/duration.ts` | Stage 2 stratified landmark estimate + support gates |
-| `shared/lib/depeg-resolver/strata.ts` | Depth / direction / structural / currency stratification keys |
-| `shared/lib/depeg-resolver/incident-groups.ts` | Incident grouping + quarantine of flappy coins |
-| `shared/lib/depeg-resolver/inputs.ts` | Engine input shapes (active event, structural, supply, live context) |
-| `shared/lib/depeg-resolver/public-contract.ts` | Public prediction/no-call contract helpers and publication-state mapping |
-| `shared/types/depeg-resolver.ts` | Shared DDR types + Zod schemas |
-| `worker/src/cron/depeg-resolver/publication.ts` | First-publication manifest finalization and retry handling |
-| `worker/src/cron/depeg-resolver/public-projection.ts` | Public DDR row projection from sealed outcomes plus live overlays |
-| `shared/lib/depeg-resolver-review/` | Runtime-neutral DDRR outcome, duration-error, horizon-review, and summary logic |
-| `shared/types/depeg-resolver-review.ts` | Shared DDRR assessment, review row, summary, meta, and response schemas |
-| `worker/src/lib/depeg-resolver-assessment-store.ts` | DDR assessment checkpoint persistence for later review |
-| `worker/src/cron/compute-depeg-resolver-review.ts` | DDRR snapshot builder from stored assessments and actual event outcomes |
-| `worker/src/api/depeg-resolver-review.ts` | Cache-backed public DDRR endpoint |
-| `shared/lib/methodology-versions/depeg-resolver.ts` | Methodology version constants + changelog composition |
-| `shared/data/methodology-changelogs/depeg-resolver/*.ts` | Machine-readable changelog entries |
-| `shared/lib/depeg-resolver-version.ts` | Re-export of the version constants |

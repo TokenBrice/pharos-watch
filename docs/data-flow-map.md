@@ -55,7 +55,7 @@ satisfied. See [Safety Score V9 Rollout](./process/safety-score-v9-rollout.md).
 
 ## Scheduling Backbone
 
-Cron expressions are deployed from `worker/wrangler.toml`; `shared/lib/cron-jobs.ts` owns the canonical schedule/job metadata and `shared/lib/scheduled-runner-registry.ts` owns expression-to-runner dispatch. The current runtime has 49 status-tracked jobs across 19 job-bearing expressions, plus one budget-only digest-poll expression for 20 total. Use [Worker Infrastructure: Cron Scheduling](./worker-infrastructure.md#cron-scheduling) for execution details and `npm run check:cron-sync` / `npm run check:cron-connections` for the authoritative live inventory and connection-budget report.
+Cron expressions are deployed from `worker/wrangler.toml`; `shared/lib/cron-jobs.ts` owns canonical schedule/job metadata and `shared/lib/scheduled-runner-registry.ts` owns expression-to-runner dispatch. Use [Worker Infrastructure: Cron Scheduling](./worker-infrastructure.md#cron-scheduling) for execution details and `npm run check:cron-sync` / `npm run check:cron-connections` for the authoritative live inventory and connection-budget report.
 
 ## Freshness Contract (Frontend)
 

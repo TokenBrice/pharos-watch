@@ -141,14 +141,3 @@ See [API Reference](./api-reference.md) for the full response shape.
 ## Digest Integration
 
 The daily digest cron (08:05 UTC) queries the latest PSI sample plus daily rows (current and yesterday) and passes PSI score, band, components, and yesterday's score into the Anthropic digest prompt. The digest uses PSI as a market-regime frame within the body rather than the opener; the generation policy leads from the highest-impact editorial candidate, and PSI "is rarely the protagonist." The digest runs on its own 08:05 UTC trigger, five minutes after the daily PSI snapshot (`snapshot-psi`) at 08:00 UTC, so it reads today's stored row without an explicit promise chain.
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `worker/src/lib/stability-index.ts` | Pure compute function, band definitions, colors |
-| `worker/src/cron/stability-index.ts` | 30-minute cron job |
-| `worker/src/api/stability-index.ts` | API endpoint |
-| `worker/src/api/backfill-stability-index.ts` | Admin backfill (replays formula over completed UTC days only, using the PSI-eligible supply universe plus same-day historical price replay where available) |
-| `src/app/stability-index/client.tsx` | Full page with charts and methodology |
-| `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useStabilityIndex()` and `useStabilityIndexDetail()` |

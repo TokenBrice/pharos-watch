@@ -387,37 +387,3 @@ This keeps the Pages build itself network-independent once the digest snapshot h
 | `TELEGRAM_CHAT_ID` | Secret | No | Telegram channel username or numeric ID |
 
 Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Telegram delivery is optional — the digest is always stored regardless.
-
----
-
-## File Index
-
-| File | Role |
-|------|------|
-| `worker/src/cron/daily-digest.ts` | Daily digest orchestration: data collection, prompt assembly, edition counting, and daily-specific publish behavior |
-| `worker/src/cron/weekly-recap.ts` | Weekly recap orchestration: aggregates 7 days, builds weekly prompt/input, and weekly-specific Telegram title/meta shaping |
-| `worker/src/cron/digest/platform.ts` | Shared digest substrate: Anthropic request/parse flow, `daily_digest` insertion, and circuit-aware channel delivery wrappers |
-| `worker/src/lib/twitter.ts` | OAuth 1.0a signing, cashtag injection, tweet posting |
-| `worker/src/lib/telegram.ts` | HTML message formatting, Telegram Bot API posting |
-| `worker/src/api/daily-digest.ts` | `GET /api/daily-digest` handler |
-| `worker/src/api/digest-archive.ts` | `GET /api/digest-archive` handler |
-| `worker/src/api/digest-risk-summary.ts` | Shared API helper for extracting compact archive/latest digest risk signals from stored input JSON |
-| `worker/src/api/digest-intelligence-summary.ts` | Shared API helper for extracting stored digest intelligence fields from input JSON |
-| `worker/src/api/digest-snapshot.ts` | `GET /api/digest-snapshot` handler |
-| `worker/src/handlers/scheduled.ts` | Thin cron-expression dispatcher for scheduled slots |
-| `worker/src/handlers/scheduled/daily-0805.ts` | Daily 08:05 slot runner: `sync-bluechip` and `daily-digest` -> `weekly-recap` |
-| `worker/src/routes/registry.ts` | Static worker route registry that merges PUBLIC/ADMIN/OPS/MESSAGING route arrays into the dispatcher map |
-| `worker/src/routes/ops-routes.ts` | Operator-only static route definitions, including the background `trigger-digest` enqueue path |
-| `worker/src/router.ts` | Worker route dispatcher for static registry lookup plus dynamic route matching |
-| `worker/src/lib/env.ts` | `Env` interface used by fetch/scheduled handlers |
-| `worker/migrations/0000_baseline.sql` | Baseline `daily_digest` schema, including the historical title/extended/meta additions |
-| `src/components/daily-digest.tsx` | Broadsheet component (shared: homepage + archive page) |
-| `src/components/digest-intelligence.tsx` | Risk tape, change/outcome, and next-trigger panel shared by latest digest and archive snapshots |
-| `src/components/digest-archive-client.tsx` | Archive page: broadsheet + wire table with month picker |
-| `src/components/digest-snapshot.tsx` | Date-specific data cards (up to 10 categories) |
-| `src/app/digest/page.tsx` | Archive page route shell (static export) |
-| `src/app/digest/[date]/page.tsx` | Detail page (SSG, JSON-LD, prev/next nav) |
-| `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useDailyDigest()`, `useDigestArchive()`, and `useDigestSnapshot()` |
-| `scripts/maintenance/sync-digests.ts` | Pre-build script: fetches archive → writes `data/digests.json` |
-| `.github/workflows/pages-release.yml` | CI Pages path: optionally syncs API-backed data, builds/checks one export, deploys it once, and verifies the marker on the immutable production deployment URL |
-| `data/digests.json` | Static digest list for SSG (generated, not hand-edited) |

@@ -2,7 +2,7 @@
 
 Dedicated documentation for the live reserve-composition subsystem that powers `GET /api/stablecoin-reserves/:id`, the stablecoin-detail reserve card, and `/status` reserve-sync health.
 
-> **Agent navigation** — ~85 KB; Grep the heading you need instead of reading wholesale: Overview · Metadata Contract · Cron Behavior · Storage Model · API Contract · Adapter Registry · Frontend Consumers · Scope Boundaries · File Index.
+> **Agent navigation** — Grep the heading you need: Overview · Metadata Contract · Cron Behavior · Storage Model · API Contract · Adapter Registry · Frontend Consumers · Scope Boundaries.
 
 ---
 
@@ -11,7 +11,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 */4 * * *` (every 4 hours at :11 UTC)
 - **Shared 4-hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and the named `reserve-post-sync-watchdog` child for collateral-drift cache updates and stale-source alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 273 active live-enabled stablecoins across 62 registered adapters; 276 tracked metadata entries have live reserve configs. These counts are active/configured stablecoin entries, not raw source JSON files. Both the active and tracked config sets use 60 adapter keys; the other 2 registered keys are explicitly unbound below.
+- **Current coverage:** derived from `liveReservesConfig` in stablecoin metadata and the adapter declarations. Use those sources and the generated coverage reports for the current enabled, configured, bound, and unbound sets.
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -661,29 +661,3 @@ export async function fetchMyAdapterReserves(
 - [Risk Lab](./report-cards.md) uses fresh authoritative independent live reserve snapshots for collateral quality scoring when available. In practice this now means: `dynamic-mix` adapters can qualify when their latest sync state is `ok` **and** the snapshot carries scoring-eligible freshness evidence, only a subset of `single-bucket` adapters carry `evidenceClass = independent`, and `validated-static` / `weak-live-probe` feeds remain detail-card/status data only. Dependency inference uses the same score-grade live snapshot; live slices with `coinId` become dependency links, unmapped live share stays implicit self-backed / non-stablecoin exposure, and curated/static dependency modeling is used only when no score-grade live snapshot is available.
 - Blacklist attribution no longer treats live reserves as invisible just because most adapters lack `coinId` links. The report-card resolver enriches both live and curated reserve names with the same blacklist clue pipeline, then resolves inherited exposure to a fixed point across the tracked set so cyclic upstream graphs do not depend on traversal order. The collateral drift alert only compares comparable live reserve mixes: snapshots must still resolve to at least two live slices after normalization, so single-bucket proofs and collapsed one-slice snapshots do not generate noisy curated-vs-live drift alerts.
 - [Dependency Map](./dependency-map.md) remains authoritative for graph behavior; dependency edges now come from the effective report-card dependency source, including score-grade live reserve links when present and curated/static reserve metadata plus manual dependencies otherwise.
-
----
-
-## File Index
-
-| File                                                   | Role                                                                                                   |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `shared/types/live-reserve-core.ts`                    | Runtime-neutral reserve descriptor enums, input types, and validation policy                           |
-| `shared/types/live-reserves.ts`                        | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types                                   |
-| `shared/types/live-reserve-adapter-declarations.ts`    | Lightweight single adapter key/schema-id/definition/provenance/display declaration                     |
-| `shared/lib/live-reserve-adapter-descriptors.ts`       | Zod-resolved descriptor registry plus derived compatibility projections                                |
-| `shared/lib/live-reserve-adapter-schema-primitives.ts` | Reusable Zod config/input schema primitives consumed by descriptors                                    |
-| `shared/lib/live-reserve-adapters.ts`                  | Stable shared facade for descriptor projections and config parsing                                     |
-| `shared/lib/stablecoins/registry.ts`                   | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/coins/*.json` |
-| `worker/src/cron/sync-live-reserves.ts`                | 4-hourly sync orchestration and cron result statuses                                                   |
-| `worker/src/cron/reserve-adapters/index.ts`            | Exhaustive Worker-only adapter fetcher map and runtime registry                                        |
-| `worker/src/cron/reserve-adapters/helpers.ts`          | Shared adapter fetch / normalization helpers                                                           |
-| `worker/src/lib/live-reserves-store.ts`                | Public facade over the live-reserve store helpers                                                      |
-| `worker/src/lib/live-reserves-store-read.ts`           | D1 read/query helpers and authoritative row loaders                                                    |
-| `worker/src/lib/live-reserves-store-write.ts`          | D1 write paths and history pruning                                                                     |
-| `worker/src/lib/live-reserves-store-overview.ts`       | Status overview, scoring-eligible freshness checks, and authoritative snapshot maps                    |
-| `worker/src/lib/live-reserves-store-views.ts`          | Detail/API reserve-result resolution and curated/static fallback handling                              |
-| `worker/src/lib/live-reserves-store-shared.ts`         | Shared live-reserve store types, constants, and row mapping                                            |
-| `worker/src/api/stablecoin-reserves.ts`                | Public API handler                                                                                     |
-| `src/hooks/use-stablecoin-reserves.ts`                 | Frontend query hook                                                                                    |
-| `src/hooks/use-stablecoin-detail-view-model.ts`        | Detail-page integration                                                                                |

@@ -4,7 +4,7 @@ Canonical reference for Pharos live-price selection, fallback enrichment, and so
 
 For supply fallback behavior and broader cache/integrity guardrails, see [data-pipeline.md](./data-pipeline.md).
 
-> **Agent navigation** — ~72 KB; Grep the heading you need instead of reading wholesale: Overview · Versioning · Primary Consensus · Provider-Specific Normalization · Authoritative Overrides · Fallback Enrichment · Confidence Model · Update Rules · File Index.
+> **Agent navigation** — Grep the heading you need: Overview · Versioning · Primary Consensus · Provider-Specific Normalization · Authoritative Overrides · Fallback Enrichment · Confidence Model · Update Rules.
 
 ---
 
@@ -431,29 +431,5 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 2. this document for canonical pricing behavior
 3. [data-pipeline.md](./data-pipeline.md) if broader sync/integrity semantics changed
 4. `/methodology` pricing copy in `src/app/methodology/sections/core-sections-pricing.tsx`
-5. `shared/lib/pricing-pipeline-version.ts` and [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) if methodology semantics changed
+5. `shared/lib/pricing-pipeline-version.ts` and the matching entry under `shared/data/methodology-changelogs/pricing-pipeline/` if methodology semantics changed
 6. [about-page.md](./about-page.md) and `src/app/about/content.ts` when externally visible data sources change
-
----
-
-## File Index
-
-| File                                                        | Role                                                                                                                                                                                                     |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` | Primary live-price collection, source assembly, consensus, GT probe, and pool challenge                                                                                                                  |
-| `worker/src/cron/sync-stablecoins/enrich-prices.ts`         | Fallback enrichment orchestrator (`enrichMissingPrices()`) for still-missing prices                                                                                                                      |
-| `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts`  | Barrel re-export for individual pass runners (DefiLlama, CoinGecko low-volume, CMC, Jupiter, DexScreener)                                                                                                 |
-| `worker/src/lib/price-consensus.ts`                         | N-source clustering and confidence resolution                                                                                                                                                            |
-| `worker/src/lib/authoritative-price-sources/`               | Redeem-quote live/historical override provider registry                                                                                                                                                   |
-| `worker/src/lib/pyth.ts`                                    | Pyth Hermes integration and feed-ID normalization                                                                                                                                                        |
-| `worker/src/lib/redstone.ts`                                | Exact-case RedStone allowlist, batching, and retry behavior                                                                                                                                              |
-| `worker/src/lib/cex-tickers.ts`                             | Binance, Kraken, Bitstamp, and Coinbase price fetchers                                                                                                                                                   |
-| `worker/src/lib/coingecko-simple-price.ts`                  | `fetchCoingeckoSimplePrices` helper — extracted from the orchestrator to normalize batch request shape, upstream-timestamp parsing, staleness drop, and breaker accounting for CoinGecko `/simple/price` |
-| `worker/src/lib/fetcher-result.ts`                          | `FetcherOutcome<T>` result type shared by CEX / oracle fetchers for uniform circuit-breaker accounting                                                                                                   |
-| `worker/src/lib/chainlink-feeds.ts`                         | Curated Chainlink FX / commodity reference-feed reads                                                                                                                                                    |
-| `worker/src/lib/curve-onchain.ts`                           | Curve on-chain price reads                                                                                                                                                                               |
-| `worker/src/lib/price-validation.ts`                        | Peg-aware reasonableness validation                                                                                                                                                                      |
-| `worker/src/lib/pricing-circuit-map.ts`                     | Canonical `PRICING_SOURCE_TO_CIRCUIT` map plus CI contract test asserting every registry source has a declared breaker (or is explicitly null for synthesized / composite / cached sources)              |
-| `shared/lib/pricing-pipeline-constants.ts`                  | Shared numeric constants for primary pricing (currently `DIVERGENCE_THRESHOLD_BPS = 50`)                                                                                                                 |
-| `shared/lib/methodology-versions/pricing-pipeline.ts`       | Methodology version metadata and changelog route                                                                                                                                                         |
-| `src/app/methodology/sections/core-sections-pricing.tsx`    | Public longform pricing-pipeline methodology copy                                                                                                                                                        |
