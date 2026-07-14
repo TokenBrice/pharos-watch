@@ -90,7 +90,7 @@ const STREAMS = [
       "incomparable-route-requests",
     ],
     ceiling: "exit-unverified (65)",
-    fix: "Best lever per asset: (a) a resolved redemption row (redemption methodology v4.18 derives a bounded exit observation from a supply-full row with documented fixed-bps fee), (b) exact DEX capacity where the pool archetype is supported (raydium CP, balancer weighted), (c) basket/parent output resolution for unresolved-exit-output routes. CL-pool exact capacity is producer tick-data work, not per-asset curation — do not grind unsupported pools by hand.",
+    fix: "Best lever per asset: (a) a resolved redemption row (redemption methodology v4.18 derives a bounded exit observation from a supply-full row with documented fixed-bps fee), (b) unresolved-exit-output routes: set `outputAssets` on the asset's entry in shared/lib/redemption-backstop-configs/ — tracked stablecoin ids for stable-single/stable-basket, canonical asset:<symbol> keys for collateral; ONLY when the documented rail names the output (config notes/docs are the source; schema validates shape), (c) exact DEX capacity where the pool archetype is supported (raydium CP, balancer weighted). Captures with producer-embedded observations pick up outputAssets on the next production capture. CL-pool exact capacity is producer tick-data work, not per-asset curation — do not grind unsupported pools by hand.",
   },
   {
     key: "PEG",

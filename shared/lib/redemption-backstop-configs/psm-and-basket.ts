@@ -63,6 +63,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "dai-makerdao": {
     ...psmSwapBase,
+    outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.33, basis: "psm-balance-share" },
     costModel: fixedFee(0, "LitePSM docs show fees are not activated for DAI <-> USDC"),
     notes: [
@@ -71,6 +72,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "usds-sky": {
     ...psmSwapBase,
+    outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.33, basis: "psm-balance-share" },
     costModel: fixedFee(
       0,
@@ -142,6 +144,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "usdd-tron-dao-reserve": {
     ...psmSwapBase,
+    outputAssets: ["usdt-tether"],
     capacityModel: { kind: "supply-ratio", ratio: 0.16, confidence: "documented-bound" },
     costModel: fixedFee(0, "USDD docs describe 1:1 PSM conversions between USDD and USDT/USDC/TUSD"),
     reviewedAt: REVIEWED_BASKET_REDEMPTION_AT,
@@ -189,6 +192,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "dola-inverse-finance": {
     ...psmSwapBase,
+    outputAssets: ["usds-sky"],
     capacityModel: { kind: "supply-ratio", ratio: 0.08, confidence: "documented-bound" },
     costModel: fixedFee(20, "Inverse FiRM docs list a 20 bps DOLA -> USDS exit fee"),
     reviewedAt: "2026-03-23",
@@ -233,6 +237,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "dusd-alto": {
     ...psmSwapBase,
+    outputAssets: ["usdc-circle"],
     ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
     costModel: fixedFee(
       20,

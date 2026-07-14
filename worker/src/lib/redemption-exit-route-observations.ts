@@ -1,6 +1,6 @@
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
-import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ExitRouteCapacityPoint, ExitRouteObservation, ExitRouteOutput } from "@shared/types/market";
 import type {
@@ -87,19 +87,25 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
 
 function resolveOutput(
   stablecoinId: string,
-  config: Pick<RedemptionBackstopConfig, "routeFamily" | "outputAssetType">,
+  config: Pick<RedemptionBackstopConfig, "routeFamily" | "outputAssetType" | "outputAssets">,
 ): ExitRouteOutput {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
   if (config.routeFamily === "offchain-issuer") {
     return { kind: "fiat", ...(meta?.flags.pegCurrency ? { currency: meta.flags.pegCurrency } : {}) };
   }
   if (config.outputAssetType === "stable-single") {
-    const parentId = meta?.variantOf;
-    return parentId ? { kind: "tracked-stablecoin", trackedAssetIds: [parentId] } : { kind: "unresolved-asset" };
+    const outputId = config.outputAssets?.[0] ?? meta?.variantOf;
+    return outputId ? { kind: "tracked-stablecoin", trackedAssetIds: [outputId] } : { kind: "unresolved-asset" };
   }
-  if (config.outputAssetType === "stable-basket") return { kind: "unresolved-basket" };
+  if (config.outputAssetType === "stable-basket") {
+    return config.outputAssets?.length
+      ? { kind: "tracked-stablecoin", trackedAssetIds: [...config.outputAssets] }
+      : { kind: "unresolved-basket" };
+  }
   if (config.outputAssetType === "bluechip-collateral" || config.outputAssetType === "mixed-collateral") {
-    return { kind: "collateral" };
+    return config.outputAssets?.length
+      ? { kind: "collateral", assetKeys: [...config.outputAssets] }
+      : { kind: "collateral" };
   }
   return { kind: "unresolved-asset" };
 }
@@ -293,7 +299,13 @@ export function deriveSupplyModelExitRouteObservation(
     scope,
     ...point,
     settlementHorizonSec: DERIVED_SETTLEMENT_HORIZON_CEILING_SEC[entry.settlementModel],
-    output: resolveOutput(entry.stablecoinId, entry),
+    // Published rows do not carry outputAssets; the reviewed static config of
+    // the same code version supplies the documented output composition.
+    output: resolveOutput(entry.stablecoinId, {
+      routeFamily: entry.routeFamily,
+      outputAssetType: entry.outputAssetType,
+      outputAssets: getRedemptionBackstopConfig(entry.stablecoinId)?.outputAssets,
+    }),
     evidenceKind: "documented-terms",
     confidence: "medium",
     scoreEligible: routeFamily !== "eventual-redemption" && withinCost,

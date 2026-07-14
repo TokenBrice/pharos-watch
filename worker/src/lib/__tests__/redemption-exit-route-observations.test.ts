@@ -187,6 +187,42 @@ describe("derived supply-model route observations", () => {
     expect(overCost).toMatchObject({ scoreEligible: false, executableUsd: 0 });
   });
 
+  it("resolves derived outputs from the reviewed static config's outputAssets", () => {
+    // dai-makerdao's psm-swap config documents the LitePSM DAI <-> USDC leg.
+    const daiEntry: RedemptionBackstopEntry = {
+      ...supplyFullEntry,
+      stablecoinId: "dai-makerdao",
+      routeFamily: "psm-swap",
+      accessModel: "permissionless-onchain",
+      executionModel: "deterministic",
+      outputAssetType: "stable-single",
+    };
+    const observation = deriveSupplyModelExitRouteObservation(daiEntry, now);
+    expect(observation?.output).toEqual({ kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] });
+
+    // bold-liquity's collateral-redeem config names the Liquity V2 branches.
+    const boldEntry: RedemptionBackstopEntry = {
+      ...daiEntry,
+      stablecoinId: "bold-liquity",
+      routeFamily: "collateral-redeem",
+      outputAssetType: "bluechip-collateral",
+    };
+    const boldObservation = deriveSupplyModelExitRouteObservation(boldEntry, now);
+    expect(boldObservation?.output).toEqual({
+      kind: "collateral",
+      assetKeys: ["asset:weth", "asset:wsteth", "asset:reth"],
+    });
+
+    // An asset without configured outputAssets keeps the honest unresolved kind.
+    const unresolvedEntry: RedemptionBackstopEntry = {
+      ...daiEntry,
+      stablecoinId: "buck-bucket-protocol",
+    };
+    expect(deriveSupplyModelExitRouteObservation(unresolvedEntry, now)?.output).toEqual({
+      kind: "unresolved-asset",
+    });
+  });
+
   it("derives nothing outside the documented full-supply basis", () => {
     expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, provider: "reserve-sync-metadata" }, now)).toBeNull();
     expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, resolutionState: "impaired" }, now)).toBeNull();

@@ -92,6 +92,14 @@ export interface RedemptionBackstopConfig {
    * the family shape alone would overstate the actual exit quality.
    */
   totalScoreCap?: number;
+  /**
+   * Concrete redemption output assets, when the documented rail names them.
+   * Tracked stablecoin ids (e.g. "usdc-circle") for stable-single /
+   * stable-basket outputs; canonical `asset:<symbol>` keys (e.g.
+   * "asset:weth") for collateral outputs. Drives exit-route output
+   * resolution — leave unset when the output composition is not documented.
+   */
+  outputAssets?: string[];
   docs?: RedemptionDocSource[];
   reviewedAt?: string;
   notes?: string[];

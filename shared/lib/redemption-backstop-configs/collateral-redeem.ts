@@ -135,6 +135,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   ...defineCollateralRecordEntries({
     "bold-liquity": {
       ...collateralRedeemBase,
+      outputAssets: ["asset:weth", "asset:wsteth", "asset:reth"],
       capacityModel: { kind: "reserve-sync-metadata" },
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       reviewedAt: "2026-03-22",
@@ -152,6 +153,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "lusd-liquity": {
       ...collateralRedeemBase,
+      outputAssets: ["asset:eth"],
       capacityModel: { kind: "reserve-sync-metadata" },
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       reviewedAt: "2026-03-22",
@@ -177,6 +179,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "meusd-mezo": {
       ...collateralRedeemBase,
+      outputAssets: ["asset:btc"],
       capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       costModel: fixedFee(75, "75 bps standard; 0 bps when redeeming against your own debt"),
@@ -497,6 +500,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "doc-money-on-chain": {
       ...collateralRedeemBase,
+      outputAssets: ["asset:btc"],
       ...documentedBoundSupplyFull(REVIEWED_WRAPPER_WAVE_AT),
       costModel: undisclosedReviewedFee(
         "Money On Chain docs describe permissionless DOC redemption into RBTC, but the reviewed public materials do not publish a single fixed numeric redemption fee schedule",
@@ -554,6 +558,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "cjpy-yamato": {
       ...collateralRedeemBase,
+      outputAssets: ["asset:eth"],
       ...documentedBoundSupplyFull("2026-04-16"),
       outputAssetType: "bluechip-collateral",
       costModel: documentedVariableFee(
