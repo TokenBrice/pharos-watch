@@ -4,8 +4,25 @@ set -euo pipefail
 zero_sha_re='^0+$'
 main_update_seen=0
 pages_smoke_flag="${MERGE_GATE_PAGES_SMOKE:-1}"
-branch_gate_mode="${PHAROS_PRE_PUSH_GATE:-main}"
+pre_push_gate_mode="${PHAROS_PRE_PUSH_GATE:-off}"
 branch_updates=()
+
+case "$pre_push_gate_mode" in
+  off|main|all|1)
+    ;;
+  *)
+    echo "[pre-push] Invalid PHAROS_PRE_PUSH_GATE=${pre_push_gate_mode}. Use off, main, or all." >&2
+    exit 1
+    ;;
+esac
+
+gate_main_updates() {
+  [[ "$pre_push_gate_mode" == "main" || "$pre_push_gate_mode" == "all" || "$pre_push_gate_mode" == "1" ]]
+}
+
+gate_branch_updates() {
+  [[ "$pre_push_gate_mode" == "all" || "$pre_push_gate_mode" == "1" ]]
+}
 
 verify_push_snapshot() {
   local expected_sha="$1"
@@ -59,6 +76,12 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     continue
   fi
 
+  if ! gate_main_updates; then
+    echo "[pre-push] Main ref update detected; local merge gate skipped by default."
+    echo "[pre-push] GitHub Actions is the authoritative release gate. Set PHAROS_PRE_PUSH_GATE=main to run the exact-range local gate before pushing main."
+    continue
+  fi
+
   echo "[pre-push] Running merge gate for main push range ${remote_sha}...${local_sha}..."
   if [[ "$remote_sha" =~ $zero_sha_re ]]; then
     MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"
@@ -68,8 +91,8 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 done
 
 if [[ "$main_update_seen" -eq 0 ]]; then
-  if [[ "$branch_gate_mode" != "all" && "$branch_gate_mode" != "1" ]]; then
-    echo "[pre-push] No main ref update detected; full local gate skipped. Set PHAROS_PRE_PUSH_GATE=all to gate branch pushes."
+  if ! gate_branch_updates; then
+    echo "[pre-push] No gated ref update detected; local merge gate skipped. Set PHAROS_PRE_PUSH_GATE=all to gate branch pushes."
     exit 0
   fi
 

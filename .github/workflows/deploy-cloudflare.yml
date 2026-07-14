@@ -55,8 +55,7 @@ jobs:
     secrets:
       ACTIONS_CHECKOUT_TOKEN: ${{ secrets.ACTIONS_CHECKOUT_TOKEN }}
     with:
-      coverage-compare-ref: ${{ github.event.before }}
-      coverage-ratchet-all: true
+      include_advisory_prebuild: true
       pages_changed: ${{ needs.detect-changes.outputs.pages_changed == 'true' }}
       run_pages_build_and_seo: false
       worker_changed: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}
@@ -335,7 +334,6 @@ jobs:
     if: ${{ needs.detect-changes.outputs.pages_deploy_required == 'true' }}
     uses: ./.github/workflows/pages-release.yml
     with:
-      pages_ui_changed: ${{ needs.detect-changes.outputs.pages_ui_changed == 'true' }}
       wait_for_worker_promotion: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}
     secrets:
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}

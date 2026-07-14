@@ -12,6 +12,7 @@ import {
   COMMON_VALIDATE_PREBUILD_COMMANDS,
   PAGES_SMOKE_VALIDATE_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
+  VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV,
   VALIDATE_PREBUILD_SKIP_COMMANDS_ENV,
   VALIDATE_PREBUILD_SURFACE_ENV,
   WORKER_SMOKE_VALIDATE_COMMANDS,
@@ -45,7 +46,7 @@ export function resolveDiscoveryMaxParallel(env = process.env, availableCores = 
   if (Number.isFinite(explicit) && explicit > 0) {
     return explicit;
   }
-  return Math.max(1, Math.min(6, availableCores - 2));
+  return Math.max(1, Math.min(3, availableCores - 2));
 }
 
 export function buildDiscoveryExecutionGroups(plan, { includeSmoke = false } = {}) {
@@ -93,14 +94,41 @@ export function getDiscoveryCommandEnv(command, changedFiles, env = process.env)
     return commandEnv;
   }
 
-  return {
+  const discoveryEnv = {
     ...commandEnv,
     [VALIDATE_PREBUILD_SURFACE_ENV]: commandEnv[VALIDATE_PREBUILD_SURFACE_ENV] ?? "full",
-    ...(commandEnv[VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]
+    ...(env[VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV] === "1" && commandEnv[VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]
       ? { [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: commandEnv[VALIDATE_PREBUILD_SKIP_COMMANDS_ENV] }
       : {}),
     VALIDATE_PREBUILD_CONTINUE_ON_ERROR: "1",
   };
+
+  if (env[VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV] !== "1") {
+    delete discoveryEnv[VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV];
+    delete discoveryEnv[VALIDATE_PREBUILD_SKIP_COMMANDS_ENV];
+  }
+
+  return discoveryEnv;
+}
+
+function printHelp(log = console.log) {
+  log(`Usage: npm run test:merge-gate:discover -- [--staged] [--dry-run]
+
+Diagnostic failure-discovery runner for the local merge-gate command plan.
+It is not a release proof and does not write reusable merge-gate receipts.
+
+Options:
+  --staged     Diff staged files instead of MERGE_GATE_BASE_REF...MERGE_GATE_HEAD_REF.
+  --dry-run    Print the diagnostic command plan without executing commands.
+  --help       Show this help.
+
+Environment:
+  MERGE_GATE_BASE_REF=<ref>                 Override the default compare base (origin/main).
+  MERGE_GATE_HEAD_REF=<ref>                 Override the default compare head (HEAD).
+  MERGE_GATE_FULL_DEPLOY=1                  Force the full deploy-impact diagnostic plan.
+  MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>     Cap postbuild diagnostic fan-out (default max: 3).
+  MERGE_GATE_DISCOVERY_SMOKE=1              Include smoke commands; skipped by default.
+  VALIDATE_PREBUILD_INCLUDE_ADVISORY=1      Include advisory prebuild checks in discovery.`);
 }
 
 function parseOptions(argv, env) {
@@ -109,9 +137,10 @@ function parseOptions(argv, env) {
   return {
     baseRef: env.MERGE_GATE_BASE_REF ?? "origin/main",
     baseRefOverridden: typeof env.MERGE_GATE_BASE_REF === "string" && env.MERGE_GATE_BASE_REF.length > 0,
-    dryRun: env.MERGE_GATE_DRY_RUN === "1",
+    dryRun: env.MERGE_GATE_DRY_RUN === "1" || args.has("--dry-run"),
     forceFullDeploy,
     headRef: env.MERGE_GATE_HEAD_REF ?? "HEAD",
+    help: args.has("--help") || args.has("-h"),
     includeSmoke: env.MERGE_GATE_DISCOVERY_SMOKE === "1",
     skipFetch: env.MERGE_GATE_NO_FETCH === "1",
     stagedMode: args.has("--staged"),
@@ -136,14 +165,14 @@ function getDiscoveryChangedFiles(options, execFile) {
 }
 
 function printPlan(plan, groups, { includeSmoke, maxParallel }) {
-  console.log("[merge-gate:discover] Command plan:");
+  console.log("[merge-gate:discover] Diagnostic command plan:");
   for (let i = 0; i < plan.length; i++) {
     const item = plan[i];
     const extra = item.reasons.length > 1 ? ` (+${item.reasons.length - 1} more)` : "";
     console.log(`${i + 1}. ${item.cmd} - ${item.reasons[0]}${extra}`);
   }
 
-  console.log("[merge-gate:discover] Discovery grouping:");
+  console.log("[merge-gate:discover] Diagnostic grouping:");
   console.log(`  prebuild: ${groups.prebuildUnits.length} group(s), validate:prebuild continues on errors`);
   console.log(`  postbuild: ${groups.postValidateUnits.length} independent group(s), max parallel ${maxParallel}`);
   console.log(
@@ -175,6 +204,11 @@ export async function runMergeGateDiscovery({
   availableCores = os.availableParallelism(),
 } = {}) {
   const options = parseOptions(argv, env);
+  if (options.help) {
+    printHelp();
+    return { status: 0 };
+  }
+
   if (!options.stagedMode && !options.forceFullDeploy && !options.baseRefOverridden && !options.skipFetch) {
     fetchBaseRef({ baseRef: options.baseRef, execFile });
   }
@@ -184,7 +218,7 @@ export async function runMergeGateDiscovery({
   const workerSmoke = options.includeSmoke && env.MERGE_GATE_WORKER_SMOKE === "1";
   const plan = options.forceFullDeploy
     ? buildFullCommandPlan(
-        "Full deploy fallback requested; local discovery mirrors the full deploy-path validate core",
+        "Full deploy fallback requested; diagnostic discovery samples the deploy-path validate core",
         { pagesSmoke, workerSmoke },
       )
     : buildCommandPlan(changedFiles, { pagesSmoke, workerSmoke });
@@ -199,11 +233,11 @@ export async function runMergeGateDiscovery({
   console.log(`[merge-gate:discover] Changed files: ${changedFiles.length}`);
 
   if (!options.forceFullDeploy && changedFiles.length === 0) {
-    console.log("[merge-gate:discover] No changes detected; discovery skipped.");
+    console.log("[merge-gate:discover] No changes detected; diagnostic discovery skipped.");
     return { status: 0 };
   }
   if (plan.length === 0) {
-    console.log("[merge-gate:discover] No Pages or worker deploy surfaces changed; discovery skipped.");
+    console.log("[merge-gate:discover] No Pages or worker deploy surfaces changed; diagnostic discovery skipped.");
     return { status: 0 };
   }
 
@@ -244,13 +278,13 @@ export async function runMergeGateDiscovery({
   const firstFailure = [prebuildResult, postbuildResult, smokeResult].find((result) => result.status !== 0);
   if (firstFailure) {
     console.error(
-      "[merge-gate:discover] Discovery found failures. Fix by failing command, then run the final merge gate.",
+      "[merge-gate:discover] Diagnostic discovery found failures. Fix by failing command; GitHub Actions remains the authoritative release gate.",
     );
     exit(firstFailure.status);
     return { status: firstFailure.status };
   }
 
-  console.log("[merge-gate:discover] Discovery checks passed. Run npm run test:merge-gate for the authoritative gate.");
+  console.log("[merge-gate:discover] Diagnostic discovery checks passed. This does not create a release proof.");
   return { status: 0 };
 }
 

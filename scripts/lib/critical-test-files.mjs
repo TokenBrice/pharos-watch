@@ -198,11 +198,6 @@ export function buildCriticalCoverageArgs(extraArgs = []) {
   ];
 }
 
-// CLI --exclude flags are silently ignored by project-scoped include lists
-// (vitest test.projects), so the critical-file exclusion is applied inside
-// vitest.config.ts when this env flag is set by run-noncritical-tests.mjs.
-export const NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV = "VITEST_EXCLUDE_CRITICAL_TESTS";
-
 export function buildNoncriticalTestArgs(extraArgs = []) {
   return ["run", ...extraArgs];
 }

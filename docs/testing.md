@@ -22,7 +22,7 @@ npm run test:merge-gate
 npm run test:merge-gate:discover
 ```
 
-Use `package.json` for the full live npm-script list. Use `scripts/lib/validation-lanes.mjs` for the ten-lane ownership of `validate:prebuild`, postbuild, Pages/Worker, smoke commands, and validation-owned deploy-impact paths; use `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, `scripts/lib/cli-argv-policy.mjs` for the exact strict/exempt `process.argv` inventory, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. `npm run typecheck:tests` runs the dedicated test-file TypeScript project and requires zero diagnostics. Do not duplicate those inventories here.
+Use `package.json` for the full live npm-script list. Use `scripts/lib/validation-lanes.mjs` for validation lane ownership, the reduced blocking `validate:prebuild` set, advisory prebuild opt-in, postbuild, Pages/Worker, smoke commands, and validation-owned deploy-impact paths; use `scripts/lib/automation-registry.mjs` for generated-artifact checks and deploy-impact classification, `scripts/lib/cli-argv-policy.mjs` for the exact strict/exempt `process.argv` inventory, and `scripts/lib/critical-test-files.mjs` / `scripts/lib/critical-coverage.mjs` for critical-suite ownership. `npm run typecheck:tests` runs the dedicated test-file TypeScript project and requires zero diagnostics. Do not duplicate those inventories here.
 
 Common targeted runners:
 
@@ -59,20 +59,20 @@ For deployment/worktree operating procedure, secrets, rollback, and local merge-
 CI shape:
 
 1. Pull requests run through `.github/workflows/pull-request-checks.yml`. Internal-docs-only diffs run verified-link, source-path, doc-sync, agent-doc-sync, and doc-count checks; other diffs run the reusable validate workflow. The deploy-impact classifier decides whether validation also needs a Pages build, Worker typechecking, or neither. Test-only Pages diffs still run the shared tests but do not request a Pages build or production publish.
-2. `validate` runs the source-owned ten-lane validation plan from `scripts/lib/validation-lanes.mjs`, non-critical Vitest shards, `coverage:critical`, optional Worker runtime typecheck, and optional Pages build/a11y/SEO/static-artifact checks. The reusable workflow invokes the fixed `validate:pages` and `validate:worker` phase entrypoints instead of copying either command sequence into YAML. The scheduled Worker entrypoint suite remains in critical coverage rather than being rerun by `validate:worker`.
-3. Push/manual production deploys reuse the same validate result before mutating D1, promoting Workers, or publishing Pages. Pages build/publish/live-smoke details live in [Deployment Process](./deployment-process.md).
-4. `npm run test:merge-gate` mirrors the deploy-impact validation-lane plan locally and skips cleanly for non-deploy-impacting diffs. Use `MERGE_GATE_DRY_RUN=1` to print the plan without requiring a fresh install.
-5. `npm run test:merge-gate:discover` mirrors the same local command plan for large failure-discovery passes. It keeps prebuild and independent postbuild lanes running after failures, skips smoke by default, and is diagnostic only; the pre-push hook owns the final exact-range release gate.
+2. `validate` runs the source-owned reduced blocking prebuild set from `scripts/lib/validation-lanes.mjs`, normal Vitest shards, optional Worker runtime typecheck, and optional Pages build/SEO/static copy checks. The reusable workflow invokes the fixed `validate:pages` and `validate:worker` phase entrypoints instead of copying either command sequence into YAML. The scheduled Worker entrypoint suite is covered by the normal Vitest shards and the scheduled/manual critical coverage ratchet, not by `validate:worker`.
+3. Push/manual production deploys reuse the same validate result before mutating D1, promoting Workers, or publishing Pages. During the transition window the deploy caller enables `include_advisory_prebuild: true`, so advisory maintenance checks still run before production mutation while PRs use the slimmer default. Pages build/publish/live-smoke details live in [Deployment Process](./deployment-process.md).
+4. `npm run test:merge-gate` mirrors the deploy-impact validation-lane plan locally and skips cleanly for non-deploy-impacting diffs. Use `MERGE_GATE_DRY_RUN=1` to print the plan without requiring a fresh install. The pre-push hook does not run this heavy gate by default; set `PHAROS_PRE_PUSH_GATE=main` or `PHAROS_PRE_PUSH_GATE=all` when an exact-range local rehearsal is desired.
+5. `npm run test:merge-gate:discover` runs the same deploy-impact command plan for large failure-discovery passes, but keeps advisory prebuild checks opt-in via `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1`. It keeps reduced prebuild and independent postbuild lanes running after failures, skips smoke by default, caps diagnostic fan-out at 3 unless `MERGE_GATE_DISCOVERY_MAX_PARALLEL` is set, and is diagnostic only. GitHub Actions owns the authoritative release gate.
 
 Telegram load protection has two local shapes: `npm run check:telegram-load` is the blocking SLO/CPU guard, while direct `npx tsx scripts/ci/check-telegram-load.ts` is the advisory query-plan report. Both consume runtime delivery limits and reviewed model calibration from `shared/lib/telegram-delivery-policy.ts`. The dependency groups in `scripts/lib/telegram-load-guard.mjs` select the local merge-gate advisory and are parity-tested against `.github/workflows/telegram-load.yml`; sender, preset, formatter/chunker, scheduled-lane, durable schema, policy, migration, dispatch/pending, and admin-broadcast changes are covered. Full deploy fallback includes the advisory unconditionally.
 
-`npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on `coverage:critical` plus the `test:noncritical` complement.
+`npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on the normal sharded `test:noncritical` wrapper, which now includes critical tests despite the legacy script name.
 
 Selected specialized checks:
 
 - Cron schedule/connection changes: `npm run check:cron-sync`, `npm run check:cron-connections`, and `npm run validate:worker-scheduled-smoke`.
 - Worker deployment configuration: `npm run check:worker-config` verifies that production custom domains remain root-owned and asset rules fall through.
-- Worker fetch-body timeout guardrail: `npm run check:fetch-body-timeouts` blocks new raw `fetchWithRetry()` response-body reads unless they are explicitly tracked as migration debt.
+- Worker fetch-body timeout guardrail: `npm run check:fetch-body-timeouts` flags new raw `fetchWithRetry()` response-body reads unless they are explicitly tracked as migration debt; it runs in advisory prebuild mode and can be run directly for Worker fetch changes.
 - Provider fetch resilience changes: `npm run check:provider-resilience` verifies the external-provider registry, required timeout/body/circuit/test markers, and raw Worker `fetch(...)` coverage.
 - Generated public artifacts: `npm run check:generated-artifacts`, with individual checks in `scripts/lib/automation-registry.mjs`.
 - Static export SEO: `npm run seo:check`; live SEO smoke is `npm run seo:live-smoke -- --url https://pharos.watch`.
@@ -91,7 +91,7 @@ npm run test:profile -- --output /tmp/pharos-src-profile.json -- --dir src
 npm run test:profile -- --output /tmp/pharos-vitest-threads.json --baseline /tmp/pharos-vitest-profile.json -- --pool=threads
 ```
 
-In CI, `npm run test:noncritical` and `npm run coverage:critical` append `--silent=passed-only` unless an explicit `--silent` option is already supplied. Set `PHAROS_CI_VITEST_COMPACT=0` to restore full console output while debugging a CI-only failure. The PR/deploy reusable validate workflow shards `test:noncritical` across two runners; local `npm run test:merge-gate` emits the same two shard commands and auto-enables its parallel matrix when at least 12 cores are available, staying serial below that threshold unless `MERGE_GATE_PARALLEL` overrides it.
+In CI, `npm run test:noncritical` and `npm run coverage:critical` append `--silent=passed-only` unless an explicit `--silent` option is already supplied. Set `PHAROS_CI_VITEST_COMPACT=0` to restore full console output while debugging a CI-only failure. The PR/deploy reusable validate workflow shards `test:noncritical` across two runners and includes critical tests in that normal Vitest lane; local `npm run test:merge-gate` emits the same two shard commands and auto-enables its parallel matrix when at least 12 cores are available, staying serial below that threshold unless `MERGE_GATE_PARALLEL` overrides it.
 
 `npm run coverage:critical` also forwards trailing Vitest options to the critical suite. Use this to validate candidate pool behavior before any global `vitest.config.ts` change:
 
@@ -151,7 +151,7 @@ The suite is split into four `test.projects` (all `extends: true` from the root 
 - `worker` — `worker/` suites with default per-file isolation (they lean on module-level state: circuit breakers, caches, D1 stubs; verified to fail without isolation).
 - `src` — `src/` suites with default isolation for jsdom/React state.
 
-Because project include lists ignore CLI `--exclude`, the noncritical runner excludes critical test files via the `VITEST_EXCLUDE_CRITICAL_TESTS=1` env contract (set by `scripts/maintenance/run-noncritical-tests.mjs`, consumed by `vitest.config.ts`); `scripts/__tests__/validate-ci-parity.test.ts` pins both sides.
+`npm run test:noncritical` is now the normal Vitest runner for deploy validation and no longer excludes critical test files. The script name is retained for compatibility with existing npm scripts, workflow names, and historical receipts.
 
 When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob exclusions so coverage still includes the active repository files; nested worktree directories remain excluded in a normal top-level checkout.
 
@@ -319,10 +319,10 @@ Keep this section focused on how the suite is organized and which surfaces are g
 Critical gate coverage is intentionally smaller than the full suite:
 
 - `npm run test:invariants` covers numerical/schema invariants and critical cron-cache validation.
-- `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mjs` with line-coverage ratchets owned by `scripts/lib/critical-coverage.mjs`. Telegram enrollment includes authoritative target planning and legacy recovery, pending lifecycle and outage control, webhook effect fencing and watchlist import, Mini App authentication plus authenticated state/theme contracts, and aggregate-only adoption analytics. Real-SQL migration, crash-resume, rollback, and external-effect failure suites are preferred wherever the runtime owns durable state; authenticated axe coverage remains owned by the Playwright accessibility gate.
-- `npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on `coverage:critical` plus the two-shard `test:noncritical` complement.
+- `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mjs` with line-coverage ratchets owned by `scripts/lib/critical-coverage.mjs`. It is owned by the weekly/manual Critical Coverage Ratchet workflow, not the blocking reusable validate workflow. Telegram enrollment includes authoritative target planning and legacy recovery, pending lifecycle and outage control, webhook effect fencing and watchlist import, Mini App authentication plus authenticated state/theme contracts, and aggregate-only adoption analytics. Real-SQL migration, crash-resume, rollback, and external-effect failure suites are preferred wherever the runtime owns durable state; authenticated axe coverage remains owned by the Playwright accessibility gate.
+- `npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on the two-shard `test:noncritical` wrapper, which runs the normal Vitest project set including critical tests.
 
-Lane ownership is script-owned, not prose-owned. Put critical source coverage membership in `scripts/lib/critical-coverage.mjs`; keep `test:noncritical` as the complement generated from that critical coverage test list; and keep targeted contract-runner membership in `scripts/lib/critical-test-files.mjs`. Do not duplicate either file list in this document; use the scripts when you need the live membership.
+Lane ownership is script-owned, not prose-owned. Put critical source coverage membership in `scripts/lib/critical-coverage.mjs`; keep the normal Vitest shard wrapper in `scripts/maintenance/run-noncritical-tests.mjs`; and keep targeted contract-runner plus critical coverage test membership in `scripts/lib/critical-test-files.mjs`. Do not duplicate either file list in this document; use the scripts when you need the live membership.
 
 When adding tests, prefer colocating them near the module under test unless an existing `__tests__/` directory is already the local pattern. If the new test protects a production gate, add it to the relevant npm script rather than only documenting it here.
 
@@ -356,8 +356,8 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 
 ### Registry Guardrails
 
-- `npm run check:cli-args-policy` scans every committed JavaScript/TypeScript source file for `process.argv`, requires exact enrollment in `scripts/lib/cli-argv-policy.mjs`, and verifies that strict operator/mutating entrypoints reach a parser that imports and calls `scripts/lib/cli-args.mjs`. Read-only, build/local-artifact, and test/dev exemptions are exact path records with audited reasons; new unclassified scripts fail rather than increasing a baseline.
-- `check:oracle-risk-coverage:enforce` remains the deploy-impacting prebuild content guardrail for direct-CDP oracle profiles and required branch evidence. Its reviewed applicability queue is advisory for current v8 scoring; explicit unresolved dispositions remain v9 blockers rather than silently passing as profile-only evidence.
+- `npm run check:cli-args-policy` scans every committed JavaScript/TypeScript source file for `process.argv`, requires exact enrollment in `scripts/lib/cli-argv-policy.mjs`, and verifies that strict operator/mutating entrypoints reach a parser that imports and calls `scripts/lib/cli-args.mjs`. Read-only, build/local-artifact, and test/dev exemptions are exact path records with audited reasons; new unclassified scripts fail rather than increasing a baseline. It runs in advisory prebuild mode and can be run directly when CI/operator scripts change.
+- `check:oracle-risk-coverage:enforce` remains the direct content guardrail for CDP oracle profiles and required branch evidence. It runs in advisory prebuild mode; its reviewed applicability queue is advisory for current v8 scoring, while explicit unresolved dispositions remain v9 blockers rather than silently passing as profile-only evidence.
 - `src/lib/__tests__/term-markup.test.ts` owns AI-summary glossary-marker integrity as an ordinary noncritical runtime-parser test, including known slugs, balanced markers, and the current corpus totals.
 - Mechanism explainer completeness is split across ordinary noncritical domain tests: `src/app/learn/mechanisms/__tests__/content.test.ts` owns labels, one-liners, editorial content, and representative coin IDs; the existing dynamic-route test owns exact static params; `src/app/__tests__/sitemap-frozen.test.ts` owns sitemap membership. OG images remain generated-artifact-owned.
 - `shared/lib/selector/__tests__/editorial-policy.test.ts` owns the Selector banned-phrase rule matrix and complete editorial corpus as an ordinary noncritical domain test (41 files at relocation), including Picker route/component copy and checked-in worked examples.
@@ -380,7 +380,7 @@ Full-suite coverage threshold is not enforced. The critical gate applies a 40% d
 
 ### Critical Coverage Gate
 
-CI does **not** run a full-suite coverage gate. CI runs the critical-path gate via `npm run coverage:critical`:
+CI does **not** run a full-suite coverage gate. The blocking PR/deploy validate workflow also does not run `coverage:critical`; it runs the normal sharded Vitest lane, including critical tests. The weekly/manual Critical Coverage Ratchet workflow runs the critical-path coverage gate via `npm run coverage:critical`:
 
 - Runs coverage for critical suites only (contract + invariant + targeted reliability suites for alerts/detail/dex orchestrator)
 - Scopes v8 remapping to the enrolled critical source via per-file `--coverage.include` flags (built in `buildCriticalCoverageArgs`); per-file numbers are unchanged, the reporter just stops remapping the rest of the module graph
@@ -389,8 +389,8 @@ CI does **not** run a full-suite coverage gate. CI runs the critical-path gate v
 - Applies explicit per-file minimums for selected reliability paths (`alerts`, `auth`, `evm-rpc`, `discovery`, `health`, `stablecoin-detail`, `dex-liquidity/orchestrator`, plus the other file-specific overrides in `scripts/ci/check-critical-coverage.mjs`)
 - For touched critical files, enforces a no-regression ratchet using `.ci/critical-coverage-baseline.json`
 - Fails closed when an explicit `CRITICAL_COVERAGE_COMPARE_REF` cannot be diffed, so a bad ref cannot silently disable the touched-file ratchet
-- The weekly `Critical Coverage Ratchet` workflow sets `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked regularly without making every PR pay that full ratchet cost.
-- The local merge gate now passes its changed-file set into `coverage:critical`, so touched critical-file regressions fail locally too
+- The weekly `Critical Coverage Ratchet` workflow sets `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked regularly without making every PR/deploy validate run pay that full ratchet cost.
+- Local rehearsals that need coverage ratchet behavior should run `npm run coverage:critical` directly with the relevant `CRITICAL_COVERAGE_*` env controls.
 
 Gate scripts and ownership:
 
@@ -414,14 +414,13 @@ Selected files have explicit threshold overrides in `scripts/ci/check-critical-c
 
 - `npm run test:critical-contracts` is a targeted local runner for the explicitly enumerated contract suites owned by `scripts/lib/critical-test-files.mjs`; keep the npm script as a runner only instead of duplicating suite membership in prose or `package.json`.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
-- `npm run validate:prebuild` runs the full prebuild guardrail set. `VALIDATE_PREBUILD_SURFACE=pages|worker|full` keeps the deploy-impact filter, and `VALIDATE_PREBUILD_SKIP_COMMANDS` is available to callers that need explicit command skips. Use `npm run validate:prebuild -- --dry-run` to print the effective surface and exact command plan without executing checks.
-- `npm run validate:pages` and `npm run validate:worker` are fixed sequential CI phase entrypoints backed by the Pages and Worker command groups in `scripts/lib/validation-lanes.mjs`. They preserve leaf diagnostics while keeping workflow YAML out of command ownership.
-- `npm run test:merge-gate` is the delta-aware local release validator; `npm run test:merge-gate:discover` uses the same plan for failure discovery. Exact range selection, receipt reuse, pre-push authority, environment controls, smoke inclusion, and release-proof semantics belong to [Deployment Process](./deployment-process.md#what-testmerge-gate-does).
+- `npm run validate:prebuild` runs the reduced blocking prebuild guardrail set by default. `VALIDATE_PREBUILD_SURFACE=pages|worker|full` keeps the deploy-impact filter, `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1` restores advisory maintenance checks for transition deploys or explicit local rehearsals, and `VALIDATE_PREBUILD_SKIP_COMMANDS` is available to callers that need explicit command skips. Use `npm run validate:prebuild -- --dry-run` to print the effective surface and exact command plan without executing checks.
+- `npm run validate:pages` and `npm run validate:worker` are fixed sequential CI phase entrypoints backed by the Pages and Worker command groups in `scripts/lib/validation-lanes.mjs`. They support `--dry-run` and `--help`, preserve leaf diagnostics, and keep workflow YAML out of command ownership.
+- `npm run test:merge-gate` is the delta-aware local release rehearsal; `npm run test:merge-gate:discover` uses the same deploy-impact plan for diagnostics, with advisory prebuild checks still opt-in. Exact range selection, optional pre-push execution, receipt reuse, environment controls, smoke inclusion, and release-proof semantics belong to [Deployment Process](./deployment-process.md#what-testmerge-gate-does).
 - `npm run test:smoke-api` checks `/api/health` plus either the strict endpoint contract set or its deploy-canary subset.
 - `npm run test:smoke-ops` checks the Access-protected operator UI/API surfaces and their same-origin proxy where an authenticated session is available.
 - `npm run test:smoke-transport` verifies that public HTTP API origins upgrade to the exact HTTPS host, path, and query.
 - `npm run test:smoke-ui` covers the main hydrated browser path, analytics, first-party data availability, and responsive overflow checks; `npm run test:smoke-ui:mobile` applies the stricter tracked mobile-route geometry and control-size assertions. Production scope, retries, environment, and publish ordering remain canonical in [Deployment Process](./deployment-process.md#ci-deploy-sequence).
-
 
 ### Tier-3 Structural Refactor Targeted Suites
 

@@ -22,7 +22,7 @@ This file is mirrored to `AGENTS.md`. Durable process guidance belongs in `/docs
 - Update matching docs for behavior, API, pipeline, methodology, or data-source changes; new data sources also update the about page.
 - Methodology changes update `/methodology` plus the relevant timeline/changelog doc. Versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
 - When committing, use a descriptive and informative subject plus a useful body that explains what changed and why. Group pending work into logical/thematic commits; avoid empty, generic, or placeholder commit messages.
-- Do not create a branch, worktree, or PR unless explicitly asked. Before pushing, run focused checks; the repo pre-push hook owns the authoritative merge gate for the exact pushed `main` range.
+- Do not create a branch, worktree, or PR unless explicitly asked. Before pushing, run focused checks; GitHub Actions owns the authoritative release gate, while the repo pre-push hook only runs the heavy local merge gate when explicitly opted in with `PHAROS_PRE_PUSH_GATE=main` or `PHAROS_PRE_PUSH_GATE=all`.
 
 ## Hard Rules
 

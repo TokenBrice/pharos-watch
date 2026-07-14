@@ -31,6 +31,7 @@ import {
   COMMON_VALIDATE_PREBUILD_COMMANDS,
   PAGES_SMOKE_VALIDATE_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
+  VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV,
   VALIDATE_PREBUILD_SKIP_COMMANDS_ENV,
   VALIDATE_PREBUILD_SURFACE_ENV,
   WORKER_SMOKE_VALIDATE_COMMANDS,
@@ -120,33 +121,13 @@ describe("buildCommandPlan", () => {
     ]);
   });
 
-  it("provides the changed-file set to the local critical coverage command", () => {
-    expect(
-      getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts", "docs/testing.md"], testEnv()),
-    ).toEqual({
-      TZ: "UTC",
-      LANG: "C.UTF-8",
-      CI: "true",
-      CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts,docs/testing.md",
-      CRITICAL_COVERAGE_RATCHET_ALL: "1",
-    });
-
-    expect(
-      getCommandEnv(
-        "npm run coverage:critical",
-        ["worker/src/api/status.ts"],
-        testEnv({
-          CRITICAL_COVERAGE_RATCHET_ALL: "0",
-        }),
-      ),
-    ).toEqual({
-      TZ: "UTC",
-      LANG: "C.UTF-8",
-      CI: "true",
-      CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts",
-    });
-
+  it("uses the base CI env for unit commands without local coverage ratchet plumbing", () => {
     expect(getCommandEnv("npm run test:noncritical", ["worker/src/api/status.ts"], testEnv())).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+    });
+    expect(getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts"], testEnv())).toEqual({
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
@@ -163,6 +144,7 @@ describe("buildCommandPlan", () => {
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
+      [VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV]: "1",
       [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
       [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run audit:deps,npm run audit:pricing-providers",
     });
@@ -170,6 +152,7 @@ describe("buildCommandPlan", () => {
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
+      [VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV]: "1",
       [VALIDATE_PREBUILD_SURFACE_ENV]: "worker",
       [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run audit:deps,npm run audit:pricing-providers",
     });
@@ -314,14 +297,10 @@ describe("buildCommandPlan", () => {
 
   it("skips base env injection when MERGE_GATE_NATIVE_ENV=1 is set", () => {
     expect(
-      getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts"], testEnv({ MERGE_GATE_NATIVE_ENV: "1" })),
-    ).toEqual({
-      CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts",
-      CRITICAL_COVERAGE_RATCHET_ALL: "1",
-    });
-
-    expect(
       getCommandEnv("npm run test:noncritical", ["worker/src/api/status.ts"], testEnv({ MERGE_GATE_NATIVE_ENV: "1" })),
+    ).toEqual({});
+    expect(
+      getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts"], testEnv({ MERGE_GATE_NATIVE_ENV: "1" })),
     ).toEqual({});
   });
 
@@ -448,19 +427,9 @@ describe("buildCommandPlan", () => {
     expect(executionBatchCommandTexts(buildExecutionBatches(plan))).toEqual([
       [["npm run validate:prebuild"]],
       [
-        [
-          "npm run build",
-          "npm run test:a11y",
-          "npm run check:feature-flag-inlining",
-          "npm run seo:check",
-          "npm run check:phishing-signatures",
-          "npm run check:classifier-sensitive-copy",
-          "npm run check:build-size",
-          "npm run check:build-attribution",
-        ],
+        PAGES_VALIDATE_COMMANDS,
         ["npm run test:noncritical -- --shard=1/2"],
         ["npm run test:noncritical -- --shard=2/2"],
-        ["npm run coverage:critical"],
         ["npm run typecheck:worker"],
       ],
     ]);
@@ -514,7 +483,6 @@ describe("buildCommandPlan", () => {
     expect(aborted).toEqual([
       "npm run test:noncritical -- --shard=1/2",
       "npm run test:noncritical -- --shard=2/2",
-      "npm run coverage:critical",
       "npm run typecheck:worker",
     ]);
   });
@@ -525,19 +493,9 @@ describe("buildCommandPlan", () => {
 
     expect(executionUnitCommandTexts(groups.prebuildUnits)).toEqual([["npm run validate:prebuild"]]);
     expect(executionUnitCommandTexts(groups.postValidateUnits)).toEqual([
-      [
-        "npm run build",
-        "npm run test:a11y",
-        "npm run check:feature-flag-inlining",
-        "npm run seo:check",
-        "npm run check:phishing-signatures",
-        "npm run check:classifier-sensitive-copy",
-        "npm run check:build-size",
-        "npm run check:build-attribution",
-      ],
+      PAGES_VALIDATE_COMMANDS,
       ["npm run test:noncritical -- --shard=1/2"],
       ["npm run test:noncritical -- --shard=2/2"],
-      ["npm run coverage:critical"],
       ["npm run typecheck:worker"],
     ]);
     expect(groups.smokeUnits).toEqual([]);
@@ -560,7 +518,6 @@ describe("buildCommandPlan", () => {
       LANG: "C.UTF-8",
       CI: "true",
       [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
-      [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run audit:deps,npm run audit:pricing-providers",
       VALIDATE_PREBUILD_CONTINUE_ON_ERROR: "1",
     });
     expect(getDiscoveryCommandEnv({ cmd: "npm run build" }, ["src/app/page.tsx"], testEnv())).toEqual(
@@ -568,13 +525,31 @@ describe("buildCommandPlan", () => {
     );
   });
 
+  it("keeps advisory prebuild checks opt-in during discovery", () => {
+    expect(
+      getDiscoveryCommandEnv(
+        { cmd: "npm run validate:prebuild" },
+        ["src/app/page.tsx"],
+        testEnv({ [VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV]: "1" }),
+      ),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      [VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV]: "1",
+      [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
+      [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run audit:deps,npm run audit:pricing-providers",
+      VALIDATE_PREBUILD_CONTINUE_ON_ERROR: "1",
+    });
+  });
+
   it("bounds discovery parallelism with an explicit override", () => {
-    expect(resolveDiscoveryMaxParallel(testEnv(), 16)).toBe(6);
+    expect(resolveDiscoveryMaxParallel(testEnv(), 16)).toBe(3);
     expect(resolveDiscoveryMaxParallel(testEnv(), 4)).toBe(2);
     expect(resolveDiscoveryMaxParallel(testEnv({ MERGE_GATE_DISCOVERY_MAX_PARALLEL: "3" }), 16)).toBe(3);
   });
 
-  it("passes changed-file env only to coverage during execution", async () => {
+  it("passes no coverage-ratchet env during local merge-gate execution", async () => {
     const envByCommand = new Map<string, TestEnv>();
 
     await runExecutionBatches(
@@ -596,10 +571,7 @@ describe("buildCommandPlan", () => {
     );
 
     expect(envByCommand.get("npm run test:noncritical")).toEqual({});
-    expect(envByCommand.get("npm run coverage:critical")).toEqual({
-      CRITICAL_COVERAGE_CHANGED_FILES: "src/app/page.tsx,worker/src/api/status.ts",
-      CRITICAL_COVERAGE_RATCHET_ALL: "1",
-    });
+    expect(envByCommand.get("npm run coverage:critical")).toEqual({});
   });
 
   it("passes production rehearsal env through build and feature-flag check execution", async () => {
@@ -678,11 +650,13 @@ describe("getChangedFiles", () => {
 });
 
 describe("pre-push hook", () => {
-  it("passes exact main push refs through the receipt-aware gate and defaults branch pushes off", () => {
+  it("makes the exact local gate opt-in and defaults pushes to advisory-only", () => {
     const hook = readFileSync(resolve(process.cwd(), ".githooks/pre-push"), "utf8");
 
     expect(hook).toContain('pages_smoke_flag="${MERGE_GATE_PAGES_SMOKE:-1}"');
-    expect(hook).toContain('branch_gate_mode="${PHAROS_PRE_PUSH_GATE:-main}"');
+    expect(hook).toContain('pre_push_gate_mode="${PHAROS_PRE_PUSH_GATE:-off}"');
+    expect(hook).toContain("gate_main_updates()");
+    expect(hook).toContain("GitHub Actions is the authoritative release gate");
     expect(hook).toContain('remote_ref" != "refs/heads/main"');
     expect(hook).toContain(
       'MERGE_GATE_FULL_DEPLOY=0 MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"',
@@ -739,19 +713,9 @@ describe("opt-in smoke wiring", () => {
     expect(executionBatchCommandTexts(buildExecutionBatches(plan))).toEqual([
       [["npm run validate:prebuild"]],
       [
-        [
-          "npm run build",
-          "npm run test:a11y",
-          "npm run check:feature-flag-inlining",
-          "npm run seo:check",
-          "npm run check:phishing-signatures",
-          "npm run check:classifier-sensitive-copy",
-          "npm run check:build-size",
-          "npm run check:build-attribution",
-        ],
+        PAGES_VALIDATE_COMMANDS,
         ["npm run test:noncritical -- --shard=1/2"],
         ["npm run test:noncritical -- --shard=2/2"],
-        ["npm run coverage:critical"],
         ["npm run typecheck:worker"],
       ],
       [["npm run validate:pages-smoke"], ["npm run validate:worker-smoke"]],
@@ -928,18 +892,51 @@ describe("runMergeGate fetch and node_modules wiring", () => {
         "npm run build",
         "npm run test:noncritical -- --shard=1/2",
         "npm run test:noncritical -- --shard=2/2",
-        "npm run coverage:critical",
         "npm run typecheck:worker",
-        "npm run test:a11y",
         "npm run check:feature-flag-inlining",
         "npm run seo:check",
         "npm run check:phishing-signatures",
         "npm run check:classifier-sensitive-copy",
-        "npm run check:build-size",
-        "npm run check:build-attribution",
       ]),
     );
     expect(runCommandCalls).not.toContain("npm run validate:pages-smoke");
+  });
+
+  it("prints the merge-gate discovery plan without executing commands when --dry-run is passed", async () => {
+    const execFile = mockExecFileSync((_cmd, args, options) => {
+      if (args[0] === "diff" && options?.encoding === "utf8") {
+        return "src/app/page.tsx\n";
+      }
+      return "";
+    });
+    const runCommandCalls: string[] = [];
+
+    const result = await runMergeGateDiscovery({
+      argv: ["--dry-run"],
+      env: testEnv({ MERGE_GATE_NO_FETCH: "1" }),
+      runCommandImpl: mockCommandRunner((cmd) => {
+        runCommandCalls.push(cmd);
+        return Promise.resolve({ status: 0, aborted: false });
+      }),
+      execFile,
+    });
+
+    expect(result).toEqual({ status: 0 });
+    expect(runCommandCalls).toEqual([]);
+  });
+
+  it("prints merge-gate discovery help without diffing", async () => {
+    const execFile = mockExecFileSync(() => {
+      throw new Error("unexpected git call");
+    });
+
+    const result = await runMergeGateDiscovery({
+      argv: ["--help"],
+      env: testEnv(),
+      execFile,
+    });
+
+    expect(result).toEqual({ status: 0 });
   });
 
   it("defaults Pages smoke on for the normal local merge gate", async () => {

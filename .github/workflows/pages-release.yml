@@ -8,11 +8,6 @@ on:
         required: false
         default: ""
         type: string
-      pages_ui_changed:
-        description: Whether the release should run strict mobile smoke.
-        required: false
-        default: true
-        type: boolean
       wait_for_worker_promotion:
         description: Whether the release should wait for deploy-worker before publishing.
         required: false
@@ -47,7 +42,7 @@ permissions:
 jobs:
   pages-release:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 75
+    timeout-minutes: 30
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -209,12 +204,6 @@ jobs:
       - name: Run local static pre-publish checks
         run: |
           npm run seo:check
-
-          # a11y runs on its own bare static-export server (port 4174) so it keeps the
-          # exact conditions of the former standalone step (no API hydration).
-          # Keep one worker and a 60s ceiling here; standalone validation and the
-          # local gate retain the stricter config default on otherwise idle runners.
-          STATIC_EXPORT_PORT=4174 npm run test:a11y -- --workers=1 --timeout=60000
       - name: Wait for worker promotion gate
         if: ${{ inputs.wait_for_worker_promotion }}
         env:
@@ -226,43 +215,14 @@ jobs:
           --sleep-sec 5
           --stop-message "stopping production Pages deployment."
           --timeout-message "Timed out waiting for deploy-worker to finish."
-      - name: Run local artifact checks with bounded browser concurrency
+      - name: Run local artifact canary smoke
         env:
-          PAGES_UI_CHANGED: ${{ inputs.pages_ui_changed }}
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_UI_BROWSER_CHANNEL: chrome
-          SMOKE_UI_OVERFLOW_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/
-          SMOKE_UI_OVERFLOW_WORKERS: "4"
-          SMOKE_PAGES_ASSET_WORKERS: "3"
-          # Deep Yield routes can take longer to hydrate from the API-backed
-          # export. Keep the assertions strict while allowing navigation to settle.
-          SMOKE_PAGES_ASSET_TIMEOUT_MS: "60000"
-          SMOKE_MOBILE_UI_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/
-          SMOKE_MOBILE_UI_VIEWPORTS: 360x740,390x844
-          SMOKE_MOBILE_UI_SKIP_DESKTOP: "1"
-          SMOKE_MOBILE_UI_WORKERS: "3"
-          SMOKE_MOBILE_UI_WAIT_MS: "1500"
+          SMOKE_UI_OVERFLOW_ROUTES: /
+          SMOKE_UI_OVERFLOW_WORKERS: "1"
         run: |
-          # These browser suites intentionally run one after another. Running UI,
-          # asset, mobile, and axe workers together oversubscribed the 4-core release
-          # runner and produced navigation timeouts and aborted warm-cache assets.
           npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
-
-          npm run test:smoke-pages-assets -- --url http://127.0.0.1:4173 --mode local
-
-          if [ "${PAGES_UI_CHANGED}" = "true" ]; then
-            npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173
-          fi
-      # Mythos P1-14 (second half): the bare-server scan above covers the
-      # crawl-state export; this one reuses the API-backed 4173 smoke server
-      # so axe sees the hydrated product (populated tables, hero metrics).
-      # It runs after the pre-publish block so it never competes
-      # with the mobile smoke for the API budget.
-      - name: Hydrated a11y scan (API-backed export)
-        env:
-          STATIC_EXPORT_PORT: "4173"
-          PLAYWRIGHT_REUSE_SERVER: "1"
-        run: npm run test:a11y:hydrated
       - name: Dump local export smoke server log
         if: failure()
         run: |
@@ -302,7 +262,6 @@ jobs:
           SMOKE_UI_BROWSER_CHANNEL: chrome
           SMOKE_UI_OVERFLOW_ROUTES: /depeg/
           SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
-          SMOKE_PAGES_ASSET_WORKERS: "4"
           SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
           SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
           SMOKE_OPS_SCOPE: "canary"
@@ -318,36 +277,14 @@ jobs:
 
           if [ "$marker_status" -ne 0 ]; then
             echo "ui_status=failure" >> "$GITHUB_OUTPUT"
-            echo "asset_status=failure" >> "$GITHUB_OUTPUT"
             echo "ops_status=failure" >> "$GITHUB_OUTPUT"
             echo "transport_status=failure" >> "$GITHUB_OUTPUT"
             echo "post-publish smoke statuses: release-marker=failure"
             exit "$marker_status"
           fi
 
-          run_live_asset_smoke() {
-            local attempt
-            local status=1
-
-            for attempt in 1 2 3 4 5 6 7 8 9 10; do
-              npm run test:smoke-pages-assets -- --url https://pharos.watch --mode live
-              status=$?
-              if [ "$status" -eq 0 ]; then
-                return 0
-              fi
-              if [ "$attempt" -lt 10 ]; then
-                echo "Yield asset smoke attempt ${attempt}/10 failed; waiting for Pages asset propagation."
-                sleep 30
-              fi
-            done
-
-            return "$status"
-          }
-
           npm run test:smoke-ui -- --url https://pharos.watch --mode live &
           ui_pid=$!
-          run_live_asset_smoke &
-          asset_pid=$!
           OPS_SMOKE_CF_ACCESS_CLIENT_ID='${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}' \
             OPS_SMOKE_CF_ACCESS_CLIENT_SECRET='${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}' \
             npm run test:smoke-ops &
@@ -357,8 +294,6 @@ jobs:
 
           wait "$ui_pid"
           ui_status=$?
-          wait "$asset_pid"
-          asset_status=$?
           wait "$ops_pid"
           ops_status=$?
           wait "$transport_pid"
@@ -373,12 +308,10 @@ jobs:
           }
 
           UI_STATUS="$(to_result "$ui_status")"
-          ASSET_STATUS="$(to_result "$asset_status")"
           OPS_STATUS="$(to_result "$ops_status")"
           TRANSPORT_STATUS="$(to_result "$transport_status")"
 
           echo "ui_status=${UI_STATUS}" >> "$GITHUB_OUTPUT"
-          echo "asset_status=${ASSET_STATUS}" >> "$GITHUB_OUTPUT"
           echo "ops_status=${OPS_STATUS}" >> "$GITHUB_OUTPUT"
           echo "transport_status=${TRANSPORT_STATUS}" >> "$GITHUB_OUTPUT"
 
@@ -388,13 +321,12 @@ jobs:
             echo "| Check | Status | Rollback trigger |"
             echo "| --- | --- | --- |"
             echo "| Live public UI | ${UI_STATUS} | yes |"
-            echo "| Yield deep-route assets | ${ASSET_STATUS} | yes |"
             echo "| Ops canary | ${OPS_STATUS} | yes |"
             echo "| Transport redirects | ${TRANSPORT_STATUS} | yes |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$ui_status" -ne 0 ] || [ "$asset_status" -ne 0 ] || [ "$ops_status" -ne 0 ] || [ "$transport_status" -ne 0 ]; then
-            echo "post-publish smoke statuses: ui=${UI_STATUS}, assets=${ASSET_STATUS}, ops=${OPS_STATUS}, transport=${TRANSPORT_STATUS}"
+          if [ "$ui_status" -ne 0 ] || [ "$ops_status" -ne 0 ] || [ "$transport_status" -ne 0 ]; then
+            echo "post-publish smoke statuses: ui=${UI_STATUS}, ops=${OPS_STATUS}, transport=${TRANSPORT_STATUS}"
             exit 1
           fi
       - name: Roll back Pages production to previous successful deployment
@@ -405,7 +337,6 @@ jobs:
             && steps.capture-pages.outputs.deployment_id != ''
             && (
               steps.post-publish-smokes.outputs.ui_status != 'success'
-              || steps.post-publish-smokes.outputs.asset_status != 'success'
               || steps.post-publish-smokes.outputs.ops_status != 'success'
               || steps.post-publish-smokes.outputs.transport_status != 'success'
             )

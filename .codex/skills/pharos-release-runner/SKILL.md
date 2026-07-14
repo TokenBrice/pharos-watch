@@ -20,7 +20,7 @@ Do not use this for a pure review with no requested commit/push, or while anothe
 
 - Default to `main`. Do not create a branch, worktree, or PR unless the user explicitly asks.
 - Preserve unrelated dirty files. Never stash, reset, checkout, or delete work you did not create unless instructed.
-- Commit before pushing. The repo pre-push hook owns the authoritative full merge gate for the exact pushed `main` range; do not run the same full gate immediately before `git push`.
+- Commit before pushing. GitHub Actions owns the authoritative release gate; the repo pre-push hook is advisory-only by default and runs the exact-range local merge gate only when `PHAROS_PRE_PUSH_GATE=main` or `PHAROS_PRE_PUSH_GATE=all` is set.
 - The pushed state must match the validated state. Re-run `git status --short --branch` after long builds or generators.
 - If the user says other agents are working, skip broad validation/push unless explicitly requested and run only targeted checks for your scope.
 
@@ -78,17 +78,18 @@ git status --short --branch
 
 ### 3. Validate
 
-Run focused checks selected from the touched files. The push hook runs the authoritative full gate once after the intended commits are ready.
+Run focused checks selected from the touched files. Use the local merge gate only for an explicit rehearsal or failure investigation; GitHub Actions remains the release authority after push.
 
 Useful controls:
 
 - `MERGE_GATE_DRY_RUN=1 npm run test:merge-gate` to inspect the planned commands.
 - An intentional manual `npm run test:merge-gate` writes a reusable receipt only when it validates a clean committed state. A subsequent matching push reuses that receipt instead of running the gate again.
+- `PHAROS_PRE_PUSH_GATE=main git push origin main` opts into the exact-range local merge gate before sending `main`.
 - `MERGE_GATE_PAGES_SMOKE=0 npm run test:merge-gate` only when the user explicitly asked to skip Pages smoke.
 - `MERGE_GATE_WORKER_SMOKE=1 npm run test:merge-gate` when worker smoke is needed before a risky worker release.
-- `npm run test:merge-gate:discover` (full discovery gate) for risky data-model, feed-suspension, or coin-lifecycle releases — it surfaces test-level couplings the standard changed-file gate misses.
+- `npm run test:merge-gate:discover` for large failure-discovery passes only. It runs the deploy-impact plan diagnostically, skips advisory prebuild unless `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1` is set, skips smoke unless `MERGE_GATE_DISCOVERY_SMOKE=1` is set, caps default fan-out at 3, and does not create a release proof or receipt.
 
-Fix failures locally, commit the fixes, and rerun the failing focused command. Use the full gate manually only for deliberate rehearsal or failure investigation.
+Fix failures locally, commit the fixes, and rerun the failing focused command. Use the local merge gate manually only for deliberate rehearsal or failure investigation.
 
 ### 4. Push
 
@@ -98,7 +99,7 @@ When focused checks pass and the intended commit stack is clean:
 git push origin main
 ```
 
-The pre-push hook runs the merge gate against the exact pushed range and blocks the push on failure. Do not use `--no-verify` as a normal release path; a matching clean-state receipt is reused automatically when the full gate was intentionally run earlier.
+By default the pre-push hook prints that GitHub Actions is authoritative and lets `main` pushes continue. If `PHAROS_PRE_PUSH_GATE=main` is set, the hook runs the merge gate against the exact pushed range and blocks the push on failure. Do not use `--no-verify` to bypass an intentionally enabled local gate.
 
 ### 5. Watch Deployment
 
@@ -127,7 +128,7 @@ The parent agent owns staging, committing, pushing, and final judgment.
 End with:
 
 - commits created or pushed
-- focused validation commands and pre-push gate outcome
+- focused validation commands and pre-push gate outcome, if the hook was opted into the local gate
 - GitHub Actions run watched and final status, if pushed
 - any dirty files intentionally left out
 - any skipped checks and the reason

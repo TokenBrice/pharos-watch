@@ -1,6 +1,6 @@
 # Worker Import Boundary Waivers
 
-Pharos enforces a strict layering rule: code under `worker/src/` must not import from `src/` or `@/`, and code under `src/`, `shared/`, `scripts/`, or `functions/` must not import from `worker/src/`. The check is implemented in `scripts/ci/check-worker-import-boundary.mjs` and runs as part of the pre-push merge gate.
+Pharos enforces a strict layering rule: code under `worker/src/` must not import from `src/` or `@/`, and code under `src/`, `shared/`, `scripts/`, or `functions/` must not import from `worker/src/`. The check is implemented in `scripts/ci/check-worker-import-boundary.mjs` and runs as part of the shared validation gate.
 
 Files listed in `BOUNDARY_WAIVERS` inside the checker are exempt from this rule. Every exempt file MUST have an entry below explaining why retirement is not feasible today.
 

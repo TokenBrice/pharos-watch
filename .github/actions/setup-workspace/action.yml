@@ -28,6 +28,10 @@ inputs:
     description: Whether to run npm ci after setup.
     required: false
     default: "true"
+  bootstrap-generated:
+    description: Whether to materialize bootstrap-safe generated projections after npm ci.
+    required: false
+    default: "true"
   install-playwright-chromium:
     description: Whether to install the Playwright Chromium browser after npm dependencies are installed.
     required: false
@@ -91,6 +95,10 @@ runs:
     - if: ${{ inputs.install-deps == 'true' }}
       shell: bash
       run: npm ci
+
+    - if: ${{ inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true' }}
+      shell: bash
+      run: npm run bootstrap:generated
 
     - if: ${{ inputs.install-playwright-chromium == 'true' }}
       shell: bash

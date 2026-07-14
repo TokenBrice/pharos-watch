@@ -21,7 +21,7 @@ Use this skill from the Pharos repository root for:
 - Start from logs and the exact failing command. Do not guess from the workflow name alone.
 - Classify the failing lane before editing: generated artifact, docs, tests, Pages build/smoke, Worker typecheck/smoke, migration, deploy infra, or external transient.
 - Reproduce locally with the narrowest equivalent command before broad gates when possible.
-- For large local batches, use discovery mode to collect failures before the final authoritative gate.
+- For large local batches, use diagnostic discovery to collect failures across independent lanes; it is not a final gate and does not create release proof.
 - Preserve unrelated dirty work. If other agents are editing, patch only the failing lane and do not push unless explicitly requested.
 - If production deploy is requested, keep iterating until the workflow clears or a real external blocker is proven.
 
@@ -75,7 +75,9 @@ npm run validate:pages-smoke
 npm run validate:worker-smoke
 ```
 
-Use `npm run test:merge-gate:discover` when a large local batch is failing one lane at a time. It mirrors the merge-gate plan, runs `validate:prebuild` with continue-on-error, keeps independent postbuild lanes running after failures, and skips smoke by default. Tune it with `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>`; set `MERGE_GATE_DISCOVERY_SMOKE=1` only when smoke is the current target. Discovery success is not a release proof.
+Use `npm run test:merge-gate:discover` when a large local batch is failing one lane at a time. It runs the deploy-impact command plan diagnostically, uses the reduced blocking `validate:prebuild` surface with continue-on-error, keeps independent postbuild lanes running after failures, and skips smoke by default. Advisory prebuild checks stay opt-in with `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1`; tune fan-out with `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` (default max: 3); set `MERGE_GATE_DISCOVERY_SMOKE=1` only when smoke is the current target. Discovery success is not a release proof and does not write a reusable receipt.
+
+`coverage:critical` failures belong to the weekly/manual Critical Coverage Ratchet workflow or direct local rehearsals, not the blocking reusable validate workflow. The normal `test:noncritical` lane includes critical tests despite the legacy script name.
 
 Use `scripts/ci/classify-deploy-changes.mjs` and `scripts/ci/pharos-change-contract.mjs` when deploy-surface classification is unclear.
 
@@ -98,10 +100,11 @@ Rerun the failing local command first. If the user asked for release/push:
 
 ```bash
 npm run test:merge-gate:discover # for large batches only; diagnostic
-npm run test:merge-gate
 git push origin main
 gh run watch <run-id> --repo TokenBrice/pharos-watch --exit-status
 ```
+
+Run `npm run test:merge-gate` before push only when the user wants an explicit local rehearsal or when you are debugging a local gate failure. `PHAROS_PRE_PUSH_GATE=main git push origin main` opts into the exact-range local gate; otherwise GitHub Actions is authoritative.
 
 If a pushed workflow fails again, repeat from Step 1 with the new run id.
 

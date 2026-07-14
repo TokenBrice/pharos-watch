@@ -117,36 +117,24 @@ describe("hard-block hook outputs", () => {
     expect(requireBlockingReason(output)).toContain("git reset --hard");
   });
 
-  it("blocks git pushes that bypass the merge gate", () => {
+  it("allows git pushes that bypass only the advisory local gate", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {
         command: "git push --no-verify origin main",
       },
     });
 
-    expect(output).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
-    });
-    expect(requireBlockingReason(output)).toContain("pre-push merge gate");
+    expect(output).toEqual({ continue: true });
   });
 
-  it("blocks git pushes with repeated -C global options", () => {
+  it("allows git pushes with repeated -C global options when only --no-verify is present", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {
         command: "git -C /tmp -C /repo push --no-verify origin main",
       },
     });
 
-    expect(output).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
-    });
-    expect(requireBlockingReason(output)).toContain("pre-push merge gate");
+    expect(output).toEqual({ continue: true });
   });
 
   it("blocks git subcommands after git global flags", () => {

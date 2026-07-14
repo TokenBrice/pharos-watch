@@ -1,18 +1,10 @@
 import { configDefaults, defineConfig } from "vitest/config";
 import type { Plugin } from "vite";
 import path from "path";
-import {
-  CRITICAL_TEST_FILES,
-  NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV,
-} from "./scripts/lib/critical-test-files.mjs";
 
 const normalizedRoot = path.resolve(__dirname).replaceAll("\\", "/");
 const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalizedRoot.includes("/worktrees/");
 const worktreeExcludes = isWorktreeCheckout ? [] : [".worktrees/**", "worktrees/**"];
-// run-noncritical-tests.mjs sets this flag; CLI --exclude cannot express it
-// because project-scoped include lists ignore CLI-level excludes.
-const criticalTestExcludes =
-  process.env[NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV] === "1" ? CRITICAL_TEST_FILES : [];
 const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
 const nodeExecArgv = nodeMajor >= 25 ? ["--no-experimental-webstorage"] : [];
 
@@ -37,7 +29,6 @@ const baseTestExcludes = [
   "out/**",
   "coverage/**",
   "tests/visual/**",
-  ...criticalTestExcludes,
 ];
 
 // These node-root suites depend on per-file process isolation (module-level
@@ -65,8 +56,7 @@ export default defineConfig({
             "shared/**/*.test.?(c|m)[jt]s?(x)",
           ],
           // Project-level exclude replaces the inherited root list, so the
-          // base excludes (incl. the critical-test env exclusion) must be
-          // spread here explicitly.
+          // base excludes must be spread here explicitly.
           exclude: [...baseTestExcludes, ...isolationDependentNodeTests],
           // These pure-node suites don't need per-file process isolation;
           // reusing workers skips ~200 fork setup/teardown cycles per run.

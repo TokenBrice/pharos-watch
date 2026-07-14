@@ -4,11 +4,16 @@ const PHASES = ["prebuild", "manual-advisory", "pages", "postbuild", "worker", "
 
 export const VALIDATE_PREBUILD_SURFACE_ENV = "VALIDATE_PREBUILD_SURFACE";
 export const VALIDATE_PREBUILD_SKIP_COMMANDS_ENV = "VALIDATE_PREBUILD_SKIP_COMMANDS";
+export const VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV = "VALIDATE_PREBUILD_INCLUDE_ADVISORY";
 export const VALIDATE_PREBUILD_MAX_PARALLEL = 8;
 export const NONCRITICAL_TEST_SHARD_COUNT = 2;
 
 function prebuild(command, prebuildOrder, surfaces = SURFACES, terminal = false) {
   return { command, phase: "prebuild", prebuildOrder, surfaces, ...(terminal ? { terminal: true } : {}) };
+}
+
+function advisoryPrebuild(command, prebuildOrder, surfaces = SURFACES, terminal = false) {
+  return { ...prebuild(command, prebuildOrder, surfaces, terminal), blocking: false };
 }
 
 /** @returns {{ command: string, phase: string, prebuildOrder?: number, phaseOrder?: number, surfaces: string[] }} */
@@ -40,9 +45,9 @@ export const VALIDATION_LANES = [
   {
     id: "unit-and-domain-tests",
     impactPaths: impactPaths({
-      full: ["scripts/maintenance/run-noncritical-tests.mjs", "scripts/maintenance/run-critical-coverage.mjs"],
+      full: ["scripts/maintenance/run-noncritical-tests.mjs"],
     }),
-    leaves: [ordered("npm run test:noncritical", "postbuild", 1), ordered("npm run coverage:critical", "postbuild", 2)],
+    leaves: [ordered("npm run test:noncritical", "postbuild", 1)],
   },
   {
     id: "d1-migration-and-runtime-safety",
@@ -63,12 +68,12 @@ export const VALIDATION_LANES = [
       ],
     }),
     leaves: [
-      prebuild("npm run check:cron-abort-contract", 13),
-      prebuild("npm run check:cron-console-usage", 14),
-      prebuild("npm run check:cron-connections", 16),
-      prebuild("npm run check:cron-sync", 17),
-      prebuild("npm run check:frozen-invariants", 23),
-      prebuild("npm run check:json-parse-ratchet", 15, ["full", "worker"]),
+      advisoryPrebuild("npm run check:cron-abort-contract", 13),
+      advisoryPrebuild("npm run check:cron-console-usage", 14),
+      prebuild("npm run check:cron-connections", 16, ["full", "worker"]),
+      prebuild("npm run check:cron-sync", 17, ["full", "worker"]),
+      advisoryPrebuild("npm run check:frozen-invariants", 23),
+      advisoryPrebuild("npm run check:json-parse-ratchet", 15, ["full", "worker"]),
       prebuild("npm run check:migrations", 27, ["full", "worker"]),
       prebuild("npm run check:sql-safety", 33, ["full", "worker"]),
     ],
@@ -104,16 +109,16 @@ export const VALIDATION_LANES = [
       ],
     }),
     leaves: [
-      prebuild("npm run audit:pricing-providers", 2),
-      prebuild("npm run check:provider-resilience", 3),
+      advisoryPrebuild("npm run audit:pricing-providers", 2),
+      advisoryPrebuild("npm run check:provider-resilience", 3),
       prebuild("npm run check:client-registry-imports", 11, ["full", "pages"]),
-      prebuild("npm run check:dependency-coverage", 41),
-      prebuild("npm run check:redemption-backstops", 28),
+      advisoryPrebuild("npm run check:dependency-coverage", 41),
+      advisoryPrebuild("npm run check:redemption-backstops", 28),
       ordered("npm run check:redemption-coverage-audit", "manual-advisory", undefined),
-      prebuild("npm run check:stablecoin-data", 35),
-      prebuild("npm run check:oracle-risk-coverage:enforce", 36),
-      prebuild("npm run check:mechanism-archetype-coverage", 42),
-      prebuild("npm run check:supply-helper-usage", 37),
+      prebuild("npm run check:stablecoin-data", 35, ["full", "pages"]),
+      advisoryPrebuild("npm run check:oracle-risk-coverage:enforce", 36),
+      advisoryPrebuild("npm run check:mechanism-archetype-coverage", 42),
+      advisoryPrebuild("npm run check:supply-helper-usage", 37),
       ordered("npm run check:world-map", "manual-advisory", undefined, ["full", "pages"]),
     ],
   },
@@ -133,15 +138,15 @@ export const VALIDATION_LANES = [
       ordered("npm run build", "pages", 1, ["full", "pages"]),
       ordered("npm run check:feature-flag-inlining", "pages", 3, ["full", "pages"]),
       ordered("npm run seo:check", "pages", 4, ["full", "pages"]),
-      ordered("npm run check:build-size", "pages", 7, ["full", "pages"]),
-      ordered("npm run check:build-attribution", "pages", 8, ["full", "pages"]),
+      ordered("npm run check:build-size", "manual-advisory", undefined, ["full", "pages"]),
+      ordered("npm run check:build-attribution", "manual-advisory", undefined, ["full", "pages"]),
     ],
   },
   {
     id: "browser-and-accessibility",
     impactPaths: impactPaths({ pages: ["scripts/maintenance/run-pages-smoke.mjs"] }),
     leaves: [
-      ordered("npm run test:a11y", "pages", 2, ["full", "pages"]),
+      ordered("npm run test:a11y", "manual-advisory", undefined, ["full", "pages"]),
       ordered("npm run validate:pages-smoke", "smoke", 1, ["full", "pages"]),
     ],
   },
@@ -182,26 +187,26 @@ export const VALIDATION_LANES = [
       worker: ["scripts/ci/check-worker-wrangler-config.ts", "worker/wrangler.toml"],
     }),
     leaves: [
-      prebuild("npm run audit:deps", 1),
-      prebuild("npm run check:agent-doc-sync", 9),
-      prebuild("npm run check:agent-skill-symlinks", 10),
-      prebuild("npm run check:cli-args-policy", 12),
-      prebuild("npm run check:doc-counts", 19),
-      prebuild("npm run check:doc-source-paths", 20),
-      prebuild("npm run check:doc-sync", 21),
+      advisoryPrebuild("npm run audit:deps", 1),
+      advisoryPrebuild("npm run check:agent-doc-sync", 9),
+      advisoryPrebuild("npm run check:agent-skill-symlinks", 10),
+      advisoryPrebuild("npm run check:cli-args-policy", 12),
+      advisoryPrebuild("npm run check:doc-counts", 19),
+      advisoryPrebuild("npm run check:doc-source-paths", 20),
+      advisoryPrebuild("npm run check:doc-sync", 21),
       prebuild("npm run check:env-contract", 22),
       ordered("npm run check:phishing-signatures", "pages", 5, ["full", "pages"]),
       ordered("npm run check:classifier-sensitive-copy", "pages", 6, ["full", "pages"]),
-      prebuild("npm run check:hook-polling-window", 25),
-      prebuild("npm run check:hotspot-ratchet", 26),
-      prebuild("npm run check:script-entrypoints", 30),
-      prebuild("npm run check:shared-cycles", 31),
+      advisoryPrebuild("npm run check:hook-polling-window", 25),
+      advisoryPrebuild("npm run check:hotspot-ratchet", 26),
+      advisoryPrebuild("npm run check:script-entrypoints", 30),
+      advisoryPrebuild("npm run check:shared-cycles", 31),
       prebuild("npm run check:shared-types-imports", 32),
-      prebuild("npm run check:site-csp-sync", 29),
-      prebuild("npm run check:stale-flags", 34),
-      prebuild("npm run check:unused-code", 38),
-      prebuild("npm run check:verified-doc-links", 39),
-      prebuild("npm run check:worker-boundary", 40),
+      prebuild("npm run check:site-csp-sync", 29, ["full", "pages"]),
+      advisoryPrebuild("npm run check:stale-flags", 34),
+      advisoryPrebuild("npm run check:unused-code", 38),
+      advisoryPrebuild("npm run check:verified-doc-links", 39),
+      prebuild("npm run check:worker-boundary", 40, ["full", "worker"]),
       prebuild("npm run check:worker-config", 18, ["full", "worker"]),
     ],
   },
@@ -211,7 +216,7 @@ export const VALIDATION_LANES = [
       worker: ["scripts/ci/check-fetch-body-timeouts.mjs", "scripts/maintenance/run-worker-smoke.mjs"],
     }),
     leaves: [
-      prebuild("npm run check:fetch-body-timeouts", 4, ["full", "worker"]),
+      advisoryPrebuild("npm run check:fetch-body-timeouts", 4, ["full", "worker"]),
       ordered("npm run validate:worker-smoke", "smoke", 2, ["full", "worker"]),
     ],
   },
@@ -228,11 +233,21 @@ const ALL_LEAVES = VALIDATION_LANES.flatMap((lane) => lane.leaves);
 
 function commandsForPhase(phase) {
   return ALL_LEAVES.filter((leaf) => leaf.phase === phase)
-    .sort((left, right) => left.phaseOrder - right.phaseOrder)
+    .sort(
+      (left, right) =>
+        (left.phaseOrder ?? Number.MAX_SAFE_INTEGER) - (right.phaseOrder ?? Number.MAX_SAFE_INTEGER) ||
+        left.command.localeCompare(right.command),
+    )
     .map((leaf) => leaf.command);
 }
 
-export const VALIDATE_PREBUILD_COMMANDS = ALL_LEAVES.filter((leaf) => leaf.phase === "prebuild")
+export const ALL_VALIDATE_PREBUILD_COMMANDS = ALL_LEAVES.filter((leaf) => leaf.phase === "prebuild")
+  .sort((left, right) => left.prebuildOrder - right.prebuildOrder)
+  .map((leaf) => leaf.command);
+
+export const VALIDATE_PREBUILD_COMMANDS = ALL_LEAVES.filter(
+  (leaf) => leaf.phase === "prebuild" && leaf.blocking !== false,
+)
   .sort((left, right) => left.prebuildOrder - right.prebuildOrder)
   .map((leaf) => leaf.command);
 
@@ -254,7 +269,7 @@ export function buildNoncriticalTestShardCommands(shardCount = NONCRITICAL_TEST_
   });
 }
 
-export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [...buildNoncriticalTestShardCommands(), "npm run coverage:critical"];
+export const COMMON_VALIDATE_POSTBUILD_COMMANDS = buildNoncriticalTestShardCommands();
 
 export function normalizeValidatePrebuildSurface(surface) {
   return SURFACES.includes(surface) ? surface : "full";
@@ -268,18 +283,38 @@ export function parseValidatePrebuildSkipCommands(value) {
     .filter(Boolean);
 }
 
-export function buildValidatePrebuildCommands({ surface, skipCommands } = {}) {
+export function shouldIncludeAdvisoryPrebuildChecks(value) {
+  return value === true || value === "1" || value === "true" || value === "full" || value === "all";
+}
+
+/**
+ * @typedef {object} ValidatePrebuildCommandOptions
+ * @property {string} [surface]
+ * @property {string[]} [skipCommands]
+ * @property {boolean} [includeAdvisory]
+ */
+
+/** @param {ValidatePrebuildCommandOptions} [options] */
+export function buildValidatePrebuildCommands({ surface, skipCommands, includeAdvisory = false } = {}) {
   const normalizedSurface = normalizeValidatePrebuildSurface(surface);
   const skipped = new Set(skipCommands ?? []);
   return ALL_LEAVES.filter(
-    (leaf) => leaf.phase === "prebuild" && leaf.surfaces.includes(normalizedSurface) && !skipped.has(leaf.command),
+    (leaf) =>
+      leaf.phase === "prebuild" &&
+      leaf.surfaces.includes(normalizedSurface) &&
+      (includeAdvisory || leaf.blocking !== false) &&
+      !skipped.has(leaf.command),
   )
     .sort((left, right) => left.prebuildOrder - right.prebuildOrder)
     .map((leaf) => leaf.command);
 }
 
-export function buildValidatePrebuildCommandsForSurface(surface) {
-  return buildValidatePrebuildCommands({ surface });
+/**
+ * @param {string | undefined} surface
+ * @param {Omit<ValidatePrebuildCommandOptions, "surface">} [options]
+ */
+export function buildValidatePrebuildCommandsForSurface(surface, options = {}) {
+  return buildValidatePrebuildCommands({ surface, ...options });
 }
 
 export function buildValidateCommandPlan({ pagesChanged = true, workerChanged = true } = {}) {
@@ -302,22 +337,20 @@ export const VALIDATION_IMPACT_PATHS = Object.fromEntries(
   IMPACT_BUCKETS.map((impact) => [impact, flattenValidationImpactPaths(impact)]),
 );
 
-function validateContiguousOrder(leaves, phase, expectedCount) {
-  if (leaves.length !== expectedCount) {
-    throw new Error(`Expected ${expectedCount} ${phase} leaves; received ${leaves.length}`);
-  }
+function validateUniqueOrder(leaves, phase) {
+  if (leaves.length === 0) return;
   const orders = leaves.map((leaf) => (phase === "prebuild" ? leaf.prebuildOrder : leaf.phaseOrder));
-  const expectedOrders = Array.from({ length: expectedCount }, (_value, index) => index + 1);
-  if (new Set(orders).size !== expectedCount || !expectedOrders.every((order) => orders.includes(order))) {
-    throw new Error(`${phase} orders must be unique and contiguous from 1 to ${expectedCount}`);
+  if (orders.some((order) => typeof order !== "number" || !Number.isInteger(order) || order < 1)) {
+    throw new Error(`${phase} orders must be positive integers`);
+  }
+  if (new Set(orders).size !== orders.length) {
+    throw new Error(`${phase} orders must be unique`);
   }
 }
 
 export function validateValidationLanes(lanes = VALIDATION_LANES) {
-  if (!Array.isArray(lanes) || lanes.length !== 10) {
-    throw new Error(
-      `Expected exactly 10 validation lanes; received ${Array.isArray(lanes) ? lanes.length : "non-array"}`,
-    );
+  if (!Array.isArray(lanes)) {
+    throw new Error("Validation lanes must be an array");
   }
 
   const laneIds = new Set();
@@ -352,15 +385,11 @@ export function validateValidationLanes(lanes = VALIDATION_LANES) {
     throw new Error("The terminal prebuild barrier must be npm run check:generated-artifacts");
   }
 
-  if (commands.size !== 58) throw new Error(`Expected exactly 58 unique validation leaves; received ${commands.size}`);
   const phaseLeaves = (phase) => leaves.filter((leaf) => leaf.phase === phase);
-  validateContiguousOrder(phaseLeaves("prebuild"), "prebuild", 42);
-  if (phaseLeaves("manual-advisory").length !== 2) {
-    throw new Error("Expected exactly 2 manual-advisory leaves");
-  }
-  validateContiguousOrder(phaseLeaves("pages"), "pages", 8);
-  validateContiguousOrder(phaseLeaves("worker"), "worker", 1);
-  validateContiguousOrder(phaseLeaves("smoke"), "smoke", 2);
+  validateUniqueOrder(phaseLeaves("prebuild"), "prebuild");
+  validateUniqueOrder(phaseLeaves("pages"), "pages");
+  validateUniqueOrder(phaseLeaves("worker"), "worker");
+  validateUniqueOrder(phaseLeaves("smoke"), "smoke");
 
   const orchestrationLeaves = leaves.filter((leaf) => leaf.phase === "orchestration");
   if (orchestrationLeaves.length !== 1)

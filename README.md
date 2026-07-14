@@ -89,7 +89,7 @@ Useful checks:
 npm run lint
 npm run typecheck
 npm run test
-npm run test:merge-gate
+MERGE_GATE_DRY_RUN=1 npm run test:merge-gate
 ```
 
 Use `npm install` instead of `npm ci` only when intentionally changing dependencies.

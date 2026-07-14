@@ -13,21 +13,23 @@ import {
   deriveWorkerRuntimePackageClosure,
   findDuplicateDeployImpactExactPaths,
   DEPLOY_IMPACT_REGISTRY,
+  selectGeneratedArtifacts,
 } from "../lib/automation-registry.mjs";
 import {
   buildCriticalCoverageArgs,
   buildNoncriticalTestArgs,
   CRITICAL_TEST_FILES,
   escapeCoverageIncludeGlob,
-  NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV,
 } from "../lib/critical-test-files.mjs";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import {
   buildGeneratedArtifactExecutionPhases,
   buildGeneratedArtifactExecutionUnits,
   GENERATED_ARTIFACTS_MAX_PARALLEL,
+  parseGeneratedArtifactsArgs,
   parseGeneratedArtifactsSkip,
   resolveGeneratedArtifactsSkip,
+  runGeneratedArtifacts,
 } from "../maintenance/run-generated-artifacts.mjs";
 
 function extractJobBlock(yaml: string, jobName: string, nextJobName?: string): string {
@@ -66,20 +68,24 @@ describe("validate-ci parity", () => {
     );
     const validatePrebuildJob = extractJobBlock(workflow, "validate-prebuild", "pages-build");
     const pagesBuildJob = extractJobBlock(workflow, "pages-build", "test-noncritical");
-    const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "coverage-critical");
-    const coverageCriticalJob = extractJobBlock(workflow, "coverage-critical", "typecheck-worker");
+    const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "typecheck-worker");
     const typecheckWorkerJob = extractJobBlock(workflow, "typecheck-worker", "validate");
     expect(setupWorkspaceAction).toContain("run: npm ci");
     expect(validatePrebuildJob).toContain("- run: npm run validate:prebuild");
     expect(validatePrebuildJob).toContain(
       "VALIDATE_PREBUILD_SURFACE: ${{ inputs.pages_changed && inputs.worker_changed && 'full' || inputs.pages_changed && 'pages' || inputs.worker_changed && 'worker' || 'full' }}",
     );
+    expect(validatePrebuildJob).toContain(
+      "VALIDATE_PREBUILD_INCLUDE_ADVISORY: ${{ inputs.include_advisory_prebuild && '1' || '0' }}",
+    );
     expect(pagesBuildJob).toContain("- run: npm run validate:pages");
     expect(pagesBuildJob.match(/^\s+- run:/gm)).toHaveLength(1);
     expect(testNoncriticalJob).toContain("- run: npm run test:noncritical -- --shard=${{ matrix.shard }}/2");
-    expect(coverageCriticalJob).toContain("- run: npm run coverage:critical");
     expect(typecheckWorkerJob).toContain("- run: npm run validate:worker");
     expect(typecheckWorkerJob.match(/^\s+- run:/gm)).toHaveLength(1);
+    expect(workflow).not.toContain("coverage-critical:");
+    expect(workflow).not.toContain("coverage-compare-ref:");
+    expect(workflow).not.toContain("coverage-ratchet-all:");
   });
 
   it("does not keep a duplicate LTS validate lane after Node 24 became the baseline", () => {
@@ -147,7 +153,7 @@ describe("validate-ci parity", () => {
     );
     expect(packageJson.scripts["test:noncritical"]).toBe("node scripts/maintenance/run-noncritical-tests.mjs");
     expect(packageJson.scripts["coverage:critical"]).toBe("node scripts/maintenance/run-critical-coverage.mjs");
-    expect(packageJson.scripts.prepare).toBe("npm run bootstrap:generated && git config core.hooksPath .githooks");
+    expect(packageJson.scripts.prepare).toBe("node scripts/maintenance/prepare-workspace.mjs");
     expect(packageJson.scripts["validate:worker-scheduled-smoke"]).toBe(
       "vitest run worker/src/__tests__/index.scheduled.test.ts",
     );
@@ -251,6 +257,8 @@ describe("validate-ci parity", () => {
     ).toEqual(expectedArtifacts);
     expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.checkCommand)).toBe(true);
     expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.phase >= 0 && artifact.phase <= 3)).toBe(true);
+    expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.sourcePaths.length > 0)).toBe(true);
+    expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.outputPaths.length > 0)).toBe(true);
     expect(GENERATED_ARTIFACT_REGISTRY.filter((artifact) => artifact.bootstrap).map((artifact) => artifact.id)).toEqual(
       [
         "stablecoin-catalog",
@@ -338,6 +346,55 @@ describe("validate-ci parity", () => {
     ]);
   });
 
+  it("supports targeted generated-artifact selection without losing dependency barriers", async () => {
+    expect(parseGeneratedArtifactsArgs(["--check", "--only=api-reference,og-case-studies", "--phase", "2,3"])).toEqual({
+      bootstrap: false,
+      check: true,
+      dryRun: false,
+      help: false,
+      only: ["api-reference", "og-case-studies"],
+      phases: [2, 3],
+    });
+    expect(selectGeneratedArtifacts({ only: ["api-reference"] }).map((artifact) => artifact.id)).toEqual([
+      "openapi",
+      "api-reference",
+    ]);
+    expect(buildGeneratedArtifactCommands({ check: true, only: ["api-reference"] })).toEqual([
+      "tsx scripts/maintenance/generate-openapi-spec.ts --check",
+      "node scripts/maintenance/generate-api-reference.mjs --check",
+    ]);
+    expect(
+      buildGeneratedArtifactPhases({ phases: [3] }).map(({ artifacts }) =>
+        artifacts.map((artifact: { id: string }) => artifact.id),
+      ),
+    ).toEqual([["og-editorial", "og-learn", "og-case-studies"]]);
+    expect(() => buildGeneratedArtifactCommands({ only: ["missing-artifact"] })).toThrow(
+      "Unknown generated artifact id(s): missing-artifact",
+    );
+
+    const logs: string[] = [];
+    let executed = false;
+    const result = await runGeneratedArtifacts({
+      argv: ["--check", "--only=api-reference", "--dry-run"],
+      log: (line: string) => logs.push(line),
+      runCommandImpl: async () => {
+        executed = true;
+        return 0;
+      },
+    });
+
+    expect(executed).toBe(false);
+    expect(result).toEqual({ status: 0, failedCmd: null, aborted: false });
+    expect(logs).toEqual([
+      "[generated-artifacts] Dry run enabled; 2 command(s) will not execute.",
+      "[generated-artifacts] Command plan:",
+      "phase 0:",
+      "  1. tsx scripts/maintenance/generate-openapi-spec.ts --check",
+      "phase 2:",
+      "  1. node scripts/maintenance/generate-api-reference.mjs --check",
+    ]);
+  });
+
   it("keeps the prebuild runner bounded while preserving the shared command set", () => {
     const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8")) as {
       devDependencies: Record<string, string>;
@@ -354,7 +411,7 @@ describe("validate-ci parity", () => {
     expect(VALIDATE_PREBUILD_MAX_PARALLEL).toBe(8);
   });
 
-  it("keeps critical and non-critical test runners derived from one critical test list", () => {
+  it("keeps critical coverage scoped while the normal Vitest runner includes critical tests", () => {
     expect(escapeCoverageIncludeGlob(String.raw`functions/api/admin/[[path]]\draft.ts`)).toBe(
       String.raw`functions/api/admin/\[\[path\]\]\\draft.ts`,
     );
@@ -367,17 +424,15 @@ describe("validate-ci parity", () => {
     ]);
     expect(buildNoncriticalTestArgs(["--reporter=dot"])).toEqual(["run", "--reporter=dot"]);
 
-    // The critical-file exclusion rides vitest.config.ts (project include
-    // lists ignore CLI --exclude), so pin the env contract on both sides.
     const noncriticalRunner = readFileSync(
       resolve(process.cwd(), "scripts/maintenance/run-noncritical-tests.mjs"),
       "utf8",
     );
     const vitestConfig = readFileSync(resolve(process.cwd(), "vitest.config.ts"), "utf8");
-    expect(NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV).toBe("VITEST_EXCLUDE_CRITICAL_TESTS");
-    expect(noncriticalRunner).toContain("NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV");
-    expect(vitestConfig).toContain("NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV");
-    expect(vitestConfig).toContain("criticalTestExcludes");
+    expect(noncriticalRunner).not.toContain("VITEST_EXCLUDE_CRITICAL_TESTS");
+    expect(noncriticalRunner).not.toContain("NONCRITICAL_EXCLUDE_CRITICAL_TESTS_ENV");
+    expect(vitestConfig).not.toContain("VITEST_EXCLUDE_CRITICAL_TESTS");
+    expect(vitestConfig).not.toContain("criticalTestExcludes");
   });
 
   it("documents test:critical-contracts as a targeted runner instead of a separate CI lane", () => {
@@ -407,9 +462,9 @@ describe("validate-ci parity", () => {
     );
   });
 
-  it("requires all non-critical Vitest shards in the reusable validate workflow", () => {
+  it("requires all normal Vitest shards in the reusable validate workflow", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
-    const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "coverage-critical");
+    const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "typecheck-worker");
     const validateJob = extractJobBlock(workflow, "validate");
 
     expect(NONCRITICAL_TEST_SHARD_COUNT).toBe(2);
@@ -423,6 +478,7 @@ describe("validate-ci parity", () => {
     expect(validateJob).toContain("- test-noncritical");
     expect(validateJob).toContain("node <<'NODE'");
     expect(validateJob).toContain("test-noncritical");
+    expect(validateJob).not.toContain("- coverage-critical");
   });
 
   it("starts non-mutating validate leaf jobs without waiting for validate-prebuild", () => {
@@ -430,8 +486,7 @@ describe("validate-ci parity", () => {
 
     for (const [jobName, nextJobName] of [
       ["pages-build", "test-noncritical"],
-      ["test-noncritical", "coverage-critical"],
-      ["coverage-critical", "typecheck-worker"],
+      ["test-noncritical", "typecheck-worker"],
       ["typecheck-worker", "validate"],
     ] as const) {
       expect(extractJobBlock(workflow, jobName, nextJobName)).not.toContain("needs: validate-prebuild");
@@ -440,7 +495,7 @@ describe("validate-ci parity", () => {
     const validateJob = extractJobBlock(workflow, "validate");
     expect(validateJob).toContain("- validate-prebuild");
     expect(validateJob).toContain("- test-noncritical");
-    expect(validateJob).toContain("- coverage-critical");
+    expect(validateJob).not.toContain("- coverage-critical");
   });
 
   it("keeps PR Pages build validation but lets production deploy overlap safe prep with validation", () => {
@@ -462,6 +517,7 @@ describe("validate-ci parity", () => {
 
     const deployValidateJob = extractJobBlock(deployWorkflow, "validate", "no-deploy-required");
     expect(deployValidateJob).toContain("run_pages_build_and_seo: false");
+    expect(deployValidateJob).toContain("include_advisory_prebuild: true");
 
     const uploadWorkerJob = extractJobBlock(deployWorkflow, "upload-worker-version", "deploy-worker");
     expect(uploadWorkerJob).toContain("- validate");
@@ -517,9 +573,7 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain("- validate");
     expect(pagesReleaseJob).not.toContain("- upload-worker-version");
     expect(pagesReleaseJob).toContain("uses: ./.github/workflows/pages-release.yml");
-    expect(pagesReleaseJob).toContain(
-      "pages_ui_changed: ${{ needs.detect-changes.outputs.pages_ui_changed == 'true' }}",
-    );
+    expect(pagesReleaseJob).not.toContain("pages_ui_changed:");
     expect(pagesReleaseJob).toContain("if: ${{ needs.detect-changes.outputs.pages_deploy_required == 'true' }}");
     expect(pagesReleaseJob).not.toContain("wait_for_validate_job");
     expect(pagesReleaseJob).toContain(
@@ -535,22 +589,24 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
     expect(consolidatedPagesReleaseJob).toContain('PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE: "1"');
     expect(consolidatedPagesReleaseJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
+    expect(consolidatedPagesReleaseJob).toContain("timeout-minutes: 30");
     expect(consolidatedPagesReleaseJob).toContain("Install Chromium and fetch deploy data concurrently");
     expect(consolidatedPagesReleaseJob).toContain("Generate public dataset mirrors from the target API environment");
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
     expect(consolidatedPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
     expect(consolidatedPagesReleaseJob).toContain("Start local export smoke server");
     expect(consolidatedPagesReleaseJob).toContain("Run local static pre-publish checks");
-    expect(consolidatedPagesReleaseJob).toContain("Run local artifact checks with bounded browser concurrency");
-    expect(consolidatedPagesReleaseJob).toContain("PAGES_UI_CHANGED: ${{ inputs.pages_ui_changed }}");
-    expect(consolidatedPagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "4"');
-    expect(consolidatedPagesReleaseJob).toContain('SMOKE_PAGES_ASSET_WORKERS: "3"');
-    expect(consolidatedPagesReleaseJob).toContain('SMOKE_PAGES_ASSET_TIMEOUT_MS: "60000"');
-    expect(consolidatedPagesReleaseJob).toContain("SMOKE_UI_OVERFLOW_ROUTES:");
-    expect(consolidatedPagesReleaseJob).toContain(
+    expect(consolidatedPagesReleaseJob).toContain("Run local artifact canary smoke");
+    expect(consolidatedPagesReleaseJob).not.toContain("PAGES_UI_CHANGED:");
+    expect(consolidatedPagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "1"');
+    expect(consolidatedPagesReleaseJob).not.toContain("SMOKE_PAGES_ASSET_WORKERS");
+    expect(consolidatedPagesReleaseJob).not.toContain("SMOKE_PAGES_ASSET_TIMEOUT_MS");
+    expect(consolidatedPagesReleaseJob).not.toContain(
       "npm run test:smoke-pages-assets -- --url http://127.0.0.1:4173 --mode local",
     );
-    expect(consolidatedPagesReleaseJob).toContain("npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173");
+    expect(consolidatedPagesReleaseJob).not.toContain("npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173");
+    expect(consolidatedPagesReleaseJob).not.toContain("npm run test:a11y");
+    expect(consolidatedPagesReleaseJob).not.toContain("npm run test:a11y:hydrated");
     expect(consolidatedPagesReleaseJob).not.toContain("Wait for validation gate");
     expect(consolidatedPagesReleaseJob).not.toContain("wait_for_validate_job");
     expect(consolidatedPagesReleaseJob).toContain("Wait for worker promotion gate");
@@ -572,15 +628,14 @@ describe("validate-ci parity", () => {
       "OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}",
     );
     expect(consolidatedPagesReleaseJob).toContain("npm run test:smoke-ui -- --url https://pharos.watch --mode live");
-    expect(consolidatedPagesReleaseJob).toContain(
+    expect(consolidatedPagesReleaseJob).not.toContain(
       "npm run test:smoke-pages-assets -- --url https://pharos.watch --mode live",
     );
-    expect(consolidatedPagesReleaseJob).toContain("for attempt in 1 2 3 4 5 6 7 8 9 10");
-    expect(consolidatedPagesReleaseJob).toContain("waiting for Pages asset propagation");
+    expect(consolidatedPagesReleaseJob).not.toContain("waiting for Pages asset propagation");
     expect(consolidatedPagesReleaseJob).not.toContain("--mode live --skip-overflow");
     expect(consolidatedPagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
     expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ui_status != 'success'");
-    expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.asset_status != 'success'");
+    expect(consolidatedPagesReleaseJob).not.toContain("steps.post-publish-smokes.outputs.asset_status");
     expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ops_status != 'success'");
     expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.transport_status != 'success'");
     expectTextInOrder(consolidatedPagesReleaseJob, [
@@ -599,12 +654,9 @@ describe("validate-ci parity", () => {
       "Start local export smoke server",
       "Run local static pre-publish checks",
       "npm run seo:check",
-      "npm run test:a11y",
       "Wait for worker promotion gate",
-      "Run local artifact checks with bounded browser concurrency",
+      "Run local artifact canary smoke",
       "npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local",
-      "npm run test:smoke-pages-assets -- --url http://127.0.0.1:4173 --mode local",
-      "npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173",
       "Deploy Pages with retry",
     ]);
     expect(deployWorkflow).not.toContain("  smoke-api:");
@@ -643,9 +695,8 @@ describe("validate-ci parity", () => {
       "Start local export smoke server",
       "Run local static pre-publish checks",
       "npm run seo:check",
-      "npm run test:a11y",
       "Wait for worker promotion gate",
-      "Run local artifact checks with bounded browser concurrency",
+      "Run local artifact canary smoke",
     ]);
   });
 

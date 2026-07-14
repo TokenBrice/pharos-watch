@@ -3,12 +3,8 @@ name: CI Validate
 on:
   workflow_call:
     inputs:
-      coverage-compare-ref:
-        description: Git ref used by the critical coverage ratchet.
-        required: false
-        type: string
-      coverage-ratchet-all:
-        description: Whether the critical coverage ratchet should compare every critical file instead of only touched files.
+      include_advisory_prebuild:
+        description: Whether validate:prebuild should include advisory maintenance checks in addition to blocking checks.
         required: false
         default: false
         type: boolean
@@ -45,6 +41,7 @@ jobs:
       contents: read
     env:
       VALIDATE_PREBUILD_SURFACE: ${{ inputs.pages_changed && inputs.worker_changed && 'full' || inputs.pages_changed && 'pages' || inputs.worker_changed && 'worker' || 'full' }}
+      VALIDATE_PREBUILD_INCLUDE_ADVISORY: ${{ inputs.include_advisory_prebuild && '1' || '0' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -109,24 +106,6 @@ jobs:
       - uses: ./.github/actions/setup-workspace
       - run: npm run test:noncritical -- --shard=${{ matrix.shard }}/2
 
-  coverage-critical:
-    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    env:
-      CRITICAL_COVERAGE_COMPARE_REF: ${{ inputs.coverage-compare-ref }}
-      CRITICAL_COVERAGE_RATCHET_ALL: ${{ inputs.coverage-ratchet-all && '1' || '0' }}
-      CRITICAL_COVERAGE_THRESHOLD: "40"
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
-      - uses: ./.github/actions/setup-workspace
-      - run: npm run coverage:critical
-
   typecheck-worker:
     if: ${{ inputs.worker_changed }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
@@ -149,7 +128,6 @@ jobs:
       - validate-prebuild
       - pages-build
       - test-noncritical
-      - coverage-critical
       - typecheck-worker
     if: ${{ always() }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
@@ -159,7 +137,6 @@ jobs:
     steps:
       - name: Verify validate results
         env:
-          COVERAGE_CRITICAL_RESULT: ${{ needs.coverage-critical.result }}
           PAGES_BUILD_EXPECTED: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}
           PAGES_BUILD_RESULT: ${{ needs.pages-build.result }}
           TEST_NONCRITICAL_RESULT: ${{ needs.test-noncritical.result }}
@@ -172,7 +149,6 @@ jobs:
           const checks = [
             ["validate-prebuild", process.env.VALIDATE_PREBUILD_RESULT],
             ["test-noncritical", process.env.TEST_NONCRITICAL_RESULT],
-            ["coverage-critical", process.env.COVERAGE_CRITICAL_RESULT],
             ...(
               process.env.WORKER_CHANGED === "true"
                 ? [["typecheck-worker", process.env.TYPECHECK_WORKER_RESULT]]

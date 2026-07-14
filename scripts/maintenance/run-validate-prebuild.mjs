@@ -5,6 +5,8 @@ import {
   buildValidatePrebuildCommands,
   normalizeValidatePrebuildSurface,
   parseValidatePrebuildSkipCommands,
+  shouldIncludeAdvisoryPrebuildChecks,
+  VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV,
   VALIDATE_PREBUILD_MAX_PARALLEL,
   VALIDATE_PREBUILD_SKIP_COMMANDS_ENV,
   VALIDATE_PREBUILD_SURFACE_ENV,
@@ -20,6 +22,7 @@ export function buildValidatePrebuildExecutionUnits(surface) {
 export function buildValidatePrebuildExecutionUnitsForEnv(surface, env = process.env) {
   return buildValidatePrebuildCommands({
     surface,
+    includeAdvisory: shouldIncludeAdvisoryPrebuildChecks(env[VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV]),
     skipCommands: parseValidatePrebuildSkipCommands(env[VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]),
   }).map((cmd) => createExecutionUnit([cmd]));
 }
@@ -61,12 +64,17 @@ export async function runValidatePrebuild({
   runExecutionUnits = runParallelExecutionUnits,
 } = {}) {
   const surface = normalizeValidatePrebuildSurface(env[VALIDATE_PREBUILD_SURFACE_ENV]);
+  const includeAdvisory = shouldIncludeAdvisoryPrebuildChecks(env[VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV]);
   const skippedCommands = parseValidatePrebuildSkipCommands(env[VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]);
   const units = buildValidatePrebuildExecutionUnitsForEnv(surface, env);
   const dryRun = isValidatePrebuildDryRun(argv);
 
   if (dryRun) {
-    log(`[validate:prebuild] Surface hint: ${surface}; dry-run plan has ${units.length} prebuild command(s).`);
+    log(
+      `[validate:prebuild] Surface hint: ${surface}; advisory checks: ${
+        includeAdvisory ? "included" : "skipped"
+      }; dry-run plan has ${units.length} prebuild command(s).`,
+    );
     if (skippedCommands.length > 0) {
       log(`[validate:prebuild] Skipped by caller: ${skippedCommands.join(", ")}`);
     }
@@ -75,7 +83,11 @@ export async function runValidatePrebuild({
     return { status: 0, failedCmd: null, aborted: false };
   }
 
-  log(`[validate:prebuild] Surface hint: ${surface}; running ${units.length} prebuild command(s).`);
+  log(
+    `[validate:prebuild] Surface hint: ${surface}; advisory checks: ${
+      includeAdvisory ? "included" : "skipped"
+    }; running ${units.length} prebuild command(s).`,
+  );
   if (skippedCommands.length > 0) {
     log(`[validate:prebuild] Skipped by caller: ${skippedCommands.join(", ")}`);
   }

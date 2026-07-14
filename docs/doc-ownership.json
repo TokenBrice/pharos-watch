@@ -110,8 +110,8 @@
       "risk": "medium",
       "docsToRead": ["matched docs/testing.md section", "matched docs/deployment-process.md section", "matched docs/scripts.md section"],
       "docsLikelyRequired": ["docs/testing.md", "docs/deployment-process.md", "docs/scripts.md"],
-      "checks": ["changed script's focused test", "MERGE_GATE_DRY_RUN=1 npm run test:merge-gate when deploy classification changes"],
-      "hardRules": ["Keep deploy-surface classification and local merge-gate behavior aligned."],
+      "checks": ["changed script's focused test", "MERGE_GATE_DRY_RUN=1 npm run test:merge-gate when local rehearsal planning changes"],
+      "hardRules": ["Keep deploy-surface classification aligned with GitHub deploy behavior; local merge-gate execution is opt-in."],
       "prefixes": [".github/", ".githooks/", "scripts/"],
       "exactPaths": ["package.json", "package-lock.json", ".gitignore"]
     },

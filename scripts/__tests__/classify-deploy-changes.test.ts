@@ -219,7 +219,6 @@ describe("hasDeployImpact", () => {
       "scripts/ci/check-env-contract.mjs",
       "scripts/ci/check-sql-interpolation-safety.mjs",
       "scripts/maintenance/generate-cemetery-dataset.ts",
-      "scripts/maintenance/run-critical-coverage.mjs",
       "scripts/maintenance/run-generated-artifacts.mjs",
       "scripts/maintenance/run-noncritical-tests.mjs",
       "scripts/maintenance/run-validate-prebuild.mjs",
@@ -233,6 +232,15 @@ describe("hasDeployImpact", () => {
       expect(hasWorkerPromotionImpact([file]), file).toBe(false);
       expect(hasPagesDeployImpact([file]), file).toBe(true);
     }
+  });
+
+  it("keeps scheduled coverage ratchet infrastructure out of deploy impact", () => {
+    const files = ["scripts/maintenance/run-critical-coverage.mjs"];
+
+    expect(hasDeployImpact(files)).toBe(false);
+    expect(hasWorkerDeployImpact(files)).toBe(false);
+    expect(hasWorkerPromotionImpact(files)).toBe(false);
+    expect(hasPagesDeployImpact(files)).toBe(false);
   });
 
   it("treats static export build guardrails as Pages-only deploy infrastructure", () => {

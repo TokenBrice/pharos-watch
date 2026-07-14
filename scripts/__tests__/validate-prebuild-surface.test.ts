@@ -4,6 +4,7 @@ import {
   buildValidatePrebuildCommandsForSurface,
   parseValidatePrebuildSkipCommands,
   VALIDATE_PREBUILD_COMMANDS,
+  VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV,
   VALIDATE_PREBUILD_SKIP_COMMANDS_ENV,
   VALIDATE_PREBUILD_SURFACE_ENV,
 } from "../lib/validation-lanes.mjs";
@@ -19,12 +20,11 @@ describe("validate:prebuild surface filtering", () => {
   it("keeps validation-only and full checks while skipping worker-only checks for pages-only hints", () => {
     const commands = buildValidatePrebuildCommandsForSurface("pages");
 
-    expect(commands).toContain("npm run audit:deps");
-    expect(commands).toContain("npm run audit:pricing-providers");
-    expect(commands).toContain("npm run check:provider-resilience");
     expect(commands).toContain("npm run check:generated-artifacts");
-    expect(commands).toContain("npm run check:dependency-coverage");
-    expect(commands).toContain("npm run check:mechanism-archetype-coverage");
+    expect(commands).toContain("npm run check:stablecoin-data");
+    expect(commands).not.toContain("npm run check:cron-connections");
+    expect(commands).not.toContain("npm run check:dependency-coverage");
+    expect(commands).not.toContain("npm run check:mechanism-archetype-coverage");
     expect(commands).not.toContain("npm run check:redemption-coverage-audit");
     expect(commands).not.toContain("npm run check:world-map");
     expect(commands).not.toContain("npm run check:migrations");
@@ -34,15 +34,14 @@ describe("validate:prebuild surface filtering", () => {
   it("keeps validation-only and full checks while skipping pages-only checks for worker-only hints", () => {
     const commands = buildValidatePrebuildCommandsForSurface("worker");
 
-    expect(commands).toContain("npm run audit:deps");
-    expect(commands).toContain("npm run audit:pricing-providers");
-    expect(commands).toContain("npm run check:provider-resilience");
     expect(commands).toContain("npm run check:migrations");
     expect(commands).toContain("npm run check:sql-safety");
-    expect(commands).toContain("npm run check:dependency-coverage");
-    expect(commands).toContain("npm run check:mechanism-archetype-coverage");
+    expect(commands).toContain("npm run check:cron-connections");
+    expect(commands).not.toContain("npm run check:dependency-coverage");
+    expect(commands).not.toContain("npm run check:mechanism-archetype-coverage");
     expect(commands).not.toContain("npm run check:redemption-coverage-audit");
     expect(commands).not.toContain("npm run check:generated-artifacts");
+    expect(commands).not.toContain("npm run check:stablecoin-data");
     expect(commands).not.toContain("npm run check:world-map");
   });
 
@@ -51,7 +50,7 @@ describe("validate:prebuild surface filtering", () => {
     expect(buildValidatePrebuildCommandsForSurface(undefined)).toEqual(VALIDATE_PREBUILD_COMMANDS);
   });
 
-  it("removes caller-skipped commands after surface filtering", () => {
+  it("removes caller-skipped commands after surface and advisory filtering", () => {
     expect(parseValidatePrebuildSkipCommands("npm run audit:deps, npm run audit:pricing-providers")).toEqual([
       "npm run audit:deps",
       "npm run audit:pricing-providers",
@@ -59,6 +58,7 @@ describe("validate:prebuild surface filtering", () => {
 
     const commands = buildValidatePrebuildCommands({
       surface: "full",
+      includeAdvisory: true,
       skipCommands: ["npm run audit:deps", "npm run audit:pricing-providers"],
     });
 
@@ -107,7 +107,7 @@ describe("validate:prebuild surface filtering", () => {
     expect(result).toEqual({ status: 0, failedCmd: null, aborted: false });
     expect(executed).toBe(false);
     expect(logs).toEqual([
-      `[validate:prebuild] Surface hint: worker; dry-run plan has ${expectedCommands.length} prebuild command(s).`,
+      `[validate:prebuild] Surface hint: worker; advisory checks: skipped; dry-run plan has ${expectedCommands.length} prebuild command(s).`,
       "[validate:prebuild] Command plan:",
       ...expectedCommands.map((cmd, index) => `${index + 1}. ${cmd}`),
       "[validate:prebuild] Dry run enabled; commands not executed.",
@@ -137,7 +137,7 @@ describe("validate:prebuild surface filtering", () => {
     expect(result).toEqual({ status: 0, failedCmd: null, aborted: false });
     expect(executed).toBe(false);
     expect(logs).toEqual([
-      `[validate:prebuild] Surface hint: full; dry-run plan has ${expectedCommands.length} prebuild command(s).`,
+      `[validate:prebuild] Surface hint: full; advisory checks: skipped; dry-run plan has ${expectedCommands.length} prebuild command(s).`,
       "[validate:prebuild] Skipped by caller: npm run typecheck:tests",
       "[validate:prebuild] Command plan:",
       ...expectedCommands.map((cmd, index) => `${index + 1}. ${cmd}`),
@@ -176,6 +176,30 @@ describe("validate:prebuild surface filtering", () => {
       label: "validate:prebuild",
       maxParallel: 1,
     });
+  });
+
+  it("includes advisory checks when explicitly requested by the environment", async () => {
+    const calls: Array<{
+      units: Array<{ commands: string[] }>;
+      options?: { continueOnError?: boolean; label?: string; maxParallel?: number };
+    }> = [];
+
+    await runValidatePrebuild({
+      argv: [],
+      env: testEnv({
+        [VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV]: "1",
+      }),
+      log: () => {},
+      runExecutionUnits: (units, options) => {
+        calls.push({ units, options });
+        return Promise.resolve({ status: 0, failedCmd: null, aborted: false });
+      },
+    });
+
+    const executedCommands = calls.flatMap((call) => call.units.map((unit) => unit.commands[0]));
+    expect(executedCommands).toContain("npm run audit:deps");
+    expect(executedCommands).toContain("npm run check:dependency-coverage");
+    expect(executedCommands).toContain("npm run check:generated-artifacts");
   });
 
   it("passes filtered runner units and continue-on-error through the prebuild runner", async () => {

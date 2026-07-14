@@ -50,7 +50,7 @@ describe("setup-workspace tooling cache", () => {
 
     expect(keyStep).toContain("RAW_NODE_VERSION: ${{ inputs.node-version }}");
     expect(keyStep).toContain('raw_node_version="${RAW_NODE_VERSION}"');
-    expect(keyStep).toContain('^v?([0-9]+)(\\..*)?$');
+    expect(keyStep).toContain("^v?([0-9]+)(\\..*)?$");
     expect(keyStep).toContain('echo "node-key=${node_key}" >> "${GITHUB_OUTPUT}"');
     expect(cacheStep).toContain("${{ steps.tooling-cache-key.outputs.node-key }}");
     expect(cacheStep).not.toContain("inputs.node-version");
@@ -61,6 +61,14 @@ describe("setup-workspace tooling cache", () => {
 
     expect(installStep).toContain("inputs.install-playwright-chromium == 'true'");
     expect(installStep).toContain("npx --no-install playwright install --with-deps chromium");
+  });
+
+  it("runs bootstrap-safe generators explicitly after dependency install", () => {
+    const bootstrapStep = extractStepByNeedle("npm run bootstrap:generated");
+
+    expect(action).toContain("bootstrap-generated:");
+    expect(action).toContain("inputs.install-deps == 'true' && inputs.bootstrap-generated == 'true'");
+    expect(bootstrapStep).toContain("npm run bootstrap:generated");
   });
 
   it("installs Playwright Firefox only when requested", () => {

@@ -54,7 +54,6 @@ jobs:
     if: ${{ needs.detect-changes.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/validate-ci.yml
     with:
-      coverage-compare-ref: ${{ github.event.pull_request.base.sha }}
       pages_changed: ${{ needs.detect-changes.outputs.pages_changed == 'true' }}
       run_pages_build_and_seo: ${{ needs.detect-changes.outputs.pages_deploy_required == 'true' }}
       worker_changed: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}

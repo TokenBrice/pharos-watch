@@ -1,10 +1,10 @@
 #!/usr/bin/env tsx
 /**
  * Asserts every cross-file invariant that `status: "frozen"` requires.
- * Run as part of the pre-push merge gate.
+ * Run as part of the shared validation gate.
  *
  * Failures here usually indicate a half-applied freeze procedure — fix
- * before pushing. See `docs/freezing-stablecoins.md` (when present) for
+ * before finalizing. See `docs/freezing-stablecoins.md` (when present) for
  * the full runbook.
  *
  * Boundary waiver: frozen-invariants-lifecycle-registry-check. This script is
@@ -13,11 +13,7 @@
  * See `docs/process/boundary-waivers.md` for rationale, mitigations, and the
  * retirement assessment.
  */
-import {
-  ACTIVE_IDS,
-  FROZEN_IDS,
-  FROZEN_STABLECOINS,
-} from "../../shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, FROZEN_IDS, FROZEN_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { FROZEN_SNAPSHOTS_BY_ID } from "../../shared/lib/stablecoins/frozen-snapshots";
 import { DEAD_STABLECOINS } from "../../shared/lib/dead-stablecoins";
 // Independent registries that the freeze runbook requires us to clean up.
@@ -79,16 +75,12 @@ for (const config of CONTRACT_CONFIGS) {
 }
 for (const id of Object.keys(BLUECHIP_SLUG_MAP)) {
   if (FROZEN_IDS.has(id)) {
-    failures.push(
-      `${id}: still in BLUECHIP_SLUG_MAP (shared/lib/bluechip-slugs.ts) — remove per freeze runbook`,
-    );
+    failures.push(`${id}: still in BLUECHIP_SLUG_MAP (shared/lib/bluechip-slugs.ts) — remove per freeze runbook`);
   }
 }
 for (const id of Object.keys(YIELD_POOL_MAP)) {
   if (FROZEN_IDS.has(id)) {
-    failures.push(
-      `${id}: still in YIELD_POOL_MAP (worker/src/cron/yield-config-pools.ts) — remove per freeze runbook`,
-    );
+    failures.push(`${id}: still in YIELD_POOL_MAP (worker/src/cron/yield-config-pools.ts) — remove per freeze runbook`);
   }
 }
 for (const [leftId, rightId] of STATIC_COMPARE_PAIRS) {

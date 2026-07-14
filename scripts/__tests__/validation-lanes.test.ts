@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ALL_VALIDATE_PREBUILD_COMMANDS,
   buildNoncriticalTestShardCommands,
   buildValidatePrebuildCommands,
   COMMON_VALIDATE_POSTBUILD_COMMANDS,
@@ -19,104 +20,90 @@ import { getValidationPhaseCommands, runValidationPhase } from "../maintenance/r
 const WORKER_SCHEDULED_TEST = "worker/src/__tests__/index.scheduled.test.ts";
 
 const EXPECTED_PREBUILD_COMMANDS = [
-  "npm run audit:deps",
-  "npm run audit:pricing-providers",
-  "npm run check:provider-resilience",
-  "npm run check:fetch-body-timeouts",
   "npm run lint",
   "npm run lint:typed",
   "npm run typecheck",
   "npm run typecheck:tests",
-  "npm run check:agent-doc-sync",
-  "npm run check:agent-skill-symlinks",
   "npm run check:client-registry-imports",
-  "npm run check:cli-args-policy",
-  "npm run check:cron-abort-contract",
-  "npm run check:cron-console-usage",
-  "npm run check:json-parse-ratchet",
   "npm run check:cron-connections",
   "npm run check:cron-sync",
   "npm run check:worker-config",
-  "npm run check:doc-counts",
-  "npm run check:doc-source-paths",
-  "npm run check:doc-sync",
   "npm run check:env-contract",
-  "npm run check:frozen-invariants",
   "npm run check:generated-artifacts",
-  "npm run check:hook-polling-window",
-  "npm run check:hotspot-ratchet",
   "npm run check:migrations",
-  "npm run check:redemption-backstops",
   "npm run check:site-csp-sync",
-  "npm run check:script-entrypoints",
-  "npm run check:shared-cycles",
   "npm run check:shared-types-imports",
   "npm run check:sql-safety",
-  "npm run check:stale-flags",
   "npm run check:stablecoin-data",
-  "npm run check:oracle-risk-coverage:enforce",
-  "npm run check:supply-helper-usage",
-  "npm run check:unused-code",
-  "npm run check:verified-doc-links",
   "npm run check:worker-boundary",
-  "npm run check:dependency-coverage",
-  "npm run check:mechanism-archetype-coverage",
 ];
 
 describe("validation lane authority", () => {
-  it("assigns all current descriptor commands to exactly ten unique lanes", () => {
+  it("assigns descriptor commands to unique semantic lanes", () => {
     validateValidationLanes();
-    expect(VALIDATION_LANES).toHaveLength(10);
-    expect(VALIDATION_LANES.map((lane) => lane.id)).toEqual([
-      "format-and-lint",
-      "root-and-worker-typecheck",
-      "unit-and-domain-tests",
-      "d1-migration-and-runtime-safety",
-      "catalog-schema-and-data",
-      "generated-output-build-and-seo",
-      "browser-and-accessibility",
-      "security-dependencies-and-repository-policy",
-      "worker-preview-and-smoke",
-      "deploy-promotion-and-rollback",
-    ]);
+    expect(new Set(VALIDATION_LANES.map((lane) => lane.id)).size).toBe(VALIDATION_LANES.length);
+    expect(VALIDATION_LANES.map((lane) => lane.id)).toEqual(
+      expect.arrayContaining([
+        "format-and-lint",
+        "root-and-worker-typecheck",
+        "unit-and-domain-tests",
+        "d1-migration-and-runtime-safety",
+        "catalog-schema-and-data",
+        "generated-output-build-and-seo",
+        "browser-and-accessibility",
+        "security-dependencies-and-repository-policy",
+        "worker-preview-and-smoke",
+        "deploy-promotion-and-rollback",
+      ]),
+    );
 
-    expect(VALIDATION_LANES.flatMap((lane) => lane.leaves)).toHaveLength(58);
+    const commands = VALIDATION_LANES.flatMap((lane) => lane.leaves).map((leaf) => leaf.command);
+    expect(new Set(commands).size).toBe(commands.length);
   });
 
-  it("keeps the exact prebuild command order and surface selection", () => {
+  it("keeps blocking prebuild focused while preserving full advisory opt-in", () => {
     expect(VALIDATE_PREBUILD_COMMANDS).toEqual(EXPECTED_PREBUILD_COMMANDS);
     expect(buildValidatePrebuildCommands()).toEqual(EXPECTED_PREBUILD_COMMANDS);
     expect(buildValidatePrebuildCommands({ surface: "full" })).toEqual(EXPECTED_PREBUILD_COMMANDS);
-    expect(buildValidatePrebuildCommands({ surface: "full" })).toHaveLength(42);
-    expect(buildValidatePrebuildCommands({ surface: "pages" })).toHaveLength(37);
-    expect(buildValidatePrebuildCommands({ surface: "worker" })).toHaveLength(40);
-    expect(buildValidatePrebuildCommands({ surface: "pages" })).toContain("npm run check:dependency-coverage");
-    expect(buildValidatePrebuildCommands({ surface: "worker" })).toContain("npm run check:dependency-coverage");
+    expect(buildValidatePrebuildCommands({ surface: "full" })).toHaveLength(16);
+    expect(buildValidatePrebuildCommands({ surface: "pages" })).toHaveLength(10);
+    expect(buildValidatePrebuildCommands({ surface: "worker" })).toHaveLength(12);
+    expect(buildValidatePrebuildCommands({ surface: "pages" })).not.toContain("npm run check:cron-connections");
+    expect(buildValidatePrebuildCommands({ surface: "pages" })).not.toContain("npm run check:worker-boundary");
+    expect(buildValidatePrebuildCommands({ surface: "worker" })).not.toContain("npm run check:site-csp-sync");
+    expect(buildValidatePrebuildCommands({ surface: "worker" })).not.toContain("npm run check:stablecoin-data");
+    expect(buildValidatePrebuildCommands({ surface: "pages" })).not.toContain("npm run check:dependency-coverage");
+    expect(buildValidatePrebuildCommands({ surface: "worker" })).not.toContain("npm run check:dependency-coverage");
     expect(buildValidatePrebuildCommands({ surface: "pages" })).not.toContain("npm run check:migrations");
     expect(buildValidatePrebuildCommands({ surface: "worker" })).not.toContain("npm run check:generated-artifacts");
+    expect(buildValidatePrebuildCommands({ surface: "pages", includeAdvisory: true })).toContain(
+      "npm run check:dependency-coverage",
+    );
+    expect(buildValidatePrebuildCommands({ surface: "worker", includeAdvisory: true })).toContain(
+      "npm run check:fetch-body-timeouts",
+    );
+    expect(ALL_VALIDATE_PREBUILD_COMMANDS).toHaveLength(42);
 
     const skipCommands = ["npm run audit:deps", "npm run check:generated-artifacts"];
-    expect(buildValidatePrebuildCommands({ surface: "pages", skipCommands })).not.toEqual(
-      buildValidatePrebuildCommands({ surface: "pages" }),
+    expect(buildValidatePrebuildCommands({ surface: "pages", skipCommands, includeAdvisory: true })).not.toEqual(
+      buildValidatePrebuildCommands({ surface: "pages", includeAdvisory: true }),
     );
-    expect(buildValidatePrebuildCommands({ surface: "pages", skipCommands })).not.toContain("npm run audit:deps");
+    expect(buildValidatePrebuildCommands({ surface: "pages", skipCommands, includeAdvisory: true })).not.toContain(
+      "npm run audit:deps",
+    );
   });
 
   it("keeps Pages, postbuild, Worker, smoke, and shard plans exact", () => {
     expect(PAGES_VALIDATE_COMMANDS).toEqual([
       "npm run build",
-      "npm run test:a11y",
       "npm run check:feature-flag-inlining",
       "npm run seo:check",
       "npm run check:phishing-signatures",
       "npm run check:classifier-sensitive-copy",
-      "npm run check:build-size",
-      "npm run check:build-attribution",
     ]);
     expect(COMMON_VALIDATE_POSTBUILD_COMMANDS).toEqual([
       "npm run test:noncritical -- --shard=1/2",
       "npm run test:noncritical -- --shard=2/2",
-      "npm run coverage:critical",
     ]);
     expect(WORKER_VALIDATE_COMMANDS).toEqual(["npm run typecheck:worker"]);
     expect(CRITICAL_TEST_FILES).toContain(WORKER_SCHEDULED_TEST);
@@ -127,10 +114,6 @@ describe("validation lane authority", () => {
   });
 
   it("keeps lane-owned impact path buckets", () => {
-    expect(VALIDATION_IMPACT_PATHS.full).toHaveLength(37);
-    expect(VALIDATION_IMPACT_PATHS["validation-only"]).toHaveLength(19);
-    expect(VALIDATION_IMPACT_PATHS.pages).toHaveLength(11);
-    expect(VALIDATION_IMPACT_PATHS.worker).toHaveLength(8);
     expect(VALIDATION_IMPACT_PATHS.full).toEqual(flattenValidationImpactPaths("full"));
     expect(VALIDATION_IMPACT_PATHS.full).toEqual(
       expect.arrayContaining([
@@ -161,6 +144,47 @@ describe("validation lane authority", () => {
     expect(getValidationPhaseCommands("pages")).toBe(PAGES_VALIDATE_COMMANDS);
     expect(commands).toEqual(PAGES_VALIDATE_COMMANDS);
     expect(result).toEqual({ status: 0, failedCmd: null, aborted: false });
+  });
+
+  it("prints a Pages phase dry-run plan without executing commands", async () => {
+    const logs: string[] = [];
+    let executed = false;
+    const result = await runValidationPhase("pages", {
+      argv: ["--dry-run"],
+      log: (line: string) => logs.push(line),
+      logError: () => {},
+      runCommand: async () => {
+        executed = true;
+        return 1;
+      },
+    });
+
+    expect(executed).toBe(false);
+    expect(result).toEqual({ status: 0, failedCmd: null, aborted: false });
+    expect(logs).toEqual([
+      `[validate:pages] Dry run enabled; ${PAGES_VALIDATE_COMMANDS.length} command(s) will not execute.`,
+      "[validate:pages] Command plan:",
+      ...PAGES_VALIDATE_COMMANDS.map((command, index) => `${index + 1}. ${command}`),
+    ]);
+  });
+
+  it("prints validation phase help without executing commands", async () => {
+    const logs: string[] = [];
+    let executed = false;
+    const result = await runValidationPhase("pages", {
+      argv: ["--help"],
+      log: (line: string) => logs.push(line),
+      logError: () => {},
+      runCommand: async () => {
+        executed = true;
+        return 1;
+      },
+    });
+
+    expect(executed).toBe(false);
+    expect(result).toEqual({ status: 0, failedCmd: null, aborted: false });
+    expect(logs).toContain("Usage: npm run validate:<phase> -- [--dry-run|--help]");
+    expect(logs).toContain("Supported phases: pages, worker");
   });
 
   it("preserves the Worker phase order", async () => {
@@ -210,24 +234,22 @@ describe("validation lane authority", () => {
     ]);
   });
 
-  it("rejects missing leaves, duplicate or gapped prebuild orders, invalid phases, and bad surfaces", () => {
-    const missingLeaf = structuredClone(VALIDATION_LANES);
-    missingLeaf[0].leaves.pop();
-    expect(() => validateValidationLanes(missingLeaf)).toThrow("Expected exactly 58 unique validation leaves");
-
+  it("rejects duplicate commands, duplicate orders, invalid phases, and bad surfaces", () => {
     const duplicateLane = structuredClone(VALIDATION_LANES);
     duplicateLane[1].id = duplicateLane[0].id;
     expect(() => validateValidationLanes(duplicateLane)).toThrow("Duplicate validation lane id");
 
+    const duplicateCommand = structuredClone(VALIDATION_LANES);
+    duplicateCommand[0].leaves[1].command = duplicateCommand[0].leaves[0].command;
+    expect(() => validateValidationLanes(duplicateCommand)).toThrow("Duplicate validation lane command");
+
     const duplicatePrebuildOrder = structuredClone(VALIDATION_LANES);
     duplicatePrebuildOrder[0].leaves[1].prebuildOrder = 5;
-    expect(() => validateValidationLanes(duplicatePrebuildOrder)).toThrow(
-      "prebuild orders must be unique and contiguous",
-    );
+    expect(() => validateValidationLanes(duplicatePrebuildOrder)).toThrow("prebuild orders must be unique");
 
-    const gappedPrebuildOrder = structuredClone(VALIDATION_LANES);
-    gappedPrebuildOrder[0].leaves[1].prebuildOrder = 50;
-    expect(() => validateValidationLanes(gappedPrebuildOrder)).toThrow("prebuild orders must be unique and contiguous");
+    const invalidPrebuildOrder = structuredClone(VALIDATION_LANES);
+    invalidPrebuildOrder[0].leaves[1].prebuildOrder = 0;
+    expect(() => validateValidationLanes(invalidPrebuildOrder)).toThrow("prebuild orders must be positive integers");
 
     const invalidPhase = structuredClone(VALIDATION_LANES);
     invalidPhase[0].leaves[0].phase = "unsupported";

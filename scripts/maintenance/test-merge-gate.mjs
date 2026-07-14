@@ -15,6 +15,7 @@ import {
   COMMON_VALIDATE_PREBUILD_COMMANDS,
   PAGES_SMOKE_VALIDATE_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
+  VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV,
   VALIDATE_PREBUILD_SKIP_COMMANDS_ENV,
   VALIDATE_PREBUILD_SURFACE_ENV,
   WORKER_SMOKE_VALIDATE_COMMANDS,
@@ -270,6 +271,7 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
     const skippedCommands = getValidatePrebuildSkipCommands(changedFiles, env);
     return {
       ...baseEnv,
+      [VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV]: "1",
       [VALIDATE_PREBUILD_SURFACE_ENV]: getValidatePrebuildSurface(changedFiles),
       ...(skippedCommands.length > 0 ? { [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: skippedCommands.join(",") } : {}),
     };
@@ -336,15 +338,7 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
     };
   }
 
-  if (cmd !== "npm run coverage:critical") {
-    return baseEnv;
-  }
-
-  return {
-    ...baseEnv,
-    CRITICAL_COVERAGE_CHANGED_FILES: changedFiles.join(","),
-    ...(env.CRITICAL_COVERAGE_RATCHET_ALL ? {} : { CRITICAL_COVERAGE_RATCHET_ALL: "1" }),
-  };
+  return baseEnv;
 }
 
 function findPlanItem(plan, cmd) {

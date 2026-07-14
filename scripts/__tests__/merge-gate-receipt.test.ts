@@ -153,8 +153,18 @@ describe("merge-gate receipt", () => {
 });
 
 describe("pre-push hook execution", () => {
-  it("gates an exact main update once", () => {
+  it("skips main pushes by default and points to GitHub Actions", () => {
     const result = runHook("refs/heads/main local-sha refs/heads/main remote-sha\n");
+    expect(result.status).toBe(0);
+    expect(result.calls).toEqual([]);
+    expect(result.output).toContain("local merge gate skipped by default");
+    expect(result.output).toContain("GitHub Actions is the authoritative release gate");
+  });
+
+  it("gates an exact main update when explicitly requested", () => {
+    const result = runHook("refs/heads/main local-sha refs/heads/main remote-sha\n", {
+      PHAROS_PRE_PUSH_GATE: "main",
+    });
     expect(result.status).toBe(0);
     expect(result.calls).toEqual(["remote-sha|local-sha|0|run test:merge-gate"]);
   });
@@ -162,6 +172,7 @@ describe("pre-push hook execution", () => {
   it("rejects a dirty worktree before running the gate", () => {
     const result = runHook("refs/heads/main local-sha refs/heads/main remote-sha\n", {
       HOOK_STATUS_OUTPUT: " M src/app/page.tsx",
+      PHAROS_PRE_PUSH_GATE: "main",
     });
 
     expect(result.status).toBe(1);
@@ -173,6 +184,7 @@ describe("pre-push hook execution", () => {
   it("rejects a checkout that does not match the pushed commit", () => {
     const result = runHook("refs/heads/main local-sha refs/heads/main remote-sha\n", {
       HOOK_HEAD_SHA: "other-sha",
+      PHAROS_PRE_PUSH_GATE: "main",
     });
 
     expect(result.status).toBe(1);
@@ -183,6 +195,7 @@ describe("pre-push hook execution", () => {
   it("rejects worktree mutation during the gate", () => {
     const result = runHook("refs/heads/main local-sha refs/heads/main remote-sha\n", {
       HOOK_DIRTY_AFTER_GATE: " M scripts/lib/validation-lanes.mjs",
+      PHAROS_PRE_PUSH_GATE: "main",
     });
 
     expect(result.status).toBe(1);
@@ -194,7 +207,7 @@ describe("pre-push hook execution", () => {
     const result = runHook("refs/heads/topic local-sha refs/heads/topic remote-sha\n");
     expect(result.status).toBe(0);
     expect(result.calls).toEqual([]);
-    expect(result.output).toContain("full local gate skipped");
+    expect(result.output).toContain("local merge gate skipped");
   });
 
   it("supports an explicit exact branch gate", () => {
@@ -203,5 +216,14 @@ describe("pre-push hook execution", () => {
     });
     expect(result.status).toBe(0);
     expect(result.calls).toEqual(["remote-sha|local-sha|0|run test:merge-gate"]);
+  });
+
+  it("rejects invalid gate modes", () => {
+    const result = runHook("refs/heads/main local-sha refs/heads/main remote-sha\n", {
+      PHAROS_PRE_PUSH_GATE: "maybe",
+    });
+    expect(result.status).toBe(1);
+    expect(result.calls).toEqual([]);
+    expect(result.output).toContain("Invalid PHAROS_PRE_PUSH_GATE=maybe");
   });
 });

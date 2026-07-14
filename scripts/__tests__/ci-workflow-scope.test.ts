@@ -20,8 +20,8 @@ describe("CI workflow scope", () => {
     const validate = readRepoFile(".github/workflows/validate-ci.yml");
     const prebuild = extractJob(validate, "validate-prebuild", "pages-build");
     const pages = extractJob(validate, "pages-build", "test-noncritical");
-    const noncritical = extractJob(validate, "test-noncritical", "coverage-critical");
-    const coverage = extractJob(validate, "coverage-critical", "typecheck-worker");
+    const noncritical = extractJob(validate, "test-noncritical", "typecheck-worker");
+    const typecheckWorker = extractJob(validate, "typecheck-worker", "validate");
 
     expect(prebuild).toContain('install-playwright-firefox: "true"');
     expect(pages).toContain("GENERATED_ARTIFACTS_SKIP: og-editorial");
@@ -29,7 +29,8 @@ describe("CI workflow scope", () => {
     expect(pages).not.toContain("install-playwright-firefox");
     expect(noncritical).toContain("fetch-depth: 1");
     expect(noncritical).not.toContain("tooling-cache:");
-    expect(coverage).not.toContain("tooling-cache:");
+    expect(typecheckWorker).toContain("tooling-cache:");
+    expect(validate).not.toContain("coverage-critical:");
 
     expect(readRepoFile(".github/workflows/telegram-load.yml")).not.toContain("tooling-cache:");
     expect(readRepoFile(".github/workflows/safe-browsing-monitor.yml")).not.toContain("tooling-cache:");
