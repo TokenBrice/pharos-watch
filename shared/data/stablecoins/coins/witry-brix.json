@@ -60,13 +60,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "Brix iTRY staking wrapper backed by TRY money-market fund exposure",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Brix iTRY staking",
     "yieldType": "nav-appreciation"

@@ -151,13 +151,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Issuer-disclosed VNDC 2.0 USDT/USDC collateral pools",
-      "pct": 100,
-      "risk": "very-high"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

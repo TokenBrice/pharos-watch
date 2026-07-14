@@ -1,0 +1,72 @@
+{
+  "id": "wm-m0",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
+      "pct": 100,
+      "risk": "very-low",
+      "coinId": "m-m0",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "M0 Protocol permissioned minters and collateral SPVs",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 platform mechanics and eligible collateral",
+        "url": "https://docs.m0.org/get-started/protocol-mechanics"
+      },
+      {
+        "label": "M0 minting and burning collateral system",
+        "url": "https://docs.m0.org/protocol/minting-burning"
+      },
+      {
+        "label": "M0 roles and validator attestations",
+        "url": "https://docs.m0.org/protocol/roles"
+      }
+    ],
+    "rationale": "wM wraps M 1:1, so its reserve relationship is the reviewed M0 collateral system rather than a separate reserve pool. M0 documents eligible off-chain collateral in SPVs, validator signatures on collateral updates, and the tracked M metadata identifies short-term U.S. Treasury bills as the collateral envelope.",
+    "compositionBasis": "M0 collateral documentation and the inherited M dependency",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "M0 does not publish current minter-level balances, Treasury holdings, or a dated report scoped specifically to the wM wrapper.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Permissioned M0 minters and their collateral SPVs",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 minting and burning collateral system",
+        "url": "https://docs.m0.org/protocol/minting-burning"
+      },
+      {
+        "label": "M0 SPV operator guidance",
+        "url": "https://docs.m0.org/home/fundamentals/adopted-guidance/spv-operators/"
+      }
+    ],
+    "uncertainty": "M0 documents SPV-based collateral storage and wind-down controls, but the reviewed public material does not identify the current minter for wM or state a general rehypothecation prohibition.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -408,18 +408,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "U.S. Treasury Securities",
-      "pct": 80,
-      "risk": "very-low"
-    },
-    {
-      "name": "Repurchase Agreements",
-      "pct": 20,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 1,
