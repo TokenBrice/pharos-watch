@@ -2,7 +2,7 @@
   "id": "hyusd-hylo",
   "name": "Hylo HYUSD",
   "symbol": "HYUSD",
-  "oneLiner": "HYUSD is Hylo's overcollateralized dollar stablecoin on Solana, backed by a basket of Solana LSTs with the xSOL companion token absorbing volatility.",
+  "oneLiner": "HYUSD has an observable V1 Solana-LST pool while current Hylo docs describe an unreconciled V2 architecture spanning SOL, BTC, and USDC pools.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,25 +11,29 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Diversified basket of Solana LSTs (mSOL, jitoSOL, bSOL, JupSOL)",
-  "pegMechanism": "Overcollateralization (150%+) with companion leveraged token (xSOL) absorbing SOL volatility; operates on Solana (not Ethereum or a Stage 1 L2)",
-  "mechanismArchetype": "cdp",
+  "collateral": "Observable V1 Solana-LST pool plus an unreconciled documented V2 design with independent SOL-LST, cbBTC, and USDC collateral pools; Hylo has not published a V2 program/xBTC deployment that reconciles the current production state",
+  "pegMechanism": "Hylo's deployed V1 design uses xSOL to absorb volatility for one shared LST pool. Current V2 docs describe per-asset xASSET/vUSD invariants and isolated collateral ratios across SOL, BTC, and USDC pools, but the live migration state is not published.",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "302",
   "detailProvider": "defillama",
   "geckoId": "hylo-usd",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Hylo values LST collateral internally via Sanctum stake-pool accounting but uses the Pyth EMA SOL/USD oracle for hyUSD NAV and collateral-ratio calculations.",
+    "tier": "opaque-or-unknown",
+    "summary": "The observable V1 program uses Sanctum LST accounting and Pyth SOL/USD, while current V2 documentation specifies independent SOL/USD, BTC/USD, and USDC/USD paths. Hylo's address directory does not publish a complete deployed V2 program/pool inventory, so the production oracle graph is unresolved.",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
       "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Hylo issues hyUSD and xSOL against one shared LST collateral pool. Its Pyth-priced system collateral ratio drives protocol-wide mint/redeem fee modes and a Stability Pool conversion from hyUSD to xSOL; users do not maintain borrower-specific collateralized debt positions with independently liquidatable collateral branches.",
+      "reviewer": "owner-triage",
+      "rationale": "Both the observable V1 pool and the documented V2 per-asset pools issue protocol-level synthetic claims rather than borrower-specific collateralized debt positions. The V2 design isolates collateral ratios by pool, but users still do not maintain individually liquidatable borrower branches. Production activation of the documented V2 pools remains unresolved.",
       "sources": [
         {
           "label": "Hylo hyUSD and xSOL design",
           "url": "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL"
+        },
+        {
+          "label": "Hylo V2 multi-asset architecture",
+          "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture"
         },
         {
           "label": "Hylo risk management",
@@ -42,16 +46,24 @@
       ]
     },
     "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
-    "confidence": "verified",
+    "reviewer": "owner-triage",
+    "confidence": "limited",
     "sources": [
       {
-        "label": "Hylo collateral pool docs",
-        "url": "https://docs.hylo.so/protocol-overview/collateral-pool-a-basket-of-LST.md"
+        "label": "Hylo V1 hyUSD and xSOL design",
+        "url": "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL"
+      },
+      {
+        "label": "Hylo V2 multi-asset architecture",
+        "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture"
+      },
+      {
+        "label": "Hylo on-chain address directory",
+        "url": "https://docs.hylo.so/security/onchain-addresses"
       },
       {
         "label": "Hylo equations",
-        "url": "https://docs.hylo.so/technical-addendum/hylo-equations.md"
+        "url": "https://docs.hylo.so/technical-addendum/hylo-equations"
       }
     ]
   },
@@ -88,26 +100,53 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
-      "name": "JitoSOL",
-      "pct": 90,
-      "risk": "high"
-    },
-    {
-      "name": "Other Solana LSTs (mSOL, bSOL, JupSOL)",
-      "pct": 10,
-      "risk": "high"
+      "name": "Unresolved Hylo production collateral envelope (V1 SOL-LST pool and documented V2 SOL/BTC/USDC pools)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Hylo protocol collateral pools and external asset issuers",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "hyusd-hylo",
-    "inputs": {
-      "primary": {
-        "kind": "onchain-solana"
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Hylo V1 hyUSD and xSOL design",
+        "url": "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL"
+      },
+      {
+        "label": "Hylo V2 multi-asset architecture",
+        "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture"
+      },
+      {
+        "label": "Hylo on-chain address directory",
+        "url": "https://docs.hylo.so/security/onchain-addresses"
       }
-    }
+    ],
+    "rationale": "Hylo still publishes an observable V1 exchange program and separately documents a V2 design spanning independent SOL-LST, cbBTC, and USDC pools. Its current address directory labels the exchange as V1 and leaves the V2 xBTC deployment to be determined, so a static production split or V2 pool inventory cannot be asserted.",
+    "compositionBasis": "Bounded reconciliation of deployed V1 evidence and documented but incompletely deployed V2 architecture",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The active production version, complete pool inventory, current collateral balances, and live weights are unresolved.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Unresolved Hylo production collateral envelope (V1 SOL-LST pool and documented V2 SOL/BTC/USDC pools)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Hylo's public sources do not reconcile the observable V1 deployment with the documented V2 pool architecture or publish current production weights."
+      }
+    ]
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

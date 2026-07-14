@@ -2,7 +2,7 @@
   "id": "ussd-sonic-labs",
   "name": "US Sonic Dollar",
   "symbol": "USSD",
-  "oneLiner": "USSD is Sonic Labs's permissionless 1:1 dollar built on Frax's frxUSD infrastructure, backed by tokenized U.S. Treasury products and approved stablecoins.",
+  "oneLiner": "USSD is Sonic Labs's permissionless 1:1 dollar directly backed by Sonic frxUSD and therefore inherits Frax's upstream reserve exposure.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -11,8 +11,8 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Short-duration tokenized U.S. Treasury products held by approved custodians: BlackRock BUIDL (USD Institutional Digital Liquidity Fund), Superstate USTB (Short Duration U.S. Government Securities Fund), and WisdomTree WTGXX (Government Money Market Digital Fund); supported minting collateral also includes USDC, USDT, PYUSD, and USDB",
-  "pegMechanism": "1:1 permissionless mint and redemption via non-custodial smart contracts built on Frax's frxUSD infrastructure; users mint with any approved USD asset (USDC, USDT, PYUSD, USDB, BUIDL, USTB, WTGXX) at zero fee; redeem into any supported USD asset at any time with no lockup or withdrawal delay; cross-chain via CCTP; yield from Treasury reserves flows to the Sonic ecosystem rather than to USSD holders",
+  "collateral": "Sonic frxUSD held 1:1 by the USSD BrandedCustodian contract on Sonic. USSD inherits frxUSD's upstream reserve exposure rather than directly holding Frax's tokenized Treasury and approved-stablecoin portfolio.",
+  "pegMechanism": "USSD is minted and redeemed 1:1 against Sonic frxUSD through Frax-derived permissionless contracts. Broader approved-asset and tokenized-Treasury routes belong to the upstream frxUSD reserve layer; cross-chain USSD additionally relies on its omnichain infrastructure.",
   "mechanismArchetype": "tbill",
   "llamaId": "356",
   "detailProvider": "coingecko",
@@ -294,142 +294,76 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "WTGXX (WisdomTree Government Money Market)",
-      "pct": 54.1,
-      "risk": "low",
-      "coinId": "wtgxx-wisdomtree",
-      "depType": "collateral",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "WisdomTree Government Money Market Digital Fund",
-      "riskFactors": ["duration", "liquidity", "counterparty", "custody"],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "USTB (Superstate tokenized T-bills)",
-      "pct": 29.9,
-      "risk": "low",
-      "coinId": "ustb-superstate",
-      "depType": "collateral",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Superstate USTB and United States Treasury",
-      "riskFactors": ["duration", "liquidity", "counterparty", "custody"],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "BUIDL (BlackRock tokenized T-bills)",
-      "pct": 14.2,
-      "risk": "low",
-      "coinId": "buidl-blackrock",
-      "depType": "collateral",
-      "assetClass": "other",
-      "issuerOrObligor": "BlackRock BUIDL and institutional repo counterparties",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "USDB (Bridge)",
-      "pct": 1.8,
-      "risk": "low",
+      "name": "Sonic frxUSD held by the USSD BrandedCustodian",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "frxusd-frax",
+      "depType": "wrapper",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Bridge Building Inc. and its reserve counterparties",
+      "issuerOrObligor": "Frax Finance and the Sonic USSD BrandedCustodian contract",
       "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "Codex dependency review",
+    "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Frax balance-sheet API",
-        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+        "label": "USSD BrandedCustodian verified contract",
+        "url": "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
       },
       {
-        "label": "Sonic USSD launch disclosure",
-        "url": "https://blog.soniclabs.com/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/"
+        "label": "Sonic public RPC",
+        "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "Frax frxUSD balance sheet",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
       }
     ],
-    "rationale": "USSD uses Frax's frxUSD reserve infrastructure. The official balance-sheet feed identifies every current positive asset row and supports exact tracked links for WTGXX, USTB, and BUIDL; USDB remains an identified but inactive exogenous stablecoin rather than an active dependency edge.",
-    "compositionBasis": "Official Frax balance-sheet asset values normalized through the repository's frax-balance-sheet adapter",
+    "rationale": "At Sonic block 75932905, BrandedCustodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 held 2198089373918331893881173 units of Sonic frxUSD, exactly equal to USSD totalSupply. USSD's direct reserve is therefore 100% frxUSD; Frax's WTGXX, USTB, BUIDL, and other reserve rows are inherited look-through exposure and must not be duplicated as direct USSD slices.",
+    "compositionBasis": "Fixed-block Sonic frxUSD balanceOf the USSD BrandedCustodian reconciled to USSD totalSupply",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified balance-sheet exposure; USDB is identified but intentionally remains outside the active dependency graph.",
-    "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 3,
-        "reserveName": "USDB (Bridge)",
-        "pct": 1.8,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The source identifies USDB, but the tracked USDB record is inactive and must not be promoted into the active dependency graph."
-      }
-    ]
+    "knownUnknownExposure": "The direct reserve asset is fully identified as frxUSD. Asset-level reserve and custody risks beneath frxUSD remain inherited from the linked upstream record rather than repeated here.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Frax Protocol reserve contracts",
+        "name": "USSD BrandedCustodian contract",
+        "role": "other",
+        "jurisdiction": "Sonic"
+      },
+      {
+        "name": "Frax frxUSD reserve infrastructure",
         "role": "other",
         "jurisdiction": "Onchain protocol"
-      },
-      {
-        "name": "WisdomTree Government Money Market Digital Fund",
-        "role": "other",
-        "jurisdiction": "United States"
-      },
-      {
-        "name": "The Bank of New York Mellon",
-        "role": "custodian",
-        "jurisdiction": "United States"
-      },
-      {
-        "name": "BlackRock BUIDL fund and service providers",
-        "role": "other",
-        "jurisdiction": "United States"
       }
     ],
-    "segregation": "mixed",
+    "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Frax balance-sheet API",
+        "label": "USSD BrandedCustodian verified contract",
+        "url": "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+      },
+      {
+        "label": "Sonic public RPC",
+        "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "Frax frxUSD balance sheet",
         "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
-      },
-      {
-        "label": "WisdomTree WTGXX product page",
-        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
-      },
-      {
-        "label": "Superstate USTB product page",
-        "url": "https://superstate.com/ustb"
-      },
-      {
-        "label": "Securitize BUIDL product disclosure",
-        "url": "https://investors.securitize.io/news/news-details/2024/BlackRock-Launches-Its-First-Tokenized-Fund-BUIDL-on-the-Ethereum-Network-03-20-2024/default.aspx"
       }
     ],
-    "uncertainty": "The reviewed sources identify regulated fund and protocol reserve participants, including BNY Mellon for USTB and BUIDL-related fund services, but do not provide reserve-by-provider shares or a unified legal custody agreement for USSD. The 1.8% USDB row is identified but intentionally remains outside the active dependency graph."
-  },
-  "liveReservesConfig": {
-    "adapter": "frax-balance-sheet",
-    "version": 1,
-    "semantics": "attestation-mix",
-    "breakerScope": "ussd-sonic-labs",
-    "display": {
-      "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf",
-      "label": "Frax Balance Sheet"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
-      }
-    }
+    "uncertainty": "The direct onchain holder is the USSD BrandedCustodian contract, which is not a legal custodian. Legal custody, segregation, bankruptcy remoteness, rehypothecation, and provider shares beneath frxUSD are inherited upstream and are not established independently for USSD."
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",

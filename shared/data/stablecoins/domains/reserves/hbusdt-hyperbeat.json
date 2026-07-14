@@ -2,29 +2,11 @@
   "id": "hbusdt-hyperbeat",
   "reserves": [
     {
-      "name": "hoUSDT strategy exposure (Hyperbeat USDT strategy product)",
-      "pct": 60.5,
-      "risk": "high",
-      "coinId": "usdt-tether",
-      "depType": "wrapper",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Tether Limited and Hyperbeat/Midas vault contracts",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "custody",
-        "smart-contract",
-        "market",
-        "counterparty"
-      ],
-      "liquidityHorizon": "seven-days"
-    },
-    {
-      "name": "masterUSD strategy exposure (Hyperbeat masterUSD product)",
-      "pct": 39.5,
+      "name": "Dynamic Hyperbeat hbUSDT strategy portfolio",
+      "pct": 100,
       "risk": "high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Hyperbeat/Midas masterUSD strategy",
+      "issuerOrObligor": "Hyperbeat, Midas, and allocated HyperEVM strategy protocols",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -38,7 +20,7 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "probable",
     "sources": [
       {
@@ -52,20 +34,28 @@
       {
         "label": "Accountable Hyperbeat reserve attestation",
         "url": "https://accountable.hyperbeat.org/"
+      },
+      {
+        "label": "Hyperbeat Depositor verified source",
+        "url": "https://www.hyperscan.com/address/0x6261f30144b259c74243d5f5d9230941186ac936"
+      },
+      {
+        "label": "HyperEVM public RPC",
+        "url": "https://rpc.hyperliquid.xyz/evm"
       }
     ],
-    "rationale": "The existing reserve snapshot identifies 60.5% hoUSDT strategy exposure and 39.5% masterUSD strategy exposure. Hyperbeat documents hbUSDT as a vault accepting USDT0, USDe, and USR through an insurance contract, with instant redemption subject to liquidity and classic redemption processed within 48 hours; no current constituent weights are published for either strategy slice.",
-    "compositionBasis": "Hyperbeat hbUSDT vault documentation and current curated reserve snapshot",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "The disclosed strategy names and headline percentages do not establish the current USDT0/USDe/USR mix, masterUSD underlying composition, or custody-provider shares.",
-    "knownUnknownExposurePct": 39.5,
+    "rationale": "At HyperEVM block 40439370, the active Depositor accepted USDT0 while the reviewed Hyperbeat documentation also listed USDe and USR as broader or legacy inputs. The sources do not pin a current 60.5% hoUSDT / 39.5% masterUSD allocation or publish a durable constituent split, so hbUSDT is represented as one dynamic strategy envelope rather than an unsupported static snapshot.",
+    "compositionBasis": "Hyperbeat vault documentation, Accountable transparency, and fixed-block HyperEVM deposit-token review",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current strategy venues, position weights, look-through assets, and custody-provider shares are dynamic or undisclosed in the reviewed evidence.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 1,
-        "reserveName": "masterUSD strategy exposure (Hyperbeat masterUSD product)",
-        "pct": 39.5,
-        "disposition": "insufficient-evidence",
-        "rationale": "The reserve snapshot names masterUSD but the reviewed public documentation does not disclose its current underlying composition."
+        "reserveIndex": 0,
+        "reserveName": "Dynamic Hyperbeat hbUSDT strategy portfolio",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The reviewed sources describe eligible inputs and a dynamic strategy product but do not support durable venue, asset, or position weights."
       }
     ]
   },
@@ -73,7 +63,7 @@
     "providers": [
       {
         "name": "Hyperbeat Insurance Contract and Redemption Contract",
-        "role": "custodian",
+        "role": "other",
         "jurisdiction": "HyperEVM"
       },
       {
@@ -89,7 +79,7 @@
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
     "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewer": "owner-triage",
     "confidence": "probable",
     "sources": [
       {
@@ -101,6 +91,6 @@
         "url": "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault"
       }
     ],
-    "uncertainty": "Hyperbeat identifies on-chain insurance and redemption contracts and names Midas as the vault provider, but the reviewed sources do not establish legal segregation, bankruptcy remoteness, rehypothecation terms, or current strategy-provider shares."
+    "uncertainty": "Hyperbeat identifies on-chain insurance and redemption contracts and names Midas as the vault provider, but smart contracts are not legal custodians and the reviewed sources do not establish legal segregation, bankruptcy remoteness, rehypothecation terms, or current strategy-provider shares."
   }
 }

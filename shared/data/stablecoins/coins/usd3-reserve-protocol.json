@@ -115,7 +115,7 @@
   "reserves": [
     {
       "name": "Savings USDS",
-      "pct": 25.000802629152185,
+      "pct": 25,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -126,7 +126,7 @@
     },
     {
       "name": "Static Aave Ethereum USDC",
-      "pct": 24.998895414622886,
+      "pct": 25,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -138,7 +138,7 @@
     },
     {
       "name": "Wrapped Compound USDCv3",
-      "pct": 24.99895288326576,
+      "pct": 25,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -150,7 +150,7 @@
     },
     {
       "name": "Steakhouse USDC strategy",
-      "pct": 25.001349072959167,
+      "pct": 25,
       "risk": "medium",
       "coinId": "steakusdc-steakhouse",
       "depType": "collateral",
@@ -163,7 +163,7 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 backing review",
+    "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
@@ -175,9 +175,8 @@
         "url": "https://docs.reserve.org/core-components/yield-dtfs/yield-dtf-overview"
       }
     ],
-    "rationale": "The live Reserve DTF transparency API identifies USD3 by address and reports four collateral tokens with weights of approximately 25% each. Reserve documents describe Yield DTFs as baskets minted and redeemed against their collateral, with basket configuration governed onchain. The prior rounded weights are replaced with the API snapshot values.",
-    "compositionBasis": "Reserve DTF transparency API snapshot cross-checked against Reserve Yield DTF documentation",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "USD3's governed basket targets four identified collateral positions at approximately equal weight. The authored 25% slices are a rounded fallback for static display, not a claim that a transient API snapshot remains exact; the existing reserve-protocol-dtf onchain adapter is authoritative for current live weights.",
+    "compositionBasis": "Approximate equal-weight governed basket targets cross-checked against Reserve documentation; live onchain adapter is authoritative",
     "scope": "full-composition",
     "knownUnknownExposure": "The current collateral token identities and weights are disclosed, but the API does not disclose the underlying custody allocation or protocol-level reserve composition inside the wrapped strategy tokens.",
     "knownUnknownExposurePct": 0

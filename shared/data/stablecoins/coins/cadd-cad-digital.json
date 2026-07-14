@@ -177,10 +177,29 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://tetradg.com/cadd-reserve-attestations/",
-    "provider": "Baker Tilly monthly reserve AUP report",
+    "provider": "Baker Tilly",
     "attestorTier": "regional",
     "cadence": "monthly",
-    "attestorJurisdiction": "Canada"
+    "attestorJurisdiction": "Canada",
+    "latestReport": {
+      "periodEnd": "2026-04-30",
+      "publishedAt": "2026-05-21",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "owner-triage",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Baker Tilly CADD reasonable-assurance report - April 2026",
+          "url": "https://drive.google.com/file/d/1ZMyKTB4oq6bZDNmT8WiatYDyTYmCPXQi/view?usp=sharing"
+        },
+        {
+          "label": "CADD reserve attestations",
+          "url": "https://tetradg.com/cadd-reserve-attestations/"
+        }
+      ]
+    }
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
