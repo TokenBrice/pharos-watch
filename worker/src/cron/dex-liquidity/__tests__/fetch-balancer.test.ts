@@ -117,12 +117,16 @@ describe("fetchBalancerPools stable-math amp join", () => {
   });
 
   it("drops paused and swap-disabled pools entirely", async () => {
-    const paused = stablePool();
-    paused.id = "0x33bbccddeeff00112233445566778899aabbccdd000200000000000000000003";
-    paused.address = "0x33bbccddeeff00112233445566778899aabbccdd";
-    paused.dynamicData = { ...paused.dynamicData, isPaused: true };
-    const disabled = gyroPool();
-    disabled.dynamicData = { ...disabled.dynamicData, swapEnabled: false };
+    const paused = {
+      ...stablePool(),
+      id: "0x33bbccddeeff00112233445566778899aabbccdd000200000000000000000003",
+      address: "0x33bbccddeeff00112233445566778899aabbccdd",
+      dynamicData: { totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", isPaused: true },
+    };
+    const disabled = {
+      ...gyroPool(),
+      dynamicData: { totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", swapEnabled: false },
+    };
     dispatchByQuery([paused, disabled, cleanPool()], []);
     const result = await fetchBalancerPools();
     expect(result.pools).toHaveLength(1);
