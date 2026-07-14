@@ -497,6 +497,66 @@ describe("loadPublicationHealth", () => {
     });
   });
 
+  it("does not let a generic report-card publication row hide an incompatible active cache", async () => {
+    const reportCardsAt = NOW - 180;
+    const reportCardIds = [...ACTIVE_IDS].sort();
+    const reportCardGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${reportCardsAt}`;
+    const currentIdentity = buildSafetyScoreV8PublicationIdentity({
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      baseInputGenerationId: BASE_INPUT_GENERATION_ID,
+      publicationGenerationId: reportCardGenerationId,
+    });
+    const incompatibleIdentity = {
+      ...currentIdentity,
+      evaluationBuildDigest: "b".repeat(64),
+    };
+    const genericRow = generationRow({
+      generation_id: reportCardGenerationId,
+      metadata_json: JSON.stringify({
+        validationSummary: { safetyScoreIdentity: currentIdentity },
+      }),
+    });
+    const db = mockD1([
+      {
+        match: "FROM surface_publication_generations",
+        matchBinds: ["report-card-cache"],
+        rows: [],
+        first: genericRow,
+      },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["report_card_cache"],
+        rows: [{
+          key: "report_card_cache",
+          value: JSON.stringify({
+            scores: Object.fromEntries(reportCardIds.map((id) => [id, { score: 92, grade: "A" }])),
+            safetyScoreIdentity: incompatibleIdentity,
+            publicationGenerationId: reportCardGenerationId,
+            completeness: {
+              generationId: reportCardGenerationId,
+              methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+              expectedCount: reportCardIds.length,
+              scoredCount: reportCardIds.length,
+              notRatedCount: 0,
+              notRatedIds: [],
+            },
+            updatedAt: reportCardsAt,
+            methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          }),
+          updated_at: reportCardsAt,
+        }],
+      },
+    ]);
+
+    const health = await loadPublicationHealth(db, NOW);
+
+    expect(health.surfaces["report-card-cache"]).toMatchObject({
+      sourceOfTruth: "cache[report_card_cache]",
+      lastPublishedGeneration: null,
+      lastFailureReason: "identity-mismatch",
+    });
+  });
+
   it("fails DEWS publication health closed when the pointed generation is partial", async () => {
     const dewsAt = NOW - 300;
     const publishedIds = ["usdc-circle", "usdt-tether"];

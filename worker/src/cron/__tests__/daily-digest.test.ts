@@ -118,8 +118,8 @@ vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(),
 }));
 
-vi.mock("../../lib/safety-scores", () => ({
-  computeSafetyScoresSnapshot: vi.fn(),
+vi.mock("../../lib/safety-score-history-v2", () => ({
+  loadActiveV8SafetyScoreHistorySource: vi.fn(),
 }));
 
 vi.mock("../../lib/flight-to-quality-classification", () => ({
@@ -168,18 +168,33 @@ import {
 import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import type { DigestInputData } from "@shared/types/digest";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
+import {
+  loadActiveV8SafetyScoreHistorySource,
+  type ActiveV8SafetyScoreHistorySource,
+} from "../../lib/safety-score-history-v2";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestTweet } from "../../lib/twitter";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
-import {
-  deliverTelegramDigestEdition,
-  enqueueTelegramDigestEdition,
-} from "../../lib/telegram-digest-outbox";
+import { deliverTelegramDigestEdition, enqueueTelegramDigestEdition } from "../../lib/telegram-digest-outbox";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 
 const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
+
+function canonicalSafetySource(cards: unknown[]): ActiveV8SafetyScoreHistorySource {
+  return {
+    identity: {
+      model: "v8" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      evaluationBuildDigest: "a".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:123`,
+    },
+    publishedAtSec: 123,
+    snapshot: { cards },
+  } as unknown as ActiveV8SafetyScoreHistorySource;
+}
 
 function makeParsedFixture(
   opts: {
@@ -313,9 +328,11 @@ function makePublishedDewsTables(dewsRows: TestDewsRow[]): MockTableConfig[] {
   ];
 }
 
-function makeBaseTables(options: {
-  dewsRows?: TestDewsRow[];
-} = {}): MockTableConfig[] {
+function makeBaseTables(
+  options: {
+    dewsRows?: TestDewsRow[];
+  } = {},
+): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86_400);
   const weekAgoTs = todayTs - 7 * 86_400;
@@ -456,33 +473,45 @@ describe("generateDailyDigest", () => {
         updatedAt: Math.floor(Date.now() / 1000),
       });
 
-    vi.mocked(computeSafetyScoresSnapshot)
+    vi.mocked(loadActiveV8SafetyScoreHistorySource)
       .mockReset()
-      .mockResolvedValue({
-        kind: "ok",
-        mode: "full-grades",
-        coveredCount: 2,
-        trackedCount: 2,
-        coverageRatio: 1,
-        scores: new Map(),
-        grades: [
-          { id: "usdt-tether", symbol: "USDT", grade: "A", score: 88, pegScore: 95, liqScore: 90 },
-          { id: "usdc-circle", symbol: "USDC", grade: "A", score: 85, pegScore: 93, liqScore: 87 },
-        ],
-      });
+      .mockResolvedValue(
+        canonicalSafetySource([
+          {
+            id: "usdt-tether",
+            symbol: "USDT",
+            isDefunct: false,
+            overallGrade: "A",
+            overallScore: 88,
+            rawInputs: { navToken: false, pegScore: 95 },
+            dimensions: { liquidity: { score: 90 } },
+          },
+          {
+            id: "usdc-circle",
+            symbol: "USDC",
+            isDefunct: false,
+            overallGrade: "A",
+            overallScore: 85,
+            rawInputs: { navToken: false, pegScore: 93 },
+            dimensions: { liquidity: { score: 87 } },
+          },
+        ]),
+      );
 
     vi.mocked(fetchWithRetry)
       .mockReset()
       .mockImplementation(async () => mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT));
 
     vi.mocked(postDigestTweet).mockReset().mockResolvedValue(undefined);
-    vi.mocked(enqueueTelegramDigestEdition).mockReset().mockResolvedValue({
-      created: true,
-      payloadMatched: true,
-      editionKey: "daily:2026-03-06",
-      state: "pending",
-      chunks: ["stored daily payload"],
-    });
+    vi.mocked(enqueueTelegramDigestEdition)
+      .mockReset()
+      .mockResolvedValue({
+        created: true,
+        payloadMatched: true,
+        editionKey: "daily:2026-03-06",
+        state: "pending",
+        chunks: ["stored daily payload"],
+      });
     vi.mocked(deliverTelegramDigestEdition).mockReset().mockResolvedValue({
       editionKey: "daily:2026-03-06",
       state: "sent",
@@ -778,17 +807,8 @@ describe("generateDailyDigest", () => {
     expect(getInsertDigestBinds(db as MockD1Database)).toBeUndefined();
   });
 
-  it("skips safety summary output when safety snapshot is degraded", async () => {
-    vi.mocked(computeSafetyScoresSnapshot).mockResolvedValueOnce({
-      kind: "degraded",
-      mode: "full-grades",
-      coveredCount: 0,
-      trackedCount: 2,
-      coverageRatio: 0,
-      reason: "stablecoins-cache:missing-cache",
-      scores: new Map(),
-      grades: [],
-    });
+  it("omits safety summary output when the canonical snapshot identity is unavailable", async () => {
+    vi.mocked(loadActiveV8SafetyScoreHistorySource).mockRejectedValueOnce(new Error("identity mismatch"));
 
     const db = mockD1(makeBaseTables());
     const result = await generateDailyDigest(db, "anthropic-key");
@@ -871,6 +891,10 @@ describe("generateDailyDigest", () => {
     expect(storedInput.mintBurnFlows.gaugeBand).toBeDefined();
     expect(typeof storedInput.mintBurnFlows.gaugeScore).toBe("number");
     expect(storedInput.mintBurnFlows.flightToQuality).toBeDefined();
+    expect(storedInput.mintBurnFlows.classificationSource).toBe("unavailable");
+    expect(storedInput.mintBurnFlows.classificationReason).toBe("identity-missing");
+    expect(storedInput.mintBurnFlows.safetyScoreIdentity).toBeNull();
+    expect(storedInput.degradedSources).toContain("mint-burn-ftq:identity-missing");
     expect(storedInput.mintBurnFlows.topChains).toBeDefined();
     expect(Array.isArray(storedInput.mintBurnFlows.topChains)).toBe(true);
     expect(storedInput.mintBurnFlows.topChains.length).toBeLessThanOrEqual(3);
@@ -1038,21 +1062,21 @@ describe("generateDailyDigest", () => {
     expect(storedInput.historicalContext.psiPrecedent.lastSeenDaysAgo).toBe(30);
   });
 
-  it("includes grade transitions and excludes methodology bumps", async () => {
+  it("includes V2 organic grade transitions and canonical safety provenance", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const todayTs = nowSec - (nowSec % 86_400);
 
     const baseTables = makeBaseTables();
     const db = mockD1([
       ...baseTables,
-      // Methodology bump check (no bumps)
+      // Organic V2 methodology bump check (no bumps)
       {
-        match: "HAVING COUNT(*) > 10",
+        match: "GROUP BY recorded_at HAVING COUNT(*) > 15",
         rows: [],
       },
-      // Grade transitions in last 48h
+      // Organic V2 grade transitions in last 48h
       {
-        match: "FROM safety_grade_history WHERE recorded_at >= ?",
+        match: "ORDER BY ABS(score - prev_score) DESC",
         rows: [
           {
             stablecoin_id: "usdt-tether",
@@ -1076,6 +1100,12 @@ describe("generateDailyDigest", () => {
     expect(storedInput.gradeTransitions[0].symbol).toBe("USDT");
     expect(storedInput.gradeTransitions[0].fromGrade).toBe("A");
     expect(storedInput.gradeTransitions[0].toGrade).toBe("A-");
+    expect(storedInput.safetyScores.provenance).toMatchObject({
+      model: "v8",
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:123`,
+    });
+    expect((db as MockD1Database).getHistory().some((entry) => entry.sql.includes("safety_grade_history"))).toBe(false);
   });
 
   it("parses meta field from Claude response and stores in digest_meta", async () => {
@@ -1242,11 +1272,7 @@ describe("generateDailyDigest", () => {
     const db = mockD1([
       {
         match: "INSERT OR IGNORE INTO cache",
-        matchBinds: [
-          twitterMarkerKey,
-          JSON.stringify({ sentAt: nowSec, editionNumber: 1 }),
-          nowSec,
-        ],
+        matchBinds: [twitterMarkerKey, JSON.stringify({ sentAt: nowSec, editionNumber: 1 }), nowSec],
         rows: [],
         throwError: new Error("twitter marker down"),
       },
@@ -1365,7 +1391,7 @@ describe("generateDailyDigest", () => {
   });
 
   it("stores appendix copy and success actions in the immutable Telegram edition", async () => {
-    const successActions = [{ key: "telegram:tracked-stablecoins-snapshot", value: "[\"example\"]" }];
+    const successActions = [{ key: "telegram:tracked-stablecoins-snapshot", value: '["example"]' }];
     vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
       appendixHtml: "<b>Tracking Changes</b>\n\n<code>USDX</code> Example USD",
       metadata: {
@@ -1443,7 +1469,7 @@ describe("generateDailyDigest", () => {
   });
 
   it("leaves appendix success actions uncommitted when Telegram delivery remains pending", async () => {
-    const successActions = [{ key: "telegram:cemetery-snapshot", value: "[\"terrausd\"]" }];
+    const successActions = [{ key: "telegram:cemetery-snapshot", value: '["terrausd"]' }];
     vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
       appendixHtml: "<b>New Cemetery Entries</b>\n\n<code>UST</code> TerraUSD",
       metadata: {
@@ -1916,7 +1942,7 @@ describe("totalMcapAth enrichment", () => {
     vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
     vi.mocked(fetchWithRetry).mockReset();
     vi.mocked(loadStablecoinsCache).mockReset();
-    vi.mocked(computeSafetyScoresSnapshot).mockReset();
+    vi.mocked(loadActiveV8SafetyScoreHistorySource).mockReset();
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   });
   afterEach(() => {
@@ -1942,15 +1968,19 @@ describe("totalMcapAth enrichment", () => {
       },
       updatedAt: nowSec,
     });
-    vi.mocked(computeSafetyScoresSnapshot).mockResolvedValue({
-      kind: "ok",
-      mode: "full-grades",
-      coveredCount: 1,
-      trackedCount: 1,
-      coverageRatio: 1,
-      scores: new Map(),
-      grades: [{ id: "usdt-tether", symbol: "USDT", grade: "A", score: 88, pegScore: 95, liqScore: 90 }],
-    });
+    vi.mocked(loadActiveV8SafetyScoreHistorySource).mockResolvedValue(
+      canonicalSafetySource([
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          isDefunct: false,
+          overallGrade: "A",
+          overallScore: 88,
+          rawInputs: { navToken: false, pegScore: 95 },
+          dimensions: { liquidity: { score: 90 } },
+        },
+      ]),
+    );
     vi.mocked(fetchWithRetry).mockImplementation(async () => mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT));
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
 
@@ -2788,13 +2818,15 @@ describe("collectDewsStress — topSignals enrichment", () => {
       },
       {
         match: "pharos:stress-signals:published-exact",
-        rows: [{
-          stablecoin_id: "usdt-tether",
-          score: 65,
-          band: "ALERT",
-          signals_json: "{}",
-          computed_at: computedAt,
-        }],
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            score: 65,
+            band: "ALERT",
+            signals_json: "{}",
+            computed_at: computedAt,
+          },
+        ],
       },
     ]);
     const degradedReasons: string[] = [];
@@ -2847,13 +2879,15 @@ describe("collectDewsStress — topSignals enrichment", () => {
 
   it("returns empty topSignals when signals_json is missing", async () => {
     const computedAt = Math.floor(Date.now() / 1000) - 600;
-    const dewsRows: TestDewsRow[] = [{
-      stablecoin_id: "usdt-tether",
-      score: 65,
-      band: "ALERT",
-      signals_json: "{}",
-      computed_at: computedAt,
-    }];
+    const dewsRows: TestDewsRow[] = [
+      {
+        stablecoin_id: "usdt-tether",
+        score: 65,
+        band: "ALERT",
+        signals_json: "{}",
+        computed_at: computedAt,
+      },
+    ];
     const db = mockD1([
       ...makePublishedDewsTables(dewsRows),
       {
@@ -2879,13 +2913,15 @@ describe("collectDewsStress — topSignals enrichment", () => {
       },
       amplifiers: { psi: 1.08, contagion: 1.15 },
     });
-    const dewsRows: TestDewsRow[] = [{
-      stablecoin_id: "usdt-tether",
-      score: 65,
-      band: "ALERT",
-      signals_json: wrappedJson,
-      computed_at: Math.floor(Date.now() / 1000) - 600,
-    }];
+    const dewsRows: TestDewsRow[] = [
+      {
+        stablecoin_id: "usdt-tether",
+        score: 65,
+        band: "ALERT",
+        signals_json: wrappedJson,
+        computed_at: Math.floor(Date.now() / 1000) - 600,
+      },
+    ];
     const db = mockD1([
       ...makePublishedDewsTables(dewsRows),
       {
@@ -2916,26 +2952,30 @@ describe("collectDewsStress — topSignals enrichment", () => {
     };
     const computedAt = Math.floor(Date.now() / 1000) - 600;
     const flatDb = mockD1([
-      ...makePublishedDewsTables([{
-        stablecoin_id: "usdt-tether",
-        score: 65,
-        band: "ALERT",
-        signals_json: JSON.stringify(signalsPayload),
-        computed_at: computedAt,
-      }]),
+      ...makePublishedDewsTables([
+        {
+          stablecoin_id: "usdt-tether",
+          score: 65,
+          band: "ALERT",
+          signals_json: JSON.stringify(signalsPayload),
+          computed_at: computedAt,
+        },
+      ]),
       { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: [] },
     ]);
     const wrappedDb = mockD1([
-      ...makePublishedDewsTables([{
-        stablecoin_id: "usdt-tether",
-        score: 65,
-        band: "ALERT",
-        signals_json: JSON.stringify({
-          signals: signalsPayload,
-          amplifiers: { psi: 1, contagion: 1 },
-        }),
-        computed_at: computedAt,
-      }]),
+      ...makePublishedDewsTables([
+        {
+          stablecoin_id: "usdt-tether",
+          score: 65,
+          band: "ALERT",
+          signals_json: JSON.stringify({
+            signals: signalsPayload,
+            amplifiers: { psi: 1, contagion: 1 },
+          }),
+          computed_at: computedAt,
+        },
+      ]),
       { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: [] },
     ]);
 

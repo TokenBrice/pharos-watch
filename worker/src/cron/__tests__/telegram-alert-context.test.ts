@@ -3,15 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildAlertContextLines } from "../telegram-alert-context";
 
 const mocks = vi.hoisted(() => ({
-  loadPublishedReportCardsSnapshot: vi.fn(),
+  loadActiveV8SafetyScoreHistorySource: vi.fn(),
   loadStablecoinsCache: vi.fn(),
   logTelegramEvent: vi.fn(),
   getCache: vi.fn(),
   getMintBurnConfigsForStablecoin: vi.fn(),
 }));
 
-vi.mock("../../lib/report-cards-snapshot-cache", () => ({
-  loadPublishedReportCardsSnapshot: mocks.loadPublishedReportCardsSnapshot,
+vi.mock("../../lib/safety-score-history-v2", () => ({
+  loadActiveV8SafetyScoreHistorySource: mocks.loadActiveV8SafetyScoreHistorySource,
 }));
 
 vi.mock("../../lib/stablecoins-cache", () => ({
@@ -33,7 +33,18 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
 
 describe("buildAlertContextLines", () => {
   beforeEach(() => {
-    mocks.loadPublishedReportCardsSnapshot.mockResolvedValue({ kind: "ok", payload: { cards: [] } });
+    mocks.loadActiveV8SafetyScoreHistorySource.mockReset().mockResolvedValue({
+      identity: {
+        model: "v8",
+        schemaVersion: 1,
+        methodologyVersion: "v8.17",
+        evaluationBuildDigest: "a".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+        publicationGenerationId: "report-cards:v8.17:123",
+      },
+      publishedAtSec: 123,
+      snapshot: { cards: [] },
+    });
     mocks.loadStablecoinsCache.mockResolvedValue({ kind: "ok", payload: { peggedAssets: [] } });
     mocks.logTelegramEvent.mockReset();
     mocks.getMintBurnConfigsForStablecoin.mockReset().mockReturnValue([]);
@@ -62,6 +73,39 @@ describe("buildAlertContextLines", () => {
     expect(mocks.getCache).toHaveBeenCalledTimes(1);
   });
 
+  it("omits safety context when the canonical identity is unavailable", async () => {
+    mocks.loadActiveV8SafetyScoreHistorySource.mockRejectedValueOnce(new Error("identity mismatch"));
+    const db = {
+      prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
+    } as unknown as D1Database;
+
+    const context = await buildAlertContextLines(db, ["usdc-circle"]);
+
+    expect(context.get("usdc-circle") ?? "").not.toContain("Safety");
+  });
+
+  it("includes V8 model provenance in canonical safety context", async () => {
+    mocks.loadActiveV8SafetyScoreHistorySource.mockResolvedValueOnce({
+      identity: {
+        model: "v8",
+        schemaVersion: 1,
+        methodologyVersion: "v8.17",
+        evaluationBuildDigest: "a".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+        publicationGenerationId: "report-cards:v8.17:123",
+      },
+      publishedAtSec: 123,
+      snapshot: { cards: [{ id: "usdc-circle", isDefunct: false, overallGrade: "A", overallScore: 90 }] },
+    });
+    const db = {
+      prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
+    } as unknown as D1Database;
+
+    const context = await buildAlertContextLines(db, ["usdc-circle"]);
+
+    expect(context.get("usdc-circle")).toContain("Safety A 90 (V8 v8.17)");
+  });
+
   it("chunks liquidity context reads to stay under the D1 bind limit", async () => {
     const bindCounts: number[] = [];
     let nextRowOffset = 0;
@@ -75,13 +119,14 @@ describe("buildAlertContextLines", () => {
             return statement;
           },
           all: async () => ({
-            results: currentBindCount > 90
-              ? []
-              : Array.from({ length: currentBindCount }, (_, index) => ({
-                  stablecoin_id: `coin-${nextRowOffset + index}`,
-                  liquidity_score: 72,
-                  total_tvl_usd: 1_000_000,
-                })),
+            results:
+              currentBindCount > 90
+                ? []
+                : Array.from({ length: currentBindCount }, (_, index) => ({
+                    stablecoin_id: `coin-${nextRowOffset + index}`,
+                    liquidity_score: 72,
+                    total_tvl_usd: 1_000_000,
+                  })),
           }),
         };
         const originalAll = statement.all;
@@ -112,11 +157,13 @@ describe("buildAlertContextLines", () => {
             call += 1;
             if (call === 2) throw new Error("D1 bind failure");
             return {
-              results: [{
-                stablecoin_id: "coin-0",
-                liquidity_score: 81,
-                total_tvl_usd: 2_000_000,
-              }],
+              results: [
+                {
+                  stablecoin_id: "coin-0",
+                  liquidity_score: 81,
+                  total_tvl_usd: 2_000_000,
+                },
+              ],
             };
           },
         };
@@ -129,13 +176,15 @@ describe("buildAlertContextLines", () => {
 
     expect(context.get("coin-0")).toContain("Liquidity 81");
     expect(context.has("coin-90")).toBe(false);
-    expect(mocks.logTelegramEvent).toHaveBeenCalledWith(expect.objectContaining({
-      level: "warn",
-      action: "alert-context-liquidity",
-      module: "telegram-alert-context",
-      requestedStablecoinCount: 91,
-      chunkSize: 1,
-      errorClass: "d1",
-    }));
+    expect(mocks.logTelegramEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        level: "warn",
+        action: "alert-context-liquidity",
+        module: "telegram-alert-context",
+        requestedStablecoinCount: 91,
+        chunkSize: 1,
+        errorClass: "d1",
+      }),
+    );
   });
 });

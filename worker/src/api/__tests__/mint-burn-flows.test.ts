@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import {
@@ -318,11 +320,31 @@ describe("handleMintBurnFlows contract tests", () => {
         { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 120_000_000_000 } },
       ],
     });
+    const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${now}`;
+    const scores = Object.fromEntries(
+      [...ACTIVE_IDS].map((id) => [id, { score: 60, grade: "B-" }]),
+    );
+    scores["usdc-circle"] = { score: 80, grade: "A" };
+    scores["usdt-tether"] = { score: 40, grade: "C" };
     const reportCardCache = JSON.stringify({
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      scores: {
-        "usdc-circle": { score: 80, grade: "A" },
-        "usdt-tether": { score: 40, grade: "C" },
+      scores,
+      safetyScoreIdentity: {
+        model: "v8",
+        schemaVersion: 1,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+        baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+        publicationGenerationId,
+      },
+      publicationGenerationId,
+      completeness: {
+        generationId: publicationGenerationId,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        expectedCount: ACTIVE_IDS.size,
+        scoredCount: ACTIVE_IDS.size,
+        notRatedCount: 0,
+        notRatedIds: [],
       },
       updatedAt: now,
     });
@@ -396,6 +418,10 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body.gauge.classificationSource).toBe("report-card-cache");
     expect(body.gauge.flightToQuality).toBe(true);
     expect(body.gauge.flightIntensity).toBe(20);
+    expect(body.gauge.safetyScoreIdentity).toMatchObject({
+      model: "v8",
+      evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+    });
     expect(body.sync?.classificationWarning).toBeNull();
   });
 
@@ -1020,6 +1046,166 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(history.some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
   });
 
+  it("removes cached FTQ output when its report-card identity is no longer active", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const cachedGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${now - 900}`;
+    const activeGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${now}`;
+    const cachedIdentity = {
+      model: "v8" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+      publicationGenerationId: cachedGenerationId,
+    };
+    const activeIdentity = {
+      ...cachedIdentity,
+      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+      publicationGenerationId: activeGenerationId,
+    };
+    const cachedBody = {
+      gauge: {
+        score: 10,
+        band: "BUYING",
+        intensitySemantics: "signed-v2" as const,
+        flightToQuality: true,
+        flightIntensity: 20,
+        classificationSource: "report-card-cache" as const,
+        safetyScoreIdentity: cachedIdentity,
+        trackedCoins: 1,
+        trackedMcapUsd: 1,
+      },
+      coins: [],
+      hourly: [],
+      updatedAt: now - 60,
+      sync: {
+        lastSuccessfulSyncAt: now - 120,
+        freshnessStatus: "fresh" as const,
+        warning: null,
+        classificationWarning: null,
+        criticalLaneHealthy: true,
+      },
+    };
+    const activeScores = Object.fromEntries(
+      [...ACTIVE_IDS].map((id) => [id, { score: 80, grade: "A" }]),
+    );
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["mint-burn-flows:v3:aggregate:24"],
+        rows: [{
+          key: "mint-burn-flows:v3:aggregate:24",
+          value: JSON.stringify(cachedBody),
+          updated_at: now,
+        }],
+      },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["report_card_cache"],
+        rows: [{
+          key: "report_card_cache",
+          value: JSON.stringify({
+            scores: activeScores,
+            safetyScoreIdentity: activeIdentity,
+            publicationGenerationId: activeGenerationId,
+            completeness: {
+              generationId: activeGenerationId,
+              methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+              expectedCount: ACTIVE_IDS.size,
+              scoredCount: ACTIVE_IDS.size,
+              notRatedCount: 0,
+              notRatedIds: [],
+            },
+            updatedAt: now,
+            methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          }),
+          updated_at: now,
+        }],
+      },
+      {
+        match: "FROM mint_burn_hourly",
+        rows: [],
+        throwError: new Error("live aggregate query should not run"),
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+
+    expect(body.gauge).toMatchObject({
+      flightToQuality: false,
+      flightIntensity: 0,
+      classificationSource: "unavailable",
+      safetyScoreIdentity: null,
+    });
+    expect(body.sync?.classificationWarning).toContain("identity-mismatch");
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
+  });
+
+  it("keeps cached aggregate flow data while disabling FTQ when report-card validation throws", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const identity = {
+      model: "v8" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${now}`,
+    };
+    const cachedBody = {
+      gauge: {
+        score: 10,
+        band: "BUYING",
+        intensitySemantics: "signed-v2" as const,
+        flightToQuality: true,
+        flightIntensity: 20,
+        classificationSource: "report-card-cache" as const,
+        safetyScoreIdentity: identity,
+        trackedCoins: 1,
+        trackedMcapUsd: 1,
+      },
+      coins: [],
+      hourly: [],
+      updatedAt: now - 60,
+      sync: {
+        lastSuccessfulSyncAt: now - 120,
+        freshnessStatus: "fresh" as const,
+        warning: null,
+        classificationWarning: null,
+        criticalLaneHealthy: true,
+      },
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["mint-burn-flows:v3:aggregate:24"],
+        rows: [{
+          key: "mint-burn-flows:v3:aggregate:24",
+          value: JSON.stringify(cachedBody),
+          updated_at: now,
+        }],
+      },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["report_card_cache"],
+        rows: [],
+        throwError: new Error("report-card cache read failed"),
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+
+    expect(res.status).toBe(200);
+    expect(body.gauge).toMatchObject({
+      flightToQuality: false,
+      flightIntensity: 0,
+      classificationSource: "unavailable",
+      safetyScoreIdentity: null,
+    });
+    expect(body.sync?.classificationWarning).toContain("cache-read-failed");
+  });
+
   it("serves cached aggregate fallback when live query fails after a cache miss", async () => {
     const now = Math.floor(Date.now() / 1000);
     const cachedBody = {
@@ -1125,12 +1311,17 @@ describe("handleMintBurnFlows contract tests", () => {
     });
   });
 
-  it("marks FTQ classification unavailable when report-card cache is missing", async () => {
+  it("disables FTQ when the report-card cache lacks an identity-complete publication", async () => {
     const now = Math.floor(Date.now() / 1000);
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
+    });
+    const identitylessReportCardCache = JSON.stringify({
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      scores: { "usdt-tether": { score: 80, grade: "A" } },
+      updatedAt: now,
     });
 
     const db = mockD1([
@@ -1163,8 +1354,8 @@ describe("handleMintBurnFlows contract tests", () => {
       {
         match: "cache",
         matchBinds: ["report_card_cache"],
-        rows: [],
-        first: null,
+        rows: [{ key: "report_card_cache", value: identitylessReportCardCache, updated_at: now }],
+        first: { key: "report_card_cache", value: identitylessReportCardCache, updated_at: now },
       },
       {
         match: "cache",
@@ -1179,7 +1370,8 @@ describe("handleMintBurnFlows contract tests", () => {
 
     const body = MintBurnFlowsResponseSchema.parse(await res.json());
     expect(body.gauge.classificationSource).toBe("unavailable");
-    expect(body.sync?.classificationWarning).toContain("missing-cache");
+    expect(body.gauge.safetyScoreIdentity).toBeNull();
+    expect(body.sync?.classificationWarning).toContain("identity-missing");
     expect(body.gauge.flightToQuality).toBe(false);
     expect(body.gauge.flightIntensity).toBe(0);
   });

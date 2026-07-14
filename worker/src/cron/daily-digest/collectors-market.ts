@@ -11,7 +11,13 @@ import { computeFlowIntensity, computeGaugeScore, getGaugeBand, detectFlightToQu
 import { isCanonicalMintBurnPair } from "../../lib/mint-burn-canonical-chain";
 import { SECONDS } from "../../lib/time-constants";
 import { computeDigestMintBurnFtqFlows } from "./mint-burn-ftq";
-import { collectorDegraded, collectorOk, type CollectorContext, type CollectorResult } from "./collectors-shared";
+import {
+  collectorDegraded,
+  collectorOk,
+  markCollectorDegraded,
+  type CollectorContext,
+  type CollectorResult,
+} from "./collectors-shared";
 
 type FlowIntensityRow = {
   id: string;
@@ -288,6 +294,7 @@ export async function collectResolvedDepegs(
 
 export async function collectMintBurnFlows(
   ctx: CollectorContext,
+  degradedReasons?: string[],
 ): Promise<DigestInputData["mintBurnFlows"]> {
   try {
     const cutoff24h = ctx.nowSec - SECONDS.ONE_DAY;
@@ -363,8 +370,12 @@ export async function collectMintBurnFlows(
 
     const gaugeScore = computeGaugeScore(coinIntensities.map((coin) => ({ intensity: coin.intensity, mcap: coin.mcap })));
     if (gaugeScore !== null) {
-      const { safeNet24h, riskyNet24h } = await computeDigestMintBurnFtqFlows(ctx.db, coinIntensities);
+      const ftqFlows = await computeDigestMintBurnFtqFlows(ctx.db, coinIntensities);
+      const { safeNet24h, riskyNet24h } = ftqFlows;
       const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
+      if (ftqFlows.kind === "unavailable") {
+        markCollectorDegraded(degradedReasons, `mint-burn-ftq:${ftqFlows.reason}`);
+      }
       const topPressure = coinIntensities
         .filter((coin): coin is FlowIntensityRowWithIntensity => coin.intensity !== null && Math.abs(coin.intensity) > 20)
         .sort((a, b) => Math.abs(b.intensity) - Math.abs(a.intensity))
@@ -384,6 +395,9 @@ export async function collectMintBurnFlows(
       return {
         gaugeScore,
         gaugeBand: getGaugeBand(gaugeScore),
+        classificationSource: ftqFlows.kind === "ok" ? "report-card-cache" : "unavailable",
+        classificationReason: ftqFlows.kind === "ok" ? null : ftqFlows.reason,
+        safetyScoreIdentity: ftqFlows.safetyScoreIdentity,
         flightToQuality: { active: ftq.active, safeNetUsd: safeNet24h, riskyNetUsd: riskyNet24h },
         topPressure,
         topChains,

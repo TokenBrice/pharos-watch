@@ -54,7 +54,15 @@ const statusFixture: StatusForCoin = {
   supplyUsd: 12_300_000_000,
   stablecoinsUpdatedAt: 1_700_000_000,
   dews: { band: "WATCH", score: 24, computedAt: 1_700_000_000 },
-  safety: { grade: "A", score: 82, recordedAt: 1_700_000_000 },
+  safety: {
+    grade: "A",
+    score: 82,
+    model: "v8",
+    methodologyVersion: "v8.17",
+    publicationGenerationId: "report-cards:v8.17:1700000000",
+    publishedAt: 1_700_000_000,
+    recordedAt: 1_700_000_000,
+  },
   liquidity: { score: 91, totalTvlUsd: 450_000_000, updatedAt: 1_700_000_000 },
   yield: null,
   flow: null,
@@ -81,23 +89,19 @@ function buttonsFromMarkup(markup: unknown): InlineButton[] {
 }
 
 function expectMiniAppButton(buttons: InlineButton[], text: string, startapp: string): void {
-  expect(
-    buttons.some(
-      (button) => button.text === text && button.web_app?.url?.includes(`startapp=${startapp}`),
-    ),
-  ).toBe(true);
+  expect(buttons.some((button) => button.text === text && button.web_app?.url?.includes(`startapp=${startapp}`))).toBe(
+    true,
+  );
 }
 
 function expectCallbackButton(buttons: InlineButton[], text: string, callbackData: string): void {
-  expect(
-    buttons.some((button) => button.text === text && button.callback_data === callbackData),
-  ).toBe(true);
+  expect(buttons.some((button) => button.text === text && button.callback_data === callbackData)).toBe(true);
 }
 
 function expectNoD1Mutation(db: D1Database): void {
-  const writes = (db as MockD1Database).getHistory().filter((entry) =>
-    /^\s*(INSERT|UPDATE|DELETE|REPLACE|CREATE|DROP|ALTER)\b/i.test(entry.sql),
-  );
+  const writes = (db as MockD1Database)
+    .getHistory()
+    .filter((entry) => /^\s*(INSERT|UPDATE|DELETE|REPLACE|CREATE|DROP|ALTER)\b/i.test(entry.sql));
   expect(writes).toEqual([]);
 }
 
@@ -268,8 +272,7 @@ describe("read-only webhook command handlers", () => {
     expect(buildCoverageMessage).toHaveBeenCalledWith("USDC", statusFixture);
     expect(coverageCtx.replyToChat).not.toHaveBeenCalled();
     expect(coverageCtx.replyToChatWithMarkup).toHaveBeenCalledTimes(1);
-    const [groupCoverageMessage, groupCoverageOptions] =
-      vi.mocked(coverageCtx.replyToChatWithMarkup).mock.calls[0]!;
+    const [groupCoverageMessage, groupCoverageOptions] = vi.mocked(coverageCtx.replyToChatWithMarkup).mock.calls[0]!;
     expect(groupCoverageMessage).toBe("<b>USDC coverage</b>");
     const groupCoverageButtons = buttonsFromMarkup(groupCoverageOptions.replyMarkup);
     expectCallbackButton(groupCoverageButtons, "Why?", "why:usdc-circle");

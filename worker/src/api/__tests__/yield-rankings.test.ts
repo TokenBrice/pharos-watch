@@ -502,7 +502,7 @@ describe("handleYieldRankings", () => {
     expect(body._meta.ageSeconds).toBe(30);
   });
 
-  it("hydrates only from the matching compact publication identity", async () => {
+  it("hydrates across ordinary compact publication generations and reports the live identity", async () => {
     const hourlyPublishedAt = Math.floor(Date.now() / 1000) - 3_600;
     const hourlyGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${hourlyPublishedAt}`;
     const payload = {
@@ -532,6 +532,8 @@ describe("handleYieldRankings", () => {
       },
     } satisfies YieldRankingsResponse;
     const db = makeCacheDb(payload, hourlyPublishedAt);
+    const liveGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${hourlyPublishedAt + 900}`;
+    currentSafetyIdentity = v8Identity(liveGenerationId);
 
     const res = await handleYieldRankings(db);
     const body = await res.json() as YieldRankingsResponse;
@@ -549,11 +551,12 @@ describe("handleYieldRankings", () => {
       trackedCount: 1,
       reason: null,
       source: "report-card-cache",
-      publicationGenerationId: hourlyGenerationId,
+      publicationGenerationId: liveGenerationId,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       publishedAt: expect.any(Number),
     });
-    expect(body.provenance?.liveSafetyHydration?.publicationGenerationId).toBe(hourlyGenerationId);
+    expect(body.provenance?.liveSafetyHydration?.publicationGenerationId).toBe(liveGenerationId);
+    expect(body.rankings[0]?.provenance?.safetyScoreIdentity).toEqual(currentSafetyIdentity);
   });
 
   it("returns explicit NR fields instead of crossing compact safety identities", async () => {
@@ -567,7 +570,10 @@ describe("handleYieldRankings", () => {
       coverageRatio: 1,
       scores: new Map([["usdc-circle", { score: 88, grade: "A" }]]),
       source: "report-card-cache",
-      safetyScoreIdentity: v8Identity(`report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:other`),
+      safetyScoreIdentity: {
+        ...v8Identity(`report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:other`),
+        evaluationBuildDigest: "c".repeat(64),
+      },
       publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:other`,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       publishedAt: updatedAt,

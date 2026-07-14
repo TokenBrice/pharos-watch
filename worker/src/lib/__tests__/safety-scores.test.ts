@@ -224,6 +224,119 @@ describe("computeSafetyScoresSnapshot", () => {
     expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
   });
 
+  it("fails closed when a compact cache V8 identity is from a different evaluation build", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const generationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
+    const currentIdentity = v8PublicationIdentity(generationId);
+    const nonCurrentIdentity = {
+      ...currentIdentity,
+      evaluationBuildDigest: currentIdentity.evaluationBuildDigest === "b".repeat(64) ? "c".repeat(64) : "b".repeat(64),
+    };
+    db = mockD1([{
+      match: "FROM cache WHERE key = ?",
+      matchBinds: ["report_card_cache"],
+      rows: [{
+        key: "report_card_cache",
+        value: JSON.stringify({
+          scores: {
+            "usdt-tether": { score: 75, grade: "B" },
+            "usdc-circle": { score: 82, grade: "B+" },
+          },
+          updatedAt,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          safetyScoreIdentity: nonCurrentIdentity,
+          publicationGenerationId: generationId,
+          completeness: {
+            generationId,
+            methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+            expectedCount: 3,
+            scoredCount: 2,
+            notRatedCount: 1,
+            notRatedIds: ["ust-terra"],
+          },
+        }),
+        updated_at: updatedAt,
+      }],
+    }]);
+
+    const result = await computeSafetyScoresSnapshot(db, {
+      outputMode: "map",
+      sourceMode: "published-cache",
+    });
+
+    expect(result).toMatchObject({
+      kind: "degraded",
+      source: "report-card-cache",
+      reason: "report-card-cache:identity-mismatch",
+      safetyScoreIdentity: nonCurrentIdentity,
+      publicationGenerationId: generationId,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publishedAt: updatedAt,
+      coveredCount: 0,
+      trackedCount: 3,
+    });
+    expect(result.scores.size).toBe(0);
+    expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when a compact cache carries an unsupported V9 identity", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const generationId = `safety-score-v9:9.0:${updatedAt}`;
+    db = mockD1([{
+      match: "FROM cache WHERE key = ?",
+      matchBinds: ["report_card_cache"],
+      rows: [{
+        key: "report_card_cache",
+        value: JSON.stringify({
+          scores: {
+            "usdt-tether": { score: 75, grade: "B" },
+            "usdc-circle": { score: 82, grade: "B+" },
+          },
+          updatedAt,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          safetyScoreIdentity: {
+            model: "v9",
+            schemaVersion: 1,
+            methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+            policyId: "v9-policy-2026-05",
+            policyDigest: "b".repeat(64),
+            evaluationBuildDigest: "c".repeat(64),
+            baseInputGenerationId: `report-cards-input:v1:${"d".repeat(64)}`,
+            publicationGenerationId: generationId,
+          },
+          publicationGenerationId: generationId,
+          completeness: {
+            generationId,
+            methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+            expectedCount: 3,
+            scoredCount: 2,
+            notRatedCount: 1,
+            notRatedIds: ["ust-terra"],
+          },
+        }),
+        updated_at: updatedAt,
+      }],
+    }]);
+
+    const result = await computeSafetyScoresSnapshot(db, {
+      outputMode: "map",
+      sourceMode: "published-cache",
+    });
+
+    expect(result).toMatchObject({
+      kind: "degraded",
+      source: "report-card-cache",
+      reason: "report-card-cache:invalid-payload",
+      safetyScoreIdentity: null,
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      coveredCount: 0,
+      trackedCount: 3,
+    });
+    expect(result.scores.size).toBe(0);
+    expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
+  });
+
   it("degrades yield safety when the compact cache manifest swaps an active identity", async () => {
     const updatedAt = Math.floor(Date.now() / 1000);
     const generationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;

@@ -1,22 +1,21 @@
 import type { DigestInputData } from "@shared/types/digest";
-import { scoreToGrade } from "@shared/lib/report-cards";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { DEWS_SIGNAL_LABELS, type DewsSignalKey } from "@shared/lib/dews-config";
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
-import { computeSafetyScoresSnapshot, type SafetyGradeRow } from "../../lib/safety-scores";
+import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
+import { loadActiveV8SafetyScoreHistorySource } from "../../lib/safety-score-history-v2";
 import {
   logCollectorParseFailure,
   markCollectorDegraded,
   type CollectorContext,
+  type CanonicalSafetyGradeRow,
   type SafetyScoresResult,
 } from "./collectors-shared";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import { logWorkerEvent } from "../../lib/structured-log";
 
-function parseStressSignalsMap(
-  signalsJson: string,
-): Record<string, { value: number; available: boolean }> {
+function parseStressSignalsMap(signalsJson: string): Record<string, { value: number; available: boolean }> {
   const parsed = JSON.parse(signalsJson) as unknown;
   const unwrapped = unwrapStressSignalsEnvelope(parsed);
   return (unwrapped?.signals ?? {}) as Record<string, { value: number; available: boolean }>;
@@ -28,28 +27,34 @@ export async function collectSafetyScores(
   degradedReasons: string[],
 ): Promise<SafetyScoresResult> {
   try {
-    const safetySnapshot = await computeSafetyScoresSnapshot(ctx.db, {
-      includeNavTokens: false,
-      outputMode: "full-grades",
-    });
-    if (safetySnapshot.kind !== "ok") {
-      degradedReasons.push(`safety-snapshot:${safetySnapshot.reason ?? "degraded"}`);
-      console.warn(
-        `[daily-digest] Safety snapshot degraded: ${safetySnapshot.coveredCount}/${safetySnapshot.trackedCount} ` +
-        `(${(safetySnapshot.coverageRatio * 100).toFixed(1)}%)`,
-      );
-      return { safetyScores: undefined, safetyGrades: undefined };
-    }
-
-    const allGrades = safetySnapshot.grades;
-    const scores = allGrades.map((grade) => grade.score).sort((a, b) => a - b);
-    const medianScore = scores.length > 0 ? scores[Math.floor(scores.length / 2)] : 0;
-    const medianGrade = scoreToGrade(medianScore);
-    const aboveBCount = allGrades.filter((grade) => grade.score >= 75).length;
+    const source = await loadActiveV8SafetyScoreHistorySource(ctx.db);
+    const allGrades: CanonicalSafetyGradeRow[] = source.snapshot.cards
+      .filter((card) => !card.isDefunct && !card.rawInputs.navToken)
+      .map((card) => ({
+        id: card.id,
+        symbol: card.symbol,
+        grade: card.overallGrade,
+        score: card.overallScore ?? 0,
+        pegScore: card.rawInputs.pegScore,
+        liqScore: card.dimensions.liquidity.score,
+      }));
+    const rankedGrades = [...allGrades].sort((a, b) => a.score - b.score);
+    const medianGrade = rankedGrades[Math.floor(rankedGrades.length / 2)]?.grade ?? "NR";
+    const aboveBCount = allGrades.filter(
+      (grade) =>
+        grade.grade === "A+" ||
+        grade.grade === "A" ||
+        grade.grade === "A-" ||
+        grade.grade === "B+" ||
+        grade.grade === "B",
+    ).length;
     const fCount = allGrades.filter((grade) => grade.grade === "F").length;
     const mentionedCoinGrades = allGrades.filter((grade) => mentionedSymbols.has(grade.symbol));
     const tensionCoins = allGrades
-      .filter((grade) => !mentionedSymbols.has(grade.symbol) && grade.pegScore !== null && grade.pegScore > 90 && grade.score < 50)
+      .filter(
+        (grade) =>
+          !mentionedSymbols.has(grade.symbol) && grade.pegScore !== null && grade.pegScore > 90 && grade.score < 50,
+      )
       .sort((a, b) => b.score - a.score)
       .slice(0, 2);
     const reportCoins = [...mentionedCoinGrades, ...tensionCoins];
@@ -84,13 +89,23 @@ export async function collectSafetyScores(
         medianGrade,
         aboveBCount,
         fCount,
+        provenance: {
+          model: source.identity.model,
+          schemaVersion: source.identity.schemaVersion,
+          methodologyVersion: source.identity.methodologyVersion,
+          evaluationBuildDigest: source.identity.evaluationBuildDigest,
+          baseInputGenerationId: source.identity.baseInputGenerationId,
+          publicationGenerationId: source.identity.publicationGenerationId,
+          publishedAt: source.publishedAtSec,
+        },
       },
       safetyGrades: allGrades,
+      safetyIdentity: source.identity,
     };
   } catch (error) {
-    markCollectorDegraded(degradedReasons, "safety-snapshot-query");
-    console.error("[daily-digest] Failed to compute safety scores:", error);
-    return { safetyScores: undefined, safetyGrades: undefined };
+    markCollectorDegraded(degradedReasons, "safety-canonical-snapshot");
+    console.error("[daily-digest] Failed to load canonical safety scores:", error);
+    return { safetyScores: undefined, safetyGrades: undefined, safetyIdentity: undefined };
   }
 }
 
@@ -151,9 +166,7 @@ export async function collectDewsStress(
           for (const [key, signal] of Object.entries(signals)) {
             if (signal.available && signal.value > maxVal) {
               maxVal = signal.value;
-              topDriver = key in DEWS_SIGNAL_LABELS
-                ? DEWS_SIGNAL_LABELS[key as DewsSignalKey].toLowerCase()
-                : key;
+              topDriver = key in DEWS_SIGNAL_LABELS ? DEWS_SIGNAL_LABELS[key as DewsSignalKey].toLowerCase() : key;
             }
           }
         } catch (error) {
@@ -231,9 +244,11 @@ export async function collectDewsStress(
 
 export async function collectGradeTransitions(
   ctx: CollectorContext,
-  safetyGrades: SafetyGradeRow[] | undefined,
+  safetyGrades: CanonicalSafetyGradeRow[] | undefined,
+  safetyIdentity: SafetyScoreV8PublicationIdentity | undefined,
   degradedReasons?: string[],
 ): Promise<DigestInputData["gradeTransitions"]> {
+  if (!safetyGrades || !safetyIdentity) return undefined;
   try {
     const cutoff48h = ctx.nowSec - 2 * 24 * 60 * 60;
     const bumpRows = await ctx.db
@@ -242,11 +257,22 @@ export async function collectGradeTransitions(
                 COUNT(*) as cnt,
                 SUM(CASE WHEN score > prev_score THEN 1 ELSE 0 END) as upgrades,
                 SUM(CASE WHEN score < prev_score THEN 1 ELSE 0 END) as downgrades
-         FROM safety_grade_history
-         WHERE recorded_at >= ? AND prev_grade IS NOT NULL
+         FROM safety_score_history_v2
+         WHERE recorded_at >= ?
+           AND model = ?
+           AND identity_schema_version = ?
+           AND methodology_version = ?
+           AND evaluation_build_digest = ?
+           AND transition_kind = 'organic-grade-change'
          GROUP BY recorded_at HAVING COUNT(*) > 15`,
       )
-      .bind(cutoff48h)
+      .bind(
+        cutoff48h,
+        safetyIdentity.model,
+        safetyIdentity.schemaVersion,
+        safetyIdentity.methodologyVersion,
+        safetyIdentity.evaluationBuildDigest,
+      )
       .all<{ recorded_at: number; cnt: number; upgrades: number; downgrades: number }>();
     const bumpTimestamps = new Set(
       (bumpRows.results ?? [])
@@ -257,12 +283,31 @@ export async function collectGradeTransitions(
     const transitionRows = await ctx.db
       .prepare(
         `SELECT stablecoin_id, recorded_at, grade, score, prev_grade, prev_score
-         FROM safety_grade_history WHERE recorded_at >= ? AND prev_grade IS NOT NULL
+         FROM safety_score_history_v2
+         WHERE recorded_at >= ?
+           AND model = ?
+           AND identity_schema_version = ?
+           AND methodology_version = ?
+           AND evaluation_build_digest = ?
+           AND transition_kind = 'organic-grade-change'
          ORDER BY ABS(score - prev_score) DESC
          LIMIT 10`,
       )
-      .bind(cutoff48h)
-      .all<{ stablecoin_id: string; recorded_at: number; grade: string; score: number; prev_grade: string; prev_score: number }>();
+      .bind(
+        cutoff48h,
+        safetyIdentity.model,
+        safetyIdentity.schemaVersion,
+        safetyIdentity.methodologyVersion,
+        safetyIdentity.evaluationBuildDigest,
+      )
+      .all<{
+        stablecoin_id: string;
+        recorded_at: number;
+        grade: string;
+        score: number;
+        prev_grade: string;
+        prev_score: number;
+      }>();
 
     const candidates = (transitionRows.results ?? [])
       .filter((row) => !bumpTimestamps.has(row.recorded_at))
@@ -272,7 +317,7 @@ export async function collectGradeTransitions(
       })
       .slice(0, 5);
 
-    if (candidates.length > 0 && safetyGrades) {
+    if (candidates.length > 0) {
       const gradeMap = new Map(safetyGrades.map((grade) => [grade.id, grade]));
       return candidates.map((row) => {
         const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === row.stablecoin_id)!;

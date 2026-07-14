@@ -2,7 +2,7 @@ import { formatCompactUsdShort } from "@shared/lib/format";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { loadPublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
+import { loadActiveV8SafetyScoreHistorySource } from "../lib/safety-score-history-v2";
 import { buildInClause, chunkArray } from "../lib/db";
 import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
@@ -32,13 +32,13 @@ export async function buildAlertContextLines(
   const nowSec = Math.floor(Date.now() / 1000);
 
   const [snapshot, stablecoinsResult, liquidityResult, flowResult] = await Promise.all([
-    loadPublishedReportCardsSnapshot(db).catch(() => null),
+    loadActiveV8SafetyScoreHistorySource(db).catch(() => null),
     loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }).catch(() => null),
     loadLiquidityRows(db, uniqueIds),
     loadFlowRows(db, uniqueIds, nowSec),
   ]);
 
-  const cards = new Map((snapshot?.kind === "ok" ? snapshot.payload.cards : []).map((card) => [card.id, card]));
+  const cards = new Map((snapshot?.snapshot.cards ?? []).map((card) => [card.id, card]));
   const supplies = new Map<string, number>();
   if (stablecoinsResult?.kind === "ok") {
     const wantedIds = new Set(uniqueIds);
@@ -54,7 +54,11 @@ export async function buildAlertContextLines(
     const parts: string[] = [];
     const card = cards.get(id);
     const liq = liquidityResult.get(id);
-    if (card) parts.push(`Safety ${card.overallGrade}${card.overallScore != null ? ` ${card.overallScore}` : ""}`);
+    if (card) {
+      parts.push(
+        `Safety ${card.overallGrade}${card.overallScore != null ? ` ${card.overallScore}` : ""} (${snapshot!.identity.model.toUpperCase()} ${snapshot!.identity.methodologyVersion})`,
+      );
+    }
     if (liq) parts.push(`Liquidity ${liq.score ?? "NR"}, DEX TVL ${formatUsdCompact(liq.tvl)}`);
     const supply = supplies.get(id);
     if (supply != null) parts.push(`Supply ${formatUsdCompact(supply)}`);
@@ -99,10 +103,7 @@ async function loadLiquidityRows(
     }
   }
 
-  return new Map(rows.map((row) => [
-    row.stablecoin_id,
-    { score: row.liquidity_score, tvl: row.total_tvl_usd },
-  ]));
+  return new Map(rows.map((row) => [row.stablecoin_id, { score: row.liquidity_score, tvl: row.total_tvl_usd }]));
 }
 
 /**
@@ -116,9 +117,7 @@ async function loadFlowRows(
   stablecoinIds: readonly string[],
   nowSec: number,
 ): Promise<Map<string, { netFlowUsd: number; updatedAt: number }>> {
-  const trackedIds = Array.from(new Set(stablecoinIds)).filter(
-    (id) => getMintBurnConfigsForStablecoin(id).length > 0,
-  );
+  const trackedIds = Array.from(new Set(stablecoinIds)).filter((id) => getMintBurnConfigsForStablecoin(id).length > 0);
   if (trackedIds.length === 0) return new Map();
 
   const entries = await Promise.all(

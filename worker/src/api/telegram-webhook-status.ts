@@ -6,6 +6,7 @@ import { perCoinFlowCacheKey } from "./mint-burn-flows-shared";
 import { getCache } from "../lib/db-cache";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
+import { loadActiveV8SafetyScoreHistorySource } from "../lib/safety-score-history-v2";
 
 /** 24h mint/burn flow older than this is "stale": shown on /status with age, omitted from the terse alert Context line. */
 const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
@@ -15,7 +16,7 @@ const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
  *
  * Sources:
  * - published `stress_signals` generation for the latest DEWS band + score per coin
- * - `safety_grade_history`    latest safety grade per coin (timestamp column: `recorded_at`)
+ * - exact canonical Safety Score V8 snapshot + fixed-input identity
  * - `depeg_events`            only rows with `ended_at IS NULL` (an active event)
  * - `price_cache`             latest cached price by `asset_id = stablecoin_id`
  *
@@ -30,7 +31,17 @@ export interface StatusForCoin {
   supplyUsd: number | null;
   stablecoinsUpdatedAt: number | null;
   dews: { band: string; score: number; computedAt: number } | null;
-  safety: { grade: string; score: number | null; recordedAt: number } | null;
+  safety: {
+    grade: string;
+    score: number | null;
+    model: "v8";
+    methodologyVersion: string;
+    publicationGenerationId: string;
+    publishedAt: number;
+    /** Compatibility alias for status consumers that label the publication age. */
+    recordedAt: number;
+  } | null;
+  safetyUnavailableReason?: string | null;
   liquidity: {
     score: number | null;
     totalTvlUsd: number;
@@ -55,66 +66,59 @@ export interface StatusForCoin {
       };
 }
 
-export async function loadStatusForCoin(
-  db: D1Database,
-  stablecoinId: string,
-): Promise<StatusForCoin> {
+export async function loadStatusForCoin(db: D1Database, stablecoinId: string): Promise<StatusForCoin> {
   const nowSec = Math.floor(Date.now() / 1000);
   const isMintBurnTracked = getMintBurnConfigsForStablecoin(stablecoinId).length > 0;
-  const [dewsRow, safetyRow, depegRow, priceRow, liquidityRow, yieldRow, stablecoinsCache, flowCache] = await Promise.all([
-    loadStressSignalCurrentRowForCoin(db, stablecoinId, nowSec, { staleAfterSec: 30 * 60 }),
-    db
-      .prepare(
-        "SELECT grade, score, recorded_at FROM safety_grade_history WHERE stablecoin_id = ? ORDER BY recorded_at DESC LIMIT 1",
-      )
-      .bind(stablecoinId)
-      .first<{ grade: string; score: number | null; recorded_at: number }>(),
-    db
-      .prepare(
-        "SELECT direction, peak_deviation_bps, peg_reference, started_at FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1",
-      )
-      .bind(stablecoinId)
-      .first<{
-        direction: "above" | "below";
-        peak_deviation_bps: number;
-        peg_reference: number;
-        started_at: number;
-      }>(),
-    db
-      .prepare("SELECT price, updated_at FROM price_cache WHERE asset_id = ?")
-      .bind(stablecoinId)
-      .first<{ price: number; updated_at: number }>(),
-    db
-      .prepare(
-        `SELECT liquidity_score, total_tvl_usd, updated_at
+  const [dewsRow, safetySource, depegRow, priceRow, liquidityRow, yieldRow, stablecoinsCache, flowCache] =
+    await Promise.all([
+      loadStressSignalCurrentRowForCoin(db, stablecoinId, nowSec, { staleAfterSec: 30 * 60 }),
+      loadActiveV8SafetyScoreHistorySource(db)
+        .then((source) => ({ kind: "ok" as const, source }))
+        .catch(() => ({ kind: "error" as const })),
+      db
+        .prepare(
+          "SELECT direction, peak_deviation_bps, peg_reference, started_at FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1",
+        )
+        .bind(stablecoinId)
+        .first<{
+          direction: "above" | "below";
+          peak_deviation_bps: number;
+          peg_reference: number;
+          started_at: number;
+        }>(),
+      db
+        .prepare("SELECT price, updated_at FROM price_cache WHERE asset_id = ?")
+        .bind(stablecoinId)
+        .first<{ price: number; updated_at: number }>(),
+      db
+        .prepare(
+          `SELECT liquidity_score, total_tvl_usd, updated_at
          FROM dex_liquidity
          WHERE stablecoin_id = ?
            AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
-      )
-      .bind(stablecoinId)
-      .first<{ liquidity_score: number | null; total_tvl_usd: number; updated_at: number }>(),
-    db
-      .prepare(
-        `SELECT current_apy, apy_30d, yield_source, pharos_yield_score, updated_at
+        )
+        .bind(stablecoinId)
+        .first<{ liquidity_score: number | null; total_tvl_usd: number; updated_at: number }>(),
+      db
+        .prepare(
+          `SELECT current_apy, apy_30d, yield_source, pharos_yield_score, updated_at
            FROM yield_data
           WHERE stablecoin_id = ? AND is_best = 1
             AND (publication_generation_id IS NULL OR publication_state = 'published')
           ORDER BY pharos_yield_score DESC, apy_30d DESC
           LIMIT 1`,
-      )
-      .bind(stablecoinId)
-      .first<{
-        current_apy: number;
-        apy_30d: number;
-        yield_source: string;
-        pharos_yield_score: number | null;
-        updated_at: number;
-      }>(),
-    loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }).catch(() => null),
-    isMintBurnTracked
-      ? getCache(db, perCoinFlowCacheKey(stablecoinId, 24)).catch(() => null)
-      : Promise.resolve(null),
-  ]);
+        )
+        .bind(stablecoinId)
+        .first<{
+          current_apy: number;
+          apy_30d: number;
+          yield_source: string;
+          pharos_yield_score: number | null;
+          updated_at: number;
+        }>(),
+      loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }).catch(() => null),
+      isMintBurnTracked ? getCache(db, perCoinFlowCacheKey(stablecoinId, 24)).catch(() => null) : Promise.resolve(null),
+    ]);
 
   let flow: StatusForCoin["flow"] = null;
   if (flowCache) {
@@ -137,18 +141,31 @@ export async function loadStatusForCoin(
     stablecoinsUpdatedAt = stablecoinsCache.updatedAt;
   }
 
+  const safetyCard =
+    safetySource.kind === "ok"
+      ? safetySource.source.snapshot.cards.find((card) => card.id === stablecoinId && !card.isDefunct)
+      : null;
+
   return {
     stablecoinId,
     priceUsd: priceRow?.price ?? null,
     priceUpdatedAt: priceRow?.updated_at ?? null,
     supplyUsd,
     stablecoinsUpdatedAt,
-    dews: dewsRow
-      ? { band: dewsRow.band, score: dewsRow.score, computedAt: dewsRow.computed_at }
-      : null,
-    safety: safetyRow
-      ? { grade: safetyRow.grade, score: safetyRow.score, recordedAt: safetyRow.recorded_at }
-      : null,
+    dews: dewsRow ? { band: dewsRow.band, score: dewsRow.score, computedAt: dewsRow.computed_at } : null,
+    safety:
+      safetyCard && safetySource.kind === "ok"
+        ? {
+            grade: safetyCard.overallGrade,
+            score: safetyCard.overallScore,
+            model: safetySource.source.identity.model,
+            methodologyVersion: safetySource.source.identity.methodologyVersion,
+            publicationGenerationId: safetySource.source.identity.publicationGenerationId,
+            publishedAt: safetySource.source.publishedAtSec,
+            recordedAt: safetySource.source.publishedAtSec,
+          }
+        : null,
+    safetyUnavailableReason: safetySource.kind === "error" ? "canonical-snapshot-unavailable" : null,
     liquidity: liquidityRow
       ? {
           score: liquidityRow.liquidity_score,

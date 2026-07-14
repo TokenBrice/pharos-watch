@@ -2,13 +2,13 @@ import { aggregateChains } from "@shared/lib/chain-aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { formatTelegramAge } from "../lib/telegram-format-age";
-import type { ReportCard, DimensionKey } from "@shared/types/report-cards";
 import type { DigestInputData } from "@shared/types/digest";
 import { escapeHtml } from "../lib/telegram";
 import { safeJsonParse } from "../lib/api-utils";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
-import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
+import { loadActiveV8SafetyScoreHistorySource } from "../lib/safety-score-history-v2";
+import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
 import { suggestClosestToken } from "../lib/telegram-alerts";
 import { TOP_VIEW_NAMES } from "../lib/telegram-constants";
 import { formatTelegramCompactUsd } from "./telegram-format";
@@ -27,12 +27,6 @@ function formatAge(ts: number | null | undefined, nowSec = Math.floor(Date.now()
 function truncate(text: string, max = 220): string {
   if (text.length <= max) return text;
   return `${text.slice(0, max - 1).trim()}...`;
-}
-
-function topDimensionWeaknesses(card: ReportCard): Array<[DimensionKey, ReportCard["dimensions"][DimensionKey]]> {
-  return (Object.entries(card.dimensions) as Array<[DimensionKey, ReportCard["dimensions"][DimensionKey]]>)
-    .sort(([, a], [, b]) => (a.score ?? Number.POSITIVE_INFINITY) - (b.score ?? Number.POSITIVE_INFINITY))
-    .slice(0, 2);
 }
 
 export async function buildBriefMessage(db: D1Database): Promise<string> {
@@ -80,7 +74,9 @@ export async function buildBriefMessage(db: D1Database): Promise<string> {
     lines.push("");
     lines.push("<b>Risk tape</b>");
     for (const item of input.riskTape.slice(0, 4)) {
-      lines.push(`- ${escapeHtml(item.label)}: ${escapeHtml(item.value)}${item.detail ? ` — ${escapeHtml(item.detail)}` : ""}`);
+      lines.push(
+        `- ${escapeHtml(item.label)}: ${escapeHtml(item.value)}${item.detail ? ` — ${escapeHtml(item.detail)}` : ""}`,
+      );
     }
   }
 
@@ -142,15 +138,17 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
           peg_reference: number;
           started_at: number;
         }>();
-      return formatTopRows("Top active depegs", result.results ?? [], (row, i) =>
-        `${i}. ${row.symbol} — ${row.direction} peg ${(row.peak_deviation_bps / 100).toFixed(1)}%, price $${row.display_price.toFixed(4)}, ${formatAge(row.started_at)} old`,
+      return formatTopRows(
+        "Top active depegs",
+        result.results ?? [],
+        (row, i) =>
+          `${i}. ${row.symbol} — ${row.direction} peg ${(row.peak_deviation_bps / 100).toFixed(1)}%, price $${row.display_price.toFixed(4)}, ${formatAge(row.started_at)} old`,
       );
     }
     case "dews": {
       const published = await loadPublishedStressSignalGeneration(db, Math.floor(Date.now() / 1000));
-      const rows = published.status === "ok"
-        ? [...published.rows].sort((a, b) => b.score - a.score).slice(0, TOP_LIMIT)
-        : [];
+      const rows =
+        published.status === "ok" ? [...published.rows].sort((a, b) => b.score - a.score).slice(0, TOP_LIMIT) : [];
       return formatTopRows("Top DEWS scores", rows, (row, i) => {
         const symbol = TRACKED_META_BY_ID.get(row.stablecoin_id)?.symbol ?? row.stablecoin_id;
         return `${i}. ${symbol} — ${row.band} (${row.score}), ${formatAge(row.computed_at)}`;
@@ -177,8 +175,11 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
           pharos_yield_score: number | null;
           source_tvl_usd: number | null;
         }>();
-      return formatTopRows("Top risk-adjusted yields", result.results ?? [], (row, i) =>
-        `${i}. ${row.symbol} — ${row.apy_30d.toFixed(2)}% 30d, PYS ${row.pharos_yield_score != null ? Math.round(row.pharos_yield_score) : "NR"}, TVL ${formatTelegramCompactUsd(row.source_tvl_usd) ?? "n/a"} (${row.yield_source})`,
+      return formatTopRows(
+        "Top risk-adjusted yields",
+        result.results ?? [],
+        (row, i) =>
+          `${i}. ${row.symbol} — ${row.apy_30d.toFixed(2)}% 30d, PYS ${row.pharos_yield_score != null ? Math.round(row.pharos_yield_score) : "NR"}, TVL ${formatTelegramCompactUsd(row.source_tvl_usd) ?? "n/a"} (${row.yield_source})`,
       );
     }
     case "liquidity": {
@@ -198,16 +199,22 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
           total_tvl_usd: number;
           pool_count: number;
         }>();
-      return formatTopRows("Top DEX liquidity", result.results ?? [], (row, i) =>
-        `${i}. ${row.symbol} — score ${row.liquidity_score ?? "NR"}, TVL ${formatTelegramCompactUsd(row.total_tvl_usd) ?? "n/a"}, ${row.pool_count} pools`,
+      return formatTopRows(
+        "Top DEX liquidity",
+        result.results ?? [],
+        (row, i) =>
+          `${i}. ${row.symbol} — score ${row.liquidity_score ?? "NR"}, TVL ${formatTelegramCompactUsd(row.total_tvl_usd) ?? "n/a"}, ${row.pool_count} pools`,
       );
     }
     case "chains": {
       const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
       if (stablecoinsResult.kind !== "ok") return "Chain rankings are temporarily unavailable.";
-      const reportCardResult = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS });
+      const reportCardResult = await loadReportCardCache(db, {
+        maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+        requireCompleteness: true,
+      });
       const safetyScores: Record<string, number> = {};
-      if (reportCardResult.kind === "ok") {
+      if (reportCardResult.kind === "ok" && isCurrentSafetyScoreV8Identity(reportCardResult.payload.safetyScoreIdentity)) {
         for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
           safetyScores[id] = entry.score;
         }
@@ -222,18 +229,28 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         safetyScores,
         pegRates,
       }).chains.slice(0, TOP_LIMIT);
-      return formatTopRows("Top chains by stablecoin supply", chains, (row, i) =>
-        `${i}. ${row.name} — ${formatTelegramCompactUsd(row.totalUsd) ?? "n/a"}, health ${row.healthScore ?? "NR"} (${row.healthBand})`,
+      return formatTopRows(
+        "Top chains by stablecoin supply",
+        chains,
+        (row, i) =>
+          `${i}. ${row.name} — ${formatTelegramCompactUsd(row.totalUsd) ?? "n/a"}, health ${row.healthScore ?? "NR"} (${row.healthBand})`,
       );
     }
     case "safety": {
-      const snapshot = await buildReportCardsSnapshot(db);
-      const cards = snapshot.cards
+      let source;
+      try {
+        source = await loadActiveV8SafetyScoreHistorySource(db);
+      } catch {
+        return "Safety scores are temporarily unavailable.";
+      }
+      const cards = source.snapshot.cards
         .filter((card) => !card.isDefunct && card.overallScore != null)
         .sort((a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0))
         .slice(0, TOP_LIMIT);
-      return formatTopRows("Top Safety Scores", cards, (card, i) =>
-        `${i}. ${card.symbol} — ${card.overallGrade} (${card.overallScore ?? "NR"})`,
+      return formatTopRows(
+        `Top Safety Scores (${source.identity.model.toUpperCase()})`,
+        cards,
+        (card, i) => `${i}. ${card.symbol} — ${card.overallGrade} (${card.overallScore ?? "NR"})`,
       );
     }
     default: {
@@ -251,26 +268,39 @@ function formatTopRows<T>(title: string, rows: readonly T[], render: (row: T, in
 }
 
 export async function buildWhyMessage(db: D1Database, stablecoinId: string): Promise<string> {
-  const snapshot = await buildReportCardsSnapshot(db);
-  const card = snapshot.cards.find((candidate) => candidate.id === stablecoinId);
+  let source;
+  try {
+    source = await loadActiveV8SafetyScoreHistorySource(db);
+  } catch {
+    return "Safety Score is temporarily unavailable.";
+  }
+  const card = source.snapshot.cards.find((candidate) => candidate.id === stablecoinId);
   if (!card) return "No Safety Score is available for that coin yet.";
 
   const lines = [
     `<b>${escapeHtml(card.symbol)} Safety Score</b>`,
     `Overall: ${card.overallGrade}${card.overallScore != null ? ` (${card.overallScore})` : ""}`,
+    `Model: ${escapeHtml(source.identity.model.toUpperCase())} · ${escapeHtml(source.identity.methodologyVersion)} · ${escapeHtml(source.identity.publicationGenerationId)}`,
   ];
-  const weaknesses = topDimensionWeaknesses(card);
+  const weaknesses = (
+    Object.entries(card.dimensions) as Array<[string, { grade: string; score: number | null; detail: string }]>
+  )
+    .sort(([, a], [, b]) => (a.score ?? Number.POSITIVE_INFINITY) - (b.score ?? Number.POSITIVE_INFINITY))
+    .slice(0, 2);
   if (weaknesses.length > 0) {
     lines.push("");
     lines.push("<b>Weakest dimensions</b>");
     for (const [dimension, detail] of weaknesses) {
-      lines.push(`- ${escapeHtml(formatDimensionName(dimension))}: ${detail.grade}${detail.score != null ? ` (${detail.score})` : ""} — ${escapeHtml(truncate(detail.detail, 140))}`);
+      lines.push(
+        `- ${escapeHtml(formatDimensionName(dimension))}: ${detail.grade}${detail.score != null ? ` (${detail.score})` : ""} — ${escapeHtml(truncate(detail.detail, 140))}`,
+      );
     }
   }
 
   const inputs = card.rawInputs;
   const riskNotes: string[] = [];
-  if (inputs.activeDepeg) riskNotes.push(`active depeg cap${inputs.activeDepegBps != null ? ` (${inputs.activeDepegBps} bps)` : ""}`);
+  if (inputs.activeDepeg)
+    riskNotes.push(`active depeg cap${inputs.activeDepegBps != null ? ` (${inputs.activeDepegBps} bps)` : ""}`);
   if (inputs.canBeBlacklisted) riskNotes.push("blacklistable/freeze risk");
   if (inputs.dependencies.length > 0) riskNotes.push(`${inputs.dependencies.length} modeled dependencies`);
   if (inputs.collateralFromLive) riskNotes.push("live reserve data contributes to collateral scoring");
@@ -284,13 +314,20 @@ export async function buildWhyMessage(db: D1Database, stablecoinId: string): Pro
   return lines.join("\n");
 }
 
-function formatDimensionName(key: DimensionKey): string {
+function formatDimensionName(key: string): string {
   switch (key) {
-    case "pegStability": return "Peg stability";
-    case "liquidity": return "Liquidity";
-    case "resilience": return "Resilience";
-    case "decentralization": return "Decentralization";
-    case "dependencyRisk": return "Dependency risk";
+    case "pegStability":
+      return "Peg stability";
+    case "liquidity":
+      return "Liquidity";
+    case "resilience":
+      return "Resilience";
+    case "decentralization":
+      return "Decentralization";
+    case "dependencyRisk":
+      return "Dependency risk";
+    default:
+      return key;
   }
 }
 
@@ -300,7 +337,13 @@ export function buildCoverageMessage(symbol: string, status: StatusForCoin): str
     `Price: ${status.priceUsd != null ? "yes" : "missing"}`,
     `Supply: ${formatTelegramCompactUsd(status.supplyUsd) ?? "missing"}`,
     `DEWS: ${status.dews ? `${status.dews.band} (${formatAge(status.dews.computedAt)})` : "missing"}`,
-    `Safety: ${status.safety ? `${status.safety.grade}${status.safety.score != null ? ` (${status.safety.score})` : ""}` : "missing"}`,
+    `Safety: ${
+      status.safety
+        ? `${status.safety.grade}${status.safety.score != null ? ` (${status.safety.score})` : ""} [${status.safety.model.toUpperCase()} ${status.safety.methodologyVersion}]`
+        : status.safetyUnavailableReason
+          ? "unavailable"
+          : "missing"
+    }`,
     `Active depeg: ${status.depeg.status === "active" ? "yes" : "no"}`,
     `DEX liquidity: ${status.liquidity ? `score ${status.liquidity.score ?? "NR"}, TVL ${formatTelegramCompactUsd(status.liquidity.totalTvlUsd) ?? "n/a"}` : "missing"}`,
     `Yield: ${status.yield ? `${status.yield.apy30d.toFixed(2)}% 30d at ${escapeHtml(status.yield.source)}` : "missing"}`,

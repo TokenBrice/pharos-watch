@@ -1,14 +1,37 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { loadStatusForCoin } from "../telegram-webhook-status";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
+
+const mocks = vi.hoisted(() => ({
+  loadActiveV8SafetyScoreHistorySource: vi.fn(),
+}));
+
+vi.mock("../../lib/safety-score-history-v2", () => ({
+  loadActiveV8SafetyScoreHistorySource: mocks.loadActiveV8SafetyScoreHistorySource,
+}));
 
 afterEach(() => {
   vi.useRealTimers();
 });
 
 describe("loadStatusForCoin", () => {
+  beforeEach(() => {
+    mocks.loadActiveV8SafetyScoreHistorySource.mockReset().mockResolvedValue({
+      identity: {
+        model: "v8",
+        schemaVersion: 1,
+        methodologyVersion: "v8.17",
+        evaluationBuildDigest: "a".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+        publicationGenerationId: "report-cards:v8.17:123",
+      },
+      publishedAtSec: 123,
+      snapshot: { cards: [{ id: "usdc-circle", isDefunct: false, overallGrade: "B+", overallScore: 66 }] },
+    });
+  });
+
   it("returns DEWS + safety + depeg=stable when no active event", async () => {
     const db = mockD1([
       { match: "FROM stress_signals", rows: [{ band: "ALERT", score: 42, computed_at: 1700000000 }] },
@@ -19,6 +42,8 @@ describe("loadStatusForCoin", () => {
     const status = await loadStatusForCoin(db, "usdc-circle");
     expect(status.dews?.band).toBe("ALERT");
     expect(status.safety?.grade).toBe("B+");
+    expect(status.safety?.model).toBe("v8");
+    expect(status.safety?.publicationGenerationId).toBe("report-cards:v8.17:123");
     expect(status.depeg.status).toBe("stable");
     expect(status.priceUsd).toBeCloseTo(0.9997);
   });
@@ -69,9 +94,10 @@ describe("loadStatusForCoin", () => {
     const db = mockD1([
       { match: "FROM stress_signals", rows: [{ band: "WATCH", score: 30, computed_at: 1700000000 }] },
       { match: "FROM safety_grade_history", rows: [{ grade: "A", score: 80, recorded_at: 1700000000 }] },
-      { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [
-        { direction: "below", peak_deviation_bps: 180, started_at: 1700000000, peg_reference: 1.0 },
-      ] },
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL",
+        rows: [{ direction: "below", peak_deviation_bps: 180, started_at: 1700000000, peg_reference: 1.0 }],
+      },
       { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 0.982, updated_at: 1700000500 }] },
     ]);
     const status = await loadStatusForCoin(db, "usdc-circle");
@@ -98,8 +124,7 @@ describe("loadStatusForCoin", () => {
 
   it("uses schema-correct column names", async () => {
     // Regression guard: the dispatcher uses `computed_at` on stress_signals and
-    // `recorded_at` on safety_grade_history. Mismatching either would throw
-    // `no such column` at D1 runtime but silently pass substring-based fixtures.
+    // does not query the legacy safety history table.
     const db = mockD1([
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
@@ -113,9 +138,7 @@ describe("loadStatusForCoin", () => {
     expect(stressSql).toMatch(/\bcomputed_at\b/);
     expect(stressSql).not.toMatch(/\brecorded_at\b/);
 
-    const safetySql = history.find((s) => s.includes("FROM safety_grade_history"));
-    expect(safetySql).toMatch(/\brecorded_at\b/);
-    expect(safetySql).not.toMatch(/\bcomputed_at\b/);
+    expect(history.some((s) => s.includes("safety_grade_history"))).toBe(false);
 
     const priceSql = history.find((s) => s.includes("FROM price_cache"));
     expect(priceSql).toMatch(/\basset_id\b/);
@@ -127,6 +150,21 @@ describe("loadStatusForCoin", () => {
 
     const yieldSql = history.find((s) => s.includes("FROM yield_data"));
     expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
+  });
+
+  it("fails closed when canonical safety identity is unavailable", async () => {
+    mocks.loadActiveV8SafetyScoreHistorySource.mockRejectedValueOnce(new Error("identity mismatch"));
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
+      { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
+    ]);
+
+    const status = await loadStatusForCoin(db, "usdc-circle");
+
+    expect(status.safety).toBeNull();
+    expect(status.safetyUnavailableReason).toBe("canonical-snapshot-unavailable");
+    expect(db.getHistory().some((entry) => entry.sql.includes("safety_grade_history"))).toBe(false);
   });
 
   it("returns yield status from published or legacy rows only", async () => {

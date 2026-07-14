@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NET_FLOW_DIRECTION_24H_VALUES, PRESSURE_SHIFT_STATE_VALUES } from "./mint-burn-signals";
+import { SafetyScoreV8PublicationIdentitySchema } from "./safety-score-publication";
 
 export {
   NET_FLOW_DIRECTION_24H_VALUES,
@@ -19,6 +20,7 @@ const MintBurnGaugeSchema = z.object({
   flightToQuality: z.boolean(),
   flightIntensity: z.number().finite(),
   classificationSource: z.enum(["report-card-cache", "unavailable"]).optional(),
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.nullable().optional(),
   trackedCoins: z.number().int().nonnegative(),
   trackedMcapUsd: z.number().finite().nonnegative(),
 });

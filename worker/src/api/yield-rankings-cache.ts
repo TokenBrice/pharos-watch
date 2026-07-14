@@ -1,4 +1,5 @@
 import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
+import { safetyScoreV8MethodologyIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   YieldRankingsResponseSchema,
@@ -452,6 +453,7 @@ function hydrateYieldRankingsWithLiveSafety(
                 usedDefaultSafety: hydratedSafety.usedDefaultSafety,
                 safetyProvenance: hydratedSafety.provenance,
                 safetyReason: hydratedSafety.reason,
+                safetyScoreIdentity: source.safetyScoreIdentity,
                 calculationMode: resolveHydratedCalculationMode(row),
                 evidenceClass,
                 evidenceCompleteness: evidenceAssessment.evidenceCompleteness,
@@ -542,12 +544,12 @@ function hydrateYieldRankingsWithLiveSafety(
   };
 }
 
-function hasMatchingSafetyIdentity(
+function hasCompatibleSafetyIdentity(
   payload: YieldRankingsResponse,
   identity: SafetyScoreV8PublicationIdentity,
 ): boolean {
   const published = payload.provenance?.safetySnapshot.safetyScoreIdentity;
-  return published != null && JSON.stringify(published) === JSON.stringify(identity);
+  return published != null && safetyScoreV8MethodologyIdentitiesMatch(published, identity);
 }
 
 function degradeYieldRankingsSafety(
@@ -674,7 +676,7 @@ function createYieldRankingsCacheHandler(
             [reason],
           );
         }
-        if (!hasMatchingSafetyIdentity(validatedPayload, snapshot.safetyScoreIdentity)) {
+        if (!hasCompatibleSafetyIdentity(validatedPayload, snapshot.safetyScoreIdentity)) {
           const publishedIdentity = validatedPayload.provenance?.safetySnapshot.safetyScoreIdentity;
           const reason = publishedIdentity == null ? "safety-identity-missing" : "safety-identity-mismatch";
           return buildYieldRankingsResponse(
