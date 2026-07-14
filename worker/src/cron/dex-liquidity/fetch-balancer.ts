@@ -62,7 +62,7 @@ const QUERY = `query($first: Int!, $skip: Int!) {
     address
     type
     chain
-    dynamicData { totalLiquidity volume24h swapFee }
+    dynamicData { totalLiquidity volume24h swapFee isPaused swapEnabled }
     poolTokens { address symbol decimals balance balanceUSD weight priceRate }
   }
 }`;
@@ -93,7 +93,13 @@ interface BalancerPool {
   address?: string | null;
   type: string;
   chain: string;
-  dynamicData: { totalLiquidity: string; volume24h: string; swapFee: string };
+  dynamicData: {
+    totalLiquidity: string;
+    volume24h: string;
+    swapFee: string;
+    isPaused?: boolean | null;
+    swapEnabled?: boolean | null;
+  };
   poolTokens: { address: string; symbol: string; decimals: number; balance: string; balanceUSD: string; weight?: string | null; priceRate?: string | null }[];
 }
 
@@ -117,11 +123,17 @@ function isOptionalString(value: unknown): value is string | null | undefined {
   return value == null || typeof value === "string";
 }
 
+function isOptionalBoolean(value: unknown): value is boolean | null | undefined {
+  return value == null || typeof value === "boolean";
+}
+
 function isBalancerDynamicData(value: unknown): value is BalancerPool["dynamicData"] {
   return isDexApiRecord(value) &&
     typeof value.totalLiquidity === "string" &&
     typeof value.volume24h === "string" &&
-    typeof value.swapFee === "string";
+    typeof value.swapFee === "string" &&
+    isOptionalBoolean(value.isPaused) &&
+    isOptionalBoolean(value.swapEnabled);
 }
 
 function isBalancerPoolToken(value: unknown): value is BalancerPool["poolTokens"][number] {
@@ -312,6 +324,9 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
 
       const pool = rawPool;
       if (!SUPPORTED_POOL_TYPES.has(pool.type)) continue;
+      // Paused or swap-disabled pools cannot execute swaps: their TVL is not
+      // exit liquidity and any execution model would overstate capacity.
+      if (pool.dynamicData.isPaused === true || pool.dynamicData.swapEnabled === false) continue;
 
       const chain = BALANCER_CHAIN_MAP[pool.chain];
       if (!chain) {

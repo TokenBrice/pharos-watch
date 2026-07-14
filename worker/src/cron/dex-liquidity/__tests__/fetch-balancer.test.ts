@@ -116,6 +116,19 @@ describe("fetchBalancerPools stable-math amp join", () => {
     expect(gyro?.amp).toBeUndefined();
   });
 
+  it("drops paused and swap-disabled pools entirely", async () => {
+    const paused = stablePool();
+    paused.id = "0x33bbccddeeff00112233445566778899aabbccdd000200000000000000000003";
+    paused.address = "0x33bbccddeeff00112233445566778899aabbccdd";
+    paused.dynamicData = { ...paused.dynamicData, isPaused: true };
+    const disabled = gyroPool();
+    disabled.dynamicData = { ...disabled.dynamicData, swapEnabled: false };
+    dispatchByQuery([paused, disabled, cleanPool()], []);
+    const result = await fetchBalancerPools();
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]!.poolAddress).toBe("0xaabbccddeeff00112233445566778899aabbccdd");
+  });
+
   it("keys the amp join by chain so same-id pools on other chains cannot cross-attach", async () => {
     const mainnetPool = stablePool();
     const arbitrumPool = stablePool();

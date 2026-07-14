@@ -149,6 +149,7 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
       "Requires exact per-token balances, decimals, addresses, rate-provider price rates, and the pool amplification.",
       "Hook-free stable-math pools with reviewed rate providers only; the phantom BPT of composable pools is excluded from the model.",
       "Balances are rate-scaled and the amplification is converted to the plain paper convention before simulation.",
+      "Amp ramps and rate-cache refresh between producer runs bound residual error: ramps are protocol-capped at 2x/day and measured expired-cache drift was +0.09%.",
     ],
   },
   {
