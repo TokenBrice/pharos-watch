@@ -9,6 +9,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
+
 import { sleep } from "./smoke-runtime.mjs";
 
 interface ResolveApiUrlOptions {
@@ -171,9 +173,11 @@ export function resolveApiBaseFromEnv(envNames: readonly string[]): string | nul
  */
 export function apiFetchHeaders(envNames: readonly string[]): Record<string, string> {
   const apiKey = envNames.map((name) => process.env[name]?.trim()).find((value) => value);
+  const siteApiSharedSecret = process.env.SITE_API_SHARED_SECRET?.trim();
   return {
     Accept: "application/json",
     ...(apiKey ? { "X-API-Key": apiKey } : {}),
+    ...(siteApiSharedSecret ? { [SITE_DATA_PROXY_SECRET_HEADER]: siteApiSharedSecret } : {}),
   };
 }
 

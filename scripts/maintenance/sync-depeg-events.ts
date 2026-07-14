@@ -22,7 +22,7 @@ import {
   writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import { fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
+import { apiFetchHeaders, fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/sync-depeg-events.ts [options]
 
@@ -131,10 +131,7 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
     scriptName: "sync-depeg-events",
   });
   const outputPath = resolveOutputPath(options.output);
-  const apiKey = (process.env.DEPEG_EVENTS_API_KEY ?? process.env.SMOKE_API_KEY ?? "").trim();
-
-  const headers = new Headers();
-  if (apiKey) headers.set("X-API-Key", apiKey);
+  const headers = new Headers(apiFetchHeaders(["DEPEG_EVENTS_API_KEY", "SMOKE_API_KEY"]));
 
   console.log(`[sync-depeg-events] Source: ${apiUrl}`);
 

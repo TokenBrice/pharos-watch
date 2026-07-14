@@ -1,9 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchWithRetry } from "../lib/sync-from-api";
+import { apiFetchHeaders, fetchWithRetry } from "../lib/sync-from-api";
 
 describe("fetchWithRetry", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("adds the site API credential for deploy-time internal reads", () => {
+    vi.stubEnv("DIGEST_API_KEY", "public-key");
+    vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");
+
+    expect(apiFetchHeaders(["DIGEST_API_KEY"])).toEqual({
+      Accept: "application/json",
+      "X-API-Key": "public-key",
+      "X-Pharos-Site-Proxy-Secret": "site-secret",
+    });
   });
 
   it("retries caller-declared transient statuses", async () => {

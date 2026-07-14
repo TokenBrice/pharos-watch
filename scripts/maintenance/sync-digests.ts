@@ -11,7 +11,7 @@ import {
   writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import { fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
+import { apiFetchHeaders, fetchWithRetry, resolveApiUrl, syncJson } from "../lib/sync-from-api";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/sync-digests.ts [options]
 
@@ -100,17 +100,12 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
     scriptName: "sync-digests",
   });
   const outputPath = resolveOutputPath(options.output);
-  const digestApiKey = (process.env.DIGEST_API_KEY ?? "").trim();
-
   console.log("Fetching digest archive...");
   console.log(`Digest source: ${apiUrl}`);
   const fetchUrl = cacheBustedUrl(apiUrl);
-  const headers = new Headers();
+  const headers = new Headers(apiFetchHeaders(["DIGEST_API_KEY"]));
   headers.set("Cache-Control", "no-cache");
   headers.set("Pragma", "no-cache");
-  if (digestApiKey) {
-    headers.set("X-API-Key", digestApiKey);
-  }
 
   const { entries, outputFile, written } = await syncJson<DigestEntry>({
     writeTo: outputPath,
