@@ -12,6 +12,8 @@
     "navToken": true
   },
   "pegReferenceId": "usdc-circle",
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
   "collateral": "USDC deposits continuously rebalanced across 50+ whitelisted DeFi yield sources on Ethereum, Base, Arbitrum, and Unichain; allocations ranked by Exponential.fi risk-adjusted ratings with per-pool caps (max 50%) and per-protocol caps (max 70%); 5 smart contract audits by Offbeat Security, Hunter Security, Spearbit/Cantina, Aether Labs, and Paladin with no critical or high findings; admin multisig with <4 signers controls protocol whitelisting; backed by Paradigm, Haun Ventures, and Coinbase Ventures",
   "pegMechanism": "ERC-4626 vault on Base; USDC deposited via yoGateway, rebalanced cross-chain to whitelisted DeFi pools; NAV appreciates with accrued yield (e.g. ~$1.069 at launch anniversary); instant redemptions up to liquidity buffer, larger withdrawals up to 24h as cross-chain positions unwind",
   "detailProvider": "coingecko",
