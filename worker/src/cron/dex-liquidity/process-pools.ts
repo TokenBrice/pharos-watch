@@ -55,12 +55,18 @@ export function buildCurveStableswapExecutionModel(
   if (trackedTokenIndex === -1) return null;
   const addresses = tokens.map((token) => `${chainNorm}:${token.address.toLowerCase()}`);
   if (new Set(addresses).size !== addresses.length) return null;
+  // The Curve API reports the contract amplification (Ann = A_contract * n); the
+  // execution model stores the plain paper convention (Ann = A * n^n). Converting by
+  // n^(n-1) reproduces on-chain get_dy exactly (verified against 3pool and the
+  // crvUSD/USDC NG pool at a pinned block); passing the contract value through
+  // overstates amplification and therefore exit capacity.
+  const n = tokens.length;
   return {
     source: "curve",
     invariant: "stableswap",
     trackedTokenIndex,
     feeRate: CURVE_STABLESWAP_FEE_BOUND,
-    amplification: curveData.A,
+    amplification: curveData.A / n ** (n - 1),
     tokens,
   };
 }
