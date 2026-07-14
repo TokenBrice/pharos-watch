@@ -13,15 +13,31 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Colombian-peso cash and liquid local-currency instruments backing Ripio wCOP at a one Colombian peso target",
+  "collateral": "Colombian-peso fiat cash deposited in a Colombian bank account, backing Ripio wCOP one-to-one against the Colombian peso per Ripio's wFIAT token certification",
   "pegMechanism": "WCOP is issued and managed by Ripio against local fiat reserves, but ordinary holders do not have a documented direct redemption right with the issuer. Exits depend on secondary-market liquidity, Ripio on/off-ramp flows, or issuer-managed market operations.",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
-    "provider": "Local public accountants",
+    "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf",
+    "provider": "Pablo Eduardo Soto",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
-    "attestorJurisdiction": "Colombia"
+    "attestorJurisdiction": "Argentina",
+    "attestorLicense": "Professional Council of Economic Sciences of the Autonomous City of Buenos Aires",
+    "latestReport": {
+      "periodEnd": "2026-03-31",
+      "publishedAt": "2026-04-23",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Independent public accountant certification for wCOP - March 2026",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf"
+        }
+      ]
+    }
   },
   "mechanismArchetype": "fiat-cash",
   "geckoId": "colombian-peso",
@@ -184,21 +200,62 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Colombian-peso cash and local-currency liquid instruments",
+      "name": "Colombian-peso cash deposited in a Colombian bank account",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed Colombian financial institution",
+      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "wcop-ripio",
+    "display": {
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+      "label": "Ripio local stablecoins"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Colombian-peso cash deposited in a Colombian bank account",
+      "risk": "high"
+    }
+  },
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wCOP - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf"
+      },
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "rationale": "The March 31, 2026 certification reconciles 104,898,654 outstanding wCOP across six chains and COP107,966,549.02 of collateral to a Colombian bank statement, then certifies that all outstanding tokens are backed by Colombian pesos at a financial institution in Colombia. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed.",
+    "compositionBasis": "Independent public accountant certification of the wCOP collateral as of March 31, 2026",
+    "compositionAsOf": "2026-03-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset class is unclassified; the Colombian financial institution, account type, and withdrawal liquidity are undisclosed.",
+    "knownUnknownExposurePct": 0
+  },
   "notices": [
     {
       "type": "info",
       "title": "Peg grouped as Other",
       "message": "COP is not yet a first-class Pharos peg-currency enum, so WCOP is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
-    },
-    {
-      "type": "info",
-      "title": "No per-token attestation located",
-      "message": "Ripio describes wFIAT local-currency backing, but no reliable public per-token reserve attestation was found for WCOP during this addition. Curated reserves remain conservative until source coverage improves."
     }
   ],
   "launchDate": "2025-10-20",
@@ -214,10 +271,7 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": [
-          "intent",
-          "liquidity"
-        ]
+        "bridgeTypes": ["intent", "liquidity"]
       }
     ],
     "sources": [

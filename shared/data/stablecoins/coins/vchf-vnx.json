@@ -2,7 +2,7 @@
   "id": "vchf-vnx",
   "name": "VNX Swiss Franc",
   "symbol": "VCHF",
-  "oneLiner": "VCHF is VNX's Liechtenstein-licensed Swiss franc stablecoin redeemable 1:1, backed by CHF cash in Swiss and Liechtenstein bank accounts with Areva audits.",
+  "oneLiner": "VCHF is VNX's issuer-redeemable Swiss franc token, backed at the latest published report date by an aggregate CHF-value reserve of undisclosed composition.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CHF",
@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "CHF held 1:1 in bank and custody accounts of VNX Commodities AG in Switzerland and Liechtenstein, independently audited by Areva General Auditing and Trust Company Limited",
+  "collateral": "Aggregate CHF-value reserves held by VNX Commodities AG in bank accounts and/or securities custody accounts; the latest published AREVA report does not disclose the holdings or category split",
   "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent CHF value",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "157",
@@ -407,11 +407,45 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "CHF 1:1 reserves (Areva audited)",
+      "name": "Aggregate CHF-value reserve (composition undisclosed)",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "very-high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AREVA VNX reserve report as of December 31, 2024",
+        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+      },
+      {
+        "label": "VNX Reserves Management Policy",
+        "url": "https://vnx.li/wp-content/uploads/2023/05/2023.04.30-VNX-staiblecoins-Reserves-Management-Policy.pdf"
+      },
+      {
+        "label": "VNX current transparency page",
+        "url": "https://vnx.li/transparency/"
+      }
+    ],
+    "rationale": "AREVA reconciled the December 31, 2024 circulating VCHF liability to at least the same aggregate CHF value held in bank accounts or securities custody accounts. The report does not disclose constituents or weights, while VNX's non-binding policy permits a broader mix of debt securities, ETFs, derivatives, deposits, repos, money-market instruments, and currency hedges. The current VNX transparency page publishes no later VCHF reserve report.",
+    "compositionBasis": "AREVA aggregate reserve-value reconciliation and VNX non-binding reserve policy",
+    "compositionAsOf": "2024-12-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All reserve value is reported only as an aggregate. The bank-account versus securities-custody allocation, underlying holdings, issuers, maturities, custodians, and liquidity terms are undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Aggregate CHF-value reserve (composition undisclosed)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The AUP report confirms aggregate CHF-value coverage but does not disclose reserve constituents or weights."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -429,18 +463,37 @@
       }
     },
     "params": {
-      "label": "CHF cash & equivalents",
-      "risk": "very-low"
+      "label": "Aggregate CHF-value reserve (composition undisclosed)",
+      "risk": "very-high"
     }
   },
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://vnx.li/transparency/",
+    "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf",
     "provider": "AREVA General Auditing and Trust Company Limited",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Liechtenstein",
-    "attestorLicense": "FMA TVTG (Blockchain Act)"
+    "attestorLicense": "Liechtenstein FMA-licensed auditing company",
+    "latestReport": {
+      "periodEnd": "2024-12-31",
+      "publishedAt": "2025-02-05",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "AREVA VNX reserve report as of December 31, 2024",
+          "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        },
+        {
+          "label": "AREVA licences and registrations",
+          "url": "https://www.areva.li/en/"
+        }
+      ]
+    }
   },
   "launchDate": "2022-12-02"
 }

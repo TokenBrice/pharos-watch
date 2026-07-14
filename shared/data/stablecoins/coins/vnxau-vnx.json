@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Allocated physical gold bars stored in Liechtenstein vaults, with VNX materials describing token-holder ownership and segregated custody",
+  "collateral": "Physical gold reported in custody at Philoro in Liechtenstein; the latest AUP reconciles 13,100 tokens to 13,100 gross grams but does not validate gold quality, value, legal rights, or physical presence",
   "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",
   "mechanismArchetype": "fiat-cash",
   "commodityOunces": 0.0321507466,
@@ -25,7 +25,26 @@
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Liechtenstein",
-    "attestorLicense": "FMA TVTG (Blockchain Act)"
+    "attestorLicense": "Liechtenstein FMA-licensed auditing company",
+    "latestReport": {
+      "periodEnd": "2025-12-31",
+      "publishedAt": "2026-03-23",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "AREVA VNXAU agreed-upon procedures report as of December 31, 2025",
+          "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+        },
+        {
+          "label": "AREVA licences and registrations",
+          "url": "https://www.areva.li/en/"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -142,10 +161,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 25526129,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "eoa:0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "eoa:0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403"],
         "sources": [
           {
             "label": "Ethereum role-0 bearer",
@@ -167,10 +183,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 25526129,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "ethereum:0xcdb3867935247049e87c38ea270edd305d84c9ae"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "ethereum:0xcdb3867935247049e87c38ea270edd305d84c9ae"],
         "bypassSurfaces": [
           "Role 0 administers role 1, so any role-0 bearer can grant itself the proxy-upgrader role without delay.",
           "The token owner is this manager; role 0 can use transferContractOwnership and then replace the token RBAC address."
@@ -202,10 +215,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 25526129,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"],
         "sources": [
           {
             "label": "Ethereum role-0 bearer",
@@ -229,10 +239,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 25526129,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "eoa:0x45a149f42ff0b77d148d05904dd7577df36a545a"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "eoa:0x45a149f42ff0b77d148d05904dd7577df36a545a"],
         "sources": [
           {
             "label": "Ethereum role-0 bearer",
@@ -254,10 +261,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 48592766,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "base:0xc4c917fda20fc2f39c629c809c4c3662a8cf7d9d"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "base:0xc4c917fda20fc2f39c629c809c4c3662a8cf7d9d"],
         "bypassSurfaces": [
           "Role 0 administers role 1, so any role-0 bearer can grant itself the proxy-upgrader role without delay.",
           "The token owner can replace the token RBAC address immediately."
@@ -289,10 +293,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 48592766,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "eoa:0xd63052e09af164cef57695d3b96043ea848b051f"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "eoa:0xd63052e09af164cef57695d3b96043ea848b051f"],
         "sources": [
           {
             "label": "Base role-0 bearer",
@@ -316,10 +317,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 48592766,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"],
         "sources": [
           {
             "label": "Base role-0 bearer",
@@ -343,10 +341,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 48592766,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "eoa:0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "eoa:0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6"],
         "sources": [
           {
             "label": "Base role-0 bearer",
@@ -368,10 +363,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 90179923,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "polygon:0xbbe070a5f848b532fd4c9ceee77f66867fb70172"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "polygon:0xbbe070a5f848b532fd4c9ceee77f66867fb70172"],
         "bypassSurfaces": [
           "Role 0 administers role 1, so any role-0 bearer can grant itself the proxy-upgrader role without delay.",
           "The token owner is this manager; role 0 can use transferContractOwnership and then replace the token RBAC address."
@@ -403,10 +395,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 90179923,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "eoa:0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "eoa:0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403"],
         "sources": [
           {
             "label": "Polygon role-0 bearer",
@@ -430,10 +419,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 90179923,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"],
         "sources": [
           {
             "label": "Polygon role-0 bearer",
@@ -455,10 +441,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 48196648,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "etherlink:0x36526b007def3a3efa5a197afe86caf65ec1b9a5"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "etherlink:0x36526b007def3a3efa5a197afe86caf65ec1b9a5"],
         "bypassSurfaces": [
           "Role 0 administers role 1, which was empty; any role-0 bearer can grant itself that proxy-upgrader role without delay.",
           "The token owner can replace the token RBAC address immediately."
@@ -490,10 +473,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 48196648,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "eoa:0x21f5727b19051a0a483f05ce3c379202daa559c1"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "eoa:0x21f5727b19051a0a483f05ce3c379202daa559c1"],
         "sources": [
           {
             "label": "Etherlink role-0 bearer",
@@ -517,10 +497,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 48196648,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"],
         "sources": [
           {
             "label": "Etherlink role-0 bearer",
@@ -544,10 +521,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 48196648,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "eoa:0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "eoa:0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6"],
         "sources": [
           {
             "label": "Etherlink role-0 bearer",
@@ -571,13 +545,8 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 432714278,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "solana:51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY"
-        ],
-        "bypassSurfaces": [
-          "The authority can rotate the mint and freeze authorities without a timelock."
-        ],
+        "failureDomainKeys": ["issuer:vnx", "solana:51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY"],
+        "bypassSurfaces": ["The authority can rotate the mint and freeze authorities without a timelock."],
         "sources": [
           {
             "label": "Solana VNXAU mint",
@@ -605,10 +574,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 14047971,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "tezos:tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "tezos:tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3"],
         "bypassSurfaces": [
           "As contract owner, this account can replace the RBAC or implementation contract immediately through set_contract."
         ],
@@ -639,10 +605,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 14047971,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "tezos:tz1cHbzZQwRiThsmCjSPodiv9SWoHEtnciWH"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "tezos:tz1cHbzZQwRiThsmCjSPodiv9SWoHEtnciWH"],
         "sources": [
           {
             "label": "Tezos VNXAU storage at level 14047971",
@@ -670,10 +633,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-13",
         "observedBlock": 63463325,
-        "failureDomainKeys": [
-          "issuer:vnx",
-          "stellar:GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3"
-        ],
+        "failureDomainKeys": ["issuer:vnx", "stellar:GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3"],
         "bypassSurfaces": [
           "The master signer can change signer weights, thresholds, and authorization flags immediately.",
           "AUTH_REVOCABLE and AUTH_CLAWBACK_ENABLED permit trustline revocation and eligible-balance clawback."
@@ -974,11 +934,69 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "Allocated physical gold bars (Liechtenstein vault custody)",
+      "name": "Allocated physical gold held at Philoro Edelmetallhandel AG",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Physical gold inventory held at Philoro Edelmetallhandel AG",
+      "riskFactors": ["market", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AREVA VNXAU agreed-upon procedures report as of December 31, 2025",
+        "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+      },
+      {
+        "label": "VNX Gold",
+        "url": "https://vnx.li/gold/"
+      }
+    ],
+    "rationale": "AREVA reconciled 13,100 generated VNXAU across Ethereum, Q, Polygon, Solana, and Base to 13,100 gross grams reported on Philoro's custody statement as of December 31, 2025. The AUP documented a 1.13-token Solana difference caused by holder burns and still found generated supply did not exceed the reported gold balance. AREVA did not physically observe the gold or validate its quality, value, legal property rights, or the token-holder register.",
+    "compositionBasis": "AREVA AUP reconciliation of VNXAU supply to gross grams on Philoro's custody statement",
+    "compositionAsOf": "2025-12-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The backing asset and custody provider are identified, but gold quality, valuation, bar-level identity, legal property rights, and liquidation timing were outside the AUP procedures.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Allocated physical gold held at Philoro Edelmetallhandel AG",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Physical gold is an exogenous reserve asset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Philoro Edelmetallhandel AG",
+        "role": "subcustodian",
+        "sharePct": 100,
+        "jurisdiction": "Liechtenstein"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AREVA VNXAU agreed-upon procedures report as of December 31, 2025",
+        "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+      }
+    ],
+    "uncertainty": "AREVA confirmed that Philoro's custody statement was in VNX Commodities AG's name and reported all 13,100 gross grams there, but did not physically observe the gold or validate quality, legal rights, segregation, bankruptcy remoteness, or rehypothecation restrictions.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -996,7 +1014,7 @@
       }
     },
     "params": {
-      "label": "Allocated physical gold bars",
+      "label": "Allocated physical gold held at Philoro Edelmetallhandel AG",
       "risk": "very-low"
     }
   },

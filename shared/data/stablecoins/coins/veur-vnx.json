@@ -2,7 +2,7 @@
   "id": "veur-vnx",
   "name": "VNX EURO",
   "symbol": "VEUR",
-  "oneLiner": "VEUR is VNX's Liechtenstein-licensed euro stablecoin redeemable 1:1, backed by EUR cash in bank accounts and Areva-audited under the FMA Blockchain Act.",
+  "oneLiner": "VEUR is VNX's euro stablecoin redeemable 1:1 and backed by aggregate EUR-value reserves whose latest AREVA report does not disclose composition.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Fiat reserves (euro-denominated cash and cash equivalents) held in bank/custody accounts of VNX Commodities AG",
+  "collateral": "Aggregate EUR-value reserves held by VNX Commodities AG in bank accounts and/or securities custody accounts; the latest published AREVA report does not disclose the holdings or category split",
   "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG (registered KYC/AML customers only)",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "158",
@@ -19,12 +19,31 @@
   "geckoId": "vnx-euro",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://vnx.li/transparency/",
+    "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf",
     "provider": "AREVA General Auditing and Trust Company Limited",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Liechtenstein",
-    "attestorLicense": "FMA TVTG (Blockchain Act)"
+    "attestorLicense": "Liechtenstein FMA-licensed auditing company",
+    "latestReport": {
+      "periodEnd": "2024-12-31",
+      "publishedAt": "2025-02-05",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "AREVA VNX reserve report as of December 31, 2024",
+          "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        },
+        {
+          "label": "AREVA licences and registrations",
+          "url": "https://www.areva.li/en/"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -214,11 +233,45 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "Euro cash and cash equivalents (bank/custody accounts)",
+      "name": "Aggregate EUR-value reserve (composition undisclosed)",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "very-high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AREVA VNX reserve report as of December 31, 2024",
+        "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+      },
+      {
+        "label": "VNX Reserves Management Policy",
+        "url": "https://vnx.li/wp-content/uploads/2023/05/2023.04.30-VNX-staiblecoins-Reserves-Management-Policy.pdf"
+      },
+      {
+        "label": "VNX current transparency page",
+        "url": "https://vnx.li/transparency/"
+      }
+    ],
+    "rationale": "AREVA reconciled the December 31, 2024 circulating VEUR liability across the reported deployments to at least the same aggregate EUR value held in bank accounts or securities custody accounts. The report does not disclose constituents or weights, while VNX's non-binding policy permits a broader mix of debt securities, ETFs, derivatives, deposits, repos, money-market instruments, and currency hedges. The current VNX transparency page publishes no later VEUR reserve report.",
+    "compositionBasis": "AREVA aggregate reserve-value reconciliation and VNX non-binding reserve policy",
+    "compositionAsOf": "2024-12-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All reserve value is reported only as an aggregate. The bank-account versus securities-custody allocation, underlying holdings, issuers, maturities, custodians, and liquidity terms are undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Aggregate EUR-value reserve (composition undisclosed)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The AUP report confirms aggregate EUR-value coverage but does not disclose reserve constituents or weights."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -236,8 +289,8 @@
       }
     },
     "params": {
-      "label": "Euro cash & equivalents",
-      "risk": "very-low"
+      "label": "Aggregate EUR-value reserve (composition undisclosed)",
+      "risk": "very-high"
     }
   },
   "launchDate": "2022-11-18",
@@ -251,9 +304,7 @@
       {
         "source": "issuer",
         "name": "VEUR issuer-operated multichain issuance",
-        "bridgeTypes": [
-          "issuer-native-mint-redeem"
-        ]
+        "bridgeTypes": ["issuer-native-mint-redeem"]
       }
     ],
     "sources": [

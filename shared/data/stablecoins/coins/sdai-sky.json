@@ -116,36 +116,34 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "third-party-bridge",
+  "deploymentModel": "canonical-bridge",
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "sDAI is a savings wrapper over DAI and its non-Ethereum deployments inherit DAI/Sky bridge-route exposure. Spark/Sky documentation shows cross-chain liquidity and savings-token deployments outside Ethereum, so Pharos applies a conservative external lock/mint route review for the wrapper.",
-    "reviewedAt": "2026-06-13",
+    "tier": "canonical-rollup-bridge",
+    "summary": "Ethereum sDAI is the native ERC-4626 savings vault. The Base and OP Mainnet contracts are immutable OptimismMintableERC20 representations whose BRIDGE is the chain-local L2StandardBridge and whose REMOTE_TOKEN is Ethereum sDAI, so both routes use the canonical OP Stack lock/mint bridge rather than a Sky PSM or third-party bridge.",
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
-        "name": "Spark cross-chain PSM",
-        "url": "https://docs.spark.fi/dev/savings/spark-psm",
-        "bridgeTypes": [
-          "lockAndMint",
-          "liquidity"
-        ]
+        "name": "OP Stack Standard Bridge",
+        "url": "https://docs.optimism.io/app-developers/guides/bridging/standard-bridge",
+        "bridgeTypes": ["lockAndMint"],
+        "note": "Base and OP Mainnet sDAI use the standard L1 escrow / L2 mint-and-burn representation model."
       }
     ],
     "sources": [
       {
-        "label": "Spark docs",
-        "url": "https://docs.spark.fi/"
+        "label": "Spark sDAI token docs",
+        "url": "https://docs.spark.fi/dev/savings/sdai-token"
       },
       {
-        "label": "Spark PSM docs",
-        "url": "https://docs.spark.fi/dev/savings/spark-psm"
+        "label": "Optimism Standard Bridge docs",
+        "url": "https://docs.optimism.io/app-developers/guides/bridging/standard-bridge"
       },
       {
-        "label": "Sky Dai token docs",
-        "url": "https://developers.sky.money/protocol/tokens/dai/"
+        "label": "Base Standard Bridge docs",
+        "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
       }
     ],
     "routes": [
@@ -162,19 +160,16 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530298,
         "sources": [
           {
-            "label": "Spark docs",
-            "url": "https://docs.spark.fi/"
+            "label": "Spark sDAI token docs",
+            "url": "https://docs.spark.fi/dev/savings/sdai-token"
           },
           {
-            "label": "Spark PSM docs",
-            "url": "https://docs.spark.fi/dev/savings/spark-psm"
-          },
-          {
-            "label": "Sky Dai token docs",
-            "url": "https://developers.sky.money/protocol/tokens/dai/"
+            "label": "Ethereum sDAI contract",
+            "url": "https://etherscan.io/address/0x83f20f44975d03b1b09e64809b757c47f942beea#readContract"
           }
         ]
       },
@@ -184,27 +179,30 @@
         "destinationChain": "base",
         "canonicalChain": "ethereum",
         "contractAddress": "0x99ac4484e8a1dbd6a185380b3a811913ac884d87",
-        "protocol": "Sky cross-chain deployment",
+        "protocol": "Base Standard Bridge",
         "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-lock-mint",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
         "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0x4200000000000000000000000000000000000010"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
+        "observedBlock": 48617859,
         "sources": [
           {
-            "label": "Spark docs",
-            "url": "https://docs.spark.fi/"
+            "label": "Base sDAI contract",
+            "url": "https://basescan.org/address/0x99ac4484e8a1dbd6a185380b3a811913ac884d87#code"
           },
           {
-            "label": "Spark PSM docs",
-            "url": "https://docs.spark.fi/dev/savings/spark-psm"
-          },
-          {
-            "label": "Sky Dai token docs",
-            "url": "https://developers.sky.money/protocol/tokens/dai/"
+            "label": "Base Standard Bridge docs",
+            "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
           }
         ]
       },
@@ -214,27 +212,30 @@
         "destinationChain": "optimism",
         "canonicalChain": "ethereum",
         "contractAddress": "0x2218a117083f5b482b0bb821d27056ba9c04b1d3",
-        "protocol": "Sky cross-chain deployment",
+        "protocol": "OP Mainnet Standard Bridge",
         "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-lock-mint",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
         "scope": "peripheral",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x4200000000000000000000000000000000000010"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-14",
+        "observedBlock": 154213143,
         "sources": [
           {
-            "label": "Spark docs",
-            "url": "https://docs.spark.fi/"
+            "label": "OP Mainnet sDAI contract",
+            "url": "https://optimistic.etherscan.io/address/0x2218a117083f5b482b0bb821d27056ba9c04b1d3#code"
           },
           {
-            "label": "Spark PSM docs",
-            "url": "https://docs.spark.fi/dev/savings/spark-psm"
-          },
-          {
-            "label": "Sky Dai token docs",
-            "url": "https://developers.sky.money/protocol/tokens/dai/"
+            "label": "Optimism Standard Bridge docs",
+            "url": "https://docs.optimism.io/app-developers/guides/bridging/standard-bridge"
           }
         ]
       }

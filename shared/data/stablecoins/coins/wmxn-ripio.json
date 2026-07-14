@@ -13,16 +13,31 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mexican-peso fiat cash deposited in a Mexican bank account, backing Ripio wMXN one-to-one against the Mexican peso per Ripio's quarterly wFIAT token certifications",
-  "pegMechanism": "Issuer-controlled wFIAT token: the Ripio affiliate mints WMXN only against segregated Mexican-peso reserves and burns supply as needed, holding 1 WMXN = 1 MXN through on/off-ramp convertibility on Ripio and other VASP platforms plus DEX arbitrage; holders have no contractual on-chain redemption right",
+  "collateral": "Mexican-peso fiat cash deposited in a Mexican bank account, backing Ripio wMXN one-to-one against the Mexican peso per Ripio's wFIAT token certification",
+  "pegMechanism": "Issuer-controlled wFIAT token: the Ripio affiliate mints WMXN against local Mexican-peso reserves and burns supply as needed, holding 1 WMXN = 1 MXN through on/off-ramp convertibility on Ripio and other VASP platforms plus DEX arbitrage; holders have no contractual on-chain redemption right",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
-    "provider": "Local public accountants",
+    "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf",
+    "provider": "Pablo Eduardo Soto",
     "attestorTier": "niche",
-    "cadence": "quarterly",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Argentina",
-    "attestorLicense": "Professional Council of Economic Sciences of the Autonomous City of Buenos Aires"
+    "attestorLicense": "Professional Council of Economic Sciences of the Autonomous City of Buenos Aires",
+    "latestReport": {
+      "periodEnd": "2026-03-31",
+      "publishedAt": "2026-04-24",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Independent public accountant certification for wMXN - March 2026",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf"
+        }
+      ]
+    }
   },
   "mechanismArchetype": "fiat-cash",
   "geckoId": "mexican-peso",
@@ -192,20 +207,14 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": [
-          "intent",
-          "liquidity"
-        ]
+        "bridgeTypes": ["intent", "liquidity"]
       },
       {
         "source": "l2beat",
         "name": "World Chain",
         "slug": "world",
         "url": "https://l2beat.com/interop/protocols/world",
-        "bridgeTypes": [
-          "canonical",
-          "liquidity"
-        ]
+        "bridgeTypes": ["canonical", "liquidity"]
       }
     ],
     "sources": [
@@ -322,15 +331,54 @@
     {
       "name": "Mexican-peso fiat deposits in a Mexican bank account",
       "pct": 100,
+      "risk": "high",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed Mexican financial institution",
+      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "wmxn-ripio",
+    "display": {
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+      "label": "Ripio local stablecoins"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Mexican-peso fiat deposits in a Mexican bank account",
       "risk": "high"
     }
-  ],
-  "notices": [
-    {
-      "type": "info",
-      "title": "No per-token attestation located",
-      "message": "Ripio describes wFIAT local-currency backing and DefiLlama cites periodic attestations, but no reliable public per-token reserve attestation was found for WMXN during this addition. Curated reserves remain conservative until source coverage improves."
-    }
-  ],
+  },
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wMXN - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf"
+      },
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "rationale": "The March 31, 2026 certification reconciles 518,689 outstanding wMXN across six chains and MXN937,364.13 of collateral to a Mexican bank statement, then certifies that all outstanding tokens are backed by Mexican pesos at a financial institution in Mexico. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed.",
+    "compositionBasis": "Independent public accountant certification of the wMXN collateral as of March 31, 2026",
+    "compositionAsOf": "2026-03-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset class is unclassified; the Mexican financial institution, account type, and withdrawal liquidity are undisclosed.",
+    "knownUnknownExposurePct": 0
+  },
   "launchDate": "2025-07-11"
 }

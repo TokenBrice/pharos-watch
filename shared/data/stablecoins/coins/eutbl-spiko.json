@@ -37,11 +37,7 @@
         "name": "Chainlink CCIP",
         "slug": "ccip",
         "url": "https://l2beat.com/interop/protocols/ccip",
-        "bridgeTypes": [
-          "messaging",
-          "burnAndMint",
-          "lockAndMint"
-        ]
+        "bridgeTypes": ["messaging", "burnAndMint", "lockAndMint"]
       }
     ],
     "sources": [
@@ -306,16 +302,70 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "Eurozone short-term Treasury Bills",
-      "pct": 95,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash and bank deposits",
-      "pct": 5,
-      "risk": "very-low"
+      "name": "Spiko EU T-Bills Money Market Fund NAV",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Spiko EU T-Bills Money Market Fund",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "smart-contract"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 180
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko EU T-Bills product page",
+        "url": "https://www.spiko.io/spiko-treasury-bills-euro"
+      },
+      {
+        "label": "Spiko SICAV prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Spiko EU T-Bills Money Market Fund KID",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_EUTBL_EN.pdf"
+      }
+    ],
+    "rationale": "The producer emits one 100% NAV identity for the regulated Spiko EU T-Bills Money Market Fund. The KID and prospectus establish daily dealing, an explicit 180-day maximum residual maturity for eligible instruments, and a short-term Eurozone-government mandate. The prior 95/5 Treasury-bill and cash split was not a reported live allocation, so this review classifies the exact producer identity at the fund-share level.",
+    "compositionBasis": "Exact Chainlink NAV single-asset identity cross-checked against Spiko's current product page, prospectus, and KID",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No exposure outside the emitted fund NAV identity is indicated. Current security weights and operational settlement cash inside the regulated fund are not published by the NAV producer and are intentionally not represented as separate authored slices.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "CACEIS Bank",
+        "role": "custodian",
+        "jurisdiction": "France"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko EU T-Bills Money Market Fund KID",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_EUTBL_EN.pdf"
+      },
+      {
+        "label": "Spiko SICAV prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Spiko EU T-Bills product page",
+        "url": "https://www.spiko.io/spiko-treasury-bills-euro"
+      }
+    ],
+    "uncertainty": "The KID identifies CACEIS Bank as custodian and states that the fund is separate from its management company and legally segregated from custodian assets. The reviewed sources do not publish delegated-provider allocations or rehypothecation terms."
+  },
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 1,
@@ -336,7 +386,7 @@
       "oracleAddress": "0xfD628af590c4150A9651C1f4ddD0b4f532B703ae",
       "tokenAddress": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
       "assetLabel": "Spiko EU T-Bills Money Market Fund NAV",
-      "assetRisk": "very-low",
+      "assetRisk": "low",
       "oracleMethod": "latestRoundData",
       "maxOracleAgeSec": 604800
     },

@@ -205,10 +205,7 @@
         "name": "Chainlink CCIP",
         "slug": "ccip",
         "url": "https://l2beat.com/interop/protocols/ccip",
-        "bridgeTypes": [
-          "burnAndMint",
-          "lockRelease"
-        ]
+        "bridgeTypes": ["burnAndMint", "lockRelease"]
       }
     ],
     "sources": [
@@ -336,9 +333,71 @@
     {
       "name": "Fully collateralized overnight total-return swap exposure",
       "pct": 100,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "BNP Paribas",
+      "riskFactors": ["counterparty", "market", "liquidity", "custody", "legal", "smart-contract"],
+      "liquidityHorizon": "one-day"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko Euro product page",
+        "url": "https://www.spiko.io/spiko-euro"
+      },
+      {
+        "label": "Spiko SICAV prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Spiko Amundi Overnight Swap Fund KID",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf"
+      },
+      {
+        "label": "Spiko eurSAFO share-class totals API",
+        "url": "https://public-api.spiko.io/share-classes/eurSAFO/totals"
+      }
+    ],
+    "rationale": "The producer emits one 100% fully collateralized overnight total-return swap identity. Spiko's product page and legal documents identify BNP Paribas as the current TRS counterparty, daily dealing, and residual counterparty and market-liquidity risk; this review classifies that exact producer identity without treating the fund's changing securities portfolio as a separately weighted reserve slice.",
+    "compositionBasis": "Exact spiko-api single-asset identity cross-checked against Spiko's current product page, prospectus, KID, and share-class totals API",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No exposure outside the emitted 100% TRS identity is indicated. The fund's changing securities portfolio and any future change of eligible TRS counterparty are look-through details, not separately reported producer slices.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "CACEIS Bank",
+        "role": "custodian",
+        "jurisdiction": "France"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko Amundi Overnight Swap Fund KID",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf"
+      },
+      {
+        "label": "Spiko SICAV prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Spiko Euro product page",
+        "url": "https://www.spiko.io/spiko-euro"
+      }
+    ],
+    "uncertainty": "The KID identifies CACEIS Bank as depositary and states that the fund is separate from its management company and legally segregated from custodian assets. The reviewed sources do not publish delegated-provider allocations or rehypothecation terms."
+  },
   "yieldConfig": {
     "yieldSource": "Spiko Amundi Overnight Swap Fund EUR NAV",
     "yieldType": "nav-appreciation"
