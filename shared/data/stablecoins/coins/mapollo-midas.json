@@ -120,7 +120,68 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "mAPOLLO is minted by the MApolloDepositVault proxy (0xc215…) and an EOA holding M_APOLLO_MINT_OPERATOR_ROLE in the shared MidasAccessControl (0x0312…). DEFAULT_ADMIN_ROLE is held by a 1-of-3 Midas Safe and an EOA. Proxy upgrades require a 2-day MidasTimelockController.",
+    "summary": "mAPOLLO is minted by the MApolloDepositVault proxy and an EOA holding M_APOLLO_MINT_OPERATOR_ROLE. Its token, deposit vault, shared access control, data feed, and manual aggregator are transparent proxies under one ProxyAdmin owned by a two-day Midas timelock.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05",
+        "0xc21511edd1e6ecdc36e8ad4c82117033e50d5921",
+        "0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b",
+        "0x9aebf5d6f9411bac355021ddfbe9b2c756bdd358",
+        "0x84303e5568c7b167fa4febc6253cddfe12b7ee4b"
+      ],
+      "implementationAddresses": [
+        "0xd43cc40e380a59bfc06e80fdea9847556297df0c",
+        "0xd60cb8329199becb500d4cf9daf7d9d4697b5dc3",
+        "0xdd5a54ba2ab379a5e642c58f98ad793a183960e2",
+        "0xf39b570aa5889f61f9d99b55304f055b2a77cca9",
+        "0x7e91532b11df3f710ce892d304d875dc5c0e7df4"
+      ],
+      "adminAddresses": [
+        "0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac",
+        "0xe3eee3e0d2398799c884a47fc40c029c8e241852",
+        "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "MidasTimelockController (proxy upgrade guard)",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25527135,
+      "sources": [
+        {
+          "label": "Midas mAPOLLO contracts",
+          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+        },
+        {
+          "label": "mAPOLLO token proxy",
+          "url": "https://eth.blockscout.com/address/0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05"
+        },
+        {
+          "label": "MApolloDepositVault proxy",
+          "url": "https://eth.blockscout.com/address/0xc21511edd1e6ecdc36e8ad4c82117033e50d5921"
+        },
+        {
+          "label": "MidasAccessControl proxy",
+          "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+        },
+        {
+          "label": "MApolloDataFeed proxy",
+          "url": "https://eth.blockscout.com/address/0x9aebf5d6f9411bac355021ddfbe9b2c756bdd358"
+        },
+        {
+          "label": "MApolloCustomAggregatorFeed proxy",
+          "url": "https://eth.blockscout.com/address/0x84303e5568c7b167fa4febc6253cddfe12b7ee4b"
+        },
+        {
+          "label": "Midas ProxyAdmin",
+          "url": "https://eth.blockscout.com/address/0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac"
+        },
+        {
+          "label": "MidasTimelockController",
+          "url": "https://eth.blockscout.com/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -176,18 +237,23 @@
           "threshold": 1,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
           "version": "1.4.1",
-          "observedBlock": 25295093,
+          "observedBlock": 25527135,
+          "observedAt": "2026-07-13",
           "source": "onchain"
         },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527135,
         "sources": [
           {
             "label": "Midas admin Safe (Blockscout)",
             "url": "https://eth.blockscout.com/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
           }
         ],
-        "evidence": "At Ethereum block 25295093, hasRole(DEFAULT_ADMIN_ROLE=0x0000…, 0xb608…) returned true. getOwners() = 3; threshold = 1; 0 modules; guard = 0x0; Safe v1.4.1."
+        "evidence": "At Ethereum block 25527135, this Safe remained a DEFAULT_ADMIN_ROLE holder and the timelock's sole proposer, executor, and canceller. It was 1-of-3 with no modules, zero guard and module guard, Safe v1.4.1 singleton 0x41675c099f32341bf84bfc5382af534df5c7461a, and standard fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99."
       },
       {
         "chain": "ethereum",
@@ -211,23 +277,26 @@
         "label": "MidasTimelockController (proxy upgrade guard)",
         "role": "minter-admin",
         "authorityType": "contract",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
         "address": "0xe3eee3e0d2398799c884a47fc40c029c8e241852",
-        "modulesOrGuardsStatus": "none-detected",
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527135,
         "sources": [
           {
             "label": "MidasTimelockController (Blockscout)",
             "url": "https://eth.blockscout.com/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
           }
         ],
-        "evidence": "ProxyAdmin (0xbf25…) owner() = 0xe3ee… (MidasTimelockController). getMinDelay() = 172800 s (2 days)."
+        "evidence": "At Ethereum block 25527135, all five mint-critical transparent proxies had admin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac and zero beacon slots. ProxyAdmin.owner() returned this MidasTimelockController, whose getMinDelay() was 172800 seconds. Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 was its sole proposer, executor, and canceller."
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295093: M_APOLLO_MINT_OPERATOR_ROLE (keccak256 = 0x5940…) held by MApolloDepositVault proxy 0xc215… and EOA 0xe10a…; DEFAULT_ADMIN_ROLE held by Safe 0xb608… (1-of-3, no modules) and EOA 0xd419…; shared ProxyAdmin gated by 2-day MidasTimelockController. All five Midas mTokens share the same MidasAccessControl 0x0312….",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25527135, the complete mAPOLLO mint-critical proxy inventory was token 0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05, deposit vault 0xc21511edd1e6ecdc36e8ad4c82117033e50d5921, shared access control 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, data feed 0x9aebf5d6f9411bac355021ddfbe9b2c756bdd358, and manual aggregator 0x84303e5568c7b167fa4febc6253cddfe12b7ee4b. All five transparent proxies shared ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac, owned by the two-day timelock. The timelock's sole initiating Safe remained 1-of-3 with no modules or guard.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
       "sources": [
         {
           "label": "Midas smart contracts docs",
@@ -240,6 +309,14 @@
         {
           "label": "MidasAccessControl on Ethereum (Blockscout)",
           "url": "https://eth.blockscout.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+        },
+        {
+          "label": "Midas ProxyAdmin",
+          "url": "https://eth.blockscout.com/address/0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac"
+        },
+        {
+          "label": "MidasTimelockController",
+          "url": "https://eth.blockscout.com/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
         }
       ]
     }
