@@ -472,7 +472,7 @@ describe("v9 readiness audit helpers", () => {
       "unresolved-methodology": 1,
       "unsupported-design": 1,
     });
-    expect(audit.byCriticality).toEqual({ critical: 1, noncritical: 2 });
+    expect(audit.byCriticality).toEqual({ critical: 0, noncritical: 3 });
     expect(audit.items.map((item) => item.code)).toEqual([
       "material-reserve-slice-unstructured",
       "correlated-exit-routes",

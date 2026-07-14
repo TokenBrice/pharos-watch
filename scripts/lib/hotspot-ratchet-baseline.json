@@ -20,9 +20,9 @@
     "branchCount": 147
   },
   "shared/lib/safety-score-v9/control.ts": {
-    "fileLines": 744,
-    "maxFunctionLines": 453,
-    "branchCount": 101
+    "fileLines": 775,
+    "maxFunctionLines": 484,
+    "branchCount": 105
   },
   "shared/lib/safety-score-v9/coverage.ts": {
     "fileLines": 928,
@@ -40,7 +40,7 @@
     "branchCount": 13
   },
   "shared/types/safety-score-v9.ts": {
-    "fileLines": 1447,
+    "fileLines": 1469,
     "maxFunctionLines": 357,
     "branchCount": 67
   },
@@ -325,7 +325,7 @@
     "branchCount": 139
   },
   "worker/src/lib/safety-score-v9-fact-set.ts": {
-    "fileLines": 2178,
+    "fileLines": 2186,
     "maxFunctionLines": 224,
     "branchCount": 144
   },

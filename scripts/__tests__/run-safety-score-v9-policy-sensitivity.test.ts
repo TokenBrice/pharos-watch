@@ -25,11 +25,11 @@ describe("Safety Score v9 candidate policy sensitivity", { timeout: V9_EVALUATIO
       reportKind: "safety-score-v9-policy-sensitivity-research",
       candidateOnly: true,
       baseline: {
-        policyId: "safety-score-v9-candidate-v1",
+        policyId: V9_CANDIDATE_POLICY_V1.policy.policyId,
         lifecycle: "candidate",
         semanticDigest: V9_CANDIDATE_POLICY_V1.semanticDigest,
-        scenarioCount: 30,
-        pairwiseConstraintCount: 28,
+        scenarioCount: 34,
+        pairwiseConstraintCount: 32,
         pairwiseViolationCount: 0,
       },
       selection: {
@@ -38,8 +38,8 @@ describe("Safety Score v9 candidate policy sensitivity", { timeout: V9_EVALUATIO
       },
     });
     expect(first.cases).toHaveLength(2);
-    expect(first.cases.every((item) => item.pairwiseConstraints.length === 28)).toBe(true);
-    expect(first.summary.pairwiseEvaluationCount).toBe(56);
+    expect(first.cases.every((item) => item.pairwiseConstraints.length === 32)).toBe(true);
+    expect(first.summary.pairwiseEvaluationCount).toBe(64);
     expect(first.cases.map((item) => item.value)).toEqual([19, 21]);
     expect(first.cases.every((item) => item.policyDigest !== first.baseline.semanticDigest)).toBe(true);
     expect(

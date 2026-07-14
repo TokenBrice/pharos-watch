@@ -71,6 +71,7 @@ function runHook(input: string, extraEnv: Record<string, string> = {}) {
       ...process.env,
       HOOK_LOG: logPath,
       PATH: `${directory}${delimiter}${process.env.PATH}`,
+      PHAROS_PRE_PUSH_GATE: "off",
       PHAROS_PRE_PUSH_SKIP_RECEIPT: "1",
       ...extraEnv,
     },
