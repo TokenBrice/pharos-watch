@@ -3,42 +3,42 @@
   "groups": [
     {
       "key": "(unclassified)",
-      "totalBytes": 2595620,
+      "totalBytes": 2567135,
       "chunkCount": 131
     },
     {
       "key": "stablecoin-client-registry",
-      "totalBytes": 571737,
+      "totalBytes": 691174,
       "chunkCount": 1
     },
     {
       "key": "recharts+recharts-component",
-      "totalBytes": 501423,
+      "totalBytes": 501433,
       "chunkCount": 1
     },
     {
       "key": "next-framework",
-      "totalBytes": 378677,
+      "totalBytes": 378733,
       "chunkCount": 3
     },
     {
       "key": "depeg-event-related-data",
-      "totalBytes": 229806,
+      "totalBytes": 230212,
       "chunkCount": 1
     },
     {
       "key": "error-boundary",
-      "totalBytes": 123013,
-      "chunkCount": 4
+      "totalBytes": 100853,
+      "chunkCount": 3
     },
     {
       "key": "zod",
-      "totalBytes": 71593,
+      "totalBytes": 71592,
       "chunkCount": 1
     },
     {
       "key": "react-tweet",
-      "totalBytes": 29516,
+      "totalBytes": 29520,
       "chunkCount": 1
     }
   ]
