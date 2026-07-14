@@ -123,15 +123,6 @@
   },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "dao-governance",
-  "reserves": [
-    {
-      "name": "Locked USD0",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "usd0-usual",
-      "depType": "wrapper"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",
     "version": 1,

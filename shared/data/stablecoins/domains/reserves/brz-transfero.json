@@ -1,0 +1,67 @@
+{
+  "id": "brz-transfero",
+  "reserves": [
+    {
+      "name": "Brazilian-real deposit at an authorized financial institution",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed financial institution authorized by the Central Bank of Brazil",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Transfero BRZ transparency report",
+        "url": "https://transfero.com/wp-content/uploads/2024/12/daily-report.pdf"
+      },
+      {
+        "label": "Transfero BRZ product disclosure",
+        "url": "https://transfero.com/brz"
+      }
+    ],
+    "rationale": "Transfero's issuer report describes BRZ as redeemable one-for-one for reais and states that the reserve is held at a financial institution authorized by the Central Bank of Brazil. The accessible report is dated March 31, 2024 and does not name the institution or disclose additional reserve instruments.",
+    "compositionBasis": "Transfero BRZ transparency report dated March 31, 2024",
+    "compositionAsOf": "2024-03-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer discloses a single authorized-institution reserve category but not the institution name, account terms, liquidity terms, segregation, or a current report.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Brazilian-real deposit at an authorized financial institution",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "A Brazilian-real bank deposit is an external reserve asset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed financial institution authorized by the Central Bank of Brazil",
+        "role": "bank",
+        "sharePct": 100,
+        "jurisdiction": "Brazil"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Transfero BRZ transparency report",
+        "url": "https://transfero.com/wp-content/uploads/2024/12/daily-report.pdf"
+      }
+    ],
+    "uncertainty": "The issuer report says the reserve is held at an authorized Brazilian financial institution, but does not name it or disclose segregation, bankruptcy-remoteness, rehypothecation, or account-level terms."
+  }
+}

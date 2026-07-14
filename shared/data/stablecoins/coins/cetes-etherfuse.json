@@ -18,10 +18,26 @@
   "geckoId": "cetes",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://app.etherfuse.com/legal/proof-of-reserves",
+    "url": "https://api.etherfuse.com/statement/attestation/latest",
     "attestorTier": "niche",
-    "cadence": "ad-hoc",
-    "provider": "Etherfuse third-party attestations"
+    "cadence": "monthly",
+    "provider": "BHR México",
+    "attestorJurisdiction": "Mexico",
+    "latestReport": {
+      "periodEnd": "2026-05-26",
+      "publishedAt": "2026-05-26",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "BHR México Etherfuse reasonable-assurance report - May 2026",
+          "url": "https://api.etherfuse.com/statement/attestation/latest"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -230,13 +246,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "CETES (Mexican federal government bonds, BBB-, WAM <1 year)",
-      "pct": 100,
-      "risk": "low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

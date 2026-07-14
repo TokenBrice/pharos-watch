@@ -1,0 +1,59 @@
+{
+  "id": "busd0-usual",
+  "reserves": [
+    {
+      "name": "USD0 locked in the bUSD0 bond contract",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usd0-usual",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Usual DAO",
+      "riskFactors": ["liquidity", "custody", "counterparty", "smart-contract", "market", "legal", "concentration"],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Usual bUSD0 product documentation",
+        "url": "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0"
+      },
+      {
+        "label": "Usual bUSD0 fact sheet",
+        "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+      }
+    ],
+    "rationale": "Usual documents bUSD0 as a fixed-notional bond token backed one-for-one by locked USD0. Par redemption before the June 11, 2028 maturity requires recombining bUSD0 with rt-bUSD0; bUSD0 alone redeems one-for-one at maturity, while earlier secondary-market exits may occur below par.",
+    "compositionBasis": "Usual bUSD0 product documentation last updated February 16, 2026",
+    "compositionAsOf": "2026-02-16",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "The direct reserve dependency is fully identified as USD0; holder liquidity before maturity depends on the separate redemption-right token, governance-enabled floor redemption, or secondary markets.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Usual bUSD0 smart contracts",
+        "role": "other",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Usual bUSD0 product documentation",
+        "url": "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0"
+      }
+    ],
+    "uncertainty": "Usual states that USD0 collateralizing bUSD0 is locked and cannot be allocated to its lending vaults, but the position remains exposed to the bUSD0 and underlying USD0 smart-contract and governance structures."
+  }
+}
