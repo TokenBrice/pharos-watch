@@ -1,4 +1,5 @@
 import { buildPoolIdentity, type PoolIdentity } from "./pool-identity";
+import { buildChainAddressKey } from "./token-resolution";
 import type { DexApiPool } from "../../lib/dex-api-common";
 
 export function normalizeFeeRateFromBps(feeBps: number | null | undefined): number | null {
@@ -29,7 +30,20 @@ function deriveDirectApiFeeTierBps(pool: DexApiPool): number | null {
   return Math.round(pool.feeRate * 10_000 * 100) / 100;
 }
 
-export function buildDirectApiPoolIdentity(pool: DexApiPool): PoolIdentity {
+export function buildDirectApiPoolIdentity(
+  pool: DexApiPool,
+  chainAddressToId?: Map<string, string>,
+): PoolIdentity {
+  // DeFiLlama rows mark all-stablecoin pairs stable (`pool.stablecoin`), while
+  // direct sources only encode stability in the pool type. Without the same
+  // tracked-pair hint the stability buckets diverge and the cross-source
+  // dedupe never collapses the duplicate (observed live: DL raydium-amm
+  // USDS-USDC surviving next to the identical direct Raydium pool).
+  const typeImpliesStable = pool.poolType.includes("stable") || pool.poolType.includes("fluid");
+  const allTrackedStablePair =
+    chainAddressToId != null &&
+    pool.tokens.length >= 2 &&
+    pool.tokens.every((token) => chainAddressToId.has(buildChainAddressKey(pool.chain, token.address)));
   return buildPoolIdentity({
     chain: pool.chain,
     protocol: pool.source,
@@ -37,6 +51,6 @@ export function buildDirectApiPoolIdentity(pool: DexApiPool): PoolIdentity {
     tokenAddresses: pool.tokens.map((token) => token.address),
     poolType: pool.poolType,
     feeTierBps: deriveDirectApiFeeTierBps(pool),
-    isStable: pool.poolType.includes("stable") || pool.poolType.includes("fluid"),
+    isStable: typeImpliesStable || allTrackedStablePair,
   });
 }
