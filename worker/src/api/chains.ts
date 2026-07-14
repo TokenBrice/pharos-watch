@@ -12,6 +12,8 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
+import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
 
 const CHAINS_FRESHNESS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.chains;
 const CHAINS_STALE_THRESHOLD_SEC = CHAINS_FRESHNESS_MAX_AGE_SEC * 2;
@@ -35,6 +37,7 @@ interface ChainsFreshnessMeta {
   dependencies?: {
     reportCards: ChainsDependencyMeta;
   };
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
 }
 
 function getDependencyAgeSeconds(updatedAt: number | null | undefined, nowSec: number): number | null {
@@ -135,6 +138,9 @@ function buildChainsFreshnessMeta(
       dependencies: {
         reportCards,
       },
+      safetyScoreIdentity: reportCardResult.kind === "ok"
+        ? reportCardResult.payload.safetyScoreIdentity ?? null
+        : null,
       ...(warning ? { warning } : {}),
     },
   };
@@ -158,7 +164,14 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
 
   // Load safety scores from report card cache (one D1 read)
   const safetyScores: Record<string, number> = {};
-  const reportCardResult = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS });
+  const loadedReportCardResult = await loadReportCardCache(db, {
+    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+    requireCompleteness: true,
+  });
+  const reportCardResult: ReportCardCacheLoadResult = loadedReportCardResult.kind === "ok"
+    && !isCurrentSafetyScoreV8Identity(loadedReportCardResult.payload.safetyScoreIdentity)
+    ? { kind: "error", reason: "identity-mismatch", updatedAt: loadedReportCardResult.updatedAt }
+    : loadedReportCardResult;
   if (reportCardResult.kind === "ok") {
     for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
       safetyScores[id] = entry.score;
@@ -177,6 +190,9 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
     {
       ...response,
       updatedAt: stablecoinsResult.updatedAt,
+      safetyScoreIdentity: reportCardResult.kind === "ok"
+        ? reportCardResult.payload.safetyScoreIdentity
+        : null,
       _meta: freshness.meta,
     },
     freshness.headers,

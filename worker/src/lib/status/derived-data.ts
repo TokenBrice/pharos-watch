@@ -17,6 +17,8 @@ import { emptyReserveCompositionOverview } from "../live-reserves-store";
 import { logWorkerEvent } from "../structured-log";
 import { loadMintBurnFirstHourRows } from "../mint-burn-hourly-queries";
 import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";
+import { loadReportCardCache } from "../report-card-cache";
+import { isCurrentSafetyScoreV8Identity } from "../safety-score-current-identity";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   return {
@@ -55,6 +57,9 @@ type DatasetFreshnessTarget =
     }
   | {
       type: "dews-publication";
+    }
+  | {
+      type: "report-card-publication";
     };
 
 const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"], DatasetFreshnessTarget> = {
@@ -62,7 +67,7 @@ const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"]
   blacklist: { type: "cron", jobs: ["sync-blacklist"] },
   mintBurn: { type: "cron", jobs: ["sync-mint-burn", "sync-mint-burn-extended"] },
   supply: { type: "table", table: "supply_history", column: "snapshot_date" },
-  safetyGrades: { type: "table", table: "safety_grade_history", column: "recorded_at" },
+  safetyGrades: { type: "report-card-publication" },
   yield: {
     type: "table",
     table: "yield_data",
@@ -161,6 +166,23 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now
       source: "dews:published-generation",
       message: "Failed to validate the DEWS published generation for dataset freshness",
       metadata: { status: published.status },
+    });
+    return null;
+  }
+  if (target.type === "report-card-publication") {
+    const published = await loadReportCardCache(db, { requireCompleteness: true });
+    if (published.kind === "ok" && isCurrentSafetyScoreV8Identity(published.payload.safetyScoreIdentity)) {
+      return published.updatedAt;
+    }
+    const reason = published.kind === "ok" ? "identity-mismatch" : published.reason;
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "report_card_publication_freshness_unavailable",
+      route: "status",
+      source: "report_card_cache",
+      message: "Failed to validate the complete identified report-card publication for dataset freshness",
+      metadata: { reason, updatedAt: published.updatedAt },
     });
     return null;
   }

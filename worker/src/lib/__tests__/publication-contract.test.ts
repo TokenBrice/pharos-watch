@@ -491,6 +491,9 @@ describe("loadPublicationHealth", () => {
         state: "published",
         publishedRows: ACTIVE_IDS.size,
       },
+      dependencyWatermarks: {
+        reportCardCache: reportCardsAt,
+      },
     });
   });
 

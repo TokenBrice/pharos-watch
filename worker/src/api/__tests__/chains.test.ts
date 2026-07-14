@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 // Mock stablecoins to avoid importing full metadata tree
@@ -78,6 +80,8 @@ function reportCardCache(
   },
 ) {
   const nowSec = Math.floor(Date.now() / 1000);
+  const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${nowSec - payloadAgeSeconds}`;
+  const notRatedIds = [...ACTIVE_IDS].filter((id) => !(id in scores));
   return {
     match: "cache",
     matchBinds: ["report_card_cache"],
@@ -88,6 +92,20 @@ function reportCardCache(
         methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
         scores,
         updatedAt: nowSec - payloadAgeSeconds,
+        safetyScoreIdentity: buildSafetyScoreV8PublicationIdentity({
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+          publicationGenerationId,
+        }),
+        publicationGenerationId,
+        completeness: {
+          generationId: publicationGenerationId,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          expectedCount: ACTIVE_IDS.size,
+          scoredCount: Object.keys(scores).length,
+          notRatedCount: notRatedIds.length,
+          notRatedIds,
+        },
         ...(degradedInputs ? { degradedInputs } : {}),
       }),
       updated_at: nowSec - rowAgeSeconds,
@@ -146,9 +164,11 @@ describe("handleChains", () => {
     expect(response.status).toBe(200);
     const body = await response.json() as {
       chains: Array<{ id: string; totalUsd: number; healthScore: number | null }>;
+      safetyScoreIdentity: { model: string } | null;
       _meta: {
         ageSeconds: number;
         status: FreshnessStatus;
+        safetyScoreIdentity: { model: string } | null;
         dependencies: {
           reportCards: {
             status: FreshnessStatus | "unavailable";
@@ -162,6 +182,8 @@ describe("handleChains", () => {
     expect(body._meta.status).toBe("fresh");
     expect(body._meta.ageSeconds).toBeGreaterThanOrEqual(0);
     expect(body._meta.dependencies.reportCards.status).toBe("fresh");
+    expect(body.safetyScoreIdentity).toMatchObject({ model: "v8" });
+    expect(body._meta.safetyScoreIdentity).toEqual(body.safetyScoreIdentity);
     expect(response.headers.get("Warning")).toBeNull();
   });
 
@@ -197,6 +219,48 @@ describe("handleChains", () => {
     expect(body._meta.dependencies.reportCards.status).toBe("unavailable");
     expect(body._meta.dependencies.reportCards.reason).toBe("missing cache");
     expect(response.headers.get("Warning")).toContain("report-card cache missing cache");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("rejects an identity-less compact cache instead of deriving health from it", async () => {
+    const payload = {
+      peggedAssets: [{
+        id: "usdt-tether", symbol: "USDT", name: "Tether", price: 1, pegType: "peggedUSD",
+        circulating: { peggedUSD: 100 },
+        chainCirculating: {
+          ethereum: { current: 100, circulatingPrevDay: 100, circulatingPrevWeek: 100, circulatingPrevMonth: 100 },
+        },
+      }],
+    };
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      freshCache(payload),
+      {
+        match: "cache",
+        matchBinds: ["report_card_cache"],
+        rows: [],
+        first: {
+          key: "report_card_cache",
+          value: JSON.stringify({
+            methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+            updatedAt: nowSec - 60,
+            scores: { "usdt-tether": { score: 99, grade: "A+" } },
+          }),
+          updated_at: nowSec - 60,
+        },
+      },
+    ]);
+
+    const response = await handleChains(db);
+    const body = await response.json() as {
+      chains: Array<{ healthScore: number | null }>;
+      safetyScoreIdentity: unknown;
+      _meta: { dependencies: { reportCards: { status: string; reason: string } } };
+    };
+
+    expect(body.chains[0].healthScore).toBeNull();
+    expect(body.safetyScoreIdentity).toBeNull();
+    expect(body._meta.dependencies.reportCards).toMatchObject({ status: "unavailable", reason: "identity missing" });
     expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 

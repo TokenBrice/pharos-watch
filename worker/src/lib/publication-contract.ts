@@ -14,6 +14,7 @@ import { parseObjectMetadata } from "./json-metadata";
 import { loadReportCardCache } from "./report-card-cache";
 import { loadStablecoinsCache } from "./stablecoins-cache";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
+import { isCurrentSafetyScoreV8Identity } from "./safety-score-current-identity";
 
 interface PublicationGenerationRow {
   generation_id: string;
@@ -598,7 +599,7 @@ async function loadReportCardCachePublicationSurface(
   if (genericSurface) return genericSurface;
 
   const result = await loadReportCardCache(db, { requireCompleteness: true });
-  if (result.kind === "ok") {
+  if (result.kind === "ok" && isCurrentSafetyScoreV8Identity(result.payload.safetyScoreIdentity)) {
     const publishedRow = publishedFallbackRow(
       `report-card-cache:${result.updatedAt}`,
       result.updatedAt,
@@ -609,18 +610,20 @@ async function loadReportCardCachePublicationSurface(
         },
         cacheKey: "report_card_cache",
         methodologyVersion: result.payload.methodologyVersion,
+        safetyScoreIdentity: result.payload.safetyScoreIdentity,
         degradedInputs: result.payload.degradedInputs ?? null,
       },
     );
     return buildSurfaceHealth(REPORT_CARD_CACHE_FALLBACK_SURFACE, now, publishedRow, publishedRow, null);
   }
 
+  const reason = result.kind === "ok" ? "identity-mismatch" : result.reason;
   const attemptedAt = result.updatedAt ?? now;
   const failedRow = failedFallbackRow(
     result.updatedAt == null
       ? "report-card-cache:missing"
       : `report-card-cache:${result.updatedAt}:invalid`,
-    result.reason,
+    reason,
     attemptedAt,
     {
       cacheKey: "report_card_cache",

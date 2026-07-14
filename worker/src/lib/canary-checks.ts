@@ -11,6 +11,7 @@ import { boundedJson, parseObjectMetadata } from "./json-metadata";
 import { getCache } from "./db-cache";
 import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
+import { isCurrentSafetyScoreV8Identity } from "./safety-score-current-identity";
 
 export type WorkerCanaryMode = "off" | "shadow" | "status" | "alert";
 
@@ -469,6 +470,9 @@ async function checkReportCardCacheMethodology(db: D1Database) {
   if (cache.kind === "error") {
     const severity: CanaryRunSeverity = cache.reason === "generation-mismatch"
       || cache.reason === "methodology-mismatch"
+      || cache.reason === "identity-missing"
+      || cache.reason === "identity-mismatch"
+      || cache.reason === "completeness-missing"
       || cache.reason === "completeness-mismatch"
       ? "error"
       : "warning";
@@ -484,11 +488,26 @@ async function checkReportCardCacheMethodology(db: D1Database) {
       },
     };
   }
+  if (!isCurrentSafetyScoreV8Identity(cache.payload.safetyScoreIdentity)) {
+    return {
+      status: "error" as const,
+      severity: "error" as const,
+      error: "report-card cache identity-mismatch",
+      metadata: {
+        reason: "identity-mismatch",
+        updatedAt: cache.updatedAt,
+        safetyScoreIdentity: cache.payload.safetyScoreIdentity ?? null,
+        expectedGeneration: REPORT_CARD_CACHE_GENERATION,
+        maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+      },
+    };
+  }
   const scoreCount = Object.keys(cache.payload.scores).length;
   const metadata = {
     updatedAt: cache.updatedAt,
     scoreCount,
     methodologyVersion: cache.payload.methodologyVersion,
+    safetyScoreIdentity: cache.payload.safetyScoreIdentity,
     expectedGeneration: REPORT_CARD_CACHE_GENERATION,
     maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
     degradedInputs: cache.payload.degradedInputs ?? null,

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import { snapshotPublicDataset } from "../snapshot-public-dataset";
@@ -30,6 +32,7 @@ const STABLECOINS_CACHE_PAYLOAD = {
   ],
 };
 
+const REPORT_CARD_PUBLICATION_GENERATION_ID = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${NOW_SEC}`;
 const REPORT_CARD_CACHE_PAYLOAD = {
   methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
   scores: {
@@ -37,6 +40,20 @@ const REPORT_CARD_CACHE_PAYLOAD = {
     "usdt-tether": { score: 78.1, grade: "B" },
   },
   updatedAt: NOW_SEC,
+  safetyScoreIdentity: buildSafetyScoreV8PublicationIdentity({
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+    publicationGenerationId: REPORT_CARD_PUBLICATION_GENERATION_ID,
+  }),
+  publicationGenerationId: REPORT_CARD_PUBLICATION_GENERATION_ID,
+  completeness: {
+    generationId: REPORT_CARD_PUBLICATION_GENERATION_ID,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    expectedCount: ACTIVE_IDS.size,
+    scoredCount: 2,
+    notRatedCount: ACTIVE_IDS.size - 2,
+    notRatedIds: [...ACTIVE_IDS].filter((id) => id !== "usdc-circle" && id !== "usdt-tether"),
+  },
 };
 
 const PSI_ROW = {
@@ -321,6 +338,60 @@ describe("snapshotPublicDataset", () => {
     const result = await snapshotPublicDataset(db);
     expect(result.status).toBe("degraded");
     expect(result.metadata).toContain("report_card_cache_unavailable");
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("does not publish an immutable snapshot from an identity-less compact cache", async () => {
+    const legacyReportCardCache = {
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      scores: REPORT_CARD_CACHE_PAYLOAD.scores,
+      updatedAt: NOW_SEC,
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
+          { key: "report_card_cache", value: JSON.stringify(legacyReportCardCache), updated_at: NOW_SEC },
+        ],
+      },
+    ]);
+
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "report_card_cache_unavailable",
+      cacheReason: "identity-missing",
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("does not publish an immutable snapshot from a different evaluation build", async () => {
+    const mismatchedReportCardCache = {
+      ...REPORT_CARD_CACHE_PAYLOAD,
+      safetyScoreIdentity: {
+        ...REPORT_CARD_CACHE_PAYLOAD.safetyScoreIdentity,
+        evaluationBuildDigest: "b".repeat(64),
+      },
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
+          { key: "report_card_cache", value: JSON.stringify(mismatchedReportCardCache), updated_at: NOW_SEC },
+        ],
+      },
+    ]);
+
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "report_card_cache_unavailable",
+      cacheReason: "identity-mismatch",
+    });
     expect(getInsertBinds(db)).toBeUndefined();
   });
 

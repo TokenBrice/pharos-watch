@@ -11,6 +11,9 @@ import satori from "satori";
 import satoriStandalone from "satori/standalone";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import { deriveStablecoinOgCardData, handleOg } from "../og";
 import { StablecoinCard, type StablecoinCardData } from "../../lib/og-templates/stablecoin-card";
 
@@ -90,7 +93,30 @@ describe("stablecoin OG card data", () => {
   describe("peg-analytics cache hits", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
-    function makeOgDb(assets: ReturnType<typeof makeAsset>[]) {
+    function completeReportCardCache(updatedAt: number) {
+      const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
+      return {
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        updatedAt,
+        safetyScoreIdentity: buildSafetyScoreV8PublicationIdentity({
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+          publicationGenerationId,
+        }),
+        publicationGenerationId,
+        completeness: {
+          generationId: publicationGenerationId,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          expectedCount: ACTIVE_IDS.size,
+          scoredCount: ACTIVE_IDS.size,
+          notRatedCount: 0,
+          notRatedIds: [],
+        },
+        scores: Object.fromEntries([...ACTIVE_IDS].map((id) => [id, { score: 92, grade: "A" }])),
+      };
+    }
+
+    function makeOgDb(assets: ReturnType<typeof makeAsset>[], reportCardCache?: unknown) {
       const stablecoinsValue = JSON.stringify({ peggedAssets: assets });
       // Nav-inclusive payload, mirroring what the report-cards pass publishes.
       const pegAnalyticsValue = JSON.stringify({
@@ -108,6 +134,7 @@ describe("stablecoin OG card data", () => {
           rows: [
             { key: "stablecoins", value: stablecoinsValue, updated_at: nowSec },
             { key: "peg-analytics", value: pegAnalyticsValue, updated_at: nowSec },
+            ...(reportCardCache ? [{ key: "report_card_cache", value: JSON.stringify(reportCardCache), updated_at: nowSec }] : []),
           ],
         },
         { match: "dex_liquidity", rows: [] },
@@ -151,6 +178,35 @@ describe("stablecoin OG card data", () => {
 
       const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
       expect(data.pegScore).toBe(99);
+    });
+
+    it("renders an explicit non-cacheable degraded state when compact safety identity is unavailable", async () => {
+      const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
+      const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+
+      expect(res?.status).toBe(200);
+      expect(res?.headers.get("Cache-Control")).toBe("no-store");
+      expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      expect(element.props.data).toMatchObject({
+        grade: "NR",
+        lastUpdated: "DEGRADED: Safety score unavailable",
+      });
+    });
+
+    it("does not cache stale complete compact safety data", async () => {
+      const db = makeOgDb(
+        [makeAsset({ id: "usdt-tether", symbol: "USDT" })],
+        completeReportCardCache(nowSec - 3 * 60 * 60),
+      );
+
+      const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+
+      expect(res?.status).toBe(200);
+      expect(res?.headers.get("Cache-Control")).toBe("no-store");
+      expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
+      expect(res?.headers.get("X-Safety-Score-Reason")).toBe("stale-cache");
     });
 
     it("anchors 24h price change to the latest snapshot instead of wall-clock time", async () => {

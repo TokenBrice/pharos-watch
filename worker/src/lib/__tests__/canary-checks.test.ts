@@ -31,7 +31,7 @@ function stablecoinsPayload(activeCount = ACTIVE_IDS.size) {
   return JSON.stringify({ peggedAssets: assets });
 }
 
-function reportCardPayload(updatedAt = NOW - 60) {
+function reportCardPayload(updatedAt = NOW - 60, evaluationBuildDigest?: string) {
   const scoreIds = [...ACTIVE_IDS].sort();
   const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
   const safetyScoreIdentity = buildSafetyScoreV8PublicationIdentity({
@@ -45,7 +45,9 @@ function reportCardPayload(updatedAt = NOW - 60) {
     payload: {
       updatedAt,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      safetyScoreIdentity,
+      safetyScoreIdentity: evaluationBuildDigest
+        ? { ...safetyScoreIdentity, evaluationBuildDigest }
+        : safetyScoreIdentity,
       publicationGenerationId,
       completeness: {
         generationId: publicationGenerationId,
@@ -139,6 +141,7 @@ function healthyD1(
     stablecoinsActiveCount?: number;
     gbpFreshRuns?: number;
     gbpFallback?: boolean;
+    reportCardEvaluationBuildDigest?: string;
   } = {},
 ) {
   const rowCount = dex.rowCount ?? 408;
@@ -194,7 +197,12 @@ function healthyD1(
           updatedAt: NOW - 60,
           updated_at: NOW - 60,
         },
-        { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+        {
+          key: "report_card_cache",
+          value: reportCardPayload(NOW - 60, dex.reportCardEvaluationBuildDigest),
+          updatedAt: NOW - 60,
+          updated_at: NOW - 60,
+        },
         dewsPointerRow(publishedDewsRows),
         ...gbpCanaryCacheRows({ freshRuns: dex.gbpFreshRuns, fallback: dex.gbpFallback }),
       ],
@@ -239,6 +247,29 @@ describe("worker data invariant canaries", () => {
       skippedCount: 0,
       worstStatus: "ok",
       worstSeverity: "info",
+    });
+    expect(summary.results.find((result) => result.checkId === "report-card-cache-methodology")?.metadata)
+      .toMatchObject({ safetyScoreIdentity: { model: "v8" } });
+  });
+
+  it("rejects a complete compact cache from a different deployed evaluation build", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+
+    const summary = await runCanaryChecks(healthyD1({ reportCardEvaluationBuildDigest: "b".repeat(64) }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    const reportCards = summary.results.find((result) => result.checkId === "report-card-cache-methodology");
+
+    expect(reportCards).toMatchObject({
+      status: "error",
+      severity: "error",
+      error: "report-card cache identity-mismatch",
+      metadata: {
+        reason: "identity-mismatch",
+        safetyScoreIdentity: { evaluationBuildDigest: "b".repeat(64) },
+      },
     });
   });
 

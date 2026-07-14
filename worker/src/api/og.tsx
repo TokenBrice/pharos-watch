@@ -18,14 +18,14 @@ import { getConditionBand } from "../lib/stability-index";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { loadReportCardCache } from "../lib/report-card-cache";
+import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { scoreToGrade } from "@shared/lib/report-cards";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import type { BackingType } from "@shared/types";
+import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
 
 // ---------------------------------------------------------------------------
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
@@ -97,6 +97,32 @@ function ogDataNotYetAvailable(): Response {
     "Retry-After": "60",
     "Cache-Control": "no-store",
   });
+}
+
+function safetyScoreOgPresentation(
+  reportCardCache: Awaited<ReturnType<typeof loadReportCardCache>>,
+): { lastUpdated: string; headers: Record<string, string> } {
+  if (reportCardCache.kind === "ok" && isCurrentSafetyScoreV8Identity(reportCardCache.payload.safetyScoreIdentity)) {
+    const identity = reportCardCache.payload.safetyScoreIdentity;
+    return {
+      lastUpdated: `${identity.model.toUpperCase()} ${identity.methodologyVersion}`,
+      headers: {
+        ...CACHE_HEADERS,
+        "X-Safety-Score-Model": identity.model,
+        "X-Safety-Score-Status": "current",
+      },
+    };
+  }
+
+  return {
+    lastUpdated: "DEGRADED: Safety score unavailable",
+    headers: {
+      ...CACHE_HEADERS,
+      "Cache-Control": "no-store",
+      "X-Safety-Score-Status": "degraded",
+      "X-Safety-Score-Reason": reportCardCache.kind === "error" ? reportCardCache.reason : "identity-mismatch",
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -209,7 +235,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     stablecoinsPayload,
     dexLiqMap,
     dewsRow,
-    reportCardRow,
+    reportCardCache,
     sparklineRows,
     activeDepegRow,
     flowRow,
@@ -223,7 +249,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       )
       .bind(id)
       .first<{ score: number; band: string }>(),
-    loadReportCardCache(db).then((result) => (result.kind === "ok" ? result.payload.scores?.[id] ?? null : null)),
+    loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS, requireCompleteness: true }),
     db
       .prepare(
         "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 7",
@@ -281,6 +307,10 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   }
 
   const meta = TRACKED_META_BY_ID.get(id);
+  const reportCardRow = reportCardCache.kind === "ok"
+    && isCurrentSafetyScoreV8Identity(reportCardCache.payload.safetyScoreIdentity)
+    ? reportCardCache.payload.scores[id] ?? null
+    : null;
 
   // Cache-first: only pegScore is needed here, and the direct compute
   // re-scans ~21K depeg_events rows per render. The cache is published every
@@ -318,26 +348,30 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     change24h = ((price24hRow.current_price - price24hRow.prev_day_price) / price24hRow.prev_day_price) * 100;
   }
 
-  const data = deriveStablecoinOgCardData({
-    coin,
-    dexLiquidityScore: liq?.liquidityScore ?? null,
-    dewsBand: dewsRow?.band,
-    grade: reportCardRow?.grade,
-    sparklineRows: sparklineRows.results ?? [],
-    hasActiveDepeg: activeDepegRow !== null,
-    flow7d: flowRow?.net_flow,
-    pegScore,
-    backing: meta?.flags.backing ?? "rwa-backed",
-    governance: meta?.flags.governance ?? "centralized",
-    redemptionScore: null, // Not available in current cache schema
-    change24h,
-    variantLabel,
-    variantParentSymbol,
-    isFrozen,
-  });
+  const safetyPresentation = safetyScoreOgPresentation(reportCardCache);
+  const data = {
+    ...deriveStablecoinOgCardData({
+      coin,
+      dexLiquidityScore: liq?.liquidityScore ?? null,
+      dewsBand: dewsRow?.band,
+      grade: reportCardRow?.grade,
+      sparklineRows: sparklineRows.results ?? [],
+      hasActiveDepeg: activeDepegRow !== null,
+      flow7d: flowRow?.net_flow,
+      pegScore,
+      backing: meta?.flags.backing ?? "rwa-backed",
+      governance: meta?.flags.governance ?? "centralized",
+      redemptionScore: null, // Not available in current cache schema
+      change24h,
+      variantLabel,
+      variantParentSymbol,
+      isFrozen,
+    }),
+    lastUpdated: safetyPresentation.lastUpdated,
+  };
 
   const png = await renderPng(<StablecoinCard data={data} />);
-  return new Response(png, { headers: CACHE_HEADERS });
+  return new Response(png, { headers: safetyPresentation.headers });
 }
 
 // ---------------------------------------------------------------------------
@@ -347,7 +381,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
 async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   const [stablecoinsPayload, reportCardCache] = await Promise.all([
     loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
-    loadReportCardCache(db),
+    loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS, requireCompleteness: true }),
   ]);
 
   const gradeDistribution: Record<string, number> = {
@@ -370,7 +404,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   }
   const totalCoins = payloadUsable ? stablecoinsPayload.payload.peggedAssets.length : ACTIVE_IDS.size;
 
-  if (reportCardCache.kind === "ok") {
+  if (reportCardCache.kind === "ok" && isCurrentSafetyScoreV8Identity(reportCardCache.payload.safetyScoreIdentity)) {
     for (const [id, entry] of Object.entries(reportCardCache.payload.scores)) {
       const grade = entry.grade;
       if (grade in gradeDistribution) {
@@ -390,7 +424,6 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   }
 
   const avgScore = ratedCount > 0 ? pulseScore / ratedCount : 0;
-  const pulseGrade = ratedCount > 0 ? scoreToGrade(Math.round(avgScore)) : "NR";
 
   allScores.sort((a, b) => b.score - a.score);
   const topPerformers = allScores.slice(0, 3);
@@ -398,18 +431,20 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
 
   const data: SafetyScoresCardData = {
     gradeDistribution,
-    pulseGrade,
+    // An average score is not an asset-level grade. Do not apply V8 grade bands
+    // here, since that would also mislabel a future identified model.
+    pulseGrade: "NR",
     pulseScore: avgScore,
     coverageRatio: totalCoins > 0 ? ratedCount / totalCoins : 0,
     totalCoins,
     topPerformers,
     bottomPerformers,
     trend: null,
-    lastUpdated: nowUtcLabel(),
+    lastUpdated: safetyScoreOgPresentation(reportCardCache).lastUpdated,
   };
 
   const png = await renderPng(<SafetyScoresCard data={data} />);
-  return new Response(png, { headers: CACHE_HEADERS });
+  return new Response(png, { headers: safetyScoreOgPresentation(reportCardCache).headers });
 }
 
 // ---------------------------------------------------------------------------
@@ -610,10 +645,14 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
   const activePeggedAssets = peggedAssets.filter(isActiveChainAggregateAsset);
   const { rates: pegRates } = derivePegRates(activePeggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
 
-  // Safety scores feed the chain health factor; render proceeds without them.
+  // Safety scores feed the chain health factor. An incomplete or mismatched
+  // compact publication deliberately leaves chain health unrated.
   const safetyScores: Record<string, number> = {};
-  const reportCardResult = await loadReportCardCache(db);
-  if (reportCardResult.kind === "ok") {
+  const reportCardResult = await loadReportCardCache(db, {
+    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+    requireCompleteness: true,
+  });
+  if (reportCardResult.kind === "ok" && isCurrentSafetyScoreV8Identity(reportCardResult.payload.safetyScoreIdentity)) {
     for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
       safetyScores[id] = entry.score;
     }
@@ -626,7 +665,6 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
   // skips chains whose tracked supply is currently zero. Render a degraded
   // "no tracked supply" card instead of 404 so baked share images never break
   // when a chain's supply transiently drops out of the aggregate.
-  const updated = nowUtcLabel();
   const data: ChainCardData = chain
     ? {
         name: chain.name,
@@ -641,7 +679,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
           share: coin.share,
           supplyUsd: coin.supplyUsd,
         })),
-        lastUpdated: updated,
+        lastUpdated: safetyScoreOgPresentation(reportCardResult).lastUpdated,
       }
     : {
         name: CHAIN_META[chainId].name,
@@ -652,11 +690,11 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
         healthScore: null,
         healthBand: null,
         topStablecoins: [],
-        lastUpdated: updated,
+        lastUpdated: safetyScoreOgPresentation(reportCardResult).lastUpdated,
       };
 
   const png = await renderPng(<ChainCard data={data} />);
-  return new Response(png, { headers: CACHE_HEADERS });
+  return new Response(png, { headers: safetyScoreOgPresentation(reportCardResult).headers });
 }
 
 // ---------------------------------------------------------------------------

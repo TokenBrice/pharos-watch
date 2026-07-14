@@ -38,6 +38,7 @@ import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
+import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
 
 type StableMethodologyVersions = {
   pegScore: string;
@@ -249,21 +250,27 @@ export async function snapshotPublicDataset(
   }
 
   // --- 2. Report-card cache (required and freshness-gated) ---
-  const reportCardCache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS });
+  const reportCardCache = await loadReportCardCache(db, {
+    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+    requireCompleteness: true,
+  });
   throwIfAborted(signal);
-  if (reportCardCache.kind !== "ok") {
-    console.warn(`[snapshot-public-dataset] Report-card cache unavailable: ${reportCardCache.reason}`);
+  if (reportCardCache.kind !== "ok" || !isCurrentSafetyScoreV8Identity(reportCardCache.payload.safetyScoreIdentity)) {
+    const cacheReason = reportCardCache.kind === "ok" ? "identity-mismatch" : reportCardCache.reason;
+    const cacheUpdatedAt = reportCardCache.updatedAt;
+    console.warn(`[snapshot-public-dataset] Report-card cache unavailable: ${cacheReason}`);
     return {
       status: "degraded",
       itemCount: 0,
       metadata: JSON.stringify({
         reason: "report_card_cache_unavailable",
-        cacheReason: reportCardCache.reason,
-        updatedAt: reportCardCache.updatedAt,
+        cacheReason,
+        updatedAt: cacheUpdatedAt,
       }),
     };
   }
   const reportCards = reportCardCache.payload;
+  const safetyScoreIdentity = reportCards.safetyScoreIdentity;
 
   // --- 3. Latest PSI row (required to be the completed prior UTC day) ---
   let psiRow: StabilityIndexRow | null = null;
@@ -343,11 +350,16 @@ export async function snapshotPublicDataset(
   }
 
   const methodologyVersions = buildMethodologyVersions();
+  const snapshotMetadata = {
+    ...methodologyVersions,
+    safetyScoreIdentity,
+  };
 
   const envelope = {
     snapshotDate,
     generatedAt: nowSec,
     methodologyVersions,
+    safetyScoreIdentity,
     stablecoins: stablecoinsCache.payload.peggedAssets,
     fxFallbackRates: stablecoinsCache.payload.fxFallbackRates ?? null,
     reportCards,
@@ -415,7 +427,7 @@ export async function snapshotPublicDataset(
       .bind(
         snapshotDate,
         payloadGz,
-        JSON.stringify(methodologyVersions),
+        JSON.stringify(snapshotMetadata),
         contentHash,
         byteSize,
         nowSec,
