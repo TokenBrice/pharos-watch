@@ -31,6 +31,16 @@ const CURVE_STABLESWAP_FEE_BOUND = 0.001;
  * Curve pool whose complete per-coin capture survived shaping. Returns null
  * whenever any identity, balance, or tracked-token requirement fails.
  */
+/**
+ * StableSwap math assumes pool units exchange near 1:1. Rate-bearing pools
+ * (sUSDe, sfrxUSD, stUSDS legs) run the invariant on rate-scaled balances the
+ * Curve pools endpoint does not expose; modeling them on raw balances
+ * overstated on-chain get_dy by 6-24% in live probes. A persistent per-coin
+ * USD price spread is the observable signature of such a pool, so any spread
+ * beyond this bound fails closed to shaped TVL evidence.
+ */
+const CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD = 1.01;
+
 export function buildCurveStableswapExecutionModel(
   curveData: CurvePoolEntry | undefined,
   chainNorm: string,
@@ -39,6 +49,14 @@ export function buildCurveStableswapExecutionModel(
 ): DexAmmExecutionModel | null {
   const coins = curveData?.executionCoins;
   if (!coins || curveData.isMetaPool || !Number.isFinite(curveData.A) || curveData.A <= 0) return null;
+  // CryptoSwap (Curve v2) pools publish an amplification coefficient too, but
+  // price on a different invariant; a stableswap model overstates their
+  // capacity massively (1.5x+ measured on EURS/USDC).
+  if (isCryptoSwap(curveData.registryId)) return null;
+  const prices = coins.map((coin) => coin.usdPrice);
+  const maxPrice = Math.max(...prices);
+  const minPrice = Math.min(...prices);
+  if (!(minPrice > 0) || maxPrice / minPrice > CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD) return null;
   const tokens = coins.map((coin) => {
     const trackedAssetId = chainAddressToId.get(`${chainNorm}:${coin.address.toLowerCase()}`);
     return {

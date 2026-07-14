@@ -81,6 +81,45 @@ describe("buildCurveStableswapExecutionModel", () => {
     expect(buildCurveStableswapExecutionModel(undefined, "ethereum", "usdc-circle", chainAddressToId)).toBeNull();
   });
 
+  it("fails closed on CryptoSwap registries despite a published amplification", () => {
+    expect(
+      buildCurveStableswapExecutionModel(
+        entry({ registryId: "factory-twocrypto", A: 20_000_000 }),
+        "ethereum",
+        "usdc-circle",
+        chainAddressToId,
+      ),
+    ).toBeNull();
+    expect(
+      buildCurveStableswapExecutionModel(
+        entry({ registryId: "factory-tricrypto" }),
+        "ethereum",
+        "usdc-circle",
+        chainAddressToId,
+      ),
+    ).toBeNull();
+  });
+
+  it("fails closed on rate-bearing pools via the coin price spread gate", () => {
+    // A persistent >1% per-coin USD price spread marks a rate-scaled pool
+    // (e.g. DOLA/sUSDe at ~1.24): raw-balance stableswap overstates output.
+    const rateBearing = entry({
+      executionCoins: [
+        { address: USDC, symbol: "DOLA", decimals: 18, balance: 5_000_000, usdPrice: 1 },
+        { address: USDT, symbol: "sUSDe", decimals: 18, balance: 4_000_000, usdPrice: 1.24 },
+      ],
+    });
+    expect(buildCurveStableswapExecutionModel(rateBearing, "ethereum", "usdc-circle", chainAddressToId)).toBeNull();
+    // A sub-1% spread (normal peg noise) still models.
+    const pegNoise = entry({
+      executionCoins: [
+        { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+        { address: USDT, symbol: "USDT", decimals: 6, balance: 5_000_000, usdPrice: 0.9945 },
+      ],
+    });
+    expect(buildCurveStableswapExecutionModel(pegNoise, "ethereum", "usdc-circle", chainAddressToId)).not.toBeNull();
+  });
+
   it("rejects duplicate coin addresses instead of emitting an ambiguous model", () => {
     const duplicated = entry({
       executionCoins: [
