@@ -474,10 +474,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Freeze-only re-review: PHT has no confirmed direct holder-balance freeze in reviewed metadata, but resolves to Upstream through apcxUSDT/USDT collateral exposure.",
-    "evidence": "PHT resolves to Upstream because its backing path includes apcxUSDT/USDT collateral rather than direct token freeze authority.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "sources": [
+      {
+        "label": "APACX PHT overview",
+        "url": "https://docs.apacx.io/what-is-pht/pht-overview"
+      },
+      {
+        "label": "APACX Ethereum contract addresses",
+        "url": "https://docs.apacx.io/technical-references/contract-addresses"
+      },
+      {
+        "label": "Verified PHT Ethereum deployment",
+        "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+      }
+    ],
+    "evidence": "BLOCKED: APACX documents PHT as a Maker-style CDP and publishes the Ethereum core addresses, while the tracked asset also has Polygon and Tron deployments. The reviewed public sources do not provide a deployment-wide holder-control inventory for all three token contracts, so the inherited apcxUSDT/USDT exposure is retained without asserting a direct no-freeze result.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

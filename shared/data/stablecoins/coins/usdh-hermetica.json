@@ -82,9 +82,49 @@
     {
       "name": "BTC spot + short BTC perpetual futures (delta-neutral)",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Hermetica protocol, BTC custodians, and perpetual-futures counterparties",
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Hermetica USDh backing mechanism",
+        "url": "https://docs.hermetica.fi/usdh/how-it-works/backing-mechanism"
+      },
+      {
+        "label": "Hermetica December 2025 custodian attestation",
+        "url": "https://www.blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-december-2025"
+      }
+    ],
+    "rationale": "Hermetica states that USDh is backed by BTC and uses equal short BTC perpetual futures positions to make the reserve delta-neutral. Its monthly custodian attestations identify Copper and Ceffu settlement solutions and report aggregate backing assets and liabilities, but do not disclose the current spot BTC, hedge, or counterparty allocation.",
+    "compositionBasis": "Hermetica backing documentation and December 2025 custodian attestation",
+    "compositionAsOf": "2025-12-24",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The public attestation reports aggregate assets and liabilities but not current spot BTC, short-futures, exchange-counterparty, or custodian weights.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BTC spot + short BTC perpetual futures (delta-neutral)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Official sources establish the delta-neutral BTC design but do not publish the live allocation among collateral and hedge venues."
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://docs.hermetica.fi/usdh/how-it-works/backing",

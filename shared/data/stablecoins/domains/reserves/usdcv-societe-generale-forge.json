@@ -2,7 +2,7 @@
   "id": "usdcv-societe-generale-forge",
   "reserves": [
     {
-      "name": "USD cash deposits at BNY Mellon (segregated)",
+      "name": "U.S. dollar cash deposits at BNY",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
@@ -34,7 +34,7 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "USD cash deposits at BNY Mellon (segregated)",
+        "reserveName": "U.S. dollar cash deposits at BNY",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "USD cash at BNY is external reserve backing rather than a tracked stablecoin dependency."

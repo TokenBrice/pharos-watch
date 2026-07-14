@@ -170,9 +170,9 @@
         "url": "https://docs.hliquity.org/overview/overview"
       }
     ],
-    "evidence": "Hedera token metadata has no admin, freeze, wipe, or pause key. The non-null supply_key supports protocol minting against HBAR collateral in HLiquity's Liquity-style CDP system rather than a privileged holder-freeze or unbounded admin-mint path.",
-    "reviewer": "Codex Worker C",
-    "reviewedAt": "2026-05-14"
+    "evidence": "Hedera Mirror Node metadata for HCHF token 0.0.6070123 reports no admin, freeze, wipe, or pause key. The non-null supply_key supports protocol minting against HBAR collateral in HLiquity's Liquity-style CDP system, but does not establish a holder-level freeze or arbitrary transfer restriction.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

@@ -65,17 +65,25 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.nerona.xyz/"
+        "label": "M0 Extensions documentation",
+        "url": "https://docs.m0.org/protocol/extensions"
       },
       {
-        "label": "Website",
-        "url": "https://www.nerona.xyz/"
+        "label": "M0 M Token technical specification",
+        "url": "https://docs.m0.org/protocol/m-token-spec"
+      },
+      {
+        "label": "Ethereum USDnr proxy",
+        "url": "https://eth.blockscout.com/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9?tab=contract"
+      },
+      {
+        "label": "Ethereum USDnr current implementation",
+        "url": "https://eth.blockscout.com/address/0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0?tab=contract"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Blocked pending a complete deployment-level holder-control inventory. On 2026-07-14, the tracked Ethereum proxy resolves to a verified M0 JMIExtension implementation, and M0's official documentation describes extensions as custom ERC-20 wrappers on the M token foundation. The reviewed primary sources do not establish a USDnr blacklist, pause, or arbitrary-burn path, nor do they establish that the matching Fluent deployment has the same immutable control surface. Possible is retained rather than inferring a no-freeze conclusion across both deployments.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",

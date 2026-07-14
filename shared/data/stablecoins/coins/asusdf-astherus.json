@@ -92,9 +92,9 @@
         "url": "https://bscscan.com/token/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb#code"
       }
     ],
-    "evidence": "asUSDF resolves to Upstream because it is a staked wrapper of USDF and inherits the parent asset's custody, reserve, and issuer-control exposure. The holder-facing asUSDF contract is role-controlled and pausable, with mint/burn authority assigned to privileged roles.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
+    "evidence": "Bounded unknown retained: asUSDF is a staked wrapper of USDF and inherits the parent asset's custody, reserve, and issuer-control exposure. The reviewed holder-facing contract is role-controlled and pausable, but a complete current holder blacklist/freeze inventory and admin path were not established.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

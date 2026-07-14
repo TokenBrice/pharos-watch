@@ -50,10 +50,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "sdUSD is a dUSD strategy-vault receipt and inherits upstream dUSD/dTRINITY protocol controls and reserve dependencies.",
-    "reviewer": "Codex dependency-map audit",
-    "reviewedAt": "2026-05-21"
+    "sources": [
+      {
+        "label": "sdUSD documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+      },
+      {
+        "label": "sdUSD Ethereum proxy",
+        "url": "https://eth.blockscout.com/address/0x7cb20517776636ed76b68edb3d99dcce356abf02?tab=contract"
+      }
+    ],
+    "evidence": "BLOCKED: sdUSD is a dUSD strategy-vault receipt with tracked Ethereum and Fraxtal deployments. The Ethereum address is an upgradeable proxy, and reviewed issuer documentation does not provide a deployment-wide current holder blacklist, freeze, or transfer-control inventory across both vault implementations. The inherited classification is retained for dUSD/dTRINITY protocol and reserve dependencies; no direct holder-control posture is asserted without multi-deployment implementation evidence.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",

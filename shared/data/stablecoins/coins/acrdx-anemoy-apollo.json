@@ -99,14 +99,58 @@
     {
       "name": "Apollo diversified credit strategy",
       "pct": 95,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Apollo Global Management credit strategies through Anemoy Tokenized Apollo Diversified Credit Fund",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "market",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
     },
     {
       "name": "Cash and liquidity buffer",
       "pct": 5,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Anemoy Tokenized Apollo Diversified Credit Fund reserve and liquidity accounts",
+      "riskFactors": [
+        "custody",
+        "liquidity",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 reserve review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Anemoy ACRDX launch",
+        "url": "https://www.anemoy.io/news/acrdx-launched"
+      },
+      {
+        "label": "Chronicle proof of asset for ACRDX",
+        "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse"
+      },
+      {
+        "label": "Centrifuge protocol documentation",
+        "url": "https://docs.centrifuge.io/"
+      }
+    ],
+    "rationale": "Anemoy and Chronicle identify ACRDX as a tokenized Apollo diversified private-credit fund share with a proof-of-asset feed. The current source envelope retains the existing 95% Apollo strategy and 5% cash or liquidity buffer; the reviewed public disclosures do not publish current bank-level cash allocation or a full independent reserve schedule.",
+    "compositionBasis": "Anemoy ACRDX product and Chronicle proof-of-asset disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The two reserve categories are identified, but current fund sleeve, bank-level cash allocation, custody segregation, and recovery terms are not disclosed in the reviewed public sources.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "Anemoy Apollo Diversified Credit Fund NAV",
     "yieldType": "nav-appreciation"

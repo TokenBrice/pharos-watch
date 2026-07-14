@@ -214,12 +214,30 @@
     {
       "name": "AAA-rated CLO tranches",
       "pct": 95,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Janus Henderson Anemoy AAA CLO Fund",
+      "riskFactors": [
+        "counterparty",
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Cash and liquidity buffer",
       "pct": 5,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Janus Henderson Anemoy AAA CLO Fund custody and liquidity counterparties",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "liveReservesConfig": {
@@ -256,6 +274,11 @@
       "type": "warning",
       "title": "Contract-priced fund token",
       "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats JAAA as a NAV-priced fund share, not a liquid stablecoin peg."
+    },
+    {
+      "type": "warning",
+      "title": "Deployment-control semantics remain bounded",
+      "message": "SONG Safety Score V9 deployment-control review on 2026-07-15 verified the Centrifuge ward and 4-of-9 Safe authority path from issuer, protocol, and Safe sources, but did not establish complete current cap, incident, economic-loss, and materiality reconciliation across all mint surfaces."
     }
   ],
   "mintAuthority": {

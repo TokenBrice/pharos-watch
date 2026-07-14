@@ -13,10 +13,24 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: gtUSDCp resolves to Upstream because the vault holds USDC routed through Morpho markets, inheriting Circle's blacklist surface.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Gauntlet USDC Prime vault",
+        "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
+      },
+      {
+        "label": "Morpho curator documentation",
+        "url": "https://docs.morpho.org/curate/"
+      },
+      {
+        "label": "Gauntlet USDC Prime Ethereum vault contract",
+        "url": "https://etherscan.io/address/0x8c106eedad96553e64287a5a6839c3cc78afa3d0#code"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: the reviewed vault and Morpho materials establish USDC exposure and curator controls, but do not establish a complete holder-level blacklist or freeze inventory for the vault share token and all tracked routes.",
+    "evidence": "gtUSDCp is a Morpho vault exposure to USDC and inherits Circle's upstream blacklist surface. The reviewed vault and curator sources do not prove a direct holder-control function for gtUSDCp itself or a deployment-wide control inventory.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

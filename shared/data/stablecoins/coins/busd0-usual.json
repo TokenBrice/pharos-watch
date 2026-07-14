@@ -51,17 +51,17 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Docs",
+        "label": "Usual bUSD0 fact sheet",
         "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
       },
       {
-        "label": "Website",
-        "url": "https://usual.money/"
+        "label": "Usual USD0 token technical documentation",
+        "url": "https://tech.usual.money/smart-contracts/token-contracts/usd0"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Usual's official bUSD0 materials identify the token as a bond wrapper over USD0, while the USD0 technical documentation describes issuer or DAO-controlled minting and blacklist checks on the underlying token. A separate deployment-wide holder-freeze inventory for bUSD0 was not established, so the explicit Possible status is retained.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {

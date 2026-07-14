@@ -14,6 +14,52 @@
   "collateral": "USDC, DAI, ETH, WBTC, sfrxETH, and Vesper Finance yield-bearing tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH); FRAX and vaFRAX accepted but currently inactive; collateral factors range 75–85%",
   "pegMechanism": "Overcollateralized CDP: users deposit crypto collateral (CF 75–85%) to mint msUSD at a fixed 1% annual fee; no direct redemption — only debt repayment to reclaim collateral. Peg maintained by zero-slippage intra-protocol synth swaps (Synth Marketplace) that arbitrageurs exploit when msUSD trades below par, plus collateral-provider buybacks of discounted msUSD",
   "mechanismArchetype": "cdp",
+  "reserves": [
+    {
+      "name": "Metronome Synth eligible CDP collateral basket (stablecoins, ETH, WBTC, and Vesper yield-bearing tokens)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Metronome Synth user-deposited collateral",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Metronome Synth deposit and mintage caps",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/metronome-synth-mintage-and-deposit-caps"
+      },
+      {
+        "label": "Metronome Synth liquidation design",
+        "url": "https://docs.metronome.io/metronome-synth/risks/liquidation"
+      }
+    ],
+    "rationale": "Metronome identifies USDC, DAI, FRAX, ETH, WBTC, and Vesper yield-bearing tokens as collateral assets subject to deposit caps and collateral factors. It does not publish the current collateral allocation backing outstanding msUSD, so the documented eligible envelope is retained as one bounded basket rather than a fabricated allocation.",
+    "compositionBasis": "Metronome Synth collateral-cap and liquidation documentation",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current deposited balances and weights across the eligible collateral set are not published in the reviewed issuer documentation.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Metronome Synth eligible CDP collateral basket (stablecoins, ETH, WBTC, and Vesper yield-bearing tokens)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer names eligible collateral and limits but does not disclose current composition weights."
+      }
+    ]
+  },
   "llamaId": "326",
   "detailProvider": "defillama",
   "geckoId": "metronome-synth-usd",

@@ -14,6 +14,22 @@
   "collateral": "Short-dated U.S. Treasury bills, overnight Treasury repo, a government money market fund, and cash held by Figure Certificate Company (FCC), an SEC-registered face-amount certificate company; qualified assets are on deposit with UMB Bank N.A. and Flagstar Bank N.A.",
   "pegMechanism": "Fixed $1.00 face-amount certificate; daily interest accrual at SOFR minus 35bps (minimum 0%), paid monthly in USD or YLDS; 1:1 mint and redemption through Figure Certificate Company with mandatory KYC; registered under the Securities Act of 1933 and Investment Company Act of 1940",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SONG Safety Score V9 mechanism review",
+    "rationale": "YLDS documentation establishes a Figure Markets yield-bearing private-credit instrument, but the reviewed sources do not provide the complete current assurance, reconciliation, custody continuity, valuation, seniority, and loss-recovery inputs required for a full mechanism review.",
+    "sources": [
+      {
+        "label": "YLDS official site",
+        "url": "https://www.ylds.com/"
+      },
+      {
+        "label": "Provenance YLDS documentation",
+        "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
+      }
+    ]
+  },
   "llamaId": "272",
   "detailProvider": "defillama",
   "geckoId": "ylds",

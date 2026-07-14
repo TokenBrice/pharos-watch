@@ -123,6 +123,46 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "MU Digital Asia Dollar AZND overview",
+        "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd"
+      },
+      {
+        "label": "MU Digital yield mechanics",
+        "url": "https://docs.mudigital.net/mechanics/how-we-generate-yield"
+      },
+      {
+        "label": "MU Digital AZND mint and redeem terms",
+        "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd/mint-redeem"
+      }
+    ],
+    "rationale": "The reviewed MU Digital disclosures and the latest checked-in Accountable snapshot support the disclosed AZND reserve envelope of 80.9% short-term cash and 19.1% liquid bonds. The product mandate also permits an Asia credit portfolio with illiquid private credit capped at 20%, while the muBOND junior tranche is described as absorbing losses before AZND; those are structural terms, not a current constituent-level reconciliation.",
+    "compositionBasis": "Latest checked-in Accountable snapshot and MU Digital product disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The static envelope is disclosed, but the snapshot date, fund-level constituent identities, custody allocation, valuation reconciliation, and loss-recovery execution terms are not fully published in the reviewed materials.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short Term Cash",
+        "pct": 80.9,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Liquid Bonds",
+        "pct": 19.1,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      }
+    ]
+  },
   "yieldConfig": {
     "yieldSource": "Mu Digital Asian Dollar credit fund",
     "yieldType": "nav-appreciation"

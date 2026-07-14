@@ -997,11 +997,16 @@
   ],
   "deploymentModel": "single-chain",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: DUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Ethereum DUSD verified token contract",
+        "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+      }
+    ],
+    "evidence": "The verified DUSD contract inherits Pausable and lets the owner assign the pausing authority through setPauser(address, bytes32, bool). It also lets the owner authorize burners, and an authorized burner can call burn(from, amount) against an arbitrary account. The reviewed token source does not show a direct transfer blacklist, but these owner-mediated controls create a material holder intervention surface, so Possible is retained.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

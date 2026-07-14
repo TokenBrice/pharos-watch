@@ -14,6 +14,22 @@
   "collateral": "USD bank deposits and money market funds managed by Fidelity and Western Asset Management (Moneta/USA issuance) and Sparebanken Norge / Amundi USD MM fund (NBX/EEA issuance), held in segregated reserve accounts",
   "pegMechanism": "Direct 1:1 redemption through Moneta (USA) or NBX (EEA); KYC required; Charli3 oracle verifies reserve backing on-chain before each mint on Cardano",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "Moneta and NBX disclosures support the fiat-cash classification, but do not provide a complete current deployment-wide account of claim, custody, reconciliation, recovery, and administrative control semantics; those gaps remain unresolved.",
+    "sources": [
+      {
+        "label": "moneta.global",
+        "url": "https://moneta.global/"
+      },
+      {
+        "label": "moneta.global",
+        "url": "https://moneta.global/USDM%20Lite%20Paper.pdf"
+      }
+    ]
+  },
   "llamaId": "215",
   "detailProvider": "defillama",
   "geckoId": "usdm-2",
@@ -176,7 +192,8 @@
         }
       ],
       "unresolvedQuestions": [
-        "Cardano minting policy 0014df105553444d (USDM asset): the minting-policy script hash and its controlling keys are not readable via standard on-chain API calls (Koios getAccountInfo does not expose policy-key signatories). Resolve via Cardano CLI policy-id inspection or issuer disclosure of the policy script before raising confidence."
+        "Cardano minting policy 0014df105553444d (USDM asset): the minting-policy script hash and its controlling keys are not readable via standard on-chain API calls (Koios getAccountInfo does not expose policy-key signatories). Resolve via Cardano CLI policy-id inspection or issuer disclosure of the policy script before raising confidence.",
+        "The reviewed materials do not provide a complete current deployment-wide inventory of upgrade, pause, admin, and recovery controls across the Cardano and issuer-operated minting paths."
       ]
     }
   }

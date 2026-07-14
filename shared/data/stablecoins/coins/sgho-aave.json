@@ -136,9 +136,24 @@
       "pct": 100,
       "risk": "low",
       "coinId": "gho-aave",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Aave GHO protocol",
+      "riskFactors": ["smart-contract", "counterparty", "liquidity"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [{"label": "Aave sGHO documentation", "url": "https://aave.com/docs/aave-v3/guides/sgho"}],
+    "rationale": "sGHO is the Aave Savings module receipt claim for deposited GHO. Its single backing asset is the tracked GHO parent token.",
+    "compositionBasis": "Aave sGHO product documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material unclassified reserve exposure is present; sGHO inherits GHO protocol and facilitator risk.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "sgho-wrapper",
     "version": 1,

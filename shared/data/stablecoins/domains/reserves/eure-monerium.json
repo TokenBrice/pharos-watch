@@ -27,7 +27,7 @@
     "rationale": "Monerium identifies safeguarded deposits at Arion Bank and LHV Bank and states that the bulk of EURe funds is held in the AAA-rated State Street EUR Liquidity LVNAV Fund. It does not disclose current allocation weights, so the reserve remains one aggregate bank-deposit/fund basket.",
     "compositionBasis": "Current Monerium safeguarding policy; provider and asset-class weights undisclosed",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reserves fall within the disclosed bank-deposit and liquidity-fund basket, but the current allocation by provider and asset class is not public.",
+    "knownUnknownExposure": "All reserves fall within the disclosed bank-deposit and liquidity-fund basket, but the current allocation by provider and asset class is not public. Monerium's reviewed materials do not provide a current independent assets-and-liabilities assurance report or reconciliation schedule, so assurance and custody-continuity conclusions remain bounded.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

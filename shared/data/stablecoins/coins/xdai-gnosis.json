@@ -50,9 +50,9 @@
         "url": "https://bridge.gnosischain.com/"
       }
     ],
-    "evidence": "xDAI is a native gas token backed by assets bridged through Gnosis bridge infrastructure; Pharos records possible administrative or bridge-route control uncertainty, but the reviewed sources do not prove a holder-level blacklist path on native xDAI balances.",
-    "reviewer": "Codex dependency audit",
-    "reviewedAt": "2026-05-21"
+    "evidence": "xDAI is a native gas token backed by assets bridged through Gnosis bridge infrastructure; the reviewed current bridge and token sources do not prove a holder-level blacklist path on native xDAI balances, while bridge administration remains an unresolved route-level control boundary.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

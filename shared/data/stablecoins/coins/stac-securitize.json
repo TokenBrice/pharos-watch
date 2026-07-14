@@ -261,6 +261,18 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [{ "label": "Securitize BNY CLO Fund offering page", "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund" }, { "label": "Chronicle STAC proof of asset", "url": "https://chroniclelabs.org/dashboard/proofofasset/securitize-stac" }],
+    "rationale": "Securitize identifies STAC as a tokenized AAA CLO fund share, and Chronicle publishes the proof-of-asset surface. The static envelope is one AAA-CLO portfolio category; current issuer/tranche weights are not publicly reproduced.",
+    "compositionBasis": "Securitize fund mandate and proof-of-asset disclosure",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The sole disclosed portfolio category is AAA CLO exposure; current tranche and issuer weights are not published.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "AAA CLO fund portfolio", "pct": 100, "disposition": "untracked-exogenous-asset", "rationale": "The CLO portfolio is an external fund exposure rather than a tracked stablecoin dependency." }]
+  },
   "yieldConfig": {
     "yieldSource": "Securitize Tokenized AAA CLO Fund NAV",
     "yieldType": "nav-appreciation"

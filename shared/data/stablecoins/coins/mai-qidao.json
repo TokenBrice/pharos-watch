@@ -408,6 +408,18 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "unknown",
+    "sources": [{ "label": "QiDao documentation", "url": "https://docs.mai.finance/" }],
+    "rationale": "BLOCKED: QiDao documents overcollateralized multi-market vaults but does not publish a current all-chain collateral composition or market weights for MAI.",
+    "compositionBasis": "QiDao CDP design; current vault composition undisclosed",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The full recorded multi-market crypto-vault category lacks current public constituent weights.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "QiDao overcollateralized crypto vaults", "pct": 100, "disposition": "insufficient-evidence", "rationale": "No current cross-market collateral allocation is published." }]
+  },
   "notices": [
     {
       "type": "warning",

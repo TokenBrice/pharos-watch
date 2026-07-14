@@ -14,6 +14,22 @@
   "collateral": "U.S. Treasury bills and accepted stablecoins (USDC, USDT, and other approved stable assets); staking into sAID is the separate route into GAIB's AI infrastructure financing portfolio",
   "pegMechanism": "1:1 mint and burn against accepted stablecoins through GAIB AID contracts; whitelisted partners can mint or redeem directly while other users trade through the app or DEX liquidity",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "GAIB documentation and dated transparency classify AID as a fiat-cash token, but do not disclose current AID-specific assurance and reconciliation terms; that risk boundary remains explicitly unresolved.",
+    "sources": [
+      {
+        "label": "GAIB AID documentation",
+        "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
+      },
+      {
+        "label": "GAIB AID transparency",
+        "url": "https://aid.gaib.ai/transparency"
+      }
+    ]
+  },
   "llamaId": "353",
   "detailProvider": "defillama",
   "geckoId": "gaib-aid",

@@ -58,11 +58,20 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: WEUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "PicWe official WEUSD contract inventory",
+        "url": "https://docs.picwe.org/developers/contracts"
+      },
+      {
+        "label": "PicWe WEUSD product documentation",
+        "url": "https://docs.picwe.org/what-is-weusd"
+      }
+    ],
+    "evidence": "Blocked pending a code-level holder-control inventory. PicWe's official contracts page identifies the same WEUSD address on BSC, Base, Arbitrum, HashKey Chain, and Plume and describes the asset as omnichain, but the issuer documentation does not disclose whether those token deployments expose blacklist, pause, or arbitrary-burn controls. No conclusion is inferred from the issuer's statement that contracts are verified; a dated verified ABI/source review is required for each tracked deployment.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "unproven",
   "deploymentModel": "native-multichain",

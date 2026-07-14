@@ -57,18 +57,26 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Website",
+        "label": "Ethereum Blockscout AUDX contract",
+        "url": "https://eth.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+      },
+      {
+        "label": "Polygon Blockscout AUDX contract",
+        "url": "https://polygon.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+      },
+      {
+        "label": "AUDX website",
         "url": "https://www.audxtoken.com/"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The reviewed AUDX ERC1967 deployment evidence identifies a BLACKLISTER role alongside DEFAULT_ADMIN_ROLE, PAUSER, MINTER_ROLE, SALVAGER, and UPGRADER on the Ethereum and Polygon token contracts. That role is issuer-controlled through the deployment admin, so AUDX has direct holder-level transfer restriction capability; the issuer also describes AUDX as an issuer-managed token available on Ethereum and Polygon.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {

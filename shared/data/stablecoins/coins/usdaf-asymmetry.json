@@ -514,43 +514,122 @@
   "reserves": [
     {
       "name": "ysyBOLD (Yearn savings BOLD)",
-      "pct": 65.4,
+      "pct": 79.5,
       "risk": "medium",
       "coinId": "bold-liquity",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Yearn and Liquity BOLD protocol",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "scrvUSD (Savings crvUSD)",
-      "pct": 22.5,
+      "pct": 9.9,
       "risk": "medium",
       "coinId": "scrvusd-curve",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Curve Finance",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "sUSDS (Sky savings USDS)",
       "pct": 7.4,
       "risk": "low",
       "coinId": "susds-sky",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "tBTC",
-      "pct": 2.3,
-      "risk": "medium"
+      "pct": 1.3,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Threshold Network and tBTC custodians",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "sfrxUSD (Staked Frax USD)",
-      "pct": 1.9,
+      "pct": 1.5,
       "risk": "medium",
       "coinId": "sfrxusd-frax",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Frax Finance",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "WBTC",
-      "pct": 0.5,
-      "risk": "medium"
+      "pct": 0.4,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "WBTC custodians and merchant network",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-6 V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Asymmetry Finance collateral stats API",
+        "url": "https://app.asymmetry.finance/api/stats"
+      },
+      {
+        "label": "Pinned USDaf V2 deployment registry",
+        "url": "https://github.com/asymmetryfinance/api.usdafv2/blob/394afe37705c011326ff84299c6d3b2966b18a6f/src/v2MainnetDeployment.json"
+      },
+      {
+        "label": "USDaf V2 contracts",
+        "url": "https://github.com/asymmetryfinance/USDaf-v2/tree/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts"
+      }
+    ],
+    "rationale": "The official Asymmetry stats endpoint reports the current USDaf V2 collateral mix, and the pinned deployment registry and contracts map the reported positions to the reviewed slices. The snapshot does not independently establish legal custody, reserve segregation, or assurance for the underlying protocol positions and BTC wrappers.",
+    "compositionBasis": "Asymmetry Finance /api/stats collateral mix normalized on 2026-07-14",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Underlying protocol-position custody, wrapper counterparty exposure, and independent reserve assurance are not established by the public stats endpoint.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "asymmetry",
     "version": 1,

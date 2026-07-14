@@ -44,19 +44,23 @@
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
+    "evidence": "Current HedgeCore documentation and the sUSD contract identify a soul-bound, operator-controlled redemption and wrapper path, but the reviewed sources do not prove a holder-balance blacklist or freeze function on the sUSD token. Possible access risk is retained for the issuer, wrapper, and admin surfaces.",
     "sources": [
       {
-        "label": "Docs",
+        "label": "HedgeCore yield generation",
         "url": "https://docs.hedgecore.io/docs/protocol/yield-generation"
       },
       {
-        "label": "Website",
-        "url": "https://hedgecore.io/"
+        "label": "HedgeCore hUSDC wrapper",
+        "url": "https://docs.hedgecore.io/docs/protocol/husdc-wrapper"
+      },
+      {
+        "label": "sUSD BSC contract",
+        "url": "https://bscscan.com/token/0xbe1922750760c4cae69edb6fe79a22ae9b62a23d"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "reviewer": "SONG-2 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "liveReservesConfig": {
     "adapter": "curated-validated",

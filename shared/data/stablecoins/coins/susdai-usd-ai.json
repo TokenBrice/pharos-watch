@@ -13,10 +13,32 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: sUSDai resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "USD.AI documentation",
+        "url": "https://docs.usd.ai"
+      },
+      {
+        "label": "sUSDai Ethereum deployment",
+        "url": "https://etherscan.io/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9#code"
+      },
+      {
+        "label": "sUSDai Arbitrum deployment",
+        "url": "https://arbiscan.io/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9#code"
+      },
+      {
+        "label": "sUSDai Base deployment",
+        "url": "https://basescan.org/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9#code"
+      },
+      {
+        "label": "sUSDai Plasma deployment",
+        "url": "https://plasmascan.to/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9#code"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: USD.AI documentation and four tracked deployments establish the sUSDai scope, but do not establish a complete holder-level blacklist or freeze inventory across all deployments.",
+    "evidence": "sUSDai is the USD.AI GPU-financing and private-credit vault layer. The reviewed primary sources identify Ethereum, Arbitrum, Base, and Plasma deployments but do not prove deployment-wide holder-control behavior; inherited upstream exposure is not treated as a direct sUSDai blacklist.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "variantOf": "usdai-usd-ai",
   "variantKind": "strategy-vault",

@@ -79,6 +79,18 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "unknown",
+    "sources": [{ "label": "HomeCoin documentation", "url": "https://github.com/homecoin-finance/gitbook" }],
+    "rationale": "BLOCKED: issuer materials describe home-loan liens and property-backed receivables but do not publish a current loan tape, valuation, reserve allocation, or independent attestation.",
+    "compositionBasis": "Issuer description of mortgage-lien backing; current portfolio composition undisclosed",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The entire recorded collateral category lacks current public constituent, valuation, and allocation evidence.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "U.S. home loan liens / property-backed receivables", "pct": 100, "disposition": "insufficient-evidence", "rationale": "No current sourced portfolio composition or valuation is published." }]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

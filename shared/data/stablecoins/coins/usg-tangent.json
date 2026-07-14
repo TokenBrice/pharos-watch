@@ -498,9 +498,42 @@
     {
       "name": "Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions, including material USDC-paired LP exposure)",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Tangent markets, Curve, Pendle, and related DeFi protocols",
+      "riskFactors": ["smart-contract", "market", "liquidity", "counterparty", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Tangent USG overview",
+        "url": "https://docs.tangent.finance/docs/usg/overview_usg"
+      },
+      {
+        "label": "USG verified source",
+        "url": "https://eth.blockscout.com/address/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1?tab=contract"
+      }
+    ],
+    "rationale": "Tangent source code and product materials identify user-collateralized DeFi mint routes and the aggregate productive-collateral envelope, but do not publish current position-level collateral weights or custody allocation.",
+    "compositionBasis": "Tangent USG product and verified contract disclosures",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The current underlying DeFi positions, weights, and venue-level custody allocation are undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions, including material USDC-paired LP exposure)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Tangent identifies the collateral family but does not publish a current position-level inventory for the full USG reserve."
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

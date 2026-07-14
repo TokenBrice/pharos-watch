@@ -163,16 +163,38 @@
     {
       "name": "Sovryn Zero ZUSD",
       "pct": 99.998,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sovryn Zero protocol",
+      "riskFactors": ["market", "smart-contract", "liquidity"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Dollar on Chain DOC",
       "pct": 0.002,
       "risk": "medium",
       "coinId": "doc-money-on-chain",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Money on Chain protocol",
+      "riskFactors": ["market", "smart-contract", "liquidity"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [{"label": "Sovryn Mynt and DLLR documentation", "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"}],
+    "rationale": "Sovryn documents DLLR as a 1:1 Mynt basket whose currently supported bAssets are ZUSD and DOC, both BTC-backed. The issuer documentation does not publish a current basket balance or an API for the live ZUSD/DOC allocation.",
+    "compositionBasis": "Sovryn Mynt supported-bAsset documentation and captured live balance labels",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No issuer-published current balance or allocation proves the live ZUSD/DOC split emitted by the reserve producer.",
+    "knownUnknownExposurePct": 99.998,
+    "nonLinkDispositions": [
+      {"reserveIndex": 0, "reserveName": "Sovryn Zero ZUSD", "pct": 99.998, "disposition": "basket-needs-split", "rationale": "Issuer confirms ZUSD is supported but does not publish the current basket balance."}
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",
     "version": 1,

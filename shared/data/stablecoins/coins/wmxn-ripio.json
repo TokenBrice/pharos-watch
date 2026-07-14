@@ -219,11 +219,15 @@
       {
         "label": "Website",
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Ethereum WMXN verified contract",
+        "url": "https://etherscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34#code"
       }
     ],
-    "evidence": "Ripio wMXN is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
-    "reviewer": "Codex DefiLlama path addition",
-    "reviewedAt": "2026-05-14"
+    "evidence": "Ripio wMXN is centrally issued across multiple EVM chains. The reviewed Ripio and verified token sources establish issuer-managed mint/admin surfaces but do not prove a holder-level blacklist or freeze path; the possible posture is retained.",
+    "reviewer": "SONG-2 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {

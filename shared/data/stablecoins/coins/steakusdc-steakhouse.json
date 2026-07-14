@@ -17,6 +17,22 @@
   "collateral": "USDC deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
   "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex mechanism review",
+    "rationale": "steakUSDC is an immutable, deposit-only MetaMorpho ERC-4626 vault share over USDC; it does not create discretionary base-asset supply.",
+    "sources": [
+      {
+        "label": "Steakhouse USDC V2 MetaMorpho vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
+      },
+      {
+        "label": "MetaMorpho source",
+        "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "steakhouse-usdc",
   "canBeBlacklisted": true,

@@ -267,9 +267,39 @@
       "pct": 100,
       "risk": "low",
       "coinId": "dai-makerdao",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Maker/Sky DAI and the sDAI savings module",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-6 V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sky sDAI documentation",
+        "url": "https://docs.spark.fi/"
+      },
+      {
+        "label": "Ethereum sDAI contract",
+        "url": "https://etherscan.io/address/0x83F20F44975D03b1b09e64809B757c47f942BEeA#readContract"
+      }
+    ],
+    "rationale": "The reviewed wrapper contract identifies DAI as its underlying asset, and the Sky documentation describes sDAI as a DAI savings-rate wrapper. The direct reserve envelope is therefore one tracked DAI dependency; the inherited DAI backing and governance risks remain represented by the parent asset.",
+    "compositionBasis": "sDAI ERC-4626 underlying-asset relationship",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The wrapper review does not independently re-review the underlying DAI reserve and liquidation system.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "Dai Savings Rate (sDAI)",
     "yieldType": "nav-appreciation"

@@ -172,6 +172,53 @@
       "risk": "medium"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-2 Safety Score V9 reserve review",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "StandX DUSD architecture",
+        "url": "https://docs.standx.com/docs/dusd-solutions"
+      },
+      {
+        "label": "StandX risks and hedging system",
+        "url": "https://docs.standx.com/docs/dusd-solutions/risks-hedging-system"
+      },
+      {
+        "label": "StandX DUSD redemption",
+        "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+      }
+    ],
+    "rationale": "The official StandX sources describe the three reserve categories retained in the existing fallback, but they do not publish a dated current balance-sheet or custody allocation that verifies the 50/45/5 weights. The categories are retained for context and no constituent percentages or dependency edges are inferred beyond the documented boundary.",
+    "compositionBasis": "Existing curated category fallback cross-checked against StandX architecture, hedging, and redemption documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current reserve weights, exact spot constituents, exchange counterparties, and the Stability Reserve Fund composition are not disclosed in the reviewed primary sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Spot crypto (BTC/ETH/SOL/BNB, delta-hedged via perp shorts)",
+        "pct": 50,
+        "disposition": "basket-needs-split",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Perpetual short futures positions (CEX via Ceffu custody)",
+        "pct": 45,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Stability reserve fund (stablecoins, multisig)",
+        "pct": 5,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

@@ -56,11 +56,16 @@
   ],
   "deploymentModel": "single-chain",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: NECT resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Berachain NECT verified debt-token contract",
+        "url": "https://routescan.io/address/0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3"
+      }
+    ],
+    "evidence": "The verified NECT debt-token contract leaves ordinary transfer and transferFrom unguarded by a blacklist or pause check. However, its MetaBeraborrowCore owner can whitelist DenManager, borrower-operations, and PSM contracts; those whitelisted modules can call burn(account, amount) against an arbitrary account. This is a material owner-mediated holder intervention surface, so Possible is retained rather than asserting no freeze exposure.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "unproven",
   "collateralQuality": "exotic",

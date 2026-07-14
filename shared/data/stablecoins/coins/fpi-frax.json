@@ -82,10 +82,24 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Freeze-only re-review: FPI has no confirmed direct holder-balance freeze in the reviewed token source, but resolves to Upstream through FRAX reserve exposure.",
-    "evidence": "FPI resolves to Upstream because its backing and Frax-controlled reserve model inherit FRAX/freezable-stablecoin exposure.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "sources": [
+      {
+        "label": "FPI Ethereum token verified source",
+        "url": "https://eth.blockscout.com/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?tab=contract"
+      },
+      {
+        "label": "FPI Fraxtal token address",
+        "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000003?tab=contract"
+      },
+      {
+        "label": "Frax AMO overview",
+        "url": "https://docs.frax.finance/amo/overview"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: the reviewed primary sources establish FPI's Ethereum and Fraxtal deployments and Frax-controlled AMO issuance, but do not establish a deployment-wide holder blacklist or freeze function for both tracked contracts.",
+    "evidence": "FPI inherits upstream FRAX and reserve-control exposure. The Ethereum token source and Fraxtal deployment reference were reviewed, but a verified holder-level blacklist/freeze inventory is absent across both deployments; no direct transfer restriction is asserted.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",

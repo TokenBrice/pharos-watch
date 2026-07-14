@@ -216,9 +216,40 @@
       "pct": 100,
       "risk": "medium",
       "coinId": "rusd-reservoir",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Reservoir rUSD balance sheet and Savings Module",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-6 V9 reserve review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Reservoir reserve dashboard",
+        "url": "https://app.reservoir.xyz/reserves"
+      },
+      {
+        "label": "Reservoir contract addresses",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+      }
+    ],
+    "rationale": "The direct srUSD dependency is the Reservoir rUSD balance sheet, and the public reserve route identifies that balance-sheet boundary. The underlying rUSD composition and current custody or strategy allocation are not reproduced in this static record, so the wrapper dependency is structured while the complete backing envelope remains bounded.",
+    "compositionBasis": "srUSD wrapper dependency on the Reservoir rUSD balance sheet",
+    "compositionAsOf": "2026-07-14",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "Underlying rUSD reserve composition, strategy allocations, and legal custody terms are not independently reconciled here.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "reservoir",
     "version": 1,

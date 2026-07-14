@@ -5,17 +5,21 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Docs",
+        "label": "Money On Chain published contract verification",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/smart-contracts/contracts-verification"
+      },
+      {
+        "label": "Money On Chain platform concepts",
         "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
       },
       {
-        "label": "Dapp",
+        "label": "Money On Chain dapp",
         "url": "https://dapp.moneyonchain.com/"
       }
     ],
-    "evidence": "Explicit Possible retained: DOC is a permissionless rBTC CDP with no holder-balance freeze or blacklist on the token, but the Money On Chain contract suite is DAO-governed and proxy-upgradeable, leaving an indirect intervention surface.",
-    "reviewer": "Opus med-confidence verification",
-    "reviewedAt": "2026-05-23"
+    "evidence": "The reviewed Money On Chain documentation establishes issuer, governance, mint, and redemption contracts, but does not establish a complete current holder-level freeze, blacklist, pause, privileged-burn, or transfer-restriction inventory across DOC and its route contracts. Direct access control remains unresolved rather than being treated as absent.",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "reviewedAt": "2026-07-14"
   },
   "oracleRisk": {
     "tier": "standard-external",

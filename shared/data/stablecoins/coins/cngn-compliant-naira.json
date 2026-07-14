@@ -14,6 +14,22 @@
   "collateral": "Naira reserves held 1:1 against outstanding cNGN, comprising deposits at licensed Nigerian commercial banks plus naira money-market funds and short-term FGN treasury bills, verified by monthly independent attestations",
   "pegMechanism": "Issuer-managed mint and redemption path designed to maintain 1 cNGN = 1 NGN through naira reserves and compliant transfer rails",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 mechanism review",
+    "rationale": "CNGN issuer and transparency materials describe naira bank deposits, money-market funds, and short-term Nigerian government bills, but the reviewed sources do not provide the current assurance, reconciliation, claim segregation, custody continuity, or loss-recovery inputs required for a complete mechanism review.",
+    "sources": [
+      {
+        "label": "CNGN transparency",
+        "url": "https://cngn.co/transparency"
+      },
+      {
+        "label": "CNGN contract addresses",
+        "url": "https://docs.cngn.co/integrations/contract-addresses"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "compliant-naira",
   "cmcSlug": "consortium-naira",

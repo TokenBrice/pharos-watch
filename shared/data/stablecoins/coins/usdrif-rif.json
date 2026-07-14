@@ -104,13 +104,6 @@
   },
   "chainTier": "mature-alt-l1",
   "collateralQuality": "exotic",
-  "reserves": [
-    {
-      "name": "RIF collateral locked in RIF On Chain smart contracts",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

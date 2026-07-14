@@ -189,7 +189,7 @@
       ],
       "evidence": "Direct reads and Sourcify source identify AegisMinting as the active YUSD minter, with owner/default-admin control held by a 3/5 Safe.",
       "reviewer": "Codex mint-authority top100 batch-c",
-      "reviewedAt": "2026-05-24",
+      "reviewedAt": "2026-07-14",
       "unresolvedQuestions": [
         "Identify the operational owner of trusted signer 0xA4056dE842E9117D3B48cA6509D1dc430698C8a2.",
         "Confirm current cross-chain operator role holder before finalizing bridge mint posture."

@@ -88,10 +88,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "PHPm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Mento stablecoin documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento V3 deployments",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "Mento Reserve documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+      }
+    ],
+    "evidence": "Mento documents PHPm as a CDP-backed stablecoin minted against USDm collateral. USDm is documented as Reserve-backed by fiat-backed assets including USDC, USDT, and USDS, and the reviewed PHPm control path is governed by Mento's timelock and governor. No direct PHPm holder blacklist is established, so the upstream freeze classification is retained.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

@@ -56,13 +56,17 @@
     "reviewedStatus": false,
     "sources": [
       {
-        "label": "Docs",
+        "label": "Solana mainnet USDH mint account",
+        "url": "https://explorer.solana.com/address/USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX"
+      },
+      {
+        "label": "Hubble Protocol documentation",
         "url": "https://docs.hubbleprotocol.io"
       }
     ],
-    "evidence": "Reviewed No: Hubble USDH is a Solana CDP debt token backed by borrower vault collateral and Stability Pool liquidations; reviewed docs do not identify a holder-balance blacklist, freeze, or arbitrary burn path on USDH itself.",
-    "reviewer": "Codex stablecoin audit",
-    "reviewedAt": "2026-05-12",
+    "evidence": "At finalized Solana state on 2026-07-14, the tracked USDH mint reports freezeAuthority: null. Solana's Token Program therefore has no authority able to freeze USDH token accounts. Hubble's documented CDP/vault design does not establish a separate holder-balance blacklist or arbitrary burn path on the token itself, so Reviewed No is retained.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14",
     "upstreamSuppressionRationale": "The reviewed override is scoped to the USDH holder-facing token. Hubble docs describe a crypto-collateral CDP vault system, so this override deliberately suppresses inferred upstream freeze exposure from generic BTC/ETH/stablecoin text signals."
   },
   "chainTier": "mature-alt-l1",

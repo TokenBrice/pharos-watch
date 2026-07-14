@@ -89,10 +89,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "CADm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "CADm Celo proxy and verified StableTokenV2 implementation",
+        "url": "https://celo.blockscout.com/address/0xff4ab19391af240c311c54200a492233052b6325?tab=contract"
+      },
+      {
+        "label": "Mento Celo stablecoin documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "evidence": "The Celo explorer resolves the tracked CADm proxy to verified StableTokenV2 implementation 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E. The reviewed implementation exposes standard stable-token transfer operations but no holder blacklist, freeze, or pause function. CADm retains inherited exposure from the Mento reserve mix, including freezable upstream stablecoins such as USDC, USDT, and EURC.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

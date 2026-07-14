@@ -17,6 +17,22 @@
   "collateral": "USDT deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
   "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDT as borrower interest accrues; withdrawals redeem vault shares for available USDT liquidity or wait for Morpho market liquidity to return",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "The reviewed Steakhouse and Morpho materials support the fiat-cash classification inherited through the USDT reserve, but do not disclose current deployment-wide custody, assurance, reconciliation, or recovery terms for the strategy vault; that risk boundary remains unresolved.",
+    "sources": [
+      {
+        "label": "app.morpho.org",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+      },
+      {
+        "label": "steakhouse.financial",
+        "url": "https://www.steakhouse.financial/docs"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "steakhouse-usdt",
   "canBeBlacklisted": true,
@@ -74,7 +90,10 @@
       ],
       "evidence": "On-chain asset() read confirmed USDT. EIP-1967 impl and admin slots both zero at Ethereum block 25295160 — MetaMorpho vault is immutable with no upgrade path. Durable mint authority inherits from reviewed parent USDT.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewedAt": "2026-06-11",
+      "unresolvedQuestions": [
+        "The reviewed vault is immutable, but the current deployment-wide curator, custody, reconciliation, and recovery controls for the strategy allocation are not fully disclosed in the reviewed materials."
+      ]
     }
   },
   "links": [

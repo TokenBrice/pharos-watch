@@ -14,6 +14,22 @@
   "collateral": "Mexican-peso Digital Cash reserve backing managed by Telcoin for eMXN issued on Polygon",
   "pegMechanism": "Issuer-managed Mexican-peso Digital Cash stablecoin used for payments and settlement in the Telcoin Wallet; public materials do not yet expose an eMXN-specific redemption or reserve-attestation report",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 mechanism review",
+    "rationale": "Telcoin Digital Cash materials establish MXN fiat reserves and issuer rails, but the reviewed sources do not provide current independent assurance, reserve reconciliation, claim segregation, custody continuity, or loss-recovery inputs for a complete mechanism review.",
+    "sources": [
+      {
+        "label": "Telcoin Digital Cash",
+        "url": "https://www.telco.in/en/digital-cash"
+      },
+      {
+        "label": "Telcoin banking platform",
+        "url": "https://bank.telco.in/"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "telcoin-mxn",
   "links": [

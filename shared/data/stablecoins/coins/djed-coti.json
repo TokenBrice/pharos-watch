@@ -74,17 +74,21 @@
     "reviewedStatus": false,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4"
+        "label": "Djed official FAQ",
+        "url": "https://faq.coticommunity.com/djed-and-shen/djed"
       },
       {
-        "label": "Dapp",
-        "url": "https://app.djed.xyz/"
+        "label": "Cardano native-token transfer model",
+        "url": "https://developers.cardano.org/docs/build/native-tokens/cardano-token-registry/"
+      },
+      {
+        "label": "Djed technical review",
+        "url": "https://raw.githubusercontent.com/tweag/tweag-audit-reports/main/Djed-2023-01.pdf"
       }
     ],
-    "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Djed is a Cardano native asset. Cardano's native-token model routes ordinary transfers through the ledger rather than an ERC-20-style token contract; the minting policy controls mint and burn operations, not arbitrary holder transfers. The official Djed documentation and technical review describe the ADA reserve, DJED mint/burn, and SHEN mechanisms without a holder blacklist or freeze path. Direct holder-balance blacklistability remains false.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

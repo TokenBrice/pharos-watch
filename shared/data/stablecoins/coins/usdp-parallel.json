@@ -563,10 +563,10 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDp resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sourceFreeRationale": "The current dated reserve inventory links USDp exposure to multiple separately tracked upstream stablecoins and wrapper assets. This is an inherited upstream-access posture, not a claim that the USDp contracts themselves expose a direct holder blacklist or freeze function.",
+    "evidence": "The 2026-07-14 reserve review identifies frxUSD, sfrxUSD, USDe, sUSDe, sUSDS, USDS, and USDC exposure. USDp's access posture therefore remains inherited from upstream reserve and custody controls; no direct USDp holder restriction is asserted by this review.",
+    "reviewer": "SONG-2 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",

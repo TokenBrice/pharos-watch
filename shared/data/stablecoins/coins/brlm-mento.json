@@ -129,10 +129,24 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "BRLm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Mento V3 stablecoin documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "BRLm Celo token verified source",
+        "url": "https://celo.blockscout.com/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787?tab=contract"
+      },
+      {
+        "label": "Mento reserve configuration",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: Mento documentation and the verified BRLm deployment establish the reserve-backed system, but do not establish a complete holder-level blacklist or freeze inventory for the token and its upstream reserve assets.",
+    "evidence": "BRLm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC. No direct BRLm holder-control function is asserted without a deployment-wide verified control inventory.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

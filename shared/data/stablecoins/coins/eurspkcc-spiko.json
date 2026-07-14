@@ -1018,15 +1018,55 @@
   "reserves": [
     {
       "name": "Digital-asset cash-and-carry strategy",
-      "pct": 80,
-      "risk": "high"
-    },
-    {
-      "name": "Short-duration Treasury bills and cash",
-      "pct": 20,
-      "risk": "very-low"
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Spiko SAS and the eurSPKCC strategy counterparties",
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-2 Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Spiko eurSPKCC totals API",
+        "url": "https://public-api.spiko.io/share-classes/eurSPKCC/totals"
+      },
+      {
+        "label": "Spiko Cash and Carry",
+        "url": "https://www.spiko.io/spiko-cash-and-carry"
+      },
+      {
+        "label": "Spiko smart contracts",
+        "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      }
+    ],
+    "rationale": "The current eurSPKCC public share-class API exposes one 100% Digital-asset cash-and-carry strategy slice. The exact strategy positions, counterparties, custody, and any Treasury or cash overlay are not published as a current constituent allocation, so the live slice is retained as one bounded protocol-position row rather than preserving an unsupported 80/20 split.",
+    "compositionBasis": "Current Spiko eurSPKCC share-class API snapshot and product documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The strategy category and live weight are known, but the underlying digital assets, counterparties, custody, and internal cash or Treasury overlay are not disclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Digital-asset cash-and-carry strategy",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Spiko exposes the live strategy category but does not publish the current constituent positions or weights needed for tracked dependency mapping."
+      }
+    ]
+  },
   "yieldConfig": {
     "yieldSource": "Spiko Cash and Carry EUR NAV",
     "yieldType": "nav-appreciation"

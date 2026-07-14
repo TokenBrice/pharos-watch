@@ -45,11 +45,20 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: OUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Ethereum OUSD proxy",
+        "url": "https://eth.blockscout.com/address/0x2a8e1e676ec238d8a992307b495b45b3feaa5e86?tab=contract"
+      },
+      {
+        "label": "Ethereum OUSD verified implementation",
+        "url": "https://eth.blockscout.com/address/0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33?tab=contract"
+      }
+    ],
+    "evidence": "The live proxy implementation exposes ordinary transfer and transferFrom without a blacklist or pause check. Its privileged Vault may nevertheless call burn(account, amount) against an arbitrary nonzero account. The verified token source therefore establishes a material privileged holder-intervention surface without proving a direct transfer blacklist, so Possible is retained.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "collateralQuality": "exotic",
   "governanceQuality": "wrapper",

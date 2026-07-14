@@ -247,22 +247,26 @@
   },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://bank.telco.in/terms-of-use"
+        "label": "Telcoin eUSD Ethereum contract",
+        "url": "https://etherscan.io/address/0x14913815bcfde78baead2111f463d038ac9c2949"
       },
       {
-        "label": "Website",
-        "url": "https://bank.telco.in/"
+        "label": "Telcoin eUSD Solana mint",
+        "url": "https://solscan.io/token/HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank Terms",
+        "url": "https://bank.telco.in/terms-of-use"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The reviewed Solana eUSD mint has the issuer authority as both mintAuthority and freezeAuthority, establishing direct holder-level freeze capability for a material deployment. Telcoin's current Terms also state that TDAB may block transactions to or from addresses associated with illegal activity. Ethereum and EVM bridge controls remain deployment-specific, so the reviewed status is conservatively direct capability rather than an assertion that every chain uses identical controls.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "reserves": [
     {

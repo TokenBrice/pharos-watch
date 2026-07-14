@@ -364,9 +364,9 @@
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     ],
-    "evidence": "Ripio wBRL is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Ripio's official local-stablecoin material describes wBRL as an issuer-managed wFIAT representation deployed across multiple EVM networks. The material confirms centralized issuance and redemption operations but does not publish a complete verified implementation or direct holder blacklist inventory, so holder-level restriction remains possible rather than proven.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",

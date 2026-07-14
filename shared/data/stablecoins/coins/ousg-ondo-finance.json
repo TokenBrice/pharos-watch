@@ -14,6 +14,22 @@
   "collateral": "Primarily BlackRock USD Institutional Digital Liquidity Fund (BUIDL), which holds short-term U.S. Treasury bills, cash, and repurchase agreements; secondary allocations to BlackRock FedFund (TFDXX) and USDC for liquidity; Ondo I LP is the largest single holder of BUIDL; migrated from iShares SHV ETF to BUIDL in March 2024",
   "pegMechanism": "NAV-accreting fund share token (not pegged to $1); token price rises daily as Treasury income accrues; instant mint/redemption at daily NAV via OUSGInstantManager against USDC (T+0 settlement via BUIDL on-chain liquidity); token transfers restricted to KYC-verified whitelisted addresses on-chain",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "Ondo's OUSG product and portfolio disclosures support the tokenized Treasury-fund share classification, but do not disclose a current OUSG-specific loss-recovery design for underlying fund and custody failure.",
+    "sources": [
+      {
+        "label": "Ondo OUSG product page",
+        "url": "https://ondo.finance/ousg"
+      },
+      {
+        "label": "Ondo OUSG documentation",
+        "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "ousg",
   "proofOfReserves": {

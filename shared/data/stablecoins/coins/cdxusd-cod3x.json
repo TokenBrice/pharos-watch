@@ -66,10 +66,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: cdxUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Cod3x technical documentation",
+        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      },
+      {
+        "label": "Verified cdxUSD Base deployment",
+        "url": "https://basescan.org/address/0xc0d3700000987c99b3c9009069e4f8413fd22330#code"
+      }
+    ],
+    "evidence": "BLOCKED: Cod3x documents cdxUSD as a facilitator-managed CDP asset and the Base deployment is identified in the tracked contract set, but the public source set does not establish a complete holder-control inventory for the token and its strategy/facilitator routes. The inherited upstream exposure remains recorded without asserting direct holder blacklistability or a direct no-freeze result.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",

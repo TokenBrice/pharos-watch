@@ -2,13 +2,22 @@
   "id": "musd-metamask",
   "reserves": [
     {
-      "name": "Short-term U.S. Treasury bills and cash-equivalent reserve basket",
-      "pct": 100,
+      "name": "Tokenized treasury collateral",
+      "pct": 97.9,
       "risk": "very-low",
-      "assetClass": "other",
-      "issuerOrObligor": "United States Treasury and Bridge/M0 reserve custodians",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "M0 Protocol and underlying U.S. Treasury reserve providers",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "smart-contract", "concentration"],
       "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Cash",
+      "pct": 2.1,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed Bridge/M0 reserve institutions",
+      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
@@ -27,10 +36,14 @@
       {
         "label": "Bridge stablecoins FAQ",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
+      },
+      {
+        "label": "M0 protocol API",
+        "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "MetaMask states that mUSD in circulation is backed 1:1 by short-term U.S. Treasury bills, while M0 and Bridge describe off-chain collateral held through minter SPVs and Bridge reserve infrastructure. The earlier 85/15 split is not published by the mUSD-specific primary sources and is therefore replaced by one complete aggregate basket rather than retaining unsupported weights.",
-    "compositionBasis": "MetaMask mUSD reserve disclosure with Bridge/M0 collateral architecture; component weights are undisclosed",
+    "rationale": "MetaMask states that mUSD is backed by short-term Treasury collateral, while the current M0 protocol API snapshot exposes 97.9% Tokenized treasury collateral and 2.1% Cash. M0 and Bridge describe off-chain collateral held through minter SPVs and reserve infrastructure, but mUSD-specific underlying positions and provider allocations remain undisclosed.",
+    "compositionBasis": "Current M0 protocol category snapshot combined with MetaMask and Bridge/M0 collateral architecture disclosures",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
     "knownUnknownExposure": "The short-term Treasury and cash-equivalent reserve envelope is identified, but mUSD-specific component weights and provider allocations are not published.",
@@ -38,10 +51,17 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Short-term U.S. Treasury bills and cash-equivalent reserve basket",
-        "pct": 100,
+        "reserveName": "Tokenized treasury collateral",
+        "pct": 97.9,
         "disposition": "basket-needs-split",
-        "rationale": "The primary sources identify the reserve envelope but do not publish current mUSD-specific component weights."
+        "rationale": "The current API identifies the tokenized treasury category but does not publish mUSD-specific underlying positions, custodians, or provider weights."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Cash",
+        "pct": 2.1,
+        "disposition": "insufficient-evidence",
+        "rationale": "The current API identifies a cash category but does not publish mUSD-specific institutions or account-level allocation."
       }
     ]
   },

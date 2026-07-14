@@ -628,7 +628,7 @@
     "compositionBasis": "Circle USYC fund and developer disclosures",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The allocation between Treasury bills and reverse-repo positions and the repo counterparties are not disclosed in the reviewed public materials.",
+    "knownUnknownExposure": "The allocation between Treasury bills and reverse-repo positions and the repo counterparties are not disclosed in the reviewed public materials. Circle's reviewed product and developer disclosures also do not state a USYC fund loss-recovery or loss-allocation design; that evidence boundary was rechecked on 2026-07-14 by SONG Safety Score V9 mechanism review.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

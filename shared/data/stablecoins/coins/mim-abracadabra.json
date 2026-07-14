@@ -114,10 +114,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: MIM resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "MIM contract source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3?fields=abi,metadata"
+      },
+      {
+        "label": "MIM owner Safe API",
+        "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5f0DeE98360d8200b20812e174d139A1a633EDd2/"
+      },
+      {
+        "label": "Abracadabra documentation",
+        "url": "https://docs.abracadabra.money/"
+      }
+    ],
+    "evidence": "The verified MIM token source exposes owner-controlled mint functions and the owner is a 5-of-11 Safe. The reviewed cauldron and reserve metadata also include stablecoin collateral such as DAI, so upstream issuer freeze exposure is retained. The sources do not establish one direct holder-freeze implementation across MIM's material deployments, so no direct blacklist boolean is asserted.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

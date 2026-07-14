@@ -310,9 +310,54 @@
       "pct": 100,
       "risk": "high",
       "coinId": "avusd-avant",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Avant Protocol avUSD savings vault",
+      "riskFactors": ["smart-contract", "liquidity", "counterparty", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Avant Protocol documentation",
+        "url": "https://docs.avantprotocol.com/"
+      },
+      {
+        "label": "Avant Protocol website",
+        "url": "https://www.avantprotocol.com/"
+      },
+      {
+        "label": "Avant Protocol source repository",
+        "url": "https://github.com/Avant-Protocol"
+      }
+    ],
+    "rationale": "savUSD's live ERC-4626 adapter emits one 100% avUSD savings-vault share exposure, and avUSD is the tracked upstream dependency. The wrapper relationship is classified directly; avUSD's underlying collateral remains the upstream asset's reserve question and is not duplicated as savUSD backing.",
+    "compositionBasis": "Avant Protocol documentation and the exact live ERC-4626 single-asset row",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct savUSD reserve slice is identified; the upstream avUSD reserve composition, vault liquidity, and withdrawal conditions remain upstream questions.",
+    "knownUnknownExposurePct": 0
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "The reviewed Avant documentation and live ERC-4626 vault path do not identify a complete savUSD NAV oracle, fallback, stale-price, or circuit-breaker profile.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "Avant Protocol documentation",
+        "url": "https://docs.avantprotocol.com/"
+      },
+      {
+        "label": "Avant Protocol website",
+        "url": "https://www.avantprotocol.com/"
+      }
+    ]
+  },
   "yieldConfig": {
     "yieldSource": "Avant savings (savUSD)",
     "yieldType": "nav-appreciation"

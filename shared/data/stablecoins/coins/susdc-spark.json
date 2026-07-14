@@ -24,6 +24,22 @@
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC deposited into Spark Savings Vault V2 (ERC-4626 asset=USDC); idle USDC is deployed by the Spark Liquidity Layer. Spark documents V2 USD vaults as economically fully backed by USDS / Sky balance-sheet liquidity for redemptions.",
   "pegMechanism": "Deposit USDC to mint spUSDC; share price appreciates against USDC as the Vault Savings Rate (vsr) accrues while SLL deploys idle assets. Withdrawals burn spUSDC for USDC subject to vault idle liquidity or Savings Liquidity Intents for large exits.",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "Spark materials describe an ERC-4626 savings wrapper with USDC and Sky liquidity-layer exposure, but the complete current deployment-wide assurance, custody, valuation, reconciliation, and recovery semantics needed to resolve the mechanism archetype are not disclosed.",
+    "sources": [
+      {
+        "label": "docs.spark.fi",
+        "url": "https://docs.spark.fi"
+      },
+      {
+        "label": "github.com",
+        "url": "https://github.com/sparkdotfi/spark-address-registry"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",

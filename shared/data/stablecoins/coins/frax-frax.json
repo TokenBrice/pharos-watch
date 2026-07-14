@@ -683,7 +683,7 @@
         "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/overview"
       }
     ],
-    "rationale": "The official balance-sheet API identifies the material tracked constituents directly. FRAX and sFRAX remain unlinked self exposure, inactive USDB is not promoted into the active dependency graph, and the sub-4% residual is retained as an unlinked mixed basket.",
+    "rationale": "The official balance-sheet API identifies the material tracked constituents directly. FRAX and sFRAX remain unlinked self exposure, inactive USDB is not promoted into the active dependency graph, and the sub-4% residual is retained as an unlinked mixed basket. The live adapter's current output is more granular than this grouped static projection, so exact name-and-weight matching remains open for reserve-classification replay; no additional dependency edges are inferred from unmatched rows.",
     "compositionBasis": "Official Frax balance-sheet asset values, rounded to one decimal percentage and grouped below 0.1% into the residual basket",
     "compositionAsOf": "2026-07-14",
     "scope": "selected-slices",
@@ -740,5 +740,21 @@
     }
   },
   "launchDate": "2020-12-20",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-2 Safety Score V9 mechanism review",
+    "rationale": "Frax's reserve disclosures support a T-bill and protocol-reserve mechanism classification. The current V9 mechanism compiler still requires measured duration and liquidity, fund-claim seniority, NAV valuation, and loss-recovery evidence that the reviewed public sources do not expose as a complete scoreable component; those gaps remain explicitly unresolved rather than inferred from the reserve snapshot.",
+    "sources": [
+      {
+        "label": "Frax balance-sheet API",
+        "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
+      },
+      {
+        "label": "Frax v3 balance-sheet design",
+        "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/overview"
+      }
+    ]
+  },
   "mechanismArchetype": "tbill"
 }

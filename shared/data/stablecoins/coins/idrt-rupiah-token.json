@@ -14,6 +14,22 @@
   "collateral": "Indonesian rupiah bank deposits held 1:1 by PT Rupiah Token Indonesia; issuer materials describe full fiat backing with regular bank reporting",
   "pegMechanism": "Direct 1:1 issuance and redemption through PT Rupiah Token Indonesia after KYC; the issuer publishes bank-reporting and smart-contract audit materials",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "Rupiah Token documentation and the dated accountant AUP support the fiat-cash classification, but do not disclose current IDRT claim, custody-continuity, and reconciliation semantics beyond aggregate bank collateral.",
+    "sources": [
+      {
+        "label": "Rupiah Token website",
+        "url": "https://rupiahtoken.com/"
+      },
+      {
+        "label": "Rupiah Token January 2026 AUP",
+        "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf?updated_at=2026-02-20T07%3A40%3A45.154Z"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "rupiah-token",
   "links": [

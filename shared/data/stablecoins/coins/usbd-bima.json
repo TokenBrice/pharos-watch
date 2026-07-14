@@ -271,10 +271,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USBD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Verified USBD Ethereum DebtToken source",
+        "url": "https://eth.blockscout.com/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c?tab=contract"
+      },
+      {
+        "label": "Bima documentation",
+        "url": "https://docs.bima.money/"
+      }
+    ],
+    "evidence": "The verified Ethereum DebtToken source at the tracked USBD address exposes ERC-20 transfer and protocol mint/burn operations but no holder blacklist, freeze, or pause function. The same token address is recorded across the tracked deployments. The inherited classification is retained for the protocol's upstream collateral and dependency exposure; no direct holder-balance control is asserted from the reviewed source.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {

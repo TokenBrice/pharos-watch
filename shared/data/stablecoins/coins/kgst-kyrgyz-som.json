@@ -38,13 +38,17 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Website",
+        "label": "KGST official website",
         "url": "https://www.kgstoken.kg/"
+      },
+      {
+        "label": "Verified KGST BSC deployment",
+        "url": "https://bscscan.com/address/0x94be0bba8e1e303fe998c9360b57b826f1a4f828#code"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "BLOCKED: KGST's official website describes an issuer-managed Kyrgyz-som reserve and the tracked BSC token address is identified, but the public source set does not establish the verified implementation, administrator, or holder-control behavior of the live token. Possible is retained rather than asserting a direct no-freeze result.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

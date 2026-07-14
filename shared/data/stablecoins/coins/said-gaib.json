@@ -223,7 +223,18 @@
       "pct": 100,
       "risk": "high",
       "coinId": "aid-gaib",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "other",
+      "issuerOrObligor": "GAIB AID vault and AI infrastructure financing counterparties",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "yieldConfig": {

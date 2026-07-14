@@ -62,13 +62,25 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Website",
+        "label": "VNDC official website",
         "url": "https://vndc.io/"
+      },
+      {
+        "label": "Tracked VNDC Ethereum deployment",
+        "url": "https://etherscan.io/address/0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de#code"
+      },
+      {
+        "label": "Tracked VNDC Polygon deployment",
+        "url": "https://polygonscan.com/address/0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa#code"
+      },
+      {
+        "label": "Tracked VNDC BSC deployment",
+        "url": "https://bscscan.com/address/0xa276dc434a366c62ef010585b3885d0c85154389#code"
       }
     ],
-    "evidence": "Explicit Possible retained: centralized issuer with discretionary mint/redeem authority; contract source not independently audited and ONUS deployment retains administrative pause and reissue privileges.",
-    "reviewer": "Pharos lane D Wave 3 non-USD review",
-    "reviewedAt": "2026-05-12"
+    "evidence": "BLOCKED: VNDC's official site supports an issuer-managed mint and redemption model, and the three tracked EVM deployments are identified, but the public source set does not establish the verified implementation, administrator, or holder-control behavior for every deployment. Possible is retained rather than asserting a direct no-freeze result.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "native-multichain",

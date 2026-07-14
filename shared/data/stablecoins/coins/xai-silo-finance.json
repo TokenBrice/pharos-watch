@@ -166,14 +166,52 @@
       "name": "USDC Silo credit-line collateral",
       "pct": 89.45,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and Silo isolated credit lines",
+      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "ETH Silo credit-line collateral",
       "pct": 10.55,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum and Silo isolated credit lines",
+      "riskFactors": ["market", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-6 V9 reserve review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Silo V3 documentation",
+        "url": "https://docs.silo.finance/"
+      },
+      {
+        "label": "XAI verified Ethereum contract",
+        "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
+      }
+    ],
+    "rationale": "Silo documentation establishes isolated credit-line collateral as the backing model, and the reviewed XAI record identifies USDC and ETH exposure. The public sources do not provide a dated, reproducible aggregate collateral snapshot for the rounded percentages in this static record, so those weights remain a bounded review rather than a claim of complete current composition.",
+    "compositionBasis": "Static XAI collateral categories reconciled against Silo's isolated-market design",
+    "compositionAsOf": "2026-07-14",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The current aggregate collateral mix, market-level balances, and liquidation liquidity are not published in a reproducible issuer snapshot.",
+    "knownUnknownExposurePct": 10.55,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "ETH Silo credit-line collateral",
+        "pct": 10.55,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

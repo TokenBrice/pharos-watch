@@ -1,0 +1,43 @@
+{
+  "id": "usdrif-rif",
+  "reserves": [
+    {
+      "name": "RIF and DOC collateral in RIF On Chain V3 buckets",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "RIF On Chain protocol",
+      "riskFactors": ["market", "smart-contract", "liquidity"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RIF On Chain V3 multi-collateral announcement",
+        "url": "https://rif.technology/content-hub/rif-on-chain-v3-multi-collateral-support-coming-21-may-2026/"
+      },
+      {
+        "label": "RIF On Chain main concepts",
+        "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/main-concepts"
+      }
+    ],
+    "rationale": "RIF On Chain's May 2026 V3 announcement states that RIF and DOC each have a collateral bucket and both contribute to one fungible USDRIF supply. The protocol documentation confirms the RIF bucket's collateralized USDRIF model. Neither source publishes a current value or percentage for either bucket, so the reserve composition cannot be split into RIF and DOC slices.",
+    "compositionBasis": "Issuer V3 collateral architecture disclosure",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "Current RIF and DOC collateral values and weights are not publicly disclosed in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "RIF and DOC collateral in RIF On Chain V3 buckets",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The two collateral buckets are verified, but no dated public allocation supports a percentage split."
+      }
+    ]
+  }
+}

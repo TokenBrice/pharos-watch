@@ -13,10 +13,24 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: syzUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Yuzu syzUSD documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+      },
+      {
+        "label": "syzUSD Plasma deployment",
+        "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6#code"
+      },
+      {
+        "label": "syzUSD Monad deployment",
+        "url": "https://monad.blockscout.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f?tab=contract"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: syzUSD is a staked wrapper over yzUSD and two deployments are identified, but the reviewed wrapper and issuer materials do not establish a complete holder-level blacklist or freeze inventory across the tracked routes.",
+    "evidence": "Yuzu documents syzUSD as an ERC-4626 wrapper over yzUSD. The reviewed deployment references establish the wrapper scope but do not prove a direct holder-control function; inherited yzUSD access exposure remains unresolved rather than being treated as a direct syzUSD blacklist.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "variantOf": "yzusd-yuzu",
   "variantKind": "strategy-vault",

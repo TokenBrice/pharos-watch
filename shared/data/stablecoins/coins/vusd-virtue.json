@@ -343,11 +343,15 @@
       {
         "label": "Docs",
         "url": "https://docs.virtue.money/overview/what-is-vusd"
+      },
+      {
+        "label": "VUSD package on IOTA Rebased",
+        "url": "https://graphql.mainnet.iota.cafe"
       }
     ],
-    "evidence": "Virtue is a crypto-collateralized protocol with tracked IOTA Move and IOTA EVM deployments. The IOTA Rebased package has a verified AdminCap holder, so Pharos retains Possible while the full holder-facing pause and blacklist surface remains unresolved.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Virtue is a crypto-collateralized protocol with tracked IOTA Move and IOTA EVM deployments. The IOTA Rebased package has a verified AdminCap holder, so Pharos retains Possible while the full holder-facing pause and blacklist surface remains unresolved; no direct holder-control claim is promoted.",
+    "reviewer": "SONG-2 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
@@ -416,6 +420,35 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-2 Safety Score V9 reserve review",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "Virtue VUSD CDP documentation",
+        "url": "https://docs.virtue.money/overview/what-is-vusd"
+      },
+      {
+        "label": "VUSD package on IOTA Rebased",
+        "url": "https://graphql.mainnet.iota.cafe"
+      }
+    ],
+    "rationale": "Virtue's reviewed IOTA checkpoint enumerates four debt-bearing collateral branches and their vault debt, but does not publish a current total collateral allocation or custody split that verifies the static 100% IOTA/stIOTA/iBTC fallback. The branch categories are retained without invented percentages or additional dependency edges.",
+    "compositionBasis": "Current branch inventory and collateral categories from Virtue documentation and IOTA package reads",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current collateral balances, collateral weights, and branch-level custody allocation are not published as a reconciled reserve composition.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "IOTA, stIOTA, and IBTC collateral",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+      }
+    ]
+  },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
@@ -451,10 +484,18 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "virtue-vault-iota",
+          "virtue-vault-stiota",
+          "virtue-vault-viota",
+          "virtue-vault-ibtc"
+        ],
         "capDescription": "Mint bounded by overcollateralized CDPs across IOTA/stIOTA branches with user-set interest rates, per the Liquity V2 multi-collateral design.",
         "evidence": "Virtue docs describe VUSD as minted by opening overcollateralized CDPs using IOTA/stIOTA on a Liquity V2 friendly fork on IOTA EVM with user-set rates, flash minting, and liquidation/redemption peg defense."
       },
       {
+        "chain": "iota",
+        "address": "0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12",
         "label": "Virtue Money AdminCap holder",
         "role": "governor",
         "authorityType": "eoa",

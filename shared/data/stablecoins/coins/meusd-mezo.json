@@ -295,6 +295,36 @@
       "risk": "medium"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mezo MUSD development guide",
+        "url": "https://mezo.org/docs/developers/musd/"
+      },
+      {
+        "label": "Mezo MUSD liquidation and redemption mechanics",
+        "url": "https://mezo.org/docs/users/borrow/liquidation-mechanics/"
+      }
+    ],
+    "rationale": "Mezo documents MUSD as a Bitcoin-collateralized CDP. Borrowed MUSD is backed by BTC placed in the ActivePool; collateral returns on repayment, is paid out on redemptions, or moves to the StabilityPool or DefaultPool following liquidation. The documented design is BTC-only, so no unsupported multi-asset allocation is asserted.",
+    "compositionBasis": "Mezo MUSD collateral, custody, liquidation, and redemption documentation",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The published product documentation does not disclose a current split among native BTC and supported wrapped-BTC variants.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The source establishes BTC-only collateral but not live native versus wrapped-BTC weights."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "liquity-native-active-pool",
     "version": 1,

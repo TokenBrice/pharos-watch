@@ -344,8 +344,8 @@
       }
     ],
     "evidence": "FXD token source does not show a direct blacklist, but Fathom AdminControls can pause core modules including bookKeeper, positionManager, and stablecoinAdapter. Treat as a possible mutable holder-facing protocol-control surface.",
-    "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-05-25"
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "canBeBlacklisted": "possible",
   "mintAuthority": {

@@ -14,6 +14,22 @@
   "collateral": "Tokenised short-duration U.S. Treasury exposure routed by Nest into Janus Henderson JTRSY and Superstate USTB positions, plus a small stablecoin liquidity buffer",
   "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying Treasury fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 mechanism review",
+    "rationale": "Nest materials identify nTBILL as a Treasury-bill fund-share exposure, but the reviewed sources do not provide the current compiler-required assurance, reconciliation, custody continuity, seniority, liquidity, valuation, or loss-recovery inputs for a complete mechanism review.",
+    "sources": [
+      {
+        "label": "Nest Credit",
+        "url": "https://www.nest.credit/"
+      },
+      {
+        "label": "Nest documentation",
+        "url": "https://docs.nest.credit/"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "nest-treasury-vault",
   "protocolSlug": "nest-credit",

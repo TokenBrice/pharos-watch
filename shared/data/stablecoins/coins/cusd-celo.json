@@ -57,10 +57,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: cUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Mento Reserve documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+      },
+      {
+        "label": "Mento USDm owner Safe",
+        "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+      },
+      {
+        "label": "Mento USDm documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "evidence": "Mento documents USDm as Reserve-backed by fiat-backed collateral including USDC, USDT, and USDS, with reserve composition and liquidity strategy controlled by MENTO governance. The reviewed Celo and Monad token owner is a Mento Safe, while the NEAR bridge deployment is controlled by the parent account a11bd.near. No single holder-freeze function is established for every material deployment, so inherited upstream exposure is retained rather than asserting a direct token blacklist.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

@@ -4,6 +4,22 @@
   "symbol": "USD0",
   "oneLiner": "USD0 is Usual's RWA-backed dollar, collateralized by tokenized U.S. T-bills and cash-equivalent products such as USYC, M by M0, USDtb by Ethena, and USDC.",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SONG Safety Score V9 mechanism review",
+    "rationale": "Usual documentation establishes USD0's RWA/custody-backed issuance path, but the reviewed sources do not provide the complete current assurance, reconciliation, custody continuity, valuation, seniority, and loss-recovery inputs required for a full mechanism review.",
+    "sources": [
+      {
+        "label": "Usual USD0 documentation",
+        "url": "https://tech.usual.money/smart-contracts/token-contracts/usd0"
+      },
+      {
+        "label": "Usual USD0 flow and architecture",
+        "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
+      }
+    ]
+  },
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

@@ -121,6 +121,22 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "EURE is minted via Monerium's licensed EMI flow; the Ethereum token owner is a 3/6 Safe (Monerium-operated); proxy admin slot is zero; all addressable mint-capable surfaces confirmed.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-06-11",
+      "observedBlock": 25294789,
+      "sources": [
+        {
+          "label": "Monerium smart-contract source",
+          "url": "https://github.com/monerium/smart-contracts"
+        },
+        {
+          "label": "EURE token owner Safe",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Monerium issuer-operated mint authority",

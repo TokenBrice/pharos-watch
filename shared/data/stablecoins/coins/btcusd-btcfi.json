@@ -144,10 +144,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: BtcUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "BTCFi BtcUSD documentation",
+        "url": "https://docs.bifrostnetwork.com/eng.btcfi.one"
+      },
+      {
+        "label": "Verified BtcUSD Base deployment",
+        "url": "https://basescan.org/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4#code"
+      }
+    ],
+    "evidence": "BLOCKED: BTCFi documentation describes BtcUSD as a CDP asset backed by BTC variants, and the Base deployment is a verified transparent proxy, but the public source set does not establish a complete holder-control inventory for both the Base and Bifrost deployments. The inherited upstream exposure remains recorded; no direct no-freeze conclusion is asserted without deployment-wide evidence.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
