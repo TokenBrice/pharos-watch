@@ -546,11 +546,14 @@ describe("validate-ci parity", () => {
     expect(worker.environment).toMatchObject({ name: "production", url: "https://api.pharos.watch" });
     expect(worker["runs-on"]).toBe("ubuntu-latest");
     const workerText = JSON.stringify(worker);
-    expect(workerText.match(/wrangler deploy/g)).toHaveLength(1);
+    expect(workerText.match(/wrangler deploy --strict/g)).toHaveLength(1);
     expect(workerText).toContain("wrangler deploy --strict");
     expect(workerText).toContain("wrangler d1 migrations apply stablecoin-db --remote");
-    expect(workerText).toContain("https://site-api.pharos.watch/api/health");
-    expect(workerText).toContain("X-Pharos-Site-Proxy-Secret");
+    expect(workerText).toContain("wrangler deployments status --json");
+    expect(workerText).toContain("GitHub Actions deploy ${process.env.GITHUB_SHA}");
+    expect(workerText).toContain("version?.percentage !== 100");
+    expect(workerText).not.toContain("site-api.pharos.watch/api/health");
+    expect(workerText).not.toContain("X-Pharos-Site-Proxy-Secret");
     expect(workerText).not.toContain("versions upload");
     expect(workerText).not.toContain("triggers deploy");
     expect(workerText).not.toContain("continue-on-error");

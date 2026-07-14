@@ -96,40 +96,36 @@ jobs:
           cd worker
           && npx --no-install wrangler deploy --strict
           --message "GitHub Actions deploy ${GITHUB_SHA}"
-      - name: Verify authenticated Worker health
-        env:
-          SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
+      - name: Verify active Worker deployment
         run: |
-          node <<'NODE'
-          const url = new URL("https://site-api.pharos.watch/api/health");
-          url.searchParams.set("deploy", process.env.GITHUB_SHA);
-          const accepted = new Set(["healthy", "degraded", "stale"]);
-          let lastError = "not attempted";
+          status_file="${RUNNER_TEMP}/worker-deployment-status.json"
+          (cd worker && npx --no-install wrangler deployments status --json) > "${status_file}"
 
-          for (let attempt = 1; attempt <= 6; attempt += 1) {
-            try {
-              const response = await fetch(url, {
-                cache: "no-store",
-                headers: {
-                  Accept: "application/json",
-                  "X-Pharos-Site-Proxy-Secret": process.env.SITE_API_SHARED_SECRET,
-                },
-                signal: AbortSignal.timeout(10_000),
-              });
-              const body = await response.json().catch(() => null);
-              if (response.ok && accepted.has(body?.status)) {
-                console.log(`[worker-health] OK status=${body.status}`);
-                process.exit(0);
-              }
-              lastError = `HTTP ${response.status}, status=${body?.status ?? "missing"}`;
-            } catch (error) {
-              lastError = error instanceof Error ? error.message : String(error);
-            }
-            console.log(`[worker-health] attempt ${attempt}/6 failed: ${lastError}`);
-            if (attempt < 6) await new Promise((resolve) => setTimeout(resolve, 5_000));
+          DEPLOYMENT_STATUS_FILE="${status_file}" node <<'NODE'
+          const { readFileSync } = require("node:fs");
+          const deployment = JSON.parse(readFileSync(process.env.DEPLOYMENT_STATUS_FILE, "utf8"));
+          const versions = Array.isArray(deployment.versions) ? deployment.versions : [];
+          const message = deployment.annotations?.["workers/message"] ?? "";
+          const version = versions[0];
+
+          if (
+            versions.length !== 1
+            || version?.percentage !== 100
+            || typeof version?.version_id !== "string"
+            || message !== `GitHub Actions deploy ${process.env.GITHUB_SHA}`
+          ) {
+            throw new Error(
+              `Active Worker deployment did not match this release: ${JSON.stringify({
+                deploymentId: deployment.id ?? null,
+                message,
+                versions,
+              })}`,
+            );
           }
 
-          throw new Error(`Authenticated Worker health check failed: ${lastError}`);
+          console.log(
+            `[worker-deployment] OK deployment=${deployment.id} version=${version.version_id} traffic=100%`,
+          );
           NODE
       - name: Summarize Worker release
         if: always()

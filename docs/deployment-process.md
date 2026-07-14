@@ -138,8 +138,8 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - runs only when `worker_required=true`, on `ubuntu-latest`, with the protected `production` environment;
    - installs the lockfile workspace, runs `npm run check:migrations`, and applies remote D1 migrations;
    - deploys once with `cd worker && npx --no-install wrangler deploy --strict --message ...`; Wrangler synchronizes the checked-in Worker configuration and triggers as part of that supported path;
-   - verifies `/api/health` through `https://site-api.pharos.watch` using `SITE_API_SHARED_SECRET`, isolating the Worker from public-edge challenge policy;
-   - fails visibly on migration, deploy, or health-proof failure. It does not preview-upload, poll deployment status, run browser/ops/transport checks, or automatically roll back.
+   - queries `wrangler deployments status --json` once and requires the SHA-tagged deployment to be the sole active version at 100% traffic;
+   - fails visibly on migration, deploy, or activation-proof failure. It does not preview-upload, poll deployment status, make a custom-domain request from shared GitHub egress, run browser/ops/transport checks, or automatically roll back.
 3. `pages-release`
    - calls the reusable Pages workflow only when `pages_required=true`;
    - uses native `needs: [plan, deploy-worker]` ordering. Pages proceeds when Worker was legitimately skipped, and stops when a required Worker deployment failed;
@@ -170,7 +170,7 @@ Repository secrets consumed only by jobs attached to the production environment:
 - `CLOUDFLARE_ACCOUNT_ID`
 - `SITE_API_SHARED_SECRET`
 
-The Cloudflare credentials authorize Worker/D1 and Pages deployment. `SITE_API_SHARED_SECRET` authenticates the Worker health proof and the scheduled Pages refresh. Ordinary Pages code releases receive only the Cloudflare credentials. Re-enter these values as environment-scoped secrets before deleting their repository-scoped copies; GitHub does not expose existing secret values for automated migration. Secret values are never recorded in the repository.
+The Cloudflare credentials authorize Worker/D1 and Pages deployment. `SITE_API_SHARED_SECRET` authenticates the scheduled Pages refresh. Ordinary Pages code releases receive only the Cloudflare credentials. Re-enter these values as environment-scoped secrets before deleting their repository-scoped copies; GitHub does not expose existing secret values for automated migration. Secret values are never recorded in the repository.
 
 The manual zone-cache recovery workflow additionally requires the Cloudflare token to grant `Zone Read` and `Cache Purge` for `pharos.watch`. Normal Pages and Worker deployment permissions do not imply those zone permissions.
 
@@ -236,7 +236,7 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 ### Failure Stop and Surface Classification
 
 - Deployment stops on the first failed required step.
-- Pull requests own full source/test validation. The post-merge workflow reruns only the focused Worker migration check and Pages artifact checks that are adjacent to production mutation.
+- Pull requests own full source/test validation. The post-merge workflow reruns only the focused Worker migration/activation checks and Pages artifact checks that are adjacent to production mutation.
 - Worker deploy is skipped unless deployed Worker/runtime/config/shared inputs changed. Root package and lockfile changes conservatively deploy both surfaces.
 - Pages publish is skipped for non-publishable or test-only Pages changes.
 - A combined deployment publishes Pages only after the required Worker job succeeds; Pages-only deployment treats the skipped Worker job as expected.
