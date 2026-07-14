@@ -162,6 +162,33 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "USDsui is issued through Bridge's Open Issuance platform on Sui. The TreasuryCap was wrapped at deploy into Bridge's shared TokenAuthority contract (0xd4fc1ca0b...) via stablecoin_manager::register_stablecoin. Minting requires MinterRole, held by Bridge operational address 0xb1e7dc9a5... The TokenAuthority is shared (no single owner) with Bridge controlling AdminRole and MinterRole.",
+    "upgradeability": {
+      "model": "custom",
+      "implementationAddresses": [
+        "0x94e8cb8df7796c7ea57f747f330ef61aedd8f48d48f7ac21bc975708a6ca6a1a"
+      ],
+      "adminAddresses": [
+        "0xb7fec6160bbb02eed26e2ffd24c458e1a391c88cd47018e973ef82d2d7519423"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Bridge Sui mint-package UpgradeCap owner",
+      "observedAt": "2026-07-14",
+      "observedBlock": 298463699,
+      "sources": [
+        {
+          "label": "Sui mainnet RPC — Bridge mint-package UpgradeCap",
+          "url": "https://fullnode.mainnet.sui.io:443"
+        },
+        {
+          "label": "Sui package upgrade documentation",
+          "url": "https://docs.sui.io/develop/publish-upgrade-packages/upgrade"
+        },
+        {
+          "label": "Sui Explorer — Bridge mint-package UpgradeCap",
+          "url": "https://suiscan.xyz/mainnet/object/0x6b5accd5473c2f194c84a7ca6ac422729d9ef4d8c9f4275823a24f0295b1c8d1"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Bridge TokenAuthority shared contract (TreasuryCap wrapper)",
@@ -196,12 +223,38 @@
             "url": "https://suiscan.xyz/mainnet/account/0xb1e7dc9a51c2e86e45f6c930f411b8f22dbc2204c964d174e3666816f7ecaac3"
           }
         ]
+      },
+      {
+        "label": "Bridge Sui mint-package UpgradeCap owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "chain": "sui",
+        "address": "0xb7fec6160bbb02eed26e2ffd24c458e1a391c88cd47018e973ef82d2d7519423",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 298463699,
+        "evidence": "At Sui checkpoint 298463699, UpgradeCap 0x6b5accd5473c2f194c84a7ca6ac422729d9ef4d8c9f4275823a24f0295b1c8d1 was address-owned by 0xb7fec6160bbb02eed26e2ffd24c458e1a391c88cd47018e973ef82d2d7519423. Its fields identify Bridge mint package 0x94e8cb8df7796c7ea57f747f330ef61aedd8f48d48f7ac21bc975708a6ca6a1a, policy 0, version 1. That package implements minter, stablecoin_manager, and token_authority for the shared object holding USDsui's wrapped TreasuryCap. Recent transactions sent by the owner use Sui signature scheme byte 0x00 (Ed25519). The separate USDsui coin-package UpgradeCap is held by deployer 0xd76f7d309d52d1020e50588997bb5b82d25e870542316fa082a6c6cdf93e3290, but the coin package only initializes the coin and does not hold the wrapped TreasuryCap or implement the active mint path.",
+        "sources": [
+          {
+            "label": "Sui mainnet RPC — UpgradeCap owner and package fields",
+            "url": "https://fullnode.mainnet.sui.io:443"
+          },
+          {
+            "label": "Sui package upgrade documentation",
+            "url": "https://docs.sui.io/develop/publish-upgrade-packages/upgrade"
+          },
+          {
+            "label": "Sui Explorer — Bridge mint-package UpgradeCap",
+            "url": "https://suiscan.xyz/mainnet/object/0x6b5accd5473c2f194c84a7ca6ac422729d9ef4d8c9f4275823a24f0295b1c8d1"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Sui RPC: TreasuryCap 0x57eafc43... traced to wrapping tx CRwtcn7F... which called Bridge's stablecoin_manager::register_stablecoin; TreasuryCap is locked in Stablecoin<RESERVE_LEDGER, USDSUI> wrapper (obj 0x80954159...) inside TokenAuthority shared object 0xd4fc1ca0b... MinterRole confirmed at 0xb1e7dc9a5... (active operational Bridge minter). AdminRole at 0xb7fec616... (holds UpgradeCaps for Bridge packages). Package 0x94e8cb8df... self-identifies as Bridge Open Issuance in bytecode. No external party can access TreasuryCap — it is wrapped in a non-transferable, shared contract object. Bridge confirmed as sole mint controller.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Sui RPC: TreasuryCap 0x57eafc43... traced to wrapping tx CRwtcn7F... which called Bridge's stablecoin_manager::register_stablecoin; TreasuryCap is locked in Stablecoin<RESERVE_LEDGER, USDSUI> wrapper (obj 0x80954159...) inside TokenAuthority shared object 0xd4fc1ca0b... MinterRole confirmed at 0xb1e7dc9a5... (active operational Bridge minter). At checkpoint 298463699, Bridge mint-package UpgradeCap 0x6b5accd5... for package 0x94e8cb8d... had policy 0, version 1, and was address-owned by 0xb7fec616.... Sui's upgrade documentation confirms a retained UpgradeCap can authorize compatible package upgrades that change function implementations. The separate USDsui coin-package UpgradeCap controls only the coin initialization package, not the active wrapped-TreasuryCap mint path.",
+      "reviewer": "Codex V9 mint-authority review",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
           "label": "Bridge issuance overview",
@@ -214,6 +267,18 @@
         {
           "label": "Sui Explorer — TokenAuthority object",
           "url": "https://suiscan.xyz/mainnet/object/0xd4fc1ca0b4a21bc15bacd5d21bf0e0964dfe17e90fc1a1a8294a2e9f4991f407"
+        },
+        {
+          "label": "Sui mainnet RPC — Bridge mint-package UpgradeCap",
+          "url": "https://fullnode.mainnet.sui.io:443"
+        },
+        {
+          "label": "Sui package upgrade documentation",
+          "url": "https://docs.sui.io/develop/publish-upgrade-packages/upgrade"
+        },
+        {
+          "label": "Sui Explorer — Bridge mint-package UpgradeCap",
+          "url": "https://suiscan.xyz/mainnet/object/0x6b5accd5473c2f194c84a7ca6ac422729d9ef4d8c9f4275823a24f0295b1c8d1"
         }
       ]
     }
