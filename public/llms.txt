@@ -233,7 +233,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [rwaUSDi (rwaUSDi)](https://pharos.watch/stablecoin/rwausdi-multipli/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Avant USD (avUSD)](https://pharos.watch/stablecoin/avusd-avant/): centralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Avant Staked USD (savUSD)](https://pharos.watch/stablecoin/savusd-avant/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Re Protocol reUSD (reUSD)](https://pharos.watch/stablecoin/reusd-re-protocol/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Re Protocol reUSD (reUSD)](https://pharos.watch/stablecoin/reusd-re-protocol/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [pmUSD (pmUSD)](https://pharos.watch/stablecoin/pmusd-precious-metals/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Anzen USDz (USDz)](https://pharos.watch/stablecoin/usdz-anzen/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [CASH (CASH)](https://pharos.watch/stablecoin/cash-phantom/): centralized stablecoin backed by real-world assets pegged to US Dollar.
