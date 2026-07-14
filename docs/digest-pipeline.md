@@ -419,5 +419,5 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Telegram delivery i
 | `src/app/digest/[date]/page.tsx` | Detail page (SSG, JSON-LD, prev/next nav) |
 | `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useDailyDigest()`, `useDigestArchive()`, and `useDigestSnapshot()` |
 | `scripts/maintenance/sync-digests.ts` | Pre-build script: fetches archive → writes `data/digests.json` |
-| `.github/workflows/pages-release.yml` | CI Pages path: optionally syncs API-backed data, builds/checks one export, deploys it once, and verifies the public release marker |
+| `.github/workflows/pages-release.yml` | CI Pages path: optionally syncs API-backed data, builds/checks one export, deploys it once, and verifies the marker on the immutable production deployment URL |
 | `data/digests.json` | Static digest list for SSG (generated, not hand-edited) |

@@ -95,11 +95,57 @@ jobs:
         run: >-
           npx --no-install wrangler pages deploy out
           --project-name=stablecoin-dashboard
+          --branch=main
+          --commit-hash="${GITHUB_SHA}"
           --commit-dirty=true
-          --commit-message="${GITHUB_SHA}"
-      - name: Verify published release marker
-        run: >-
-          node scripts/maintenance/wait-pages-release-marker.mjs
-          --url https://pharos.watch/__pharos_release.json
-          --attempts 24
-          --delay-ms 5000
+          --commit-message="GitHub Actions run ${GITHUB_RUN_ID}"
+      - id: pages-deployment
+        name: Resolve active Pages deployment
+        run: |
+          deployments_file="${RUNNER_TEMP}/pages-deployments.json"
+          npx --no-install wrangler pages deployment list \
+            --project-name=stablecoin-dashboard \
+            --environment=production \
+            --json > "${deployments_file}"
+
+          PAGES_DEPLOYMENTS_FILE="${deployments_file}" node <<'NODE'
+          const { appendFileSync, readFileSync } = require("node:fs");
+          const deployments = JSON.parse(
+            readFileSync(process.env.PAGES_DEPLOYMENTS_FILE, "utf8"),
+          );
+          const deployment = deployments[0];
+          const expectedSource = process.env.GITHUB_SHA.slice(0, 7);
+
+          if (
+            deployment?.Environment !== "Production"
+            || deployment?.Branch !== "main"
+            || deployment?.Source !== expectedSource
+          ) {
+            throw new Error(
+              `Latest Pages deployment did not match this release: ${JSON.stringify(deployment ?? null)}`,
+            );
+          }
+
+          const deploymentUrl = new URL(deployment.Deployment);
+          if (
+            deploymentUrl.protocol !== "https:"
+            || !deploymentUrl.hostname.endsWith(".stablecoin-dashboard.pages.dev")
+          ) {
+            throw new Error(`Unexpected Pages deployment URL: ${deployment.Deployment}`);
+          }
+
+          appendFileSync(process.env.GITHUB_OUTPUT, `deployment_url=${deploymentUrl.origin}\n`);
+          console.log(
+            `[pages-deployment] OK deployment=${deployment.Id} source=${deployment.Source} url=${deploymentUrl.origin}`,
+          );
+          NODE
+      - name: Verify deployment release marker
+        run: |
+          node scripts/maintenance/wait-pages-release-marker.mjs \
+            --url ${{ steps.pages-deployment.outputs.deployment_url }}/__pharos_release.json \
+            --attempts 24 \
+            --delay-ms 5000
+          {
+            echo "- Deployment: ${{ steps.pages-deployment.outputs.deployment_url }}"
+            echo "- Release marker: verified for \`${GITHUB_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
