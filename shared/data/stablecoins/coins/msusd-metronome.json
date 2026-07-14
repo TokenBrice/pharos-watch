@@ -927,6 +927,21 @@
         "observedAt": "2026-06-13"
       },
       {
+        "id": "hemi:0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
+        "destinationChain": "hemi",
+        "contractAddress": "0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-14"
+      },
+      {
         "id": "plasma:0x29ad7fe4516909b9e498b5a65339e54791293234",
         "destinationChain": "plasma",
         "contractAddress": "0x29ad7fe4516909b9e498b5a65339e54791293234",
