@@ -49,6 +49,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "honey-berachain": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
+    outputAssets: ["usdc-circle", "usdt-tether", "pyusd-paypal", "usde-ethena"],
     costModel: documentedVariableFee(
       "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead",
     ),
@@ -179,6 +180,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "pmusd-precious-metals": {
     ...psmSwapBase,
+    outputAssets: ["susds-sky"],
     capacityModel: { kind: "supply-ratio", ratio: 0.001, confidence: "heuristic", basis: "psm-balance-share" },
     costModel: fixedFee(25, "RAAC PSM docs specify a 25 bps swap fee for pmUSD → sUSDS exits"),
     reviewedAt: "2026-05-02",
@@ -277,6 +279,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "eusd-electronic-usd": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
+    outputAssets: ["usdc-circle", "usdt-tether"],
     costModel: documentedVariableFee(
       "Reserve Index docs describe mint and TVL fees, but do not document a separate redemption fee",
     ),
@@ -300,6 +303,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "usd3-reserve-protocol": {
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_RESERVE_PROTOCOL_DTF_AT),
+    outputAssets: ["susds-sky", "usdc-circle", "steakusdc-steakhouse"],
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",
     costModel: undisclosedReviewedFee(

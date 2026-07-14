@@ -136,6 +136,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "zchf-frankencoin": defineStablecoinRedeemConfig({
+    outputAssets: ["chfau-allunity"],
     capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.0085 },
     costModel: fixedFee(
       0,
@@ -335,6 +336,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "usdf-astherus": defineStablecoinRedeemConfig({
+    outputAssets: ["usdt-tether"],
     capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound" },
     settlementModel: "days",
     executionModel: "rules-based-nav",
@@ -513,6 +515,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "frxusd-frax": defineStablecoinRedeemConfig({
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssets: ["usdc-circle"],
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: undisclosedReviewedFee(
       "Direct Ethereum mint and redeem contracts support 1:1 conversion between frxUSD and USDC; public docs do not publish a fixed redemption fee",
@@ -535,6 +538,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "jupusd-jupiter": defineStablecoinRedeemConfig({
     accessModel: "whitelisted-onchain",
+    outputAssets: ["usdc-circle"],
     capacityModel: {
       kind: "reserve-sync-metadata",
       fallbackRatio: 0.1,
@@ -651,6 +655,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "usdz-anzen": defineStablecoinRedeemConfig({
     ...documentedBoundSupplyFull("2026-04-16"),
     accessModel: "whitelisted-onchain",
+    outputAssets: ["usdc-circle"],
     costModel: undisclosedReviewedFee(
       "Qualified Market Makers mint and redeem 1:1 USDz/USDC against SPCT collateral; public docs reviewed do not publish a fixed retail redemption fee",
     ),
@@ -716,6 +721,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "susd-solayer": defineStablecoinRedeemConfig({
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
+    outputAssets: ["usdc-circle"],
     executionModel: "rules-based-nav",
     costModel: undisclosedReviewedFee(
       "Solayer docs describe sUSD mint and redemption through protocol rails; public docs reviewed do not publish a fixed redemption fee",
@@ -1263,6 +1269,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usdv-solomon": defineStablecoinRedeemConfig({
     accessModel: "whitelisted-onchain",
+    outputAssets: ["usdc-circle"],
     capacityModel: { kind: "supply-ratio", ratio: 0.005, confidence: "documented-bound", basis: "hot-buffer" },
     costModel: documentedVariableFee(
       "Solomon docs disclose a 0.2% mint fee; redemption fee is not separately published, and access is limited to approved or whitelisted participants",

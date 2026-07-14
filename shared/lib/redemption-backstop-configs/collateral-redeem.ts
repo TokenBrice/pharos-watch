@@ -124,7 +124,10 @@ const mentoBrokerPoolRedeemConfig: RedemptionBackstopConfig = {
 
 export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = defineBackstopRegistry([
   ...defineBatch(BASE_COLLATERAL_REDEEM_IDS, collateralRedeemBase, { sourceFilePath: SOURCE_FILE_PATH }),
-  ...defineBatch(["jpym-mento", "chfm-mento"], mentoFpmmPoolRedeemConfig, {
+  ...defineBatch(["jpym-mento"], { ...mentoFpmmPoolRedeemConfig, outputAssets: ["cusd-celo"] }, {
+    sourceFilePath: SOURCE_FILE_PATH,
+  }),
+  ...defineBatch(["chfm-mento"], mentoFpmmPoolRedeemConfig, {
     sourceFilePath: SOURCE_FILE_PATH,
   }),
   ...defineBatch(
@@ -229,6 +232,14 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...collateralRedeemBase,
       capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+      outputAssets: [
+        "asset:wbtc",
+        "asset:tbtc",
+        "asset:susds",
+        "asset:sfrxusd",
+        "asset:scrvusd",
+        "asset:ysybold",
+      ],
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
     },
@@ -236,6 +247,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...collateralRedeemBase,
       capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+      outputAssets: ["asset:weth", "asset:wsteth", "asset:weeth", "asset:scr"],
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
     },
@@ -526,6 +538,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "usbd-bima": {
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
+      outputAssets: ["asset:btc"],
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(
         "Redemption fee = coreRate + 75 bps; coreRate rises with redeemed supply and decays with a 24-hour half-life",
@@ -575,6 +588,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "uusd-youves": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+      outputAssets: ["asset:xtz", "asset:tzbtc", "asset:sirs", "asset:usdt"],
       settlementModel: "days",
       executionModel: "rules-based-nav",
       outputAssetType: "mixed-collateral",
@@ -607,6 +621,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "fpi-frax": {
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
+      outputAssets: ["asset:frax"],
       capacityModel: { kind: "reserve-sync-metadata" },
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(
@@ -642,6 +657,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "djed-coti": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+      outputAssets: ["asset:ada"],
       outputAssetType: "mixed-collateral",
       executionModel: "rules-based-nav",
       costModel: undisclosedReviewedFee(
@@ -688,6 +704,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "usdn-smardex": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+      outputAssets: ["asset:wsteth"],
       settlementModel: "days",
       executionModel: "rules-based-nav",
       outputAssetType: "bluechip-collateral",
