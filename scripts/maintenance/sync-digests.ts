@@ -115,7 +115,11 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
   const { entries, outputFile, written } = await syncJson<DigestEntry>({
     writeTo: outputPath,
     parse: async () => {
-      const res = await fetchWithRetry(fetchUrl, { headers }, { logLabel: "sync-digests" });
+      const res = await fetchWithRetry(fetchUrl, { headers }, {
+        logLabel: "sync-digests",
+        retryStatuses: [403],
+        backoffMs: [12_000, 12_000],
+      });
       if (!res.ok) throw new Error(`API returned ${res.status}`);
       const { digests } = (await res.json()) as { digests: ApiDigest[] };
       console.log(`Fetched ${digests.length} digests`);

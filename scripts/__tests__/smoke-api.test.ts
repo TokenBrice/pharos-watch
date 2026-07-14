@@ -4,10 +4,22 @@ import {
   assertPathCoverage,
   CANARY_CONTRACT_SMOKE_PATHS,
   ENDPOINT_ASSERTIONS,
+  isRetryableStatus,
   OG_SMOKE_PATHS,
   resolveContractSmokePaths,
   STRICT_CONTRACT_SMOKE_PATHS,
 } from "../maintenance/smoke-api.mjs";
+
+describe("smoke-api retry policy", () => {
+  it("outwaits the production API WAF block without retrying normal client errors", () => {
+    expect(isRetryableStatus(403)).toBe(true);
+    expect(isRetryableStatus(408)).toBe(true);
+    expect(isRetryableStatus(429)).toBe(true);
+    expect(isRetryableStatus(500)).toBe(true);
+    expect(isRetryableStatus(401)).toBe(false);
+    expect(isRetryableStatus(404)).toBe(false);
+  });
+});
 
 function makeRedemptionBody(overrides: Record<string, unknown> = {}) {
   return {

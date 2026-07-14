@@ -150,7 +150,11 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         params.set("limit", String(limit));
         if (cursor) params.set("cursor", cursor);
         const pagedUrl = `${apiUrl}?${params.toString()}`;
-        const res = await fetchWithRetry(pagedUrl, { headers }, { logLabel: "sync-depeg-events" });
+        const res = await fetchWithRetry(pagedUrl, { headers }, {
+          logLabel: "sync-depeg-events",
+          retryStatuses: [403],
+          backoffMs: [12_000, 12_000],
+        });
         if (!res.ok) throw new Error(`API returned ${res.status} for ${pagedUrl}`);
         const body = (await res.json()) as DepegEventsResponse;
         const batch = Array.isArray(body.events) ? body.events : [];

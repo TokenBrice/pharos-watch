@@ -54,6 +54,8 @@ interface FetchWithRetryOptions {
   logLabel: string;
   attempts?: number;
   backoffMs?: readonly number[];
+  /** Additional response statuses that are known to be transient for this caller. */
+  retryStatuses?: readonly number[];
 }
 
 /**
@@ -73,6 +75,7 @@ export async function fetchWithRetry(
 ): Promise<Response> {
   const attempts = retryOptions.attempts ?? 3;
   const backoff = retryOptions.backoffMs ?? [1000, 2000];
+  const retryStatuses = new Set(retryOptions.retryStatuses ?? []);
   for (let i = 0; i < attempts; i++) {
     let res: Response;
     try {
@@ -89,7 +92,7 @@ export async function fetchWithRetry(
       }
       throw err;
     }
-    if (res.ok || res.status < 500) return res;
+    if (res.ok || (res.status < 500 && !retryStatuses.has(res.status))) return res;
     if (i < attempts - 1) {
       const delay = backoff[i] ?? backoff[backoff.length - 1];
       console.log(

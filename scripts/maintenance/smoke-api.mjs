@@ -146,8 +146,10 @@ async function fetchJson(baseUrl, endpointPath, timeoutMs) {
   return { url, status: res.status, body };
 }
 
-function isRetryableStatus(status) {
-  return status === 408 || status === 429 || status >= 500;
+export function isRetryableStatus(status) {
+  // api.pharos.watch has a 10-second zone WAF block. Shared CI egress can
+  // inherit another runner's block, so the production smoke must outwait it.
+  return status === 403 || status === 408 || status === 429 || status >= 500;
 }
 
 function isRetryableError(error) {
