@@ -105,7 +105,7 @@ describe("fetchBalancerPools stable-math amp join", () => {
   it("attaches amp to stable-math pools present in the aggregator sweep", async () => {
     dispatchByQuery(
       [stablePool(), gyroPool()],
-      [{ id: stablePool().id, amp: "250.0" }, { id: gyroPool().id, amp: "999" }],
+      [{ id: stablePool().id, chain: "MAINNET", amp: "250.0" }, { id: gyroPool().id, chain: "MAINNET", amp: "999" }],
     );
     const result = await fetchBalancerPools();
     const stable = result.pools.find((pool) => pool.poolAddress === "0xaabbccddeeff00112233445566778899aabbccdd");
@@ -114,6 +114,24 @@ describe("fetchBalancerPools stable-math amp join", () => {
     expect(stable?.tokens.every((token) => token.priceRate === 1.02)).toBe(true);
     // Gyro pools do not use stable math; amp must never attach even if the sweep returns a row.
     expect(gyro?.amp).toBeUndefined();
+  });
+
+  it("keys the amp join by chain so same-id pools on other chains cannot cross-attach", async () => {
+    const mainnetPool = stablePool();
+    const arbitrumPool = stablePool();
+    arbitrumPool.chain = "ARBITRUM";
+    dispatchByQuery(
+      [mainnetPool, arbitrumPool],
+      [
+        { id: mainnetPool.id, chain: "MAINNET", amp: "250.0" },
+        { id: arbitrumPool.id, chain: "ARBITRUM", amp: "5000" },
+      ],
+    );
+    const result = await fetchBalancerPools();
+    const mainnet = result.pools.find((pool) => pool.chain === "ethereum");
+    const arbitrum = result.pools.find((pool) => pool.chain === "arbitrum");
+    expect(mainnet?.amp).toBe(250);
+    expect(arbitrum?.amp).toBe(5000);
   });
 
   it("degrades to no amp when the sweep fails, without dropping pools", async () => {

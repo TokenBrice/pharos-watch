@@ -83,6 +83,7 @@ const AMP_QUERY = `query($first: Int!, $skip: Int!) {
     where: { minTvl: 10000, poolTypeIn: [STABLE, COMPOSABLE_STABLE, META_STABLE] }
   ) {
     id
+    chain
     amp
   }
 }`;
@@ -103,6 +104,7 @@ type BalancerResponse = {
 
 interface BalancerAmpRow {
   id: string;
+  chain: string;
   amp?: string | null;
 }
 
@@ -135,7 +137,18 @@ function isBalancerPoolToken(value: unknown): value is BalancerPool["poolTokens"
 }
 
 function isBalancerAmpRow(value: unknown): value is BalancerAmpRow {
-  return isDexApiRecord(value) && typeof value.id === "string" && isOptionalString(value.amp);
+  return isDexApiRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.chain === "string" &&
+    isOptionalString(value.amp);
+}
+
+/**
+ * Deterministic deployments reuse pool addresses (v3) and can reuse vault ids
+ * (v2) across chains, so amp rows must be keyed chain-scoped.
+ */
+function ampJoinKey(chain: string, poolId: string): string {
+  return `${chain.trim().toUpperCase()}:${poolId.trim().toLowerCase()}`;
 }
 
 function isBalancerPool(value: unknown): value is BalancerPool {
@@ -224,7 +237,7 @@ async function fetchBalancerStableAmps(
       if (!isBalancerAmpRow(row) || row.amp == null) continue;
       const amp = parseFloat(row.amp);
       if (Number.isFinite(amp) && amp > 0) {
-        ampByPoolId.set(row.id.trim().toLowerCase(), amp);
+        ampByPoolId.set(ampJoinKey(row.chain, row.id), amp);
       }
     }
 
@@ -360,7 +373,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         balancesNormalized: true,
       });
       if (STABLE_MATH_POOL_TYPES.has(pool.type)) {
-        stableMathPoolIdsByIndex.set(results.length - 1, pool.id.trim().toLowerCase());
+        stableMathPoolIdsByIndex.set(results.length - 1, ampJoinKey(pool.chain, pool.id));
       }
     }
     if (malformedRows > 0) {
