@@ -1,0 +1,71 @@
+{
+  "id": "sofid-sofi",
+  "reserves": [
+    {
+      "name": "USD cash and cash equivalents at SoFi Bank Federal Reserve master account",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "SoFi Bank, N.A. and the Federal Reserve master account",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "legal",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "SoFiUSD official product page",
+        "url": "https://www.sofi.com/crypto/sofiusd/"
+      },
+      {
+        "label": "SoFiUSD Deloitte filing",
+        "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm"
+      }
+    ],
+    "rationale": "SoFi describes SOFID as a bank-issued payment stablecoin backed 1:1 by cash or cash equivalents and says reserves are expected to receive periodic independent third-party attestation. The reviewed materials do not publish current reserve balances, bank-account shares, or the cash-equivalent mix.",
+    "compositionBasis": "SoFiUSD product and reserve-attestation disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer identifies the SoFi Bank/Federal Reserve cash-reserve envelope but does not publish current balances, cash-equivalent composition, or custody shares.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USD cash and cash equivalents at SoFi Bank Federal Reserve master account",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer describes the reserve framework but no current dated composition or completed attestation is available in the reviewed sources."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "SoFi Bank, N.A. Federal Reserve master account",
+        "role": "bank",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "SoFiUSD official product page",
+        "url": "https://www.sofi.com/crypto/sofiusd/"
+      }
+    ],
+    "uncertainty": "SoFi identifies the bank and Federal Reserve master-account framework but does not disclose account segregation, bankruptcy treatment, rehypothecation, or any other custody provider shares."
+  }
+}

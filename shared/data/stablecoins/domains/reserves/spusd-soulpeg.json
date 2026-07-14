@@ -1,0 +1,72 @@
+{
+  "id": "spusd-soulpeg",
+  "reserves": [
+    {
+      "name": "USDC routed through Venus lending markets (via soul-bound sUSDC)",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, Inc. and SoulPeg Venus strategy",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SoulPeg official documentation",
+        "url": "https://docs.soulpeg.io/"
+      },
+      {
+        "label": "SoulPeg security model",
+        "url": "https://docs.soulpeg.io/docs/whitepaper/security-model"
+      }
+    ],
+    "rationale": "SoulPeg documents SPUSD as a tradeable ERC-20 wrapper for 1:1 sUSDC, with deposited USDC routed into Venus lending markets. The protocol describes single-sided USDC lending and on-chain verifiability; current Venus liquidity and strategy balances remain dynamic.",
+    "compositionBasis": "SoulPeg SPUSD and security-model documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The sole tracked USDC dependency is identified, but current Venus market allocation and available redemption liquidity change over time.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "SoulPeg StrategyRouter and VenusUSDCVault",
+        "role": "custodian"
+      },
+      {
+        "name": "Venus Protocol lending markets",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "SoulPeg official documentation",
+        "url": "https://docs.soulpeg.io/"
+      },
+      {
+        "label": "SoulPeg security model",
+        "url": "https://docs.soulpeg.io/docs/whitepaper/security-model"
+      }
+    ],
+    "uncertainty": "SoulPeg identifies on-chain strategy and Venus contracts but does not establish legal segregation, bankruptcy remoteness, or rehypothecation treatment for deposited USDC."
+  }
+}

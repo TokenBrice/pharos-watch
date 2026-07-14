@@ -1,0 +1,68 @@
+{
+  "id": "sdusd-dtrinity",
+  "reserves": [
+    {
+      "name": "dLEND dUSD deposits",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "dusd-dtrinity",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "dTRINITY dUSD and dLEND",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "dTRINITY sdUSD documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+      },
+      {
+        "label": "dTRINITY official website",
+        "url": "https://www.dtrinity.org/"
+      }
+    ],
+    "rationale": "dTRINITY documents sdUSD as an ERC-4626 receipt token backed by dUSD deposits supplied into dLEND. Staking and unstaking are permissionless and depend on unutilized dLEND liquidity; the structured envelope therefore retains one 100% dUSD dependency without inventing lending-market weights.",
+    "compositionBasis": "dTRINITY sdUSD and dLEND documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The dUSD dependency is identified at 100%, but dLEND market allocation, utilization, and available unstaking liquidity are dynamic.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "dTRINITY dSTAKE vaults",
+        "role": "custodian"
+      },
+      {
+        "name": "dLEND lending markets",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "dTRINITY sdUSD documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+      }
+    ],
+    "uncertainty": "The protocol identifies on-chain dSTAKE and dLEND contracts but does not establish legal segregation, bankruptcy remoteness, or rehypothecation treatment for dUSD supplied to lending markets."
+  }
+}
