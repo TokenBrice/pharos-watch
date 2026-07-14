@@ -524,8 +524,13 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
           },
           {
             kind: "fact-set",
+            // v2 archives only the reviewed extension: compiled facts are
+            // deterministically rebuilt from (base-input, extension) at gate
+            // replay time and bound by factSetDigest, and archiving the
+            // compiled copy pushed the artifact past the D1 row budget once
+            // every asset became rateable.
             identity: pipeline.candidate.factSetDigest,
-            value: { schemaVersion: 1, extension: pipeline.extension, compiledFacts: pipeline.compiledFacts },
+            value: { schemaVersion: 2, extension: pipeline.extension },
             createdAtSec: completedAtSec,
             verifiedAtSec: completedAtSec,
           },

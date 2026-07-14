@@ -50,8 +50,12 @@ const UtcDaySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const NonEmptyTextSchema = z.string().trim().min(1);
 const ArchiveSelectionReasonSchema = z.enum(["first", "final", "anomaly"]);
 const ArchivedFactSetArtifactSchema = z
-  .object({ schemaVersion: z.literal(1), extension: z.unknown(), compiledFacts: z.unknown() })
-  .strict();
+  .discriminatedUnion("schemaVersion", [
+    z.object({ schemaVersion: z.literal(1), extension: z.unknown(), compiledFacts: z.unknown() }).strict(),
+    // v2 archives only the extension; compiled facts are rebuilt at replay
+    // time and bound by the run identity's factSetDigest.
+    z.object({ schemaVersion: z.literal(2), extension: z.unknown() }).strict(),
+  ]);
 const ArchivedPolicyArtifactSchema = z.object({ policy: z.unknown(), semanticDigest: Sha256Schema }).strict();
 const ArchivedEvaluationBuildArtifactSchema = z.object({ manifest: z.unknown() }).strict();
 const ArchivedResultArtifactSchema = z
@@ -388,7 +392,8 @@ export async function verifySafetyScoreV9ArchivedReplays(input: {
       if (
         !canonicalEqual(replay.fixedInput, baseInput) ||
         !canonicalEqual(replay.extension, factSetArtifact.extension) ||
-        !canonicalEqual(replay.compiledFacts, factSetArtifact.compiledFacts) ||
+        (factSetArtifact.schemaVersion === 1 &&
+          !canonicalEqual(replay.compiledFacts, factSetArtifact.compiledFacts)) ||
         !canonicalEqual(replay.evaluatedSet, resultArtifact.evaluatedSet) ||
         !canonicalEqual(replay.candidate, resultArtifact.candidate) ||
         replay.candidate.candidateId !== run.identity.candidateId ||
