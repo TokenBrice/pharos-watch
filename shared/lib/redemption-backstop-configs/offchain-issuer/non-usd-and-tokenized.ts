@@ -85,10 +85,19 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "jpyc-jpyc": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee(
-      "Direct 1:1 redemption through JPYC EX after KYC and bank transfer verification; public fee schedule not disclosed",
+    costModel: fixedFee(
+      0,
+      "JPYC EX states that registered users redeem 1 JPYC for JPY 1 with no redemption fee; users still pay blockchain gas when sending JPYC",
     ),
-    docs: [sourceRef("JPYC website", "https://jpyc.co.jp/", ["route", "capacity"])],
+    docs: [
+      sourceRef("JPYC EX", "https://ex.jpyc.co.jp/", ["route", "fees", "access", "settlement"]),
+      sourceRef("JPYC launch announcement", "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch", [
+        "route",
+        "capacity",
+        "access",
+        "settlement",
+      ]),
+    ],
   },
   "axcnh-anchorx": {
     ...issuerBase,

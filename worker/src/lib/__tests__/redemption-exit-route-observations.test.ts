@@ -213,10 +213,29 @@ describe("derived supply-model route observations", () => {
       assetKeys: ["asset:weth", "asset:wsteth", "asset:reth"],
     });
 
+    const buckEntry: RedemptionBackstopEntry = {
+      ...daiEntry,
+      stablecoinId: "buck-bucket-protocol",
+      outputAssetType: "stable-basket",
+    };
+    expect(deriveSupplyModelExitRouteObservation(buckEntry, now)?.output).toEqual({
+      kind: "tracked-stablecoin",
+      trackedAssetIds: ["usdc-circle", "usdt-tether"],
+    });
+
+    const aidEntry: RedemptionBackstopEntry = {
+      ...daiEntry,
+      stablecoinId: "aid-gaib",
+    };
+    expect(deriveSupplyModelExitRouteObservation(aidEntry, now)?.output).toEqual({
+      kind: "tracked-stablecoin",
+      trackedAssetIds: ["usdc-circle"],
+    });
+
     // An asset without configured outputAssets keeps the honest unresolved kind.
     const unresolvedEntry: RedemptionBackstopEntry = {
       ...daiEntry,
-      stablecoinId: "buck-bucket-protocol",
+      stablecoinId: "usn-noon",
     };
     expect(deriveSupplyModelExitRouteObservation(unresolvedEntry, now)?.output).toEqual({
       kind: "unresolved-asset",

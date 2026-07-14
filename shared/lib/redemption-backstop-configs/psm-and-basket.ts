@@ -27,6 +27,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "cusd-cap": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
+    outputAssets: ["usdc-circle", "wtgxx-wisdomtree"],
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: documentedVariableFee(
       "The cUSD vault's inherited Minter sets a flat on-chain redeem fee, queryable via getRedeemFee() (currently 0 ray / 0 bps; whitelisted users pay 0%); dynamic mint/burn fees do not apply to proportional redemption beyond this flat fee",
@@ -42,6 +43,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "Cap docs describe cUSD as always redeemable against the underlying reserve basket, with dynamic interest rates preventing full utilization so withdrawals remain atomic",
+      "At Ethereum block 25530449, the cUSD vault assets() list contained only USDC and wWTGXX; the live reserve config maps those contracts to usdc-circle and wtgxx-wisdomtree",
     ],
   },
   "honey-berachain": {
@@ -210,10 +212,18 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "buck-bucket-protocol": {
     ...psmSwapBase,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
     capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound" },
     costModel: fixedFee(30, "Modeled route uses PSM OUT at 30 bps; collateral redemptions use a separate dynamic fee"),
-    reviewedAt: REVIEWED_BASKET_REDEMPTION_AT,
-    docs: [sourceRef("Bucket Protocol docs", "https://docs.bucketprotocol.io/", ["route", "capacity", "fees"])],
+    reviewedAt: "2026-07-14",
+    docs: [
+      sourceRef("Bucket Protocol PSM", "https://docs.bucketprotocol.io/mechanisms/peg-stability-module", [
+        "route",
+        "capacity",
+        "fees",
+      ]),
+    ],
     notes: [
       "The reviewed 25% bound matches the tracked USDC/USDT PSM reserve share rather than assuming the full BUCK supply is instantly redeemable through the stablecoin module",
     ],

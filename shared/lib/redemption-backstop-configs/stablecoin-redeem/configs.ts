@@ -415,17 +415,18 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "aid-gaib": defineStablecoinRedeemConfig({
     ...reviewedDirectRedemptionSupplyFull,
     accessModel: "whitelisted-onchain",
+    outputAssets: ["usdc-circle"],
     costModel: fixedFee(
       10,
       "GAIB docs currently show a 10 bps sell fee in the dApp, while direct AID minting and redemption are reserved for whitelisted users and partners",
     ),
+    reviewedAt: "2026-07-14",
     docs: [
-      sourceRef("GAIB AI Dollar (AID)", "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid", [
-        "route",
-        "capacity",
-        "access",
-        "fees",
-      ]),
+      sourceRef(
+        "GAIB AID acquisition and redemption guide",
+        "https://docs.gaib.ai/products/gaib-products/how-to-get-aid-said",
+        ["route", "capacity", "access", "fees"],
+      ),
       sourceRef("GAIB economy", "https://docs.gaib.ai/gaib-overview/gaib-economy", ["route", "capacity"]),
     ],
     notes: [
