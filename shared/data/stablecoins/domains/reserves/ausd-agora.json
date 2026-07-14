@@ -1,0 +1,123 @@
+{
+  "id": "ausd-agora",
+  "reserves": [
+    {
+      "name": "Short-dated U.S. Treasury Bills",
+      "pct": 31.66,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "seven-days",
+      "maturityDaysMax": 60
+    },
+    {
+      "name": "Overnight Reverse Repurchase Agreements",
+      "pct": 60.79,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "Undisclosed repo counterparties; U.S. Treasury collateral",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
+    },
+    {
+      "name": "Cash at regulated financial institutions",
+      "pct": 3.89,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed regulated financial institutions",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Stablecoins held in segregated wallets",
+      "pct": 3.66,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Undisclosed stablecoin issuers",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Grant Thornton Agora Dollar Reserve Report - May 31, 2026",
+        "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+      },
+      {
+        "label": "Agora reserve transparency index",
+        "url": "https://docs.agora.finance/developer/transparency"
+      }
+    ],
+    "rationale": "Grant Thornton's May 31 report lists $41,638,712 of U.S. Treasury securities, $79,954,061 of U.S. Treasury repurchase agreements, $5,111,541 of cash at regulated financial institutions, and $4,813,320 of stablecoins held in segregated wallets, totaling $131,518,300. The normalized weights are 31.66%, 60.79%, 3.89%, and 3.66%.",
+    "compositionBasis": "Grant Thornton examination of AUSD reserve assets as of May 31, 2026",
+    "compositionAsOf": "2026-05-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The report does not name the repo counterparties or stablecoin issuers; the 3.66% stablecoin slice cannot be split further from the cited primary source.",
+    "knownUnknownExposurePct": 3.66,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 3,
+        "reserveName": "Stablecoins held in segregated wallets",
+        "pct": 3.66,
+        "disposition": "insufficient-evidence",
+        "rationale": "The attestation identifies a stablecoin balance but does not identify the token issuers or individual weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Agora Reserve Fund LP",
+        "role": "custodian",
+        "sharePct": 92.45,
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Undisclosed regulated financial institutions",
+        "role": "bank",
+        "sharePct": 3.89
+      },
+      {
+        "name": "Agora-controlled segregated wallets and regulated virtual asset service providers",
+        "role": "custodian",
+        "sharePct": 3.66
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Grant Thornton Agora Dollar Reserve Report - May 31, 2026",
+        "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+      }
+    ],
+    "uncertainty": "The report states that Agora is a segregated accounts company and reserve assets are segregated from proprietary assets. It does not establish a statutory treatment for every underlying vehicle or a general rehypothecation prohibition."
+  }
+}

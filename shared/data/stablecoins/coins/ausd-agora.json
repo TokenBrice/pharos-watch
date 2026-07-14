@@ -24,7 +24,22 @@
     "provider": "Grant Thornton LLP",
     "attestorTier": "regional",
     "cadence": "monthly",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-26",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Grant Thornton Agora Dollar Reserve Report - May 31, 2026",
+          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -553,23 +568,6 @@
     ]
   },
   "custodyModel": "institutional-top",
-  "reserves": [
-    {
-      "name": "Short-dated U.S. Treasury Bills",
-      "pct": 60,
-      "risk": "very-low"
-    },
-    {
-      "name": "Overnight Reverse Repurchase Agreements",
-      "pct": 25,
-      "risk": "low"
-    },
-    {
-      "name": "Cash (USD deposits at State Street)",
-      "pct": 15,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

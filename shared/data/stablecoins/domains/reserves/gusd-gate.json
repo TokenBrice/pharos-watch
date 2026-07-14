@@ -1,0 +1,83 @@
+{
+  "id": "gusd-gate",
+  "reserves": [
+    {
+      "name": "Gate RWA, stablecoin, and ecosystem-yield reserve basket",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Gate ecosystem, U.S. Treasury RWA products, and USDT/USDC/USD1 issuers",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 dependency review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Gate GUSD product page",
+        "url": "https://www.gate.com/gusd"
+      },
+      {
+        "label": "Gate GUSD minting and redemption guide",
+        "url": "https://www.gate.tv/staking/GUSD"
+      },
+      {
+        "label": "Gate GUSD launch announcement",
+        "url": "https://www.gate.com/learn/articles/gusd-the-note-like-evolution-of-stablecoins/12656"
+      }
+    ],
+    "rationale": "Gate describes GUSD as a yield-bearing certificate backed by U.S. Treasury RWA products, stablecoin collateral, and Gate ecosystem revenue, and separately states that minting accepts USDT, USDC, or USD1. It publishes no current asset-class or constituent weights, so the prior 70/25/5 split is replaced by one explicit mixed basket rather than preserving unsupported percentages.",
+    "compositionBasis": "Gate GUSD product and minting disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Gate does not publish current weights for Treasury products, stablecoin collateral, ecosystem revenue, or the custody providers supporting the product.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Gate RWA, stablecoin, and ecosystem-yield reserve basket",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer names the broad reserve and yield sources but does not publish a current composition or a defensible split among them.",
+        "candidateCoinIds": [
+          "usdt-tether",
+          "usdc-circle",
+          "usd1-world-liberty-financial"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Gate ecosystem and undisclosed RWA custodians",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Gate GUSD product page",
+        "url": "https://www.gate.com/gusd"
+      },
+      {
+        "label": "Gate GUSD minting page",
+        "url": "https://www.gate.tv/staking/GUSD"
+      }
+    ],
+    "uncertainty": "Gate does not identify the legal reserve vehicle, custody providers, segregation model, bankruptcy remoteness, or rehypothecation terms for GUSD backing."
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "id": "usdgo-osl",
+  "reserves": [
+    {
+      "name": "Money market funds (CUSIPs 38151N205 and 46655R119)",
+      "pct": 74.19,
+      "risk": "very-low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "Undisclosed money market fund issuers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund)",
+      "pct": 25.32,
+      "risk": "low",
+      "coinId": "buidl-blackrock",
+      "depType": "collateral",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Cash at FDIC-insured depository institutions",
+      "pct": 0.50,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed major commercial banks",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Anchorage USDGO Reserve Report - May 31, 2026",
+        "url": "https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf"
+      },
+      {
+        "label": "Anchorage USDGO reserve attestations",
+        "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
+      }
+    ],
+    "rationale": "Anchorage's May 31 examination reports $240,981,509 of money market funds, $82,231,670 of BUIDL, and $1,613,956 of cash against $324,827,135 of reserve assets. Those balances normalize to 74.19%, 25.32%, and 0.50%; BUIDL is the only tracked canonical dependency.",
+    "compositionBasis": "Anchorage examination of the USDGO Reserve Report as of May 31, 2026",
+    "compositionAsOf": "2026-05-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The two money market fund CUSIPs are disclosed but their issuer names and underlying portfolio composition are not identified in the report.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Anchorage Digital Bank, National Association",
+        "role": "custodian",
+        "sharePct": 100,
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Anchorage USDGO Reserve Report - May 31, 2026",
+        "url": "https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf"
+      }
+    ],
+    "uncertainty": "The report says reserve assets are held in segregated fiduciary trust accounts for token holders and identifies Anchorage as the issuer and qualified custodian. It does not state a general rehypothecation prohibition."
+  }
+}

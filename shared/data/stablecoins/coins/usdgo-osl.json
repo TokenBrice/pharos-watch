@@ -19,7 +19,22 @@
     "provider": "Big Four accounting firm via Anchorage Digital Bank",
     "attestorTier": "big4",
     "cadence": "monthly",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-26",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Anchorage USDGO Reserve Report - May 31, 2026",
+          "url": "https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf"
+        }
+      ]
+    }
   },
   "mechanismArchetype": "fiat-cash",
   "llamaId": "347",
@@ -351,59 +366,6 @@
     }
   },
   "custodyModel": "institutional-regulated",
-  "reserves": [
-    {
-      "name": "JLTXX (J.P. Morgan tokenized money market fund)",
-      "pct": 67.95,
-      "risk": "very-low"
-    },
-    {
-      "name": "BUIDL (BlackRock tokenized MMF)",
-      "pct": 19.65,
-      "risk": "low",
-      "coinId": "buidl-blackrock",
-      "depType": "collateral"
-    },
-    {
-      "name": "STBXX (Goldman Sachs Stablecoin Reserves Fund)",
-      "pct": 11.39,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash",
-      "pct": 1.01,
-      "risk": "very-low"
-    }
-  ],
-  "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 dependency review",
-    "confidence": "verified",
-    "sources": [
-      {
-        "label": "USDGO reserve API",
-        "url": "https://www.usdgo.com/api/lark-bitable"
-      },
-      {
-        "label": "USDGO transparency dashboard",
-        "url": "https://www.usdgo.com/transparency"
-      },
-      {
-        "label": "OSL USDGO reserve expansion announcement",
-        "url": "https://www.osl.com/hk-en/press-release/usdgo-stablecoin-circulation-surpasses-500-million-osl-group"
-      },
-      {
-        "label": "Anchorage stablecoin reserve transparency",
-        "url": "https://www.anchorage.com/platform/transparency-stablecoin-reserves"
-      }
-    ],
-    "rationale": "The dated USDGO reserve API publishes exact asset balances. BUIDL is the only reserve constituent that maps to a tracked canonical dependency; JLTXX, STBXX, and cash are exogenous reserve assets.",
-    "compositionBasis": "USDGO reserve API asset balances normalized to total backing assets",
-    "compositionAsOf": "2026-07-08",
-    "scope": "full-composition",
-    "knownUnknownExposure": "No unresolved tracked-stablecoin constituent exposure in the published composition.",
-    "knownUnknownExposurePct": 0
-  },
   "liveReservesConfig": {
     "adapter": "usdgo-transparency",
     "version": 1,

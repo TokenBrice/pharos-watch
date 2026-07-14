@@ -1,0 +1,75 @@
+{
+  "id": "m-m0",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury Bills (30-90 day)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty"
+      ],
+      "liquidityHorizon": "seven-days",
+      "maturityDaysMax": 90
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 platform mechanics and eligible collateral",
+        "url": "https://docs.m0.org/get-started/protocol-mechanics"
+      },
+      {
+        "label": "M0 architecture overview",
+        "url": "https://docs.m0.org/get-started/how-it-works"
+      }
+    ],
+    "rationale": "M0 documents that issuers pledge eligible collateral to mint M-powered stablecoins and that eligible collateral is limited to safe, regulatory-aligned assets. The tracked M metadata identifies 30-90 day U.S. Treasury bills as its collateral; the reserve envelope therefore remains one 100% Treasury-bill slice.",
+    "compositionBasis": "M0 documented collateral policy and M collateral metadata",
+    "scope": "full-composition",
+    "knownUnknownExposure": "M0 does not publish current issuer-level Treasury holdings, maturity buckets, or minter shares in the reviewed public documentation.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-term U.S. Treasury Bills (30-90 day)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Direct U.S. Treasury securities are external reserve backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Permissioned M0 minters and their bankruptcy-remote collateral SPVs",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 platform mechanics and eligible collateral",
+        "url": "https://docs.m0.org/get-started/protocol-mechanics"
+      },
+      {
+        "label": "M0 issuer overview",
+        "url": "https://docs.m0.org/issuers/overview"
+      }
+    ],
+    "uncertainty": "M0 identifies permissioned issuers and collateral management at the issuer layer, while the tracked metadata describes bankruptcy-remote SPVs. The reviewed public docs do not identify current minters or state a general rehypothecation prohibition.",
+    "knownUnknownExposurePct": 100
+  }
+}

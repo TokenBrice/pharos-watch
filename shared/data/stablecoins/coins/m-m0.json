@@ -627,13 +627,6 @@
     ]
   },
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "Short-term U.S. Treasury Bills (30-90 day)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,
