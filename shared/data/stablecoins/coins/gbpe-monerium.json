@@ -292,13 +292,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "GBP safeguarded funds and permitted EMI reserve assets",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

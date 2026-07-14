@@ -122,13 +122,6 @@
     }
   },
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "Issuer-managed gold backing / balance-sheet gold exposure",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

@@ -1,0 +1,76 @@
+{
+  "id": "gbpe-monerium",
+  "reserves": [
+    {
+      "name": "GBP safeguarded funds and permitted EMI reserve assets",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Monerium hf and its safeguarded-asset providers",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "legal",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Monerium financial information",
+        "url": "https://monerium.com/financial-information/"
+      }
+    ],
+    "rationale": "Monerium states that e-money is safeguarded in segregated assets and names Arion Bank, LHV Bank, and State Street Global Advisors Europe as safeguarding providers. The page describes EURe holdings in a State Street liquidity fund but does not publish a GBP-specific composition or current allocation.",
+    "compositionBasis": "Monerium safeguarding and financial-information disclosure",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The reviewed disclosure does not provide a GBPe-specific split between bank deposits, liquidity funds, or other permitted EMI reserve assets, nor current provider weights.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "GBP safeguarded funds and permitted EMI reserve assets",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Monerium documents the safeguarding framework but does not publish a current GBPe-specific asset composition."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Arion Bank",
+        "role": "bank",
+        "jurisdiction": "Iceland"
+      },
+      {
+        "name": "LHV Bank",
+        "role": "bank",
+        "jurisdiction": "Estonia"
+      },
+      {
+        "name": "State Street Global Advisors Europe",
+        "role": "custodian",
+        "jurisdiction": "European Union"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Monerium financial information",
+        "url": "https://monerium.com/financial-information/"
+      }
+    ],
+    "uncertainty": "Monerium describes segregated safeguarding accounts and names providers, but the public page does not disclose current GBPe provider shares, legal bankruptcy treatment, or rehypothecation terms."
+  }
+}

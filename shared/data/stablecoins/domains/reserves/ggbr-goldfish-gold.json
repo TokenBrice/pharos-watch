@@ -1,0 +1,71 @@
+{
+  "id": "ggbr-goldfish-gold",
+  "reserves": [
+    {
+      "name": "In-situ gold-reserve-backed ION.au securities",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "I-ON Digital Corp and GGBR Ltd",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Goldfish Gold official website",
+        "url": "https://goldfishgold.com/"
+      }
+    ],
+    "rationale": "Goldfish states that each GGBR represents 1/1000 troy ounce of in-situ gold and is backed beyond 100% by audited surplus gold reserves through ION.au securities. The issuer site does not provide a dated independent reserve report or current security and custody weights.",
+    "compositionBasis": "Goldfish product and reserve-backing disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The site does not publish a dated reserve report, current ION.au security inventory, gold-bar allocation, or custody shares.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "In-situ gold-reserve-backed ION.au securities",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer describes the backing model but provides no dated independent evidence supporting the current security and gold reserve composition."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "ION Treasury and Fireblocks MPC custody",
+        "role": "custodian"
+      },
+      {
+        "name": "GGBR Ltd",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Goldfish Gold official website",
+        "url": "https://goldfishgold.com/"
+      }
+    ],
+    "uncertainty": "Goldfish names ION Treasury and Fireblocks MPC custody for the underlying gold-backed securities but does not disclose segregation, bankruptcy remoteness, rehypothecation, or current custody shares."
+  }
+}
