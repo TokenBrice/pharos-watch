@@ -31,7 +31,6 @@
 !/src/generated/sitemap-dates.json.d.ts
 
 # deterministic source-tree projections materialized by `npm run bootstrap:generated`
-/docs/agent-code-map.md
 /public/maps/world-countries.svg
 /public/openapi.json
 /public/postman/pharos-api.postman_collection.json

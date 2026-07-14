@@ -10,7 +10,7 @@ Use this skill from the Pharos repository root when the user asks to:
 
 - verify docs against code
 - update docs after behavior/API/pipeline/methodology changes
-- fix `check:doc-source-paths`, `check:doc-sync`, `check:verified-doc-links`, or `check:doc-counts`
+- fix `check:doc-source-paths`, `check:doc-sync`, or `check:verified-doc-links`
 - run a documentation update pass
 - reconcile agent guidance or skill routing
 
@@ -21,7 +21,7 @@ Use this skill from the Pharos repository root when the user asks to:
 - Use `docs/doc-ownership.json` to decide which docs may need updates.
 - Keep `/docs/` and `README.md` as the verified documentation corpus. Do not create committed planning archives.
 - Mirror durable top-level guidance between `AGENTS.md` and `CLAUDE.md`, or move it into `docs/process/*` and reference it from both.
-- If pricing pipeline, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, mint/burn flow, yield intelligence, Chain Health, or other methodology behavior changes, update `/methodology` docs and the relevant timeline/changelog doc.
+- If pricing pipeline, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, mint/burn flow, yield intelligence, Chain Health, or other methodology behavior changes, update `/methodology`, the owning methodology doc, and the structured entry under `shared/data/methodology-changelogs/`.
 - Methodology versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
 
 ## Read First
@@ -63,7 +63,7 @@ For each doc claim, inspect the source that owns the behavior:
 - cron/pipeline: `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts`, `worker/src/cron/**`
 - stablecoin data: `shared/data/stablecoins/coins/*.json`, `shared/lib/stablecoins/schema.ts`
 - scripts/CI: `package.json`, `scripts/**`, `.github/workflows/**`
-- methodology/scoring: `shared/lib/**`, route methodology sections, timeline docs
+- methodology/scoring: `shared/lib/**`, `shared/data/methodology-changelogs/**`, and route methodology sections
 
 Prefer source-backed corrections over prose polish.
 
@@ -77,7 +77,7 @@ Common doc destinations:
 - `docs/architecture.md` for structural routing/runtime model changes
 - `docs/testing.md`, `docs/deployment-process.md`, `docs/scripts.md` for CI/release behavior
 - `docs/process/*` for durable agent/operator process
-- methodology docs plus timeline docs for scoring behavior
+- methodology docs plus structured changelog entries for scoring behavior
 - `README.md`, `AGENTS.md`, and `CLAUDE.md` only when top-level guidance actually changes
 
 ### 4. Validate
@@ -88,7 +88,6 @@ Run the relevant doc checks:
 npm run check:doc-source-paths
 npm run check:verified-doc-links
 npm run check:doc-sync
-npm run check:doc-counts
 npm run check:agent-doc-sync
 npm run check:agent-skill-symlinks
 ```

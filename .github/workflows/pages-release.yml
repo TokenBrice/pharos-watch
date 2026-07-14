@@ -60,7 +60,7 @@ jobs:
           npm run generate:public-datasets
       - name: Build clean production export
         env:
-          GENERATED_ARTIFACTS_SKIP: stablecoin-catalog,world-map,agent-code-map,sitemap-dates,case-study-client-index,docs-metadata,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,stablecoin-prevalidated-registry,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
+          GENERATED_ARTIFACTS_SKIP: stablecoin-catalog,world-map,sitemap-dates,case-study-client-index,docs-metadata,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,stablecoin-prevalidated-registry,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
           PUBLIC_DATASETS_API_URL: ""
           PUBLIC_DATASETS_API_KEY: ""
           PUBLIC_DATASETS_REQUIRE_API: ""

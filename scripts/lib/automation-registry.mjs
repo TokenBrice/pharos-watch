@@ -337,18 +337,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: ["shared/data/stablecoins/coins.generated.json"],
   }),
   generatedArtifact({
-    id: "agent-code-map",
-    checkCommand: "node scripts/maintenance/generate-agent-code-map.mjs --check",
-    command: "node scripts/maintenance/generate-agent-code-map.mjs",
-    bootstrap: true,
-    dependsOn: ["stablecoin-prevalidated-registry", "legacy-stablecoin-redirects", "stablecoin-client-registry"],
-    outputPaths: ["docs/agent-code-map.md"],
-    phase: 2,
-    reproducibility: "deterministic",
-    script: "scripts/maintenance/generate-agent-code-map.mjs",
-    sourcePaths: ["functions/**", "scripts/**", "shared/**", "src/**", "worker/src/**"],
-  }),
-  generatedArtifact({
     id: "cemetery-dataset",
     checkCommand: "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
     command: "tsx scripts/maintenance/generate-cemetery-dataset.ts",

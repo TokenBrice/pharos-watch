@@ -121,7 +121,7 @@ queue payload shape, or methodology-visible behavior changes.
 Typical files:
 
 - `docs/yield-intelligence.md`
-- `docs/yield-intelligence-timeline.md`
+- `shared/data/methodology-changelogs/yield-methodology/`
 - `docs/status-dashboard.md` and `docs/runbooks/yield-health.md` for status
   surface changes
 - `docs/about-page.md` and `src/app/about/content.ts` for new external source

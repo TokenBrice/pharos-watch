@@ -49,7 +49,7 @@ Each missing field must either be filled (by re-calling the appropriate speciali
 - Add/update exactly one per-coin JSON file under `shared/data/stablecoins/coins/`.
 - Update `shared/data/stablecoins/canonical-order.json`.
 - Regenerate `shared/data/stablecoins/coins.generated.json`.
-- Update the coupled static files per the Phase 4 registry editing checklist in `docs/process/adding-a-stablecoin.md` — `src/lib/stablecoin-static-data.ts` (counts, `TRACKED_STABLECOIN_IDS`, `NON_ACTIVE_STABLECOIN_ID_SET`), `src/lib/command-palette-search-data.ts`, the hardcoded expectations in `shared/lib/__tests__/stablecoins.test.ts`, and doc counts (`npm run check:doc-counts`). The build fails on every addition until these match.
+- Update the coupled static files per the Phase 4 registry editing checklist in `docs/process/adding-a-stablecoin.md` — `src/lib/stablecoin-static-data.ts` (counts, `TRACKED_STABLECOIN_IDS`, `NON_ACTIVE_STABLECOIN_ID_SET`), `src/lib/command-palette-search-data.ts`, and the hardcoded expectations in `shared/lib/__tests__/stablecoins.test.ts`. The build fails on every addition until these match.
 - Add `data/logos.json` and `data/ai-summaries.json` entries, or record explicit skipped reasons.
 
 5. **Record downstream coverage decisions**
@@ -71,7 +71,7 @@ Before saying the addition is complete, report:
 - price path and market-cap path, or pre-launch exemption
 - generated aggregate status
 - canonical-order status
-- coupled static files updated (static-data counts/IDs, command-palette row, test expectations, doc counts)
+- coupled static files updated (static-data counts/IDs, command-palette row, and test expectations)
 - `blacklistabilityReview` present with matching reviewed status
 - compliance fields (`mica`/`genius`) authored or intentionally left undefined
 - logo and summary status

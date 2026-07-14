@@ -183,7 +183,6 @@ npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 node scripts/build-data/build-client-registry.mjs
 npm run check:stablecoin-data
 npm run check:generated-artifacts
-npm run check:doc-counts
 ```
 
 After route/crawlability edits: `npm run typecheck`, `npm run build`, `npm run seo:check`.

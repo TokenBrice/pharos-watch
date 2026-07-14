@@ -1,13 +1,13 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. The current runtime scans across 70 contract configurations on 9 chains (34 tracked symbols; exact live and deferred rosters stay in code) every 6 hours. Those counts are checked against source by `npm run check:doc-counts`.
+Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the runtime scans the live contract configurations in `worker/src/lib/blacklist-contracts.ts`; that registry owns the supported chains, symbols, and deferred deployments.
 
 ## Methodology And Ownership
 
 - **Current methodology version:** `v3.9972`
 - **Version source:** `shared/lib/blacklist-tracker-version.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
-- **Timeline:** [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md)
+- **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
 
 Three registries have deliberately different jobs:
 
@@ -208,12 +208,11 @@ When changing blacklist coverage or behavior:
 1. Edit the canonical registry, manifest, parser, or schema owner rather than this document's prose inventory.
 2. Add focused parser and coverage tests for every new event layout or deployment.
 3. Preserve contract/config identity, contiguous coverage, amount provenance, and last-known snapshot semantics.
-4. Update the methodology version and [timeline](./blacklist-tracker-timeline.md) only when user-visible methodology changes.
+4. Update the methodology version and structured changelog only when user-visible methodology changes.
 5. Update the API reference for wire-contract changes and the sync runbook for operator-procedure changes.
 6. Run:
 
    ```bash
-   npm run check:doc-counts
    npm run check:doc-source-paths
    npm run check:verified-doc-links
    npm run check:docs-api-reference

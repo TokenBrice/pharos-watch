@@ -75,7 +75,6 @@ jobs:
       - run: npm run check:doc-source-paths
       - run: npm run check:doc-sync
       - run: npm run check:agent-doc-sync
-      - run: npm run check:doc-counts
 
   node26-proof:
     name: Node 26 proof

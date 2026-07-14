@@ -54,7 +54,6 @@ describe("CI workflow scope", () => {
     expect(validateDocs).toContain("npm run check:doc-source-paths");
     expect(validateDocs).toContain("npm run check:doc-sync");
     expect(validateDocs).toContain("npm run check:agent-doc-sync");
-    expect(validateDocs).toContain("npm run check:doc-counts");
     expect(nodeProof).toContain("if: ${{ needs.detect-changes.outputs.node_compat_changed == 'true' }}");
   });
 

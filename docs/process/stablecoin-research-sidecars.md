@@ -90,7 +90,6 @@ Validation:
 ```bash
 npm run check:stablecoin-data
 npm run check:generated-artifacts
-npm run check:doc-counts
 npm run typecheck
 npm run typecheck:worker
 ```

@@ -43,7 +43,6 @@ import {
   CACHE_FRESHNESS_LANES,
 } from "../../../shared/lib/api-freshness";
 import { THREAT_BAND_HEX } from "../../../shared/lib/classification";
-import { CRON_SCHEDULES } from "../../../shared/lib/cron-jobs";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION,
@@ -317,10 +316,7 @@ function checkLiquidityDoc(failures: Failure[]): void {
 function checkWorkerLimitsDoc(failures: Failure[]): void {
   const file = "docs/worker-and-api-limits.md";
   const doc = read(file);
-  const cronScheduleCount = Object.keys(CRON_SCHEDULES).length;
-
   const feedbackRow = requireTableRow(doc, file, "Feedback limiter");
-  const cronRow = requireTableRow(doc, file, "Cron expressions / trigger slots");
   const circuitRow = requireTableRow(doc, file, "Generic circuit breaker");
 
   const feedbackNumbers = getAllNumbersFromText(feedbackRow[0]);
@@ -328,7 +324,6 @@ function checkWorkerLimitsDoc(failures: Failure[]): void {
 
   expectNumber(failures, file, "feedback rate-limit submissions", feedbackNumbers[0] ?? null, FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS);
   expectNumber(failures, file, "feedback rate-limit window minutes", feedbackNumbers[1] ?? null, FEEDBACK_RATE_LIMIT_WINDOW_SEC / 60);
-  expectNumber(failures, file, "cron trigger count", getFirstNumberFromText(cronRow[0]), cronScheduleCount);
   expectNumber(failures, file, "circuit open threshold", circuitNumbers[0] ?? null, CIRCUIT_OPEN_THRESHOLD);
   expectNumber(failures, file, "circuit probe interval minutes", circuitNumbers[1] ?? null, CIRCUIT_PROBE_INTERVAL_SEC / 60);
 }

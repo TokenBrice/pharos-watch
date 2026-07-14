@@ -107,7 +107,6 @@
     "check:hotspot-ratchet:update-baseline": "node scripts/maintenance/update-hotspot-ratchet-baseline.mjs",
     "check:cron-sync": "tsx scripts/ci/check-cron-schedule-sync.ts",
     "check:worker-config": "tsx scripts/ci/check-worker-wrangler-config.ts",
-    "check:doc-counts": "node scripts/ci/check-doc-counts.mjs",
     "check:agent-doc-sync": "node scripts/ci/check-agent-doc-sync.mjs",
     "check:agent-skill-symlinks": "node scripts/ci/check-agent-skill-symlinks.mjs && node scripts/ci/check-agent-infra.mjs",
     "check:agent-infra": "node scripts/ci/check-agent-infra.mjs",
