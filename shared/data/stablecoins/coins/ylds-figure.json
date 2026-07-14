@@ -115,39 +115,272 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "YLDS issuance is Figure-issuer-operated. On Solana the SPL mint authority and freeze authority are both system-owned wallets (Solana EOA-equivalent) controlled by Figure. This is the expected enterprise MPC/HSM pattern and corroborates the issuer-only mint model.",
+    "upgradeability": {
+      "model": "custom",
+      "implementationAddresses": [
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "provenance.marker.v1"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 86400,
+      "controlRef": "Provenance chain governance marker and runtime authority",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Solana RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "SPL Token program source",
+          "url": "https://github.com/solana-program/token"
+        },
+        {
+          "label": "Provenance marker state",
+          "url": "https://api.provenance.io/provenance/marker/v1/detail/uylds.fcc"
+        },
+        {
+          "label": "Provenance marker governance source",
+          "url": "https://github.com/provenance-io/provenance/blob/c2c500237e52832b261538f9276350708732bbb6/x/marker/spec/10_governance.md"
+        }
+      ]
+    },
+    "summary": "YLDS has independent direct issuance on Solana and Provenance. Solana's standard SPL mint has one externally signable mint authority with no on-chain cap, while the shared SPL Token program is immutable. Provenance marker uylds.fcc has five direct ACCESS_MINT authorities: one zero-delay 4-of-6 group policy and four individual accounts. Chain governance is also enabled for the marker and can change supply controls or native marker logic after the fastest 86,400-second expedited vote.",
     "controls": [
       {
-        "label": "YLDS Solana mint authority (Figure issuer wallet)",
+        "label": "YLDS Solana direct mint authority",
         "role": "direct-minter",
         "authorityType": "eoa",
+        "chain": "solana",
         "address": "AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "No configured supply cap beyond the standard SPL Token integer bound.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM"
+        ],
         "sources": [
           {
-            "label": "Solana mint account: 8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih",
-            "url": "https://solscan.io/token/8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih"
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "SPL Token program source",
+            "url": "https://github.com/solana-program/token"
           }
         ],
-        "evidence": "Solana SPL mint 8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih: mint_authority = AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM; freeze_authority = 8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6. Both accounts are system-program owned (no on-chain data, no executable flag) — Solana EOA wallets. Account not found / zero lamports confirmed issuer wallet pattern."
+        "evidence": "At Solana slot 432714278, standard SPL mint 8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih named this on-curve external signer as mintAuthority and separate on-curve signer 8A18H7n3atDfQsN8rLvt98hj5WZJWwhqqR8digDvbia6 as freezeAuthority. The mint key can create arbitrary supply with one signature and no delay. Sixty-six successful post-cutoff mint-touching transactions and no SetAuthority transaction preserve the cutoff state. No address-bound public evidence establishes the legal signer identity or off-chain custody method."
+      },
+      {
+        "label": "YLDS Provenance 4-of-6 marker admin and mint policy",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "chain": "provenance",
+        "address": "pb10r29n9w7ja6qt7l3dzls32x7alvmc9j9l9q8x79xwusy0fjf372s348dzu",
+        "directMintAbility": "direct",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Marker supply_fixed is false and marker supply=0 is not a cap. The chain marker module limits total supply to 1,000,000,000,000.000001 YLDS, versus 503,748,076.285525 YLDS outstanding at the cutoff; only chain governance can raise the module limit.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 32226495,
+        "failureDomainKeys": [
+          "provenance:pb10r29n9w7ja6qt7l3dzls32x7alvmc9j9l9q8x79xwusy0fjf372s348dzu"
+        ],
+        "sources": [
+          {
+            "label": "Provenance YLDS marker state",
+            "url": "https://api.provenance.io/provenance/marker/v1/detail/uylds.fcc"
+          },
+          {
+            "label": "Provenance group policy 722",
+            "url": "https://api.provenance.io/cosmos/group/v1/group_policy_info/pb10r29n9w7ja6qt7l3dzls32x7alvmc9j9l9q8x79xwusy0fjf372s348dzu"
+          },
+          {
+            "label": "Provenance group 722 members",
+            "url": "https://api.provenance.io/cosmos/group/v1/group_members/722?pagination.limit=100"
+          }
+        ],
+        "evidence": "At Provenance height 32226495, this address held both ACCESS_MINT and ACCESS_ADMIN on marker uylds.fcc. It was self-administered Cosmos group policy 722 with six equal-weight secp256k1 members, a 0.51 threshold requiring four approvals, a 172,800-second voting expiry, and min_execution_period=0. The six members were pb1xak7..., pb108t72..., pb14ujed..., pb1ktgsj..., pb1ue08t..., and pb17fvw.... Execution can occur immediately after the fourth approval; the voting period is not a timelock."
+      },
+      {
+        "label": "YLDS Provenance individual mint authority 1",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "chain": "provenance",
+        "address": "pb18r6ncean59nm9d2pql7ely74jxn7g7s4tqrldw",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Direct ACCESS_MINT under the marker module's 1,000,000,000,000.000001-YLDS chain limit; the address cannot raise that module limit.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 32226495,
+        "failureDomainKeys": [
+          "provenance:pb18r6ncean59nm9d2pql7ely74jxn7g7s4tqrldw"
+        ],
+        "sources": [
+          {
+            "label": "Provenance YLDS marker state",
+            "url": "https://api.provenance.io/provenance/marker/v1/detail/uylds.fcc"
+          },
+          {
+            "label": "Provenance account state",
+            "url": "https://api.provenance.io/cosmos/auth/v1beta1/accounts/pb18r6ncean59nm9d2pql7ely74jxn7g7s4tqrldw"
+          }
+        ],
+        "evidence": "At height 32226495, the marker granted this individual BaseAccount ACCESS_MINT with no threshold or execution delay. It can mint directly until the chain-level marker module limit."
+      },
+      {
+        "label": "YLDS Provenance individual mint authority 2",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "chain": "provenance",
+        "address": "pb17eswnfkr0nl8p7jt52l2gpxpap7205zavkls07",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Direct ACCESS_MINT under the marker module's 1,000,000,000,000.000001-YLDS chain limit; the address cannot raise that module limit.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 32226495,
+        "failureDomainKeys": [
+          "provenance:pb17eswnfkr0nl8p7jt52l2gpxpap7205zavkls07"
+        ],
+        "sources": [
+          {
+            "label": "Provenance YLDS marker state",
+            "url": "https://api.provenance.io/provenance/marker/v1/detail/uylds.fcc"
+          },
+          {
+            "label": "Provenance account state",
+            "url": "https://api.provenance.io/cosmos/auth/v1beta1/accounts/pb17eswnfkr0nl8p7jt52l2gpxpap7205zavkls07"
+          }
+        ],
+        "evidence": "At height 32226495, the marker granted this individual BaseAccount ACCESS_MINT with no threshold or execution delay. It can mint directly until the chain-level marker module limit."
+      },
+      {
+        "label": "YLDS Provenance individual mint authority 3",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "chain": "provenance",
+        "address": "pb1qt67v5kr6hdvwlwlenxvnjtzsm56j4msax696p",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Direct ACCESS_MINT under the marker module's 1,000,000,000,000.000001-YLDS chain limit; the address cannot raise that module limit.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 32226495,
+        "failureDomainKeys": [
+          "provenance:pb1qt67v5kr6hdvwlwlenxvnjtzsm56j4msax696p"
+        ],
+        "sources": [
+          {
+            "label": "Provenance YLDS marker state",
+            "url": "https://api.provenance.io/provenance/marker/v1/detail/uylds.fcc"
+          },
+          {
+            "label": "Provenance account state",
+            "url": "https://api.provenance.io/cosmos/auth/v1beta1/accounts/pb1qt67v5kr6hdvwlwlenxvnjtzsm56j4msax696p"
+          }
+        ],
+        "evidence": "At height 32226495, the marker granted this individual BaseAccount ACCESS_MINT with no threshold or execution delay. It can mint directly until the chain-level marker module limit."
+      },
+      {
+        "label": "YLDS Provenance individual mint authority 4",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "chain": "provenance",
+        "address": "pb1lez9xkd8mw27xzzlyu0cjyqxxyapvcqq3fj3ld",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Direct ACCESS_MINT under the marker module's 1,000,000,000,000.000001-YLDS chain limit; the address cannot raise that module limit.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 32226495,
+        "failureDomainKeys": [
+          "provenance:pb1lez9xkd8mw27xzzlyu0cjyqxxyapvcqq3fj3ld"
+        ],
+        "sources": [
+          {
+            "label": "Provenance YLDS marker state",
+            "url": "https://api.provenance.io/provenance/marker/v1/detail/uylds.fcc"
+          },
+          {
+            "label": "Provenance account state",
+            "url": "https://api.provenance.io/cosmos/auth/v1beta1/accounts/pb1lez9xkd8mw27xzzlyu0cjyqxxyapvcqq3fj3ld"
+          }
+        ],
+        "evidence": "At height 32226495, the marker granted this individual BaseAccount ACCESS_MINT with no threshold or execution delay. It can mint directly until the chain-level marker module limit."
+      },
+      {
+        "label": "Provenance chain governance marker and runtime authority",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "chain": "provenance",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 86400,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "governance:provenance-chain"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 32226495,
+        "sources": [
+          {
+            "label": "Provenance YLDS marker state",
+            "url": "https://api.provenance.io/provenance/marker/v1/detail/uylds.fcc"
+          },
+          {
+            "label": "Provenance marker parameters",
+            "url": "https://api.provenance.io/provenance/marker/v1/params"
+          },
+          {
+            "label": "Provenance marker governance source",
+            "url": "https://github.com/provenance-io/provenance/blob/c2c500237e52832b261538f9276350708732bbb6/x/marker/spec/10_governance.md"
+          }
+        ],
+        "evidence": "At height 32226495, marker uylds.fcc had allow_governance_control=true and marker-module governance enabled. Provenance proposal-handler source permits governance to change marker access and supply and to replace native chain logic through a software-upgrade proposal. The fastest enforced governance path is the 86,400-second expedited voting period; normal voting is 172,800 seconds. Governance can raise the chain marker limits or authorize a different mint surface."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "YLDS docs",
-          "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
+          "label": "Solana RPC",
+          "url": "https://api.mainnet-beta.solana.com"
         },
         {
-          "label": "Solana mint account: 8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih",
-          "url": "https://solscan.io/token/8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih"
+          "label": "Provenance YLDS marker state",
+          "url": "https://api.provenance.io/provenance/marker/v1/detail/uylds.fcc"
+        },
+        {
+          "label": "Provenance group policy 722",
+          "url": "https://api.provenance.io/cosmos/group/v1/group_policy_info/pb10r29n9w7ja6qt7l3dzls32x7alvmc9j9l9q8x79xwusy0fjf372s348dzu"
+        },
+        {
+          "label": "Provenance marker parameters",
+          "url": "https://api.provenance.io/provenance/marker/v1/params"
+        },
+        {
+          "label": "Provenance YLDS bank supply",
+          "url": "https://api.provenance.io/cosmos/bank/v1beta1/supply/by_denom?denom=uylds.fcc"
+        },
+        {
+          "label": "Provenance marker governance source",
+          "url": "https://github.com/provenance-io/provenance/blob/c2c500237e52832b261538f9276350708732bbb6/x/marker/spec/10_governance.md"
         }
       ],
-      "evidence": "Solana getAccountInfo on mint 8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih confirmed: mint_authority = AJuGsS1 (system account = Figure's EOA wallet); freeze_authority = 8A18H7n (system account = Figure's EOA wallet). Both accounts are non-existent on-chain (system-program, no data), consistent with issuer-controlled keypair custody. No permissionless mint route; Provenance chain backend is issuer-operated.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At the fixed cutoff, Solana slot 432714278 and Provenance height 32226495 resolved every tracked mint authority. Solana used one external SPL mint key and immutable shared token code. Provenance marker uylds.fcc was active, restricted, not supply-fixed, and governance-enabled; its exact ACCESS_MINT set was one 4-of-6 group policy plus four individual BaseAccounts. Bank supply was 503,748,076.285525 YLDS and the marker module's chain limit was 1,000,000,000,000.000001 YLDS. Chain governance can change marker supply controls or native runtime after the fastest one-day expedited vote.",
+      "reviewer": "Codex Safety Score V9 evidence audit",
+      "reviewedAt": "2026-07-13"
     }
   },
   "deploymentModel": "native-multichain",
