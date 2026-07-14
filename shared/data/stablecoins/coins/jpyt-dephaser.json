@@ -19,7 +19,24 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "DePhaser mints JPYT using Chainlink USD/JPY exchange-rate data for USDT/USDC deposits, with no fallback or failure handling documented.",
-    "reviewedAt": "2026-06-12",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "JPYT is issued through fully collateralized USDT or USDC deposits and redeemed by burning JPYT for the deposited asset. The documented flow has no borrower-specific undercollateralized position or liquidation branch to enumerate.",
+      "sources": [
+        {
+          "label": "DePhaser money flow",
+          "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
+        },
+        {
+          "label": "DePhaser terms of service",
+          "url": "https://docs.dephaser.com/policy/terms-of-service"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex data review",
     "confidence": "verified",
     "sources": [
