@@ -145,10 +145,30 @@ describe("commonModeSignalSeverity (owner ruling 2026-07-15 Batch 3.3)", () => {
     }
   });
 
-  it("keeps a fragile or unreviewed chain concentration at the default high severity", () => {
+  it("normalizes DefiLlama display-name chain keys to their canonical slug before matching", () => {
+    // Supply facts key chain domains by display name; they must tier identically
+    // to the slug form (coordinator namespace-fidelity ruling 2026-07-15).
+    for (const [displayName, slug] of [
+      ["Ethereum", "ethereum"],
+      ["BSC", "bsc"],
+      ["OP Mainnet", "optimism"],
+      ["Arbitrum", "arbitrum"],
+      ["Avalanche", "avalanche"],
+      ["Polygon", "polygon"],
+      ["Base", "base"],
+      ["Solana", "solana"],
+    ] as const) {
+      expect(materiality.matureChains).toContain(slug);
+      expect(commonModeSignalSeverity({ kind: "chain", key: displayName }, materiality)).toBe("moderate");
+    }
+  });
+
+  it("keeps a fragile, unreviewed, or unresolvable chain concentration at the default high severity", () => {
     expect(materiality.commonModeSignal.severity).toBe("high");
     expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "Fantom" }, materiality)).toBe("high");
     expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "chain:ethereum" }, materiality)).toBe("high");
   });
 
   it("keeps non-chain failure domains fail-closed at high", () => {

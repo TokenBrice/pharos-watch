@@ -12,6 +12,7 @@ import type {
   V9StructuralSignal,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
+import { resolveChainId } from "../chains";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { evaluateV9AccessPosture, type V9AccessPostureResult } from "./access-posture";
@@ -250,18 +251,25 @@ function gapReasonsForStatus(
 
 /**
  * Grades a common-mode dependency signal's severity (owner ruling 2026-07-15
- * Batch 3.3). Chain concentration across reviewed mature chains grades one rung
- * lower than the default: only a chain-kind failure domain whose chain is in
- * the reviewed mature set graduates to "moderate". Any other domain (a fragile
- * or unreviewed chain, or a non-chain failure domain) stays fail-closed at the
- * policy's default common-mode severity.
+ * Batch 3.3; coordinator namespace-fidelity ruling 2026-07-15). Chain
+ * concentration across reviewed mature chains grades one rung lower than the
+ * default: a chain-kind failure domain whose chain is in the reviewed mature set
+ * graduates to "moderate". The ruling is on chains, not string encodings, so the
+ * failure-domain key is normalized to its canonical slug first — exit-route
+ * facts key by slug ("ethereum") while supply facts key by DefiLlama display
+ * name ("Ethereum", "OP Mainnet"), and both must tier identically. An
+ * unresolvable name, a non-mature chain, or a non-chain domain stays fail-closed
+ * at the policy's default common-mode severity.
  */
 export function commonModeSignalSeverity(
   failureDomain: V9FailureDomainRef,
   materiality: V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"],
 ): V9Severity {
-  if (failureDomain.kind === "chain" && materiality.matureChains.includes(failureDomain.key)) {
-    return "moderate";
+  if (failureDomain.kind === "chain") {
+    const slug = resolveChainId(failureDomain.key);
+    if (slug !== null && materiality.matureChains.includes(slug)) {
+      return "moderate";
+    }
   }
   return materiality.commonModeSignal.severity;
 }
