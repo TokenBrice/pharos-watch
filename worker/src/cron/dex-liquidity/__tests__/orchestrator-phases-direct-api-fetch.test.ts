@@ -97,7 +97,7 @@ describe("runDirectApiFetchPhase", () => {
     expect(result.results.map((entry) => entry.name)).toEqual(["one", "two", "three", "four"]);
     expect(result.failedSources).toEqual([]);
     expect(result.fallbackSignals).toEqual([]);
-    expect(maxActive).toBe(2);
+    expect(maxActive).toBe(1);
   });
 
   it("reports circuit close events after a half-open source recovers", async () => {

@@ -560,7 +560,7 @@ export async function logCronRun(
                 schedule_key, producer_path, producer_kind, invocation_id, worker_version,
                 productive, publication_count, calendar_period)
              VALUES (?, ?, ?, 'error', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
-             ON CONFLICT(idempotency_key) DO UPDATE SET
+             ON CONFLICT(idempotency_key) WHERE idempotency_key IS NOT NULL DO UPDATE SET
                status = 'error',
                error = excluded.error,
                metadata = COALESCE(excluded.metadata, cron_runs.metadata),

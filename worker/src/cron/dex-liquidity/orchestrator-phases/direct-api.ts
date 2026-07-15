@@ -70,11 +70,97 @@ export interface DirectApiFetchPhaseResult {
   circuitEvents: DirectApiCircuitEvent[];
 }
 
+export interface DirectApiPoolCompactionCounts {
+  rawPoolCount: number;
+  retainedPoolCount: number;
+  skippedInvalidUnitCount: number;
+  skippedUntrackedCount: number;
+}
+
+export interface CompactedDirectApiFetchPhase {
+  phase: DirectApiFetchPhaseResult;
+  pools: DexApiPool[];
+  measuredExecutionPools: DexApiPool[];
+  counts: DirectApiPoolCompactionCounts;
+}
+
 export interface DirectApiCircuitEvent {
   circuitKey: string;
   from: CircuitState;
   to: CircuitState;
   at: number | null;
+}
+
+function hasTrackedDirectApiToken(
+  pool: DexApiPool,
+  lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
+): boolean {
+  return pool.tokens.some(
+    (token) =>
+      resolveStablecoinIdForDexApiToken(
+        pool.chain,
+        token,
+        lookups.chainAddressToId,
+        lookups.symbolToChainScopedIds,
+      ) != null,
+  );
+}
+
+export function compactDirectApiFetchPhasePools(
+  phase: DirectApiFetchPhaseResult,
+  lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
+): CompactedDirectApiFetchPhase {
+  const pools: DexApiPool[] = [];
+  const measuredExecutionPools: DexApiPool[] = [];
+  const counts: DirectApiPoolCompactionCounts = {
+    rawPoolCount: 0,
+    retainedPoolCount: 0,
+    skippedInvalidUnitCount: 0,
+    skippedUntrackedCount: 0,
+  };
+
+  const results = phase.results.map((entry) => {
+    const rawPoolCount = entry.result.pools.length;
+    for (const pool of entry.result.pools) {
+      if (
+        (pool.source === "fluid" || pool.source === "pancakeswap") &&
+        hasTrackedDirectApiToken(pool, lookups)
+      ) {
+        measuredExecutionPools.push(pool);
+      }
+    }
+    const normalized = normalizeDexApiPoolsForMerge(entry.result.pools);
+    const normalizedPoolCount = normalized.pools.length;
+    let retainedPoolCount = 0;
+    for (const pool of normalized.pools) {
+      if (hasTrackedDirectApiToken(pool, lookups)) {
+        normalized.pools[retainedPoolCount++] = pool;
+      }
+    }
+    normalized.pools.length = retainedPoolCount;
+    const retainedPools = normalized.pools;
+
+    counts.rawPoolCount += rawPoolCount;
+    counts.retainedPoolCount += retainedPoolCount;
+    counts.skippedInvalidUnitCount += normalized.skippedInvalidUnitCount;
+    counts.skippedUntrackedCount += normalizedPoolCount - retainedPoolCount;
+    pools.push(...retainedPools);
+
+    return {
+      ...entry,
+      result: {
+        ...entry.result,
+        pools: retainedPools,
+      },
+    };
+  });
+
+  return {
+    phase: { ...phase, results },
+    pools,
+    measuredExecutionPools,
+    counts,
+  };
 }
 
 export interface DirectApiIntegrationResult {
@@ -344,7 +430,17 @@ export async function integrateDirectApiLiquidityPhase(params: {
   symbolToIds: SymbolLookups["symbolToIds"];
   validationReferences: PriceValidationReferences;
   stablecoinPriceById: Map<string, number>;
+  preprocessedPoolCounts?: DirectApiPoolCompactionCounts;
 }): Promise<DirectApiIntegrationResult> {
+  if (
+    params.preprocessedPoolCounts &&
+    params.preprocessedPoolCounts.retainedPoolCount !== params.directApiPools.length
+  ) {
+    throw new Error(
+      "dex-liquidity: compacted direct API retained count does not match the integration input",
+    );
+  }
+
   let directApiDedupSkippedByAddress = 0;
   let directApiDedupSkippedByDerivedIdentity = 0;
   let directApiDedupSkippedByOptionalWildcardIdentity = 0;
@@ -353,13 +449,37 @@ export async function integrateDirectApiLiquidityPhase(params: {
   let directApiSkippedAboveTvlSanityCap = 0;
   const acceptedByProtocolChain: Record<string, number> = {};
   const excludedByReason: Record<string, number> = {};
-  const normalized = normalizeDexApiPoolsForMerge(params.directApiPools);
+  const normalized = params.preprocessedPoolCounts
+    ? {
+        pools: params.directApiPools,
+        skippedInvalidUnitCount: params.preprocessedPoolCounts.skippedInvalidUnitCount,
+      }
+    : normalizeDexApiPoolsForMerge(params.directApiPools);
   const directApiPools = normalized.pools;
   if (normalized.skippedInvalidUnitCount > 0) {
     incrementReason(excludedByReason, "invalid_units", normalized.skippedInvalidUnitCount);
   }
 
-  if (directApiPools.length === 0) {
+  const trackedDirectApiPools = params.preprocessedPoolCounts
+    ? directApiPools
+    : directApiPools.filter((pool) =>
+        pool.tokens.some(
+          (token) =>
+            resolveStablecoinIdForDexApiToken(
+              pool.chain,
+              token,
+              params.chainAddressToId,
+              params.symbolToChainScopedIds,
+            ) != null,
+        ),
+      );
+  directApiSkippedUntracked =
+    params.preprocessedPoolCounts?.skippedUntrackedCount ?? directApiPools.length - trackedDirectApiPools.length;
+  if (directApiSkippedUntracked > 0) {
+    incrementReason(excludedByReason, "untracked_token", directApiSkippedUntracked);
+  }
+
+  if (directApiPools.length === 0 && !params.preprocessedPoolCounts) {
     return {
       directApiDedupSkippedByAddress,
       directApiDedupSkippedByDerivedIdentity,
@@ -373,25 +493,27 @@ export async function integrateDirectApiLiquidityPhase(params: {
     };
   }
 
-  console.log(`[dex-liquidity] Fetched ${directApiPools.length} direct API pools total`);
-  const trackedDirectApiPools = directApiPools.filter((pool) =>
-    pool.tokens.some(
-      (token) =>
-        resolveStablecoinIdForDexApiToken(
-          pool.chain,
-          token,
-          params.chainAddressToId,
-          params.symbolToChainScopedIds,
-        ) != null,
-    ),
-  );
-  directApiSkippedUntracked = directApiPools.length - trackedDirectApiPools.length;
+  const fetchedPoolCount = params.preprocessedPoolCounts?.rawPoolCount ?? directApiPools.length;
+  console.log(`[dex-liquidity] Fetched ${fetchedPoolCount} direct API pools total`);
   if (directApiSkippedUntracked > 0) {
-    incrementReason(excludedByReason, "untracked_token", directApiSkippedUntracked);
     console.log(
       `[dex-liquidity] Retained ${trackedDirectApiPools.length} direct API pools with tracked tokens ` +
         `(skipped ${directApiSkippedUntracked} untracked pools before identity processing)`,
     );
+  }
+
+  if (trackedDirectApiPools.length === 0) {
+    return {
+      directApiDedupSkippedByAddress,
+      directApiDedupSkippedByDerivedIdentity,
+      directApiDedupSkippedByOptionalWildcardIdentity,
+      directApiSkippedUntracked,
+      directApiSkippedInvalidUnits: normalized.skippedInvalidUnitCount,
+      directApiSkippedBelowTvlThreshold,
+      directApiSkippedAboveTvlSanityCap,
+      acceptedByProtocolChain,
+      excludedByReason,
+    };
   }
 
   hydrateDirectApiPoolMetadata(trackedDirectApiPools, params.contractMetaByChainAddress);

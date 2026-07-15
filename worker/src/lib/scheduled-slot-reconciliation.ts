@@ -125,14 +125,52 @@ async function getCronLeaseForJob(db: D1Database, job: string): Promise<StaleSlo
   );
 }
 
-async function hasCronRunForSlot(db: D1Database, job: string, slotStartedAt: number): Promise<boolean> {
+async function hasCronRunWithIdempotencyKey(
+  db: D1Database,
+  job: string,
+  slotStartedAt: number,
+  idempotencyKey: string,
+): Promise<boolean> {
   const row = await runWithOverloadRetry(() =>
     db
-      .prepare("SELECT id FROM cron_runs WHERE job = ? AND slot_started_at = ? LIMIT 1")
-      .bind(job, slotStartedAt)
+      .prepare(
+        `SELECT id
+           FROM cron_runs
+          WHERE job = ? AND slot_started_at = ? AND idempotency_key = ?
+          LIMIT 1`,
+      )
+      .bind(job, slotStartedAt, idempotencyKey)
       .first<{ id: number }>(),
   );
   return row != null;
+}
+
+async function canPersistSyntheticProducerOutcome(
+  db: D1Database,
+  input: {
+    scheduleKey: string;
+    job: string;
+    producerPath: string;
+    invocationId: string;
+    idempotencyKey: string;
+  },
+): Promise<boolean> {
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT idempotency_key
+           FROM worker_producer_history
+          WHERE schedule_key = ?
+            AND job = ?
+            AND producer_path = ?
+            AND producer_kind = 'scheduled-job'
+            AND invocation_id = ?
+          LIMIT 1`,
+      )
+      .bind(input.scheduleKey, input.job, input.producerPath, input.invocationId)
+      .first<{ idempotency_key: string }>(),
+  );
+  return row == null || row.idempotency_key === input.idempotencyKey;
 }
 
 async function insertSyntheticStaleCronRun(
@@ -141,7 +179,7 @@ async function insertSyntheticStaleCronRun(
   progress: StaleSlotProgressRow,
   lease: StaleSlotLeaseRow,
   nowSec: number,
-): Promise<void> {
+): Promise<boolean> {
   const startedAt = progress.started_at || slot.started_at || slot.slot_started_at;
   const durationMs = Math.max(0, nowSec - startedAt) * 1000;
   const error = "scheduled slot heartbeat stale; child job progress abandoned";
@@ -165,15 +203,27 @@ async function insertSyntheticStaleCronRun(
   ].join(":");
   const descriptor = getScheduledTaskDescriptor(slot.slot_key as CronScheduleKey, progress.job);
   const invocationId = slot.invocation_id ?? `platform-abandoned:${slot.execution_owner}`;
+  if (!(await canPersistSyntheticProducerOutcome(db, {
+    scheduleKey: slot.slot_key,
+    job: progress.job,
+    producerPath: descriptor.producerPath,
+    invocationId,
+    idempotencyKey,
+  }))) {
+    return false;
+  }
 
-  await runWithOverloadRetry(() =>
+  const result = await runWithOverloadRetry(() =>
     db
       .prepare(
         `INSERT INTO cron_runs
            (job, started_at, duration_ms, status, error, item_count, metadata, slot_started_at, idempotency_key,
             schedule_key, producer_path, producer_kind, invocation_id, worker_version,
             productive, publication_count, calendar_period)
-         VALUES (?, ?, ?, 'error', ?, NULL, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL)
+         SELECT ?, ?, ?, 'error', ?, NULL, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL
+          WHERE NOT EXISTS (
+            SELECT 1 FROM cron_runs WHERE job = ? AND slot_started_at = ?
+          )
          ON CONFLICT DO NOTHING`,
       )
       .bind(
@@ -188,9 +238,20 @@ async function insertSyntheticStaleCronRun(
         descriptor.producerPath,
         invocationId,
         slot.worker_version ?? null,
+        progress.job,
+        slot.slot_started_at,
       )
       .run(),
   );
+  const inserted = (result.meta.changes ?? 0) === 1;
+  if (!inserted && !(await hasCronRunWithIdempotencyKey(
+    db,
+    progress.job,
+    slot.slot_started_at,
+    idempotencyKey,
+  ))) {
+    return false;
+  }
   await recordProducerOutcome(db, {
     scheduleKey: slot.slot_key,
     job: progress.job,
@@ -208,6 +269,7 @@ async function insertSyntheticStaleCronRun(
     error,
     productivity: { productive: false, reason: "platform-abandoned" },
   });
+  return inserted;
 }
 
 async function insertSyntheticNotStartedCronRun(
@@ -219,6 +281,15 @@ async function insertSyntheticNotStartedCronRun(
   const idempotencyKey = ["scheduled-slot-not-started", slot.slot_key, slot.slot_started_at, job].join(":");
   const descriptor = getScheduledTaskDescriptor(slot.slot_key as CronScheduleKey, job);
   const invocationId = slot.invocation_id ?? `platform-abandoned:${slot.execution_owner}`;
+  if (!(await canPersistSyntheticProducerOutcome(db, {
+    scheduleKey: slot.slot_key,
+    job,
+    producerPath: descriptor.producerPath,
+    invocationId,
+    idempotencyKey,
+  }))) {
+    return false;
+  }
   const error = "scheduled slot abandoned before child job started";
   const metadata = JSON.stringify({
     reason: "stale-slot-reconciled",
@@ -258,6 +329,10 @@ async function insertSyntheticNotStartedCronRun(
       )
       .run(),
   );
+  const inserted = (result.meta.changes ?? 0) === 1;
+  if (!inserted && !(await hasCronRunWithIdempotencyKey(db, job, slot.slot_started_at, idempotencyKey))) {
+    return false;
+  }
   await recordProducerOutcome(db, {
     scheduleKey: slot.slot_key,
     job,
@@ -275,7 +350,7 @@ async function insertSyntheticNotStartedCronRun(
     error,
     productivity: { productive: false, reason: "platform-abandoned-before-start" },
   });
-  return (result.meta.changes ?? 0) === 1;
+  return inserted;
 }
 
 async function reconcileStaleSlotArtifacts(
@@ -380,8 +455,7 @@ async function reconcileStaleSlotArtifacts(
     const lease = await getCronLeaseForJob(db, progress.job);
     if (!lease || lease.lease_owner !== progress.lease_owner || lease.lease_until >= nowSec) continue;
 
-    if (!(await hasCronRunForSlot(db, progress.job, slot.slot_started_at))) {
-      await insertSyntheticStaleCronRun(db, slot, progress, lease, nowSec);
+    if (await insertSyntheticStaleCronRun(db, slot, progress, lease, nowSec)) {
       summary.syntheticCronRuns++;
     }
     summary.abandonedJobs.push({
