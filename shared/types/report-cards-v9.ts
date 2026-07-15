@@ -93,7 +93,7 @@ export const ReportCardsV9ResponseSchema = z
   .object({
     model: z.literal("v9"),
     schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
-    lifecycle: z.literal("shadow"),
+    lifecycle: z.enum(["shadow", "active"]),
     safetyScoreIdentity: SafetyScoreV9PublicationIdentitySchema,
     methodology: z
       .object({
